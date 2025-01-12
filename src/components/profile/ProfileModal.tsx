@@ -138,15 +138,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
               </div>
             </div>
 
-            {!showChangePassword ? (
-              <button
-                onClick={() => setShowChangePassword(true)}
-                className="text-sm text-blue-600 hover:text-blue-700 
-                         dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                修改密码
-              </button>
-            ) : (
+            {showChangePassword ? (
               <form onSubmit={handleChangePassword} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -155,9 +147,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
                   <input
                     type="password"
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 
-                           shadow-sm focus:border-blue-500 focus:ring-blue-500 
-                           dark:bg-[#2c2c2e] dark:text-white text-sm"
+                    className="appearance-none block w-full px-3 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white text-base"
                     value={passwordForm.currentPassword}
                     onChange={(e) => setPasswordForm({
                       ...passwordForm,
@@ -173,9 +163,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
                   <input
                     type="password"
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 
-                           shadow-sm focus:border-blue-500 focus:ring-blue-500 
-                           dark:bg-[#2c2c2e] dark:text-white text-sm"
+                    className="appearance-none block w-full px-3 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white text-base"
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm({
                       ...passwordForm,
@@ -191,9 +179,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
                   <input
                     type="password"
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 
-                           shadow-sm focus:border-blue-500 focus:ring-blue-500 
-                           dark:bg-[#2c2c2e] dark:text-white text-sm"
+                    className="appearance-none block w-full px-3 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white text-base"
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm({
                       ...passwordForm,
@@ -201,49 +187,58 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
                     })}
                   />
                 </div>
-              </form>
-            )}
-          </div>
 
-          <div className="mt-6 flex justify-end space-x-3">
-            {showChangePassword ? (
-              <>
+                <div className="mt-6 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowChangePassword(false);
+                      setError(null);
+                      setPasswordForm({
+                        currentPassword: '',
+                        newPassword: '',
+                        confirmPassword: '',
+                      });
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 
+                           hover:text-gray-900 dark:hover:text-white transition-colors"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 
+                           hover:bg-blue-700 rounded-md shadow-sm focus:outline-none 
+                           focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 
+                           disabled:opacity-50 transition-colors"
+                  >
+                    {loading ? '保存中...' : '保存'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div>
                 <button
-                  type="button"
-                  onClick={() => {
-                    setShowChangePassword(false);
-                    setError(null);
-                    setPasswordForm({
-                      currentPassword: '',
-                      newPassword: '',
-                      confirmPassword: '',
-                    });
-                  }}
+                  onClick={() => setShowChangePassword(true)}
+                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 
+                         dark:hover:text-blue-300 transition-colors"
+                >
+                  修改密码
+                </button>
+              </div>
+            )}
+            
+            {!showChangePassword && (
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={onClose}
                   className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 
                          hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
-                  取消
+                  关闭
                 </button>
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={handleChangePassword}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 
-                         hover:bg-blue-700 rounded-md shadow-sm focus:outline-none 
-                         focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 
-                         disabled:opacity-50 transition-colors"
-                >
-                  {loading ? '保存中...' : '保存'}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 
-                       hover:text-gray-900 dark:hover:text-white transition-colors"
-              >
-                关闭
-              </button>
+              </div>
             )}
           </div>
         </div>

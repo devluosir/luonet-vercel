@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getServerSession } from 'next-auth';
+import { config } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { hash, compare } from 'bcryptjs';
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.user) {
+    const session = await getServerSession(config);
+    if (!session?.user?.id) {
       return NextResponse.json({ error: '未登录' }, { status: 401 });
     }
 
@@ -17,11 +18,19 @@ export async function POST(req: Request) {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id }
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        password: true
+      }
     });
 
     if (!user) {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 });
+    }
+
+    if (!user.password) {
+      return NextResponse.json({ error: '用户密码数据异常' }, { status: 400 });
     }
 
     const isValid = await compare(currentPassword, user.password);
@@ -38,6 +47,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: '密码修改成功' });
   } catch (error) {
     console.error('修改密码时出错:', error);
-    return NextResponse.json({ error: '修改密码失败' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : '修改密码失败';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 } 
