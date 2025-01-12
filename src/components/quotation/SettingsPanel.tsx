@@ -139,7 +139,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
     <div className={settingsPanelClassName}>
       {/* 小屏布局 */}
       <div className="flex flex-col gap-4 sm:hidden">
-        {/* 第一行：日期和名字 */}
+        {/* 第一行：日期和币种 */}
         <div className="flex items-center justify-center gap-4">
           <input
             type="date"
@@ -147,6 +147,57 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             onChange={e => onChange({ ...data, date: e.target.value })}
             className={`${inputClassName} w-[130px]`}
           />
+           {/* 币种选择 */}
+           <div className={`${radioGroupClassName} h-[38px] w-[120px]`}>
+            <label
+              className={`${radioButtonClassName} ${
+                data.currency === 'USD' ? radioButtonActiveClassName : 
+                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
+              }`}
+            >
+              <input
+                type="radio"
+                name="currency"
+                value="USD"
+                checked={data.currency === 'USD'}
+                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
+                className="sr-only"
+              />
+              <span>$</span>
+            </label>
+            <label
+              className={`${radioButtonClassName} ${
+                data.currency === 'EUR' ? radioButtonActiveClassName : 
+                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
+              }`}
+            >
+              <input
+                type="radio"
+                name="currency"
+                value="EUR"
+                checked={data.currency === 'EUR'}
+                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
+                className="sr-only"
+              />
+              <span>€</span>
+            </label>
+            <label
+              className={`${radioButtonClassName} ${
+                data.currency === 'CNY' ? radioButtonActiveClassName : 
+                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
+              }`}
+            >
+              <input
+                type="radio"
+                name="currency"
+                value="CNY"
+                checked={data.currency === 'CNY'}
+                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
+                className="sr-only"
+              />
+              <span>¥</span>
+            </label>
+          </div>
         </div>
 
         {/* 第二行：Bank复选框和币种选择 */}
@@ -208,59 +259,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
               <line x1="15" y1="3" x2="15" y2="21"></line>
             </svg>
             <span>Table</span>
-          </button>
-
-          {/* 币种选择 */}
-          <div className={`${radioGroupClassName} h-[38px] w-[120px]`}>
-            <label
-              className={`${radioButtonClassName} ${
-                data.currency === 'USD' ? radioButtonActiveClassName : 
-                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
-              }`}
-            >
-              <input
-                type="radio"
-                name="currency"
-                value="USD"
-                checked={data.currency === 'USD'}
-                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
-                className="sr-only"
-              />
-              <span>$</span>
-            </label>
-            <label
-              className={`${radioButtonClassName} ${
-                data.currency === 'EUR' ? radioButtonActiveClassName : 
-                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
-              }`}
-            >
-              <input
-                type="radio"
-                name="currency"
-                value="EUR"
-                checked={data.currency === 'EUR'}
-                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
-                className="sr-only"
-              />
-              <span>€</span>
-            </label>
-            <label
-              className={`${radioButtonClassName} ${
-                data.currency === 'CNY' ? radioButtonActiveClassName : 
-                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
-              }`}
-            >
-              <input
-                type="radio"
-                name="currency"
-                value="CNY"
-                checked={data.currency === 'CNY'}
-                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
-                className="sr-only"
-              />
-              <span>¥</span>
-            </label>
-          </div>
+          </button>        
         </div>
 
         {/* 表格设置展开面板 */}
