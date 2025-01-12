@@ -53,7 +53,7 @@ const MODULES = [
     id: 'feature1', 
     name: '功能1', 
     description: '待开发功能', 
-    path: '/tools/feature1',
+    path: '/review',
     icon: Star,
     color: 'from-purple-500 to-pink-500'
   },
