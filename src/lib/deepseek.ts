@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 if (!process.env.DEEPSEEK_API_KEY) {
   throw new Error('Missing DEEPSEEK_API_KEY environment variable');
@@ -58,21 +59,18 @@ export async function generateMail({
       try {
         console.log(`Attempt ${attempts + 1} of ${maxAttempts}`);
         
-        const requestBody = {
+        const messages: ChatCompletionMessageParam[] = [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ];
+
+        const completion = await deepseek.chat.completions.create({
           model: "deepseek-chat",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-          ],
+          messages,
           temperature: 0.7,
           max_tokens: 2000,
-          stream: false // 明确指定非流式输出
-        };
-        
-        console.log('Request body:', JSON.stringify(requestBody, null, 2));
-
-        // 使用正确的 API 端点
-        const completion = await deepseek.chat.completions.create(requestBody);
+          stream: false as const
+        });
 
         console.log('API response status:', completion.choices?.[0]?.finish_reason);
         console.log('API response message:', completion.choices?.[0]?.message);
@@ -83,15 +81,15 @@ export async function generateMail({
         }
 
         return completion.choices[0].message.content;
-      } catch (error: any) {
+      } catch (error) {
         console.error(`Attempt ${attempts + 1} failed:`, error);
         
         attempts++;
         if (attempts === maxAttempts) {
-          if (error.status === 504) {
+          if ('status' in error && error.status === 504) {
             throw new Error('服务器响应超时，请稍后重试');
           }
-          if (error.status === 429) {
+          if ('status' in error && error.status === 429) {
             throw new Error('请求过于频繁，请稍后重试');
           }
           throw error;
@@ -105,28 +103,33 @@ export async function generateMail({
     }
 
     throw new Error('达到最大重试次数');
-  } catch (error: any) {
+  } catch (error) {
     console.error('Final DeepSeek API Error:', error);
     
     // 处理特定错误类型
-    if (error.status === 504) {
-      throw new Error('服务器响应超时，请稍后重试');
+    if ('status' in error) {
+      if (error.status === 504) {
+        throw new Error('服务器响应超时，请稍后重试');
+      }
+      if (error.status === 429) {
+        throw new Error('请求过于频繁，请稍后重试');
+      }
     }
-    if (error.status === 429) {
-      throw new Error('请求过于频繁，请稍后重试');
-    }
-    if (error.message.includes('timeout')) {
-      throw new Error('请求超时，请稍后重试');
-    }
-    if (error.message.includes('rate limit')) {
-      throw new Error('请求过于频繁，请稍后重试');
+
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        throw new Error('请求超时，请稍后重试');
+      }
+      if (error.message.includes('rate limit')) {
+        throw new Error('请求过于频繁，请稍后重试');
+      }
+      if (error.name === 'NetworkError' || error.message.includes('network')) {
+        throw new Error('网络连接错误，请检查网络后重试');
+      }
+      
+      throw error;
     }
     
-    // 如果是网络错误
-    if (error.name === 'NetworkError' || error.message.includes('network')) {
-      throw new Error('网络连接错误，请检查网络后重试');
-    }
-    
-    throw new Error(error.message || '生成失败，请稍后重试');
+    throw new Error('生成失败，请稍后重试');
   }
 } 
