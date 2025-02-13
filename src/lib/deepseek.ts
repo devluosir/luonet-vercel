@@ -34,6 +34,24 @@ function isAPIError(error: unknown): error is APIError {
   return typeof error === 'object' && error !== null && ('status' in error || 'message' in error);
 }
 
+// 添加 AbortController 用于请求超时控制
+async function fetchWithTimeout(url: string, options: RequestInit, timeout = 8000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
 export async function generateMail({
   content,
   language,
@@ -66,6 +84,7 @@ export async function generateMail({
 
     let attempts = 0;
     const maxAttempts = 3;
+    const timeoutDuration = 8000; // 8 秒超时
     
     while (attempts < maxAttempts) {
       try {
@@ -81,24 +100,31 @@ export async function generateMail({
             { role: "user", content: userPrompt }
           ],
           temperature: 0.7,
-          max_tokens: 2000,
-          stream: false
+          max_tokens: 1000, // 减少 token 数量以加快响应
+          stream: false,
+          presence_penalty: 0,
+          frequency_penalty: 0
         };
 
         console.log('Request body:', JSON.stringify(requestBody, null, 2));
 
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-            'Accept': 'application/json'
+        // 使用带超时的 fetch
+        const response = await fetchWithTimeout(
+          apiUrl,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+              'Accept': 'application/json',
+              'Connection': 'keep-alive'
+            },
+            body: JSON.stringify(requestBody)
           },
-          body: JSON.stringify(requestBody)
-        });
+          timeoutDuration + (attempts * 2000) // 每次重试增加超时时间
+        );
 
         console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
           let errorMessage = `API 请求失败: ${response.status} ${response.statusText}`;
@@ -110,7 +136,7 @@ export async function generateMail({
             console.error('Failed to read error response:', e);
           }
           
-          if (response.status === 504) {
+          if (response.status === 504 || response.status === 408) {
             throw new Error('服务器响应超时，请稍后重试');
           }
           if (response.status === 429) {
@@ -119,14 +145,8 @@ export async function generateMail({
           throw new Error(errorMessage);
         }
 
-        const contentType = response.headers.get('content-type');
-        if (!contentType?.includes('application/json')) {
-          console.error('Unexpected content type:', contentType);
-          throw new Error('API 返回格式错误');
-        }
-
         const data = await response.json();
-        console.log('API Response:', JSON.stringify(data, null, 2));
+        console.log('API Response received');
 
         if (!data.choices?.[0]?.message?.content) {
           console.error('Invalid API response format:', data);
@@ -140,13 +160,16 @@ export async function generateMail({
         attempts++;
         if (attempts === maxAttempts) {
           if (error instanceof Error) {
+            if (error.name === 'AbortError') {
+              throw new Error('请求超时，请稍后重试');
+            }
             throw error;
           }
           throw new Error('请求失败，请稍后重试');
         }
         
-        // 指数退避重试
-        const delay = Math.min(1000 * Math.pow(2, attempts), 10000);
+        // 指数退避重试，增加等待时间
+        const delay = Math.min(2000 * Math.pow(2, attempts), 10000);
         console.log(`Waiting ${delay}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
