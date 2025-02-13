@@ -65,8 +65,9 @@ export async function generateMail({
             { role: "user", content: userPrompt }
           ],
           temperature: 0.7,
-          max_tokens: 2000,
-          timeout: 30000
+          max_tokens: 2000
+        }, {
+          timeout: 30000 // 在 RequestOptions 中设置超时
         });
 
         console.log('API response:', completion);
