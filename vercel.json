@@ -6,5 +6,8 @@
       "memory": 1024,
       "maxDuration": 60
     }
+  },
+  "edge": {
+    "api/**": true
   }
 } 

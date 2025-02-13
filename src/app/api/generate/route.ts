@@ -1,31 +1,111 @@
 import { NextResponse } from 'next/server';
-import { generateMail } from '@/lib/deepseek';
+import type { NextRequest } from 'next/server';
 
-export async function POST(req: Request) {
+export const runtime = 'edge';
+
+if (!process.env.DEEPSEEK_API_KEY) {
+  throw new Error('Missing DEEPSEEK_API_KEY environment variable');
+}
+
+const BASE_URL = 'https://api.deepseek.com/v1';
+
+export async function POST(request: NextRequest) {
   try {
-    // 获取请求数据
-    const data = await req.json();
-    const { language, type, content, originalMail, mode } = data;
+    const { content, language, type, originalMail = '', mode } = await request.json();
 
-    // 验证必要参数
-    if (!content || !language || !type || !mode) {
-      return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
+    const systemPrompt = mode === 'mail' 
+      ? `You are a professional business email assistant. Help users write business emails in ${language}. 
+         The tone should be ${type}. Focus on clarity, professionalism, and cultural appropriateness.
+         Please format the output with clear sections:
+         1. For bilingual emails, use [English] and [中文] to separate languages
+         2. Start with [Subject] for email subject
+         3. Use proper spacing between sections`
+      : `You are a professional business email assistant. Help users reply to business emails in ${language}. 
+         The tone should be ${type}. Ensure the reply is contextually appropriate and professional.
+         Please format the output with clear sections:
+         1. For bilingual emails, use [English] and [中文] to separate languages
+         2. Use proper spacing between sections`;
+
+    const userPrompt = mode === 'mail'
+      ? `Please help me write a business email with the following content: ${content}`
+      : `Please help me reply to this email:\n\nOriginal email:\n${originalMail}\n\nMy reply draft:\n${content}`;
+
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        const response = await fetch(`${BASE_URL}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            model: "deepseek-chat",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 800,
+            presence_penalty: 0,
+            frequency_penalty: 0
+          })
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`API 请求失败: ${response.status} ${response.statusText} - ${text}`);
+        }
+
+        const data = await response.json();
+        
+        if (!data.choices?.[0]?.message?.content) {
+          throw new Error('API 返回数据格式错误');
+        }
+
+        return NextResponse.json({ result: data.choices[0].message.content });
+        
+      } catch (error: any) {
+        console.error(`Attempt ${retryCount + 1} failed:`, error);
+        
+        if (error.message.includes('504') || error.message.includes('408')) {
+          if (retryCount === maxRetries) {
+            return NextResponse.json(
+              { error: '服务器响应超时，请稍后重试' },
+              { status: 504 }
+            );
+          }
+          await new Promise(resolve => setTimeout(resolve, 3000 * (retryCount + 1)));
+          retryCount++;
+          continue;
+        }
+        
+        if (error.message.includes('429')) {
+          return NextResponse.json(
+            { error: '请求过于频繁，请稍后重试' },
+            { status: 429 }
+          );
+        }
+        
+        return NextResponse.json(
+          { error: error.message || '生成失败，请稍后重试' },
+          { status: 500 }
+        );
+      }
     }
-
-    // 调用 DeepSeek API 生成邮件内容
-    const result = await generateMail({
-      content,
-      language,
-      type,
-      originalMail,
-      mode,
-    });
-
-    return NextResponse.json({ result });
-  } catch (error) {
-    console.error('Generate API Error:', error);
+    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '生成失败，请稍后重试' },
+      { error: '达到最大重试次数' },
+      { status: 500 }
+    );
+    
+  } catch (error) {
+    console.error('Final Error:', error);
+    return NextResponse.json(
+      { error: '生成失败，请稍后重试' },
       { status: 500 }
     );
   }
