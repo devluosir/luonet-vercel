@@ -6,10 +6,12 @@ if (!process.env.DEEPSEEK_API_KEY) {
 
 // 创建 DeepSeek API 客户端
 const deepseek = new OpenAI({
-  baseURL: 'https://api.deepseek.com/v1',
+  baseURL: 'https://api.deepseek.com', // 修改为官方文档推荐的基础 URL
   apiKey: process.env.DEEPSEEK_API_KEY,
-  defaultHeaders: { 'Content-Type': 'application/json' },
-  timeout: 60000,
+  defaultHeaders: { 
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}` // 添加正确的认证头
+  }
 });
 
 interface GenerateMailOptions {
@@ -28,7 +30,7 @@ export async function generateMail({
   mode
 }: GenerateMailOptions): Promise<string> {
   try {
-    console.log('Generating mail with params:', { content, language, type, mode });
+    console.log('Starting mail generation with params:', { content, language, type, mode });
     
     // 构建系统提示词
     const systemPrompt = mode === 'mail' 
@@ -44,59 +46,87 @@ export async function generateMail({
          1. For bilingual emails, use [English] and [中文] to separate languages
          2. Use proper spacing between sections`;
 
-    console.log('System prompt:', systemPrompt);
-
     // 构建用户提示词
     const userPrompt = mode === 'mail'
       ? `Please help me write a business email with the following content: ${content}`
       : `Please help me reply to this email:\n\nOriginal email:\n${originalMail}\n\nMy reply draft:\n${content}`;
-
-    console.log('User prompt:', userPrompt);
 
     let attempts = 0;
     const maxAttempts = 3;
     
     while (attempts < maxAttempts) {
       try {
-        const completion = await deepseek.chat.completions.create({
+        console.log(`Attempt ${attempts + 1} of ${maxAttempts}`);
+        
+        const requestBody = {
           model: "deepseek-chat",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt }
           ],
           temperature: 0.7,
-          max_tokens: 2000
-        }, {
-          timeout: 30000 // 在 RequestOptions 中设置超时
-        });
+          max_tokens: 2000,
+          stream: false // 明确指定非流式输出
+        };
+        
+        console.log('Request body:', JSON.stringify(requestBody, null, 2));
 
-        console.log('API response:', completion);
+        // 使用正确的 API 端点
+        const completion = await deepseek.chat.completions.create(requestBody);
+
+        console.log('API response status:', completion.choices?.[0]?.finish_reason);
+        console.log('API response message:', completion.choices?.[0]?.message);
 
         if (!completion.choices?.[0]?.message?.content) {
+          console.error('Invalid API response format:', completion);
           throw new Error('API 返回数据格式错误');
         }
 
         return completion.choices[0].message.content;
-      } catch (error) {
+      } catch (error: any) {
+        console.error(`Attempt ${attempts + 1} failed:`, error);
+        
         attempts++;
         if (attempts === maxAttempts) {
+          if (error.status === 504) {
+            throw new Error('服务器响应超时，请稍后重试');
+          }
+          if (error.status === 429) {
+            throw new Error('请求过于频繁，请稍后重试');
+          }
           throw error;
         }
-        await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
+        
+        // 指数退避重试
+        const delay = Math.min(1000 * Math.pow(2, attempts), 10000);
+        console.log(`Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
 
     throw new Error('达到最大重试次数');
-  } catch (error) {
-    console.error('DeepSeek API Error:', error);
-    if (error instanceof Error) {
-      if (error.message.includes('timeout')) {
-        throw new Error('请求超时，请稍后重试');
-      }
-      if (error.message.includes('rate limit')) {
-        throw new Error('请求过于频繁，请稍后重试');
-      }
+  } catch (error: any) {
+    console.error('Final DeepSeek API Error:', error);
+    
+    // 处理特定错误类型
+    if (error.status === 504) {
+      throw new Error('服务器响应超时，请稍后重试');
     }
-    throw new Error(error instanceof Error ? error.message : '生成失败，请稍后重试');
+    if (error.status === 429) {
+      throw new Error('请求过于频繁，请稍后重试');
+    }
+    if (error.message.includes('timeout')) {
+      throw new Error('请求超时，请稍后重试');
+    }
+    if (error.message.includes('rate limit')) {
+      throw new Error('请求过于频繁，请稍后重试');
+    }
+    
+    // 如果是网络错误
+    if (error.name === 'NetworkError' || error.message.includes('network')) {
+      throw new Error('网络连接错误，请检查网络后重试');
+    }
+    
+    throw new Error(error.message || '生成失败，请稍后重试');
   }
 } 
