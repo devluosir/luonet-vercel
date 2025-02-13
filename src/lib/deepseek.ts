@@ -14,12 +14,8 @@ interface APIError {
 
 // 创建 DeepSeek API 客户端
 const deepseek = new OpenAI({
-  baseURL: 'https://api.deepseek.com', // 修改为官方文档推荐的基础 URL
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  defaultHeaders: { 
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}` // 添加正确的认证头
-  }
+  baseURL: 'https://api.deepseek.com/v1', // 使用完整的 v1 路径
+  apiKey: process.env.DEEPSEEK_API_KEY
 });
 
 interface GenerateMailOptions {
@@ -70,41 +66,55 @@ export async function generateMail({
     while (attempts < maxAttempts) {
       try {
         console.log(`Attempt ${attempts + 1} of ${maxAttempts}`);
-        
-        const messages: ChatCompletionMessageParam[] = [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ];
 
-        const completion = await deepseek.chat.completions.create({
-          model: "deepseek-chat",
-          messages,
-          temperature: 0.7,
-          max_tokens: 2000,
-          stream: false as const
+        // 使用 fetch 直接调用 API
+        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: "deepseek-chat",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000,
+            stream: false
+          })
         });
 
-        console.log('API response status:', completion.choices?.[0]?.finish_reason);
-        console.log('API response message:', completion.choices?.[0]?.message);
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error('API Error Response:', errorData);
+          
+          if (response.status === 504) {
+            throw new Error('服务器响应超时，请稍后重试');
+          }
+          if (response.status === 429) {
+            throw new Error('请求过于频繁，请稍后重试');
+          }
+          throw new Error(`API 请求失败: ${response.status} ${response.statusText}`);
+        }
 
-        if (!completion.choices?.[0]?.message?.content) {
-          console.error('Invalid API response format:', completion);
+        const data = await response.json();
+        console.log('API Response:', data);
+
+        if (!data.choices?.[0]?.message?.content) {
+          console.error('Invalid API response format:', data);
           throw new Error('API 返回数据格式错误');
         }
 
-        return completion.choices[0].message.content;
-      } catch (error: unknown) {
+        return data.choices[0].message.content;
+      } catch (error) {
         console.error(`Attempt ${attempts + 1} failed:`, error);
         
         attempts++;
         if (attempts === maxAttempts) {
-          if (isAPIError(error)) {
-            if (error.status === 504) {
-              throw new Error('服务器响应超时，请稍后重试');
-            }
-            if (error.status === 429) {
-              throw new Error('请求过于频繁，请稍后重试');
-            }
+          if (error instanceof Error) {
+            throw error;
           }
           throw new Error('请求失败，请稍后重试');
         }
@@ -117,26 +127,8 @@ export async function generateMail({
     }
 
     throw new Error('达到最大重试次数');
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('Final DeepSeek API Error:', error);
-    
-    if (isAPIError(error)) {
-      if (error.status === 504) {
-        throw new Error('服务器响应超时，请稍后重试');
-      }
-      if (error.status === 429) {
-        throw new Error('请求过于频繁，请稍后重试');
-      }
-      if (error.message?.includes('timeout')) {
-        throw new Error('请求超时，请稍后重试');
-      }
-      if (error.message?.includes('rate limit')) {
-        throw new Error('请求过于频繁，请稍后重试');
-      }
-      if (error.name === 'NetworkError' || error.message?.includes('network')) {
-        throw new Error('网络连接错误，请检查网络后重试');
-      }
-    }
     
     if (error instanceof Error) {
       throw error;
