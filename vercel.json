@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "regions": ["sin1"],
+  "regions": ["hnd1"],
   "functions": {
     "app/api/**": {
       "memory": 1024,
