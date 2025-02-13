@@ -2,9 +2,20 @@
   "framework": "nextjs",
   "regions": ["hkg1"],
   "functions": {
-    "app/api/**": {
+    "app/api/generate/**": {
       "memory": 1024,
       "maxDuration": 60
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/manifest.webmanifest",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
+        }
+      ]
+    }
+  ]
 } 

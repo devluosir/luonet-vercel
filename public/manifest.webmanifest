@@ -1,0 +1,9 @@
+{
+  "name": "Business Email Assistant",
+  "short_name": "Email AI",
+  "description": "Professional business email writing and reply assistant",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000"
+} 
