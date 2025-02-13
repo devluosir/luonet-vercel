@@ -5,6 +5,9 @@ if (!process.env.DEEPSEEK_API_KEY) {
   throw new Error('Missing DEEPSEEK_API_KEY environment variable');
 }
 
+const BASE_URL = process.env.BASE_URL || 'https://api.deepseek.com';
+console.log('Using BASE_URL:', BASE_URL); // 添加日志
+
 // 定义错误类型接口
 interface APIError {
   status?: number;
@@ -14,7 +17,7 @@ interface APIError {
 
 // 创建 DeepSeek API 客户端
 const deepseek = new OpenAI({
-  baseURL: 'https://api.deepseek.com/v1', // 使用完整的 v1 路径
+  baseURL: BASE_URL,
   apiKey: process.env.DEEPSEEK_API_KEY
 });
 
@@ -40,6 +43,7 @@ export async function generateMail({
 }: GenerateMailOptions): Promise<string> {
   try {
     console.log('Starting mail generation with params:', { content, language, type, mode });
+    console.log('Using API Key:', process.env.DEEPSEEK_API_KEY?.substring(0, 8) + '...'); // 只打印 API key 的前8位
     
     // 构建系统提示词
     const systemPrompt = mode === 'mail' 
@@ -67,28 +71,44 @@ export async function generateMail({
       try {
         console.log(`Attempt ${attempts + 1} of ${maxAttempts}`);
 
-        // 使用 fetch 直接调用 API
-        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        const apiUrl = `${BASE_URL}/v1/chat/completions`;
+        console.log('Making request to:', apiUrl);
+
+        const requestBody = {
+          model: "deepseek-chat",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+          stream: false
+        };
+
+        console.log('Request body:', JSON.stringify(requestBody, null, 2));
+
+        const response = await fetch(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
+            'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+            'Accept': 'application/json'
           },
-          body: JSON.stringify({
-            model: "deepseek-chat",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 2000,
-            stream: false
-          })
+          body: JSON.stringify(requestBody)
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
-          const errorData = await response.text();
-          console.error('API Error Response:', errorData);
+          let errorMessage = `API 请求失败: ${response.status} ${response.statusText}`;
+          try {
+            const errorData = await response.text();
+            console.error('API Error Response:', errorData);
+            errorMessage += ` - ${errorData}`;
+          } catch (e) {
+            console.error('Failed to read error response:', e);
+          }
           
           if (response.status === 504) {
             throw new Error('服务器响应超时，请稍后重试');
@@ -96,11 +116,17 @@ export async function generateMail({
           if (response.status === 429) {
             throw new Error('请求过于频繁，请稍后重试');
           }
-          throw new Error(`API 请求失败: ${response.status} ${response.statusText}`);
+          throw new Error(errorMessage);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType?.includes('application/json')) {
+          console.error('Unexpected content type:', contentType);
+          throw new Error('API 返回格式错误');
         }
 
         const data = await response.json();
-        console.log('API Response:', data);
+        console.log('API Response:', JSON.stringify(data, null, 2));
 
         if (!data.choices?.[0]?.message?.content) {
           console.error('Invalid API response format:', data);
@@ -131,6 +157,8 @@ export async function generateMail({
     console.error('Final DeepSeek API Error:', error);
     
     if (error instanceof Error) {
+      // 添加更多上下文信息到错误消息中
+      error.message = `DeepSeek API Error: ${error.message} (BASE_URL: ${BASE_URL})`;
       throw error;
     }
     
