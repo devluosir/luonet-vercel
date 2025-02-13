@@ -1,5 +1,3 @@
-import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
-
 interface DeepSeekResponse {
   choices?: Array<{
     message?: {
