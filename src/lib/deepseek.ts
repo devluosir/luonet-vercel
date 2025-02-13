@@ -121,10 +121,12 @@ export async function generateMail({
 
         return response.choices[0].message.content;
         
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Attempt ${retryCount + 1} failed:`, error);
         
-        if (error.message.includes('504') || error.message.includes('408')) {
+        const err = error as Error;
+        
+        if (err.message.includes('504') || err.message.includes('408')) {
           if (retryCount === maxRetries) {
             throw new Error('服务器响应超时，请稍后重试');
           }
@@ -133,7 +135,7 @@ export async function generateMail({
           continue;
         }
         
-        if (error.message.includes('429')) {
+        if (err.message.includes('429')) {
           throw new Error('请求过于频繁，请稍后重试');
         }
         
@@ -143,7 +145,7 @@ export async function generateMail({
     
     throw new Error('达到最大重试次数');
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Final Error:', error);
     if (error instanceof Error) {
       throw error;
