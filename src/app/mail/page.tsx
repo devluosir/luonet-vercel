@@ -35,11 +35,17 @@ export default function MailPage() {
         mode: activeTab
       };
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 秒超时
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestData)
+        body: JSON.stringify(requestData),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         let errorMessage = '生成失败';
@@ -50,16 +56,33 @@ export default function MailPage() {
           }
         } catch (e) {
           console.error('Error parsing error response:', e);
+          if (response.status === 504) {
+            errorMessage = '请求超时，请稍后重试';
+          } else if (response.status === 429) {
+            errorMessage = '请求过于频繁，请稍后重试';
+          }
         }
         throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      if (!data.result) {
+        throw new Error('返回数据格式错误');
+      }
+      
       setGeneratedContent(data.result);
 
     } catch (error: unknown) {
       console.error('Generate Error:', error);
-      setError(error instanceof Error ? error.message : '生成失败，请稍后重试');
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          setError('请求超时，请稍后重试');
+        } else {
+          setError(error.message);
+        }
+      } else {
+        setError('生成失败，请稍后重试');
+      }
     } finally {
       setIsLoading(false);
     }
