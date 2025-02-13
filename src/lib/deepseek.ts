@@ -5,6 +5,13 @@ if (!process.env.DEEPSEEK_API_KEY) {
   throw new Error('Missing DEEPSEEK_API_KEY environment variable');
 }
 
+// 定义错误类型接口
+interface APIError {
+  status?: number;
+  message?: string;
+  name?: string;
+}
+
 // 创建 DeepSeek API 客户端
 const deepseek = new OpenAI({
   baseURL: 'https://api.deepseek.com', // 修改为官方文档推荐的基础 URL
@@ -21,6 +28,11 @@ interface GenerateMailOptions {
   type: string;
   originalMail?: string;
   mode: 'mail' | 'reply';
+}
+
+// 类型守卫函数
+function isAPIError(error: unknown): error is APIError {
+  return typeof error === 'object' && error !== null && ('status' in error || 'message' in error);
 }
 
 export async function generateMail({
@@ -81,18 +93,20 @@ export async function generateMail({
         }
 
         return completion.choices[0].message.content;
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`Attempt ${attempts + 1} failed:`, error);
         
         attempts++;
         if (attempts === maxAttempts) {
-          if ('status' in error && error.status === 504) {
-            throw new Error('服务器响应超时，请稍后重试');
+          if (isAPIError(error)) {
+            if (error.status === 504) {
+              throw new Error('服务器响应超时，请稍后重试');
+            }
+            if (error.status === 429) {
+              throw new Error('请求过于频繁，请稍后重试');
+            }
           }
-          if ('status' in error && error.status === 429) {
-            throw new Error('请求过于频繁，请稍后重试');
-          }
-          throw error;
+          throw new Error('请求失败，请稍后重试');
         }
         
         // 指数退避重试
@@ -103,30 +117,28 @@ export async function generateMail({
     }
 
     throw new Error('达到最大重试次数');
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Final DeepSeek API Error:', error);
     
-    // 处理特定错误类型
-    if ('status' in error) {
+    if (isAPIError(error)) {
       if (error.status === 504) {
         throw new Error('服务器响应超时，请稍后重试');
       }
       if (error.status === 429) {
         throw new Error('请求过于频繁，请稍后重试');
       }
-    }
-
-    if (error instanceof Error) {
-      if (error.message.includes('timeout')) {
+      if (error.message?.includes('timeout')) {
         throw new Error('请求超时，请稍后重试');
       }
-      if (error.message.includes('rate limit')) {
+      if (error.message?.includes('rate limit')) {
         throw new Error('请求过于频繁，请稍后重试');
       }
-      if (error.name === 'NetworkError' || error.message.includes('network')) {
+      if (error.name === 'NetworkError' || error.message?.includes('network')) {
         throw new Error('网络连接错误，请检查网络后重试');
       }
-      
+    }
+    
+    if (error instanceof Error) {
       throw error;
     }
     
