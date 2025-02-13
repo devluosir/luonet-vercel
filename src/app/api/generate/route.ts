@@ -7,7 +7,7 @@ if (!process.env.DEEPSEEK_API_KEY) {
   throw new Error('Missing DEEPSEEK_API_KEY environment variable');
 }
 
-const BASE_URL = 'https://api.deepseek.com/v1';
+const BASE_URL = 'https://api.deepseek.com';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,12 +35,15 @@ export async function POST(request: NextRequest) {
     
     while (retryCount <= maxRetries) {
       try {
-        const response = await fetch(`${BASE_URL}/chat/completions`, {
+        console.log(`Attempt ${retryCount + 1} of ${maxRetries + 1}`);
+        
+        const response = await fetch(`${BASE_URL}/v1/chat/completions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'User-Agent': 'Vercel Edge Function'
           },
           body: JSON.stringify({
             model: "deepseek-chat",
@@ -51,16 +54,24 @@ export async function POST(request: NextRequest) {
             temperature: 0.7,
             max_tokens: 800,
             presence_penalty: 0,
-            frequency_penalty: 0
+            frequency_penalty: 0,
+            stream: false
           })
         });
 
         if (!response.ok) {
           const text = await response.text();
+          console.error('API Error Response:', {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+            body: text
+          });
           throw new Error(`API 请求失败: ${response.status} ${response.statusText} - ${text}`);
         }
 
         const data = await response.json();
+        console.log('API Response:', JSON.stringify(data, null, 2));
         
         if (!data.choices?.[0]?.message?.content) {
           throw new Error('API 返回数据格式错误');
