@@ -1,41 +1,10 @@
-import OpenAI from 'openai';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 if (!process.env.DEEPSEEK_API_KEY) {
   throw new Error('Missing DEEPSEEK_API_KEY environment variable');
 }
 
-// 使用环境变量中的 BASE_URL
 const BASE_URL = 'https://api.deepseek.com/v1';
-console.log('Using BASE_URL:', BASE_URL);
-
-// 创建 DeepSeek API 客户端
-const deepseek = new OpenAI({
-  baseURL: BASE_URL,
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  timeout: 60000, // 60 秒超时
-  maxRetries: 3,
-  defaultHeaders: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
-});
-
-// 添加连接测试函数
-async function testConnection() {
-  try {
-    const completion = await deepseek.chat.completions.create({
-      model: "deepseek-chat",
-      messages: [{ role: "system", content: "Hello" }],
-      max_tokens: 5
-    });
-    console.log('Connection test successful');
-    return true;
-  } catch (error) {
-    console.error('Connection test failed:', error);
-    return false;
-  }
-}
 
 interface GenerateMailOptions {
   content: string;
@@ -43,6 +12,31 @@ interface GenerateMailOptions {
   type: string;
   originalMail?: string;
   mode: 'mail' | 'reply';
+}
+
+async function makeRequest(url: string, data: any) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.error('API Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      body: text
+    });
+    throw new Error(`API 请求失败: ${response.status} ${response.statusText} - ${text}`);
+  }
+
+  return response.json();
 }
 
 export async function generateMail({
@@ -54,13 +48,6 @@ export async function generateMail({
 }: GenerateMailOptions): Promise<string> {
   try {
     console.log('Starting mail generation with params:', { content, language, type, mode });
-    console.log('Using API Key:', process.env.DEEPSEEK_API_KEY?.substring(0, 8) + '...');
-    
-    // 测试连接
-    const isConnected = await testConnection();
-    if (!isConnected) {
-      throw new Error('无法连接到 DeepSeek API，请检查网络连接和 API 密钥');
-    }
     
     const systemPrompt = mode === 'mail' 
       ? `You are a professional business email assistant. Help users write business emails in ${language}. 
@@ -86,7 +73,7 @@ export async function generateMail({
       try {
         console.log(`Attempt ${retryCount + 1} of ${maxRetries + 1}`);
         
-        const completion = await deepseek.chat.completions.create({
+        const requestData = {
           model: "deepseek-chat",
           messages: [
             { role: "system", content: systemPrompt },
@@ -96,39 +83,36 @@ export async function generateMail({
           max_tokens: 800,
           presence_penalty: 0,
           frequency_penalty: 0
-        });
+        };
 
-        if (!completion.choices?.[0]?.message?.content) {
+        console.log('Request data:', JSON.stringify(requestData, null, 2));
+        
+        const response = await makeRequest(`${BASE_URL}/chat/completions`, requestData);
+        console.log('Response received:', JSON.stringify(response, null, 2));
+
+        if (!response.choices?.[0]?.message?.content) {
           throw new Error('API 返回数据格式错误');
         }
 
-        return completion.choices[0].message.content;
+        return response.choices[0].message.content;
         
       } catch (error: any) {
         console.error(`Attempt ${retryCount + 1} failed:`, error);
-        console.error('Error details:', {
-          name: error.name,
-          message: error.message,
-          status: error.status,
-          stack: error.stack,
-          response: error.response?.data
-        });
         
-        if (error.status === 504 || error.status === 408) {
+        if (error.message.includes('504') || error.message.includes('408')) {
           if (retryCount === maxRetries) {
             throw new Error('服务器响应超时，请稍后重试');
           }
-          // 增加重试等待时间
           await new Promise(resolve => setTimeout(resolve, 3000 * (retryCount + 1)));
           retryCount++;
           continue;
         }
         
-        if (error.status === 429) {
+        if (error.message.includes('429')) {
           throw new Error('请求过于频繁，请稍后重试');
         }
         
-        throw new Error(`DeepSeek API 错误: ${error.message || '未知错误'}`);
+        throw error;
       }
     }
     
