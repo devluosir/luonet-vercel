@@ -1,5 +1,18 @@
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
+interface DeepSeekResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+}
+
+interface DeepSeekError {
+  message: string;
+  status?: number;
+}
+
 if (!process.env.DEEPSEEK_API_KEY) {
   throw new Error('Missing DEEPSEEK_API_KEY environment variable');
 }
@@ -14,7 +27,19 @@ interface GenerateMailOptions {
   mode: 'mail' | 'reply';
 }
 
-async function makeRequest(url: string, data: any) {
+interface RequestData {
+  model: string;
+  messages: Array<{
+    role: string;
+    content: string;
+  }>;
+  temperature: number;
+  max_tokens: number;
+  presence_penalty: number;
+  frequency_penalty: number;
+}
+
+async function makeRequest(url: string, data: RequestData): Promise<DeepSeekResponse> {
   const response = await fetch(url, {
     method: 'POST',
     headers: {

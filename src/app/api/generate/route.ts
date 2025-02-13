@@ -3,6 +3,11 @@ import type { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
+interface APIError {
+  message: string;
+  status?: number;
+}
+
 if (!process.env.DEEPSEEK_API_KEY) {
   throw new Error('Missing DEEPSEEK_API_KEY environment variable');
 }
@@ -79,10 +84,12 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ result: data.choices[0].message.content });
         
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`Attempt ${retryCount + 1} failed:`, error);
         
-        if (error.message.includes('504') || error.message.includes('408')) {
+        const err = error as APIError;
+        
+        if (err.message?.includes('504') || err.message?.includes('408')) {
           if (retryCount === maxRetries) {
             return NextResponse.json(
               { error: '服务器响应超时，请稍后重试' },
@@ -94,7 +101,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
         
-        if (error.message.includes('429')) {
+        if (err.message?.includes('429')) {
           return NextResponse.json(
             { error: '请求过于频繁，请稍后重试' },
             { status: 429 }
@@ -102,7 +109,7 @@ export async function POST(request: NextRequest) {
         }
         
         return NextResponse.json(
-          { error: error.message || '生成失败，请稍后重试' },
+          { error: err.message || '生成失败，请稍后重试' },
           { status: 500 }
         );
       }
@@ -113,10 +120,11 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Final Error:', error);
+    const err = error as APIError;
     return NextResponse.json(
-      { error: '生成失败，请稍后重试' },
+      { error: err.message || '生成失败，请稍后重试' },
       { status: 500 }
     );
   }
