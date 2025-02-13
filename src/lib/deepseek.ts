@@ -5,16 +5,16 @@ if (!process.env.DEEPSEEK_API_KEY) {
   throw new Error('Missing DEEPSEEK_API_KEY environment variable');
 }
 
-// 确保使用正确的 base URL
-const BASE_URL = 'https://api.deepseek.com/v1';
+// 使用环境变量中的 BASE_URL
+const BASE_URL = process.env.BASE_URL || 'https://api.deepseek.com/v1';
 console.log('Using BASE_URL:', BASE_URL);
 
 // 创建 DeepSeek API 客户端
 const deepseek = new OpenAI({
   baseURL: BASE_URL,
   apiKey: process.env.DEEPSEEK_API_KEY,
-  timeout: 30000, // 30 秒超时
-  maxRetries: 2,
+  timeout: 50000,
+  maxRetries: 3,
   defaultHeaders: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -58,7 +58,7 @@ export async function generateMail({
       : `Please help me reply to this email:\n\nOriginal email:\n${originalMail}\n\nMy reply draft:\n${content}`;
 
     let retryCount = 0;
-    const maxRetries = 2;
+    const maxRetries = 3;
     
     while (retryCount <= maxRetries) {
       try {
@@ -74,8 +74,6 @@ export async function generateMail({
           max_tokens: 800,
           presence_penalty: 0,
           frequency_penalty: 0
-        }, {
-          timeout: 25000 // 25 秒超时
         });
 
         if (!completion.choices?.[0]?.message?.content) {
@@ -91,8 +89,8 @@ export async function generateMail({
           if (retryCount === maxRetries) {
             throw new Error('服务器响应超时，请稍后重试');
           }
-          // 等待后重试
-          await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
+          // 增加重试等待时间
+          await new Promise(resolve => setTimeout(resolve, 3000 * (retryCount + 1)));
           retryCount++;
           continue;
         }
