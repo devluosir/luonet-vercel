@@ -6,20 +6,36 @@ if (!process.env.DEEPSEEK_API_KEY) {
 }
 
 // 使用环境变量中的 BASE_URL
-const BASE_URL = process.env.BASE_URL || 'https://api.deepseek.com/v1';
+const BASE_URL = 'https://api.deepseek.com/v1';
 console.log('Using BASE_URL:', BASE_URL);
 
 // 创建 DeepSeek API 客户端
 const deepseek = new OpenAI({
   baseURL: BASE_URL,
   apiKey: process.env.DEEPSEEK_API_KEY,
-  timeout: 50000,
+  timeout: 60000, // 60 秒超时
   maxRetries: 3,
   defaultHeaders: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   }
 });
+
+// 添加连接测试函数
+async function testConnection() {
+  try {
+    const completion = await deepseek.chat.completions.create({
+      model: "deepseek-chat",
+      messages: [{ role: "system", content: "Hello" }],
+      max_tokens: 5
+    });
+    console.log('Connection test successful');
+    return true;
+  } catch (error) {
+    console.error('Connection test failed:', error);
+    return false;
+  }
+}
 
 interface GenerateMailOptions {
   content: string;
@@ -39,6 +55,12 @@ export async function generateMail({
   try {
     console.log('Starting mail generation with params:', { content, language, type, mode });
     console.log('Using API Key:', process.env.DEEPSEEK_API_KEY?.substring(0, 8) + '...');
+    
+    // 测试连接
+    const isConnected = await testConnection();
+    if (!isConnected) {
+      throw new Error('无法连接到 DeepSeek API，请检查网络连接和 API 密钥');
+    }
     
     const systemPrompt = mode === 'mail' 
       ? `You are a professional business email assistant. Help users write business emails in ${language}. 
@@ -84,6 +106,13 @@ export async function generateMail({
         
       } catch (error: any) {
         console.error(`Attempt ${retryCount + 1} failed:`, error);
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          status: error.status,
+          stack: error.stack,
+          response: error.response?.data
+        });
         
         if (error.status === 504 || error.status === 408) {
           if (retryCount === maxRetries) {
