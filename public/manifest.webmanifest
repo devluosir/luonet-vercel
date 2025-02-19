@@ -1,9 +1,21 @@
 {
-  "name": "Business Email Assistant",
-  "short_name": "Email AI",
-  "description": "Professional business email writing and reply assistant",
+  "name": "Luo & Company",
+  "short_name": "Luo & Co",
+  "description": "Luo & Company Quotation System",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#000000"
+  "theme_color": "#007AFF",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 } 

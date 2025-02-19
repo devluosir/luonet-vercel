@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
-import { Settings, Download, ArrowLeft, Eye, Clipboard } from 'lucide-react';
+import { Settings, Download, ArrowLeft, Eye, Clipboard, History, Save } from 'lucide-react';
 import { generateQuotationPDF } from '@/utils/quotationPdfGenerator';
 import { generateOrderConfirmationPDF } from '@/utils/orderConfirmationPdfGenerator';
 import { TabButton } from '@/components/quotation/TabButton';
@@ -17,6 +17,7 @@ import type { QuotationData, LineItem } from '@/types/quotation';
 import { Footer } from '@/components/Footer';
 import { parseExcelData, convertExcelToLineItems } from '@/utils/excelPasteHandler';
 import { PaymentTermsSection } from '@/components/quotation/PaymentTermsSection';
+import { saveQuotationHistory } from '@/utils/quotationHistory';
 
 // 标题样式
 const titleClassName = `text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]`;
@@ -66,29 +67,49 @@ export default function QuotationPage() {
     showInvoiceReminder: false,
     additionalPaymentTerms: ''
   });
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // 初始化时根据用户名设置报价人和备注
   useEffect(() => {
-    const username = window?.localStorage?.getItem('username');
-    let from = 'Roger';
-    switch(username) {
-      case 'sharon': from = 'Sharon'; break;
-      case 'emily': from = 'Emily'; break;
-      case 'nina': from = 'Nina'; break;
-      case 'summer': from = 'Summer'; break;
+    // 检查是否有编辑数据
+    const editData = sessionStorage.getItem('edit_quotation_data');
+    if (editData) {
+      try {
+        const { type, data: historyData } = JSON.parse(editData);
+        setActiveTab(type);
+        setData(historyData);
+        // 清除 sessionStorage 中的数据
+        sessionStorage.removeItem('edit_quotation_data');
+      } catch (error) {
+        console.error('Error loading edit data:', error);
+      }
+    } else {
+      // 如果没有编辑数据，则加载用户名和默认备注
+      const username = window?.localStorage?.getItem('username');
+      let from = 'Roger';
+      switch(username) {
+        case 'sharon': from = 'Sharon'; break;
+        case 'emily': from = 'Emily'; break;
+        case 'nina': from = 'Nina'; break;
+        case 'summer': from = 'Summer'; break;
+      }
+      setData(prev => ({
+        ...prev,
+        from,
+        // 只在初始化时设置默认备注
+        ...(prev.notes === getDefaultNotes('Roger', 'quotation') ? { notes: getDefaultNotes(from, 'quotation') } : {})
+      }));
     }
-    setData(prev => ({
-      ...prev,
-      from,
-      notes: getDefaultNotes(from, activeTab)
-    }));
-  }, [activeTab]);
+  }, []);
 
   // 监听 activeTab 变化，更新 notes
   useEffect(() => {
     setData(prev => ({
       ...prev,
-      notes: getDefaultNotes(prev.from, activeTab)
+      // 只在 notes 为空数组或等于默认值时更新
+      ...(prev.notes.length === 0 || JSON.stringify(prev.notes) === JSON.stringify(getDefaultNotes(prev.from, activeTab === 'quotation' ? 'confirmation' : 'quotation'))
+        ? { notes: getDefaultNotes(prev.from, activeTab) }
+        : {})
     }));
   }, [activeTab]);
 
@@ -266,9 +287,18 @@ export default function QuotationPage() {
     input.focus();
   };
 
+  // 添加保存处理函数
+  const handleSave = useCallback(() => {
+    const result = saveQuotationHistory(activeTab, data);
+    if (result) {
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    }
+  }, [activeTab, data]);
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E]">
-      <div className="flex-1">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
+      <main className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
           <Link href="/tools" className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]">
@@ -310,17 +340,39 @@ export default function QuotationPage() {
                     <Clipboard className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setShowSettings(!showSettings);
-                  }}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
-                  title="Settings"
-                >
-                  <Settings className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/quotation/history"
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                    title="历史记录"
+                  >
+                    <History className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0 relative"
+                    title="保存"
+                  >
+                    <Save className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                    {saveSuccess && (
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-green-500 rounded-lg whitespace-nowrap">
+                        保存成功
+                      </div>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowSettings(!showSettings);
+                    }}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                    title="Settings"
+                  >
+                    <Settings className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                  </button>
+                </div>
               </div>
 
               {/* 设置面板 */}
@@ -424,153 +476,153 @@ export default function QuotationPage() {
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Notes 部分 */}
-              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 dark:border-[#3A3A3C]">
-                <div className="space-y-6">
-                  <NotesSection 
-                    data={data}
-                    onChange={setData}
-                  />
-                  {/* 银行信息区域 */}
-                  {activeTab === 'confirmation' && data.showBank && (
-                    <div className="mb-6">
-                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                        Bank Information:
-                      </label>
-                      <div className="bg-gray-50 dark:bg-[#3A3A3C] p-3 sm:p-4 rounded-xl text-sm dark:text-[#F5F5F7]">
-                        <p>Bank Name: The Hongkong and Shanghai Banking Corporation Limited</p>
-                        <p>Swift code: HSBCHKHHHKH</p>
-                        <p>Bank address: Head Office 1 Queen&apos;s Road Central Hong Kong</p>
-                        <p>A/C No.: 801470337838</p>
-                        <p>Beneficiary: Luo & Company Co., Limited</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {activeTab === 'confirmation' && data.showBank && (
-                    <PaymentTermsSection
+                {/* Notes 部分 */}
+                <div className="px-4 sm:px-6 py-4 border-t border-gray-100 dark:border-[#3A3A3C]">
+                  <div className="space-y-6">
+                    <NotesSection 
                       data={data}
                       onChange={setData}
                     />
-                  )}
-                </div>
-              </div>
+                    {/* 银行信息区域 */}
+                    {activeTab === 'confirmation' && data.showBank && (
+                      <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
+                          Bank Information:
+                        </label>
+                        <div className="bg-gray-50 dark:bg-[#3A3A3C] p-3 sm:p-4 rounded-xl text-sm dark:text-[#F5F5F7]">
+                          <p>Bank Name: The Hongkong and Shanghai Banking Corporation Limited</p>
+                          <p>Swift code: HSBCHKHHHKH</p>
+                          <p>Bank address: Head Office 1 Queen&apos;s Road Central Hong Kong</p>
+                          <p>A/C No.: 801470337838</p>
+                          <p>Beneficiary: Luo & Company Co., Limited</p>
+                        </div>
+                      </div>
+                    )}
 
-              {/* 生成按钮和预览按钮 */}
-              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 dark:border-[#3A3A3C]">
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <div className="w-full sm:w-auto sm:min-w-[180px]">
+                    {activeTab === 'confirmation' && data.showBank && (
+                      <PaymentTermsSection
+                        data={data}
+                        onChange={setData}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* 生成按钮和预览按钮 */}
+                <div className="px-4 sm:px-6 py-4 border-t border-gray-100 dark:border-[#3A3A3C]">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <div className="w-full sm:w-auto sm:min-w-[180px]">
+                      <button
+                        type="button"
+                        onClick={handleGenerate}
+                        disabled={isGenerating}
+                        className={`${buttonClassName}
+                          bg-[#007AFF] hover:bg-[#0063CC] dark:bg-[#0A84FF] dark:hover:bg-[#0070E0]
+                          text-white font-medium
+                          shadow-sm shadow-[#007AFF]/20 dark:shadow-[#0A84FF]/20
+                          hover:shadow-lg hover:shadow-[#007AFF]/25 dark:hover:shadow-[#0A84FF]/25
+                          active:scale-[0.98] active:shadow-inner
+                          transform transition-all duration-200 ease-out
+                          w-full h-10
+                          disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          {isGenerating ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              <span>Generating...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-4 h-4" />
+                              <span>Generate {activeTab === 'quotation' ? 'Quotation' : 'Order'}</span>
+                            </>
+                          )}
+                        </div>
+                      </button>
+                      {/* 进度条 */}
+                      {isGenerating && (
+                        <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
+                          <div 
+                            className="bg-[#007AFF] dark:bg-[#0A84FF] h-1.5 rounded-full transition-all duration-300 ease-out"
+                            style={{ width: `${Math.min(100, generatingProgress)}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
                     <button
                       type="button"
-                      onClick={handleGenerate}
-                      disabled={isGenerating}
+                      onClick={handlePreview}
+                      disabled={isLoading}
                       className={`${buttonClassName}
-                        bg-[#007AFF] hover:bg-[#0063CC] dark:bg-[#0A84FF] dark:hover:bg-[#0070E0]
-                        text-white font-medium
-                        shadow-sm shadow-[#007AFF]/20 dark:shadow-[#0A84FF]/20
-                        hover:shadow-lg hover:shadow-[#007AFF]/25 dark:hover:shadow-[#0A84FF]/25
-                        active:scale-[0.98] active:shadow-inner
+                        bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
+                        text-[#007AFF] dark:text-[#0A84FF] font-medium
+                        border border-[#007AFF]/20 dark:border-[#0A84FF]/20
+                        hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
+                        hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30
+                        active:bg-[#007AFF]/[0.16] dark:active:bg-[#0A84FF]/[0.16]
+                        active:scale-[0.98]
                         transform transition-all duration-200 ease-out
-                        w-full h-10
+                        w-full sm:w-auto sm:min-w-[120px] h-10
                         disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       <div className="flex items-center justify-center gap-2">
-                        {isGenerating ? (
+                        {isLoading ? (
                           <>
                             <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            <span>Generating...</span>
+                            <span>Previewing...</span>
                           </>
                         ) : (
                           <>
-                            <Download className="w-4 h-4" />
-                            <span>Generate {activeTab === 'quotation' ? 'Quotation' : 'Order'}</span>
+                            <Eye className="w-4 h-4" />
+                            <span>Preview</span>
                           </>
                         )}
                       </div>
                     </button>
-                    {/* 进度条 */}
-                    {isGenerating && (
-                      <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
-                        <div 
-                          className="bg-[#007AFF] dark:bg-[#0A84FF] h-1.5 rounded-full transition-all duration-300 ease-out"
-                          style={{ width: `${Math.min(100, generatingProgress)}%` }}
-                        />
-                      </div>
-                    )}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={handlePreview}
-                    disabled={isLoading}
-                    className={`${buttonClassName}
-                      bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
-                      text-[#007AFF] dark:text-[#0A84FF] font-medium
-                      border border-[#007AFF]/20 dark:border-[#0A84FF]/20
-                      hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
-                      hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30
-                      active:bg-[#007AFF]/[0.16] dark:active:bg-[#0A84FF]/[0.16]
-                      active:scale-[0.98]
-                      transform transition-all duration-200 ease-out
-                      w-full sm:w-auto sm:min-w-[120px] h-10
-                      disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      {isLoading ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          <span>Previewing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-4 h-4" />
-                          <span>Preview</span>
-                        </>
-                      )}
-                    </div>
-                  </button>
                 </div>
               </div>
             </form>
           </div>
         </div>
+      </main>
 
-        {/* PDF预览弹窗 */}
-        {pdfPreviewUrl && (
-          <div className="fixed inset-0 bg-black/50 dark:bg-[#000000]/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-[#2C2C2E] w-full max-w-5xl h-[90vh] rounded-2xl flex flex-col overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#3A3A3C]">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F5F5F7]">
-                  PDF Preview
-                </h3>
-                <button
-                  onClick={() => setPdfPreviewUrl(null)}
-                  className="text-gray-500 hover:text-gray-700 dark:text-[#98989D] dark:hover:text-[#F5F5F7]"
-                >
-                  <span className="sr-only">Close</span>
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="flex-1 p-4">
-                <iframe
-                  src={pdfPreviewUrl}
-                  className="w-full h-full rounded-lg border border-gray-200 dark:border-[#3A3A3C]"
-                />
-              </div>
+      {/* PDF预览弹窗 */}
+      {pdfPreviewUrl && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-[#000000]/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#2C2C2E] w-full max-w-5xl h-[90vh] rounded-2xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#3A3A3C]">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F5F5F7]">
+                PDF Preview
+              </h3>
+              <button
+                onClick={() => setPdfPreviewUrl(null)}
+                className="text-gray-500 hover:text-gray-700 dark:text-[#98989D] dark:hover:text-[#F5F5F7]"
+              >
+                <span className="sr-only">Close</span>
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 p-4">
+              <iframe
+                src={pdfPreviewUrl}
+                className="w-full h-full rounded-lg border border-gray-200 dark:border-[#3A3A3C]"
+              />
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
       <Footer />
     </div>
   );
