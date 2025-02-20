@@ -5,6 +5,15 @@ interface Env {
   DB: D1Database;
 }
 
+interface QuotationBody {
+  type: 'quotation' | 'confirmation';
+  customerName: string;
+  quotationNo: string;
+  totalAmount: number;
+  currency: string;
+  data: any;
+}
+
 const router = Router();
 
 // 添加 CORS 处理
@@ -60,7 +69,7 @@ router.get('/api/quotation/history', async (request: Request, env: Env) => {
 // 保存新的历史记录
 router.post('/api/quotation/history', async (request: Request, env: Env) => {
   try {
-    const body = await request.json();
+    const body = await request.json() as QuotationBody;
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
 
