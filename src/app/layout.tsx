@@ -1,7 +1,7 @@
 import './globals.css'
 import { Providers } from './providers'
 import { Inter } from 'next/font/google'
-import type { Metadata, Viewport } from 'next'
+import type { Metadata } from 'next'
 
 const inter = Inter({
   subsets: ['latin', 'latin-ext'],
@@ -13,7 +13,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: '报价系统',
   description: '专业的报价和订单确认系统',
-  manifest: '/manifest.webmanifest',
+  manifest: '/manifest.json',
   icons: {
     icon: [
       { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
@@ -27,15 +27,6 @@ export const metadata: Metadata = {
     'apple-mobile-web-app-status-bar-style': 'default',
     'apple-mobile-web-app-title': '报价系统',
   }
-}
-
-export const viewport: Viewport = {
-  themeColor: '#007AFF',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  viewportFit: 'cover',
 }
 
 export default function RootLayout({
@@ -52,7 +43,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="报价系统" />
         <meta httpEquiv="Content-Language" content="zh-CN" />
         <meta name="google" content="notranslate" />
-        <link rel="manifest" href="/manifest.webmanifest" type="application/manifest+json" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <Providers>
