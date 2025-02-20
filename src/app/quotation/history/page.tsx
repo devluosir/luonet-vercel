@@ -6,11 +6,12 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Search, Calendar, Filter, Edit2, Trash2, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-history';
-import { getQuotationHistory, searchQuotationHistory, deleteQuotationHistory } from '@/utils/quotationHistory';
+import { getQuotationHistory, deleteQuotationHistory } from '@/utils/quotationHistory';
 
 export default function QuotationHistoryPage() {
   const router = useRouter();
   const [history, setHistory] = useState<QuotationHistory[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<QuotationHistoryFilters>({
     search: '',
     type: 'all'
@@ -19,18 +20,25 @@ export default function QuotationHistoryPage() {
 
   // 加载历史记录
   useEffect(() => {
-    if (filters.search || filters.dateRange || filters.type) {
-      const results = searchQuotationHistory(filters);
-      setHistory(results);
-    } else {
-      const allHistory = getQuotationHistory();
-      setHistory(allHistory);
-    }
+    const loadHistory = async () => {
+      setIsLoading(true);
+      try {
+        const results = await getQuotationHistory(filters);
+        setHistory(results);
+      } catch (error) {
+        console.error('Error loading history:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadHistory();
   }, [filters]);
 
   // 处理删除
-  const handleDelete = (id: string) => {
-    if (deleteQuotationHistory(id)) {
+  const handleDelete = async (id: string) => {
+    const success = await deleteQuotationHistory(id);
+    if (success) {
       setHistory(prev => prev.filter(item => item.id !== id));
       setShowDeleteConfirm(null);
     }

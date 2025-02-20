@@ -8,19 +8,23 @@ export default function EditQuotationPage({ params }: { params: { id: string } }
   const router = useRouter();
 
   useEffect(() => {
-    const history = getQuotationHistoryById(params.id);
-    if (history) {
-      // 将历史数据存储到 sessionStorage 中
-      sessionStorage.setItem('edit_quotation_data', JSON.stringify({
-        type: history.type,
-        data: history.data
-      }));
-      // 重定向到报价页面
-      router.push('/quotation');
-    } else {
-      // 如果找不到历史记录，返回历史记录页面
-      router.push('/quotation/history');
-    }
+    const loadHistory = async () => {
+      const history = await getQuotationHistoryById(params.id);
+      if (history) {
+        // 将历史数据存储到 sessionStorage 中
+        sessionStorage.setItem('edit_quotation_data', JSON.stringify({
+          type: history.type,
+          data: history.data
+        }));
+        // 重定向到报价页面
+        router.push('/quotation');
+      } else {
+        // 如果找不到历史记录，返回历史记录页面
+        router.push('/quotation/history');
+      }
+    };
+
+    loadHistory();
   }, [params.id, router]);
 
   return (

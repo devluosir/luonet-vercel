@@ -288,8 +288,8 @@ export default function QuotationPage() {
   };
 
   // 添加保存处理函数
-  const handleSave = useCallback(() => {
-    const result = saveQuotationHistory(activeTab, data);
+  const handleSave = useCallback(async () => {
+    const result = await saveQuotationHistory(activeTab, data);
     if (result) {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);

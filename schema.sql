@@ -1,0 +1,11 @@
+CREATE TABLE quotation_history (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  customer_name TEXT NOT NULL,
+  quotation_no TEXT NOT NULL,
+  total_amount REAL NOT NULL,
+  currency TEXT NOT NULL,
+  data TEXT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+); 
