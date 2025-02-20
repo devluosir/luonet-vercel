@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  return NextResponse.json(
-    {
+  return new NextResponse(
+    JSON.stringify({
       name: "报价系统",
       short_name: "报价",
       description: "专业的报价和订单确认系统",
@@ -16,8 +16,6 @@ export async function GET() {
       dir: "ltr",
       prefer_related_applications: false,
       scope: "/",
-      display_override: ["standalone", "browser"],
-      id: "/",
       icons: [
         {
           src: "/icons/icon-192x192.png",
@@ -32,7 +30,7 @@ export async function GET() {
           purpose: "any maskable"
         }
       ]
-    },
+    }),
     {
       headers: {
         'Content-Type': 'application/manifest+json',
