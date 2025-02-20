@@ -27,20 +27,39 @@ const successResponse = (data) => {
     });
 };
 // 验证 API Token
-const validateToken = (request, env) => {
+const validateToken = async (request, env) => {
     const authHeader = request.headers.get('Authorization');
     if (!authHeader) {
         return false;
     }
     const token = authHeader.replace('Bearer ', '');
-    return token === env.API_TOKEN;
+    try {
+        // 调用主站的认证 API 验证 token
+        const response = await fetch(`${env.MAIN_SITE_URL}/api/auth/validate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (!response.ok) {
+            return false;
+        }
+        const data = await response.json();
+        return data.valid === true;
+    }
+    catch (error) {
+        console.error('Token validation error:', error);
+        return false;
+    }
 };
 // 身份验证中间件
 const authMiddleware = async (request, env) => {
     if (request.method === 'OPTIONS') {
         return;
     }
-    if (!validateToken(request, env)) {
+    const isValid = await validateToken(request, env);
+    if (!isValid) {
         return errorResponse('Unauthorized', 401);
     }
 };
@@ -56,7 +75,35 @@ router.options('*', () => {
         headers: corsHeaders
     });
 });
-// 获取历史记录列表
+// 添加重试函数
+const fetchWithRetry = async (url, options, maxRetries = 3) => {
+    let lastError;
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    'Connection': 'keep-alive',
+                    'Keep-Alive': 'timeout=30, max=100'
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response;
+        }
+        catch (error) {
+            lastError = error;
+            if (i === maxRetries - 1)
+                break;
+            // 指数退避重试
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+        }
+    }
+    throw lastError;
+};
+// 修改获取历史记录的路由处理
 router.get('/api/quotation/history', async (request, { env }) => {
     try {
         // 验证身份
@@ -84,14 +131,22 @@ router.get('/api/quotation/history', async (request, { env }) => {
         const results = await env.DB.prepare(query)
             .bind(...params)
             .all();
-        return successResponse({ items: results.results || [] });
+        return new Response(JSON.stringify({ items: results.results || [] }), {
+            status: 200,
+            headers: {
+                ...corsHeaders,
+                'Content-Type': 'application/json',
+                'Connection': 'keep-alive',
+                'Keep-Alive': 'timeout=30, max=100'
+            }
+        });
     }
     catch (error) {
         console.error('Error in GET /api/quotation/history:', error);
         return errorResponse(error);
     }
 });
-// 保存报价历史
+// 修改保存报价历史的路由处理
 router.post('/api/quotation/history', async (request, { env }) => {
     try {
         // 验证身份
@@ -106,7 +161,15 @@ router.post('/api/quotation/history', async (request, { env }) => {
         await env.DB.prepare('INSERT INTO quotation_history (type, customer_name, quotation_no, total_amount, currency, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now"), datetime("now"))')
             .bind(type, customerName, quotationNo, totalAmount, currency, JSON.stringify(quotationData))
             .run();
-        return successResponse({ success: true });
+        return new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: {
+                ...corsHeaders,
+                'Content-Type': 'application/json',
+                'Connection': 'keep-alive',
+                'Keep-Alive': 'timeout=30, max=100'
+            }
+        });
     }
     catch (error) {
         console.error('Error in POST /api/quotation/history:', error);

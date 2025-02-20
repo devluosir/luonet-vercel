@@ -1,10 +1,10 @@
 import './globals.css'
 import { Providers } from './providers'
 import { Inter } from 'next/font/google'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 
 const inter = Inter({
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
   display: 'swap',
   preload: true,
   variable: '--font-inter',
@@ -21,15 +21,21 @@ export const metadata: Metadata = {
     ],
     apple: '/icons/icon-192x192.png',
   },
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: '报价系统',
-  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'default',
+    'apple-mobile-web-app-title': '报价系统',
+  }
 }
 
-export const viewport = {
+export const viewport: Viewport = {
   themeColor: '#007AFF',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({
@@ -38,7 +44,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh" suppressHydrationWarning className={inter.variable}>
+    <html lang="zh-CN" suppressHydrationWarning className={inter.variable}>
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="报价系统" />
+        <meta httpEquiv="Content-Language" content="zh-CN" />
+        <meta name="google" content="notranslate" />
+        <link rel="manifest" href="/manifest.webmanifest" type="application/manifest+json" />
+      </head>
       <body className={inter.className} suppressHydrationWarning>
         <Providers>
           {children}
