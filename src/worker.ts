@@ -111,7 +111,35 @@ router.options('*', () => {
   });
 });
 
-// 获取历史记录列表
+// 添加重试函数
+const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 3) => {
+  let lastError;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Connection': 'keep-alive',
+          'Keep-Alive': 'timeout=30, max=100'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response;
+    } catch (error) {
+      lastError = error;
+      if (i === maxRetries - 1) break;
+      // 指数退避重试
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+    }
+  }
+  throw lastError;
+};
+
+// 修改获取历史记录的路由处理
 router.get('/api/quotation/history', async (request: Request, { env }: { env: Env }) => {
   try {
     // 验证身份
@@ -146,14 +174,22 @@ router.get('/api/quotation/history', async (request: Request, { env }: { env: En
       .bind(...params)
       .all();
 
-    return successResponse({ items: results.results || [] });
+    return new Response(JSON.stringify({ items: results.results || [] }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Connection': 'keep-alive',
+        'Keep-Alive': 'timeout=30, max=100'
+      }
+    });
   } catch (error: any) {
     console.error('Error in GET /api/quotation/history:', error);
     return errorResponse(error);
   }
 });
 
-// 保存报价历史
+// 修改保存报价历史的路由处理
 router.post('/api/quotation/history', async (request: Request, { env }: { env: Env }) => {
   try {
     // 验证身份
@@ -173,7 +209,15 @@ router.post('/api/quotation/history', async (request: Request, { env }: { env: E
       .bind(type, customerName, quotationNo, totalAmount, currency, JSON.stringify(quotationData))
       .run();
 
-    return successResponse({ success: true });
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Connection': 'keep-alive',
+        'Keep-Alive': 'timeout=30, max=100'
+      }
+    });
   } catch (error: any) {
     console.error('Error in POST /api/quotation/history:', error);
     return errorResponse(error);

@@ -15,6 +15,7 @@ MAIN_SITE_URL = "https://luocompany.net"
 [[routes]]
 pattern = "bj.luocompany.net/*"
 zone_name = "luocompany.net"
+custom_domain = true
 
 [site]
 bucket = "./public"
@@ -39,11 +40,16 @@ vars = { MAIN_SITE_URL = "http://localhost:3000" }
 
 # 增加超时和连接配置
 [http_timeout]
-read = 30000
-write = 30000
+read = 60000
+write = 60000
 connect = 30000
 
 [http]
-max_retries = 3
-retry_on = [500, 502, 503, 504, 408, 429]
+max_retries = 5
+retry_on = [500, 502, 503, 504, 408, 429, "ERR_CONNECTION_CLOSED"]
 retry_delay = 1000
+max_concurrent_requests = 100
+
+[limits]
+cpu_ms = 50
+memory_mb = 512
