@@ -1,8 +1,8 @@
 import { QuotationData } from '@/types/quotation';
 import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-history';
+import { getSession } from 'next-auth/react';
 
 const WORKER_URL = process.env.WORKER_URL || 'https://bj.luocompany.net';
-const API_TOKEN = process.env.API_TOKEN;
 
 // 定义可重试的错误类型
 const RETRYABLE_ERRORS = [
@@ -11,7 +11,8 @@ const RETRYABLE_ERRORS = [
   'net::ERR_CONNECTION_REFUSED',
   'net::ERR_NETWORK',
   'net::ERR_CONNECTION_TIMED_OUT',
-  'timeout'
+  'timeout',
+  'Unauthorized'
 ];
 
 const isRetryableError = (error: any): boolean => {
@@ -29,17 +30,25 @@ const fetchWithRetry = async (url: string, options: RequestInit = {}, maxRetries
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
+      // 获取认证 session
+      const session = await getSession();
+      if (!session?.user?.id) {
+        // 如果没有 session，重定向到登录页面
+        window.location.href = '/auth/signin';
+        throw new Error('No authentication session available');
+      }
+
       const response = await fetch(url, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${API_TOKEN}`,
+          'Authorization': `Bearer ${session.user.id}`,
           ...options.headers,
         },
         signal: controller.signal,
         keepalive: true,
         mode: 'cors',
-        credentials: 'omit'
+        credentials: 'include'
       });
 
       clearTimeout(timeoutId);
@@ -53,6 +62,13 @@ const fetchWithRetry = async (url: string, options: RequestInit = {}, maxRetries
         } catch {
           errorMessage += `, body: ${errorText}`;
         }
+
+        // 如果是认证错误，重定向到登录页面
+        if (response.status === 401) {
+          window.location.href = '/auth/signin';
+          throw new Error('Unauthorized');
+        }
+
         throw new Error(errorMessage);
       }
       

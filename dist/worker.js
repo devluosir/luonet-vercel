@@ -10,13 +10,39 @@ const corsHeaders = {
 };
 // 错误响应处理函数
 const errorResponse = (error, status = 500) => {
+    const message = error instanceof Error ? error.message : String(error);
     return new Response(JSON.stringify({
-        error: 'Internal Server Error',
-        message: error instanceof Error ? error.message : String(error)
+        error: status === 500 ? 'Internal Server Error' : 'Bad Request',
+        message
     }), {
         status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
+};
+// 成功响应处理函数
+const successResponse = (data) => {
+    return new Response(JSON.stringify(data), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+};
+// 验证 API Token
+const validateToken = (request, env) => {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+        return false;
+    }
+    const token = authHeader.replace('Bearer ', '');
+    return token === env.API_TOKEN;
+};
+// 身份验证中间件
+const authMiddleware = async (request, env) => {
+    if (request.method === 'OPTIONS') {
+        return;
+    }
+    if (!validateToken(request, env)) {
+        return errorResponse('Unauthorized', 401);
+    }
 };
 // 处理根路径请求
 router.get('/', () => {
@@ -33,6 +59,10 @@ router.options('*', () => {
 // 获取历史记录列表
 router.get('/api/quotation/history', async (request, { env }) => {
     try {
+        // 验证身份
+        const authResult = await authMiddleware(request, env);
+        if (authResult)
+            return authResult;
         const url = new URL(request.url);
         const search = url.searchParams.get('search') || '';
         const type = url.searchParams.get('type') || 'all';
@@ -50,35 +80,36 @@ router.get('/api/quotation/history', async (request, { env }) => {
         if (conditions.length > 0) {
             query += ' WHERE ' + conditions.join(' AND ');
         }
-        query += ' ORDER BY created_at DESC LIMIT 100'; // 限制返回数量
+        query += ' ORDER BY created_at DESC LIMIT 100';
         const results = await env.DB.prepare(query)
             .bind(...params)
             .all();
-        return new Response(JSON.stringify({ items: results.results || [] }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return successResponse({ items: results.results || [] });
     }
     catch (error) {
+        console.error('Error in GET /api/quotation/history:', error);
         return errorResponse(error);
     }
 });
 // 保存报价历史
 router.post('/api/quotation/history', async (request, { env }) => {
     try {
+        // 验证身份
+        const authResult = await authMiddleware(request, env);
+        if (authResult)
+            return authResult;
         const data = await request.json();
         const { type, customerName, quotationNo, totalAmount, currency, data: quotationData } = data;
-        // 验证必填字段
         if (!type || !customerName || !quotationNo) {
             return errorResponse('Missing required fields', 400);
         }
-        const result = await env.DB.prepare('INSERT INTO quotation_history (type, customer_name, quotation_no, total_amount, currency, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now"), datetime("now"))')
+        await env.DB.prepare('INSERT INTO quotation_history (type, customer_name, quotation_no, total_amount, currency, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now"), datetime("now"))')
             .bind(type, customerName, quotationNo, totalAmount, currency, JSON.stringify(quotationData))
             .run();
-        return new Response(JSON.stringify({ success: true }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return successResponse({ success: true });
     }
     catch (error) {
+        console.error('Error in POST /api/quotation/history:', error);
         return errorResponse(error);
     }
 });
@@ -92,9 +123,7 @@ export default {
             });
             // 处理 CORS 预检请求
             if (request.method === 'OPTIONS') {
-                return new Response(null, {
-                    headers: corsHeaders
-                });
+                return new Response(null, { headers: corsHeaders });
             }
             // 处理请求
             const responsePromise = router.handle(request, { env });
@@ -119,6 +148,10 @@ export default {
             });
         }
         catch (error) {
+            console.error('Error in fetch:', error);
+            if (error.message === 'Request timeout') {
+                return errorResponse('Request timeout', 408);
+            }
             return errorResponse(error);
         }
     },
