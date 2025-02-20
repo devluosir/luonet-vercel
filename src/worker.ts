@@ -14,7 +14,7 @@ interface QuotationBody {
   data: any;
 }
 
-const router = Router();
+const router = Router({ base: '/' });
 
 // 添加 CORS 处理
 const corsHeaders = {
@@ -74,13 +74,6 @@ router.get('/api/quotation/history', async (request: Request, env: Env) => {
 // 保存新的历史记录
 router.post('/api/quotation/history', async (request: Request, env: Env) => {
   try {
-    if (!request.body) {
-      return new Response(
-        JSON.stringify({ error: 'Request body is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const body = await request.json() as QuotationBody;
     
     // 验证必填字段
@@ -132,6 +125,10 @@ router.all('*', () => new Response('Not Found', {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     try {
+      // 确保请求路径正确
+      const url = new URL(request.url);
+      request = new Request(url.pathname + url.search, request);
+      
       return await router.handle(request, env, ctx);
     } catch (error: any) {
       console.error('Unhandled error:', error);
