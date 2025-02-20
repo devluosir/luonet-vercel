@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Search, Calendar, Filter, Edit2, Trash2, Copy, Download, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-history';
-import { getQuotationHistory, deleteQuotationHistory } from '@/utils/quotationHistory';
+import { getQuotationHistory, deleteQuotationHistory, importQuotationHistory } from '@/utils/quotationHistory';
 
 export default function QuotationHistoryPage() {
   const router = useRouter();
@@ -22,10 +22,10 @@ export default function QuotationHistoryPage() {
 
   // 加载历史记录
   useEffect(() => {
-    const loadHistory = async () => {
+    const loadHistory = () => {
       setIsLoading(true);
       try {
-        const results = await getQuotationHistory(filters);
+        const results = getQuotationHistory(filters);
         setHistory(results);
       } catch (error) {
         console.error('Error loading history:', error);
@@ -38,8 +38,8 @@ export default function QuotationHistoryPage() {
   }, [filters]);
 
   // 处理删除
-  const handleDelete = async (id: string) => {
-    const success = await deleteQuotationHistory(id);
+  const handleDelete = (id: string) => {
+    const success = deleteQuotationHistory(id);
     if (success) {
       setHistory(prev => prev.filter(item => item.id !== id));
       setShowDeleteConfirm(null);
@@ -57,9 +57,9 @@ export default function QuotationHistoryPage() {
   };
 
   // 处理导出
-  const handleExport = async () => {
+  const handleExport = () => {
     try {
-      const results = await getQuotationHistory();
+      const results = getQuotationHistory();
       const jsonData = JSON.stringify(results, null, 2);
       const blob = new Blob([jsonData], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -85,28 +85,19 @@ export default function QuotationHistoryPage() {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = async (e) => {
+        reader.onload = (e) => {
           const jsonData = e.target?.result as string;
           if (jsonData) {
             try {
-              const importedHistory = JSON.parse(jsonData);
-              // 验证导入的数据格式
-              if (!Array.isArray(importedHistory) || !importedHistory.every(item => 
-                typeof item.id === 'string' &&
-                typeof item.createdAt === 'string' &&
-                typeof item.updatedAt === 'string' &&
-                (item.type === 'quotation' || item.type === 'confirmation') &&
-                typeof item.customerName === 'string' &&
-                typeof item.quotationNo === 'string' &&
-                typeof item.totalAmount === 'number' &&
-                typeof item.currency === 'string' &&
-                typeof item.data === 'object'
-              )) {
-                throw new Error('Invalid data format');
+              const success = importQuotationHistory(jsonData);
+              if (success) {
+                // 重新加载历史记录
+                const results = getQuotationHistory(filters);
+                setHistory(results);
+                alert('导入成功！');
+              } else {
+                throw new Error('Import failed');
               }
-
-              // TODO: 实现导入到服务器的功能
-              alert('导入功能正在开发中');
             } catch (error) {
               console.error('Error importing history:', error);
               alert('导入失败，请检查文件格式是否正确。');
@@ -140,13 +131,10 @@ export default function QuotationHistoryPage() {
   };
 
   // 处理批量删除
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     try {
-      const results = await Promise.all(
-        Array.from(selectedIds).map(id => deleteQuotationHistory(id))
-      );
-      
-      if (results.every(success => success)) {
+      const success = Array.from(selectedIds).every(id => deleteQuotationHistory(id));
+      if (success) {
         setHistory(prev => prev.filter(item => !selectedIds.has(item.id)));
         setSelectedIds(new Set());
         setShowBatchDeleteConfirm(false);
