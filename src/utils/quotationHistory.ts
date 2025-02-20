@@ -4,14 +4,14 @@ import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-his
 const WORKER_URL = process.env.WORKER_URL || 'https://bj.luo.edu.rs';
 const API_TOKEN = process.env.API_TOKEN;
 
-const fetchWithCORS = (url: string, options: RequestInit = {}) => {
+const fetchWithAuth = (url: string, options: RequestInit = {}) => {
   return fetch(url, {
     ...options,
-    mode: 'cors',
-    credentials: 'include',
+    mode: 'no-cors',
     headers: {
-      ...options.headers,
+      'Content-Type': 'application/json',
       'Authorization': `Bearer ${API_TOKEN}`,
+      ...options.headers,
     }
   });
 };
@@ -22,11 +22,8 @@ export const saveQuotationHistory = async (type: 'quotation' | 'confirmation', d
     const totalAmount = data.items.reduce((sum, item) => sum + item.amount, 0) +
       (data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0);
 
-    const response = await fetchWithCORS(`${WORKER_URL}/api/quotation/history`, {
+    const response = await fetchWithAuth(`${WORKER_URL}/api/quotation/history`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         type,
         data,
@@ -64,7 +61,7 @@ export const getQuotationHistory = async (filters?: QuotationHistoryFilters): Pr
       searchParams.set('endDate', filters.dateRange.end);
     }
 
-    const response = await fetchWithCORS(`${WORKER_URL}/api/quotation/history?${searchParams.toString()}`);
+    const response = await fetchWithAuth(`${WORKER_URL}/api/quotation/history?${searchParams.toString()}`);
     
     if (!response.ok) {
       throw new Error('Failed to fetch quotation history');
@@ -81,7 +78,7 @@ export const getQuotationHistory = async (filters?: QuotationHistoryFilters): Pr
 // 根据ID获取单个历史记录
 export const getQuotationHistoryById = async (id: string): Promise<QuotationHistory | null> => {
   try {
-    const response = await fetchWithCORS(`${WORKER_URL}/api/quotation/history/${id}`);
+    const response = await fetchWithAuth(`${WORKER_URL}/api/quotation/history/${id}`);
     
     if (!response.ok) {
       throw new Error('Failed to fetch quotation history');
@@ -98,11 +95,8 @@ export const getQuotationHistoryById = async (id: string): Promise<QuotationHist
 // 更新历史记录
 export const updateQuotationHistory = async (id: string, data: QuotationData): Promise<boolean> => {
   try {
-    const response = await fetchWithCORS(`${WORKER_URL}/api/quotation/history/${id}`, {
+    const response = await fetchWithAuth(`${WORKER_URL}/api/quotation/history/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({ data }),
     });
 
@@ -116,7 +110,7 @@ export const updateQuotationHistory = async (id: string, data: QuotationData): P
 // 删除历史记录
 export const deleteQuotationHistory = async (id: string): Promise<boolean> => {
   try {
-    const response = await fetchWithCORS(`${WORKER_URL}/api/quotation/history/${id}`, {
+    const response = await fetchWithAuth(`${WORKER_URL}/api/quotation/history/${id}`, {
       method: 'DELETE',
     });
 
