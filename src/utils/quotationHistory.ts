@@ -23,14 +23,21 @@ const fetchWithRetry = async (url: string, options: RequestInit = {}, maxRetries
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          errorMessage += `, body: ${errorText}`;
+        }
+        throw new Error(errorMessage);
       }
       
       return response;
     } catch (error) {
       lastError = error;
-      console.log(`Retry ${i + 1} failed:`, error);
       if (i < maxRetries - 1) {
+        // 使用指数退避策略
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
       }
     }
@@ -54,29 +61,15 @@ export const saveQuotationHistory = async (type: 'quotation' | 'confirmation', d
       currency: data.currency,
     };
 
-    console.log('Saving quotation with payload:', payload);
-
     const response = await fetchWithRetry(`${WORKER_URL}/api/quotation/history`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Server response:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText
-      });
-      throw new Error(`Failed to save quotation history: ${response.status} ${response.statusText}`);
-    }
-
     const result = await response.json();
-    console.log('Save successful:', result);
     return result;
   } catch (error) {
-    console.error('Error saving quotation history:', error);
-    return null;
+    throw new Error(`保存报价历史失败: ${error instanceof Error ? error.message : '未知错误'}`);
   }
 };
 
@@ -96,16 +89,10 @@ export const getQuotationHistory = async (filters?: QuotationHistoryFilters): Pr
     }
 
     const response = await fetchWithRetry(`${WORKER_URL}/api/quotation/history?${searchParams.toString()}`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch quotation history');
-    }
-
     const data = await response.json();
     return data.items || [];
   } catch (error) {
-    console.error('Error getting quotation history:', error);
-    return [];
+    throw new Error(`获取报价历史失败: ${error instanceof Error ? error.message : '未知错误'}`);
   }
 };
 
@@ -113,16 +100,10 @@ export const getQuotationHistory = async (filters?: QuotationHistoryFilters): Pr
 export const getQuotationHistoryById = async (id: string): Promise<QuotationHistory | null> => {
   try {
     const response = await fetchWithRetry(`${WORKER_URL}/api/quotation/history/${id}`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch quotation history');
-    }
-
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error getting quotation history by id:', error);
-    return null;
+    throw new Error(`获取报价历史详情失败: ${error instanceof Error ? error.message : '未知错误'}`);
   }
 };
 
@@ -136,8 +117,7 @@ export const updateQuotationHistory = async (id: string, data: QuotationData): P
 
     return response.ok;
   } catch (error) {
-    console.error('Error updating quotation history:', error);
-    return false;
+    throw new Error(`更新报价历史失败: ${error instanceof Error ? error.message : '未知错误'}`);
   }
 };
 
@@ -150,7 +130,6 @@ export const deleteQuotationHistory = async (id: string): Promise<boolean> => {
 
     return response.ok;
   } catch (error) {
-    console.error('Error deleting quotation history:', error);
-    return false;
+    throw new Error(`删除报价历史失败: ${error instanceof Error ? error.message : '未知错误'}`);
   }
 }; 

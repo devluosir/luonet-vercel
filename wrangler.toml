@@ -10,10 +10,37 @@ database_id = "fe5975d3-4a87-4965-b86a-4670db3656e7"
 [vars]
 API_TOKEN = "Kqm0uVxJuVRkJ1GUoAwT4SrfvYAbaVbcwV6jQ8hY"
 
+# 修改路由配置
 [[routes]]
 pattern = "bj.luocompany.net/*"
 zone_name = "luocompany.net"
 
+[site]
+bucket = "./public"
+
+[triggers]
+crons = []
+
 [build]
 command = "npm run build:worker"
 watch_dir = "src"
+
+[build.upload]
+format = "modules"
+
+[env.production]
+workers_dev = false
+
+[env.development]
+workers_dev = true
+
+# 增加超时和连接配置
+[http_timeout]
+read = 30000
+write = 30000
+connect = 30000
+
+[http]
+max_retries = 3
+retry_on = [500, 502, 503, 504, 408, 429]
+retry_delay = 1000
