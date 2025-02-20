@@ -77,7 +77,7 @@ const validateToken = async (request: Request, env: Env) => {
       return false;
     }
 
-    const data = await response.json();
+    const data = await response.json() as { valid: boolean };
     return data.valid === true;
   } catch (error) {
     console.error('Token validation error:', error);
