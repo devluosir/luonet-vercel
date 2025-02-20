@@ -1,4 +1,4 @@
-CREATE TABLE quotation_history (
+CREATE TABLE IF NOT EXISTS quotation_history (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL,
   customer_name TEXT NOT NULL,

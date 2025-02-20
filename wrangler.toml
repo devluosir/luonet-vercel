@@ -5,11 +5,15 @@ compatibility_date = "2024-02-20"
 [[d1_databases]]
 binding = "DB"
 database_name = "quotation-history"
-database_id = "quotation-history-db"
+database_id = "fe5975d3-4a87-4965-b86a-4670db3656e7"
 
 [vars]
 API_TOKEN = "Kqm0uVxJuVRkJ1GUoAwT4SrfvYAbaVbcwV6jQ8hY"
 
 [[routes]]
 pattern = "bj.luocompany.net/*"
-zone_name = "luocompany.net" 
+zone_name = "luocompany.net"
+
+[[rules]]
+type = "ESModule"
+globs = ["**/*.js"] 
