@@ -4,19 +4,14 @@ import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-his
 const WORKER_URL = process.env.WORKER_URL || 'https://bj.luocompany.net';
 const API_TOKEN = process.env.API_TOKEN;
 
-const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  const headers = new Headers({
-    'Content-Type': 'application/json',
-    'X-API-Token': API_TOKEN || '',
-    'Accept': 'application/json',
-    'Origin': window.location.origin,
-  });
-
+const fetchApi = async (url: string, options: RequestInit = {}) => {
   return fetch(url, {
     ...options,
-    headers,
-    mode: 'cors',
-    credentials: 'include'
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_TOKEN}`,
+      ...options.headers,
+    }
   });
 };
 
@@ -26,7 +21,7 @@ export const saveQuotationHistory = async (type: 'quotation' | 'confirmation', d
     const totalAmount = data.items.reduce((sum, item) => sum + item.amount, 0) +
       (data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0);
 
-    const response = await fetchWithAuth(`${WORKER_URL}/api/quotation/history`, {
+    const response = await fetchApi(`${WORKER_URL}/api/quotation/history`, {
       method: 'POST',
       body: JSON.stringify({
         type,
@@ -39,8 +34,7 @@ export const saveQuotationHistory = async (type: 'quotation' | 'confirmation', d
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to save quotation history');
+      throw new Error('Failed to save quotation history');
     }
 
     const result = await response.json();
@@ -66,7 +60,7 @@ export const getQuotationHistory = async (filters?: QuotationHistoryFilters): Pr
       searchParams.set('endDate', filters.dateRange.end);
     }
 
-    const response = await fetchWithAuth(`${WORKER_URL}/api/quotation/history?${searchParams.toString()}`);
+    const response = await fetchApi(`${WORKER_URL}/api/quotation/history?${searchParams.toString()}`);
     
     if (!response.ok) {
       throw new Error('Failed to fetch quotation history');
@@ -83,7 +77,7 @@ export const getQuotationHistory = async (filters?: QuotationHistoryFilters): Pr
 // 根据ID获取单个历史记录
 export const getQuotationHistoryById = async (id: string): Promise<QuotationHistory | null> => {
   try {
-    const response = await fetchWithAuth(`${WORKER_URL}/api/quotation/history/${id}`);
+    const response = await fetchApi(`${WORKER_URL}/api/quotation/history/${id}`);
     
     if (!response.ok) {
       throw new Error('Failed to fetch quotation history');
@@ -100,7 +94,7 @@ export const getQuotationHistoryById = async (id: string): Promise<QuotationHist
 // 更新历史记录
 export const updateQuotationHistory = async (id: string, data: QuotationData): Promise<boolean> => {
   try {
-    const response = await fetchWithAuth(`${WORKER_URL}/api/quotation/history/${id}`, {
+    const response = await fetchApi(`${WORKER_URL}/api/quotation/history/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ data }),
     });
@@ -115,7 +109,7 @@ export const updateQuotationHistory = async (id: string, data: QuotationData): P
 // 删除历史记录
 export const deleteQuotationHistory = async (id: string): Promise<boolean> => {
   try {
-    const response = await fetchWithAuth(`${WORKER_URL}/api/quotation/history/${id}`, {
+    const response = await fetchApi(`${WORKER_URL}/api/quotation/history/${id}`, {
       method: 'DELETE',
     });
 
