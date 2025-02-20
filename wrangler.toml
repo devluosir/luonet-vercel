@@ -11,5 +11,5 @@ database_id = "quotation-history-db"
 API_TOKEN = "Kqm0uVxJuVRkJ1GUoAwT4SrfvYAbaVbcwV6jQ8hY"
 
 [[routes]]
-pattern = "bj.luo.edu.rs/*"
-zone_name = "luo.edu.rs" 
+pattern = "bj.luocompany.net/*"
+zone_name = "luocompany.net" 

@@ -1,7 +1,7 @@
 import { QuotationData } from '@/types/quotation';
 import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-history';
 
-const WORKER_URL = process.env.WORKER_URL || 'https://bj.luo.edu.rs';
+const WORKER_URL = process.env.WORKER_URL || 'https://bj.luocompany.net';
 const API_TOKEN = process.env.API_TOKEN;
 
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
@@ -9,12 +9,14 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
     'Content-Type': 'application/json',
     'X-API-Token': API_TOKEN || '',
     'Accept': 'application/json',
+    'Origin': window.location.origin,
   });
 
   return fetch(url, {
     ...options,
     headers,
-    credentials: 'same-origin'
+    mode: 'cors',
+    credentials: 'include'
   });
 };
 
