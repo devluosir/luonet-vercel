@@ -6,11 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Search, Calendar, Filter, Edit2, Trash2, Copy, Download, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-history';
-<<<<<<< HEAD
 import { getQuotationHistory, deleteQuotationHistory } from '@/utils/quotationHistory';
-=======
-import { getQuotationHistory, searchQuotationHistory, deleteQuotationHistory, exportQuotationHistory, importQuotationHistory } from '@/utils/quotationHistory';
->>>>>>> temp-branch
 
 export default function QuotationHistoryPage() {
   const router = useRouter();
@@ -61,9 +57,10 @@ export default function QuotationHistoryPage() {
   };
 
   // 处理导出
-  const handleExport = () => {
-    const jsonData = exportQuotationHistory();
-    if (jsonData) {
+  const handleExport = async () => {
+    try {
+      const results = await getQuotationHistory();
+      const jsonData = JSON.stringify(results, null, 2);
       const blob = new Blob([jsonData], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -73,6 +70,9 @@ export default function QuotationHistoryPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting history:', error);
+      alert('导出失败，请稍后重试。');
     }
   };
 
@@ -85,16 +85,30 @@ export default function QuotationHistoryPage() {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
           const jsonData = e.target?.result as string;
           if (jsonData) {
-            const success = importQuotationHistory(jsonData);
-            if (success) {
-              // 重新加载历史记录
-              const allHistory = getQuotationHistory();
-              setHistory(allHistory);
-              alert('导入成功！');
-            } else {
+            try {
+              const importedHistory = JSON.parse(jsonData);
+              // 验证导入的数据格式
+              if (!Array.isArray(importedHistory) || !importedHistory.every(item => 
+                typeof item.id === 'string' &&
+                typeof item.createdAt === 'string' &&
+                typeof item.updatedAt === 'string' &&
+                (item.type === 'quotation' || item.type === 'confirmation') &&
+                typeof item.customerName === 'string' &&
+                typeof item.quotationNo === 'string' &&
+                typeof item.totalAmount === 'number' &&
+                typeof item.currency === 'string' &&
+                typeof item.data === 'object'
+              )) {
+                throw new Error('Invalid data format');
+              }
+
+              // TODO: 实现导入到服务器的功能
+              alert('导入功能正在开发中');
+            } catch (error) {
+              console.error('Error importing history:', error);
               alert('导入失败，请检查文件格式是否正确。');
             }
           }
@@ -126,12 +140,22 @@ export default function QuotationHistoryPage() {
   };
 
   // 处理批量删除
-  const handleBatchDelete = () => {
-    const success = Array.from(selectedIds).every(id => deleteQuotationHistory(id));
-    if (success) {
-      setHistory(prev => prev.filter(item => !selectedIds.has(item.id)));
-      setSelectedIds(new Set());
-      setShowBatchDeleteConfirm(false);
+  const handleBatchDelete = async () => {
+    try {
+      const results = await Promise.all(
+        Array.from(selectedIds).map(id => deleteQuotationHistory(id))
+      );
+      
+      if (results.every(success => success)) {
+        setHistory(prev => prev.filter(item => !selectedIds.has(item.id)));
+        setSelectedIds(new Set());
+        setShowBatchDeleteConfirm(false);
+      } else {
+        alert('部分记录删除失败，请刷新页面后重试。');
+      }
+    } catch (error) {
+      console.error('Error batch deleting:', error);
+      alert('删除失败，请稍后重试。');
     }
   };
 
