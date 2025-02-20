@@ -1,159 +1,110 @@
-# LC APP - 企业级文档管理系统
+# LC APP - 商业文档管理系统
 
-## 项目概述
-LC APP 是一个现代化的企业级文档管理系统，专注于提供高效的商业文档处理解决方案。系统采用 Next.js 15 和 TypeScript 开发，提供了报价单、销售确认单和发票等核心商业文档的全生命周期管理。
+一个用于处理报价单、销售确认单和发票等商业文档的生成和管理系统。
 
-## 核心功能
+## 功能特性
 
-### 文档管理
-- 📄 报价单管理
-  - 在线创建和编辑报价单
-  - Excel 数据导入功能
-  - 多币种支持
-  - PDF 导出
+### 1. 报价单和订单确认书生成
+- 支持报价单和订单确认书的快速生成
+- 可自定义客户信息、商品明细、备注等内容
+- 支持多币种（USD/CNY）
+- 提供专业的 PDF 导出功能
+- 支持本地历史记录保存和管理
 
-- 📋 销售确认单
-  - 基于报价单快速生成
-  - 自动计算功能
-  - 状态跟踪
+### 2. AI 邮件助手
+- 智能生成商务邮件
+- 支持中英文双语邮件
+- 多种邮件语气风格可选
+- 快速邮件回复建议
 
-- 🧾 发票系统
-  - 自动生成发票
-  - 多模板支持
-  - 批量处理
+### 3. 用户管理
+- 多用户支持
+- 基于角色的权限控制
+- 管理员后台管理
 
-### 系统功能
-- 👥 用户管理
-  - 基于角色的权限控制
-  - 完整的用户配置文件
-  - 安全的身份认证
+### 4. 系统特性
+- 支持深色/浅色主题
+- 响应式设计，支持移动端访问
+- 本地数据存储，保护隐私
 
-- 🛠 工具集成
-  - Excel 导入/导出
-  - PDF 生成器
-  - 邮件通知系统
+## 技术栈
 
-## 技术架构
+- **前端框架**: Next.js 14
+- **UI 框架**: TailwindCSS
+- **状态管理**: React Hooks
+- **认证**: NextAuth.js
+- **数据库**: Prisma + PostgreSQL
+- **AI 集成**: DeepSeek API
+- **PDF 生成**: jsPDF
 
-### 前端技术
-- Next.js 15.1.3 (App Router)
-- TypeScript 5.x
-- Tailwind CSS 3.4.1
-- shadcn/ui 组件库
-- jsPDF 文档生成
-
-### 后端技术
-- Next.js API Routes
-- Prisma ORM
-- PostgreSQL 数据库
-- Auth.js 认证
-- AWS S3 文件存储
-
-## 快速开始
-
-### 环境要求
-- Node.js 18.x 或更高版本
-- PostgreSQL 14.x 或更高版本
-- npm 或 yarn
-
-### 安装步骤
+## 开发环境设置
 
 1. 克隆项目
 ```bash
 git clone [repository-url]
-cd lc-app
+cd mluonet
 ```
 
 2. 安装依赖
 ```bash
 npm install
-# 或
-yarn install
 ```
 
-3. 环境配置
-```bash
-cp .env.example .env
-```
-编辑 .env 文件，配置以下必要环境变量：
-- DATABASE_URL: PostgreSQL 连接串
-- NEXTAUTH_SECRET: Auth.js 密钥
-- AWS_ACCESS_KEY_ID: AWS 访问密钥
-- AWS_SECRET_ACCESS_KEY: AWS 密钥
-- S3_BUCKET_NAME: S3 存储桶名称
-
-4. 数据库迁移
-```bash
-npx prisma generate
-npx prisma migrate dev
+3. 环境变量配置
+创建 `.env.local` 文件并添加以下配置：
+```env
+DEEPSEEK_API_KEY=your_api_key
+DATABASE_URL=your_database_url
+NEXTAUTH_SECRET=your_nextauth_secret
 ```
 
-5. 启动开发服务器
+4. 启动开发服务器
 ```bash
 npm run dev
-# 或
-yarn dev
 ```
 
-## 项目结构
-```
-/src
-  /app                # Next.js 应用路由
-    /admin           # 管理面板
-    /quotation      # 报价单模块
-    /order          # 订单管理
-    /invoice        # 发票系统
-  /components        # React 组件
-  /lib              # 工具库
-  /types            # TypeScript 类型定义
-  /utils            # 通用工具函数
-/prisma             # 数据库模型
-/public             # 静态资源
-```
+## 部署
 
-## 开发指南
-
-### 代码规范
-- 使用 ESLint 进行代码检查
-- 使用 Prettier 进行代码格式化
-- 遵循 TypeScript 严格模式
-
-### 分支管理
-- main: 生产环境分支
-- develop: 开发环境分支
-- feature/*: 功能开发分支
-- hotfix/*: 紧急修复分支
-
-### 提交规范
-使用语义化提交信息：
-- feat: 新功能
-- fix: 错误修复
-- docs: 文档更新
-- style: 代码格式调整
-- refactor: 代码重构
-- test: 测试相关
-- chore: 构建过程或辅助工具的变动
-
-## 部署指南
-
-### Vercel 部署
-1. 在 Vercel 中导入项目
-2. 配置环境变量
-3. 选择部署分支
-4. 触发部署
-
-### 自托管部署
-1. 构建生产版本
+1. 构建项目
 ```bash
 npm run build
 ```
-2. 启动服务
+
+2. 启动生产服务器
 ```bash
-npm run start
+npm start
 ```
 
-## 维护者
-- 开发团队 [@team](mailto:team@example.com)
+## 数据存储说明
+
+- 用户数据存储在 PostgreSQL 数据库中
+- 报价历史记录使用浏览器的 localStorage 存储
+- AI 生成的内容不会被永久存储
+
+## 注意事项
+
+1. localStorage 存储限制
+   - 浏览器的 localStorage 通常限制在 5-10MB
+   - 建议定期导出重要的报价历史记录
+   - 清除浏览器数据会导致历史记录丢失
+
+2. AI 功能使用
+   - 需要配置有效的 DeepSeek API Key
+   - API 调用有频率限制
+   - 生成的内容建议人工审核
+
+## 更新日志
+
+### V1.1.1
+- 移除 Cloudflare D1 集成
+- 改用 localStorage 存储报价历史
+- 优化用户界面响应速度
+- 修复已知问题
+
+## 贡献指南
+
+欢迎提交 Issue 和 Pull Request 来帮助改进项目。
 
 ## 许可证
-本项目采用 MIT 许可证
+
+[MIT License](LICENSE)
