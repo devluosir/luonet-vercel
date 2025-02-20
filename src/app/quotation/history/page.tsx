@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Search, Calendar, Filter, Edit2, Trash2, Copy, Download, Upload } from 'lucide-react';
+import { ArrowLeft, Search, Edit2, Trash2, Copy, Download, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-history';
 import { getQuotationHistory, deleteQuotationHistory, importQuotationHistory } from '@/utils/quotationHistory';
@@ -223,7 +223,7 @@ export default function QuotationHistoryPage() {
             <div className="w-full sm:w-48">
               <select
                 value={filters.type}
-                onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as any }))}
+                onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as 'all' | 'quotation' | 'confirmation' }))}
                 className="w-full h-10 px-4 rounded-xl
                   bg-white dark:bg-[#2C2C2E]
                   border border-gray-200 dark:border-[#3A3A3C]
@@ -240,92 +240,99 @@ export default function QuotationHistoryPage() {
           {/* 历史记录列表 */}
           <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl shadow-lg overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-[#3A3A3C]">
-                    <th className="px-6 py-4 text-left">
-                      <input
-                        type="checkbox"
-                        checked={history.length > 0 && selectedIds.size === history.length}
-                        onChange={handleSelectAll}
-                        className="rounded border-gray-300 dark:border-[#3A3A3C]
-                          text-[#007AFF] 
-                          focus:ring-[#007AFF]
-                          bg-white dark:bg-[#3A3A3C]"
-                      />
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">客户名称</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">报价单号</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">类型</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">金额</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">创建时间</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((item) => (
-                    <tr key={item.id} className="border-b border-gray-200 dark:border-[#3A3A3C] last:border-0">
-                      <td className="px-6 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(item.id)}
-                          onChange={() => handleSelect(item.id)}
-                          className="rounded border-gray-300 dark:border-[#3A3A3C]
-                            text-[#007AFF]
-                            focus:ring-[#007AFF]
-                            bg-white dark:bg-[#3A3A3C]"
-                        />
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">{item.customerName}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">{item.quotationNo}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">
-                        {item.type === 'quotation' ? '报价单' : '订单确认'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">
-                        {item.currency === 'USD' ? '$' : '¥'}{item.totalAmount.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">
-                        {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm')}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => handleEdit(item.id)}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C]
-                              text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
-                            title="编辑"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleCopy(item.id)}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C]
-                              text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
-                            title="复制"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setShowDeleteConfirm(item.id)}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C]
-                              text-red-600 hover:text-red-700"
-                            title="删除"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {isLoading ? (
+                <div className="py-12 text-center text-gray-500 dark:text-[#98989D]">
+                  加载中...
+                </div>
+              ) : (
+                <>
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-[#3A3A3C]">
+                        <th className="px-6 py-4 text-left">
+                          <input
+                            type="checkbox"
+                            checked={history.length > 0 && selectedIds.size === history.length}
+                            onChange={handleSelectAll}
+                            className="rounded border-gray-300 dark:border-[#3A3A3C]
+                              text-[#007AFF] 
+                              focus:ring-[#007AFF]
+                              bg-white dark:bg-[#3A3A3C]"
+                          />
+                        </th>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">客户名称</th>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">报价单号</th>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">类型</th>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">金额</th>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">创建时间</th>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {history.map((item) => (
+                        <tr key={item.id} className="border-b border-gray-200 dark:border-[#3A3A3C] last:border-0">
+                          <td className="px-6 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(item.id)}
+                              onChange={() => handleSelect(item.id)}
+                              className="rounded border-gray-300 dark:border-[#3A3A3C]
+                                text-[#007AFF]
+                                focus:ring-[#007AFF]
+                                bg-white dark:bg-[#3A3A3C]"
+                            />
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">{item.customerName}</td>
+                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">{item.quotationNo}</td>
+                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">
+                            {item.type === 'quotation' ? '报价单' : '订单确认'}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">
+                            {item.currency === 'USD' ? '$' : '¥'}{item.totalAmount.toFixed(2)}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">
+                            {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm')}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => handleEdit(item.id)}
+                                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C]
+                                  text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
+                                title="编辑"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleCopy(item.id)}
+                                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C]
+                                  text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
+                                title="复制"
+                              >
+                                <Copy className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setShowDeleteConfirm(item.id)}
+                                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C]
+                                  text-red-600 hover:text-red-700"
+                                title="删除"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {history.length === 0 && (
+                    <div className="py-12 text-center text-gray-500 dark:text-[#98989D]">
+                      暂无历史记录
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-
-            {history.length === 0 && (
-              <div className="py-12 text-center text-gray-500 dark:text-[#98989D]">
-                暂无历史记录
-              </div>
-            )}
           </div>
         </div>
       </div>
