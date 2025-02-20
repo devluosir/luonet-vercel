@@ -180,4 +180,55 @@ export const deleteQuotationHistory = async (id: string): Promise<boolean> => {
   } catch (error) {
     throw new Error(`删除报价历史失败: ${error instanceof Error ? error.message : '未知错误'}`);
   }
+};
+
+// 导出历史记录
+export const exportQuotationHistory = (): string => {
+  try {
+    const history = getQuotationHistory();
+    return JSON.stringify(history, null, 2);
+  } catch (error) {
+    console.error('Error exporting quotation history:', error);
+    return '';
+  }
+};
+
+// 导入历史记录
+export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace' | 'merge' = 'merge'): boolean => {
+  try {
+    const importedHistory = JSON.parse(jsonData) as QuotationHistory[];
+    
+    // 验证导入的数据格式
+    if (!Array.isArray(importedHistory) || !importedHistory.every(item => 
+      typeof item.id === 'string' &&
+      typeof item.createdAt === 'string' &&
+      typeof item.updatedAt === 'string' &&
+      (item.type === 'quotation' || item.type === 'confirmation') &&
+      typeof item.customerName === 'string' &&
+      typeof item.quotationNo === 'string' &&
+      typeof item.totalAmount === 'number' &&
+      typeof item.currency === 'string' &&
+      typeof item.data === 'object'
+    )) {
+      throw new Error('Invalid data format');
+    }
+
+    if (mergeStrategy === 'replace') {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(importedHistory));
+    } else {
+      // 合并策略：保留现有记录，添加新记录（根据 id 去重）
+      const existingHistory = getQuotationHistory();
+      const existingIds = new Set(existingHistory.map(item => item.id));
+      const newHistory = [
+        ...existingHistory,
+        ...importedHistory.filter(item => !existingIds.has(item.id))
+      ];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error importing quotation history:', error);
+    return false;
+  }
 }; 
