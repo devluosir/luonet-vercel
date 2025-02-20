@@ -11,14 +11,22 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'LC APP',
-  description: '一个用于处理报价单、销售确认单和发票等商业文档的生成和管理系统',
+  title: '报价系统',
+  description: '专业的报价和订单确认系统',
+  manifest: '/manifest.webmanifest',
   icons: {
     icon: [
-      { url: '/logo/logo.png', type: 'image/png' },
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: '/logo/apple-touch-icon.png',
-  }
+    apple: '/icons/icon-192x192.png',
+  },
+  themeColor: '#007AFF',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: '报价系统',
+  },
 }
 
 export default function RootLayout({

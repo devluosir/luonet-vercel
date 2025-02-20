@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Search, Calendar, Filter, Edit2, Trash2, Copy } from 'lucide-react';
+import { ArrowLeft, Search, Calendar, Filter, Edit2, Trash2, Copy, Download, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-history';
-import { getQuotationHistory, searchQuotationHistory, deleteQuotationHistory } from '@/utils/quotationHistory';
+import { getQuotationHistory, searchQuotationHistory, deleteQuotationHistory, exportQuotationHistory, importQuotationHistory } from '@/utils/quotationHistory';
 
 export default function QuotationHistoryPage() {
   const router = useRouter();
@@ -16,6 +16,8 @@ export default function QuotationHistoryPage() {
     type: 'all'
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
 
   // 加载历史记录
   useEffect(() => {
@@ -46,6 +48,81 @@ export default function QuotationHistoryPage() {
     router.push(`/quotation/copy/${id}`);
   };
 
+  // 处理导出
+  const handleExport = () => {
+    const jsonData = exportQuotationHistory();
+    if (jsonData) {
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quotation-history-${format(new Date(), 'yyyy-MM-dd')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  // 处理导入
+  const handleImport = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const jsonData = e.target?.result as string;
+          if (jsonData) {
+            const success = importQuotationHistory(jsonData);
+            if (success) {
+              // 重新加载历史记录
+              const allHistory = getQuotationHistory();
+              setHistory(allHistory);
+              alert('导入成功！');
+            } else {
+              alert('导入失败，请检查文件格式是否正确。');
+            }
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  };
+
+  // 处理多选
+  const handleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  // 处理全选
+  const handleSelectAll = () => {
+    if (selectedIds.size === history.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(history.map(item => item.id)));
+    }
+  };
+
+  // 处理批量删除
+  const handleBatchDelete = () => {
+    const success = Array.from(selectedIds).every(id => deleteQuotationHistory(id));
+    if (success) {
+      setHistory(prev => prev.filter(item => !selectedIds.has(item.id)));
+      setSelectedIds(new Set());
+      setShowBatchDeleteConfirm(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
@@ -57,9 +134,46 @@ export default function QuotationHistoryPage() {
 
         {/* 标题和搜索栏 */}
         <div className="mt-4 sm:mt-6">
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#F5F5F7] mb-6">
-            报价历史记录
-          </h1>
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#F5F5F7]">
+              报价历史记录
+            </h1>
+            <div className="flex gap-2">
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={() => setShowBatchDeleteConfirm(true)}
+                  className="px-4 py-2 rounded-xl text-sm font-medium
+                    bg-red-600 hover:bg-red-700
+                    text-white
+                    flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  删除所选 ({selectedIds.size})
+                </button>
+              )}
+              <button
+                onClick={handleExport}
+                className="px-4 py-2 rounded-xl text-sm font-medium
+                  bg-[#007AFF] hover:bg-[#0066CC]
+                  text-white
+                  flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                导出
+              </button>
+              <button
+                onClick={handleImport}
+                className="px-4 py-2 rounded-xl text-sm font-medium
+                  bg-gray-100 dark:bg-[#3A3A3C]
+                  text-gray-900 dark:text-[#F5F5F7]
+                  hover:bg-gray-200 dark:hover:bg-[#48484A]
+                  flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                导入
+              </button>
+            </div>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             {/* 搜索框 */}
@@ -105,6 +219,17 @@ export default function QuotationHistoryPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-[#3A3A3C]">
+                    <th className="px-6 py-4 text-left">
+                      <input
+                        type="checkbox"
+                        checked={history.length > 0 && selectedIds.size === history.length}
+                        onChange={handleSelectAll}
+                        className="rounded border-gray-300 dark:border-[#3A3A3C]
+                          text-[#007AFF] 
+                          focus:ring-[#007AFF]
+                          bg-white dark:bg-[#3A3A3C]"
+                      />
+                    </th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">客户名称</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">报价单号</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">类型</th>
@@ -116,6 +241,17 @@ export default function QuotationHistoryPage() {
                 <tbody>
                   {history.map((item) => (
                     <tr key={item.id} className="border-b border-gray-200 dark:border-[#3A3A3C] last:border-0">
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => handleSelect(item.id)}
+                          className="rounded border-gray-300 dark:border-[#3A3A3C]
+                            text-[#007AFF]
+                            focus:ring-[#007AFF]
+                            bg-white dark:bg-[#3A3A3C]"
+                        />
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">{item.customerName}</td>
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">{item.quotationNo}</td>
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">
@@ -192,6 +328,39 @@ export default function QuotationHistoryPage() {
               </button>
               <button
                 onClick={() => handleDelete(showDeleteConfirm)}
+                className="px-4 py-2 rounded-xl text-sm font-medium
+                  bg-red-600 hover:bg-red-700
+                  text-white"
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 批量删除确认弹窗 */}
+      {showBatchDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-[#000000]/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F5F5F7] mb-4">
+              确认批量删除
+            </h3>
+            <p className="text-gray-600 dark:text-[#98989D] mb-6">
+              确定要删除选中的 {selectedIds.size} 条历史记录吗？此操作无法撤销。
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowBatchDeleteConfirm(false)}
+                className="px-4 py-2 rounded-xl text-sm font-medium
+                  bg-gray-100 dark:bg-[#3A3A3C]
+                  text-gray-900 dark:text-[#F5F5F7]
+                  hover:bg-gray-200 dark:hover:bg-[#48484A]"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleBatchDelete}
                 className="px-4 py-2 rounded-xl text-sm font-medium
                   bg-red-600 hover:bg-red-700
                   text-white"
