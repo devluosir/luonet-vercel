@@ -21,12 +21,15 @@ export const metadata: Metadata = {
     ],
     apple: '/icons/icon-192x192.png',
   },
-  themeColor: '#007AFF',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: '报价系统',
   },
+}
+
+export const viewport = {
+  themeColor: '#007AFF',
 }
 
 export default function RootLayout({
