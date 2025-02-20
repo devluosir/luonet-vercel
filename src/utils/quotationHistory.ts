@@ -4,11 +4,31 @@ import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-his
 const WORKER_URL = process.env.WORKER_URL || 'https://bj.luocompany.net';
 const API_TOKEN = process.env.API_TOKEN;
 
+// 定义可重试的错误类型
+const RETRYABLE_ERRORS = [
+  'net::ERR_CONNECTION_CLOSED',
+  'net::ERR_CONNECTION_RESET',
+  'net::ERR_CONNECTION_REFUSED',
+  'net::ERR_NETWORK',
+  'net::ERR_CONNECTION_TIMED_OUT',
+  'timeout'
+];
+
+const isRetryableError = (error: any): boolean => {
+  const errorMessage = error?.message || error?.toString() || '';
+  return RETRYABLE_ERRORS.some(e => errorMessage.includes(e)) ||
+    (error instanceof TypeError && errorMessage.includes('fetch'));
+};
+
 const fetchWithRetry = async (url: string, options: RequestInit = {}, maxRetries = 3) => {
   let lastError;
   
   for (let i = 0; i < maxRetries; i++) {
     try {
+      // 设置请求超时
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const response = await fetch(url, {
         ...options,
         headers: {
@@ -16,10 +36,13 @@ const fetchWithRetry = async (url: string, options: RequestInit = {}, maxRetries
           'Authorization': `Bearer ${API_TOKEN}`,
           ...options.headers,
         },
+        signal: controller.signal,
         keepalive: true,
         mode: 'cors',
         credentials: 'omit'
       });
+
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -34,11 +57,20 @@ const fetchWithRetry = async (url: string, options: RequestInit = {}, maxRetries
       }
       
       return response;
-    } catch (error) {
+    } catch (error: any) {
       lastError = error;
+
+      // 如果是不可重试的错误，直接抛出
+      if (!isRetryableError(error)) {
+        throw error;
+      }
+
       if (i < maxRetries - 1) {
-        // 使用指数退避策略
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+        // 使用指数退避策略，基础等待时间为1秒
+        const waitTime = Math.min(1000 * Math.pow(2, i), 10000);
+        // 添加随机抖动，避免多个请求同时重试
+        const jitter = Math.random() * 1000;
+        await new Promise(resolve => setTimeout(resolve, waitTime + jitter));
       }
     }
   }

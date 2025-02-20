@@ -28,6 +28,20 @@ const corsHeaders = {
   'Access-Control-Max-Age': '86400',
 };
 
+// 错误响应处理函数
+const errorResponse = (error: any, status = 500) => {
+  return new Response(
+    JSON.stringify({
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : String(error)
+    }),
+    {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    }
+  );
+};
+
 // 处理根路径请求
 router.get('/', () => {
   return new Response('Quotation API is running', {
@@ -67,21 +81,20 @@ router.get('/api/quotation/history', async (request: Request, { env }: { env: En
       query += ' WHERE ' + conditions.join(' AND ');
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY created_at DESC LIMIT 100'; // 限制返回数量
 
-    const results = await env.DB.prepare(query).bind(...params).all();
+    const results = await env.DB.prepare(query)
+      .bind(...params)
+      .all();
 
-    return new Response(JSON.stringify({ items: results.results }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (error: any) {
     return new Response(
-      JSON.stringify({ error: 'Failed to get history', message: error.message }),
+      JSON.stringify({ items: results.results || [] }),
       {
-        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
+  } catch (error: any) {
+    return errorResponse(error);
   }
 });
 
@@ -91,23 +104,25 @@ router.post('/api/quotation/history', async (request: Request, { env }: { env: E
     const data = await request.json() as QuotationHistory;
     const { type, customerName, quotationNo, totalAmount, currency, data: quotationData } = data;
 
+    // 验证必填字段
+    if (!type || !customerName || !quotationNo) {
+      return errorResponse('Missing required fields', 400);
+    }
+
     const result = await env.DB.prepare(
       'INSERT INTO quotation_history (type, customer_name, quotation_no, total_amount, currency, data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now"), datetime("now"))'
     )
       .bind(type, customerName, quotationNo, totalAmount, currency, JSON.stringify(quotationData))
       .run();
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (error: any) {
     return new Response(
-      JSON.stringify({ error: 'Failed to save quotation', message: error.message }),
+      JSON.stringify({ success: true }),
       {
-        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
+  } catch (error: any) {
+    return errorResponse(error);
   }
 });
 
@@ -115,6 +130,11 @@ router.post('/api/quotation/history', async (request: Request, { env }: { env: E
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     try {
+      // 设置请求超时
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 30000);
+      });
+
       // 处理 CORS 预检请求
       if (request.method === 'OPTIONS') {
         return new Response(null, {
@@ -123,7 +143,10 @@ export default {
       }
 
       // 处理请求
-      const response = await router.handle(request, { env });
+      const responsePromise = router.handle(request, { env });
+      
+      // 使用 Promise.race 实现超时控制
+      const response = await Promise.race([responsePromise, timeoutPromise]) as Response;
       
       // 如果没有匹配的路由
       if (!response) {
@@ -145,16 +168,7 @@ export default {
         headers
       });
     } catch (error: any) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Internal Server Error', 
-          message: error.message
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+      return errorResponse(error);
     }
   },
 }; 
