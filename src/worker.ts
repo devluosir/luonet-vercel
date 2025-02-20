@@ -1,46 +1,58 @@
 import { Router } from 'itty-router';
 import { D1Database, ExecutionContext } from '@cloudflare/workers-types';
 
+// 定义环境变量接口
 interface Env {
   DB: D1Database;
+  API_TOKEN: string;
 }
 
-interface QuotationBody {
-  type: 'quotation' | 'confirmation';
+// 定义报价历史记录接口
+interface QuotationHistory {
+  type: string;
   customerName: string;
   quotationNo: string;
   totalAmount: number;
-  currency: string;
-  data: any;
 }
 
-const router = Router({ base: '/' });
+// 创建路由器实例
+const router = Router<{ env: Env }>();
 
-// 添加 CORS 处理
+// CORS 头
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-// 处理预检请求
-router.options('*', () => new Response(null, { headers: corsHeaders }));
-
 // 处理根路径请求
-router.get('/', () => new Response('Quotation API is running', {
-  headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
-}));
+router.get('/', () => {
+  return new Response('Quotation API is running', {
+    headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
+  });
+});
+
+// 处理预检请求
+router.options('*', () => {
+  return new Response(null, {
+    headers: {
+      ...corsHeaders,
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+});
 
 // 获取历史记录列表
-router.get('/api/quotation/history', async (request: Request, env: Env) => {
+router.get('/api/quotation/history', async (request: Request, { env }: { env: Env }) => {
   try {
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
-    const type = searchParams.get('type');
+    console.log('Getting quotation history');
+    const url = new URL(request.url);
+    const search = url.searchParams.get('search') || '';
+    const type = url.searchParams.get('type') || 'all';
 
     let query = 'SELECT * FROM quotation_history';
-    const params: any[] = [];
-    const conditions: string[] = [];
+    const params = [];
+    const conditions = [];
 
     if (search) {
       conditions.push('(customer_name LIKE ? OR quotation_no LIKE ?)');
@@ -57,84 +69,94 @@ router.get('/api/quotation/history', async (request: Request, env: Env) => {
     }
 
     query += ' ORDER BY created_at DESC';
+    console.log('Query:', query, 'Params:', params);
 
     const results = await env.DB.prepare(query).bind(...params).all();
+    console.log('Results:', results);
+
     return new Response(JSON.stringify({ items: results.results }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error getting quotation history:', error);
+    console.error('Error getting history:', error);
     return new Response(
-      JSON.stringify({ error: 'Failed to get quotation history', details: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Failed to get history', message: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     );
   }
 });
 
-// 保存新的历史记录
-router.post('/api/quotation/history', async (request: Request, env: Env) => {
+// 保存报价历史
+router.post('/api/quotation/history', async (request: Request, { env }: { env: Env }) => {
   try {
-    const body = await request.json() as QuotationBody;
-    
-    // 验证必填字段
-    if (!body.type || !body.customerName || !body.quotationNo) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const data = await request.json() as QuotationHistory;
+    console.log('Saving quotation:', data);
 
-    const id = crypto.randomUUID();
-    const now = new Date().toISOString();
+    const { type, customerName, quotationNo, totalAmount } = data;
 
-    await env.DB.prepare(`
-      INSERT INTO quotation_history (
-        id, type, customer_name, quotation_no, total_amount, currency, data, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      id,
-      body.type,
-      body.customerName,
-      body.quotationNo,
-      body.totalAmount,
-      body.currency,
-      JSON.stringify(body.data),
-      now,
-      now
-    ).run();
+    const result = await env.DB.prepare(
+      'INSERT INTO quotation_history (type, customer_name, quotation_no, total_amount, created_at) VALUES (?, ?, ?, ?, datetime("now"))'
+    )
+      .bind(type, customerName, quotationNo, totalAmount)
+      .run();
 
-    return new Response(JSON.stringify({ id }), {
+    console.log('Insert result:', result);
+
+    return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('Error saving quotation history:', error);
+    console.error('Error saving quotation:', error);
     return new Response(
-      JSON.stringify({ error: 'Failed to save quotation history', details: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Failed to save quotation', message: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
     );
   }
 });
 
-// 处理 404
-router.all('*', () => new Response('Not Found', { 
-  status: 404,
-  headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
-}));
-
-// 处理所有请求
+// 导出默认处理函数
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     try {
-      // 确保请求路径正确
-      const url = new URL(request.url);
-      request = new Request(url.pathname + url.search, request);
+      // 处理请求
+      const response = await router.handle(request, { env });
       
-      return await router.handle(request, env, ctx);
+      // 如果没有匹配的路由
+      if (!response) {
+        return new Response('Not Found', { 
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+        });
+      }
+
+      // 确保响应包含 CORS 头
+      const headers = new Headers(response.headers);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        headers.set(key, value);
+      });
+
+      return new Response(response.body, {
+        status: response.status || 200,
+        statusText: response.statusText || '',
+        headers
+      });
     } catch (error: any) {
       console.error('Unhandled error:', error);
       return new Response(
-        JSON.stringify({ error: 'Internal Server Error', details: error.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: 'Internal Server Error', 
+          message: error.message 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
   },

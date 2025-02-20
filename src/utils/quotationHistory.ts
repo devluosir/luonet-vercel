@@ -17,14 +17,21 @@ const fetchWithRetry = async (url: string, options: RequestInit = {}, maxRetries
           ...options.headers,
         },
         keepalive: true,
+        mode: 'cors',
+        credentials: 'omit'
       });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+      }
       
       return response;
     } catch (error) {
       lastError = error;
       console.log(`Retry ${i + 1} failed:`, error);
       if (i < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
       }
     }
   }
