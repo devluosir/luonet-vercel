@@ -6,7 +6,7 @@ interface DeepSeekResponse {
   }>;
 }
 
-interface DeepSeekError {
+interface _DeepSeekError {
   message: string;
   status?: number;
 }
