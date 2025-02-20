@@ -4,15 +4,17 @@ import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-his
 const WORKER_URL = process.env.WORKER_URL || 'https://bj.luo.edu.rs';
 const API_TOKEN = process.env.API_TOKEN;
 
-const fetchWithAuth = (url: string, options: RequestInit = {}) => {
+const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+  const headers = new Headers({
+    'Content-Type': 'application/json',
+    'X-API-Token': API_TOKEN || '',
+    'Accept': 'application/json',
+  });
+
   return fetch(url, {
     ...options,
-    mode: 'no-cors',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_TOKEN}`,
-      ...options.headers,
-    }
+    headers,
+    credentials: 'same-origin'
   });
 };
 
@@ -35,7 +37,8 @@ export const saveQuotationHistory = async (type: 'quotation' | 'confirmation', d
     });
 
     if (!response.ok) {
-      throw new Error('Failed to save quotation history');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to save quotation history');
     }
 
     const result = await response.json();

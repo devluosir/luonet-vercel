@@ -1,0 +1,15 @@
+name = "quotation-api"
+main = "src/worker.ts"
+compatibility_date = "2024-02-20"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "quotation-history"
+database_id = "quotation-history-db"
+
+[vars]
+API_TOKEN = "Kqm0uVxJuVRkJ1GUoAwT4SrfvYAbaVbcwV6jQ8hY"
+
+[[routes]]
+pattern = "bj.luo.edu.rs/*"
+zone_name = "luo.edu.rs" 
