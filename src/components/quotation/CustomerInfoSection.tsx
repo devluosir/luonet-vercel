@@ -24,7 +24,6 @@ const labelClassName = `block text-sm font-medium text-gray-500 dark:text-gray-4
 interface SavedCustomer {
   name: string;
   to: string;
-  inquiryNo: string;
 }
 
 export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectionProps) {
@@ -47,8 +46,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
     const customerName = data.to.split('\n')[0].trim(); // 使用第一行作为客户名称
     const newCustomer: SavedCustomer = {
       name: customerName,
-      to: data.to,
-      inquiryNo: data.inquiryNo
+      to: data.to
     };
 
     const newSavedCustomers = [...savedCustomers];
@@ -76,8 +74,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
   const handleLoad = (customer: SavedCustomer) => {
     onChange({
       ...data,
-      to: customer.to,
-      inquiryNo: customer.inquiryNo
+      to: customer.to
     });
     setShowSavedCustomers(false);
   };
