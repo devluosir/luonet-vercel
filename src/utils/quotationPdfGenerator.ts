@@ -13,19 +13,6 @@ interface ExtendedJsPDF extends jsPDF {
   getNumberOfPages: () => number;
 }
 
-// 在文件顶部添加这个接口定义
-interface TableCell {
-  y?: number;
-  content?: string | number;
-  styles?: {
-    halign?: 'left' | 'center' | 'right';
-    textColor?: [number, number, number];
-    [key: string]: unknown;
-  };
-  colSpan?: number;
-  [key: string]: unknown;
-}
-
 // 货币符号映射
 const currencySymbols: { [key: string]: string } = {
   USD: '$',

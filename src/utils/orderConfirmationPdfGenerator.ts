@@ -36,19 +36,6 @@ const getUnitDisplay = (baseUnit: string, quantity: number) => {
   return baseUnit; // 自定义单位不变化单复数
 };
 
-// 在文件顶部添加这个接口定义
-interface TableCell {
-  y?: number;
-  content?: string | number;
-  styles?: {
-    halign?: 'left' | 'center' | 'right';
-    textColor?: [number, number, number];
-    [key: string]: unknown;
-  };
-  colSpan?: number;
-  [key: string]: unknown;
-}
-
 export const generateOrderConfirmationPDF = async (data: QuotationData, preview = false): Promise<Blob> => {
   const doc = new jsPDF({
     orientation: 'portrait',
