@@ -586,10 +586,11 @@ export default function QuotationPage() {
                           text-white font-medium
                           shadow-sm shadow-[#007AFF]/20 dark:shadow-[#0A84FF]/20
                           hover:shadow-lg hover:shadow-[#007AFF]/25 dark:hover:shadow-[#0A84FF]/25
-                          active:scale-[0.98] active:shadow-inner
-                          transform transition-all duration-200 ease-out
+                          active:scale-[0.98] active:shadow-inner active:bg-[#0052CC] dark:active:bg-[#0063CC]
+                          transform transition-all duration-75 ease-out
                           w-full h-10
-                          disabled:opacity-50 disabled:cursor-not-allowed`}
+                          disabled:opacity-50 disabled:cursor-not-allowed
+                          ${isGenerating ? 'scale-[0.98] shadow-inner bg-[#0052CC] dark:bg-[#0063CC]' : ''}`}
                       >
                         <div className="flex items-center justify-center gap-2">
                           {isGenerating ? (
@@ -630,10 +631,11 @@ export default function QuotationPage() {
                         hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
                         hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30
                         active:bg-[#007AFF]/[0.16] dark:active:bg-[#0A84FF]/[0.16]
-                        active:scale-[0.98]
-                        transform transition-all duration-200 ease-out
+                        active:scale-[0.98] active:shadow-inner
+                        transform transition-all duration-75 ease-out
                         w-full sm:w-auto sm:min-w-[120px] h-10
-                        disabled:opacity-50 disabled:cursor-not-allowed`}
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        ${isLoading ? 'scale-[0.98] shadow-inner bg-[#007AFF]/[0.16] dark:bg-[#0A84FF]/[0.16]' : ''}`}
                     >
                       <div className="flex items-center justify-center gap-2">
                         {isLoading ? (
