@@ -283,6 +283,19 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
 
         // 在每页绘制时添加页码
         addPageNumber();
+      },
+      didDrawCell: (data) => {
+        // 确保绘制所有单元格的边框
+        const cell = data.cell;
+        const doc = data.doc;
+        
+        // 绘制单元格的所有边框
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.1);
+        doc.line(cell.x, cell.y, cell.x + cell.width, cell.y); // 上边框
+        doc.line(cell.x, cell.y + cell.height, cell.x + cell.width, cell.y + cell.height); // 下边框
+        doc.line(cell.x, cell.y, cell.x, cell.y + cell.height); // 左边框
+        doc.line(cell.x + cell.width, cell.y, cell.x + cell.width, cell.y + cell.height); // 右边框
       }
     });
 
