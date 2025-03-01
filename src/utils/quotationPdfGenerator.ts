@@ -262,12 +262,13 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
         const pageHeight = doc.internal.pageSize.height;
         const table = hookData.table;
         const row = hookData.row;
+        const cursor = hookData.cursor;
         const isNewPage = row.index === 0 && table.pageCount > 1;
 
         // 检查当前位置是否接近页面底部
-        if (!isNewPage && (hookData.cursor.y + row.height > pageHeight - 40)) {
+        if (!isNewPage && cursor && (cursor.y + row.height > pageHeight - 40)) {
           doc.addPage();
-          hookData.cursor.y = 20; // 在新页面上设置初始 y 坐标
+          cursor.y = 20; // 在新页面上设置初始 y 坐标
         }
       }
     });
