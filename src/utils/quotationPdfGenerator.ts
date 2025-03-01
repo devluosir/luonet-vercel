@@ -13,18 +13,6 @@ interface ExtendedJsPDF extends jsPDF {
   getNumberOfPages: () => number;
 }
 
-// 添加页码函数
-const addPageNumber = (doc: ExtendedJsPDF, pageWidth: number, margin: number) => {
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    const str = `Page ${i} of ${pageCount}`;
-    doc.setFontSize(8);
-    doc.setFont('NotoSansSC', 'normal');
-    doc.text(str, pageWidth - margin, doc.internal.pageSize.height - 10, { align: 'right' });
-  }
-};
-
 // 货币符号映射
 const currencySymbols: { [key: string]: string } = {
   USD: '$',
