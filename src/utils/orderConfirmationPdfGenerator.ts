@@ -509,7 +509,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
       doc.setFont('NotoSansSC', 'bold');
 
       // 根据条款数量决定使用单数还是复数形式
-      const titleText = totalTerms === 1 ? 'Payment Term:' : 'Payment Terms:';
+      const titleText = totalTerms === 1 ? 'Payment Term: ' : 'Payment Terms:';
       doc.text(titleText, margin, currentY);
 
       doc.setFontSize(8);
@@ -525,7 +525,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           
           // 增加标题和内容之间的间距
           const titleWidth = doc.getTextWidth('Payment Term:');
-          const spacing = 8; // 设置合适的间距
+          const spacing = 3; // 设置合适的间距
           
           doc.text(term1Parts[0], margin + titleWidth + spacing, currentY);
           
@@ -537,14 +537,14 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           doc.setTextColor(0, 0, 0);
           doc.text(term1Parts[1], margin + titleWidth + spacing + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
           
-          currentY += 6;
+          currentY += 5;
         } else if (data.additionalPaymentTerms) {
           // 显示额外的付款条款
           const additionalTerm = data.additionalPaymentTerms.trim();
           const titleWidth = doc.getTextWidth('Payment Term:');
-          const spacing = 8; // 设置合适的间距
+          const spacing = 3; // 设置合适的间距
           doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
-          currentY += 6;
+          currentY += 5;
         } else if (data.showInvoiceReminder) {
           // 只有发票号提醒时的布局
           const reminderPrefix = `Please state our contract no. "`;
@@ -552,7 +552,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           
           // 计算各部分的宽度
           const titleWidth = doc.getTextWidth('Payment Term:');
-          const spacing = 8; // 设置合适的间距
+          const spacing = 3; // 设置合适的间距
           const prefixWidth = doc.getTextWidth(reminderPrefix);
           const contractNoWidth = doc.getTextWidth(data.contractNo);
           
@@ -567,7 +567,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           doc.setTextColor(0, 0, 0);
           doc.text(reminderSuffix, margin + titleWidth + spacing + prefixWidth + contractNoWidth, currentY);
           
-          currentY += 6;
+          currentY += 5;
         }
       } else {
         // 多条付款条款的情况，使用编号列表格式
