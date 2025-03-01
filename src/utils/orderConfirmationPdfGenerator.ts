@@ -341,17 +341,52 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
 
     // 检查Notes和其他内容是否会导致印章单独出现在下一页
     const validNotes = data.notes?.filter(note => note.trim() !== '') || [];
-    const notesHeight = validNotes.length > 0 ? (validNotes.length * 5 + 13) : 0; // 估算Notes所需高度
-    const bankInfoHeight = data.showBank ? 35 : 0; // 估算银行信息所需高度
-    const paymentTermsHeight = data.showPaymentTerms ? 20 : 0; // 估算付款条款所需高度
-    const totalContentHeight = notesHeight + bankInfoHeight + paymentTermsHeight;
+    const estimatedLineHeight = 5; // 每行文本的估计高度
+    
+    // 更准确地估算Notes所需高度
+    let notesHeight = 0;
+    if (validNotes.length > 0) {
+      notesHeight = 13; // Notes标题的高度
+      validNotes.forEach(note => {
+        const wrappedText = doc.splitTextToSize(note, pageWidth - (margin * 2) - doc.getTextWidth('1. '));
+        notesHeight += wrappedText.length * estimatedLineHeight;
+      });
+    }
+
+    // 更准确地估算银行信息高度
+    const bankInfoHeight = data.showBank ? 45 : 0; // 考虑到标题和5行信息
+
+    // 更准确地估算付款条款高度
+    let paymentTermsHeight = 0;
+    if (data.showPaymentTerms || data.additionalPaymentTerms || data.showInvoiceReminder) {
+      paymentTermsHeight = 10; // 标题高度
+      if (data.showPaymentTerms) {
+        paymentTermsHeight += estimatedLineHeight;
+      }
+      if (data.additionalPaymentTerms) {
+        const terms = data.additionalPaymentTerms.split('\n').filter(term => term.trim());
+        terms.forEach(term => {
+          const wrappedText = doc.splitTextToSize(term, pageWidth - (margin * 2) - doc.getTextWidth('1. '));
+          paymentTermsHeight += wrappedText.length * estimatedLineHeight;
+        });
+      }
+      if (data.showInvoiceReminder) {
+        paymentTermsHeight += estimatedLineHeight;
+      }
+    }
+
+    const totalContentHeight = notesHeight + bankInfoHeight + paymentTermsHeight + 15; // 添加15mm作为内容间距
     
     // 检查当前页剩余空间
     const remainingSpace = pageHeight - currentY;
-    const stampWithContentHeight = stampHeight + totalContentHeight;
+    const stampWithContentHeight = stampHeight + 10; // 印章高度加上10mm边距
     
-    // 如果内容加上印章的高度超过剩余空间，但内容本身不超过，说明印章会单独出现在下一页
-    const stampWillBeAlone = remainingSpace < stampWithContentHeight && remainingSpace >= totalContentHeight;
+    // 如果剩余空间不足以容纳所有内容和印章，但足够容纳内容，则先添加内容
+    const contentFitsCurrentPage = remainingSpace >= totalContentHeight;
+    const stampNeedsNewPage = remainingSpace < (totalContentHeight + stampWithContentHeight);
+    
+    // 如果内容可以放在当前页，但加上印章后空间不够，则印章需要放到下一页
+    const stampWillBeAlone = contentFitsCurrentPage && stampNeedsNewPage;
 
     // 如果印章会单独出现在下一页，则先放置印章
     if (data.showStamp && stampWillBeAlone) {
