@@ -496,84 +496,149 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         currentY = margin;
       }
 
+      // 计算条款总数
+      let totalTerms = 0;
+      if (data.showPaymentTerms) totalTerms++;
+      if (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) {
+        totalTerms += data.additionalPaymentTerms.trim().split('\n').filter(line => line.trim()).length;
+      }
+      if (data.showInvoiceReminder) totalTerms++;
+
       currentY += 5;
       doc.setFontSize(9);
       doc.setFont('NotoSansSC', 'bold');
-      doc.text('Payment Terms:', margin, currentY);
-      currentY += 5;  // 增加标题与内容的间距
+
+      // 根据条款数量决定使用单数还是复数形式
+      const titleText = totalTerms === 1 ? 'Payment Term:' : 'Payment Terms:';
+      doc.text(titleText, margin, currentY);
 
       doc.setFontSize(8);
       doc.setFont('NotoSansSC', 'normal');
       let termIndex = 1;
 
-      // 显示标准付款条款
-      if (data.showPaymentTerms) {
-        const term1Text = `${termIndex}. Full paid not later than `;
-        const term1End = ` by telegraphic transfer.`;
+      if (totalTerms === 1) {
+        // 单条付款条款的情况，使用单行格式
+        if (data.showPaymentTerms) {
+          const term1Text = `Full paid not later than ${data.paymentDate} by telegraphic transfer.`;
+          const term1Parts = term1Text.split(data.paymentDate);
+          const firstPartWidth = doc.getTextWidth(term1Parts[0]);
+          doc.text(term1Parts[0], margin + doc.getTextWidth('Payment Term: ') + 3, currentY);
+          
+          // 日期显示为红色
+          doc.setTextColor(255, 0, 0);
+          doc.text(data.paymentDate, margin + doc.getTextWidth('Payment Term: ') + firstPartWidth + 3, currentY);
+          
+          // 恢复黑色并绘制剩余部分
+          doc.setTextColor(0, 0, 0);
+          doc.text(term1Parts[1], margin + doc.getTextWidth('Payment Term: ') + firstPartWidth + doc.getTextWidth(data.paymentDate) + 3, currentY);
+          
+          currentY += 6;
+        } else if (data.additionalPaymentTerms) {
+          // 显示额外的付款条款
+          const additionalTerm = data.additionalPaymentTerms.trim();
+          doc.text(additionalTerm, margin + doc.getTextWidth('Payment Term: ') + 3, currentY);
+          currentY += 6;
+        } else if (data.showInvoiceReminder) {
+          // 只有发票号提醒时的布局
+          const reminderPrefix = `Please state our contract no. "`;
+          const reminderSuffix = `" on your payment documents.`;
+          
+          // 计算各部分的宽度
+          const titleWidth = doc.getTextWidth('Payment Term: ');
+          const prefixWidth = doc.getTextWidth(reminderPrefix);
+          const contractNoWidth = doc.getTextWidth(data.contractNo);
+          
+          // 绘制前缀（黑色）
+          doc.text(reminderPrefix, margin + titleWidth + 3, currentY);
+          
+          // 绘制合同号（红色）
+          doc.setTextColor(255, 0, 0);
+          doc.text(data.contractNo, margin + titleWidth + 3 + prefixWidth, currentY);
+          
+          // 绘制后缀（黑色）
+          doc.setTextColor(0, 0, 0);
+          doc.text(reminderSuffix, margin + titleWidth + 3 + prefixWidth + contractNoWidth, currentY);
+          
+          currentY += 6;
+        }
+      } else {
+        // 多条付款条款的情况，使用编号列表格式
+        currentY += 5;  // 标题和第一条之间的间距
         
-        // 计算各部分的宽度
-        const term1Width = doc.getTextWidth(term1Text);
-        const dateWidth = doc.getTextWidth(data.paymentDate);
-        
-        // 绘制第一部分（黑色）
-        doc.text(term1Text, margin, currentY);
-        
-        // 绘制日期（红色）
-        doc.setTextColor(255, 0, 0);
-        doc.text(data.paymentDate, margin + term1Width, currentY);
-        
-        // 绘制最后部分（黑色）
-        doc.setTextColor(0, 0, 0);
-        doc.text(term1End, margin + term1Width + dateWidth, currentY);
-        
-        currentY += 5;  // 增加行间距
-        termIndex++;
-      }
+        const termLeftMargin = 25;
+        const termRightMargin = 15;
+        const maxWidth = pageWidth - termLeftMargin - termRightMargin;
+        const termSpacing = 5;  // 条款之间的固定间距
 
-      // 显示额外的付款条款
-      if (data.additionalPaymentTerms) {
-        const terms = data.additionalPaymentTerms.split('\n').filter(term => term.trim());
-        terms.forEach(term => {
-          const numberText = `${termIndex}. `;
-          const numberWidth = doc.getTextWidth(numberText);
-          const maxWidth = pageWidth - (margin * 2) - numberWidth;
-
-          // 添加序号
-          doc.text(numberText, margin, currentY);
-
-          // 处理长文本自动换行
-          const wrappedText = doc.splitTextToSize(term, maxWidth);
-          wrappedText.forEach((line: string, lineIndex: number) => {
-            doc.text(line, margin + numberWidth, currentY + (lineIndex * 5));
-          });
-
-          // 更新Y坐标，并增加额外的行间距
-          currentY += wrappedText.length * 5;
+        // 显示标准付款条款
+        if (data.showPaymentTerms) {
+          // 绘制条款编号
+          doc.text(`${termIndex}.`, 20, currentY);
+          
+          // 绘制第一部分文本
+          const term1Text = `Full paid not later than ${data.paymentDate} by telegraphic transfer.`;
+          const term1Parts = term1Text.split(data.paymentDate);
+          const firstPartWidth = doc.getTextWidth(term1Parts[0]);
+          doc.text(term1Parts[0], termLeftMargin, currentY);
+          
+          // 日期显示为红色
+          doc.setTextColor(255, 0, 0);
+          doc.text(data.paymentDate, termLeftMargin + firstPartWidth, currentY);
+          
+          // 恢复黑色并绘制剩余部分
+          doc.setTextColor(0, 0, 0);
+          doc.text(term1Parts[1], termLeftMargin + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
+          
+          currentY += termSpacing;
           termIndex++;
-        });
-      }
+        }
 
-      // 显示发票号提醒
-      if (data.showInvoiceReminder) {
-        const reminderPrefix = `${termIndex}. Please state our contract no. "`;
-        const reminderSuffix = `" on your payment documents.`;
-        
-        // 计算各部分的宽度
-        const prefixWidth = doc.getTextWidth(reminderPrefix);
-        const contractNoWidth = doc.getTextWidth(data.contractNo);
-        
-        // 绘制前缀（黑色）
-        doc.text(reminderPrefix, margin, currentY);
-        
-        // 绘制合同号（红色）
-        doc.setTextColor(255, 0, 0);
-        doc.text(data.contractNo, margin + prefixWidth, currentY);
-        
-        // 绘制后缀（黑色）
-        doc.setTextColor(0, 0, 0);
-        doc.text(reminderSuffix, margin + prefixWidth + contractNoWidth, currentY);
-        
-        currentY += 6;
+        // 显示额外的付款条款
+        if (data.additionalPaymentTerms) {
+          const terms = data.additionalPaymentTerms.split('\n').filter(term => term.trim());
+          terms.forEach(term => {
+            const numberText = `${termIndex}. `;
+            const numberWidth = doc.getTextWidth(numberText);
+            const maxWidth = pageWidth - (margin * 2) - numberWidth;
+
+            // 添加序号
+            doc.text(numberText, margin, currentY);
+
+            // 处理长文本自动换行
+            const wrappedText = doc.splitTextToSize(term, maxWidth);
+            wrappedText.forEach((line: string, lineIndex: number) => {
+              doc.text(line, margin + numberWidth, currentY + (lineIndex * 5));
+            });
+
+            // 更新Y坐标，并增加额外的行间距
+            currentY += wrappedText.length * 5;
+            termIndex++;
+          });
+        }
+
+        // 显示发票号提醒
+        if (data.showInvoiceReminder) {
+          const reminderPrefix = `${termIndex}. Please state our contract no. "`;
+          const reminderSuffix = `" on your payment documents.`;
+          
+          // 计算各部分的宽度
+          const titleWidth = doc.getTextWidth('Payment Term: ');
+          const prefixWidth = doc.getTextWidth(reminderPrefix);
+          const contractNoWidth = doc.getTextWidth(data.contractNo);
+          
+          // 绘制前缀（黑色）
+          doc.text(reminderPrefix, margin + titleWidth + 3, currentY);
+          
+          // 绘制合同号（红色）
+          doc.setTextColor(255, 0, 0);
+          doc.text(data.contractNo, margin + titleWidth + 3 + prefixWidth, currentY);
+          
+          // 绘制后缀（黑色）
+          doc.setTextColor(0, 0, 0);
+          doc.text(reminderSuffix, margin + titleWidth + 3 + prefixWidth + contractNoWidth, currentY);
+          
+          currentY += 6;
+        }
       }
     }
 
