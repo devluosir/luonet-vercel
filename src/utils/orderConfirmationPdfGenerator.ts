@@ -258,20 +258,25 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
       margin: { left: 15, right: 15 },
       tableWidth: pageWidth - 30,  // 设置表格宽度为页面宽度减去左右边距
       didDrawPage: (data) => {
-        // 清除页面底部区域
-        const pageHeight = doc.internal.pageSize.height;
-        doc.setFillColor(255, 255, 255);
-        doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-        
-        // 确保每页都添加页码，使用正确的总页数
-        const totalPages = doc.getNumberOfPages();
-        const str = `Page ${data.pageNumber} of ${totalPages}`;
-        doc.setFontSize(8);
-        doc.setFont('NotoSansSC', 'normal');
-        doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
+        // 清除页面底部区域并添加页码的通用函数
+        const addPageNumber = () => {
+          const pageHeight = doc.internal.pageSize.height;
+          // 清除页面底部区域
+          doc.setFillColor(255, 255, 255);
+          doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
+          
+          // 添加页码
+          const totalPages = doc.getNumberOfPages();
+          const str = `Page ${data.pageNumber} of ${totalPages}`;
+          doc.setFontSize(8);
+          doc.setFont('NotoSansSC', 'normal');
+          doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
+        };
+
+        // 在每页绘制时添加页码
+        addPageNumber();
       },
       willDrawCell: (hookData) => {
-        // 在绘制每个单元格之前检查是否需要分页
         const pageHeight = doc.internal.pageSize.height;
         const table = hookData.table;
         const row = hookData.row;
@@ -281,7 +286,27 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         // 检查当前位置是否接近页面底部，预留20mm空间
         if (!isNewPage && cursor && (cursor.y + row.height > pageHeight - 20)) {
           doc.addPage();
-          cursor.y = 20; // 在新页面上设置初始 y 坐标
+          
+          // 在新页面上设置初始 y 坐标
+          cursor.y = 20;
+          
+          // 重置行位置
+          if (hookData.row.raw && Array.isArray(hookData.row.raw)) {
+            (hookData.row.raw as any[]).forEach((cell: any) => {
+              if (cell.y) cell.y = cursor.y;
+            });
+          }
+          
+          // 清除页面底部区域并添加页码
+          const pageHeight = doc.internal.pageSize.height;
+          doc.setFillColor(255, 255, 255);
+          doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
+          
+          const totalPages = doc.getNumberOfPages();
+          const str = `Page ${hookData.pageNumber} of ${totalPages}`;
+          doc.setFontSize(8);
+          doc.setFont('NotoSansSC', 'normal');
+          doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
         }
       }
     });
@@ -502,6 +527,11 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
       const totalPages = doc.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
+        // 清除页面底部区域
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
+        
+        // 添加页码
         const str = `Page ${i} of ${totalPages}`;
         doc.setFontSize(8);
         doc.setFont('NotoSansSC', 'normal');
