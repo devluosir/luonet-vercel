@@ -36,6 +36,12 @@ const getUnitDisplay = (baseUnit: string, quantity: number) => {
   return baseUnit; // 自定义单位不变化单复数
 };
 
+// 在文件顶部添加这个接口定义
+interface TableCell {
+  y?: number;
+  [key: string]: any;
+}
+
 export const generateOrderConfirmationPDF = async (data: QuotationData, preview = false): Promise<Blob> => {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -292,7 +298,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           
           // 重置行位置
           if (hookData.row.raw && Array.isArray(hookData.row.raw)) {
-            (hookData.row.raw as any[]).forEach((cell: any) => {
+            (hookData.row.raw as TableCell[]).forEach((cell: TableCell) => {
               if (cell.y) cell.y = cursor.y;
             });
           }

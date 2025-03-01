@@ -13,6 +13,12 @@ interface ExtendedJsPDF extends jsPDF {
   getNumberOfPages: () => number;
 }
 
+// 在文件顶部添加这个接口定义
+interface TableCell {
+  y?: number;
+  [key: string]: any;
+}
+
 // 货币符号映射
 const currencySymbols: { [key: string]: string } = {
   USD: '$',
@@ -299,7 +305,7 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
           
           // 重置行位置
           if (hookData.row.raw && Array.isArray(hookData.row.raw)) {
-            (hookData.row.raw as any[]).forEach((cell: any) => {
+            (hookData.row.raw as TableCell[]).forEach((cell: TableCell) => {
               if (cell.y) cell.y = cursor.y;
             });
           }
