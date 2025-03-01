@@ -128,22 +128,24 @@ export default function QuotationPage() {
 
   const handleGenerate = useCallback(async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    
+    // 立即更新状态
     flushSync(() => {
       setIsGenerating(true);
-      setGeneratingProgress(0);
+      setGeneratingProgress(10);
     });
     
+    let progressInterval: NodeJS.Timeout | undefined;
+    
     try {
-      // 模拟进度更新
-      const progressInterval = setInterval(() => {
+      // 启动进度更新
+      progressInterval = setInterval(() => {
         setGeneratingProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + Math.random() * 15;
+          // 使用更平滑的进度增长
+          const increment = Math.max(1, (90 - prev) / 10);
+          return prev >= 90 ? prev : prev + increment;
         });
-      }, 200);
+      }, 100);
 
       if (activeTab === 'quotation') {
         await generateQuotationPDF(data);
@@ -151,17 +153,28 @@ export default function QuotationPage() {
         await generateOrderConfirmationPDF(data);
       }
 
-      clearInterval(progressInterval);
-      setGeneratingProgress(100);
+      // 清除进度更新
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
       
-      // 延迟重置进度，以便用户可以看到完成状态
+      // 完成时立即设置100%
+      flushSync(() => {
+        setGeneratingProgress(100);
+      });
+      
+      // 延迟重置进度
       setTimeout(() => {
         setGeneratingProgress(0);
+        setIsGenerating(false);
       }, 500);
     } catch (error) {
       console.error('Error generating PDF:', error);
-    } finally {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
       setIsGenerating(false);
+      setGeneratingProgress(0);
     }
   }, [activeTab, data]);
 
@@ -170,6 +183,7 @@ export default function QuotationPage() {
   }, []);
 
   const handlePreview = useCallback(async () => {
+    // 立即更新加载状态
     flushSync(() => {
       setIsLoading(true);
     });
@@ -187,7 +201,9 @@ export default function QuotationPage() {
     } catch (error) {
       console.error('PDF generation failed:', error);
     } finally {
-      setIsLoading(false);
+      flushSync(() => {
+        setIsLoading(false);
+      });
     }
   }, [activeTab, data]);
 
