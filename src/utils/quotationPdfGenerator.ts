@@ -263,9 +263,16 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
       } as { [key: number]: { cellWidth: number | 'auto', halign: 'center' } },
       margin: { left: 15, right: 15 },
       tableWidth: pageWidth - 30,  // 设置表格宽度为页面宽度减去左右边距
-      didDrawPage: () => {
-        // 在每页绘制页眉（如果需要）
+      didDrawPage: (data) => {
+        // 添加页码 "Page X of Y"
+        const str = `Page ${data.pageNumber} of ${data.pageCount}`;
+        doc.setFontSize(8);
+        doc.setFont('NotoSansSC', 'normal');
+        doc.text(str, pageWidth - margin, doc.internal.pageSize.height - 10, { align: 'right' });
       },
+      showPageNumber: false,  // 禁用页码显示
+      showFooter: false,  // 禁用页脚
+      pageNumber: '',  // 清空页码文本
       willDrawCell: (hookData) => {
         // 在绘制每个单元格之前检查是否需要分页
         const pageHeight = doc.internal.pageSize.height;
