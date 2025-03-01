@@ -180,6 +180,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
 
   // 处理单元格粘贴
   const handleCellPaste = (e: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>, index: number, field: keyof LineItem) => {
+    // 阻止事件冒泡
+    e.stopPropagation();
+    
     const target = e.target as HTMLInputElement | HTMLTextAreaElement;
     const pasteText = e.clipboardData.getData('text');
     
