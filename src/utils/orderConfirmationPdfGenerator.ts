@@ -649,7 +649,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           doc.setTextColor(0, 0, 0);
           doc.text(reminderSuffix, margin + prefixWidth + contractNoWidth, currentY);
           
-          currentY += 6;
+          currentY += 5;
         }
       }
     }
