@@ -277,11 +277,16 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
       margin: { left: 15, right: 15 },
       tableWidth: pageWidth - 30,  // 设置表格宽度为页面宽度减去左右边距
       didDrawPage: (data) => {
-        // 添加页码 "Page X of Y"
+        // 清除页面底部区域
+        const pageHeight = doc.internal.pageSize.height;
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
+        
+        // 添加页码 "Page X of Y"，位置稍微上移
         const str = `Page ${data.pageNumber} of ${data.pageCount}`;
         doc.setFontSize(8);
         doc.setFont('NotoSansSC', 'normal');
-        doc.text(str, pageWidth - margin, doc.internal.pageSize.height - 10, { align: 'right' });
+        doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
       },
       willDrawCell: (hookData) => {
         // 在绘制每个单元格之前检查是否需要分页
@@ -291,10 +296,15 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
         const cursor = hookData.cursor;
         const isNewPage = row.index === 0 && table.pageCount > 1;
 
-        // 检查当前位置是否接近页面底部，预留20mm空间
-        if (!isNewPage && cursor && (cursor.y + row.height > pageHeight - 20)) {
+        // 检查当前位置是否接近页面底部，预留40mm空间（增加预留空间）
+        if (!isNewPage && cursor && (cursor.y + row.height > pageHeight - 40)) {
           doc.addPage();
           cursor.y = 20; // 在新页面上设置初始 y 坐标
+          
+          // 重置当前行的位置
+          if (row.height > 0) {
+            cursor.y = Math.max(20, cursor.y);
+          }
         }
       }
     });
