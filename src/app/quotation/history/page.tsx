@@ -60,7 +60,12 @@ export default function QuotationHistoryPage() {
   const handleExport = () => {
     try {
       const results = getQuotationHistory();
-      const jsonData = JSON.stringify(results, null, 2);
+      // 如果有选中的记录，只导出选中的记录
+      const dataToExport = selectedIds.size > 0 
+        ? results.filter(item => selectedIds.has(item.id))
+        : results;
+      
+      const jsonData = JSON.stringify(dataToExport, null, 2);
       const blob = new Blob([jsonData], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -183,7 +188,7 @@ export default function QuotationHistoryPage() {
                   flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />
-                导出
+                {selectedIds.size > 0 ? `导出所选(${selectedIds.size})` : '导出全部'}
               </button>
               <button
                 onClick={handleImport}
