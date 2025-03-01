@@ -6,7 +6,7 @@ export function getDefaultNotes(salesPerson: string, type: 'quotation' | 'confir
         return [
           'Delivery time: 30 days',
           'Price based on EXW-Jiangsu, China',
-          'Delivery terms: As mentioned above,subj to unsold',
+          'Delivery terms: As mentioned above, subj to unsold',
           'Excluding handling & packing charge and freight cost',
           'Payment term: 30 days',
           'Validity: 10 days',
@@ -15,7 +15,7 @@ export function getDefaultNotes(salesPerson: string, type: 'quotation' | 'confir
         return [
           'Delivery time: 30 days',
           'Price based on EXW-Jiangsu, China',
-          'Delivery terms: As mentioned above,subj to unsold',
+          'Delivery terms: As mentioned above, subj to unsold',
           'Payment term: 50% deposit, the balance paid before delivery',
           'Validity: 10 days',
         ];
@@ -23,7 +23,7 @@ export function getDefaultNotes(salesPerson: string, type: 'quotation' | 'confir
         return [
           'Delivery time: 30 days',
           'Price based on EXW-Jiangsu, China',
-          'Delivery terms: As mentioned above,subj to unsold',
+          'Delivery terms: As mentioned above, subj to unsold',
           'Payment term: 50% deposit, the balance paid before delivery',
           'Validity: 10 days',
         ];
@@ -31,7 +31,7 @@ export function getDefaultNotes(salesPerson: string, type: 'quotation' | 'confir
         return [
           'Delivery time: 30 days',
           'Price based on EXW-Jiangsu, China',
-          'Delivery terms: As mentioned above,subj to unsold',
+          'Delivery terms: As mentioned above, subj to unsold',
           'Payment term: 50% deposit, the balance paid before delivery',
           'Validity: 10 days',
         ];
