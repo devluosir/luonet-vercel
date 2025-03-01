@@ -514,7 +514,6 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         // 计算各部分的宽度
         const term1Width = doc.getTextWidth(term1Text);
         const dateWidth = doc.getTextWidth(data.paymentDate);
-        const endWidth = doc.getTextWidth(term1End);
         
         // 绘制第一部分（黑色）
         doc.text(term1Text, margin, currentY);
