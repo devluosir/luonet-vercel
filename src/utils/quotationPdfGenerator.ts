@@ -10,6 +10,7 @@ interface ExtendedJsPDF extends jsPDF {
     finalY: number;
   };
   autoTable: (options: UserOptions) => void;
+  getNumberOfPages: () => number;
 }
 
 // 添加页码函数

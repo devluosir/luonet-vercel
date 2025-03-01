@@ -14,6 +14,7 @@ type ExtendedJsPDF = jsPDF & {
   restoreGraphicsState: () => jsPDF;
   GState: new (options: { opacity: number }) => unknown;
   setGState: (gState: unknown) => void;
+  getNumberOfPages: () => number;
 }
 
 // 添加页码函数
