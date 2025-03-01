@@ -252,12 +252,33 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         ...(data.showRemarks ? { [data.showDescription ? 7 : 6]: { halign: 'center', cellWidth: 'auto' } } : {})  // Remarks
       } as { [key: number]: { cellWidth: number | 'auto', halign: 'center' } },
       margin: { left: 15, right: 15 },
-      tableWidth: pageWidth - 30  // 设置表格宽度为页面宽度减去左右边距
+      tableWidth: pageWidth - 30,  // 设置表格宽度为页面宽度减去左右边距
+      didDrawPage: (data) => {
+        // 在每页绘制页眉（如果需要）
+      },
+      willDrawCell: (data) => {
+        // 在绘制每个单元格之前检查是否需要分页
+        const pageHeight = doc.internal.pageSize.height;
+        if (data.row.raw && data.row.y + data.row.height > pageHeight - 40) {
+          doc.addPage();
+          data.row.y = 20; // 在新页面上设置初始 y 坐标
+        }
+      }
     });
 
     // 获取表格结束的Y坐标
     const finalY = doc.lastAutoTable.finalY || currentY;
     currentY = finalY + 10;
+
+    // 检查剩余空间是否足够显示总金额和其他内容
+    const pageHeight = doc.internal.pageSize.height;
+    const remainingSpace = pageHeight - currentY;
+    const estimatedContentHeight = 150; // 估计总金额、银行信息、付款条款等内容的高度
+
+    if (remainingSpace < estimatedContentHeight) {
+      doc.addPage();
+      currentY = 20; // 在新页面上重置Y坐标
+    }
 
     // 添加总金额
     const itemsTotal = data.items.reduce((sum, item) => sum + item.amount, 0);
