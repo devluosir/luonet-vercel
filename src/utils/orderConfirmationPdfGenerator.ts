@@ -549,7 +549,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           });
 
           // 更新Y坐标，并增加额外的行间距
-          currentY += (wrappedText.length * 5) + 1;
+          currentY += wrappedText.length * 5;
           termIndex++;
         });
       }
