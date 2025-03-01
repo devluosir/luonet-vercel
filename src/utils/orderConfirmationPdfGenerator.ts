@@ -279,16 +279,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     const finalY = doc.lastAutoTable.finalY || currentY;
     currentY = finalY + 10;
 
-    // 检查剩余空间是否足够显示总金额和其他内容
-    const pageHeight = doc.internal.pageSize.height;
-    const remainingSpace = pageHeight - currentY;
-
-    if (remainingSpace < 20) { // 同样预留20mm空间
-      doc.addPage();
-      currentY = 20; // 在新页面上重置Y坐标
-    }
-
-    // 添加总金额
+    // 添加总金额（总是和表格在同一页）
     const itemsTotal = data.items.reduce((sum, item) => sum + item.amount, 0);
     const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
     const total = itemsTotal + feesTotal;
@@ -296,6 +287,17 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     doc.setFont('NotoSansSC', 'bold');
     const totalText = `Total Amount: ${currencySymbols[data.currency]}${total.toFixed(2)}`;
     doc.text(totalText, pageWidth - 20 - doc.getTextWidth(totalText), currentY);
+
+    // 检查 Notes 部分是否需要新页面
+    currentY += 15; // 在总金额下方留出更多空间
+    const pageHeight = doc.internal.pageSize.height;
+    const remainingSpace = pageHeight - currentY;
+
+    // 如果剩余空间小于40mm（预估Notes等内容的最小需求），整体移到新页面
+    if (remainingSpace < 40) {
+      doc.addPage();
+      currentY = 20; // 在新页面上重置Y坐标
+    }
 
     // 添加备注
     if (data.notes && data.notes.length > 0 && data.notes.some(note => note.trim() !== '')) {
