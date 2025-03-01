@@ -226,6 +226,44 @@ export default function QuotationPage() {
     }
   };
 
+  // 添加全局粘贴事件监听器
+  useEffect(() => {
+    const handlePaste = async (event: ClipboardEvent) => {
+      const target = event.target as HTMLElement;
+      
+      // 更严格的判断：检查是否在输入框、文本区域或表格单元格内
+      if (target && (
+        target.tagName === 'INPUT' || 
+        target.tagName === 'TEXTAREA' ||
+        target.closest('td') !== null ||
+        target.closest('table') !== null ||
+        target.getAttribute('contenteditable') === 'true' ||
+        target.closest('[contenteditable="true"]') !== null
+      )) {
+        return;
+      }
+
+      // 只有在非表格区域的粘贴才执行全局粘贴
+      event.preventDefault();
+      try {
+        let text = event.clipboardData?.getData('text') || '';
+        if (!text) {
+          text = await navigator.clipboard.readText();
+        }
+        if (text) {
+          handleGlobalPaste(text);
+        }
+      } catch (err) {
+        console.error('Failed to handle paste:', err);
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, []);
+
   // 显示粘贴对话框
   const showPasteDialog = () => {
     const input = document.createElement('textarea');
