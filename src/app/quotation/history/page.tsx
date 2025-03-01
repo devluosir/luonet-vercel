@@ -70,7 +70,21 @@ export default function QuotationHistoryPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `quotation-history-${format(new Date(), 'yyyy-MM-dd')}.json`;
+
+      // 生成文件名
+      let fileName = '';
+      if (selectedIds.size === 1) {
+        // 如果只选择了一条记录，使用其单号
+        const selectedItem = dataToExport[0];
+        const docNo = selectedItem.type === 'quotation' ? selectedItem.quotationNo : selectedItem.data.contractNo;
+        fileName = `${docNo}-${format(new Date(), 'yyyy-MM-dd')}`;
+      } else {
+        // 如果选择了多条或全部，使用日期
+        const prefix = selectedIds.size > 0 ? `selected-${selectedIds.size}` : 'all';
+        fileName = `quotation-history-${prefix}-${format(new Date(), 'yyyy-MM-dd')}`;
+      }
+      
+      a.download = `${fileName}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
