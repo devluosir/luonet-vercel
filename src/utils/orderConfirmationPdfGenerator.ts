@@ -256,15 +256,25 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         [data.showDescription ? 6 : 5]: { halign: 'center', cellWidth: 20 },  // Amount
         ...(data.showRemarks ? { [data.showDescription ? 7 : 6]: { halign: 'center', cellWidth: 'auto' } } : {})  // Remarks
       } as { [key: number]: { cellWidth: number | 'auto', halign: 'center' } },
-      margin: { left: 15, right: 15 },
+      margin: { left: 15, right: 15, bottom: 20 },  // 增加底部边距
       tableWidth: pageWidth - 30,  // 设置表格宽度为页面宽度减去左右边距
+      didParseCell: (data) => {
+        const pageHeight = data.doc.internal.pageSize.height;
+        const bottomMargin = 25;
+        
+        if (data.row.index > 0 && 
+            data.cursor && 
+            (data.cell.y + data.cell.height) > (pageHeight - bottomMargin)) {
+          data.cursor.y = 0;
+        }
+      },
       didDrawPage: (data) => {
         // 清除页面底部区域并添加页码的通用函数
         const addPageNumber = () => {
           const pageHeight = doc.internal.pageSize.height;
           // 清除页面底部区域
           doc.setFillColor(255, 255, 255);
-          doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
+          doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
           
           // 添加页码
           const totalPages = doc.getNumberOfPages();
