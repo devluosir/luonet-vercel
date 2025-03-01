@@ -525,7 +525,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           
           // 增加标题和内容之间的间距
           const titleWidth = doc.getTextWidth('Payment Term:');
-          const spacing = 8; // 设置合适的间距
+          const spacing = 5; // 设置合适的间距
           
           doc.text(term1Parts[0], margin + titleWidth + spacing, currentY);
           
@@ -542,7 +542,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           // 显示额外的付款条款
           const additionalTerm = data.additionalPaymentTerms.trim();
           const titleWidth = doc.getTextWidth('Payment Term:');
-          const spacing = 8; // 设置合适的间距
+          const spacing = 5; // 设置合适的间距
           doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
           currentY += 5;
         } else if (data.showInvoiceReminder) {
@@ -552,7 +552,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           
           // 计算各部分的宽度
           const titleWidth = doc.getTextWidth('Payment Term:');
-          const spacing = 8; // 设置合适的间距
+          const spacing = 5; // 设置合适的间距
           const prefixWidth = doc.getTextWidth(reminderPrefix);
           const contractNoWidth = doc.getTextWidth(data.contractNo);
           
