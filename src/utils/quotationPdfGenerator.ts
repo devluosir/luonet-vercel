@@ -270,8 +270,9 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
         doc.setFillColor(255, 255, 255);
         doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
         
-        // 添加页码 "Page X of Y"，位置稍微上移
-        const str = `Page ${data.pageNumber} of ${data.pageCount}`;
+        // 确保每页都添加页码，使用正确的总页数
+        const totalPages = doc.getNumberOfPages();
+        const str = `Page ${data.pageNumber} of ${totalPages}`;
         doc.setFontSize(8);
         doc.setFont('NotoSansSC', 'normal');
         doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
@@ -288,11 +289,6 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
         if (!isNewPage && cursor && (cursor.y + row.height > pageHeight - 20)) {
           doc.addPage();
           cursor.y = 20; // 在新页面上设置初始 y 坐标
-          
-          // 重置当前行的位置，确保在新页面顶部正确显示
-          if (row.height > 0) {
-            cursor.y = Math.max(20, cursor.y);
-          }
         }
       }
     });
@@ -332,6 +328,13 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     const validNotes = data.notes?.filter(note => note.trim() !== '') || [];
 
     if (validNotes.length > 0) {
+      // 检查剩余空间是否足够显示 Notes
+      const remainingSpace = pageHeight - currentY;
+      if (remainingSpace < 40) {
+        doc.addPage();
+        currentY = 20;
+      }
+
       doc.setFontSize(8);
       doc.setFont('NotoSansSC', 'bold');
       doc.text('Notes:', leftMargin, currentY);
@@ -362,6 +365,15 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
 
     // 如果是预览模式，返回 blob
     if (preview) {
+      // 确保所有页面都有页码
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        const str = `Page ${i} of ${totalPages}`;
+        doc.setFontSize(8);
+        doc.setFont('NotoSansSC', 'normal');
+        doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
+      }
       return doc.output('blob');
     }
     

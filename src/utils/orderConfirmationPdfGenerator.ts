@@ -263,8 +263,9 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         doc.setFillColor(255, 255, 255);
         doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
         
-        // 添加页码 "Page X of Y"，位置稍微上移
-        const str = `Page ${data.pageNumber} of ${data.pageCount}`;
+        // 确保每页都添加页码，使用正确的总页数
+        const totalPages = doc.getNumberOfPages();
+        const str = `Page ${data.pageNumber} of ${totalPages}`;
         doc.setFontSize(8);
         doc.setFont('NotoSansSC', 'normal');
         doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
@@ -281,11 +282,6 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         if (!isNewPage && cursor && (cursor.y + row.height > pageHeight - 20)) {
           doc.addPage();
           cursor.y = 20; // 在新页面上设置初始 y 坐标
-          
-          // 重置当前行的位置，确保在新页面顶部正确显示
-          if (row.height > 0) {
-            cursor.y = Math.max(20, cursor.y);
-          }
         }
       }
     });
@@ -316,6 +312,13 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
 
     // 添加备注
     if (data.notes && data.notes.length > 0 && data.notes.some(note => note.trim() !== '')) {
+      // 检查剩余空间是否足够
+      const remainingSpace = pageHeight - currentY;
+      if (remainingSpace < 40) {
+        doc.addPage();
+        currentY = 20;
+      }
+
       currentY += 8;
       doc.setFontSize(9);
       doc.setFont('NotoSansSC', 'bold');
@@ -348,6 +351,13 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
 
     // 添加银行信息
     if (data.showBank) {
+      // 检查剩余空间是否足够显示银行信息
+      const remainingSpace = pageHeight - currentY;
+      if (remainingSpace < 40) {
+        doc.addPage();
+        currentY = 20;
+      }
+
       currentY += 5;
       doc.setFontSize(9);
       doc.setFont('NotoSansSC', 'bold');
@@ -486,8 +496,17 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
       }
     }
 
-    // 根据模式选择保存或返回预览URL
+    // 如果是预览模式，返回 blob
     if (preview) {
+      // 确保所有页面都有页码
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        const str = `Page ${i} of ${totalPages}`;
+        doc.setFontSize(8);
+        doc.setFont('NotoSansSC', 'normal');
+        doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
+      }
       return doc.output('blob');
     }
     
