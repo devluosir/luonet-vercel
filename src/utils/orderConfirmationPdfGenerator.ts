@@ -573,15 +573,15 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         // 多条付款条款的情况，使用编号列表格式
         currentY += 5;  // 标题和第一条之间的间距
         
-        const termLeftMargin = 25;
         const termRightMargin = 15;
-        const maxWidth = pageWidth - termLeftMargin - termRightMargin;
+        const numberWidth = doc.getTextWidth('1. '); // 获取序号的标准宽度
+        const maxWidth = pageWidth - margin - numberWidth - termRightMargin;
         const termSpacing = 5;  // 条款之间的固定间距
 
         // 显示标准付款条款
         if (data.showPaymentTerms) {
           // 绘制条款编号
-          doc.text(`${termIndex}.`, 20, currentY);
+          doc.text(`${termIndex}.`, margin, currentY);
           
           // 绘制第一部分文本
           const term1Text = `Full paid not later than ${data.paymentDate} by telegraphic transfer.`;
@@ -590,15 +590,15 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           
           // 处理长文本自动换行
           const wrappedText = doc.splitTextToSize(term1Parts[0], maxWidth - firstPartWidth);
-          doc.text(wrappedText[0], termLeftMargin, currentY);
+          doc.text(wrappedText[0], margin + numberWidth, currentY);
           
           // 日期显示为红色
           doc.setTextColor(255, 0, 0);
-          doc.text(data.paymentDate, termLeftMargin + firstPartWidth, currentY);
+          doc.text(data.paymentDate, margin + numberWidth + firstPartWidth, currentY);
           
           // 恢复黑色并绘制剩余部分
           doc.setTextColor(0, 0, 0);
-          doc.text(term1Parts[1], termLeftMargin + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
+          doc.text(term1Parts[1], margin + numberWidth + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
           
           currentY += termSpacing;
           termIndex++;
