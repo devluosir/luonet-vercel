@@ -18,7 +18,7 @@ type ExtendedJsPDF = jsPDF & {
 
 // 添加页码函数
 const addPageNumber = (doc: ExtendedJsPDF, pageWidth: number, margin: number) => {
-  const pageCount = doc.internal.getNumberOfPages();
+  const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     const str = `Page ${i} of ${pageCount}`;
