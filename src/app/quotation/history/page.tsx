@@ -20,13 +20,40 @@ export default function QuotationHistoryPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
 
+  // 处理搜索
+  const getFilteredHistory = (items: QuotationHistory[]) => {
+    return items.filter(item => {
+      if (!filters.search) return true;
+      
+      const searchTerm = filters.search.toLowerCase().trim();
+      
+      // 匹配客户名称
+      if (item.customerName.toLowerCase().includes(searchTerm)) return true;
+      
+      // 匹配单号
+      const docNo = item.type === 'quotation' ? item.quotationNo : item.data.contractNo;
+      if (docNo.toLowerCase().includes(searchTerm)) return true;
+      
+      // 匹配金额（支持大致金额搜索）
+      const amount = item.totalAmount.toString();
+      if (amount.includes(searchTerm)) return true;
+      
+      return false;
+    }).filter(item => {
+      // 类型筛选
+      if (filters.type === 'all') return true;
+      return item.type === filters.type;
+    });
+  };
+
   // 加载历史记录
   useEffect(() => {
     const loadHistory = () => {
       setIsLoading(true);
       try {
-        const results = getQuotationHistory(filters);
-        setHistory(results);
+        const results = getQuotationHistory();
+        const filteredResults = getFilteredHistory(results);
+        setHistory(filteredResults);
       } catch (error) {
         console.error('Error loading history:', error);
       } finally {
@@ -178,53 +205,29 @@ export default function QuotationHistoryPage() {
         {/* 标题和搜索栏 */}
         <div className="mt-4 sm:mt-6">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#F5F5F7]">
-              报价历史记录
-            </h1>
-            <div className="flex gap-2">
-              {selectedIds.size > 0 && (
-                <button
-                  onClick={() => setShowBatchDeleteConfirm(true)}
-                  className="px-4 py-2 rounded-xl text-sm font-medium
-                    bg-red-600 hover:bg-red-700
-                    text-white
-                    flex items-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  删除所选 ({selectedIds.size})
-                </button>
-              )}
-              <button
-                onClick={handleExport}
-                className="px-4 py-2 rounded-xl text-sm font-medium
-                  bg-[#007AFF] hover:bg-[#0066CC]
-                  text-white
-                  flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                {selectedIds.size > 0 ? `导出所选(${selectedIds.size})` : '导出全部'}
-              </button>
-              <button
-                onClick={handleImport}
-                className="px-4 py-2 rounded-xl text-sm font-medium
-                  bg-gray-100 dark:bg-[#3A3A3C]
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#F5F5F7]">
+                报价历史记录
+              </h1>
+              <select
+                value={filters.type}
+                onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as 'all' | 'quotation' | 'confirmation' }))}
+                className="h-10 px-4 rounded-xl
+                  bg-white dark:bg-[#2C2C2E]
+                  border border-gray-200 dark:border-[#3A3A3C]
                   text-gray-900 dark:text-[#F5F5F7]
-                  hover:bg-gray-200 dark:hover:bg-[#48484A]
-                  flex items-center gap-2"
+                  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/50"
               >
-                <Upload className="w-4 h-4" />
-                导入
-              </button>
+                <option value="all">全部类型</option>
+                <option value="quotation">报价单</option>
+                <option value="confirmation">订单确认</option>
+              </select>
             </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            {/* 搜索框 */}
-            <div className="flex-1">
-              <div className="relative">
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
                 <input
                   type="text"
-                  placeholder="搜索客户名称或报价单号..."
+                  placeholder="搜索客户名称/单号/金额..."
                   value={filters.search}
                   onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                   className="w-full h-10 pl-10 pr-4 rounded-xl
@@ -235,24 +238,50 @@ export default function QuotationHistoryPage() {
                     focus:outline-none focus:ring-2 focus:ring-[#007AFF]/50"
                 />
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                {filters.search && (
+                  <button
+                    onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1
+                      text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <span className="sr-only">清除搜索</span>
+                    ×
+                  </button>
+                )}
               </div>
-            </div>
-
-            {/* 类型筛选 */}
-            <div className="w-full sm:w-48">
-              <select
-                value={filters.type}
-                onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as 'all' | 'quotation' | 'confirmation' }))}
-                className="w-full h-10 px-4 rounded-xl
-                  bg-white dark:bg-[#2C2C2E]
-                  border border-gray-200 dark:border-[#3A3A3C]
-                  text-gray-900 dark:text-[#F5F5F7]
-                  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/50"
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={() => setShowBatchDeleteConfirm(true)}
+                  className="h-10 px-4 rounded-xl text-sm font-medium
+                    bg-red-600 hover:bg-red-700
+                    text-white
+                    flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  删除所选 ({selectedIds.size})
+                </button>
+              )}
+              <button
+                onClick={handleExport}
+                className="h-10 px-4 rounded-xl text-sm font-medium
+                  bg-[#007AFF] hover:bg-[#0066CC]
+                  text-white
+                  flex items-center gap-2"
               >
-                <option value="all">全部类型</option>
-                <option value="quotation">报价单</option>
-                <option value="confirmation">订单确认</option>
-              </select>
+                <Download className="w-4 h-4" />
+                {selectedIds.size > 0 ? `导出所选(${selectedIds.size})` : '导出全部'}
+              </button>
+              <button
+                onClick={handleImport}
+                className="h-10 px-4 rounded-xl text-sm font-medium
+                  bg-gray-100 dark:bg-[#3A3A3C]
+                  text-gray-900 dark:text-[#F5F5F7]
+                  hover:bg-gray-200 dark:hover:bg-[#48484A]
+                  flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                导入
+              </button>
             </div>
           </div>
 
