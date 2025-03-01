@@ -586,37 +586,69 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           throw new Error('Failed to load stamp image: Image is null');
         }
 
-        // 计算页面底部边界
+        // 计算页面底部边界和当前页剩余空间
         const pageBottom = doc.internal.pageSize.height - margin;
+        const remainingSpace = pageBottom - currentY;
         
-        // 印章位置跟随在付款条款下方
-        let stampY = currentY + 5;  // 在付款条款下方留出5mm间距
-
-        // 确保印章不会超出页面底部
-        if (stampY + stampHeight > pageBottom) {
-          doc.addPage();
-          stampY = margin;
-          currentY = margin;
+        // 如果当前页剩余空间不足以放置印章，且当前页已经有其他内容，则将印章放在上一部分内容的旁边
+        if (remainingSpace < stampHeight && currentY > margin + 50) {
+          // 找到合适的Y坐标，通常是在总金额附近
+          let adjustedY = currentY - stampHeight - 20; // 从当前位置向上偏移
+          
+          // 确保不会太靠近页面顶部
+          adjustedY = Math.max(adjustedY, margin + 50);
+          
+          // 设置印章透明度为0.9
+          doc.saveGraphicsState();
+          doc.setGState(new doc.GState({ opacity: 0.9 }));
+          
+          doc.addImage(
+            stampImage,
+            'PNG',
+            stampX,
+            adjustedY,
+            stampWidth,
+            stampHeight
+          );
+          
+          // 恢复透明度
+          doc.restoreGraphicsState();
+        } else {
+          // 正常情况下的印章位置处理
+          let stampY = currentY + 5;
+          
+          // 如果印章会超出页面底部，添加新页面
+          if (stampY + stampHeight > pageBottom) {
+            // 在添加新页面之前，检查当前页是否已经有内容
+            if (currentY > margin + 20) {
+              // 如果有内容，将印章放在当前页的合适位置
+              stampY = Math.max(margin + 50, currentY - stampHeight - 20);
+            } else {
+              doc.addPage();
+              stampY = margin;
+              currentY = margin;
+            }
+          }
+          
+          // 设置印章透明度为0.9
+          doc.saveGraphicsState();
+          doc.setGState(new doc.GState({ opacity: 0.9 }));
+          
+          doc.addImage(
+            stampImage,
+            'PNG',
+            stampX,
+            stampY,
+            stampWidth,
+            stampHeight
+          );
+          
+          // 恢复透明度
+          doc.restoreGraphicsState();
+          
+          // 更新当前Y坐标
+          currentY = stampY + stampHeight + 5;
         }
-
-        // 设置印章透明度为0.9
-        doc.saveGraphicsState();
-        doc.setGState(new doc.GState({ opacity: 0.9 }));
-        
-        doc.addImage(
-          stampImage,
-          'PNG',
-          stampX,
-          stampY,
-          stampWidth,
-          stampHeight
-        );
-
-        // 恢复透明度
-        doc.restoreGraphicsState();
-
-        // 更新当前Y坐标
-        currentY = stampY + stampHeight + 5;
       } catch (error) {
         console.error('Error loading stamp:', error instanceof Error ? error.message : 'Unknown error');
       }
