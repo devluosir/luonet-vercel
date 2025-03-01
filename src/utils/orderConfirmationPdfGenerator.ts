@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
 import { loadImage } from '@/utils/pdfHelpers';
-import { UserOptions } from 'jspdf-autotable';
+import { UserOptions, RowInput } from 'jspdf-autotable';
 
 // 扩展jsPDF类型
 type ExtendedJsPDF = jsPDF & {
