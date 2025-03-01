@@ -296,12 +296,12 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
         const cursor = hookData.cursor;
         const isNewPage = row.index === 0 && table.pageCount > 1;
 
-        // 检查当前位置是否接近页面底部，预留40mm空间（增加预留空间）
-        if (!isNewPage && cursor && (cursor.y + row.height > pageHeight - 40)) {
+        // 检查当前位置是否接近页面底部，预留20mm空间
+        if (!isNewPage && cursor && (cursor.y + row.height > pageHeight - 20)) {
           doc.addPage();
           cursor.y = 20; // 在新页面上设置初始 y 坐标
           
-          // 重置当前行的位置
+          // 重置当前行的位置，确保在新页面顶部正确显示
           if (row.height > 0) {
             cursor.y = Math.max(20, cursor.y);
           }
@@ -374,8 +374,6 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
 
     // 如果是预览模式，返回 blob
     if (preview) {
-      // 在返回之前添加页码
-      addPageNumber(doc, pageWidth, margin);
       return doc.output('blob');
     }
     
@@ -383,10 +381,7 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     const currentDate = new Date();
     const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
 
-    // 在保存之前添加页码
-    addPageNumber(doc, pageWidth, margin);
-
-    // 如果不是预览模式，下载文件
+    // 保存文件，不再需要单独添加页码，因为已经在 didDrawPage 中处理了
     doc.save(`Quotation-${data.quotationNo}-${formattedDate}.pdf`);
     return new Blob(); // 返回空 Blob 以满足类型要求
   } catch (error) {
