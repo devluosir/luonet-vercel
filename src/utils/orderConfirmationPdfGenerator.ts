@@ -490,29 +490,44 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
 
     // 添加付款条款
     if (data.showPaymentTerms || data.additionalPaymentTerms || data.showInvoiceReminder) {
-      currentY += 5;
-      doc.setFontSize(8);
+      // 检查剩余空间，如果不足则添加新页面
+      if (pageHeight - currentY < 40) {
+        doc.addPage();
+        currentY = margin;
+      }
+
+      currentY += 8;
+      doc.setFontSize(9);
       doc.setFont('NotoSansSC', 'bold');
       doc.text('Payment Terms:', margin, currentY);
-      doc.setFont('NotoSansSC', 'normal');
-      currentY += 5;
+      currentY += 8;  // 增加标题与内容的间距
 
+      doc.setFontSize(8);
+      doc.setFont('NotoSansSC', 'normal');
       let termIndex = 1;
 
+      // 显示标准付款条款
       if (data.showPaymentTerms) {
-        const term1Text = `${termIndex}. Full paid not later than ${data.paymentDate} by telegraphic transfer.`;
-        const term1Parts = term1Text.split(data.paymentDate);
-        const firstPartWidth = doc.getTextWidth(term1Parts[0]);
-        doc.text(term1Parts[0], margin, currentY);
+        const term1Text = `${termIndex}. Full paid not later than `;
+        const term1End = ` by telegraphic transfer.`;
         
-        // 日期显示为红色
+        // 计算各部分的宽度
+        const term1Width = doc.getTextWidth(term1Text);
+        const dateWidth = doc.getTextWidth(data.paymentDate);
+        const endWidth = doc.getTextWidth(term1End);
+        
+        // 绘制第一部分（黑色）
+        doc.text(term1Text, margin, currentY);
+        
+        // 绘制日期（红色）
         doc.setTextColor(255, 0, 0);
-        doc.text(data.paymentDate, margin + firstPartWidth, currentY);
+        doc.text(data.paymentDate, margin + term1Width, currentY);
         
-        // 恢复黑色并绘制剩余部分
+        // 绘制最后部分（黑色）
         doc.setTextColor(0, 0, 0);
-        doc.text(term1Parts[1], margin + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
-        currentY += 5;
+        doc.text(term1End, margin + term1Width + dateWidth, currentY);
+        
+        currentY += 6;  // 增加行间距
         termIndex++;
       }
 
@@ -520,7 +535,6 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
       if (data.additionalPaymentTerms) {
         const terms = data.additionalPaymentTerms.split('\n').filter(term => term.trim());
         terms.forEach(term => {
-          // 计算可用宽度（页面宽度减去左右边距和序号宽度）
           const numberText = `${termIndex}. `;
           const numberWidth = doc.getTextWidth(numberText);
           const maxWidth = pageWidth - (margin * 2) - numberWidth;
@@ -534,23 +548,33 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
             doc.text(line, margin + numberWidth, currentY + (lineIndex * 5));
           });
 
-          // 更新Y坐标到最后一行之后
-          currentY += wrappedText.length * 5;
+          // 更新Y坐标，并增加额外的行间距
+          currentY += (wrappedText.length * 5) + 1;
           termIndex++;
         });
       }
 
       // 显示发票号提醒
       if (data.showInvoiceReminder) {
-        const reminderText = `${termIndex}. Please state our contract no. "${data.contractNo}" on your payment documents.`;
-        const parts = reminderText.split(`"${data.contractNo}"`);
+        const reminderPrefix = `${termIndex}. Please state our contract no. "`;
+        const reminderSuffix = `" on your payment documents.`;
         
-        doc.text(parts[0], margin, currentY);
+        // 计算各部分的宽度
+        const prefixWidth = doc.getTextWidth(reminderPrefix);
+        const contractNoWidth = doc.getTextWidth(data.contractNo);
+        
+        // 绘制前缀（黑色）
+        doc.text(reminderPrefix, margin, currentY);
+        
+        // 绘制合同号（红色）
         doc.setTextColor(255, 0, 0);
-        doc.text(data.contractNo, margin + doc.getTextWidth(parts[0]), currentY);
+        doc.text(data.contractNo, margin + prefixWidth, currentY);
+        
+        // 绘制后缀（黑色）
         doc.setTextColor(0, 0, 0);
-        doc.text(parts[1], margin + doc.getTextWidth(parts[0]) + doc.getTextWidth(data.contractNo), currentY);
-        currentY += 5;
+        doc.text(reminderSuffix, margin + prefixWidth + contractNoWidth, currentY);
+        
+        currentY += 6;
       }
     }
 
