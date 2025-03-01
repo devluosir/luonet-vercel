@@ -242,6 +242,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         ])
       ] as unknown as RowInput[],
       theme: 'plain',
+      showHead: 'everyPage',
       styles: {
         fontSize: 8,
         cellPadding: 2,

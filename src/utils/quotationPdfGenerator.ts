@@ -249,6 +249,7 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
         ])
       ] as unknown as RowInput[],
       theme: 'plain',
+      showHead: 'everyPage',
       styles: {
         fontSize: 8,
         cellPadding: 2,
