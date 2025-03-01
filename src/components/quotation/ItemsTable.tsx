@@ -180,7 +180,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
 
   // 处理单元格粘贴
   const handleCellPaste = (e: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>, index: number, field: keyof LineItem) => {
-    // 阻止事件冒泡，但不阻止默认行为
+    // 阻止事件冒泡
     e.stopPropagation();
     
     const target = e.target as HTMLInputElement | HTMLTextAreaElement;
@@ -189,72 +189,62 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
     // 如果没有粘贴内容，直接返回
     if (!pasteText) return;
     
-    // 获取当前光标位置
-    const start = target.selectionStart || 0;
-    const end = target.selectionEnd || 0;
-    
-    // 构建新值：保留光标前后的文本，插入粘贴的内容
-    const currentValue = target.value;
-    const newValue = currentValue.substring(0, start) + pasteText + currentValue.substring(end);
-    
-    // 清理文本，但保留换行符
-    const cleanText = newValue.replace(/^"|"$/g, '').trim();
-    
+    // 对于数字类型的字段，需要验证和处理
     switch (field) {
       case 'quantity':
-        if (!/^\d+$/.test(cleanText)) {
+        if (!/^\d+$/.test(pasteText)) {
           e.preventDefault();
           alert('数量必须是正整数');
           return;
         }
-        const quantity = parseInt(cleanText);
+        const quantity = parseInt(pasteText);
         if (quantity < 0) {
           e.preventDefault();
           alert('数量不能为负数');
           return;
         }
-        handleItemChange(index, field, quantity);
+        // 让默认粘贴行为发生，然后在下一个事件循环中更新数据
+        setTimeout(() => {
+          handleItemChange(index, field, quantity);
+        }, 0);
         break;
         
       case 'unitPrice':
-        if (!/^\d*\.?\d*$/.test(cleanText)) {
+        if (!/^\d*\.?\d*$/.test(pasteText)) {
           e.preventDefault();
           alert('单价必须是有效的数字');
           return;
         }
-        const unitPrice = parseFloat(cleanText);
+        const unitPrice = parseFloat(pasteText);
         if (isNaN(unitPrice) || unitPrice < 0) {
           e.preventDefault();
           alert('请输入有效的单价');
           return;
         }
-        handleItemChange(index, field, unitPrice);
+        // 让默认粘贴行为发生，然后在下一个事件循环中更新数据
+        setTimeout(() => {
+          handleItemChange(index, field, unitPrice);
+        }, 0);
         break;
         
       case 'unit':
         e.preventDefault();
         // 单位处理，自动处理单复数
-        const baseUnit = cleanText.toLowerCase().replace(/s$/, '');
+        const baseUnit = pasteText.toLowerCase().replace(/s$/, '');
         if (defaultUnits.includes(baseUnit as typeof defaultUnits[number])) {
           const quantity = data.items[index].quantity;
           handleItemChange(index, field, getUnitDisplay(baseUnit, quantity));
         } else {
-          handleItemChange(index, field, cleanText);
+          handleItemChange(index, field, pasteText);
         }
         break;
         
       default:
-        // 对于其他字段（partName, description, remarks），直接使用清理后的文本，保留换行符
-        handleItemChange(index, field, cleanText);
+        // 对于其他字段（partName, description, remarks），让默认粘贴行为发生，然后在下一个事件循环中更新数据
+        setTimeout(() => {
+          handleItemChange(index, field, target.value);
+        }, 0);
     }
-    
-    // 计算新的光标位置
-    const newCursorPos = start + pasteText.length;
-    
-    // 在下一个事件循环中设置光标位置
-    setTimeout(() => {
-      target.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
   };
 
   // 处理软删除
