@@ -289,39 +289,6 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
 
         // 在每页绘制时添加页码
         addPageNumber();
-      },
-      willDrawCell: (hookData) => {
-        const pageHeight = doc.internal.pageSize.height;
-        const table = hookData.table;
-        const row = hookData.row;
-        const cursor = hookData.cursor;
-        const isNewPage = row.index === 0 && table.pageCount > 1;
-
-        // 检查当前位置是否接近页面底部，预留20mm空间
-        if (!isNewPage && cursor && (cursor.y + row.height > pageHeight - 20)) {
-          doc.addPage();
-          
-          // 在新页面上设置初始 y 坐标
-          cursor.y = 20;
-          
-          // 重置行位置
-          if (hookData.row.raw && Array.isArray(hookData.row.raw)) {
-            (hookData.row.raw as TableCell[]).forEach((cell: TableCell) => {
-              if (cell.y) cell.y = cursor.y;
-            });
-          }
-          
-          // 清除页面底部区域并添加页码
-          const pageHeight = doc.internal.pageSize.height;
-          doc.setFillColor(255, 255, 255);
-          doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-          
-          const totalPages = doc.getNumberOfPages();
-          const str = `Page ${hookData.pageNumber} of ${totalPages}`;
-          doc.setFontSize(8);
-          doc.setFont('NotoSansSC', 'normal');
-          doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
-        }
       }
     });
 
