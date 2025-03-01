@@ -579,7 +579,10 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           const term1Text = `Full paid not later than ${data.paymentDate} by telegraphic transfer.`;
           const term1Parts = term1Text.split(data.paymentDate);
           const firstPartWidth = doc.getTextWidth(term1Parts[0]);
-          doc.text(term1Parts[0], termLeftMargin, currentY);
+          
+          // 处理长文本自动换行
+          const wrappedText = doc.splitTextToSize(term1Parts[0], maxWidth - firstPartWidth);
+          doc.text(wrappedText[0], termLeftMargin, currentY);
           
           // 日期显示为红色
           doc.setTextColor(255, 0, 0);
@@ -599,13 +602,12 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           terms.forEach(term => {
             const numberText = `${termIndex}. `;
             const numberWidth = doc.getTextWidth(numberText);
-            const maxWidth = pageWidth - (margin * 2) - numberWidth;
 
             // 添加序号
             doc.text(numberText, margin, currentY);
 
-            // 处理长文本自动换行
-            const wrappedText = doc.splitTextToSize(term, maxWidth);
+            // 处理长文本自动换行，使用定义好的 maxWidth
+            const wrappedText = doc.splitTextToSize(term, maxWidth - numberWidth);
             wrappedText.forEach((line: string, lineIndex: number) => {
               doc.text(line, margin + numberWidth, currentY + (lineIndex * 5));
             });
@@ -622,20 +624,22 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           const reminderSuffix = `" on your payment documents.`;
           
           // 计算各部分的宽度
-          const titleWidth = doc.getTextWidth('Payment Term: ');
           const prefixWidth = doc.getTextWidth(reminderPrefix);
           const contractNoWidth = doc.getTextWidth(data.contractNo);
           
+          // 处理长文本自动换行，使用定义好的 maxWidth
+          const wrappedPrefix = doc.splitTextToSize(reminderPrefix, maxWidth);
+          
           // 绘制前缀（黑色）
-          doc.text(reminderPrefix, margin + titleWidth + 3, currentY);
+          doc.text(wrappedPrefix, margin, currentY);
           
           // 绘制合同号（红色）
           doc.setTextColor(255, 0, 0);
-          doc.text(data.contractNo, margin + titleWidth + 3 + prefixWidth, currentY);
+          doc.text(data.contractNo, margin + prefixWidth, currentY);
           
           // 绘制后缀（黑色）
           doc.setTextColor(0, 0, 0);
-          doc.text(reminderSuffix, margin + titleWidth + 3 + prefixWidth + contractNoWidth, currentY);
+          doc.text(reminderSuffix, margin + prefixWidth + contractNoWidth, currentY);
           
           currentY += 6;
         }
