@@ -77,11 +77,11 @@ export default function QuotationHistoryPage() {
         // 如果只选择了一条记录，使用其单号
         const selectedItem = dataToExport[0];
         const docNo = selectedItem.type === 'quotation' ? selectedItem.quotationNo : selectedItem.data.contractNo;
-        fileName = `${docNo}-${format(new Date(), 'yyyy-MM-dd')}`;
+        fileName = `QH-${docNo}-${format(new Date(), 'yyyy-MM-dd')}`;
       } else {
         // 如果选择了多条或全部，使用日期
         const prefix = selectedIds.size > 0 ? `selected-${selectedIds.size}` : 'all';
-        fileName = `quotation-history-${prefix}-${format(new Date(), 'yyyy-MM-dd')}`;
+        fileName = `QH-history-${prefix}-${format(new Date(), 'yyyy-MM-dd')}`;
       }
       
       a.download = `${fileName}.json`;
