@@ -522,21 +522,28 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           const term1Text = `Full paid not later than ${data.paymentDate} by telegraphic transfer.`;
           const term1Parts = term1Text.split(data.paymentDate);
           const firstPartWidth = doc.getTextWidth(term1Parts[0]);
-          doc.text(term1Parts[0], margin + doc.getTextWidth('Payment Term: ') + 3, currentY);
+          
+          // 增加标题和内容之间的间距
+          const titleWidth = doc.getTextWidth('Payment Term:');
+          const spacing = 8; // 设置合适的间距
+          
+          doc.text(term1Parts[0], margin + titleWidth + spacing, currentY);
           
           // 日期显示为红色
           doc.setTextColor(255, 0, 0);
-          doc.text(data.paymentDate, margin + doc.getTextWidth('Payment Term: ') + firstPartWidth + 3, currentY);
+          doc.text(data.paymentDate, margin + titleWidth + spacing + firstPartWidth, currentY);
           
           // 恢复黑色并绘制剩余部分
           doc.setTextColor(0, 0, 0);
-          doc.text(term1Parts[1], margin + doc.getTextWidth('Payment Term: ') + firstPartWidth + doc.getTextWidth(data.paymentDate) + 3, currentY);
+          doc.text(term1Parts[1], margin + titleWidth + spacing + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
           
           currentY += 6;
         } else if (data.additionalPaymentTerms) {
           // 显示额外的付款条款
           const additionalTerm = data.additionalPaymentTerms.trim();
-          doc.text(additionalTerm, margin + doc.getTextWidth('Payment Term: ') + 3, currentY);
+          const titleWidth = doc.getTextWidth('Payment Term:');
+          const spacing = 8; // 设置合适的间距
+          doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
           currentY += 6;
         } else if (data.showInvoiceReminder) {
           // 只有发票号提醒时的布局
@@ -544,20 +551,21 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           const reminderSuffix = `" on your payment documents.`;
           
           // 计算各部分的宽度
-          const titleWidth = doc.getTextWidth('Payment Term: ');
+          const titleWidth = doc.getTextWidth('Payment Term:');
+          const spacing = 8; // 设置合适的间距
           const prefixWidth = doc.getTextWidth(reminderPrefix);
           const contractNoWidth = doc.getTextWidth(data.contractNo);
           
           // 绘制前缀（黑色）
-          doc.text(reminderPrefix, margin + titleWidth + 3, currentY);
+          doc.text(reminderPrefix, margin + titleWidth + spacing, currentY);
           
           // 绘制合同号（红色）
           doc.setTextColor(255, 0, 0);
-          doc.text(data.contractNo, margin + titleWidth + 3 + prefixWidth, currentY);
+          doc.text(data.contractNo, margin + titleWidth + spacing + prefixWidth, currentY);
           
           // 绘制后缀（黑色）
           doc.setTextColor(0, 0, 0);
-          doc.text(reminderSuffix, margin + titleWidth + 3 + prefixWidth + contractNoWidth, currentY);
+          doc.text(reminderSuffix, margin + titleWidth + spacing + prefixWidth + contractNoWidth, currentY);
           
           currentY += 6;
         }
