@@ -548,7 +548,7 @@ export default function QuotationPage() {
                       </div>
                     )}
 
-                    {activeTab === 'confirmation' && data.showBank && (
+                    {activeTab === 'confirmation' && (
                       <PaymentTermsSection
                         data={data}
                         onChange={setData}
