@@ -362,128 +362,88 @@ Beneficiary: Luo & Company Co., Limited`,
     }));
   };
 
-  // 处理单元格粘贴
-  const handleCellPaste = (e: React.ClipboardEvent, index: number, field: keyof LineItem) => {
-    e.stopPropagation(); // 阻止事件冒泡，防止触发全局粘贴事件
-    // 获取粘贴的文本
-    const text = e.clipboardData.getData('text');
-    if (text) {
-      // 获取当前光标位置
-      const target = e.target as HTMLTextAreaElement | HTMLInputElement;
-      const start = target.selectionStart || 0;
-      const end = target.selectionEnd || 0;
-      
-      // 获取当前值
-      const currentValue = target.value;
-      
-      // 构建新值：保留光标前后的文本，插入粘贴的内容
-      const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
-      
-      // 更新值
-      updateLineItem(index, field, newValue);
-      
-      // 计算新的光标位置
-      const newCursorPos = start + text.length;
-      
-      // 在下一个事件循环中设置光标位置
-      setTimeout(() => {
-        target.setSelectionRange(newCursorPos, newCursorPos);
-      }, 0);
-    }
-  };
-
   // 修改全局粘贴事件处理函数
   useEffect(() => {
     const handlePaste = async (event: ClipboardEvent) => {
-      // 检查粘贴目标是否是输入框或文本区域
-      const target = event.target;
+      const target = event.target as HTMLElement;
       
-      // 如果目标元素是输入框或文本区域，直接返回，使用默认粘贴行为
-      if (target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-        return;
-      }
-
-      // 检查是否点击在表格内的任何位置
-      const isTableCell = target instanceof Element && target.closest('td') !== null;
-      if (isTableCell) {
-        return; // 如果是表格单元格内，直接返回，使用默认粘贴行为
-      }
-
-      // 只有在非表格区域的粘贴才执行全局粘贴
-      event.preventDefault();
-      try {
-        let text = event.clipboardData?.getData('text') || '';
-        if (!text) {
-          text = await navigator.clipboard.readText();
-        }
-        if (text) {
-          // 按行分割，但保留引号内的换行符
-          const rows = text.split(/\n(?=(?:[^"]*"[^"]*")*[^"]*$)/);
-          
-          const newItems: LineItem[] = rows.map((row, index) => {
-            // 分割单元格，但保留引号内的制表符和换行符
-            const cells = row.split(/\t(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(cell => {
-              // 保留单元格内的换行符，只去除首尾空格
-              return cell.replace(/^\s+|\s+$/g, '');
-            });
+      // 如果不是在表格单元格内粘贴，则处理全局粘贴
+      if (!target.closest('td')) {
+        event.preventDefault();
+        try {
+          let text = event.clipboardData?.getData('text') || '';
+          if (!text) {
+            text = await navigator.clipboard.readText();
+          }
+          if (text) {
+            // 按行分割，但保留引号内的换行符
+            const rows = text.split(/\n(?=(?:[^"]*"[^"]*")*[^"]*$)/);
             
-            let partname = '', description = '', quantity = '0', unit = 'pc', unitPrice = '0';
+            const newItems: LineItem[] = rows.map((row, index) => {
+              // 分割单元格，但保留引号内的制表符和换行符
+              const cells = row.split(/\t(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(cell => {
+                // 保留单元格内的换行符，只去除首尾空格
+                return cell.replace(/^\s+|\s+$/g, '');
+              });
+              
+              let partname = '', description = '', quantity = '0', unit = 'pc', unitPrice = '0';
 
-            // 根据不同的列数处理数据
-            if (cells.length >= 5) {
-              // 5列或更多：名称 tab 描述 tab 数量 tab 单位 tab 单价
-              [partname, description, quantity, unit, unitPrice] = cells;
-            } else if (cells.length === 4) {
-              // 4列：名称 tab tab 数量 tab 单位 tab 单价
-              [partname,, quantity, unit, unitPrice] = cells;
-            } else if (cells.length === 3) {
-              // 3列有多种情况
-              if (cells[1] && !isNaN(Number(cells[1]))) {
-                if (!isNaN(Number(cells[2]))) {
-                  // 名称 tab 数量 tab 单价
-                  [partname, quantity, unitPrice] = cells;
+              // 根据不同的列数处理数据
+              if (cells.length >= 5) {
+                // 5列或更多：名称 tab 描述 tab 数量 tab 单位 tab 单价
+                [partname, description, quantity, unit, unitPrice] = cells;
+              } else if (cells.length === 4) {
+                // 4列：名称 tab tab 数量 tab 单位 tab 单价
+                [partname,, quantity, unit, unitPrice] = cells;
+              } else if (cells.length === 3) {
+                // 3列有多种情况
+                if (cells[1] && !isNaN(Number(cells[1]))) {
+                  if (!isNaN(Number(cells[2]))) {
+                    // 名称 tab 数量 tab 单价
+                    [partname, quantity, unitPrice] = cells;
+                  } else {
+                    // 名称 tab 数量 tab tab
+                    [partname, quantity] = cells;
+                  }
                 } else {
-                  // 名称 tab 数量 tab tab
-                  [partname, quantity] = cells;
+                  // 名称 tab 描述 tab 数量
+                  [partname, description, quantity] = cells;
                 }
-              } else {
-                // 名称 tab 描述 tab 数量
-                [partname, description, quantity] = cells;
+              } else if (cells.length === 2) {
+                // 2列：名称 tab 数量
+                [partname, quantity] = cells;
+              } else if (cells.length === 1) {
+                // 1列：只有名称
+                [partname] = cells;
               }
-            } else if (cells.length === 2) {
-              // 2列：名称 tab 数量
-              [partname, quantity] = cells;
-            } else if (cells.length === 1) {
-              // 1列：只有名称
-              [partname] = cells;
-            }
 
-            // 清理并验证数据，但保留换行符
-            const cleanQuantity = parseInt(quantity.replace(/[^\d.-]/g, '')) || 0;
-            const cleanUnitPrice = parseFloat(unitPrice.replace(/[^\d.-]/g, '')) || 0;
-            const baseUnit = unit.trim().replace(/s$/, '') || 'pc';
+              // 清理并验证数据，但保留换行符
+              const cleanQuantity = parseInt(quantity.replace(/[^\d.-]/g, '')) || 0;
+              const cleanUnitPrice = parseFloat(unitPrice.replace(/[^\d.-]/g, '')) || 0;
+              const baseUnit = unit.trim().replace(/s$/, '') || 'pc';
 
-            return {
-              lineNo: index + 1,
-              hsCode: '',
-              partname: partname, // 不使用 trim()，保留换行符
-              description: description, // 不使用 trim()，保留换行符
-              quantity: cleanQuantity,
-              unit: defaultUnits.includes(baseUnit) ? getUnitDisplay(baseUnit, cleanQuantity) : baseUnit,
-              unitPrice: cleanUnitPrice,
-              amount: cleanQuantity * cleanUnitPrice,
-              highlight: {}
-            };
-          });
+              return {
+                lineNo: index + 1,
+                hsCode: '',
+                partname: partname,
+                description: description,
+                quantity: cleanQuantity,
+                unit: defaultUnits.includes(baseUnit) ? getUnitDisplay(baseUnit, cleanQuantity) : baseUnit,
+                unitPrice: cleanUnitPrice,
+                amount: cleanQuantity * cleanUnitPrice,
+                highlight: {}
+              };
+            });
 
-          // 更新发票数据，过滤掉完全空白的行
-          setInvoiceData(prev => ({
-            ...prev,
-            items: newItems.filter(item => item.partname || item.description)
-          }));
+            // 更新发票数据，过滤掉完全空白的行
+            setInvoiceData(prev => ({
+              ...prev,
+              items: newItems.filter(item => item.partname || item.description)
+            }));
+          }
+        } catch (err) {
+          console.error('Failed to handle paste:', err);
         }
-      } catch (err) {
-        console.error('Failed to handle paste:', err);
       }
     };
 
@@ -1097,7 +1057,6 @@ Beneficiary: Luo & Company Co., Limited`,
                                   type="text"
                                   value={item.hsCode}
                                   onChange={e => updateLineItem(index, 'hsCode', e.target.value)}
-                                  onPaste={(e) => handleCellPaste(e, index, 'hsCode')}
                                   onKeyDown={(e) => handleKeyDown(e, index, 'hsCode')}
                                   onDoubleClick={() => handleDoubleClick(index, 'hsCode')}
                                   data-row={index}
@@ -1111,7 +1070,6 @@ Beneficiary: Luo & Company Co., Limited`,
                               <textarea
                                 value={item.partname}
                                 onChange={e => updateLineItem(index, 'partname', e.target.value)}
-                                onPaste={(e) => handleCellPaste(e, index, 'partname')}
                                 onKeyDown={(e) => handleKeyDown(e, index, 'partname')}
                                 onDoubleClick={() => handleDoubleClick(index, 'partname')}
                                 data-row={index}
@@ -1153,7 +1111,6 @@ Beneficiary: Luo & Company Co., Limited`,
                                 <textarea
                                   value={item.description}
                                   onChange={e => updateLineItem(index, 'description', e.target.value)}
-                                  onPaste={(e) => handleCellPaste(e, index, 'description')}
                                   onKeyDown={(e) => handleKeyDown(e, index, 'description')}
                                   onDoubleClick={() => handleDoubleClick(index, 'description')}
                                   data-row={index}
@@ -1206,7 +1163,6 @@ Beneficiary: Luo & Company Co., Limited`,
                                     }
                                   }
                                 }}
-                                onPaste={(e) => handleCellPaste(e, index, 'quantity')}
                                 onKeyDown={(e) => handleKeyDown(e, index, 'quantity')}
                                 onDoubleClick={() => handleDoubleClick(index, 'quantity')}
                                 data-row={index}
@@ -1262,7 +1218,6 @@ Beneficiary: Luo & Company Co., Limited`,
                                     }
                                   }
                                 }}
-                                onPaste={(e) => handleCellPaste(e, index, 'unitPrice')}
                                 onKeyDown={(e) => handleKeyDown(e, index, 'unitPrice')}
                                 onDoubleClick={() => handleDoubleClick(index, 'unitPrice')}
                                 data-row={index}
