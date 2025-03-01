@@ -254,15 +254,20 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
       } as { [key: number]: { cellWidth: number | 'auto', halign: 'center' } },
       margin: { left: 15, right: 15 },
       tableWidth: pageWidth - 30,  // 设置表格宽度为页面宽度减去左右边距
-      didDrawPage: (data) => {
+      didDrawPage: () => {
         // 在每页绘制页眉（如果需要）
       },
-      willDrawCell: (data) => {
+      willDrawCell: (hookData) => {
         // 在绘制每个单元格之前检查是否需要分页
         const pageHeight = doc.internal.pageSize.height;
-        if (data.row.raw && data.row.y + data.row.height > pageHeight - 40) {
+        const table = hookData.table;
+        const row = hookData.row;
+        const isNewPage = row.index === 0 && table.pageCount > 1;
+
+        // 检查当前位置是否接近页面底部
+        if (!isNewPage && (hookData.cursor.y + row.height > pageHeight - 40)) {
           doc.addPage();
-          data.row.y = 20; // 在新页面上设置初始 y 坐标
+          hookData.cursor.y = 20; // 在新页面上设置初始 y 坐标
         }
       }
     });
