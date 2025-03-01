@@ -266,7 +266,7 @@ export default function QuotationHistoryPage() {
                           />
                         </th>
                         <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">客户名称</th>
-                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">报价单号</th>
+                        <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">单号</th>
                         <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">类型</th>
                         <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">金额</th>
                         <th className="px-6 py-4 text-left text-sm font-medium text-gray-500 dark:text-[#98989D]">创建时间</th>
@@ -288,7 +288,9 @@ export default function QuotationHistoryPage() {
                             />
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">{item.customerName}</td>
-                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">{item.quotationNo}</td>
+                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">
+                            {item.type === 'quotation' ? item.quotationNo : item.data.contractNo}
+                          </td>
                           <td className="px-6 py-4 text-sm text-gray-900 dark:text-[#F5F5F7]">
                             {item.type === 'quotation' ? '报价单' : '订单确认'}
                           </td>
