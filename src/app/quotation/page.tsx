@@ -231,19 +231,29 @@ export default function QuotationPage() {
     const handlePaste = async (event: ClipboardEvent) => {
       const target = event.target as HTMLElement;
       
-      // 更严格的判断：检查是否在输入框、文本区域或表格单元格内
-      if (target && (
-        target.tagName === 'INPUT' || 
-        target.tagName === 'TEXTAREA' ||
-        target.closest('td') !== null ||
-        target.closest('table') !== null ||
-        target.getAttribute('contenteditable') === 'true' ||
-        target.closest('[contenteditable="true"]') !== null
-      )) {
+      // 如果目标元素不存在，直接返回
+      if (!target) return;
+
+      // 检查是否在表格内的任何输入元素中
+      const isTableInput = target.matches('input, textarea') && 
+        (target.closest('td') !== null || target.closest('table') !== null);
+      
+      // 如果是表格内的输入元素，直接返回
+      if (isTableInput) {
         return;
       }
 
-      // 只有在非表格区域的粘贴才执行全局粘贴
+      // 检查是否在其他输入元素中
+      const isOtherInput = target.matches('input, textarea') || 
+        target.getAttribute('contenteditable') === 'true' ||
+        target.closest('[contenteditable="true"]') !== null;
+
+      // 如果是其他输入元素，直接返回
+      if (isOtherInput) {
+        return;
+      }
+
+      // 只有在非输入元素区域的粘贴才执行全局粘贴
       event.preventDefault();
       try {
         let text = event.clipboardData?.getData('text') || '';
