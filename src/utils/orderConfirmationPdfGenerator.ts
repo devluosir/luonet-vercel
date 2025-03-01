@@ -263,9 +263,6 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         doc.setFont('NotoSansSC', 'normal');
         doc.text(str, pageWidth - margin, doc.internal.pageSize.height - 10, { align: 'right' });
       },
-      showPageNumber: false,  // 禁用页码显示
-      showFooter: false,  // 禁用页脚
-      pageNumber: '',  // 清空页码文本
       willDrawCell: (hookData) => {
         // 在绘制每个单元格之前检查是否需要分页
         const pageHeight = doc.internal.pageSize.height;
