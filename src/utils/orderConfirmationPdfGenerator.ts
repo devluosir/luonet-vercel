@@ -332,7 +332,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     doc.text(totalAmountValue, valueX, currentY, { align: 'right' });
 
     // 更新currentY，为后续内容预留空间
-    currentY += 15;
+    currentY += 10;
 
     // 计算印章尺寸
     const stampWidth = 73;  // 香港印章宽度：73mm

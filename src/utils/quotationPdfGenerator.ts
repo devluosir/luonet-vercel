@@ -340,7 +340,7 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     doc.text(totalAmountValue, valueX, currentY, { align: 'right' });
 
     // 更新currentY，为后续内容预留空间
-    currentY += 15;
+    currentY += 10;
 
     // 过滤有效的备注
     const validNotes = data.notes?.filter(note => note.trim() !== '') || [];
