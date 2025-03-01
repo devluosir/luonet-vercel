@@ -282,7 +282,6 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     // 检查剩余空间是否足够显示总金额和其他内容
     const pageHeight = doc.internal.pageSize.height;
     const remainingSpace = pageHeight - currentY;
-    const estimatedContentHeight = 150; // 估计总金额、银行信息、付款条款等内容的高度
 
     if (remainingSpace < 20) { // 同样预留20mm空间
       doc.addPage();

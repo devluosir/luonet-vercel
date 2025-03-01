@@ -289,7 +289,6 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     // 检查剩余空间是否足够显示总金额和其他内容
     const pageHeight = doc.internal.pageSize.height;
     const remainingSpace = pageHeight - currentY;
-    const estimatedContentHeight = 100; // 估计总金额、Notes等内容的高度
 
     if (remainingSpace < 20) { // 同样预留20mm空间
       doc.addPage();
