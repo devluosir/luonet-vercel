@@ -170,35 +170,35 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         ...data.items.map((item, index) => [
           {
             content: (index + 1).toString(),
-            styles: { halign: 'center' }
+            styles: { halign: 'center' as const }
           },
           {
             content: item.partName,
-            styles: item.highlight?.partName ? { textColor: [255, 0, 0] as [number, number, number] } : {}
+            styles: item.highlight?.partName ? { textColor: [255, 0, 0] } : {}
           },
           ...(data.showDescription ? [{
             content: item.description || '',
-            styles: item.highlight?.description ? { textColor: [255, 0, 0] as [number, number, number] } : {}
+            styles: item.highlight?.description ? { textColor: [255, 0, 0] } : {}
           }] : []),
           {
             content: item.quantity === 0 ? '' : item.quantity,
-            styles: item.highlight?.quantity ? { textColor: [255, 0, 0] as [number, number, number] } : {}
+            styles: item.highlight?.quantity ? { textColor: [255, 0, 0] } : {}
           },
           {
             content: getUnitDisplay(item.unit || '', item.quantity || 0),
-            styles: item.highlight?.unit ? { textColor: [255, 0, 0] as [number, number, number] } : {}
+            styles: item.highlight?.unit ? { textColor: [255, 0, 0] } : {}
           },
           {
             content: item.unitPrice === 0 ? '' : item.unitPrice.toFixed(2),
-            styles: item.highlight?.unitPrice ? { textColor: [255, 0, 0] as [number, number, number] } : {}
+            styles: item.highlight?.unitPrice ? { textColor: [255, 0, 0] } : {}
           },
           {
             content: item.amount === 0 ? '' : item.amount.toFixed(2),
-            styles: item.highlight?.amount ? { textColor: [255, 0, 0] as [number, number, number] } : {}
+            styles: item.highlight?.amount ? { textColor: [255, 0, 0] } : {}
           },
           ...(data.showRemarks ? [{
             content: item.remarks || '',
-            styles: item.highlight?.remarks ? { textColor: [255, 0, 0] as [number, number, number] } : {}
+            styles: item.highlight?.remarks ? { textColor: [255, 0, 0] } : {}
           }] : [])
         ]),
         // Other Fees 行
@@ -208,25 +208,25 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
             colSpan: data.showDescription ? 6 : 5,
             styles: { 
               halign: 'center' as const,
-              ...(fee.highlight?.description ? { textColor: [255, 0, 0] as [number, number, number] } : {})
+              ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {})
             }
-          } as unknown as string,
+          },
           {
             content: fee.amount === 0 ? '' : fee.amount.toFixed(2),
             styles: {
               halign: 'center' as const,
-              ...(fee.highlight?.amount ? { textColor: [255, 0, 0] as [number, number, number] } : {})
+              ...(fee.highlight?.amount ? { textColor: [255, 0, 0] } : {})
             }
           },
           ...(data.showRemarks ? [{
             content: fee.remarks || '',
             styles: {
               halign: 'center' as const,
-              ...(fee.highlight?.remarks ? { textColor: [255, 0, 0] as [number, number, number] } : {})
+              ...(fee.highlight?.remarks ? { textColor: [255, 0, 0] } : {})
             }
           }] : [])
         ])
-      ],
+      ] as unknown as RowInput[],
       theme: 'plain',
       styles: {
         fontSize: 8,
