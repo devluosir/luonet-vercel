@@ -342,9 +342,10 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     // 更新currentY，为后续内容预留空间
     currentY += 15;
 
-    // 过滤掉空行，并检查是否有有效的 notes
+    // 过滤有效的备注
     const validNotes = data.notes?.filter(note => note.trim() !== '') || [];
 
+    // 添加备注
     if (validNotes.length > 0) {
       // 检查剩余空间是否足够显示 Notes
       const remainingSpace = pageHeight - currentY;

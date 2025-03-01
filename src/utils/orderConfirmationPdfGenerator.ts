@@ -334,24 +334,63 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     // 更新currentY，为后续内容预留空间
     currentY += 15;
 
-    // 检查 Notes 部分是否需要新页面
-    const remainingSpace = pageHeight - currentY;
+    // 计算印章尺寸
+    const stampWidth = 73;  // 香港印章宽度：73mm
+    const stampHeight = 34; // 香港印章高度：34mm
+    const stampX = pageWidth - stampWidth - margin - 10;  // 靠右对齐，留出10mm右边距
 
-    // 如果剩余空间小于40mm（预估Notes等内容的最小需求），整体移到新页面
+    // 检查Notes和其他内容是否会导致印章单独出现在下一页
+    const validNotes = data.notes?.filter(note => note.trim() !== '') || [];
+    const notesHeight = validNotes.length > 0 ? (validNotes.length * 5 + 13) : 0; // 估算Notes所需高度
+    const bankInfoHeight = data.showBank ? 35 : 0; // 估算银行信息所需高度
+    const paymentTermsHeight = data.showPaymentTerms ? 20 : 0; // 估算付款条款所需高度
+    const totalContentHeight = notesHeight + bankInfoHeight + paymentTermsHeight;
+    
+    // 检查当前页剩余空间
+    const remainingSpace = pageHeight - currentY;
+    const stampWithContentHeight = stampHeight + totalContentHeight;
+    
+    // 如果内容加上印章的高度超过剩余空间，但内容本身不超过，说明印章会单独出现在下一页
+    const stampWillBeAlone = remainingSpace < stampWithContentHeight && remainingSpace >= totalContentHeight;
+
+    // 如果印章会单独出现在下一页，则先放置印章
+    if (data.showStamp && stampWillBeAlone) {
+      try {
+        const stampImage = await loadImage('/images/stamp-hongkong.png');
+        if (!stampImage) {
+          throw new Error('Failed to load stamp image');
+        }
+
+        // 设置印章透明度为0.9
+        doc.saveGraphicsState();
+        doc.setGState(new doc.GState({ opacity: 0.9 }));
+        
+        // 在总金额下方添加印章
+        doc.addImage(
+          stampImage,
+          'PNG',
+          stampX,
+          currentY - 10, // 稍微上移一点，与总金额更紧凑
+          stampWidth,
+          stampHeight
+        );
+
+        // 恢复透明度
+        doc.restoreGraphicsState();
+
+      } catch (error) {
+        console.error('Error loading stamp:', error);
+      }
+    }
+
+    // 检查 Notes 部分是否需要新页面
     if (remainingSpace < 40) {
       doc.addPage();
       currentY = 20; // 在新页面上重置Y坐标
     }
 
     // 添加备注
-    if (data.notes && data.notes.length > 0 && data.notes.some(note => note.trim() !== '')) {
-      // 检查剩余空间是否足够
-      const remainingSpace = pageHeight - currentY;
-      if (remainingSpace < 40) {
-        doc.addPage();
-        currentY = 20;
-      }
-
+    if (validNotes.length > 0) {
       currentY += 8;
       doc.setFontSize(9);
       doc.setFont('NotoSansSC', 'bold');
@@ -480,24 +519,19 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
       }
     }
 
-    // 添加签名区域
-    if (data.showStamp) {
+    // 添加签名区域 - 仅在印章没有被提前放置时添加
+    if (data.showStamp && !stampWillBeAlone) {
       try {
         const stampImage = await loadImage('/images/stamp-hongkong.png');
         if (!stampImage) {
           throw new Error('Failed to load stamp image: Image is null');
         }
 
-        // 计算印章位置
-        const stampWidth = 73;  // 香港印章宽度：73mm
-        const stampHeight = 34; // 香港印章高度：34mm
-        
         // 计算页面底部边界
         const pageBottom = doc.internal.pageSize.height - margin;
         
         // 印章位置跟随在付款条款下方
-        let stampY = currentY + 5;  // 在付款条款下方留出10mm间距
-        const stampX = pageWidth - stampWidth - margin - 10;  // 靠右对齐，留出10mm右边距
+        let stampY = currentY + 5;  // 在付款条款下方留出5mm间距
 
         // 确保印章不会超出页面底部
         if (stampY + stampHeight > pageBottom) {
