@@ -175,7 +175,10 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
       body: [
         // 常规商品行 - 当数量为 0 时，数量和单位都显示空字符串
         ...data.items.map((item, index) => [
-          index + 1,
+          {
+            content: (index + 1).toString(),
+            styles: { halign: 'center' }
+          },
           {
             content: item.partName,
             styles: item.highlight?.partName ? { textColor: [255, 0, 0] as [number, number, number] } : {}
@@ -265,8 +268,8 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
         const cursor = hookData.cursor;
         const isNewPage = row.index === 0 && table.pageCount > 1;
 
-        // 检查当前位置是否接近页面底部
-        if (!isNewPage && cursor && (cursor.y + row.height > pageHeight - 40)) {
+        // 检查当前位置是否接近页面底部，预留20mm空间
+        if (!isNewPage && cursor && (cursor.y + row.height > pageHeight - 20)) {
           doc.addPage();
           cursor.y = 20; // 在新页面上设置初始 y 坐标
         }
@@ -282,7 +285,7 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     const remainingSpace = pageHeight - currentY;
     const estimatedContentHeight = 100; // 估计总金额、Notes等内容的高度
 
-    if (remainingSpace < estimatedContentHeight) {
+    if (remainingSpace < 20) { // 同样预留20mm空间
       doc.addPage();
       currentY = 20; // 在新页面上重置Y坐标
     }
