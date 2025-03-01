@@ -364,6 +364,7 @@ Beneficiary: Luo & Company Co., Limited`,
 
   // 处理单元格粘贴
   const handleCellPaste = (e: React.ClipboardEvent, index: number, field: keyof LineItem) => {
+    e.stopPropagation(); // 阻止事件冒泡，防止触发全局粘贴事件
     // 获取粘贴的文本
     const text = e.clipboardData.getData('text');
     if (text) {
@@ -1118,7 +1119,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                 rows={1}
                                 className={`${item.highlight?.partname ? highlightClass : ''}
                                   w-full
-                                  resize-vertical
+                                  resize-none
                                   text-center
                                   py-2 px-3
                                   border border-transparent
@@ -1131,34 +1132,19 @@ Beneficiary: Luo & Company Co., Limited`,
                                   focus:ring-0 focus:outline-none
                                   bg-transparent
                                   placeholder:text-gray-300 dark:placeholder:text-gray-600
-                                  overflow-hidden
                                   text-[11px] leading-[15px]
-                                  [&::-webkit-resizer] {
-                                    display: none;
-                                  }
-                                  hover:[&::-webkit-resizer] {
-                                    display: block;
-                                    width: 4px;
-                                    height: 4px;
-                                    background: linear-gradient(135deg, transparent 0.5px, #007AFF 0.5px);
-                                  }
-                                  dark:hover:[&::-webkit-resizer] {
-                                    background: linear-gradient(135deg, transparent 0.5px, #0A84FF 0.5px);
-                                  }
-                                  [&::-webkit-scrollbar] {
-                                    display: none;
-                                  }
+                                  whitespace-pre-wrap
+                                  overflow-y-hidden
                                 `}
                                 placeholder="Part Name"
                                 style={{ 
                                   height: 'auto',
-                                  minHeight: '41px',
-                                  maxHeight: '200px'
+                                  minHeight: '41px'
                                 }}
                                 onInput={(e) => {
                                   const target = e.target as HTMLTextAreaElement;
                                   target.style.height = 'auto';
-                                  target.style.height = `${Math.min(target.scrollHeight, 200)}px`;
+                                  target.style.height = `${target.scrollHeight}px`;
                                 }}
                               />
                             </td>
@@ -1175,7 +1161,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                   rows={1}
                                   className={`${item.highlight?.description ? highlightClass : ''}
                                     w-full
-                                    resize-vertical
+                                    resize-none
                                     text-center
                                     py-2 px-3
                                     border border-transparent
@@ -1188,34 +1174,19 @@ Beneficiary: Luo & Company Co., Limited`,
                                     focus:ring-0 focus:outline-none
                                     bg-transparent
                                     placeholder:text-gray-300 dark:placeholder:text-gray-600
-                                    overflow-hidden
                                     text-[11px] leading-[15px]
-                                    [&::-webkit-resizer] {
-                                      display: none;
-                                    }
-                                    hover:[&::-webkit-resizer] {
-                                      display: block;
-                                      width: 4px;
-                                      height: 4px;
-                                      background: linear-gradient(135deg, transparent 0.5px, #007AFF 0.5px);
-                                    }
-                                    dark:hover:[&::-webkit-resizer] {
-                                      background: linear-gradient(135deg, transparent 0.5px, #0A84FF 0.5px);
-                                    }
-                                    [&::-webkit-scrollbar] {
-                                      display: none;
-                                    }
+                                    whitespace-pre-wrap
+                                    overflow-y-hidden
                                   `}
                                   placeholder="Enter description"
                                   style={{ 
                                     height: 'auto',
-                                    minHeight: '41px',
-                                    maxHeight: '200px'
+                                    minHeight: '41px'
                                   }}
                                   onInput={(e) => {
                                     const target = e.target as HTMLTextAreaElement;
                                     target.style.height = 'auto';
-                                    target.style.height = `${Math.min(target.scrollHeight, 200)}px`;
+                                    target.style.height = `${target.scrollHeight}px`;
                                   }}
                                 />
                               </td>
