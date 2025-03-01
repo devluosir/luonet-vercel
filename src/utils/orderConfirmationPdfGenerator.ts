@@ -16,6 +16,18 @@ type ExtendedJsPDF = jsPDF & {
   setGState: (gState: unknown) => void;
 }
 
+// 添加页码函数
+const addPageNumber = (doc: ExtendedJsPDF, pageWidth: number, margin: number) => {
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    const str = `Page ${i} of ${pageCount}`;
+    doc.setFontSize(8);
+    doc.setFont('NotoSansSC', 'normal');
+    doc.text(str, pageWidth - margin, doc.internal.pageSize.height - 10, { align: 'right' });
+  }
+};
+
 // 货币符号映射
 const currencySymbols: { [key: string]: string } = {
   USD: '$',
@@ -475,16 +487,19 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
       }
     }
 
-    
-
     // 根据模式选择保存或返回预览URL
     if (preview) {
+      // 在返回之前添加页码
+      addPageNumber(doc, pageWidth, margin);
       return doc.output('blob');
     }
     
     // 获取当前日期并格式化
     const currentDate = new Date();
     const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+
+    // 在保存之前添加页码
+    addPageNumber(doc, pageWidth, margin);
 
     // 保存文件，文件名中包含日期
     doc.save(`Sales Confirmation ${data.quotationNo}-${formattedDate}.pdf`);

@@ -12,6 +12,18 @@ interface ExtendedJsPDF extends jsPDF {
   autoTable: (options: UserOptions) => void;
 }
 
+// 添加页码函数
+const addPageNumber = (doc: ExtendedJsPDF, pageWidth: number, margin: number) => {
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    const str = `Page ${i} of ${pageCount}`;
+    doc.setFontSize(8);
+    doc.setFont('NotoSansSC', 'normal');
+    doc.text(str, pageWidth - margin, doc.internal.pageSize.height - 10, { align: 'right' });
+  }
+};
+
 // 货币符号映射
 const currencySymbols: { [key: string]: string } = {
   USD: '$',
@@ -351,12 +363,17 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
 
     // 如果是预览模式，返回 blob
     if (preview) {
+      // 在返回之前添加页码
+      addPageNumber(doc, pageWidth, margin);
       return doc.output('blob');
     }
     
     // 获取当前日期并格式化
     const currentDate = new Date();
     const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+
+    // 在保存之前添加页码
+    addPageNumber(doc, pageWidth, margin);
 
     // 如果不是预览模式，下载文件
     doc.save(`Quotation-${data.quotationNo}-${formattedDate}.pdf`);
