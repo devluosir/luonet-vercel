@@ -496,11 +496,11 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         currentY = margin;
       }
 
-      currentY += 8;
+      currentY += 5;
       doc.setFontSize(9);
       doc.setFont('NotoSansSC', 'bold');
       doc.text('Payment Terms:', margin, currentY);
-      currentY += 8;  // 增加标题与内容的间距
+      currentY += 5;  // 增加标题与内容的间距
 
       doc.setFontSize(8);
       doc.setFont('NotoSansSC', 'normal');
@@ -527,7 +527,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         doc.setTextColor(0, 0, 0);
         doc.text(term1End, margin + term1Width + dateWidth, currentY);
         
-        currentY += 6;  // 增加行间距
+        currentY += 5;  // 增加行间距
         termIndex++;
       }
 
