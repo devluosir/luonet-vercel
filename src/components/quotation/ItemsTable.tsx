@@ -397,7 +397,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            transition-all duration-200 text-center whitespace-pre resize-none overflow-hidden
+                            transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
                             ${item.highlight?.description ? highlightClass : ''}`}
                           style={{ 
                             height: '28px'
