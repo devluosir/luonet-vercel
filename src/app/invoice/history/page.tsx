@@ -119,12 +119,10 @@ export default function InvoiceHistoryPage() {
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    // 扩大支持的文件类型范围，增加通用类型
-    input.accept = '.json,.txt,application/json,text/plain,text/*';
+    // 支持JSON和文本文件
+    input.accept = '.json,application/json';
     input.style.display = 'none';
-    // 添加capture属性以支持移动设备
-    input.setAttribute('capture', '');
-    // 确保文件选择器在移动设备上可用
+    // 移除capture属性，只允许选择单个文件
     input.setAttribute('multiple', 'false');
     document.body.appendChild(input);
 
