@@ -119,46 +119,72 @@ export default function InvoiceHistoryPage() {
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    // 支持更多的 MIME 类型和文件扩展名
-    input.accept = '.json,application/json,text/json,text/plain';
-    input.style.display = 'none'; // 隐藏输入元素
-    document.body.appendChild(input); // 添加到 DOM 中以确保在移动设备上正常工作
+    // 扩大支持的文件类型范围，增加通用类型
+    input.accept = '.json,.txt,application/json,text/plain,text/*';
+    input.style.display = 'none';
+    // 添加capture属性以支持移动设备
+    input.setAttribute('capture', '');
+    // 确保文件选择器在移动设备上可用
+    input.setAttribute('multiple', 'false');
+    document.body.appendChild(input);
 
     input.onchange = async (e: Event) => {
       const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
       if (file) {
+        // 检查文件大小（限制为10MB）
+        if (file.size > 10 * 1024 * 1024) {
+          alert('File is too large. Maximum size is 10MB.');
+          document.body.removeChild(input);
+          return;
+        }
+
         const reader = new FileReader();
         reader.onload = (e: ProgressEvent<FileReader>) => {
           const result = e.target?.result;
           if (typeof result === 'string') {
             try {
+              // 尝试解析JSON
+              JSON.parse(result); // 验证JSON格式
               const success = importInvoiceHistory(result);
               if (success) {
-                // 重新加载历史记录
                 const results = getInvoiceHistory();
                 setHistory(results);
-                alert('Import successful!');
+                alert('导入成功！');
               } else {
-                throw new Error('Import failed');
+                throw new Error('导入失败');
               }
             } catch (error: unknown) {
-              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-              console.error('Error importing history:', errorMessage);
-              alert('Import failed, please check if the file format is correct.');
+              const errorMessage = error instanceof Error ? error.message : '未知错误';
+              console.error('导入历史记录时出错:', errorMessage);
+              alert('导入失败，请确保文件格式正确（必须是有效的JSON格式）。');
             }
           }
         };
+
+        reader.onerror = () => {
+          alert('读取文件时出错，请重试。');
+        };
+
         reader.readAsText(file);
       }
-      // 清理 DOM
       document.body.removeChild(input);
     };
 
-    // 如果用户取消选择，也要清理 DOM
+    // 处理取消选择的情况
     input.oncancel = () => {
       document.body.removeChild(input);
     };
+
+    // 处理可能的错误
+    window.addEventListener('focus', function onFocus() {
+      setTimeout(() => {
+        if (document.body.contains(input)) {
+          document.body.removeChild(input);
+        }
+        window.removeEventListener('focus', onFocus);
+      }, 1000);
+    });
 
     input.click();
   };
