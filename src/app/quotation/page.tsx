@@ -50,32 +50,23 @@ export default function QuotationPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
-  const [data, setData] = useState<QuotationData>(initialData || {
+  const [data, setData] = useState<QuotationData>({
     to: '',
     inquiryNo: '',
     quotationNo: '',
-    date: new Date().toISOString().split('T')[0],
-    from: 'Roger',
+    date: new Date().toISOString(),
+    from: '',
     currency: 'USD',
-    paymentDate: new Date().toISOString().split('T')[0],
-    items: [{
-      id: 1,
-      partName: '',
-      description: '',
-      quantity: 0,
-      unit: 'pc',
-      unitPrice: 0,
-      amount: 0,
-      remarks: ''
-    }],
-    notes: getDefaultNotes('Roger', 'quotation'),
+    paymentDate: '',
+    items: [],
+    notes: [],
     amountInWords: {
-      dollars: 'ZERO',
+      dollars: '',
       cents: '',
       hasDecimals: false
     },
     showDescription: true,
-    showRemarks: false,
+    showRemarks: true,
     showBank: false,
     showStamp: false,
     contractNo: '',

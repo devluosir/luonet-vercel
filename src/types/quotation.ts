@@ -31,15 +31,16 @@ export interface OtherFee {
 }
 
 export interface QuotationData {
+  quotationNo: string;
+  contractNo: string;
+  date: string;
+  notes: string[];
+  from: string;
   to: string;
   inquiryNo: string;
-  quotationNo: string;
-  date: string;
-  from: string;
   currency: 'USD' | 'EUR' | 'CNY';
   paymentDate: string;
   items: LineItem[];
-  notes: string[];
   amountInWords: {
     dollars: string;
     cents: string;
@@ -49,10 +50,16 @@ export interface QuotationData {
   showRemarks: boolean;
   showBank: boolean;
   showStamp: boolean;
-  contractNo: string;
   otherFees?: OtherFee[];
   customUnits?: string[];
   showPaymentTerms?: boolean;
   showInvoiceReminder?: boolean;
   additionalPaymentTerms?: string;
+}
+
+export interface CustomWindow extends Window {
+  __QUOTATION_DATA__?: QuotationData | null;
+  __EDIT_MODE__?: boolean;
+  __EDIT_ID__?: string;
+  __QUOTATION_TYPE__?: 'quotation' | 'confirmation';
 } 

@@ -4,20 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getQuotationHistory } from '@/utils/quotationHistory';
 import QuotationPage from '../../page';
-
-interface QuotationData {
-  quotationNo: string;
-  contractNo: string;
-  date: string;
-  [key: string]: unknown;
-}
-
-interface CustomWindow extends Window {
-  __QUOTATION_DATA__?: QuotationData | null;
-  __EDIT_MODE__?: boolean;
-  __EDIT_ID__?: string;
-  __QUOTATION_TYPE__?: 'quotation' | 'confirmation';
-}
+import type { CustomWindow, QuotationData } from '@/types/quotation';
 
 export default function CopyQuotationPage({ params }: { params: { id: string } }) {
   const _router = useRouter();
