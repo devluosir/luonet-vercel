@@ -976,7 +976,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                     focus:ring-0 focus:outline-none
                                     bg-transparent
                                     placeholder:text-gray-300 dark:placeholder:text-gray-600
-                                    text-[11px] leading-[15px]
+                                    text-[13px] leading-[15px]
                                     whitespace-pre-wrap
                                     overflow-y-hidden
                                   `}
@@ -1017,7 +1017,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                       focus:ring-0 focus:outline-none
                                       bg-transparent
                                       placeholder:text-gray-300 dark:placeholder:text-gray-600
-                                      text-[11px] leading-[15px]
+                                      text-[13px] leading-[15px]
                                       whitespace-pre-wrap
                                       overflow-y-hidden
                                     `}
