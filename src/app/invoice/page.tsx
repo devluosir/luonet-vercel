@@ -673,20 +673,20 @@ Beneficiary: Luo & Company Co., Limited`,
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
-      <div className="flex-1">  {/* 添加这个 flex-1 容器 */}
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-[#000000] dark:text-gray-100">
+      <div className="flex-1">
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="max-w-7xl mx-auto space-y-8">
             {/* 返回按钮 */}
             <div className="flex items-center justify-between mb-6">
-              <Link href="/tools" className="inline-flex items-center text-gray-600 hover:text-gray-900">
+              <Link href="/tools" className="inline-flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Link>
             </div>
 
             {/* 主卡片容器 */}
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg p-4 md:p-8 mt-8">
+            <div className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-3xl shadow-lg dark:shadow-2xl shadow-black/5 dark:shadow-black/20 border border-black/5 dark:border-white/10 p-4 md:p-8 mt-8">
               <form onSubmit={handleSubmit}>
                 {/* 标题和设置按钮 */}
                 <div className="flex items-center justify-between mb-6">
@@ -697,7 +697,7 @@ Beneficiary: Luo & Company Co., Limited`,
                     <button
                       type="button"
                       onClick={handlePasteButtonClick}
-                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
+                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0"
                       title="Paste from clipboard"
                     >
                       <Clipboard className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -729,9 +729,9 @@ Beneficiary: Luo & Company Co., Limited`,
                     <button
                       type="button"
                       onClick={() => setShowSettings(!showSettings)}
-                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50"
                     >
-                      <Settings className="w-5 h-5" />
+                      <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </button>
                   </div>
                   {/* 小屏时只显示设置按钮 */}
@@ -748,224 +748,68 @@ Beneficiary: Luo & Company Co., Limited`,
 
                 {/* 设置面板 */}
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showSettings ? 'max-h-none opacity-100 mb-8' : 'max-h-0 opacity-0'}`}>
-                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border border-gray-200/30 dark:border-gray-700/30">
+                  <div className="bg-gray-50 dark:bg-[#1C1C1E]/70 p-4 rounded-xl border border-gray-200/30 dark:border-white/10">
                     <div className="space-y-4">
                       <div className="flex flex-wrap gap-4">
                         <input
                           type="date"
                           value={invoiceData.date}
                           onChange={(e) => setInvoiceData(prev => ({ ...prev, date: e.target.value }))}
-                          className={inputClassName}
+                          className={`${inputClassName} dark:bg-[#1C1C1E]/90`}
                           required
                         />
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                                invoiceData.currency === 'USD' 
-                                  ? 'bg-[#007AFF] text-white' 
-                                  : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-[#2c2c2e]/50'
-                              }`}
-                              onClick={() => setInvoiceData(prev => ({ ...prev, currency: 'USD' }))}
-                            >
-                              $
-                            </button>
-                            <button
-                              type="button"
-                              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                                invoiceData.currency === 'CNY' 
-                                  ? 'bg-[#007AFF] text-white' 
-                                  : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-[#2c2c2e]/50'
-                              }`}
-                              onClick={() => setInvoiceData(prev => ({ ...prev, currency: 'CNY' }))}
-                            >
-                              ¥
-                            </button>
-                          </div>
-                          <label className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={invoiceData.showBank}
-                                onChange={e => setInvoiceData(prev => ({ ...prev, showBank: e.target.checked }))}
-                                className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
-                              />
-                              <span className="text-sm text-gray-600 dark:text-gray-400">Bank</span>
-                            </label>
-                        <div className="flex items-center gap-4">
-                          
-                          <div className="flex items-center gap-4">
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={invoiceData.showHsCode}
-                                onChange={e => setInvoiceData(prev => ({ ...prev, showHsCode: e.target.checked }))}
-                                className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
-                              />
-                              <span className="text-sm text-gray-600 dark:text-gray-400">HS Code</span>
-                            </label>
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={invoiceData.showDescription}
-                                onChange={e => setInvoiceData(prev => ({ ...prev, showDescription: e.target.checked }))}
-                                className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
-                              />
-                              <span className="text-sm text-gray-600 dark:text-gray-400">Description</span>
-                            </label>
-                           
-                           
-                          </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                              invoiceData.currency === 'USD' 
+                                ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white' 
+                                : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
+                            }`}
+                            onClick={() => setInvoiceData(prev => ({ ...prev, currency: 'USD' }))}
+                          >
+                            $
+                          </button>
+                          <button
+                            type="button"
+                            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
+                              invoiceData.currency === 'CNY' 
+                                ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white' 
+                                : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
+                            }`}
+                            onClick={() => setInvoiceData(prev => ({ ...prev, currency: 'CNY' }))}
+                          >
+                            ¥
+                          </button>
                         </div>
-                        <div className="flex flex-col gap-2 mt-2">
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  value={newUnit}
-                                  onChange={(e) => setNewUnit(e.target.value)}
-                                  placeholder="Add unit"
-                                  className={`${inputClassName} !py-1.5 !text-sm`}
-                                  style={{ width: '100px' }}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (newUnit && !customUnits.includes(newUnit)) {
-                                      setCustomUnits([...customUnits, newUnit]);
-                                      setNewUnit('');
-                                    }
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg text-sm font-medium
-                                    bg-[#007AFF] dark:bg-[#0A84FF] text-white
-                                    hover:bg-[#007AFF]/90 dark:hover:bg-[#0A84FF]/90
-                                    transition-colors"
-                                >
-                                  Add
-                                </button>
-                                <div className="flex flex-wrap gap-2 mt-1 flex-nowrap">
-                                  {customUnits.map((unit, index) => (
-                                    <div
-                                      key={unit}
-                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg
-                                        bg-[#007AFF]/10 dark:bg-[#0A84FF]/10
-                                        text-[#007AFF] dark:text-[#0A84FF] text-sm"
-                                    >
-                                      {unit}
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const newUnits = customUnits.filter((_, i) => i !== index);
-                                          setCustomUnits(newUnits);
-                                        }}
-                                        className="ml-1 hover:text-red-500 transition-colors"
-                                      >
-                                        ×
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-
-                        {/* 模板设置选项 */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Header Type</h3>
-                            <div className="flex gap-3">
-                              <label className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  checked={templateConfig.headerType === 'none'}
-                                  onChange={() => setTemplateConfig(prev => ({ ...prev, headerType: 'none' }))}
-                                  className="text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
-                                />
-                                <span className="text-sm text-gray-600 dark:text-gray-400">None</span>
-                              </label>
-                              <label className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  checked={templateConfig.headerType === 'bilingual'}
-                                  onChange={() => setTemplateConfig(prev => ({ ...prev, headerType: 'bilingual' }))}
-                                  className="text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
-                                />
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Bilingual</span>
-                              </label>
-                              <label className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  checked={templateConfig.headerType === 'english'}
-                                  onChange={() => setTemplateConfig(prev => ({ ...prev, headerType: 'english' }))}
-                                  className="text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
-                                />
-                                <span className="text-sm text-gray-600 dark:text-gray-400">English</span>
-                              </label>
-                            </div>
-                          </div>
-
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Invoice Type</h3>
-                            <div className="flex gap-3">
-                              <label className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  checked={templateConfig.invoiceType === 'invoice'}
-                                  onChange={() => setTemplateConfig(prev => ({ ...prev, invoiceType: 'invoice' }))}
-                                  className="text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
-                                />
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Invoice</span>
-                              </label>
-                              <label className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  checked={templateConfig.invoiceType === 'commercial'}
-                                  onChange={() => setTemplateConfig(prev => ({ ...prev, invoiceType: 'commercial' }))}
-                                  className="text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
-                                />
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Commercial</span>
-                              </label>
-                              <label className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  checked={templateConfig.invoiceType === 'proforma'}
-                                  onChange={() => setTemplateConfig(prev => ({ ...prev, invoiceType: 'proforma' }))}
-                                  className="text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
-                                />
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Proforma</span>
-                              </label>
-                            </div>
-                          </div>
-
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Company Stamp</h3>
-                            <div className="flex gap-3">
-                              <label className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  checked={templateConfig.stampType === 'none'}
-                                  onChange={() => setTemplateConfig(prev => ({ ...prev, stampType: 'none' }))}
-                                  className="text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
-                                />
-                                <span className="text-sm text-gray-600 dark:text-gray-400">None</span>
-                              </label>
-                              <label className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  checked={templateConfig.stampType === 'shanghai'}
-                                  onChange={() => setTemplateConfig(prev => ({ ...prev, stampType: 'shanghai' }))}
-                                  className="text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
-                                />
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Shanghai</span>
-                              </label>
-                              <label className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  checked={templateConfig.stampType === 'hongkong'}
-                                  onChange={() => setTemplateConfig(prev => ({ ...prev, stampType: 'hongkong' }))}
-                                  className="text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
-                                />
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Hong Kong</span>
-                              </label>
-                            </div>
-                          </div>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={invoiceData.showBank}
+                            onChange={e => setInvoiceData(prev => ({ ...prev, showBank: e.target.checked }))}
+                            className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20 dark:border-gray-600"
+                          />
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Bank</span>
+                        </label>
+                        <div className="flex items-center gap-4">
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={invoiceData.showHsCode}
+                              onChange={e => setInvoiceData(prev => ({ ...prev, showHsCode: e.target.checked }))}
+                              className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20 dark:border-gray-600"
+                            />
+                            <span className="text-sm text-gray-600 dark:text-gray-400">HS Code</span>
+                          </label>
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={invoiceData.showDescription}
+                              onChange={e => setInvoiceData(prev => ({ ...prev, showDescription: e.target.checked }))}
+                              className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20 dark:border-gray-600"
+                            />
+                            <span className="text-sm text-gray-600 dark:text-gray-400">Description</span>
+                          </label>
                         </div>
                       </div>
                     </div>
@@ -1018,36 +862,36 @@ Beneficiary: Luo & Company Co., Limited`,
                 {/* 商品表格 */}
                 <div className="space-y-2">
                   {/* 主表格容器 */}
-                  <div className="overflow-x-auto rounded-2xl border border-gray-200/30 dark:border-gray-700/30
-                                  bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-lg">
+                  <div className="overflow-x-auto rounded-2xl border border-gray-200/30 dark:border-white/10
+                                  bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl shadow-lg">
                     <div className="min-w-[600px]">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10
                                         bg-[#007AFF]/5 dark:bg-[#0A84FF]/5">
-                            <th className="py-2 px-4 text-center text-xs font-bold opacity-90 w-[40px]">No.</th>
+                            <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[40px]">No.</th>
                             {invoiceData.showHsCode && (
-                              <th className="py-2 px-4 text-center text-xs font-bold opacity-90 w-[120px]">
+                              <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[120px]">
                                 HS Code
                               </th>
                             )}
-                            <th className="py-2 px-4 text-center text-[12px] font-bold opacity-90 w-[150px] md:w-[210px]">Part Name</th>
+                            <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[150px] md:w-[210px]">Part Name</th>
                             {invoiceData.showDescription && (
-                              <th className="py-2 px-4 text-center text-[12px] font-bold opacity-90 flex-1">Description</th>
+                              <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 flex-1">Description</th>
                             )}
-                            <th className="py-2 px-4 text-center text-[12px] font-bold opacity-90 w-[100px]">Q&apos;TY</th>
-                            <th className="py-2 px-4 text-center text-[12px] font-bold opacity-90 w-[100px]">Unit</th>
-                            <th className="py-2 px-4 text-center text-[12px] font-bold opacity-90 w-[130px]">U/Price</th>
-                            <th className="py-2 px-4 text-center text-[12px] font-bold opacity-90 w-[150px]">Amount</th>
+                            <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[100px]">Q&apos;TY</th>
+                            <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[100px]">Unit</th>
+                            <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[130px]">U/Price</th>
+                            <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[150px]">Amount</th>
                           </tr>
                         </thead>
                         <tbody>
                           {invoiceData.items.map((item, index) => (
                             <tr key={item.lineNo} 
-                                className="border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10">
+                                className="border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10 hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
                               <td className="py-1 px-1 text-sm">
                                 <span className="flex items-center justify-center w-6 h-6 rounded-full 
-                                               hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors"
+                                               hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-colors"
                                       onClick={() => {
                                         setInvoiceData(prev => ({
                                           ...prev,
@@ -1055,7 +899,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                             .filter((_, i) => i !== index)
                                             .map((item, i) => ({
                                               ...item,
-                                              lineNo: i + 1  // 重新编号
+                                              lineNo: i + 1
                                             }))
                                         }));
                                       }}
@@ -1441,7 +1285,7 @@ Beneficiary: Luo & Company Co., Limited`,
                             showPaymentTerms: e.target.checked
                           }));
                         }}
-                        className="rounded border-gray-300"
+                        className="rounded border-gray-300 dark:border-gray-600 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
                       />
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm text-gray-600 dark:text-gray-400">Full paid not later than</span>
@@ -1452,7 +1296,7 @@ Beneficiary: Luo & Company Co., Limited`,
                             ...prev, 
                             paymentDate: e.target.value 
                           }))}
-                          className={`${inputClassName} !py-1.5 text-red-500`}
+                          className={`${inputClassName} !py-1.5 text-red-500 dark:text-red-400`}
                           style={{ 
                             colorScheme: 'light dark',
                             width: '150px',
@@ -1470,7 +1314,7 @@ Beneficiary: Luo & Company Co., Limited`,
                         value={additionalPaymentTerms}
                         onChange={(e) => handleAdditionalTermsChange(e.target.value)}
                         placeholder="Enter additional remarks (each line will be a new payment term)"
-                        className={`${inputClassName} min-h-[4em] resize`}
+                        className={`${inputClassName} min-h-[4em] resize dark:bg-[#1C1C1E]/90`}
                         rows={2}
                       />
                     </div>
@@ -1479,10 +1323,10 @@ Beneficiary: Luo & Company Co., Limited`,
                         type="checkbox"
                         checked={invoiceData.showInvoiceReminder}
                         onChange={e => setInvoiceData(prev => ({ ...prev, showInvoiceReminder: e.target.checked }))}
-                        className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
+                        className="rounded border-gray-300 dark:border-gray-600 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
                       />
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Please state our invoice no. <span className="text-red-500">&quot;{invoiceData.invoiceNo}&quot;</span> on your payment documents.
+                        Please state our invoice no. <span className="text-red-500 dark:text-red-400">&quot;{invoiceData.invoiceNo}&quot;</span> on your payment documents.
                       </div>
                     </div>
                   </div>
@@ -1498,11 +1342,11 @@ Beneficiary: Luo & Company Co., Limited`,
                     text-white font-medium text-[15px] leading-relaxed
                     transition-all duration-300 ease-out
                     focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
-                    shadow-sm hover:shadow-md`}
-                >
-                  <Download className="w-5 h-5" />
-                  {isEditMode ? 'Save Invoice' : 'Generate Invoice'}
-                </button>
+                    shadow-sm hover:shadow-md dark:shadow-[#0A84FF]/10`}
+                  >
+                    <Download className="w-5 h-5" />
+                    {isEditMode ? 'Save Invoice' : 'Generate Invoice'}
+                  </button>
 
                 <button
                   type="button"
@@ -1547,26 +1391,26 @@ Beneficiary: Luo & Company Co., Limited`,
 
       {/* PDF 预览模态框 */}
       {showPreview && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold">Preview Invoice</h3>
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Preview Invoice</h3>
               <button
                 onClick={() => {
                   setShowPreview(false);
                   setPreviewUrl('');
                 }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <div className="flex-1 bg-gray-100 dark:bg-gray-900 p-4">
+            <div className="flex-1 bg-gray-100 dark:bg-black p-4">
               <iframe
                 src={previewUrl}
-                className="w-full h-full rounded-lg bg-white dark:bg-gray-800"
+                className="w-full h-full rounded-lg bg-white dark:bg-[#1C1C1E] shadow-lg"
                 title="PDF Preview"
               />
             </div>
