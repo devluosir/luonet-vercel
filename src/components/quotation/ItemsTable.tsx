@@ -8,7 +8,7 @@ interface ItemsTableProps {
 }
 
 // Add highlight class constant
-const highlightClass = 'text-red-500 font-medium';
+const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
 
 // 默认单位列表（需要单复数变化的单位）
 const defaultUnits = ['pc', 'set', 'length'] as const;
