@@ -134,7 +134,7 @@ Beneficiary: Luo & Company Co., Limited`,
   const [editingUnitPrice, setEditingUnitPrice] = useState<string>('');
   const [editingQuantityIndex, setEditingQuantityIndex] = useState<number | null>(null);
   const [editingQuantity, setEditingQuantity] = useState<string>('');
-  const [templateConfig, setTemplateConfig] = useState<InvoiceTemplateConfig>({
+  const [templateConfig, _setTemplateConfig] = useState<InvoiceTemplateConfig>({
     headerType: 'bilingual',
     invoiceType: 'invoice',
     stampType: 'none'
@@ -151,12 +151,11 @@ Beneficiary: Luo & Company Co., Limited`,
   } | null>(null);
 
   // 重命名未使用的变量，添加下划线前缀
-  const [_templateConfig, _setTemplateConfig] = useState({});
   const [_customUnits, _setCustomUnits] = useState<string[]>([]);
   const [_newUnit, _setNewUnit] = useState('');
 
   // 将 handleError 包装在 useCallback 中，并添加具体的错误类型
-  const handleError = useCallback((error: ErrorWithMessage | Error | unknown): string => {
+  const _handleError = useCallback((error: ErrorWithMessage | Error | unknown): string => {
     if (error instanceof Error) {
       console.error('Error:', error.message);
       return error.message;

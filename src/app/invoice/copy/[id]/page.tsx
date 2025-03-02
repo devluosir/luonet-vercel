@@ -1,12 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { getInvoiceHistory } from '@/utils/invoiceHistory';
 import InvoicePage from '../../page';
+import type { InvoiceData } from '@/types/invoice';
 
-export default function CopyInvoicePage({ params }: { params: { id: string } }) {
-  const router = useRouter();
+interface CustomWindow extends Window {
+  __INVOICE_DATA__?: InvoiceData;
+  __EDIT_MODE__?: boolean;
+  __EDIT_ID__?: string;
+}
+
+interface ErrorResponse {
+  message: string;
+  code?: string;
+  details?: unknown;
+}
+
+export default function InvoiceCopyPage({ params }: { params: { id: string } }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,24 +32,35 @@ export default function CopyInvoicePage({ params }: { params: { id: string } }) 
         return;
       }
 
-      // 复制发票数据，但生成新的发票号
-      const newData = {
+      // 复制数据，但清除一些字段
+      const copiedData = {
         ...invoice.data,
-        invoiceNo: '', // 清空发票号，让用户重新输入
+        invoiceNo: '', // 清除发票号
+        date: new Date().toISOString(), // 更新日期
       };
 
       // 将复制的数据注入到 InvoicePage 组件中
-      (window as any).__INVOICE_DATA__ = newData;
-      // 确保不设置编辑模式
-      (window as any).__EDIT_MODE__ = false;
-      (window as any).__EDIT_ID__ = null;
+      const customWindow = window as unknown as CustomWindow;
+      customWindow.__INVOICE_DATA__ = copiedData;
+      customWindow.__EDIT_MODE__ = false;
+      customWindow.__EDIT_ID__ = undefined;
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error copying invoice:', error);
-      setError('复制发票时出错');
+      const errorMessage = error instanceof Error ? error.message : 
+        (error as ErrorResponse)?.message || '复制发票时出错';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
+
+    // 清理函数
+    return () => {
+      const customWindow = window as unknown as CustomWindow;
+      customWindow.__INVOICE_DATA__ = undefined;
+      customWindow.__EDIT_MODE__ = false;
+      customWindow.__EDIT_ID__ = undefined;
+    };
   }, [params.id]);
 
   if (isLoading) {

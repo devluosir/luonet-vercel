@@ -1,12 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { getInvoiceHistory } from '@/utils/invoiceHistory';
 import InvoicePage from '../../page';
+import type { InvoiceData } from '@/types/invoice';
 
-export default function EditInvoicePage({ params }: { params: { id: string } }) {
-  const router = useRouter();
+interface CustomWindow extends Window {
+  __INVOICE_DATA__?: InvoiceData;
+  __EDIT_MODE__?: boolean;
+  __EDIT_ID__?: string;
+}
+
+interface ErrorResponse {
+  message: string;
+  code?: string;
+  details?: unknown;
+}
+
+export default function InvoiceEditPage({ params }: { params: { id: string } }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,19 +32,28 @@ export default function EditInvoicePage({ params }: { params: { id: string } }) 
         return;
       }
 
-      // 将历史数据注入到 InvoicePage 组件中
-      (window as any).__INVOICE_DATA__ = invoice.data;
-      // 设置编辑模式标志
-      (window as any).__EDIT_MODE__ = true;
-      // 设置编辑ID
-      (window as any).__EDIT_ID__ = params.id;
+      // 将数据注入到 InvoicePage 组件中
+      const customWindow = window as unknown as CustomWindow;
+      customWindow.__INVOICE_DATA__ = invoice.data;
+      customWindow.__EDIT_MODE__ = true;
+      customWindow.__EDIT_ID__ = params.id;
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading invoice:', error);
-      setError('加载发票时出错');
+      const errorMessage = error instanceof Error ? error.message : 
+        (error as ErrorResponse)?.message || '加载发票时出错';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
+
+    // 清理函数
+    return () => {
+      const customWindow = window as unknown as CustomWindow;
+      customWindow.__INVOICE_DATA__ = undefined;
+      customWindow.__EDIT_MODE__ = false;
+      customWindow.__EDIT_ID__ = undefined;
+    };
   }, [params.id]);
 
   if (isLoading) {
