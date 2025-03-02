@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 import { getQuotationHistory } from '@/utils/quotationHistory';
 import QuotationPage from '../../page';
 
+interface CustomWindow extends Window {
+  __QUOTATION_DATA__?: any;
+  __EDIT_MODE__?: boolean;
+  __EDIT_ID__?: string;
+  __QUOTATION_TYPE__?: 'quotation' | 'confirmation';
+}
+
 export default function CopyQuotationPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +52,16 @@ export default function CopyQuotationPage({ params }: { params: { id: string } }
       setIsLoading(false);
     }
   }, [params.id]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const customWindow = window as unknown as CustomWindow;
+      customWindow.__QUOTATION_DATA__ = null;
+      customWindow.__EDIT_MODE__ = false;
+      customWindow.__EDIT_ID__ = undefined;
+      customWindow.__QUOTATION_TYPE__ = 'quotation';
+    }
+  }, []);
 
   if (isLoading) {
     return (

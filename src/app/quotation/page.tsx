@@ -40,7 +40,6 @@ export default function QuotationPage() {
 
   // 从 window 全局变量获取初始数据
   const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__QUOTATION_DATA__) : null;
-  const initialEditMode = typeof window !== 'undefined' && ((window as unknown as CustomWindow).__EDIT_MODE__);
   const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
   const initialType = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__QUOTATION_TYPE__) : 'quotation';
 
@@ -96,7 +95,8 @@ export default function QuotationPage() {
     details?: unknown;
   }
 
-  const handleError = (error: CustomError | Error | unknown) => {
+  // 将 handleError 包装在 useCallback 中
+  const handleError = useCallback((error: CustomError | Error | unknown) => {
     if (error instanceof Error) {
       console.error('Error:', error.message);
       return error.message;
@@ -108,14 +108,13 @@ export default function QuotationPage() {
     }
     console.error('Unknown error:', error);
     return 'An unknown error occurred';
-  };
+  }, []);
 
   // 清除注入的数据
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // 获取并保存编辑模式状态
       const customWindow = window as unknown as CustomWindow;
-      const editMode = customWindow.__EDIT_MODE__;
       const editId = customWindow.__EDIT_ID__;
       const type = customWindow.__QUOTATION_TYPE__;
       
@@ -249,32 +248,29 @@ export default function QuotationPage() {
     }
   }, [activeTab, data, handleError]);
 
-  // 处理导入数据
-  const handleImport = (importedData: LineItem[]) => {
-    if (importedData.length > 0) {
-      setData(prev => ({
-        ...prev,
-        items: importedData
-      }));
-    }
-  };
-
-  // 处理全局粘贴
-  const handleGlobalPaste = (text: string) => {
+  // 将 handleGlobalPaste 包装在 useCallback 中
+  const handleGlobalPaste = useCallback((data: string | LineItem[]) => {
     try {
-      const parsedData = parseExcelData(text);
-      const newItems = convertExcelToLineItems(parsedData);
-      if (newItems.length > 0) {
+      if (typeof data === 'string') {
+        const parsedData = parseExcelData(data);
+        const newItems = convertExcelToLineItems(parsedData);
+        if (newItems.length > 0) {
+          setData(prev => ({
+            ...prev,
+            items: newItems
+          }));
+        }
+      } else {
         setData(prev => ({
           ...prev,
-          items: newItems
+          items: data
         }));
       }
     } catch (error: unknown) {
       const errorMessage = handleError(error);
       console.error('Failed to parse pasted data:', errorMessage);
     }
-  };
+  }, [handleError]);
 
   // 处理剪贴板按钮点击
   const handleClipboardButtonClick = async () => {
@@ -562,7 +558,7 @@ export default function QuotationPage() {
               <div className="px-0 sm:px-6 py-4">
                 <div className="space-y-4">
                   <div className="px-4 sm:px-0">
-                    <ImportDataButton onImport={handleImport} />
+                    <ImportDataButton onImport={handleGlobalPaste} />
                   </div>
                   <ItemsTable 
                     data={data}

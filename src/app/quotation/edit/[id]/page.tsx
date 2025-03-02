@@ -5,10 +5,28 @@ import { useRouter } from 'next/navigation';
 import { getQuotationHistory } from '@/utils/quotationHistory';
 import QuotationPage from '../../page';
 
-export default function EditQuotationPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
+export default function QuotationEditPage({ params }: { params: { id: string } }) {
+  const _router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 添加 window 类型定义
+  interface CustomWindow extends Window {
+    __QUOTATION_DATA__?: QuotationData;
+    __EDIT_MODE__?: boolean;
+    __EDIT_ID__?: string;
+    __QUOTATION_TYPE__?: 'quotation' | 'confirmation';
+  }
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const customWindow = window as unknown as CustomWindow;
+      customWindow.__QUOTATION_DATA__ = null;
+      customWindow.__EDIT_MODE__ = true;
+      customWindow.__EDIT_ID__ = null;
+      customWindow.__QUOTATION_TYPE__ = 'quotation';
+    }
+  }, []);
 
   useEffect(() => {
     // 从历史记录中加载报价数据
@@ -22,13 +40,11 @@ export default function EditQuotationPage({ params }: { params: { id: string } }
       }
 
       // 将历史数据注入到 QuotationPage 组件中
-      (window as any).__QUOTATION_DATA__ = quotation.data;
-      // 设置编辑模式标志
-      (window as any).__EDIT_MODE__ = true;
-      // 设置编辑ID
-      (window as any).__EDIT_ID__ = params.id;
-      // 设置类型
-      (window as any).__QUOTATION_TYPE__ = quotation.type;
+      const customWindow = window as unknown as CustomWindow;
+      customWindow.__QUOTATION_DATA__ = quotation.data;
+      customWindow.__EDIT_MODE__ = true;
+      customWindow.__EDIT_ID__ = params.id;
+      customWindow.__QUOTATION_TYPE__ = quotation.type;
       
     } catch (error) {
       console.error('Error loading quotation:', error);

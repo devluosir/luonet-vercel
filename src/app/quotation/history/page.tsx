@@ -143,8 +143,9 @@ export default function QuotationHistoryPage() {
               const success = importQuotationHistory(result);
               if (success) {
                 // 重新加载历史记录
-                const results = getQuotationHistory(filters);
-                setHistory(results);
+                const results = getQuotationHistory();
+                const filteredResults = getFilteredHistory(results);
+                setHistory(filteredResults);
                 alert('Import successful!');
               } else {
                 throw new Error('Import failed');
