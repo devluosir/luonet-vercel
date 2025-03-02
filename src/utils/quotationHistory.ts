@@ -1,5 +1,6 @@
 import { QuotationData } from '@/types/quotation';
 import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-history';
+import { getDefaultNotes } from '@/utils/getDefaultNotes';
 
 const STORAGE_KEY = 'quotation_history';
 
@@ -102,32 +103,81 @@ export const exportQuotationHistory = (): string => {
 // 导入历史记录
 export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace' | 'merge' = 'merge'): boolean => {
   try {
-    const importedHistory = JSON.parse(jsonData) as QuotationHistory[];
+    const importedHistory = JSON.parse(jsonData);
     
     // 验证导入的数据格式
-    if (!Array.isArray(importedHistory) || !importedHistory.every(item => 
-      typeof item.id === 'string' &&
-      typeof item.createdAt === 'string' &&
-      typeof item.updatedAt === 'string' &&
-      (item.type === 'quotation' || item.type === 'confirmation') &&
-      typeof item.customerName === 'string' &&
-      typeof item.quotationNo === 'string' &&
-      typeof item.totalAmount === 'number' &&
-      typeof item.currency === 'string' &&
-      typeof item.data === 'object'
-    )) {
+    if (!Array.isArray(importedHistory)) {
       throw new Error('Invalid data format');
     }
 
+    // 处理从发票导入的数据
+    const processedData = importedHistory.map(item => {
+      // 如果是发票数据（通过检查特有字段判断）
+      if (item.data && item.data.customerPO !== undefined) {
+        const convertedItems = item.data.items.map(lineItem => {
+          // @ts-ignore - 处理发票数据
+          if (lineItem.partname && !lineItem.partName) {
+            return {
+              id: lineItem.lineNo || 0,
+              partName: lineItem.partname,
+              description: lineItem.description || '',
+              quantity: lineItem.quantity,
+              unit: lineItem.unit,
+              unitPrice: lineItem.unitPrice,
+              amount: lineItem.amount,
+              remarks: '',
+              highlight: {}
+            };
+          }
+          return lineItem;
+        });
+
+        // 转换发票数据为订单确认数据
+        return {
+          id: item.id,
+          type: 'confirmation' as const, // 改为订单确认类型
+          customerName: item.customerName,
+          quotationNo: item.data.invoiceNo, // 使用发票号作为单号
+          totalAmount: item.totalAmount,
+          currency: item.currency,
+          createdAt: item.createdAt,
+          updatedAt: item.createdAt,
+          data: {
+            to: item.data.to,
+            inquiryNo: item.data.customerPO || '', // 发票 customerPO -> 订单确认 inquiryNo
+            quotationNo: '', // 订单确认不需要报价单号
+            date: item.data.date,
+            from: 'Roger',
+            currency: item.data.currency,
+            paymentDate: item.data.paymentDate,
+            items: convertedItems,
+            notes: getDefaultNotes('Roger', 'confirmation'), // 使用订单确认的默认备注
+            amountInWords: item.data.amountInWords,
+            showDescription: true,
+            showRemarks: false,
+            showBank: item.data.showBank,
+            showStamp: false,
+            contractNo: item.data.invoiceNo, // 发票号作为合同号
+            otherFees: item.data.otherFees || [],
+            customUnits: [],
+            showPaymentTerms: item.data.showPaymentTerms,
+            showInvoiceReminder: item.data.showInvoiceReminder,
+            additionalPaymentTerms: item.data.additionalPaymentTerms
+          }
+        };
+      }
+      return item;
+    });
+
     if (mergeStrategy === 'replace') {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(importedHistory));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(processedData));
     } else {
       // 合并策略：保留现有记录，添加新记录（根据 id 去重）
       const existingHistory = getQuotationHistory();
       const existingIds = new Set(existingHistory.map(item => item.id));
       const newHistory = [
         ...existingHistory,
-        ...importedHistory.filter(item => !existingIds.has(item.id))
+        ...processedData.filter(item => !existingIds.has(item.id))
       ];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
     }

@@ -60,16 +60,12 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
     const processedData = data.map(item => {
       // 如果是报价单数据，进行转换
       if (item.data && item.data.items) {
-        const convertedItems = item.data.items.map(lineItem => {
-          // @ts-ignore - 处理报价单数据
-          if (lineItem.partName && !lineItem.partname) {
+        const convertedItems = item.data.items.map((lineItem: { partName?: string; id?: number; description?: string; quantity: number; unit: string; unitPrice: number; amount: number }) => {
+          if (lineItem.partName && !('partname' in lineItem)) {
             return {
               ...lineItem,
-              // @ts-ignore - 转换字段名
               partname: lineItem.partName,
-              // @ts-ignore - 删除原字段
               partName: undefined,
-              // 添加发票特有字段
               lineNo: lineItem.id || 0,
               hsCode: '',
               highlight: {}
