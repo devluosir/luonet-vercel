@@ -811,6 +811,109 @@ Beneficiary: Luo & Company Co., Limited`,
                             ¥
                           </button>
                         </div>
+                      </div>
+
+                      {/* 模板设置 */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* 抬头类型 */}
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
+                            抬头类型
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {['none', 'bilingual', 'english'].map((type) => (
+                              <button
+                                key={type}
+                                type="button"
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                  invoiceData.templateConfig.headerType === type
+                                    ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
+                                    : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
+                                }`}
+                                onClick={() => setInvoiceData(prev => ({
+                                  ...prev,
+                                  templateConfig: {
+                                    ...prev.templateConfig,
+                                    headerType: type as 'none' | 'bilingual' | 'english'
+                                  }
+                                }))}
+                              >
+                                {type === 'none' ? '无抬头' : type === 'bilingual' ? '双语' : '英文'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 发票类型 */}
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
+                            发票类型
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              { value: 'invoice', label: '普通发票' },
+                              { value: 'commercial', label: '商业发票' },
+                              { value: 'proforma', label: '形式发票' }
+                            ].map(({ value, label }) => (
+                              <button
+                                key={value}
+                                type="button"
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                  invoiceData.templateConfig.invoiceType === value
+                                    ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
+                                    : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
+                                }`}
+                                onClick={() => setInvoiceData(prev => ({
+                                  ...prev,
+                                  templateConfig: {
+                                    ...prev.templateConfig,
+                                    invoiceType: value as 'invoice' | 'commercial' | 'proforma'
+                                  }
+                                }))}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 印章类型 */}
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
+                            印章类型
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {[
+                              { value: 'none', label: '无印章' },
+                              { value: 'stamp', label: '普通印章' },
+                              { value: 'signature', label: '签名' },
+                              { value: 'shanghai', label: '上海印章' },
+                              { value: 'hongkong', label: '香港印章' }
+                            ].map(({ value, label }) => (
+                              <button
+                                key={value}
+                                type="button"
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                                  invoiceData.templateConfig.stampType === value
+                                    ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
+                                    : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
+                                }`}
+                                onClick={() => setInvoiceData(prev => ({
+                                  ...prev,
+                                  templateConfig: {
+                                    ...prev.templateConfig,
+                                    stampType: value as 'none' | 'stamp' | 'signature' | 'shanghai' | 'hongkong'
+                                  }
+                                }))}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
                         <label className="flex items-center gap-2">
                           <input
                             type="checkbox"
