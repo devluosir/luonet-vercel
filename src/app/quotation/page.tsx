@@ -75,7 +75,7 @@ export default function QuotationPage() {
       hasDecimals: false
     },
     showDescription: true,
-    showRemarks: true,
+    showRemarks: false,
     showBank: false,
     showStamp: false,
     contractNo: '',
