@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Download, Settings, Clipboard } from 'lucide-react';
+import { ArrowLeft, Download, Settings, Clipboard, History } from 'lucide-react';
 import { generateInvoicePDF } from '@/utils/pdfGenerator';
 import { InvoiceTemplateConfig } from '@/types/invoice';
 import { format, addMonths } from 'date-fns';
 import { Footer } from '@/components/Footer';
 import { CustomerSection } from '@/components/invoice/CustomerSection';
+import { addInvoiceHistory } from '@/utils/invoiceHistory';
+import { v4 as uuidv4 } from 'uuid';
 
 // 基础样式定义
 const inputClassName = `w-full px-4 py-2.5 rounded-2xl
@@ -215,12 +217,34 @@ Beneficiary: Luo & Company Co., Limited`,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // 生成 PDF
       await generateInvoicePDF({
         ...invoiceData,
         showPaymentTerms,
         additionalPaymentTerms,
         templateConfig
       });
+
+      // 保存到历史记录
+      const historyData = {
+        id: uuidv4(),
+        customerName: invoiceData.to,
+        invoiceNo: invoiceData.invoiceNo,
+        totalAmount: getTotalAmount(),
+        currency: invoiceData.currency,
+        createdAt: new Date().toISOString(),
+        data: {
+          ...invoiceData,
+          showPaymentTerms,
+          additionalPaymentTerms,
+          templateConfig
+        }
+      };
+
+      const success = addInvoiceHistory(historyData);
+      if (!success) {
+        console.error('Failed to save invoice history');
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
     }
@@ -679,6 +703,17 @@ Beneficiary: Luo & Company Co., Limited`,
                   >
                     <Clipboard className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                   </button>
+                  <Link
+                    href="/invoice/history"
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium
+                      bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
+                      hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
+                      text-[#007AFF] dark:text-[#0A84FF]
+                      flex items-center gap-1.5"
+                  >
+                    <History className="w-4 h-4" />
+                    历史记录
+                  </Link>
                 </div>
                 <div className="hidden sm:flex items-center gap-3">
                   <input
