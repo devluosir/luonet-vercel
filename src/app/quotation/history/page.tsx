@@ -118,7 +118,7 @@ export default function QuotationHistoryPage() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting history:', error);
-      alert('导出失败，请稍后重试。');
+      alert('Export failed, please try again later.');
     }
   };
 
@@ -140,13 +140,13 @@ export default function QuotationHistoryPage() {
                 // 重新加载历史记录
                 const results = getQuotationHistory(filters);
                 setHistory(results);
-                alert('导入成功！');
+                alert('Import successful!');
               } else {
                 throw new Error('Import failed');
               }
             } catch (error) {
               console.error('Error importing history:', error);
-              alert('导入失败，请检查文件格式是否正确。');
+              alert('Import failed, please check if the file format is correct.');
             }
           }
         };
@@ -185,215 +185,213 @@ export default function QuotationHistoryPage() {
         setSelectedIds(new Set());
         setShowBatchDeleteConfirm(false);
       } else {
-        alert('部分记录删除失败，请刷新页面后重试。');
+        alert('Some records deletion failed, please refresh the page and try again.');
       }
     } catch (error) {
       console.error('Error batch deleting:', error);
-      alert('删除失败，请稍后重试。');
+      alert('Deletion failed, please try again later.');
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
-        {/* 返回按钮 */}
+        {/* Back button */}
         <Link href="/quotation" className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]">
           <ArrowLeft className="w-4 h-4 mr-2" />
-          返回报价
+          Back to Quotation
         </Link>
 
-        {/* 标题和搜索栏 */}
-        <div className="mt-4 sm:mt-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-              <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-[#F5F5F7]">
-                报价历史记录
-              </h1>
-              <select
-                value={filters.type}
-                onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as 'all' | 'quotation' | 'confirmation' }))}
-                className="h-10 px-4 rounded-xl w-full sm:w-auto
+        {/* Title and search bar */}
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex flex-row justify-between items-center">
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-[#F5F5F7] whitespace-nowrap">
+              Quotation History
+            </h1>
+            <div className="flex flex-row gap-2">
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={() => setShowBatchDeleteConfirm(true)}
+                  className="h-10 px-4 rounded-xl text-sm font-medium
+                    bg-red-600 hover:bg-red-700
+                    text-white
+                    flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <Trash2 className="w-4 h-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">Delete</span>
+                    <span className="inline-flex">({selectedIds.size})</span>
+                  </button>
+              )}
+              <button
+                onClick={handleExport}
+                className="h-10 px-4 rounded-xl text-sm font-medium
+                  bg-[#007AFF] hover:bg-[#0066CC]
+                  text-white
+                  flex items-center gap-2 whitespace-nowrap"
+              >
+                <Upload className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline">Export</span>
+                {selectedIds.size > 0 && <span className="inline-flex">({selectedIds.size})</span>}
+              </button>
+              <button
+                onClick={handleImport}
+                className="h-10 px-4 rounded-xl text-sm font-medium
+                  bg-emerald-600 hover:bg-emerald-700
+                  text-white
+                  hover:shadow-md
+                  flex items-center gap-2 whitespace-nowrap"
+              >
+                <Download className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline">Import</span>
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-row gap-2 w-full">
+            <select
+              value={filters.type}
+              onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value as 'all' | 'quotation' | 'confirmation' }))}
+              className="h-10 px-4 rounded-xl w-32 flex-shrink-0
+                bg-white dark:bg-[#2C2C2E]
+                border border-gray-200 dark:border-[#3A3A3C]
+                text-gray-900 dark:text-[#F5F5F7]
+                focus:outline-none focus:ring-2 focus:ring-[#007AFF]/50"
+            >
+              <option value="all">All Types</option>
+              <option value="quotation">Quotation</option>
+              <option value="confirmation">Order Confirmation</option>
+            </select>
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="Search customer/number/amount..."
+                value={filters.search}
+                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                className="w-full h-10 pl-10 pr-4 rounded-xl
                   bg-white dark:bg-[#2C2C2E]
                   border border-gray-200 dark:border-[#3A3A3C]
                   text-gray-900 dark:text-[#F5F5F7]
+                  placeholder-gray-500 dark:placeholder-[#98989D]
                   focus:outline-none focus:ring-2 focus:ring-[#007AFF]/50"
-              >
-                <option value="all">全部类型</option>
-                <option value="quotation">报价单</option>
-                <option value="confirmation">订单确认</option>
-              </select>
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-              <div className="relative w-full sm:w-64">
-                <input
-                  type="text"
-                  placeholder="搜索客户名称/单号/金额..."
-                  value={filters.search}
-                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                  className="w-full h-10 pl-10 pr-4 rounded-xl
-                    bg-white dark:bg-[#2C2C2E]
-                    border border-gray-200 dark:border-[#3A3A3C]
-                    text-gray-900 dark:text-[#F5F5F7]
-                    placeholder-gray-500 dark:placeholder-[#98989D]
-                    focus:outline-none focus:ring-2 focus:ring-[#007AFF]/50"
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                {filters.search && (
-                  <button
-                    onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1
-                      text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    <span className="sr-only">清除搜索</span>
-                    ×
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-row gap-2 w-full sm:w-auto justify-end">
-                {selectedIds.size > 0 && (
-                  <button
-                    onClick={() => setShowBatchDeleteConfirm(true)}
-                    className="h-10 px-4 rounded-xl text-sm font-medium
-                      bg-red-600 hover:bg-red-700
-                      text-white
-                      flex items-center gap-2 flex-1 sm:flex-none justify-center"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">删除所选</span> ({selectedIds.size})
-                  </button>
-                )}
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              {filters.search && (
                 <button
-                  onClick={handleExport}
-                  className="h-10 px-4 rounded-xl text-sm font-medium
-                    bg-[#007AFF] hover:bg-[#0066CC]
-                    text-white
-                    flex items-center gap-2 flex-1 sm:flex-none justify-center"
+                  onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1
+                    text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
-                  <Upload className="w-4 h-4" />
-                  <span className="hidden sm:inline">
-                    {selectedIds.size > 0 ? `导出所选(${selectedIds.size})` : '导出全部'}
-                  </span>
+                  <span className="sr-only">Clear search</span>
+                  ×
                 </button>
-                <button
-                  onClick={handleImport}
-                  className="h-10 px-4 rounded-xl text-sm font-medium
-                    bg-gray-100 dark:bg-[#3A3A3C]
-                    text-gray-900 dark:text-[#F5F5F7]
-                    hover:bg-gray-200 dark:hover:bg-[#48484A]
-                    flex items-center gap-2 flex-1 sm:flex-none justify-center"
-                >
-                  <Download className="w-4 h-4" />
-                  <span className="hidden sm:inline">导入</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* 历史记录列表 */}
-          <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl shadow-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              {isLoading ? (
-                <div className="py-8 text-center text-gray-500 dark:text-[#98989D]">
-                  加载中...
-                </div>
-              ) : (
-                <>
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-[#3A3A3C]">
-                        <th className="w-10 px-2 sm:px-4 py-3 text-left">
-                          <input
-                            type="checkbox"
-                            checked={history.length > 0 && selectedIds.size === history.length}
-                            onChange={handleSelectAll}
-                            className="rounded border-gray-300 dark:border-[#3A3A3C]
-                              text-[#007AFF] 
-                              focus:ring-[#007AFF]
-                              bg-white dark:bg-[#3A3A3C]"
-                          />
-                        </th>
-                        <th className="w-1/4 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] hidden sm:table-cell">客户名称</th>
-                        <th className="w-[45%] sm:w-1/3 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D]">单号</th>
-                        <th className="w-1/6 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] hidden sm:table-cell">金额</th>
-                        <th className="w-[35%] sm:w-1/6 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D]">创建时间</th>
-                        <th className="w-[20%] sm:w-[100px] px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D]">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {history.map((item) => (
-                        <tr key={item.id} className="border-b border-gray-200 dark:border-[#3A3A3C] last:border-0 hover:bg-gray-50 dark:hover:bg-[#3A3A3C]">
-                          <td className="w-10 px-2 sm:px-4 py-2.5">
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.has(item.id)}
-                              onChange={() => handleSelect(item.id)}
-                              className="rounded border-gray-300 dark:border-[#3A3A3C]
-                                text-[#007AFF]
-                                focus:ring-[#007AFF]
-                                bg-white dark:bg-[#3A3A3C]"
-                            />
-                          </td>
-                          <td className="w-1/4 px-2 sm:px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-[#F5F5F7] hidden sm:table-cell whitespace-nowrap overflow-hidden text-ellipsis">{item.customerName}</td>
-                          <td className="w-[45%] sm:w-1/3 px-2 sm:px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-[#F5F5F7] whitespace-nowrap overflow-hidden text-ellipsis">
-                            {item.type === 'quotation' ? item.quotationNo : item.data.contractNo}
-                          </td>
-                          <td className="w-1/6 px-2 sm:px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-[#F5F5F7] hidden sm:table-cell">{item.currency === 'USD' ? '$' : '¥'}{item.totalAmount.toFixed(2)}</td>
-                          <td className="w-[35%] sm:w-1/6 px-2 sm:px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-[#F5F5F7] whitespace-nowrap overflow-hidden text-ellipsis">
-                            {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm')}
-                          </td>
-                          <td className="w-[20%] sm:w-[100px] px-2 sm:px-4 py-2.5">
-                            <div className="flex items-center gap-0.5 sm:gap-2">
-                              <button
-                                onClick={() => handleEdit(item.id)}
-                                className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-[#48484A]
-                                  text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
-                                title="编辑"
-                              >
-                                <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleCopy(item.id)}
-                                className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-[#48484A]
-                                  text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
-                                title="复制"
-                              >
-                                <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                              </button>
-                              <button
-                                onClick={() => setShowDeleteConfirm(item.id)}
-                                className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-[#48484A]
-                                  text-red-600 hover:text-red-700"
-                                title="删除"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {history.length === 0 && (
-                    <div className="py-8 text-center text-gray-500 dark:text-[#98989D]">
-                      暂无历史记录
-                    </div>
-                  )}
-                </>
               )}
             </div>
           </div>
         </div>
+
+        {/* History list */}
+        <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl shadow-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            {isLoading ? (
+              <div className="py-8 text-center text-gray-500 dark:text-[#98989D]">
+                Loading...
+              </div>
+            ) : (
+              <>
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-[#3A3A3C]">
+                      <th className="w-10 px-2 sm:px-4 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          checked={history.length > 0 && selectedIds.size === history.length}
+                          onChange={handleSelectAll}
+                          className="rounded border-gray-300 dark:border-[#3A3A3C]
+                            text-[#007AFF] 
+                            focus:ring-[#007AFF]
+                            bg-white dark:bg-[#3A3A3C]"
+                        />
+                      </th>
+                      <th className="w-1/4 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] hidden lg:table-cell">Customer Name</th>
+                      <th className="w-[45%] sm:w-2/3 lg:w-1/3 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D]">Number</th>
+                      <th className="w-1/6 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] hidden lg:table-cell">Amount</th>
+                      <th className="w-[35%] sm:w-1/4 lg:w-1/6 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D]">Created At</th>
+                      <th className="w-[20%] sm:w-[100px] px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((item) => (
+                      <tr key={item.id} className="border-b border-gray-200 dark:border-[#3A3A3C] last:border-0 hover:bg-gray-50 dark:hover:bg-[#3A3A3C]">
+                        <td className="w-10 px-2 sm:px-4 py-2.5">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(item.id)}
+                            onChange={() => handleSelect(item.id)}
+                            className="rounded border-gray-300 dark:border-[#3A3A3C]
+                              text-[#007AFF]
+                              focus:ring-[#007AFF]
+                              bg-white dark:bg-[#3A3A3C]"
+                          />
+                        </td>
+                        <td className="w-1/4 px-2 sm:px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-[#F5F5F7] hidden lg:table-cell whitespace-nowrap overflow-hidden text-ellipsis">{item.customerName}</td>
+                        <td className="w-[45%] sm:w-2/3 lg:w-1/3 px-2 sm:px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-[#F5F5F7] whitespace-nowrap overflow-hidden text-ellipsis">
+                          {item.type === 'quotation' ? item.quotationNo : item.data.contractNo}
+                        </td>
+                        <td className="w-1/6 px-2 sm:px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-[#F5F5F7] hidden lg:table-cell">{item.currency === 'USD' ? '$' : '¥'}{item.totalAmount.toFixed(2)}</td>
+                        <td className="w-[35%] sm:w-1/4 lg:w-1/6 px-2 sm:px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-[#F5F5F7] whitespace-nowrap overflow-hidden text-ellipsis">
+                          {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm')}
+                        </td>
+                        <td className="w-[20%] sm:w-[100px] px-2 sm:px-4 py-2.5">
+                          <div className="flex items-center gap-0.5 sm:gap-2">
+                            <button
+                              onClick={() => handleEdit(item.id)}
+                              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-[#48484A]
+                                text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleCopy(item.id)}
+                              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-[#48484A]
+                                text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
+                              title="Copy"
+                            >
+                              <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </button>
+                            <button
+                              onClick={() => setShowDeleteConfirm(item.id)}
+                              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-[#48484A]
+                                text-red-600 hover:text-red-700"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {history.length === 0 && (
+                  <div className="py-8 text-center text-gray-500 dark:text-[#98989D]">
+                    No records found
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* 删除确认弹窗 */}
+      {/* Delete confirmation dialog */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 dark:bg-[#000000]/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl p-6 max-w-sm w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F5F5F7] mb-4">
-              确认删除
+              Confirm Delete
             </h3>
             <p className="text-gray-600 dark:text-[#98989D] mb-6">
-              确定要删除这条历史记录吗？此操作无法撤销。
+              Are you sure you want to delete this record? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button
@@ -403,7 +401,7 @@ export default function QuotationHistoryPage() {
                   text-gray-900 dark:text-[#F5F5F7]
                   hover:bg-gray-200 dark:hover:bg-[#48484A]"
               >
-                取消
+                Cancel
               </button>
               <button
                 onClick={() => handleDelete(showDeleteConfirm)}
@@ -411,22 +409,22 @@ export default function QuotationHistoryPage() {
                   bg-red-600 hover:bg-red-700
                   text-white"
               >
-                删除
+                Delete
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 批量删除确认弹窗 */}
+      {/* Batch delete confirmation dialog */}
       {showBatchDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 dark:bg-[#000000]/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl p-6 max-w-sm w-full">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F5F5F7] mb-4">
-              确认批量删除
+              Confirm Batch Delete
             </h3>
             <p className="text-gray-600 dark:text-[#98989D] mb-6">
-              确定要删除选中的 {selectedIds.size} 条历史记录吗？此操作无法撤销。
+              Are you sure you want to delete {selectedIds.size} selected records? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button
@@ -436,7 +434,7 @@ export default function QuotationHistoryPage() {
                   text-gray-900 dark:text-[#F5F5F7]
                   hover:bg-gray-200 dark:hover:bg-[#48484A]"
               >
-                取消
+                Cancel
               </button>
               <button
                 onClick={handleBatchDelete}
@@ -444,7 +442,7 @@ export default function QuotationHistoryPage() {
                   bg-red-600 hover:bg-red-700
                   text-white"
               >
-                删除
+                Delete
               </button>
             </div>
           </div>
