@@ -10,14 +10,39 @@ const generateId = () => {
 };
 
 // 保存报价历史
-export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: QuotationData) => {
+export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: QuotationData, existingId?: string) => {
   try {
     const history = getQuotationHistory();
     const totalAmount = data.items.reduce((sum, item) => sum + item.amount, 0) +
       (data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0);
 
+    // 如果提供了现有ID，则更新该记录
+    if (existingId) {
+      const index = history.findIndex(item => item.id === existingId);
+      if (index !== -1) {
+        // 保留原始创建时间
+        const originalCreatedAt = history[index].createdAt;
+        const updatedHistory: QuotationHistory = {
+          id: existingId,
+          createdAt: originalCreatedAt,
+          updatedAt: new Date().toISOString(),
+          type,
+          customerName: data.to,
+          quotationNo: data.quotationNo,
+          totalAmount,
+          currency: data.currency,
+          data
+        };
+        history[index] = updatedHistory;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        return updatedHistory;
+      }
+    }
+
+    // 如果没有提供ID或找不到记录，创建新记录
+    const newId = existingId || generateId();
     const newHistory: QuotationHistory = {
-      id: generateId(),
+      id: newId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       type,

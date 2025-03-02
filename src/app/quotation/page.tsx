@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { Settings, Download, ArrowLeft, Eye, Clipboard, History, Save } from 'lucide-react';
 import { generateQuotationPDF } from '@/utils/quotationPdfGenerator';
 import { generateOrderConfirmationPDF } from '@/utils/orderConfirmationPdfGenerator';
@@ -27,13 +28,24 @@ const buttonClassName = `px-4 py-2 rounded-xl text-sm font-medium
   transition-all duration-300`;
 
 export default function QuotationPage() {
-  const [activeTab, setActiveTab] = useState<'quotation' | 'confirmation'>('quotation');
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // 从 window 全局变量获取初始数据
+  const initialData = typeof window !== 'undefined' ? (window as any).__QUOTATION_DATA__ : null;
+  const initialEditMode = typeof window !== 'undefined' && (window as any).__EDIT_MODE__;
+  const initialEditId = typeof window !== 'undefined' ? (window as any).__EDIT_ID__ : null;
+  const initialType = typeof window !== 'undefined' ? (window as any).__QUOTATION_TYPE__ : 'quotation';
+
+  const [activeTab, setActiveTab] = useState<'quotation' | 'confirmation'>(initialType || 'quotation');
   const [showSettings, setShowSettings] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState(0);
-  const [data, setData] = useState<QuotationData>({
+  const [isEditMode, setIsEditMode] = useState(initialEditMode || false);
+  const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
+  const [data, setData] = useState<QuotationData>(initialData || {
     to: '',
     inquiryNo: '',
     quotationNo: '',
@@ -68,37 +80,32 @@ export default function QuotationPage() {
     additionalPaymentTerms: ''
   });
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  // 初始化时根据用户名设置报价人和备注
+  // 清除注入的数据
   useEffect(() => {
-    // 检查是否有编辑数据
-    const editData = sessionStorage.getItem('edit_quotation_data');
-    if (editData) {
-      try {
-        const { type, data: historyData } = JSON.parse(editData);
+    if (typeof window !== 'undefined') {
+      // 获取并保存编辑模式状态
+      const editMode = (window as any).__EDIT_MODE__;
+      const editId = (window as any).__EDIT_ID__;
+      const type = (window as any).__QUOTATION_TYPE__;
+      
+      if (editMode !== undefined) {
+        setIsEditMode(editMode);
+      }
+      if (editId !== undefined) {
+        setEditId(editId);
+      }
+      if (type !== undefined) {
         setActiveTab(type);
-        setData(historyData);
-        // 清除 sessionStorage 中的数据
-        sessionStorage.removeItem('edit_quotation_data');
-      } catch (error) {
-        console.error('Error loading edit data:', error);
       }
-    } else {
-      // 如果没有编辑数据，则加载用户名和默认备注
-      const username = window?.localStorage?.getItem('username');
-      let from = 'Roger';
-      switch(username) {
-        case 'sharon': from = 'Sharon'; break;
-        case 'emily': from = 'Emily'; break;
-        case 'nina': from = 'Nina'; break;
-        case 'summer': from = 'Summer'; break;
-      }
-      setData(prev => ({
-        ...prev,
-        from,
-        // 只在初始化时设置默认备注
-        ...(prev.notes === getDefaultNotes('Roger', 'quotation') ? { notes: getDefaultNotes(from, 'quotation') } : {})
-      }));
+
+      // 清除注入的数据
+      delete (window as any).__QUOTATION_DATA__;
+      delete (window as any).__EDIT_MODE__;
+      delete (window as any).__EDIT_ID__;
+      delete (window as any).__QUOTATION_TYPE__;
     }
   }, []);
 
@@ -128,8 +135,8 @@ export default function QuotationPage() {
 
   const handleGenerate = useCallback(async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    
-    // 立即更新状态
+
+    // 设置生成状态
     flushSync(() => {
       setIsGenerating(true);
       setGeneratingProgress(10);
@@ -138,18 +145,24 @@ export default function QuotationPage() {
     let progressInterval: NodeJS.Timeout | undefined;
     
     try {
-      // 先保存记录
-      await saveQuotationHistory(activeTab, data);
+      // 获取编辑 ID（从 URL 或 state）
+      const existingId = editId || (pathname?.startsWith('/quotation/edit/') ? pathname.split('/').pop() : undefined);
+      
+      // 保存记录
+      const saveResult = await saveQuotationHistory(activeTab, data, existingId);
+      if (saveResult && !editId) {
+        setEditId(saveResult.id);
+      }
       
       // 启动进度更新
       progressInterval = setInterval(() => {
         setGeneratingProgress(prev => {
-          // 使用更平滑的进度增长
           const increment = Math.max(1, (90 - prev) / 10);
           return prev >= 90 ? prev : prev + increment;
         });
       }, 100);
 
+      // 生成 PDF
       if (activeTab === 'quotation') {
         await generateQuotationPDF(data);
       } else {
@@ -178,8 +191,9 @@ export default function QuotationPage() {
       }
       setIsGenerating(false);
       setGeneratingProgress(0);
+      alert('生成 PDF 失败，请稍后重试');
     }
-  }, [activeTab, data]);
+  }, [activeTab, data, editId, pathname]);
 
   const handleSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -354,14 +368,56 @@ export default function QuotationPage() {
     input.focus();
   };
 
-  // 添加保存处理函数
-  const handleSave = useCallback(async () => {
-    const result = await saveQuotationHistory(activeTab, data);
-    if (result) {
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2000);
+  // 从 URL 获取编辑 ID
+  useEffect(() => {
+    if (pathname?.startsWith('/quotation/edit/')) {
+      const id = pathname.split('/').pop();
+      setEditId(id);
     }
-  }, [activeTab, data]);
+  }, [pathname]);
+
+  // 处理保存
+  const handleSave = useCallback(async () => {
+    if (!data.to.trim()) {
+      setSaveMessage('请填写客户名称');
+      setSaveSuccess(false);
+      setTimeout(() => setSaveMessage(''), 2000);
+      return;
+    }
+
+    if (data.items.length === 0 || (data.items.length === 1 && !data.items[0].partName)) {
+      setSaveMessage('请添加至少一个商品');
+      setSaveSuccess(false);
+      setTimeout(() => setSaveMessage(''), 2000);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // 使用 URL 中的 ID 或现有的 editId
+      const id = pathname?.startsWith('/quotation/edit/') ? pathname.split('/').pop() : editId;
+      
+      const result = await saveQuotationHistory(activeTab, data, id);
+      if (result) {
+        setSaveSuccess(true);
+        setSaveMessage('保存成功');
+        // 更新 editId，确保后续的保存操作会更新同一条记录
+        if (!editId) {
+          setEditId(result.id);
+        }
+      } else {
+        setSaveSuccess(false);
+        setSaveMessage('保存失败');
+      }
+    } catch (error) {
+      console.error('Error saving:', error);
+      setSaveSuccess(false);
+      setSaveMessage('保存失败');
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveMessage(''), 2000);
+    }
+  }, [activeTab, data, editId, pathname]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
@@ -418,13 +474,23 @@ export default function QuotationPage() {
                   <button
                     type="button"
                     onClick={handleSave}
+                    disabled={isSaving}
                     className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0 relative"
-                    title="保存"
+                    title={editId ? '保存修改' : '保存新记录'}
                   >
-                    <Save className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
-                    {saveSuccess && (
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-green-500 rounded-lg whitespace-nowrap">
-                        保存成功
+                    {isSaving ? (
+                      <svg className="animate-spin h-5 w-5 text-gray-600 dark:text-[#98989D]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <Save className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                    )}
+                    {saveMessage && (
+                      <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 text-xs text-white rounded-lg whitespace-nowrap ${
+                        saveSuccess ? 'bg-green-500' : 'bg-red-500'
+                      }`}>
+                        {saveMessage}
                       </div>
                     )}
                   </button>
@@ -603,6 +669,11 @@ export default function QuotationPage() {
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                               </svg>
                               <span>Generating...</span>
+                            </>
+                          ) : (pathname?.startsWith('/quotation/edit/') || editId) ? (
+                            <>
+                              <Download className="w-4 h-4" />
+                              <span>Save Changes & Generate</span>
                             </>
                           ) : (
                             <>
