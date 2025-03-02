@@ -321,11 +321,11 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
             ${(data.otherFees ?? []).length > 0 ? 'rounded-t-2xl' : 'rounded-2xl'}`}>
             <table className="min-w-full">
               <thead>
-                <tr className={`bg-[#F5F5F7] dark:bg-[#2C2C2E]
-                  border-b border-[#E5E5EA] dark:border-[#3C3C3E]
+                <tr className={`bg-[#F5F5F7] dark:bg-[#3A3A3C]
+                  border-b border-[#E5E5EA] dark:border-[#48484A]
                   ${(data.otherFees ?? []).length === 0 ? 'rounded-t-2xl overflow-hidden' : ''}`}>
                   <th className={`left-0 z-10 w-[50px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
-                    bg-[#F5F5F7] dark:bg-[#2C2C2E]
+                    bg-[#F5F5F7] dark:bg-[#3A3A3C]
                     ${(data.otherFees ?? []).length === 0 ? 'rounded-tl-2xl' : ''}`}>No.</th>
                   <th className="min-w-[180px] max-w-[300px] w-fit px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">Part Name</th>
                   {data.showDescription && (
