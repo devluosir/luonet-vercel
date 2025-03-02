@@ -114,9 +114,8 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
     const processedData = importedHistory.map(item => {
       // 如果是发票数据（通过检查特有字段判断）
       if (item.data && item.data.customerPO !== undefined) {
-        const convertedItems = item.data.items.map(lineItem => {
-          // @ts-ignore - 处理发票数据
-          if (lineItem.partname && !lineItem.partName) {
+        const convertedItems = item.data.items.map((lineItem: { partname?: string; lineNo?: number; description?: string; quantity: number; unit: string; unitPrice: number; amount: number; highlight?: Record<string, boolean> }) => {
+          if (lineItem.partname && !('partName' in lineItem)) {
             return {
               id: lineItem.lineNo || 0,
               partName: lineItem.partname,
