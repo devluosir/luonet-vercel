@@ -62,7 +62,7 @@ export default function InvoicePage() {
   
   // 从 window 全局变量获取初始数据
   const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__INVOICE_DATA__) : null;
-  const initialEditMode = typeof window !== 'undefined' && (window as any).__EDIT_MODE__;
+  const initialEditMode = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_MODE__) : false;
   const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
   
   const [isEditMode, setIsEditMode] = useState(initialEditMode || false);
@@ -113,8 +113,10 @@ Beneficiary: Luo & Company Co., Limited`,
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // 获取并保存编辑模式状态
-      const editMode = (window as any).__EDIT_MODE__;
-      const editId = (window as any).__EDIT_ID__;
+      const customWindow = window as unknown as CustomWindow;
+      const editMode = customWindow.__EDIT_MODE__;
+      const editId = customWindow.__EDIT_ID__;
+      
       if (editMode !== undefined) {
         setIsEditMode(editMode);
       }
@@ -123,9 +125,9 @@ Beneficiary: Luo & Company Co., Limited`,
       }
 
       // 清除注入的数据
-      delete (window as any).__INVOICE_DATA__;
-      delete (window as any).__EDIT_MODE__;
-      delete (window as any).__EDIT_ID__;
+      delete customWindow.__INVOICE_DATA__;
+      delete customWindow.__EDIT_MODE__;
+      delete customWindow.__EDIT_ID__;
     }
   }, []);
 
