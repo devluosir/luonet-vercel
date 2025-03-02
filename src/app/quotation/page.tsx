@@ -27,15 +27,22 @@ const titleClassName = `text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]`
 const buttonClassName = `px-4 py-2 rounded-xl text-sm font-medium 
   transition-all duration-300`;
 
+interface CustomWindow extends Window {
+  __QUOTATION_DATA__?: QuotationData;
+  __EDIT_MODE__?: boolean;
+  __EDIT_ID__?: string;
+  __QUOTATION_TYPE__?: 'quotation' | 'confirmation';
+}
+
 export default function QuotationPage() {
   const _router = useRouter();
   const pathname = usePathname();
 
   // 从 window 全局变量获取初始数据
-  const initialData = typeof window !== 'undefined' ? (window as any).__QUOTATION_DATA__ : null;
-  const initialEditMode = typeof window !== 'undefined' && (window as any).__EDIT_MODE__;
-  const initialEditId = typeof window !== 'undefined' ? (window as any).__EDIT_ID__ : null;
-  const initialType = typeof window !== 'undefined' ? (window as any).__QUOTATION_TYPE__ : 'quotation';
+  const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__QUOTATION_DATA__) : null;
+  const initialEditMode = typeof window !== 'undefined' && ((window as unknown as CustomWindow).__EDIT_MODE__);
+  const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
+  const initialType = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__QUOTATION_TYPE__) : 'quotation';
 
   const [activeTab, setActiveTab] = useState<'quotation' | 'confirmation'>(initialType || 'quotation');
   const [showSettings, setShowSettings] = useState(false);
@@ -107,13 +114,11 @@ export default function QuotationPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // 获取并保存编辑模式状态
-      const editMode = (window as any).__EDIT_MODE__;
-      const editId = (window as any).__EDIT_ID__;
-      const type = (window as any).__QUOTATION_TYPE__;
+      const customWindow = window as unknown as CustomWindow;
+      const editMode = customWindow.__EDIT_MODE__;
+      const editId = customWindow.__EDIT_ID__;
+      const type = customWindow.__QUOTATION_TYPE__;
       
-      if (editMode !== undefined) {
-        setEditId(editMode);
-      }
       if (editId !== undefined) {
         setEditId(editId);
       }
@@ -122,10 +127,10 @@ export default function QuotationPage() {
       }
 
       // 清除注入的数据
-      delete (window as any).__QUOTATION_DATA__;
-      delete (window as any).__EDIT_MODE__;
-      delete (window as any).__EDIT_ID__;
-      delete (window as any).__QUOTATION_TYPE__;
+      delete customWindow.__QUOTATION_DATA__;
+      delete customWindow.__EDIT_MODE__;
+      delete customWindow.__EDIT_ID__;
+      delete customWindow.__QUOTATION_TYPE__;
     }
   }, []);
 
@@ -242,7 +247,7 @@ export default function QuotationPage() {
         setIsLoading(false);
       });
     }
-  }, [activeTab, data]);
+  }, [activeTab, data, handleError]);
 
   // 处理导入数据
   const handleImport = (importedData: LineItem[]) => {
@@ -331,7 +336,7 @@ export default function QuotationPage() {
     return () => {
       document.removeEventListener('paste', handlePaste);
     };
-  }, []);
+  }, [handleGlobalPaste]);
 
   // 显示粘贴对话框
   const showPasteDialog = () => {
