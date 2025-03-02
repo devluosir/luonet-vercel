@@ -836,7 +836,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                   }
                                 }))}
                               >
-                                {type === 'none' ? '无抬头' : type === 'bilingual' ? '双语' : '英文'}
+                                {type === 'none' ? 'None' : type === 'bilingual' ? 'Bilingual' : 'English'}
                               </button>
                             ))}
                           </div>
@@ -846,9 +846,9 @@ Beneficiary: Luo & Company Co., Limited`,
                         <div>
                           <div className="flex flex-wrap gap-1.5">
                             {[
-                              { value: 'invoice', label: '普通' },
-                              { value: 'commercial', label: '商业' },
-                              { value: 'proforma', label: '形式' }
+                              { value: 'invoice', label: 'Invoice' },
+                              { value: 'commercial', label: 'Commercial' },
+                              { value: 'proforma', label: 'Proforma' }
                             ].map(({ value, label }) => (
                               <button
                                 key={value}
@@ -876,9 +876,9 @@ Beneficiary: Luo & Company Co., Limited`,
                         <div>
                           <div className="flex flex-wrap gap-1.5">
                             {[
-                              { value: 'none', label: '无印章' },
-                              { value: 'shanghai', label: '上海' },
-                              { value: 'hongkong', label: '香港' }
+                              { value: 'none', label: 'None' },
+                              { value: 'shanghai', label: 'Shanghai' },
+                              { value: 'hongkong', label: 'Hong Kong' }
                             ].map(({ value, label }) => (
                               <button
                                 key={value}
