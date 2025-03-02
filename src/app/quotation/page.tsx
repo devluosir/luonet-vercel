@@ -138,6 +138,9 @@ export default function QuotationPage() {
     let progressInterval: NodeJS.Timeout | undefined;
     
     try {
+      // 先保存记录
+      await saveQuotationHistory(activeTab, data);
+      
       // 启动进度更新
       progressInterval = setInterval(() => {
         setGeneratingProgress(prev => {
