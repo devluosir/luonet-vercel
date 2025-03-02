@@ -760,7 +760,14 @@ Beneficiary: Luo & Company Co., Limited`,
                     </button>
                   </div>
                   {/* 小屏时只显示设置按钮 */}
-                  <div className="sm:hidden">
+                  <div className="sm:hidden flex items-center gap-2">
+                    <Link
+                      href="/invoice/history"
+                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0"
+                      title="历史记录"
+                    >
+                      <History className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    </Link>
                     <button
                       type="button"
                       onClick={() => setShowSettings(!showSettings)}
