@@ -381,11 +381,6 @@ export async function generateInvoicePDF(data: PDFGeneratorData, preview: boolea
           const fullText = `Please state our invoice no. "${data.invoiceNo}" on your payment documents.`;
           const paymentTermsWidth = doc.getTextWidth('Payment Term: ') + 3; // 使用单数形式 'Term'
           
-          // 先绘制标题
-          doc.setFont('NotoSansSC', 'bold');
-          doc.text('Payment Term:', margin, currentY);
-          doc.setFont('NotoSansSC', 'normal');
-          
           // 绘制完整的黑色文本
           doc.text(fullText, margin + paymentTermsWidth, currentY);
           
@@ -394,9 +389,8 @@ export async function generateInvoicePDF(data: PDFGeneratorData, preview: boolea
           doc.setTextColor(255, 0, 0);
           doc.text(data.invoiceNo, invoiceStartX, currentY);
           doc.setTextColor(0, 0, 0);
-          
-          currentY += 15;  // 单条付款条款时，与印章之间的间距设为15mm
         }
+        currentY += 15;  // 单条付款条款时，与印章之间的间距设为15mm
       } else {
         // 多条付款条款的情况，使用编号列表格式
         currentY += 5;  // 标题和第一条之间的间距改为5mm

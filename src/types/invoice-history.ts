@@ -1,4 +1,4 @@
-import { InvoiceData } from '@/app/invoice/page';
+import { InvoiceData } from '@/types/invoice';
 
 export interface InvoiceHistory {
   id: string;
