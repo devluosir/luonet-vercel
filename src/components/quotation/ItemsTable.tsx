@@ -592,7 +592,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                            text-[13px] text-center
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                             transition-all duration-200
                             ${fee.highlight?.description ? highlightClass : ''}
@@ -625,7 +625,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                            text-[13px] text-center
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                             transition-all duration-200
                             [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
