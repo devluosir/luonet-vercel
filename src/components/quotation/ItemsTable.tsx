@@ -661,8 +661,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
         </div>
       </div>
       <div className="text-right">
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:block text-sm text-[#86868B] dark:text-gray-400">Total Amount:</div>
+        <div className="flex items-center justify-end gap-2">
+          <div className="text-sm text-[#86868B] dark:text-gray-400">Total Amount:</div>
           <div className="text-xl sm:text-2xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
             {data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}
             {(
