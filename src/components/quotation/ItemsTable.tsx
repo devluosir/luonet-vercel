@@ -582,7 +582,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         </span>
                       </td>
                       <td colSpan={data.showDescription ? 6 : 5} className={`px-1 py-2
-                        ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}>
+                        ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? '' : ''}`}>
                         <input
                           type="text"
                           value={fee.description}
