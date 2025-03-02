@@ -45,13 +45,25 @@ const numberInputClassName = `${tableInputClassName}
   [&::-webkit-inner-spin-button]:appearance-none
   text-center`;
 
+interface CustomWindow extends Window {
+  __INVOICE_DATA__?: InvoiceData;
+  __EDIT_MODE__?: boolean;
+  __EDIT_ID__?: string;
+}
+
+interface ErrorWithMessage {
+  message: string;
+  code?: string;
+  details?: unknown;
+}
+
 export default function InvoicePage() {
   const router = useRouter();
   
-  // 从 window.__INVOICE_DATA__ 中获取初始数据
-  const initialData = typeof window !== 'undefined' ? (window as any).__INVOICE_DATA__ : null;
+  // 从 window 全局变量获取初始数据
+  const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__INVOICE_DATA__) : null;
   const initialEditMode = typeof window !== 'undefined' && (window as any).__EDIT_MODE__;
-  const initialEditId = typeof window !== 'undefined' ? (window as any).__EDIT_ID__ : null;
+  const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
   
   const [isEditMode, setIsEditMode] = useState(initialEditMode || false);
   const [editId, setEditId] = useState(initialEditId || null);
@@ -138,9 +150,25 @@ Beneficiary: Luo & Company Co., Limited`,
     column: string;
   } | null>(null);
 
-  // 添加自定义单位状态
-  const [customUnits, setCustomUnits] = useState<string[]>([]);
-  const [newUnit, setNewUnit] = useState('');
+  // 重命名未使用的变量，添加下划线前缀
+  const [_templateConfig, _setTemplateConfig] = useState({});
+  const [_customUnits, _setCustomUnits] = useState<string[]>([]);
+  const [_newUnit, _setNewUnit] = useState('');
+
+  // 将 handleError 包装在 useCallback 中，并添加具体的错误类型
+  const handleError = useCallback((error: ErrorWithMessage | Error | unknown): string => {
+    if (error instanceof Error) {
+      console.error('Error:', error.message);
+      return error.message;
+    }
+    if (typeof error === 'object' && error !== null && 'message' in error) {
+      const customError = error as ErrorWithMessage;
+      console.error('Custom error:', customError.message);
+      return customError.message;
+    }
+    console.error('Unknown error:', error);
+    return '发生未知错误';
+  }, []);
 
   // 使用 useCallback 包装 getUnitDisplay 函数
   const getUnitDisplay = useCallback((baseUnit: string, quantity: number) => {
@@ -1053,7 +1081,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                   <option value="pc">pc{item.quantity > 1 ? 's' : ''}</option>
                                   <option value="set">set{item.quantity > 1 ? 's' : ''}</option>
                                   <option value="length">length{item.quantity > 1 ? 's' : ''}</option>
-                                  {customUnits.map((unit) => (
+                                  {_customUnits.map((unit) => (
                                     <option key={unit} value={unit}>
                                       {unit}
                                     </option>

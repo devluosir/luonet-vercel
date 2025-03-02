@@ -38,8 +38,8 @@ export default function QuotationPage() {
   const _router = useRouter();
   const pathname = usePathname();
 
-  // 从 window 全局变量获取初始数据
-  const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__QUOTATION_DATA__) : null;
+  // 从 window 全局变量获取初始数据，添加下划线前缀表示有意未使用
+  const _initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__QUOTATION_DATA__) : null;
   const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
   const initialType = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__QUOTATION_TYPE__) : 'quotation';
 
@@ -58,7 +58,16 @@ export default function QuotationPage() {
     from: '',
     currency: 'USD',
     paymentDate: '',
-    items: [],
+    items: [{
+      id: 1,
+      partName: '',
+      description: '',
+      quantity: 0,
+      unit: 'pc',
+      unitPrice: 0,
+      amount: 0,
+      remarks: ''
+    }],
     notes: [],
     amountInWords: {
       dollars: '',

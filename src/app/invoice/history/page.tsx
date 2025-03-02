@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Search, Edit2, Trash2, Copy, Download, Upload } from 'lucide-react';
@@ -20,7 +20,7 @@ export default function InvoiceHistoryPage() {
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
 
   // 处理搜索
-  const getFilteredHistory = (items: InvoiceHistory[]) => {
+  const getFilteredHistory = useCallback((items: InvoiceHistory[]) => {
     return items.filter(item => {
       if (!filters.search) return true;
       
@@ -38,7 +38,7 @@ export default function InvoiceHistoryPage() {
       
       return false;
     });
-  };
+  }, [filters.search]);
 
   // 加载历史记录
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function InvoiceHistoryPage() {
     };
 
     loadHistory();
-  }, [filters]);
+  }, [filters, getFilteredHistory]);
 
   // 处理删除
   const handleDelete = (id: string) => {
