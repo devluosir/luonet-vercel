@@ -120,16 +120,16 @@ export default function InvoiceHistoryPage() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'application/json,.json';
-    input.capture = 'filesystem';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+    input.onchange = async (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (e) => {
-          const jsonData = e.target?.result as string;
-          if (jsonData) {
+        reader.onload = (e: ProgressEvent<FileReader>) => {
+          const result = e.target?.result;
+          if (typeof result === 'string') {
             try {
-              const success = importInvoiceHistory(jsonData);
+              const success = importInvoiceHistory(result);
               if (success) {
                 // 重新加载历史记录
                 const results = getInvoiceHistory();
@@ -138,8 +138,9 @@ export default function InvoiceHistoryPage() {
               } else {
                 throw new Error('Import failed');
               }
-            } catch (error) {
-              console.error('Error importing history:', error);
+            } catch (error: unknown) {
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              console.error('Error importing history:', errorMessage);
               alert('Import failed, please check if the file format is correct.');
             }
           }
