@@ -1,13 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { getQuotationHistory } from '@/utils/quotationHistory';
 import QuotationPage from '../../page';
-import type { CustomWindow, QuotationData } from '@/types/quotation';
+import type { CustomWindow } from '@/types/quotation';
 
-export default function CopyQuotationPage({ params }: { params: { id: string } }) {
-  const _router = useRouter();
+export default function QuotationCopyPage({ params }: { params: { id: string } }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,23 +35,22 @@ export default function CopyQuotationPage({ params }: { params: { id: string } }
       customWindow.__EDIT_ID__ = undefined;
       customWindow.__QUOTATION_TYPE__ = quotation.type;
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error copying quotation:', error);
-      setError('复制报价单时出错');
+      setError(error instanceof Error ? error.message : '复制报价单时出错');
     } finally {
       setIsLoading(false);
     }
-  }, [params.id]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
+    // 清理函数
+    return () => {
       const customWindow = window as unknown as CustomWindow;
       customWindow.__QUOTATION_DATA__ = null;
       customWindow.__EDIT_MODE__ = false;
       customWindow.__EDIT_ID__ = undefined;
       customWindow.__QUOTATION_TYPE__ = 'quotation';
-    }
-  }, []);
+    };
+  }, [params.id]);
 
   if (isLoading) {
     return (

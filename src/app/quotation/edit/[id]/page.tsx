@@ -1,32 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { getQuotationHistory } from '@/utils/quotationHistory';
 import QuotationPage from '../../page';
+import type { CustomWindow } from '@/types/quotation';
 
 export default function QuotationEditPage({ params }: { params: { id: string } }) {
-  const _router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // 添加 window 类型定义
-  interface CustomWindow extends Window {
-    __QUOTATION_DATA__?: QuotationData;
-    __EDIT_MODE__?: boolean;
-    __EDIT_ID__?: string;
-    __QUOTATION_TYPE__?: 'quotation' | 'confirmation';
-  }
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const customWindow = window as unknown as CustomWindow;
-      customWindow.__QUOTATION_DATA__ = null;
-      customWindow.__EDIT_MODE__ = true;
-      customWindow.__EDIT_ID__ = null;
-      customWindow.__QUOTATION_TYPE__ = 'quotation';
-    }
-  }, []);
 
   useEffect(() => {
     // 从历史记录中加载报价数据
@@ -39,19 +20,28 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
         return;
       }
 
-      // 将历史数据注入到 QuotationPage 组件中
+      // 将数据注入到 QuotationPage 组件中
       const customWindow = window as unknown as CustomWindow;
       customWindow.__QUOTATION_DATA__ = quotation.data;
       customWindow.__EDIT_MODE__ = true;
       customWindow.__EDIT_ID__ = params.id;
       customWindow.__QUOTATION_TYPE__ = quotation.type;
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading quotation:', error);
-      setError('加载报价单时出错');
+      setError(error instanceof Error ? error.message : '加载报价单时出错');
     } finally {
       setIsLoading(false);
     }
+
+    // 清理函数
+    return () => {
+      const customWindow = window as unknown as CustomWindow;
+      customWindow.__QUOTATION_DATA__ = null;
+      customWindow.__EDIT_MODE__ = false;
+      customWindow.__EDIT_ID__ = undefined;
+      customWindow.__QUOTATION_TYPE__ = 'quotation';
+    };
   }, [params.id]);
 
   if (isLoading) {
