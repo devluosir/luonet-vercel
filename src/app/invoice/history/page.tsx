@@ -119,7 +119,8 @@ export default function InvoiceHistoryPage() {
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json';
+    input.accept = 'application/json,.json';
+    input.capture = 'filesystem';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
