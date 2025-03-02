@@ -28,7 +28,7 @@ const buttonClassName = `px-4 py-2 rounded-xl text-sm font-medium
   transition-all duration-300`;
 
 export default function QuotationPage() {
-  const router = useRouter();
+  const _router = useRouter();
   const pathname = usePathname();
 
   // 从 window 全局变量获取初始数据
@@ -43,7 +43,6 @@ export default function QuotationPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState(0);
-  const [isEditMode, setIsEditMode] = useState(initialEditMode || false);
   const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
   const [data, setData] = useState<QuotationData>(initialData || {
     to: '',
@@ -83,6 +82,27 @@ export default function QuotationPage() {
   const [saveMessage, setSaveMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // 为 any 类型添加具体的类型定义
+  interface CustomError {
+    message: string;
+    code?: string;
+    details?: unknown;
+  }
+
+  const handleError = (error: CustomError | Error | unknown) => {
+    if (error instanceof Error) {
+      console.error('Error:', error.message);
+      return error.message;
+    }
+    if (typeof error === 'object' && error !== null && 'message' in error) {
+      const customError = error as CustomError;
+      console.error('Custom error:', customError.message);
+      return customError.message;
+    }
+    console.error('Unknown error:', error);
+    return 'An unknown error occurred';
+  };
+
   // 清除注入的数据
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -92,7 +112,7 @@ export default function QuotationPage() {
       const type = (window as any).__QUOTATION_TYPE__;
       
       if (editMode !== undefined) {
-        setIsEditMode(editMode);
+        setEditId(editMode);
       }
       if (editId !== undefined) {
         setEditId(editId);
@@ -200,7 +220,6 @@ export default function QuotationPage() {
   }, []);
 
   const handlePreview = useCallback(async () => {
-    // 立即更新加载状态
     flushSync(() => {
       setIsLoading(true);
     });
@@ -215,8 +234,9 @@ export default function QuotationPage() {
         const url = URL.createObjectURL(pdfBlob);
         setPdfPreviewUrl(url);
       }
-    } catch (error) {
-      console.error('PDF generation failed:', error);
+    } catch (error: unknown) {
+      const errorMessage = handleError(error);
+      console.error('PDF generation failed:', errorMessage);
     } finally {
       flushSync(() => {
         setIsLoading(false);
@@ -236,13 +256,18 @@ export default function QuotationPage() {
 
   // 处理全局粘贴
   const handleGlobalPaste = (text: string) => {
-    const parsedData = parseExcelData(text);
-    const newItems = convertExcelToLineItems(parsedData);
-    if (newItems.length > 0) {
-      setData(prev => ({
-        ...prev,
-        items: newItems
-      }));
+    try {
+      const parsedData = parseExcelData(text);
+      const newItems = convertExcelToLineItems(parsedData);
+      if (newItems.length > 0) {
+        setData(prev => ({
+          ...prev,
+          items: newItems
+        }));
+      }
+    } catch (error: unknown) {
+      const errorMessage = handleError(error);
+      console.error('Failed to parse pasted data:', errorMessage);
     }
   };
 
@@ -253,8 +278,9 @@ export default function QuotationPage() {
       if (text) {
         handleGlobalPaste(text);
       }
-    } catch (err) {
-      console.error('Failed to access clipboard:', err);
+    } catch (error: unknown) {
+      const errorMessage = handleError(error);
+      console.error('Failed to access clipboard:', errorMessage);
       showPasteDialog();
     }
   };

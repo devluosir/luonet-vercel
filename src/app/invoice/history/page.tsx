@@ -119,7 +119,11 @@ export default function InvoiceHistoryPage() {
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'application/json,.json';
+    // 支持更多的 MIME 类型和文件扩展名
+    input.accept = '.json,application/json,text/json,text/plain';
+    input.style.display = 'none'; // 隐藏输入元素
+    document.body.appendChild(input); // 添加到 DOM 中以确保在移动设备上正常工作
+
     input.onchange = async (e: Event) => {
       const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
@@ -147,7 +151,15 @@ export default function InvoiceHistoryPage() {
         };
         reader.readAsText(file);
       }
+      // 清理 DOM
+      document.body.removeChild(input);
     };
+
+    // 如果用户取消选择，也要清理 DOM
+    input.oncancel = () => {
+      document.body.removeChild(input);
+    };
+
     input.click();
   };
 
