@@ -50,7 +50,7 @@ export default function QuotationPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
-  const [data, setData] = useState<QuotationData>({
+  const [data, setData] = useState<QuotationData>(_initialData || {
     to: '',
     inquiryNo: '',
     quotationNo: '',
