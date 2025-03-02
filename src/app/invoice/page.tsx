@@ -778,16 +778,17 @@ Beneficiary: Luo & Company Co., Limited`,
                 {/* 设置面板 */}
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showSettings ? 'max-h-none opacity-100 mb-8' : 'max-h-0 opacity-0'}`}>
                   <div className="bg-gray-50 dark:bg-[#1C1C1E]/70 p-4 rounded-xl border border-gray-200/30 dark:border-white/10">
-                    <div className="space-y-4">
-                      <div className="flex flex-wrap gap-4">
+                    <div className="space-y-3">
+                      {/* 第一行：日期和货币 */}
+                      <div className="flex items-center gap-3">
                         <input
                           type="date"
                           value={invoiceData.date}
                           onChange={(e) => setInvoiceData(prev => ({ ...prev, date: e.target.value }))}
-                          className={`${inputClassName} dark:bg-[#1C1C1E]/90`}
+                          className={`${inputClassName} dark:bg-[#1C1C1E]/90 w-[160px]`}
                           required
                         />
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <button
                             type="button"
                             className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
@@ -813,14 +814,11 @@ Beneficiary: Luo & Company Co., Limited`,
                         </div>
                       </div>
 
-                      {/* 模板设置 */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* 第二行：模板设置 */}
+                      <div className="grid grid-cols-3 gap-3">
                         {/* 抬头类型 */}
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
-                            抬头类型
-                          </label>
-                          <div className="flex flex-wrap gap-2">
+                        <div>
+                          <div className="flex flex-wrap gap-1.5">
                             {['none', 'bilingual', 'english'].map((type) => (
                               <button
                                 key={type}
@@ -845,15 +843,12 @@ Beneficiary: Luo & Company Co., Limited`,
                         </div>
 
                         {/* 发票类型 */}
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
-                            发票类型
-                          </label>
-                          <div className="flex flex-wrap gap-2">
+                        <div>
+                          <div className="flex flex-wrap gap-1.5">
                             {[
-                              { value: 'invoice', label: '普通发票' },
-                              { value: 'commercial', label: '商业发票' },
-                              { value: 'proforma', label: '形式发票' }
+                              { value: 'invoice', label: '普通' },
+                              { value: 'commercial', label: '商业' },
+                              { value: 'proforma', label: '形式' }
                             ].map(({ value, label }) => (
                               <button
                                 key={value}
@@ -878,17 +873,12 @@ Beneficiary: Luo & Company Co., Limited`,
                         </div>
 
                         {/* 印章类型 */}
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
-                            印章类型
-                          </label>
-                          <div className="flex flex-wrap gap-2">
+                        <div>
+                          <div className="flex flex-wrap gap-1.5">
                             {[
                               { value: 'none', label: '无印章' },
-                              { value: 'stamp', label: '普通印章' },
-                              { value: 'signature', label: '签名' },
-                              { value: 'shanghai', label: '上海印章' },
-                              { value: 'hongkong', label: '香港印章' }
+                              { value: 'shanghai', label: '上海' },
+                              { value: 'hongkong', label: '香港' }
                             ].map(({ value, label }) => (
                               <button
                                 key={value}
@@ -902,7 +892,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                   ...prev,
                                   templateConfig: {
                                     ...prev.templateConfig,
-                                    stampType: value as 'none' | 'stamp' | 'signature' | 'shanghai' | 'hongkong'
+                                    stampType: value as 'none' | 'shanghai' | 'hongkong'
                                   }
                                 }))}
                               >
@@ -913,7 +903,8 @@ Beneficiary: Luo & Company Co., Limited`,
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4">
+                      {/* 第三行：显示选项 */}
+                      <div className="flex items-center gap-4 pt-1">
                         <label className="flex items-center gap-2">
                           <input
                             type="checkbox"
@@ -923,26 +914,24 @@ Beneficiary: Luo & Company Co., Limited`,
                           />
                           <span className="text-sm text-gray-600 dark:text-gray-400">Bank</span>
                         </label>
-                        <div className="flex items-center gap-4">
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={invoiceData.showHsCode}
-                              onChange={e => setInvoiceData(prev => ({ ...prev, showHsCode: e.target.checked }))}
-                              className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20 dark:border-gray-600"
-                            />
-                            <span className="text-sm text-gray-600 dark:text-gray-400">HS Code</span>
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={invoiceData.showDescription}
-                              onChange={e => setInvoiceData(prev => ({ ...prev, showDescription: e.target.checked }))}
-                              className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20 dark:border-gray-600"
-                            />
-                            <span className="text-sm text-gray-600 dark:text-gray-400">Description</span>
-                          </label>
-                        </div>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={invoiceData.showHsCode}
+                            onChange={e => setInvoiceData(prev => ({ ...prev, showHsCode: e.target.checked }))}
+                            className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20 dark:border-gray-600"
+                          />
+                          <span className="text-sm text-gray-600 dark:text-gray-400">HS Code</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={invoiceData.showDescription}
+                            onChange={e => setInvoiceData(prev => ({ ...prev, showDescription: e.target.checked }))}
+                            className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20 dark:border-gray-600"
+                          />
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Description</span>
+                        </label>
                       </div>
                     </div>
                   </div>
