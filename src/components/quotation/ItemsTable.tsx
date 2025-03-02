@@ -316,9 +316,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
       </div>
       <div className="overflow-x-auto">
         <div className="inline-block min-w-full align-middle">
-          <div className="border border-[#E5E5EA] dark:border-[#2C2C2E]
+          <div className={`border border-[#E5E5EA] dark:border-[#2C2C2E]
             bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl
-            ${(data.otherFees ?? []).length > 0 ? 'rounded-t-2xl' : 'rounded-2xl'}">
+            ${(data.otherFees ?? []).length > 0 ? 'rounded-t-2xl' : 'rounded-2xl'}`}>
             <table className="min-w-full divide-y divide-[#E5E5EA] dark:divide-[#2C2C2E]">
               <thead>
                 <tr className="bg-[#F5F5F7] dark:bg-[#2C2C2E]
@@ -547,8 +547,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
           </div>
 
           {(data.otherFees ?? []).length > 0 && (
-            <div className="border border-t-0 border-[#E5E5EA] dark:border-[#2C2C2E]
-              bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-b-2xl">
+            <div className={`border border-t-0 border-[#E5E5EA] dark:border-[#2C2C2E]
+              bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-b-2xl
+              ${data.items.length === 0 ? 'rounded-t-2xl' : ''}`}>
               <table className="min-w-full divide-y divide-[#E5E5EA] dark:divide-[#2C2C2E]">
                 <tbody>
                   {(data.otherFees ?? []).map((fee, index) => (
