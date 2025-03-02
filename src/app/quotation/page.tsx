@@ -54,10 +54,10 @@ export default function QuotationPage() {
     to: '',
     inquiryNo: '',
     quotationNo: '',
-    date: new Date().toISOString(),
+    date: new Date().toISOString().split('T')[0],
     from: '',
     currency: 'USD',
-    paymentDate: '',
+    paymentDate: new Date().toISOString().split('T')[0],
     items: [{
       id: 1,
       partName: '',
