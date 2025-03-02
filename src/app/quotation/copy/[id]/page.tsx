@@ -5,15 +5,22 @@ import { useRouter } from 'next/navigation';
 import { getQuotationHistory } from '@/utils/quotationHistory';
 import QuotationPage from '../../page';
 
+interface QuotationData {
+  quotationNo: string;
+  contractNo: string;
+  date: string;
+  [key: string]: unknown;
+}
+
 interface CustomWindow extends Window {
-  __QUOTATION_DATA__?: any;
+  __QUOTATION_DATA__?: QuotationData | null;
   __EDIT_MODE__?: boolean;
   __EDIT_ID__?: string;
   __QUOTATION_TYPE__?: 'quotation' | 'confirmation';
 }
 
 export default function CopyQuotationPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
+  const _router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,13 +44,11 @@ export default function CopyQuotationPage({ params }: { params: { id: string } }
       };
 
       // 将复制的数据注入到 QuotationPage 组件中
-      (window as any).__QUOTATION_DATA__ = copiedData;
-      // 设置编辑模式标志为 false，因为这是新建
-      (window as any).__EDIT_MODE__ = false;
-      // 不设置编辑ID，因为这是新建
-      (window as any).__EDIT_ID__ = undefined;
-      // 设置类型
-      (window as any).__QUOTATION_TYPE__ = quotation.type;
+      const customWindow = window as unknown as CustomWindow;
+      customWindow.__QUOTATION_DATA__ = copiedData;
+      customWindow.__EDIT_MODE__ = false;
+      customWindow.__EDIT_ID__ = undefined;
+      customWindow.__QUOTATION_TYPE__ = quotation.type;
       
     } catch (error) {
       console.error('Error copying quotation:', error);
