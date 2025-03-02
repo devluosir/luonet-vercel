@@ -422,8 +422,8 @@ Beneficiary: Luo & Company Co., Limited`,
           return {
             lineNo: index + 1,
             hsCode: '',
-            partname: partname,
-            description: description,
+            partname: partname || '',
+            description: description || '',
             quantity: cleanQuantity,
             unit: defaultUnits.includes(baseUnit) ? getUnitDisplay(baseUnit, cleanQuantity) : baseUnit,
             unitPrice: cleanUnitPrice,
@@ -433,10 +433,27 @@ Beneficiary: Luo & Company Co., Limited`,
         });
 
         // 更新发票数据，过滤掉完全空白的行
-        setInvoiceData(prev => ({
-          ...prev,
-          items: newItems.filter(item => item.partname || item.description)
-        }));
+        setInvoiceData(prev => {
+          // 如果是从报价单导入的数据，尝试处理 partName 字段
+          const processedItems = newItems.map(item => {
+            // @ts-ignore - 处理可能的报价单数据
+            if (item.partName && !item.partname) {
+              return {
+                ...item,
+                // @ts-ignore - 处理可能的报价单数据
+                partname: item.partName,
+                // @ts-ignore - 删除报价单特有的字段
+                partName: undefined
+              };
+            }
+            return item;
+          });
+          
+          return {
+            ...prev,
+            items: processedItems.filter(item => item.partname || item.description)
+          };
+        });
       }
     } catch (err) {
       console.error('Failed to handle paste:', err);

@@ -56,8 +56,50 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
     const data = JSON.parse(jsonData);
     if (!Array.isArray(data)) throw new Error('Invalid data format');
     
+    // 处理从报价单导入的数据
+    const processedData = data.map(item => {
+      // 如果是报价单数据，进行转换
+      if (item.data && item.data.items) {
+        const convertedItems = item.data.items.map(lineItem => {
+          // @ts-ignore - 处理报价单数据
+          if (lineItem.partName && !lineItem.partname) {
+            return {
+              ...lineItem,
+              // @ts-ignore - 转换字段名
+              partname: lineItem.partName,
+              // @ts-ignore - 删除原字段
+              partName: undefined,
+              // 添加发票特有字段
+              lineNo: lineItem.id || 0,
+              hsCode: '',
+              highlight: {}
+            };
+          }
+          return lineItem;
+        });
+
+        return {
+          ...item,
+          data: {
+            ...item.data,
+            items: convertedItems,
+            // 添加发票必需字段
+            customerPO: item.data.inquiryNo || '',
+            showHsCode: false,
+            templateConfig: {
+              headerType: 'bilingual',
+              invoiceType: 'invoice',
+              stampType: 'none'
+            },
+            otherFees: item.data.otherFees || []
+          }
+        };
+      }
+      return item;
+    });
+    
     const history = getInvoiceHistory();
-    const merged = [...data, ...history];
+    const merged = [...processedData, ...history];
     const uniqueHistory = Array.from(new Map(merged.map(item => [item.id, item])).values());
     
     return saveInvoiceHistory(uniqueHistory);
