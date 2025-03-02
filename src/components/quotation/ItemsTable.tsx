@@ -327,20 +327,20 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                   <th className={`left-0 z-10 w-[50px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
                     bg-[#F5F5F7] dark:bg-[#3A3A3C]
                     ${(data.otherFees ?? []).length === 0 ? 'rounded-tl-2xl' : ''}`}>No.</th>
-                  <th className="min-w-[180px] max-w-[300px] w-fit px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">Part Name</th>
+                  <th className="min-w-[150px] max-w-[250px] w-fit px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">Part Name</th>
                   {data.showDescription && (
-                    <th className="min-w-[180px] w-fit px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Description</th>
+                    <th className="min-w-[150px] w-fit px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Description</th>
                   )}
-                  <th className="w-[100px] min-w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
-                  <th className="w-[100px] min-w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
-                  <th className="w-[120px] min-w-[120px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
-                  <th className="w-[120px] min-w-[120px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
+                  <th className="w-[80px] min-w-[80px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
+                  <th className="w-[80px] min-w-[80px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
+                  <th className="w-[100px] min-w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
+                  <th className="w-[100px] min-w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
                   {data.showRemarks && (
                     <th className={`w-[200px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
                       ${(data.otherFees ?? []).length === 0 ? 'rounded-tr-2xl' : ''}`}>Remarks</th>
                   )}
                   {!data.showRemarks && (
-                    <th className={`w-[120px] min-w-[120px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
+                    <th className={`w-[50px] min-w-[50px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
                       ${(data.otherFees ?? []).length === 0 ? 'rounded-tr-2xl' : ''}`}></th>
                   )}
                 </tr>
@@ -362,7 +362,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         {index + 1}
                       </span>
                     </td>
-                    <td className="min-w-[180px] w-fit px-1 py-2 bg-white/90 dark:bg-[#1C1C1E]/90">
+                    <td className="min-w-[150px] w-fit px-1 py-2 bg-white/90 dark:bg-[#1C1C1E]/90">
                       <textarea
                         value={item.partName}
                         data-row={index}
@@ -388,7 +388,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                       />
                     </td>
                     {data.showDescription && (
-                      <td className="min-w-[180px] w-fit px-1 py-2">
+                      <td className="min-w-[150px] w-fit px-1 py-2">
                         <textarea
                           value={item.description}
                           data-row={index}
@@ -414,7 +414,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         />
                       </td>
                     )}
-                    <td className="w-[100px] min-w-[100px] px-1 py-2">
+                    <td className="w-[80px] min-w-[80px] px-1 py-2">
                       <input
                         type="text"
                         inputMode="decimal"
@@ -450,7 +450,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           ${item.highlight?.quantity ? highlightClass : ''}`}
                       />
                     </td>
-                    <td className="w-[100px] min-w-[100px] px-1 py-2">
+                    <td className="w-[80px] min-w-[80px] px-1 py-2">
                       <select
                         value={item.unit}
                         data-row={index}
@@ -479,7 +479,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         })}
                       </select>
                     </td>
-                    <td className="w-[120px] min-w-[120px] px-1 py-2">
+                    <td className="w-[100px] min-w-[100px] px-1 py-2">
                       <input
                         type="text"
                         inputMode="decimal"
@@ -515,7 +515,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           ${item.highlight?.unitPrice ? highlightClass : ''}`}
                       />
                     </td>
-                    <td className={`w-[120px] min-w-[120px] px-1 py-2
+                    <td className={`w-[100px] min-w-[100px] px-1 py-2
                       ${!data.showRemarks && index === data.items.length - 1 && !data.otherFees?.length ? 'rounded-br-2xl' : ''}`}>
                       <input
                         type="text"
