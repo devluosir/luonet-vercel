@@ -561,21 +561,23 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                   {(data.otherFees ?? []).map((fee, index) => (
                     <tr key={fee.id} 
                       className={`border-t border-[#E5E5EA] dark:border-[#2C2C2E]
-                        ${index === (data.otherFees ?? []).length - 1 ? 'rounded-b-2xl' : ''}`}>
+                        ${index === (data.otherFees ?? []).length - 1 ? 'overflow-hidden' : ''}`}>
                       <td className={`sticky left-0 z-10 w-[50px] px-1 py-2 text-center text-sm bg-white/90 dark:bg-[#1C1C1E]/90
-                        ${index === (data.otherFees ?? []).length - 1 ? 'rounded-bl-2xl' : ''}`}>
+                        ${index === (data.otherFees ?? []).length - 1 ? 'rounded-bl-2xl overflow-hidden' : ''}`}>
                         <span 
-                          className="flex items-center justify-center w-5 h-5 rounded-full 
+                          className={`flex items-center justify-center w-5 h-5 rounded-full 
                             text-xs text-gray-400
                             hover:bg-red-100 hover:text-red-600 
-                            cursor-pointer transition-colors"
+                            cursor-pointer transition-colors
+                            ${index === (data.otherFees ?? []).length - 1 ? 'rounded-bl-2xl' : ''}`}
                           onClick={() => handleOtherFeeSoftDelete(index)}
                           title="Click to delete"
                         >
                           ×
                         </span>
                       </td>
-                      <td colSpan={data.showDescription ? 6 : 5} className="px-1 py-2">
+                      <td colSpan={data.showDescription ? 6 : 5} className={`px-1 py-2
+                        ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}>
                         <input
                           type="text"
                           value={fee.description}
@@ -588,10 +590,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             text-[13px] text-center
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                             transition-all duration-200
-                            ${fee.highlight?.description ? highlightClass : ''}`}
+                            ${fee.highlight?.description ? highlightClass : ''}
+                            ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}
                         />
                       </td>
-                      <td className="w-[120px] min-w-[120px] px-1 py-2">
+                      <td className={`w-[120px] min-w-[120px] px-1 py-2
+                        ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}>
                         <input
                           type="text"
                           inputMode="decimal"
@@ -620,7 +624,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                             transition-all duration-200
                             [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                            ${fee.highlight?.amount ? highlightClass : ''}`}
+                            ${fee.highlight?.amount ? highlightClass : ''}
+                            ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}
                         />
                       </td>
                       {data.showRemarks && (
@@ -637,7 +642,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                               text-[13px] text-center
                               placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                               transition-all duration-200
-                              ${fee.highlight?.remarks ? highlightClass : ''}`}
+                              ${fee.highlight?.remarks ? highlightClass : ''}
+                              ${index === (data.otherFees ?? []).length - 1 ? 'rounded-br-2xl' : ''}`}
                           />
                         </td>
                       )}
