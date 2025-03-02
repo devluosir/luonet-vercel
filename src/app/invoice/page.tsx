@@ -731,17 +731,6 @@ Beneficiary: Luo & Company Co., Limited`,
                     >
                       <Clipboard className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </button>
-                    <Link
-                      href="/invoice/history"
-                      className="px-3 py-1.5 rounded-lg text-sm font-medium
-                        bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
-                        hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
-                        text-[#007AFF] dark:text-[#0A84FF]
-                        flex items-center gap-1.5"
-                    >
-                      <History className="w-4 h-4" />
-                      历史记录
-                    </Link>
                   </div>
                   <div className="hidden sm:flex items-center gap-3">
                     <input
@@ -755,6 +744,13 @@ Beneficiary: Luo & Company Co., Limited`,
                           : ''
                       }`}
                     />
+                    <Link
+                      href="/invoice/history"
+                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0"
+                      title="历史记录"
+                    >
+                      <History className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    </Link>
                     <button
                       type="button"
                       onClick={() => setShowSettings(!showSettings)}
