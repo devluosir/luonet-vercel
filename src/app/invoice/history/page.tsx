@@ -7,6 +7,10 @@ import { ArrowLeft, Search, Edit2, Trash2, Copy, Download, Upload } from 'lucide
 import { format } from 'date-fns';
 import { InvoiceHistory, InvoiceHistoryFilters } from '@/types/invoice-history';
 import { getInvoiceHistory, deleteInvoiceHistory, importInvoiceHistory } from '@/utils/invoiceHistory';
+import dynamic from 'next/dynamic';
+
+// 动态导入iOS文件输入组件
+const IOSFileInput = dynamic(() => import('@/components/IOSFileInput'), { ssr: false });
 
 export default function InvoiceHistoryPage() {
   const router = useRouter();
@@ -18,6 +22,7 @@ export default function InvoiceHistoryPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
+  const [showIOSFileInput, setShowIOSFileInput] = useState(false);
 
   // 处理搜索
   const getFilteredHistory = useCallback((items: InvoiceHistory[]) => {
@@ -120,91 +125,94 @@ export default function InvoiceHistoryPage() {
     // 检测是否为iOS设备
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     
-    // 创建一个可见的文件输入元素（对iOS更友好）
+    // 在iOS设备上使用专门的组件
+    if (isIOS) {
+      setShowIOSFileInput(true);
+      return;
+    }
+    
+    // 非iOS设备使用标准方法
+    // 创建一个简单的文件输入元素
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = '.json';
-    fileInput.id = 'import-file-' + Date.now();
     
-    // iOS需要特殊处理
-    if (isIOS) {
-      // 在iOS上，文件输入需要是可见的并且可交互的
-      fileInput.style.position = 'fixed';
-      fileInput.style.top = '0';
-      fileInput.style.left = '0';
-      fileInput.style.width = '100%';
-      fileInput.style.height = '100%';
-      fileInput.style.opacity = '0.01'; // 几乎不可见但仍然可交互
-      fileInput.style.zIndex = '9999'; // 确保在最上层
-    } else {
-      // 非iOS设备可以完全隐藏
-      fileInput.style.display = 'none';
-    }
+    // 设置样式 - 保持简单
+    fileInput.style.position = 'fixed';
+    fileInput.style.top = '0';
+    fileInput.style.left = '0';
+    fileInput.style.opacity = '0';
     
+    // 添加到DOM
     document.body.appendChild(fileInput);
     
     // 文件选择处理函数
-    const handleFileSelect = async () => {
+    const handleFileSelect = () => {
+      console.log('文件选择事件触发');
+      
       if (fileInput.files && fileInput.files.length > 0) {
         const file = fileInput.files[0];
+        console.log('选择的文件:', file.name);
         
-        // 检查文件名（而不是MIME类型）
+        // 检查文件名
         if (!file.name.toLowerCase().endsWith('.json')) {
           alert('请选择JSON格式的文件');
-          if (document.body.contains(fileInput)) {
-            document.body.removeChild(fileInput);
-          }
+          document.body.removeChild(fileInput);
           return;
         }
         
-        try {
-          // 使用Promise包装FileReader，更好地处理异步
-          const fileContent = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              if (event.target && typeof event.target.result === 'string') {
-                resolve(event.target.result);
-              } else {
-                reject(new Error('读取文件失败'));
-              }
-            };
-            reader.onerror = () => reject(new Error('读取文件失败'));
-            reader.readAsText(file);
-          });
-          
-          // 导入数据前先移除文件输入元素（特别是在iOS上）
-          if (document.body.contains(fileInput)) {
-            document.body.removeChild(fileInput);
-          }
-          
-          // 验证并导入数据
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+          console.log('文件读取完成');
           try {
-            // 验证JSON格式
-            JSON.parse(fileContent);
+            const content = e.target?.result as string;
             
-            // 导入数据
-            const success = importInvoiceHistory(fileContent);
-            if (success) {
-              const results = getInvoiceHistory();
-              setHistory(results);
-              alert('导入成功！');
-            } else {
-              throw new Error('导入失败');
+            // 尝试解析JSON
+            try {
+              JSON.parse(content); // 验证JSON格式
+              
+              // 导入数据
+              console.log('开始导入数据');
+              const success = importInvoiceHistory(content);
+              
+              if (success) {
+                console.log('导入成功');
+                const results = getInvoiceHistory();
+                setHistory(results);
+                alert('导入成功！');
+              } else {
+                console.error('导入失败');
+                alert('导入失败，请确保文件格式正确。');
+              }
+            } catch (jsonError) {
+              console.error('JSON解析错误:', jsonError);
+              alert('导入失败，请确保文件格式正确（必须是有效的JSON格式）。');
             }
           } catch (error) {
-            console.error('JSON解析错误:', error);
-            alert('导入失败，请确保文件格式正确（必须是有效的JSON格式）。');
+            console.error('处理文件内容时出错:', error);
+            alert('处理文件内容时出错，请重试。');
+          } finally {
+            // 清理DOM
+            if (document.body.contains(fileInput)) {
+              document.body.removeChild(fileInput);
+            }
           }
-        } catch (error) {
-          console.error('文件读取错误:', error);
+        };
+        
+        reader.onerror = function() {
+          console.error('文件读取错误');
           alert('读取文件时出错，请重试。');
-          
-          // 确保清理DOM
           if (document.body.contains(fileInput)) {
             document.body.removeChild(fileInput);
           }
-        }
+        };
+        
+        // 开始读取文件
+        console.log('开始读取文件');
+        reader.readAsText(file);
       } else {
+        console.log('没有选择文件');
         // 用户没有选择文件，清理DOM
         if (document.body.contains(fileInput)) {
           document.body.removeChild(fileInput);
@@ -212,43 +220,49 @@ export default function InvoiceHistoryPage() {
       }
     };
     
-    // 使用更可靠的事件监听方式
-    fileInput.addEventListener('change', handleFileSelect, { once: true });
+    // 添加事件监听
+    fileInput.addEventListener('change', handleFileSelect);
     
-    // 添加取消选择的处理（特别是对iOS有用）
-    const handleCancel = () => {
-      if (document.body.contains(fileInput)) {
-        document.body.removeChild(fileInput);
-      }
-    };
-    
-    // 在iOS上，添加点击背景取消的功能
-    if (isIOS) {
-      fileInput.addEventListener('click', (e) => {
-        // 如果点击的是背景（而不是文件选择对话框），则取消
-        if (e.target === fileInput) {
-          setTimeout(handleCancel, 500);
-        }
-      });
-    }
-    
-    // 直接触发点击，打开文件选择器
-    try {
+    // 直接触发点击
+    console.log('触发文件选择器');
+    setTimeout(() => {
       fileInput.click();
-    } catch (e) {
-      console.error('无法打开文件选择器:', e);
-      alert('无法打开文件选择器，请尝试使用其他浏览器或设备。');
-      if (document.body.contains(fileInput)) {
-        document.body.removeChild(fileInput);
-      }
-    }
+    }, 100);
     
-    // 添加超时清理，防止DOM元素残留
+    // 添加超时清理
     setTimeout(() => {
       if (document.body.contains(fileInput)) {
         document.body.removeChild(fileInput);
       }
-    }, 60000); // 1分钟后如果还没完成，强制清理
+    }, 60000); // 1分钟后清理
+  };
+
+  // 处理iOS文件选择
+  const handleIOSFileSelect = (content: string) => {
+    try {
+      // 验证JSON格式
+      JSON.parse(content);
+      
+      // 导入数据
+      const success = importInvoiceHistory(content);
+      if (success) {
+        const results = getInvoiceHistory();
+        setHistory(results);
+        alert('导入成功！');
+      } else {
+        alert('导入失败，请确保文件格式正确。');
+      }
+    } catch (error) {
+      console.error('JSON解析错误:', error);
+      alert('导入失败，请确保文件格式正确（必须是有效的JSON格式）。');
+    } finally {
+      setShowIOSFileInput(false);
+    }
+  };
+  
+  // 关闭iOS文件选择器
+  const handleIOSFileCancel = () => {
+    setShowIOSFileInput(false);
   };
 
   // 处理多选
@@ -525,6 +539,16 @@ export default function InvoiceHistoryPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* iOS文件输入组件 */}
+      {showIOSFileInput && (
+        <IOSFileInput
+          onFileSelect={handleIOSFileSelect}
+          onCancel={handleIOSFileCancel}
+          accept=".json"
+          buttonText="选择JSON文件"
+        />
       )}
     </div>
   );
