@@ -126,20 +126,11 @@ export default function QuotationHistoryPage() {
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    // 扩展文件类型支持，增加通用格式以支持iOS
-    input.accept = '.json,.txt,application/json,text/json,text/plain';
+    input.accept = 'application/json';
+    input.capture = 'none';
     input.style.display = 'none';
-    // 移除multiple属性，避免iOS上的问题
     input.multiple = false;
     document.body.appendChild(input);
-
-    // 检测是否是iOS设备
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    
-    if (isIOS) {
-      // iOS设备上增加提示
-      alert('请选择之前导出的JSON文件。如果无法选择，请尝试将文件保存到"文件"应用后再选择。');
-    }
 
     input.onchange = async (e: Event) => {
       const target = e.target as HTMLInputElement;
@@ -147,7 +138,6 @@ export default function QuotationHistoryPage() {
       if (file) {
         // 检查文件类型
         const isValidType = file.type === 'application/json' || 
-                          file.type === 'text/plain' ||
                           file.name.toLowerCase().endsWith('.json');
                           
         if (!isValidType) {
