@@ -55,7 +55,11 @@ export default function QuotationPage() {
     inquiryNo: '',
     quotationNo: '',
     date: new Date().toISOString().split('T')[0],
-    from: typeof window !== 'undefined' ? localStorage.getItem('username') || 'Roger' : 'Roger',
+    from: typeof window !== 'undefined' ? 
+      (localStorage.getItem('username') ? 
+        localStorage.getItem('username')!.charAt(0).toUpperCase() + localStorage.getItem('username')!.slice(1).toLowerCase() : 
+        'Roger') : 
+      'Roger',
     currency: 'USD',
     paymentDate: new Date().toISOString().split('T')[0],
     items: [{

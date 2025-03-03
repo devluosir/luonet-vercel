@@ -41,7 +41,9 @@ export default function LoginPage() {
         return;
       }
 
-      localStorage.setItem('username', username.toLowerCase());
+      // 保存用户名到localStorage，首字母大写
+      const formattedUsername = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
+      localStorage.setItem('username', formattedUsername);
       router.push('/tools');
     } catch (error) {
       console.error('登录错误:', error);

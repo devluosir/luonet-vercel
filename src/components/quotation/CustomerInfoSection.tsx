@@ -177,10 +177,11 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
               bg-no-repeat
               pr-8`}
           >
-            <option value={data.from}>{data.from}</option>
-            {['Roger', 'Sharon', 'Emily', 'Summer', 'Nina'].filter(name => name !== data.from).map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
+            <option value="Roger">Roger</option>
+            <option value="Sharon">Sharon</option>
+            <option value="Emily">Emily</option>
+            <option value="Summer">Summer</option>
+            <option value="Nina">Nina</option>
           </select>
         </div>
       </div>
