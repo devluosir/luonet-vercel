@@ -13,7 +13,7 @@ import { addInvoiceHistory, getInvoiceHistory, saveInvoiceHistory } from '@/util
 import { v4 as uuidv4 } from 'uuid';
 
 // 添加高亮样式常量
-const highlightClass = 'text-red-500 font-medium';
+const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
 
 // 基础样式定义
 const inputClassName = `w-full px-4 py-2.5 rounded-2xl
