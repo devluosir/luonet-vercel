@@ -254,17 +254,17 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
         valign: 'middle'
       },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 10 },  // No.
-        1: { halign: 'center', cellWidth: 80 },  // Part Name - 增加宽度，从auto改为固定宽度
-        ...(data.showDescription ? { 2: { halign: 'center', cellWidth: 'auto' } } : {}),  // Description
-        [data.showDescription ? 3 : 2]: { halign: 'center', cellWidth: 15 },  // Q'TY
-        [data.showDescription ? 4 : 3]: { halign: 'center', cellWidth: 15 },  // Unit
-        [data.showDescription ? 5 : 4]: { halign: 'center', cellWidth: 20 },  // U/Price
-        [data.showDescription ? 6 : 5]: { halign: 'center', cellWidth: 25 },  // Amount - 略微增加宽度
-        ...(data.showRemarks ? { [data.showDescription ? 7 : 6]: { halign: 'center', cellWidth: 60 } } : {})  // Remarks - 从auto改为固定宽度
-      } as { [key: number]: { cellWidth: number | 'auto', halign: 'center' } },
+        0: { halign: 'center', cellWidth: '5%' },  // No.
+        1: { halign: 'center', cellWidth: data.showRemarks ? '25%' : '30%' },  // Part Name
+        ...(data.showDescription ? { 2: { halign: 'center', cellWidth: data.showRemarks ? '20%' : '25%' } } : {}),  // Description
+        [data.showDescription ? 3 : 2]: { halign: 'center', cellWidth: '8%' },  // Q'TY
+        [data.showDescription ? 4 : 3]: { halign: 'center', cellWidth: '7%' },  // Unit
+        [data.showDescription ? 5 : 4]: { halign: 'center', cellWidth: '10%' },  // U/Price
+        [data.showDescription ? 6 : 5]: { halign: 'center', cellWidth: '10%' },  // Amount
+        ...(data.showRemarks ? { [data.showDescription ? 7 : 6]: { halign: 'center', cellWidth: '15%' } } : {})  // Remarks
+      } as { [key: number]: { cellWidth: string, halign: 'center' } },
       margin: { left: 15, right: 15, bottom: 20 },  // 增加底部边距
-      tableWidth: pageWidth - 30,  // 设置表格宽度为页面宽度减去左右边距
+      tableWidth: 'auto',  // 使用自动宽度，让jspdf-autotable根据百分比自动计算
       didParseCell: (data) => {
         const pageHeight = data.doc.internal.pageSize.height;
         const bottomMargin = 25;
