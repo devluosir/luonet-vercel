@@ -135,7 +135,7 @@ export default function QuotationPage() {
       delete customWindow.__EDIT_ID__;
       delete customWindow.__QUOTATION_TYPE__;
     }
-  }, []);
+  }, [activeTab]);
 
   // 初始化notes字段
   useEffect(() => {
@@ -150,7 +150,7 @@ export default function QuotationPage() {
       }
       return prev;
     });
-  }, []);
+  }, [activeTab]);
 
   // 监听 activeTab 变化，更新 notes
   useEffect(() => {

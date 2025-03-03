@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ImportDataButton } from './ImportDataButton';
 import type { QuotationData, LineItem } from '@/types/quotation';
 
