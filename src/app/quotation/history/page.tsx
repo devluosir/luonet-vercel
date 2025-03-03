@@ -126,24 +126,38 @@ export default function QuotationHistoryPage() {
   const handleImport = () => {
     // 创建一个隐藏的表单元素，使用label触发点击，解决iOS上的问题
     const form = document.createElement('form');
-    form.style.display = 'none';
+    form.style.display = 'block';
+    form.style.height = '0';
+    form.style.width = '0';
+    form.style.overflow = 'hidden';
     
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = '.json';
-    fileInput.id = 'import-file';
+    fileInput.id = 'import-file-' + Date.now(); // 添加时间戳确保ID唯一
+    fileInput.style.position = 'absolute';
+    fileInput.style.width = '1px';
+    fileInput.style.height = '1px';
+    fileInput.style.opacity = '0';
+    fileInput.style.pointerEvents = 'none';
     
     // 添加label元素以便在iOS上更好地触发文件选择
     const label = document.createElement('label');
-    label.htmlFor = 'import-file';
-    label.style.display = 'none';
+    label.htmlFor = fileInput.id;
+    label.style.display = 'block';
+    label.style.width = '100%';
+    label.style.height = '100%';
+    label.style.cursor = 'pointer';
     
     form.appendChild(fileInput);
     form.appendChild(label);
     document.body.appendChild(form);
 
     // 文件选择处理函数
-    const handleFileSelect = async () => {
+    const handleFileSelect = async (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      
       if (fileInput.files && fileInput.files.length > 0) {
         const file = fileInput.files[0];
         
@@ -158,7 +172,7 @@ export default function QuotationHistoryPage() {
           const fileContent = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (event) => {
-              if (event.target && event.target.result) {
+              if (event.target && typeof event.target.result === 'string') {
                 resolve(event.target.result);
               } else {
                 reject(new Error('读取文件失败'));
@@ -205,16 +219,43 @@ export default function QuotationHistoryPage() {
     // 使用更可靠的事件监听方式
     fileInput.addEventListener('change', handleFileSelect, { once: true });
     
-    // 使用setTimeout确保DOM已更新
-    setTimeout(() => {
-      // 在iOS上，使用label的click()方法更可靠
+    // 确保在iOS上的Safari浏览器中也能正常工作
+    const triggerFileInput = () => {
       try {
+        // 主要方法：直接触发input的click事件
         fileInput.click();
       } catch (e) {
         console.error('直接点击input失败，尝试使用label:', e);
-        label.click();
+        try {
+          // 备选方法1：使用label触发
+          label.click();
+        } catch (e2) {
+          console.error('label点击也失败，尝试模拟点击事件:', e2);
+          try {
+            // 备选方法2：创建并分发点击事件
+            const clickEvent = new MouseEvent('click', {
+              view: window,
+              bubbles: true,
+              cancelable: true
+            });
+            fileInput.dispatchEvent(clickEvent);
+          } catch (e3) {
+            console.error('所有方法都失败，请手动选择文件:', e3);
+            alert('无法自动打开文件选择器，请尝试使用其他浏览器或设备。');
+          }
+        }
       }
-    }, 100);
+    };
+    
+    // 使用短延迟确保DOM已更新
+    setTimeout(triggerFileInput, 50);
+    
+    // 添加超时清理，防止DOM元素残留
+    setTimeout(() => {
+      if (document.body.contains(form)) {
+        document.body.removeChild(form);
+      }
+    }, 60000); // 1分钟后如果还没完成，强制清理
   };
 
   // 处理多选
