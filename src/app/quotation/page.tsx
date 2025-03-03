@@ -55,7 +55,7 @@ export default function QuotationPage() {
     inquiryNo: '',
     quotationNo: '',
     date: new Date().toISOString().split('T')[0],
-    from: '',
+    from: typeof window !== 'undefined' ? localStorage.getItem('username') || 'Roger' : 'Roger',
     currency: 'USD',
     paymentDate: new Date().toISOString().split('T')[0],
     items: [{
@@ -131,6 +131,21 @@ export default function QuotationPage() {
       delete customWindow.__EDIT_ID__;
       delete customWindow.__QUOTATION_TYPE__;
     }
+  }, []);
+
+  // 初始化notes字段
+  useEffect(() => {
+    // 只在组件挂载后执行一次，初始化notes
+    setData(prev => {
+      // 如果notes为空，则根据from字段设置默认notes
+      if (prev.notes.length === 0) {
+        return {
+          ...prev,
+          notes: getDefaultNotes(prev.from, activeTab)
+        };
+      }
+      return prev;
+    });
   }, []);
 
   // 监听 activeTab 变化，更新 notes
