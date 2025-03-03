@@ -126,8 +126,7 @@ export default function QuotationHistoryPage() {
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'application/json';
-    input.capture = 'none';
+    input.accept = '.json';
     input.style.display = 'none';
     input.multiple = false;
     document.body.appendChild(input);
@@ -137,8 +136,7 @@ export default function QuotationHistoryPage() {
       const file = target.files?.[0];
       if (file) {
         // 检查文件类型
-        const isValidType = file.type === 'application/json' || 
-                          file.name.toLowerCase().endsWith('.json');
+        const isValidType = file.name.toLowerCase().endsWith('.json');
                           
         if (!isValidType) {
           alert('请选择JSON格式的文件');
