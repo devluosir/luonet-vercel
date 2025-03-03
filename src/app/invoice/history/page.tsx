@@ -123,7 +123,7 @@ export default function InvoiceHistoryPage() {
   // 处理导入
   const handleImport = () => {
     // 检测是否为iOS设备
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown as { MSStream: unknown }).MSStream;
     
     // 在iOS设备上使用专门的组件
     if (isIOS) {

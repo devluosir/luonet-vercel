@@ -157,7 +157,12 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
     } catch (storageError) {
       console.error('Error saving to localStorage:', storageError);
       // 尝试分块保存（如果数据太大）
-      if (storageError.name === 'QuotaExceededError' || storageError.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      if (
+        typeof storageError === 'object' && 
+        storageError !== null && 
+        'name' in storageError && 
+        (storageError.name === 'QuotaExceededError' || storageError.name === 'NS_ERROR_DOM_QUOTA_REACHED')
+      ) {
         console.warn('Storage quota exceeded, trying to free up space...');
         // 尝试清理其他不重要的数据
         try {
