@@ -254,15 +254,15 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
         valign: 'middle'
       },
       columnStyles: {
-        0: { halign: 'center', cellWidth: '5%' },  // No.
-        1: { halign: 'center', cellWidth: data.showRemarks ? '25%' : '30%' },  // Part Name
-        ...(data.showDescription ? { 2: { halign: 'center', cellWidth: data.showRemarks ? '20%' : '25%' } } : {}),  // Description
-        [data.showDescription ? 3 : 2]: { halign: 'center', cellWidth: '8%' },  // Q'TY
-        [data.showDescription ? 4 : 3]: { halign: 'center', cellWidth: '7%' },  // Unit
-        [data.showDescription ? 5 : 4]: { halign: 'center', cellWidth: '10%' },  // U/Price
-        [data.showDescription ? 6 : 5]: { halign: 'center', cellWidth: '10%' },  // Amount
-        ...(data.showRemarks ? { [data.showDescription ? 7 : 6]: { halign: 'center', cellWidth: '15%' } } : {})  // Remarks
-      } as { [key: number]: { cellWidth: string, halign: 'center' } },
+        '0': { halign: 'center', cellWidth: 5 },  // No.
+        '1': { halign: 'center', cellWidth: data.showRemarks ? 25 : 30 },  // Part Name
+        ...(data.showDescription ? { '2': { halign: 'center', cellWidth: data.showRemarks ? 20 : 25 } } : {}),  // Description
+        [data.showDescription ? '3' : '2']: { halign: 'center', cellWidth: 8 },  // Q'TY
+        [data.showDescription ? '4' : '3']: { halign: 'center', cellWidth: 7 },  // Unit
+        [data.showDescription ? '5' : '4']: { halign: 'center', cellWidth: 10 },  // U/Price
+        [data.showDescription ? '6' : '5']: { halign: 'center', cellWidth: 10 },  // Amount
+        ...(data.showRemarks ? { [data.showDescription ? '7' : '6']: { halign: 'center', cellWidth: 15 } } : {})  // Remarks
+      },
       margin: { left: 15, right: 15, bottom: 20 },  // 增加底部边距
       tableWidth: 'auto',  // 使用自动宽度，让jspdf-autotable根据百分比自动计算
       didParseCell: (data) => {
