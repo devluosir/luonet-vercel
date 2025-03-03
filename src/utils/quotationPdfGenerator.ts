@@ -254,17 +254,44 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
         valign: 'middle'
       },
       columnStyles: {
-        '0': { halign: 'center', cellWidth: 5 },  // No.
-        '1': { halign: 'center', cellWidth: data.showRemarks ? 25 : 30 },  // Part Name
-        ...(data.showDescription ? { '2': { halign: 'center', cellWidth: data.showRemarks ? 20 : 25 } } : {}),  // Description
-        [data.showDescription ? '3' : '2']: { halign: 'center', cellWidth: 8 },  // Q'TY
-        [data.showDescription ? '4' : '3']: { halign: 'center', cellWidth: 7 },  // Unit
-        [data.showDescription ? '5' : '4']: { halign: 'center', cellWidth: 10 },  // U/Price
-        [data.showDescription ? '6' : '5']: { halign: 'center', cellWidth: 10 },  // Amount
-        ...(data.showRemarks ? { [data.showDescription ? '7' : '6']: { halign: 'center', cellWidth: 15 } } : {})  // Remarks
+        '0': { halign: 'center', cellWidth: 10 },  // No.
+        '1': { 
+          halign: 'center', 
+          cellWidth: data.showDescription 
+            ? (data.showRemarks ? 25 : 40)   // 显示描述列时，不显示备注列时适当增加宽度
+            : (data.showRemarks ? 45 : 65)   // 不显示描述列时，占用更多空间但不过宽
+        },  // Part Name
+        ...(data.showDescription ? { 
+          '2': { 
+            halign: 'center', 
+            cellWidth: data.showRemarks ? 20 : 40  // 显示描述列但不显示备注列时，描述列更宽
+          } 
+        } : {}),  // Description
+        [data.showDescription ? '3' : '2']: { 
+          halign: 'center', 
+          cellWidth: data.showRemarks ? 15 : 20  // 不显示备注列时，数量列适当增加宽度
+        },  // Q'TY
+        [data.showDescription ? '4' : '3']: { 
+          halign: 'center', 
+          cellWidth: data.showRemarks ? 15 : 20  // 不显示备注列时，单位列适当增加宽度
+        },  // Unit
+        [data.showDescription ? '5' : '4']: { 
+          halign: 'center', 
+          cellWidth: data.showRemarks ? 20 : 25  // 不显示备注列时，单价列适当增加宽度
+        },  // U/Price
+        [data.showDescription ? '6' : '5']: { 
+          halign: 'center', 
+          cellWidth: data.showRemarks ? 20 : 25  // 不显示备注列时，金额列适当增加宽度
+        },  // Amount
+        ...(data.showRemarks ? { 
+          [data.showDescription ? '7' : '6']: { 
+            halign: 'center', 
+            cellWidth: 55  // 备注列固定宽度
+          } 
+        } : {})  // Remarks
       },
-      margin: { left: 15, right: 15, bottom: 20 },  // 增加底部边距
-      tableWidth: 'auto',  // 使用自动宽度，让jspdf-autotable根据百分比自动计算
+      margin: { left: 15, right: 15, bottom: 20 },
+      tableWidth: 'auto',  // 使用auto让表格自动计算宽度
       didParseCell: (data) => {
         const pageHeight = data.doc.internal.pageSize.height;
         const bottomMargin = 25;
