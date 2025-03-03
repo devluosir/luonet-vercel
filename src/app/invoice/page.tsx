@@ -136,7 +136,7 @@ Beneficiary: Luo & Company Co., Limited`,
   const [editingUnitPrice, setEditingUnitPrice] = useState<string>('');
   const [editingQuantityIndex, setEditingQuantityIndex] = useState<number | null>(null);
   const [editingQuantity, setEditingQuantity] = useState<string>('');
-  const [templateConfig, _setTemplateConfig] = useState<InvoiceTemplateConfig>({
+  const [_templateConfig, _setTemplateConfig] = useState<InvoiceTemplateConfig>({
     headerType: 'bilingual',
     invoiceType: 'invoice',
     stampType: 'none'

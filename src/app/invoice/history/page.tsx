@@ -117,16 +117,23 @@ export default function InvoiceHistoryPage() {
 
   // 处理导入
   const handleImport = () => {
-    // 创建一个持久的文件输入元素（不立即从DOM移除）
+    // 创建一个隐藏的表单元素，使用label触发点击，解决iOS上的问题
+    const form = document.createElement('form');
+    form.style.display = 'none';
+    
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
-    // 只接受.json文件，避免iOS上的问题
     fileInput.accept = '.json';
-    fileInput.style.position = 'fixed';
-    fileInput.style.top = '-100px';
-    fileInput.style.left = '-100px';
-    fileInput.style.opacity = '0';
-    document.body.appendChild(fileInput);
+    fileInput.id = 'import-file';
+    
+    // 添加label元素以便在iOS上更好地触发文件选择
+    const label = document.createElement('label');
+    label.htmlFor = 'import-file';
+    label.style.display = 'none';
+    
+    form.appendChild(fileInput);
+    form.appendChild(label);
+    document.body.appendChild(form);
 
     // 文件选择处理函数
     const handleFileSelect = async () => {
@@ -143,7 +150,13 @@ export default function InvoiceHistoryPage() {
           // 使用Promise包装FileReader，更好地处理异步
           const fileContent = await new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
+            reader.onload = (event) => {
+              if (event.target && event.target.result) {
+                resolve(event.target.result);
+              } else {
+                reject(new Error('读取文件失败'));
+              }
+            };
             reader.onerror = () => reject(new Error('读取文件失败'));
             reader.readAsText(file);
           });
@@ -172,26 +185,28 @@ export default function InvoiceHistoryPage() {
         } catch (error) {
           console.error('文件读取错误:', error);
           alert('读取文件时出错，请重试。');
+        } finally {
+          // 清理DOM
+          if (document.body.contains(form)) {
+            document.body.removeChild(form);
+          }
         }
       }
     };
 
     // 使用更可靠的事件监听方式
-    fileInput.addEventListener('change', handleFileSelect);
+    fileInput.addEventListener('change', handleFileSelect, { once: true });
     
-    // 点击文件选择器
-    fileInput.click();
-    
-    // 设置一个延时清理函数
+    // 使用setTimeout确保DOM已更新
     setTimeout(() => {
-      // 移除事件监听器
-      fileInput.removeEventListener('change', handleFileSelect);
-      
-      // 从DOM中移除元素
-      if (document.body.contains(fileInput)) {
-        document.body.removeChild(fileInput);
+      // 在iOS上，使用label的click()方法更可靠
+      try {
+        fileInput.click();
+      } catch (e) {
+        console.error('直接点击input失败，尝试使用label:', e);
+        label.click();
       }
-    }, 5000); // 给用户足够的时间选择文件
+    }, 100);
   };
 
   // 处理多选
