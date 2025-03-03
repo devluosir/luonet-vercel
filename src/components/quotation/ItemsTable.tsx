@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ImportDataButton } from './ImportDataButton';
 import type { QuotationData, LineItem } from '@/types/quotation';
 
@@ -31,6 +31,27 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
       document.documentElement.style.setProperty('--table-width', `${mainTable.offsetWidth}px`);
     }
   }, [data.items.length, data.showDescription, data.showRemarks]);
+
+  // 初始化函数，用于调整所有textarea的高度
+  const initializeTextareaHeights = useCallback(() => {
+    setTimeout(() => {
+      const textareas = document.querySelectorAll('textarea');
+      textareas.forEach(textarea => {
+        textarea.style.height = '28px';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+      });
+    }, 0);
+  }, []);
+
+  // 在组件挂载时调用一次初始化函数
+  useEffect(() => {
+    initializeTextareaHeights();
+  }, [initializeTextareaHeights]);
+
+  // 在数据变化时调整所有textarea的高度
+  useEffect(() => {
+    initializeTextareaHeights();
+  }, [data.items, data.otherFees, initializeTextareaHeights]);
 
   // 处理键盘导航
   const handleKeyDown = (
@@ -532,12 +553,15 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                     {data.showRemarks && (
                       <td className={`w-[200px] px-1 py-2
                         ${index === data.items.length - 1 && !data.otherFees?.length ? 'rounded-br-2xl' : ''}`}>
-                        <input
-                          type="text"
+                        <textarea
                           value={item.remarks}
                           data-row={index}
                           data-field="remarks"
-                          onChange={(e) => handleItemChange(index, 'remarks', e.target.value)}
+                          onChange={(e) => {
+                            handleItemChange(index, 'remarks', e.target.value);
+                            e.target.style.height = '28px';
+                            e.target.style.height = `${e.target.scrollHeight}px`;
+                          }}
                           onDoubleClick={() => handleDoubleClick(index, 'remarks')}
                           onKeyDown={(e) => handleKeyDown(e, index, 'remarks')}
                           onPaste={(e) => handleCellPaste(e, index, 'remarks')}
@@ -546,8 +570,11 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            transition-all duration-200 text-center
+                            transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
                             ${item.highlight?.remarks ? highlightClass : ''}`}
+                          style={{ 
+                            height: '28px'
+                          }}
                         />
                       </td>
                     )}
@@ -636,19 +663,24 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                       {data.showRemarks && (
                         <td className={`w-[200px] px-1 py-2
                           ${index === (data.otherFees ?? []).length - 1 ? 'rounded-br-2xl' : ''}`}>
-                          <input
-                            type="text"
+                          <textarea
                             value={fee.remarks || ''}
-                            onChange={(e) => handleOtherFeeChange(index, 'remarks', e.target.value)}
+                            onChange={(e) => {
+                              handleOtherFeeChange(index, 'remarks', e.target.value);
+                              e.target.style.height = '28px';
+                              e.target.style.height = `${e.target.scrollHeight}px`;
+                            }}
                             onDoubleClick={() => handleOtherFeeDoubleClick(index, 'remarks')}
                             className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                               focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                               hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-center
+                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                               placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200
-                              ${fee.highlight?.remarks ? highlightClass : ''}
-                              ${index === (data.otherFees ?? []).length - 1 ? 'rounded-br-2xl' : ''}`}
+                              transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
+                              ${fee.highlight?.remarks ? highlightClass : ''}`}
+                            style={{ 
+                              height: '28px'
+                            }}
                           />
                         </td>
                       )}
