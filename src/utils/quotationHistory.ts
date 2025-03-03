@@ -128,17 +128,62 @@ export const exportQuotationHistory = (): string => {
 // 导入历史记录
 export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace' | 'merge' = 'merge'): boolean => {
   try {
-    const importedHistory = JSON.parse(jsonData);
+    // 确保输入是有效的JSON字符串
+    if (!jsonData || typeof jsonData !== 'string') {
+      console.error('Invalid input: jsonData must be a string');
+      return false;
+    }
+
+    // 处理可能的BOM标记（在iOS上可能会出现）
+    let cleanJsonData = jsonData;
+    if (jsonData.charCodeAt(0) === 0xFEFF) {
+      cleanJsonData = jsonData.slice(1);
+      console.log('Removed BOM marker from JSON data');
+    }
+
+    // 尝试解析JSON
+    let importedHistory;
+    try {
+      importedHistory = JSON.parse(cleanJsonData);
+    } catch (parseError) {
+      // 尝试修复常见的JSON格式问题
+      try {
+        // 有时iOS设备会在JSON字符串中添加额外的字符
+        const fixedJson = cleanJsonData
+          .replace(/\n/g, '')
+          .replace(/\r/g, '')
+          .replace(/\t/g, '')
+          .trim();
+        importedHistory = JSON.parse(fixedJson);
+        console.log('Successfully parsed JSON after fixing format issues');
+      } catch (secondError) {
+        console.error('Failed to parse JSON even after cleanup:', secondError);
+        return false;
+      }
+    }
     
     // 验证导入的数据格式
     if (!Array.isArray(importedHistory)) {
-      throw new Error('Invalid data format');
+      console.error('Invalid data format: expected an array');
+      return false;
     }
 
     // 处理从发票导入的数据
     const processedData = importedHistory.map(item => {
+      // 基本验证：确保item是对象且有id
+      if (!item || typeof item !== 'object' || !item.id) {
+        console.warn('Skipping invalid item:', item);
+        return null;
+      }
+
       // 如果是发票数据（通过检查特有字段判断）
       if (item.data && item.data.customerPO !== undefined) {
+        // 确保items数组存在
+        if (!Array.isArray(item.data.items)) {
+          console.warn('Invalid items array in invoice data:', item);
+          return item; // 返回原始项，不进行转换
+        }
+
         const convertedItems = item.data.items.map((lineItem: { partname?: string; lineNo?: number; description?: string; quantity: number; unit: string; unitPrice: number; amount: number; highlight?: Record<string, boolean> }) => {
           if (lineItem.partname && !('partName' in lineItem)) {
             return {
@@ -160,53 +205,82 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
         return {
           id: item.id,
           type: 'confirmation' as const, // 改为订单确认类型
-          customerName: item.customerName,
-          quotationNo: item.data.invoiceNo, // 使用发票号作为单号
-          totalAmount: item.totalAmount,
-          currency: item.currency,
-          createdAt: item.createdAt,
-          updatedAt: item.createdAt,
+          customerName: item.customerName || '',
+          quotationNo: item.data.invoiceNo || '', // 使用发票号作为单号
+          totalAmount: item.totalAmount || 0,
+          currency: item.currency || 'USD',
+          createdAt: item.createdAt || new Date().toISOString(),
+          updatedAt: item.createdAt || new Date().toISOString(),
           data: {
-            to: item.data.to,
+            to: item.data.to || '',
             inquiryNo: item.data.customerPO || '', // 发票 customerPO -> 订单确认 inquiryNo
             quotationNo: '', // 订单确认不需要报价单号
-            date: item.data.date,
+            date: item.data.date || new Date().toISOString().split('T')[0],
             from: 'Roger',
-            currency: item.data.currency,
-            paymentDate: item.data.paymentDate,
+            currency: item.data.currency || 'USD',
+            paymentDate: item.data.paymentDate || '',
             items: convertedItems,
             notes: getDefaultNotes('Roger', 'confirmation'), // 使用订单确认的默认备注
-            amountInWords: item.data.amountInWords,
+            amountInWords: item.data.amountInWords || '',
             showDescription: true,
             showRemarks: false,
-            showBank: item.data.showBank,
+            showBank: item.data.showBank || false,
             showStamp: false,
-            contractNo: item.data.invoiceNo, // 发票号作为合同号
+            contractNo: item.data.invoiceNo || '', // 发票号作为合同号
             otherFees: item.data.otherFees || [],
             customUnits: [],
-            showPaymentTerms: item.data.showPaymentTerms,
-            showInvoiceReminder: item.data.showInvoiceReminder,
-            additionalPaymentTerms: item.data.additionalPaymentTerms
+            showPaymentTerms: item.data.showPaymentTerms || false,
+            showInvoiceReminder: item.data.showInvoiceReminder || false,
+            additionalPaymentTerms: item.data.additionalPaymentTerms || ''
           }
         };
       }
       return item;
-    });
+    }).filter(Boolean); // 过滤掉null项
 
-    if (mergeStrategy === 'replace') {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(processedData));
-    } else {
-      // 合并策略：保留现有记录，添加新记录（根据 id 去重）
-      const existingHistory = getQuotationHistory();
-      const existingIds = new Set(existingHistory.map(item => item.id));
-      const newHistory = [
-        ...existingHistory,
-        ...processedData.filter(item => !existingIds.has(item.id))
-      ];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+    // 确保至少有一条有效记录
+    if (processedData.length === 0) {
+      console.error('No valid records found in imported data');
+      return false;
     }
-    
-    return true;
+
+    try {
+      if (mergeStrategy === 'replace') {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(processedData));
+      } else {
+        // 合并策略：保留现有记录，添加新记录（根据 id 去重）
+        const existingHistory = getQuotationHistory();
+        const existingIds = new Set(existingHistory.map(item => item.id));
+        const newHistory = [
+          ...existingHistory,
+          ...processedData.filter(item => !existingIds.has(item.id))
+        ];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newHistory));
+      }
+      return true;
+    } catch (storageError) {
+      console.error('Error saving to localStorage:', storageError);
+      // 尝试分块保存（如果数据太大）
+      if (storageError.name === 'QuotaExceededError' || storageError.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        console.warn('Storage quota exceeded, trying to free up space...');
+        // 尝试清理其他不重要的数据
+        try {
+          // 保留最重要的数据
+          const existingHistory = getQuotationHistory();
+          // 只保留最近的50条记录
+          const trimmedHistory = existingHistory.slice(-50);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
+          console.log('Successfully trimmed history to make space');
+          
+          // 再次尝试保存导入的数据
+          return importQuotationHistory(jsonData, mergeStrategy);
+        } catch (e) {
+          console.error('Failed to free up space:', e);
+          return false;
+        }
+      }
+      return false;
+    }
   } catch (error) {
     console.error('Error importing quotation history:', error);
     return false;

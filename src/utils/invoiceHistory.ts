@@ -53,13 +53,61 @@ export const deleteInvoiceHistory = (id: string): boolean => {
 // 导入历史记录
 export const importInvoiceHistory = (jsonData: string): boolean => {
   try {
-    const data = JSON.parse(jsonData);
-    if (!Array.isArray(data)) throw new Error('Invalid data format');
+    // 确保输入是有效的JSON字符串
+    if (!jsonData || typeof jsonData !== 'string') {
+      console.error('Invalid input: jsonData must be a string');
+      return false;
+    }
+
+    // 处理可能的BOM标记（在iOS上可能会出现）
+    let cleanJsonData = jsonData;
+    if (jsonData.charCodeAt(0) === 0xFEFF) {
+      cleanJsonData = jsonData.slice(1);
+      console.log('Removed BOM marker from JSON data');
+    }
+
+    // 尝试解析JSON
+    let data;
+    try {
+      data = JSON.parse(cleanJsonData);
+    } catch (parseError) {
+      // 尝试修复常见的JSON格式问题
+      try {
+        // 有时iOS设备会在JSON字符串中添加额外的字符
+        const fixedJson = cleanJsonData
+          .replace(/\n/g, '')
+          .replace(/\r/g, '')
+          .replace(/\t/g, '')
+          .trim();
+        data = JSON.parse(fixedJson);
+        console.log('Successfully parsed JSON after fixing format issues');
+      } catch (secondError) {
+        console.error('Failed to parse JSON even after cleanup:', secondError);
+        return false;
+      }
+    }
+    
+    if (!Array.isArray(data)) {
+      console.error('Invalid data format: expected an array');
+      return false;
+    }
     
     // 处理从报价单导入的数据
     const processedData = data.map(item => {
+      // 基本验证：确保item是对象且有id
+      if (!item || typeof item !== 'object' || !item.id) {
+        console.warn('Skipping invalid item:', item);
+        return null;
+      }
+      
       // 如果是报价单数据，进行转换
       if (item.data && item.data.items) {
+        // 确保items数组存在且有效
+        if (!Array.isArray(item.data.items)) {
+          console.warn('Invalid items array in quotation data:', item);
+          return item; // 返回原始项，不进行转换
+        }
+        
         const convertedItems = item.data.items.map((lineItem: { partName?: string; id?: number; description?: string; quantity: number; unit: string; unitPrice: number; amount: number }) => {
           if (lineItem.partName && !('partname' in lineItem)) {
             return {
@@ -92,13 +140,43 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
         };
       }
       return item;
-    });
+    }).filter(Boolean); // 过滤掉null项
     
-    const history = getInvoiceHistory();
-    const merged = [...processedData, ...history];
-    const uniqueHistory = Array.from(new Map(merged.map(item => [item.id, item])).values());
+    // 确保至少有一条有效记录
+    if (processedData.length === 0) {
+      console.error('No valid records found in imported data');
+      return false;
+    }
     
-    return saveInvoiceHistory(uniqueHistory);
+    try {
+      const history = getInvoiceHistory();
+      const merged = [...processedData, ...history];
+      const uniqueHistory = Array.from(new Map(merged.map(item => [item.id, item])).values());
+      
+      return saveInvoiceHistory(uniqueHistory);
+    } catch (storageError) {
+      console.error('Error saving to localStorage:', storageError);
+      // 尝试分块保存（如果数据太大）
+      if (storageError.name === 'QuotaExceededError' || storageError.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        console.warn('Storage quota exceeded, trying to free up space...');
+        // 尝试清理其他不重要的数据
+        try {
+          // 保留最重要的数据
+          const existingHistory = getInvoiceHistory();
+          // 只保留最近的50条记录
+          const trimmedHistory = existingHistory.slice(-50);
+          saveInvoiceHistory(trimmedHistory);
+          console.log('Successfully trimmed history to make space');
+          
+          // 再次尝试保存导入的数据
+          return importInvoiceHistory(jsonData);
+        } catch (e) {
+          console.error('Failed to free up space:', e);
+          return false;
+        }
+      }
+      return false;
+    }
   } catch (error) {
     console.error('Error importing invoice history:', error);
     return false;

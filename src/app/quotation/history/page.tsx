@@ -124,52 +124,49 @@ export default function QuotationHistoryPage() {
 
   // 处理导入
   const handleImport = () => {
-    // 创建一个隐藏的表单元素，使用label触发点击，解决iOS上的问题
-    const form = document.createElement('form');
-    form.style.display = 'block';
-    form.style.height = '0';
-    form.style.width = '0';
-    form.style.overflow = 'hidden';
+    // 检测是否为iOS设备
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     
+    // 创建一个可见的文件输入元素（对iOS更友好）
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = '.json';
-    fileInput.id = 'import-file-' + Date.now(); // 添加时间戳确保ID唯一
-    fileInput.style.position = 'absolute';
-    fileInput.style.width = '1px';
-    fileInput.style.height = '1px';
-    fileInput.style.opacity = '0';
-    fileInput.style.pointerEvents = 'none';
+    fileInput.id = 'import-file-' + Date.now();
     
-    // 添加label元素以便在iOS上更好地触发文件选择
-    const label = document.createElement('label');
-    label.htmlFor = fileInput.id;
-    label.style.display = 'block';
-    label.style.width = '100%';
-    label.style.height = '100%';
-    label.style.cursor = 'pointer';
+    // iOS需要特殊处理
+    if (isIOS) {
+      // 在iOS上，文件输入需要是可见的并且可交互的
+      fileInput.style.position = 'fixed';
+      fileInput.style.top = '0';
+      fileInput.style.left = '0';
+      fileInput.style.width = '100%';
+      fileInput.style.height = '100%';
+      fileInput.style.opacity = '0.01'; // 几乎不可见但仍然可交互
+      fileInput.style.zIndex = '9999'; // 确保在最上层
+    } else {
+      // 非iOS设备可以完全隐藏
+      fileInput.style.display = 'none';
+    }
     
-    form.appendChild(fileInput);
-    form.appendChild(label);
-    document.body.appendChild(form);
-
+    document.body.appendChild(fileInput);
+    
     // 文件选择处理函数
-    const handleFileSelect = async (event: Event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      
+    const handleFileSelect = async () => {
       if (fileInput.files && fileInput.files.length > 0) {
         const file = fileInput.files[0];
         
         // 检查文件名（而不是MIME类型）
         if (!file.name.toLowerCase().endsWith('.json')) {
           alert('请选择JSON格式的文件');
+          if (document.body.contains(fileInput)) {
+            document.body.removeChild(fileInput);
+          }
           return;
         }
         
         try {
           // 使用Promise包装FileReader，更好地处理异步
-          const fileContent = await new Promise((resolve, reject) => {
+          const fileContent = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (event) => {
               if (event.target && typeof event.target.result === 'string') {
@@ -182,78 +179,82 @@ export default function QuotationHistoryPage() {
             reader.readAsText(file);
           });
           
-          if (typeof fileContent === 'string') {
-            try {
-              // 验证JSON格式
-              JSON.parse(fileContent);
-              
-              // 导入数据
-              const success = importQuotationHistory(fileContent);
-              if (success) {
-                const results = getQuotationHistory();
-                const filteredResults = getFilteredHistory(results);
-                setHistory(filteredResults);
-                alert('导入成功！');
-              } else {
-                throw new Error('导入失败');
-              }
-            } catch (error) {
-              console.error('JSON解析错误:', error);
-              alert('导入失败，请确保文件格式正确（必须是有效的JSON格式）。');
+          // 导入数据前先移除文件输入元素（特别是在iOS上）
+          if (document.body.contains(fileInput)) {
+            document.body.removeChild(fileInput);
+          }
+          
+          // 验证并导入数据
+          try {
+            // 验证JSON格式
+            JSON.parse(fileContent);
+            
+            // 导入数据
+            const success = importQuotationHistory(fileContent);
+            if (success) {
+              const results = getQuotationHistory();
+              const filteredResults = getFilteredHistory(results);
+              setHistory(filteredResults);
+              alert('导入成功！');
+            } else {
+              throw new Error('导入失败');
             }
-          } else {
-            alert('文件内容格式不正确');
+          } catch (error) {
+            console.error('JSON解析错误:', error);
+            alert('导入失败，请确保文件格式正确（必须是有效的JSON格式）。');
           }
         } catch (error) {
           console.error('文件读取错误:', error);
           alert('读取文件时出错，请重试。');
-        } finally {
-          // 清理DOM
-          if (document.body.contains(form)) {
-            document.body.removeChild(form);
+          
+          // 确保清理DOM
+          if (document.body.contains(fileInput)) {
+            document.body.removeChild(fileInput);
           }
+        }
+      } else {
+        // 用户没有选择文件，清理DOM
+        if (document.body.contains(fileInput)) {
+          document.body.removeChild(fileInput);
         }
       }
     };
-
+    
     // 使用更可靠的事件监听方式
     fileInput.addEventListener('change', handleFileSelect, { once: true });
     
-    // 确保在iOS上的Safari浏览器中也能正常工作
-    const triggerFileInput = () => {
-      try {
-        // 主要方法：直接触发input的click事件
-        fileInput.click();
-      } catch (e) {
-        console.error('直接点击input失败，尝试使用label:', e);
-        try {
-          // 备选方法1：使用label触发
-          label.click();
-        } catch (e2) {
-          console.error('label点击也失败，尝试模拟点击事件:', e2);
-          try {
-            // 备选方法2：创建并分发点击事件
-            const clickEvent = new MouseEvent('click', {
-              view: window,
-              bubbles: true,
-              cancelable: true
-            });
-            fileInput.dispatchEvent(clickEvent);
-          } catch (e3) {
-            console.error('所有方法都失败，请手动选择文件:', e3);
-            alert('无法自动打开文件选择器，请尝试使用其他浏览器或设备。');
-          }
-        }
+    // 添加取消选择的处理（特别是对iOS有用）
+    const handleCancel = () => {
+      if (document.body.contains(fileInput)) {
+        document.body.removeChild(fileInput);
       }
     };
     
-    // 使用短延迟确保DOM已更新
-    setTimeout(triggerFileInput, 50);
+    // 在iOS上，添加点击背景取消的功能
+    if (isIOS) {
+      fileInput.addEventListener('click', (e) => {
+        // 如果点击的是背景（而不是文件选择对话框），则取消
+        if (e.target === fileInput) {
+          setTimeout(handleCancel, 500);
+        }
+      });
+    }
+    
+    // 直接触发点击，打开文件选择器
+    try {
+      fileInput.click();
+    } catch (e) {
+      console.error('无法打开文件选择器:', e);
+      alert('无法打开文件选择器，请尝试使用其他浏览器或设备。');
+      if (document.body.contains(fileInput)) {
+        document.body.removeChild(fileInput);
+      }
+    }
     
     // 添加超时清理，防止DOM元素残留
     setTimeout(() => {
-      if (document.body.contains(form)) {
-        document.body.removeChild(form);
+      if (document.body.contains(fileInput)) {
+        document.body.removeChild(fileInput);
       }
     }, 60000); // 1分钟后如果还没完成，强制清理
   };
