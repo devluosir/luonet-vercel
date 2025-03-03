@@ -254,7 +254,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           halign: 'center', 
           cellWidth: data.showDescription 
             ? (data.showRemarks ? 25 : 40)   // 显示描述列时，不显示备注列时适当增加宽度
-            : (data.showRemarks ? 45 : 65)   // 不显示描述列时，占用更多空间但不过宽
+            : (data.showRemarks ? 45 : 80)   // 不显示描述列时，占用更多空间但不过宽
         },  // Part Name
         ...(data.showDescription ? { 
           '2': { 
