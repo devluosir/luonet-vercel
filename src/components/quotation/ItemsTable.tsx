@@ -357,7 +357,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                   <th className="w-[100px] min-w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
                   <th className="w-[100px] min-w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
                   {data.showRemarks && (
-                    <th className={`w-[200px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
+                    <th className={`w-[250px] min-w-[250px] max-w-[250px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
                       ${(data.otherFees ?? []).length === 0 ? 'rounded-tr-2xl' : ''}`}>Remarks</th>
                   )}
                   {!data.showRemarks && (
@@ -551,7 +551,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                       />
                     </td>
                     {data.showRemarks && (
-                      <td className={`w-[200px] px-1 py-2
+                      <td className={`w-[250px] min-w-[250px] max-w-[250px] px-1 py-2
                         ${index === data.items.length - 1 && !data.otherFees?.length ? 'rounded-br-2xl' : ''}`}>
                         <textarea
                           value={item.remarks}
@@ -661,7 +661,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         />
                       </td>
                       {data.showRemarks && (
-                        <td className={`w-[200px] px-1 py-2
+                        <td className={`w-[250px] min-w-[250px] max-w-[250px] px-1 py-2
                           ${index === (data.otherFees ?? []).length - 1 ? 'rounded-br-2xl' : ''}`}>
                           <textarea
                             value={fee.remarks || ''}
