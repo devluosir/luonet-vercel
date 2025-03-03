@@ -23,7 +23,15 @@ const IOSFileInput: React.FC<IOSFileInputProps> = ({
 
   const handleButtonClick = () => {
     if (fileInputRef.current) {
-      fileInputRef.current.click();
+      // 在iOS上，需要设置一些特殊属性
+      const input = fileInputRef.current;
+      input.setAttribute('capture', 'filesystem');
+      input.setAttribute('multiple', 'false');
+      // 确保accept属性正确设置
+      input.accept = '.json,application/json';
+      
+      // 直接触发点击
+      input.click();
     }
   };
 
@@ -35,8 +43,15 @@ const IOSFileInput: React.FC<IOSFileInputProps> = ({
     }
 
     const file = files[0];
-    if (accept && !file.name.toLowerCase().endsWith(accept.replace('.', ''))) {
-      setError(`请选择${accept}格式的文件`);
+    console.log('Selected file:', file.name, file.type);
+
+    // 检查文件名和MIME类型
+    const isJSON = file.name.toLowerCase().endsWith('.json') || 
+                  file.type === 'application/json' ||
+                  file.type === 'text/json';
+
+    if (!isJSON) {
+      setError(`请选择JSON格式的文件`);
       return;
     }
 
@@ -44,10 +59,17 @@ const IOSFileInput: React.FC<IOSFileInputProps> = ({
     setError(null);
 
     const reader = new FileReader();
+    
     reader.onload = (e) => {
       setIsLoading(false);
       if (e.target && typeof e.target.result === 'string') {
-        onFileSelect(e.target.result);
+        try {
+          // 尝试解析JSON以验证格式
+          JSON.parse(e.target.result);
+          onFileSelect(e.target.result);
+        } catch (error) {
+          setError('文件内容不是有效的JSON格式');
+        }
       } else {
         setError('读取文件失败');
       }
@@ -56,8 +78,10 @@ const IOSFileInput: React.FC<IOSFileInputProps> = ({
     reader.onerror = () => {
       setIsLoading(false);
       setError('读取文件时出错');
+      console.error('FileReader error:', reader.error);
     };
 
+    // 使用readAsText而不是其他方法
     reader.readAsText(file);
   };
 
@@ -80,24 +104,28 @@ const IOSFileInput: React.FC<IOSFileInputProps> = ({
           <input
             type="file"
             ref={fileInputRef}
-            accept={accept}
+            accept=".json,application/json"
             onChange={handleFileChange}
             className="hidden"
           />
           
           <button
             onClick={handleButtonClick}
-            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-base font-medium"
             disabled={isLoading}
           >
             {isLoading ? '正在读取...' : buttonText}
           </button>
+          
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            支持的文件格式：JSON (.json)
+          </p>
         </div>
         
         <div className="flex justify-end">
           <button
             onClick={onCancel}
-            className="py-2 px-4 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-md"
+            className="py-2 px-4 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg"
             disabled={isLoading}
           >
             取消
