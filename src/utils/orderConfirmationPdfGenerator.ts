@@ -108,7 +108,9 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     // From
     doc.text('From', colonX - 2, rightInfoY + 10, { align: 'right' });
     doc.text(':', colonX, rightInfoY + 10);
-    doc.text(data.from || '', colonX + 3, rightInfoY + 10);
+    // 确保报价人信息显示，如果为空则显示默认值
+    const fromText = data.from && data.from.trim() ? data.from.trim() : 'Roger';
+    doc.text(fromText, colonX + 3, rightInfoY + 10);
     
     // Currency
     doc.text('Currency', colonX - 2, rightInfoY + 15, { align: 'right' });

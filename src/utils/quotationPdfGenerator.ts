@@ -398,6 +398,7 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
         doc.setFont('NotoSansSC', 'normal');
         doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
       }
+      
       return doc.output('blob');
     }
     
