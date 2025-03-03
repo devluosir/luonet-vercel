@@ -393,7 +393,11 @@ export default function QuotationHistoryPage() {
                               bg-white dark:bg-[#3A3A3C]"
                           />
                         </td>
-                        <td className="w-1/4 px-2 sm:px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-[#F5F5F7] hidden lg:table-cell whitespace-nowrap overflow-hidden text-ellipsis">{item.customerName}</td>
+                        <td className="w-1/4 px-2 sm:px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-[#F5F5F7] hidden lg:table-cell">
+                          <div className="max-w-[200px] xl:max-w-[300px] whitespace-nowrap overflow-hidden text-ellipsis" title={item.customerName}>
+                            {item.customerName}
+                          </div>
+                        </td>
                         <td className="w-[45%] sm:w-2/3 lg:w-1/3 px-2 sm:px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-[#F5F5F7] whitespace-nowrap overflow-hidden text-ellipsis">
                           {item.type === 'quotation' ? item.quotationNo : item.data.contractNo}
                         </td>
