@@ -255,13 +255,13 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
       },
       columnStyles: {
         0: { halign: 'center', cellWidth: 10 },  // No.
-        1: { halign: 'center', cellWidth: 'auto' },  // Part Name
+        1: { halign: 'center', cellWidth: 80 },  // Part Name - 增加宽度，从auto改为固定宽度
         ...(data.showDescription ? { 2: { halign: 'center', cellWidth: 'auto' } } : {}),  // Description
         [data.showDescription ? 3 : 2]: { halign: 'center', cellWidth: 15 },  // Q'TY
         [data.showDescription ? 4 : 3]: { halign: 'center', cellWidth: 15 },  // Unit
         [data.showDescription ? 5 : 4]: { halign: 'center', cellWidth: 20 },  // U/Price
-        [data.showDescription ? 6 : 5]: { halign: 'center', cellWidth: 20 },  // Amount
-        ...(data.showRemarks ? { [data.showDescription ? 7 : 6]: { halign: 'center', cellWidth: 'auto' } } : {})  // Remarks
+        [data.showDescription ? 6 : 5]: { halign: 'center', cellWidth: 25 },  // Amount - 略微增加宽度
+        ...(data.showRemarks ? { [data.showDescription ? 7 : 6]: { halign: 'center', cellWidth: 60 } } : {})  // Remarks - 从auto改为固定宽度
       } as { [key: number]: { cellWidth: number | 'auto', halign: 'center' } },
       margin: { left: 15, right: 15, bottom: 20 },  // 增加底部边距
       tableWidth: pageWidth - 30,  // 设置表格宽度为页面宽度减去左右边距
