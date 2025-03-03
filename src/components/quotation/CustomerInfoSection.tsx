@@ -195,7 +195,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
               onChange={e => onChange({ ...data, to: e.target.value })}
               placeholder="Enter customer name and address"
               rows={3}
-              className={inputClassName}
+              className={`${inputClassName} min-h-[100px]`}
             />
             <div className="absolute right-2 bottom-2 flex gap-2">
               <button
