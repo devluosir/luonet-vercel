@@ -124,99 +124,82 @@ export default function QuotationHistoryPage() {
 
   // 处理导入
   const handleImport = () => {
-    // 创建一个隐藏的文件输入元素
-    const input = document.createElement('input');
-    input.type = 'file';
-    // 使用多种文件类型，提高iOS兼容性
-    input.accept = '.json,application/json,text/plain';
-    input.style.display = 'none';
-    input.multiple = false;
-    document.body.appendChild(input);
+    // 创建一个持久的文件输入元素（不立即从DOM移除）
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    // 只接受.json文件，避免iOS上的问题
+    fileInput.accept = '.json';
+    fileInput.style.position = 'fixed';
+    fileInput.style.top = '-100px';
+    fileInput.style.left = '-100px';
+    fileInput.style.opacity = '0';
+    document.body.appendChild(fileInput);
 
-    input.onchange = async (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      const file = target.files?.[0];
-      if (file) {
-        try {
-          // 使用更可靠的方式读取文件
-          const reader = new FileReader();
-          
-          reader.onload = (e: ProgressEvent<FileReader>) => {
-            try {
-              const result = e.target?.result;
-              if (typeof result === 'string') {
-                try {
-                  // 尝试解析JSON
-                  JSON.parse(result); // 验证JSON格式
-                  const success = importQuotationHistory(result);
-                  if (success) {
-                    const results = getQuotationHistory();
-                    const filteredResults = getFilteredHistory(results);
-                    setHistory(filteredResults);
-                    alert('导入成功！');
-                  } else {
-                    throw new Error('导入失败');
-                  }
-                } catch (error: unknown) {
-                  const errorMessage = error instanceof Error ? error.message : '未知错误';
-                  console.error('导入历史记录时出错:', errorMessage);
-                  alert('导入失败，请确保文件格式正确（必须是有效的JSON格式）。');
-                }
-              }
-            } catch (err) {
-              console.error('处理文件时出错:', err);
-              alert('处理文件时出错，请重试。');
-            } finally {
-              // 确保清理DOM
-              if (document.body.contains(input)) {
-                document.body.removeChild(input);
-              }
-            }
-          };
-
-          reader.onerror = () => {
-            alert('读取文件时出错，请重试。');
-            if (document.body.contains(input)) {
-              document.body.removeChild(input);
-            }
-          };
-
-          // 开始读取文件
-          reader.readAsText(file);
-        } catch (err) {
-          console.error('读取文件时出错:', err);
-          alert('读取文件时出错，请重试。');
-          if (document.body.contains(input)) {
-            document.body.removeChild(input);
-          }
+    // 文件选择处理函数
+    const handleFileSelect = async () => {
+      if (fileInput.files && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        
+        // 检查文件名（而不是MIME类型）
+        if (!file.name.toLowerCase().endsWith('.json')) {
+          alert('请选择JSON格式的文件');
+          return;
         }
-      } else {
-        // 没有选择文件
-        if (document.body.contains(input)) {
-          document.body.removeChild(input);
+        
+        try {
+          // 使用Promise包装FileReader，更好地处理异步
+          const fileContent = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('读取文件失败'));
+            reader.readAsText(file);
+          });
+          
+          if (typeof fileContent === 'string') {
+            try {
+              // 验证JSON格式
+              JSON.parse(fileContent);
+              
+              // 导入数据
+              const success = importQuotationHistory(fileContent);
+              if (success) {
+                const results = getQuotationHistory();
+                const filteredResults = getFilteredHistory(results);
+                setHistory(filteredResults);
+                alert('导入成功！');
+              } else {
+                throw new Error('导入失败');
+              }
+            } catch (error) {
+              console.error('JSON解析错误:', error);
+              alert('导入失败，请确保文件格式正确（必须是有效的JSON格式）。');
+            }
+          } else {
+            alert('文件内容格式不正确');
+          }
+        } catch (error) {
+          console.error('文件读取错误:', error);
+          alert('读取文件时出错，请重试。');
         }
       }
     };
 
-    // 处理取消选择的情况
-    input.addEventListener('cancel', () => {
-      if (document.body.contains(input)) {
-        document.body.removeChild(input);
+    // 使用更可靠的事件监听方式
+    fileInput.addEventListener('change', handleFileSelect);
+    
+    // 点击文件选择器
+    fileInput.click();
+    
+    // 设置一个延时清理函数
+    setTimeout(() => {
+      // 移除事件监听器
+      fileInput.removeEventListener('change', handleFileSelect);
+      
+      // 从DOM中移除元素
+      if (document.body.contains(fileInput)) {
+        document.body.removeChild(fileInput);
       }
-    });
-
-    // 处理可能的错误
-    window.addEventListener('focus', function onFocus() {
-      setTimeout(() => {
-        if (document.body.contains(input)) {
-          document.body.removeChild(input);
-        }
-        window.removeEventListener('focus', onFocus);
-      }, 1000);
-    });
-
-    // 触发文件选择对话框
-    input.click();
+    }, 5000); // 给用户足够的时间选择文件
   };
 
   // 处理多选
