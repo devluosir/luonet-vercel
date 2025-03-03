@@ -117,9 +117,11 @@ export default function InvoiceHistoryPage() {
 
   // 处理导入
   const handleImport = () => {
+    // 创建一个隐藏的文件输入元素
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json';
+    // 使用多种文件类型，提高iOS兼容性
+    input.accept = '.json,application/json,text/plain';
     input.style.display = 'none';
     input.multiple = false;
     document.body.appendChild(input);
@@ -128,58 +130,72 @@ export default function InvoiceHistoryPage() {
       const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
       if (file) {
-        // 检查文件类型
-        const isValidType = file.name.toLowerCase().endsWith('.json');
-                          
-        if (!isValidType) {
-          alert('请选择JSON格式的文件');
-          document.body.removeChild(input);
-          return;
-        }
-
-        // 检查文件大小（限制为10MB）
-        if (file.size > 10 * 1024 * 1024) {
-          alert('文件太大。最大支持10MB。');
-          document.body.removeChild(input);
-          return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (e: ProgressEvent<FileReader>) => {
-          const result = e.target?.result;
-          if (typeof result === 'string') {
+        try {
+          // 使用更可靠的方式读取文件
+          const reader = new FileReader();
+          
+          reader.onload = (e: ProgressEvent<FileReader>) => {
             try {
-              // 尝试解析JSON
-              JSON.parse(result); // 验证JSON格式
-              const success = importInvoiceHistory(result);
-              if (success) {
-                const results = getInvoiceHistory();
-                setHistory(results);
-                alert('导入成功！');
-              } else {
-                throw new Error('导入失败');
+              const result = e.target?.result;
+              if (typeof result === 'string') {
+                try {
+                  // 尝试解析JSON
+                  JSON.parse(result); // 验证JSON格式
+                  const success = importInvoiceHistory(result);
+                  if (success) {
+                    const results = getInvoiceHistory();
+                    setHistory(results);
+                    alert('导入成功！');
+                  } else {
+                    throw new Error('导入失败');
+                  }
+                } catch (error: unknown) {
+                  const errorMessage = error instanceof Error ? error.message : '未知错误';
+                  console.error('导入历史记录时出错:', errorMessage);
+                  alert('导入失败，请确保文件格式正确（必须是有效的JSON格式）。');
+                }
               }
-            } catch (error: unknown) {
-              const errorMessage = error instanceof Error ? error.message : '未知错误';
-              console.error('导入历史记录时出错:', errorMessage);
-              alert('导入失败，请确保文件格式正确（必须是有效的JSON格式）。');
+            } catch (err) {
+              console.error('处理文件时出错:', err);
+              alert('处理文件时出错，请重试。');
+            } finally {
+              // 确保清理DOM
+              if (document.body.contains(input)) {
+                document.body.removeChild(input);
+              }
             }
-          }
-        };
+          };
 
-        reader.onerror = () => {
+          reader.onerror = () => {
+            alert('读取文件时出错，请重试。');
+            if (document.body.contains(input)) {
+              document.body.removeChild(input);
+            }
+          };
+
+          // 开始读取文件
+          reader.readAsText(file);
+        } catch (err) {
+          console.error('读取文件时出错:', err);
           alert('读取文件时出错，请重试。');
-        };
-
-        reader.readAsText(file);
+          if (document.body.contains(input)) {
+            document.body.removeChild(input);
+          }
+        }
+      } else {
+        // 没有选择文件
+        if (document.body.contains(input)) {
+          document.body.removeChild(input);
+        }
       }
-      document.body.removeChild(input);
     };
 
     // 处理取消选择的情况
-    input.oncancel = () => {
-      document.body.removeChild(input);
-    };
+    input.addEventListener('cancel', () => {
+      if (document.body.contains(input)) {
+        document.body.removeChild(input);
+      }
+    });
 
     // 处理可能的错误
     window.addEventListener('focus', function onFocus() {
@@ -191,6 +207,7 @@ export default function InvoiceHistoryPage() {
       }, 1000);
     });
 
+    // 触发文件选择对话框
     input.click();
   };
 
