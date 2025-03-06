@@ -798,7 +798,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     }
 
     // 保存文件
-    doc.save(`Sales Confirmation ${data.quotationNo}-${formattedDate}.pdf`);
+    doc.save(`Sales Confirmation ${data.contractNo}-${formattedDate}.pdf`);
     return new Blob();
   } catch (error) {
     console.error('Error generating PDF:', error);
