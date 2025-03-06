@@ -433,7 +433,22 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     const currentDate = new Date();
     const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
 
-    // 保存文件，不再需要单独添加页码，因为已经在 didDrawPage 中处理了
+    // 确保所有页面都有页码（非预览模式下也需要）
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      // 清除页面底部区域
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
+      
+      // 添加页码
+      const str = `Page ${i} of ${totalPages}`;
+      doc.setFontSize(8);
+      doc.setFont('NotoSansSC', 'normal');
+      doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
+    }
+
+    // 保存文件
     doc.save(`Quotation-${data.quotationNo}-${formattedDate}.pdf`);
     return new Blob(); // 返回空 Blob 以满足类型要求
   } catch (error) {

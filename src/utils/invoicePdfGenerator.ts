@@ -484,8 +484,42 @@ export async function generateInvoicePDF(data: PDFGeneratorData, preview: boolea
     }
 
     if (preview) {
+      // 确保所有页面都有页码
+      const totalPages = doc.getNumberOfPages();
+      const pageHeight = doc.internal.pageSize.height;
+      
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        // 清除页面底部区域
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
+        
+        // 添加页码
+        const str = `Page ${i} of ${totalPages}`;
+        doc.setFontSize(8);
+        doc.setFont('NotoSansSC', 'normal');
+        doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
+      }
+      
       return doc.output('bloburl');
     } else {
+      // 确保所有页面都有页码
+      const totalPages = doc.getNumberOfPages();
+      const pageHeight = doc.internal.pageSize.height;
+      
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        // 清除页面底部区域
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
+        
+        // 添加页码
+        const str = `Page ${i} of ${totalPages}`;
+        doc.setFontSize(8);
+        doc.setFont('NotoSansSC', 'normal');
+        doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
+      }
+      
       // 获取当前日期并格式化
       const currentDate = new Date();
       const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
