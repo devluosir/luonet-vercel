@@ -547,7 +547,7 @@ export default function InvoiceHistoryPage() {
           onFileSelect={handleIOSFileSelect}
           onCancel={handleIOSFileCancel}
           _accept=".json"
-          buttonText="选择JSON文件"
+          _buttonText="选择JSON文件"
         />
       )}
     </div>
