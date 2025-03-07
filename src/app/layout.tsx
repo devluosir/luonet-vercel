@@ -13,19 +13,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Luo & Company',
   description: '专业的报价和订单确认系统',
-  manifest: '/manifest.json',
+  manifest: '/static/manifest.json',
   icons: {
-    icon: [
-      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
-    ],
     apple: '/icons/icon-192x192.png',
-  },
-  other: {
-    'mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-capable': 'yes',
-    'apple-mobile-web-app-status-bar-style': 'default',
-    'apple-mobile-web-app-title': 'Luo & Company',
   }
 }
 
@@ -43,7 +33,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Luo & Company" />
         <meta httpEquiv="Content-Language" content="zh-CN" />
         <meta name="google" content="notranslate" />
-        <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <Providers>

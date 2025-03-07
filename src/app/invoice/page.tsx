@@ -302,7 +302,11 @@ Beneficiary: Luo & Company Co., Limited`,
   const calculatePaymentDate = useCallback((date: string) => {
     const baseDate = new Date(date);
     const nextMonth = new Date(baseDate.setMonth(baseDate.getMonth() + 1));
-    return format(nextMonth, 'yyyy-MM-dd');
+    // 确保使用 yyyy-MM-dd 格式
+    const year = nextMonth.getFullYear();
+    const month = String(nextMonth.getMonth() + 1).padStart(2, '0');
+    const day = String(nextMonth.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }, []);
 
   // 监听日期变化
@@ -790,6 +794,7 @@ Beneficiary: Luo & Company Co., Limited`,
                           onChange={(e) => setInvoiceData(prev => ({ ...prev, date: e.target.value }))}
                           className={`${inputClassName} dark:bg-[#1C1C1E]/90 w-[160px]`}
                           required
+                          pattern="\d{4}-\d{2}-\d{2}"
                         />
                         <div className="flex items-center gap-1">
                           <button
@@ -1429,6 +1434,7 @@ Beneficiary: Luo & Company Co., Limited`,
                             flexShrink: 0,
                             flexGrow: 0
                           }}
+                          pattern="\d{4}-\d{2}-\d{2}"
                         />
                         <span className="text-sm text-gray-600 dark:text-gray-400">by telegraphic transfer.</span>
                       </div>
