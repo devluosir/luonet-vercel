@@ -576,8 +576,8 @@ export default function QuotationHistoryPage() {
         <IOSFileInput
           onFileSelect={handleIOSFileSelect}
           onCancel={handleIOSFileCancel}
-          accept=".json"
-          buttonText="选择JSON文件"
+          _accept=".json"
+          _buttonText="选择JSON文件"
         />
       )}
     </div>
