@@ -290,7 +290,7 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
           } 
         } : {})  // Remarks
       },
-      margin: { left: 15, right: 15, bottom: 15 },
+      margin: { left: 15, right: 15, bottom: 20 },
       tableWidth: 'auto',  // 使用auto让表格自动计算宽度
       didParseCell: (data) => {
         const pageHeight = data.doc.internal.pageSize.height;
