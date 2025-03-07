@@ -3,8 +3,8 @@ import React, { useRef, useState } from 'react';
 interface IOSFileInputProps {
   onFileSelect: (content: string) => void;
   onCancel: () => void;
-  accept?: string;
-  buttonText?: string;
+  _accept?: string;
+  _buttonText?: string;
 }
 
 /**
@@ -14,8 +14,8 @@ interface IOSFileInputProps {
 const IOSFileInput: React.FC<IOSFileInputProps> = ({
   onFileSelect,
   onCancel,
-  accept = '.json',
-  buttonText = '选择文件'
+  _accept = '.json',
+  _buttonText = '选择文件'
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);

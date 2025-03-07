@@ -66,7 +66,7 @@ interface AutoTableOptions {
     row: {
       index: number;
       section: {
-        rows: Array<any>;
+        rows: Array<Record<string, unknown>>;
       }
     }
   }) => void;
@@ -74,7 +74,7 @@ interface AutoTableOptions {
   willDrawCell?: (data: { cell: { styles: { lineWidth: number; lineColor: number[] } } }) => void;
 }
 
-interface AutoTableDoc extends jsPDF {
+interface _AutoTableDoc extends jsPDF {
   lastAutoTable: {
     finalY: number;
   };
