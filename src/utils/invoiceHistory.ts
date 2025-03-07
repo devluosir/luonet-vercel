@@ -129,6 +129,7 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
             items: convertedItems,
             // 添加发票必需字段
             customerPO: item.data.inquiryNo || '',
+            invoiceNo: item.data.contractNo || item.data.quotationNo,
             showHsCode: false,
             templateConfig: {
               headerType: 'bilingual',
