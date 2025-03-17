@@ -207,32 +207,59 @@ async function renderCustomerInfo(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   const maxTextWidth = pageWidth - leftMargin - 80;
   let currentY = startY;
 
+  // 右上角信息区域
+  const rightMargin = pageWidth - 20;
+  const rightInfoY = startY;
+  const colonX = rightMargin - 15;  // 冒号的固定位置
+  
+  doc.setFont('NotoSansSC', 'bold');
+  
+  // Invoice No.
+  doc.text('Invoice No.', colonX - 2, rightInfoY, { align: 'right' });
+  doc.text(':', colonX, rightInfoY);
+  doc.setTextColor(255, 0, 0); // 设置文字颜色为红色
+  doc.text(data.invoiceNo || '', colonX + 3, rightInfoY);
+  doc.setTextColor(0, 0, 0); // 恢复文字颜色为黑色
+
+  // Date
+  doc.text('Date', colonX - 2, rightInfoY + 5, { align: 'right' });
+  doc.text(':', colonX, rightInfoY + 5);
+  doc.text(data.date || '', colonX + 3, rightInfoY + 5);
+
+  // Currency
+  doc.text('Currency', colonX - 2, rightInfoY + 10, { align: 'right' });
+  doc.text(':', colonX, rightInfoY + 10);
+  doc.text(data.currency === 'USD' ? 'USD' : 'CNY', colonX + 3, rightInfoY + 10);
+
   // To 信息
   doc.setFont('NotoSansSC', 'bold');
   doc.text('To:', leftMargin, currentY);
+  const toTextWidth = doc.getTextWidth('To: ');
   doc.setFont('NotoSansSC', 'normal');
   
   if (data.to.trim()) {
     const toLines = doc.splitTextToSize(data.to.trim(), maxTextWidth);
     toLines.forEach((line: string, index: number) => {
-      doc.text(String(line), leftMargin + doc.getTextWidth('To: ') + 3, currentY + (index * 5));
+      doc.text(String(line), leftMargin + toTextWidth, currentY + (index * 3.5));
     });
-    currentY += toLines.length * 5;
+    currentY += toLines.length * 3.5;
   }
 
   // Order No.
-  currentY += 8;
+  currentY = Math.max(currentY + 2, startY + 10); // 确保最小起始位置
   doc.setFont('NotoSansSC', 'bold');
   doc.text('Order No.:', leftMargin, currentY);
+  const orderNoX = leftMargin + doc.getTextWidth('Order No.: ');
+  
   if (data.customerPO) {
     const orderLines = doc.splitTextToSize(data.customerPO.trim(), maxTextWidth);
     orderLines.forEach((line: string, index: number) => {
-      doc.text(String(line), leftMargin + doc.getTextWidth('Order No.: ') + 3, currentY + (index * 5));
+      doc.text(String(line), orderNoX, currentY + (index * 3.5));
     });
-    currentY += orderLines.length * 5;
+    currentY += orderLines.length * 3.5;
   }
 
-  return currentY + 5;
+  return currentY + 2;
 }
 
 // 渲染发票表格
@@ -461,21 +488,19 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
     const termNumber = `${termCount}.`;
     doc.text(termNumber, 20, currentY);
     
-    const reminder = `Please state our invoice no. "${data.invoiceNo}" on your payment documents.`;
-    const parts = reminder.split(`"${data.invoiceNo}"`);
+    const reminder = 'Please state our invoice no. "' + data.invoiceNo + '" on your payment documents.';
+    const parts = reminder.split('"' + data.invoiceNo + '"');
     
     if (parts[0]) {
       doc.text(parts[0], termLeftMargin, currentY);
       const firstWidth = doc.getTextWidth(parts[0]);
       
-      if (data.invoiceNo) {
-        doc.setTextColor(255, 0, 0);
-        doc.text(data.invoiceNo, termLeftMargin + firstWidth, currentY);
-        doc.setTextColor(0, 0, 0);
-      }
+      doc.setTextColor(255, 0, 0);
+      doc.text('"' + data.invoiceNo + '"', termLeftMargin + firstWidth, currentY);
+      doc.setTextColor(0, 0, 0);
       
       if (parts[1]) {
-        const invoiceWidth = doc.getTextWidth(data.invoiceNo);
+        const invoiceWidth = doc.getTextWidth('"' + data.invoiceNo + '"');
         doc.text(parts[1], termLeftMargin + firstWidth + invoiceWidth, currentY);
       }
     }
