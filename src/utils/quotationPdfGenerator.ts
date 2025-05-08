@@ -259,7 +259,7 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
           halign: 'center', 
           cellWidth: data.showDescription 
             ? (data.showRemarks ? 30 : 40)   // 显示描述列时，不显示备注列时适当增加宽度
-            : (data.showRemarks ? 60 : 75)   // 不显示描述列时，占用更多空间但不过宽
+            : (data.showRemarks ? 60 : 80)   // 不显示描述列时，占用更多空间但不过宽
         },  // Part Name
         ...(data.showDescription ? { 
           '2': { 
