@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Search, Edit2, Trash2, Copy, Download, Upload } from 'lucide-react';
+import { ArrowLeft, Search, Edit2, Trash2, Copy, Download, Upload, ChevronUp, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-history';
 import { getQuotationHistory, deleteQuotationHistory, importQuotationHistory } from '@/utils/quotationHistory';
@@ -19,6 +19,13 @@ export default function QuotationHistoryPage() {
   const [filters, setFilters] = useState<QuotationHistoryFilters>({
     search: '',
     type: 'all'
+  });
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof QuotationHistory | null;
+    direction: 'asc' | 'desc';
+  }>({
+    key: null,
+    direction: 'asc'
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -51,6 +58,38 @@ export default function QuotationHistoryPage() {
     });
   }, [filters]);
 
+  // 处理排序
+  const handleSort = (key: keyof QuotationHistory) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  // 获取排序后的数据
+  const getSortedHistory = useCallback((items: QuotationHistory[]) => {
+    if (!sortConfig.key) return items;
+
+    return [...items].sort((a, b) => {
+      const aValue = a[sortConfig.key!];
+      const bValue = b[sortConfig.key!];
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortConfig.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc'
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+
+      return 0;
+    });
+  }, [sortConfig]);
+
   // 加载历史记录
   useEffect(() => {
     const loadHistory = () => {
@@ -58,7 +97,8 @@ export default function QuotationHistoryPage() {
       try {
         const results = getQuotationHistory();
         const filteredResults = getFilteredHistory(results);
-        setHistory(filteredResults);
+        const sortedResults = getSortedHistory(filteredResults);
+        setHistory(sortedResults);
       } catch (error) {
         console.error('Error loading history:', error);
       } finally {
@@ -67,7 +107,17 @@ export default function QuotationHistoryPage() {
     };
 
     loadHistory();
-  }, [filters, getFilteredHistory]);
+  }, [filters, getFilteredHistory, getSortedHistory]);
+
+  // 渲染排序图标
+  const renderSortIcon = (key: keyof QuotationHistory) => {
+    if (sortConfig.key !== key) {
+      return <ChevronUp className="w-4 h-4 opacity-0 group-hover:opacity-50" />;
+    }
+    return sortConfig.direction === 'asc' 
+      ? <ChevronUp className="w-4 h-4" />
+      : <ChevronDown className="w-4 h-4" />;
+  };
 
   // 处理删除
   const handleDelete = (id: string) => {
@@ -187,7 +237,8 @@ export default function QuotationHistoryPage() {
                 console.log('导入成功');
                 const results = getQuotationHistory();
                 const filteredResults = getFilteredHistory(results);
-                setHistory(filteredResults);
+                const sortedResults = getSortedHistory(filteredResults);
+                setHistory(sortedResults);
                 alert('导入成功！');
               } else {
                 console.error('导入失败');
@@ -256,7 +307,8 @@ export default function QuotationHistoryPage() {
       if (success) {
         const results = getQuotationHistory();
         const filteredResults = getFilteredHistory(results);
-        setHistory(filteredResults);
+        const sortedResults = getSortedHistory(filteredResults);
+        setHistory(sortedResults);
         alert('导入成功！');
       } else {
         alert('导入失败，请确保文件格式正确。');
@@ -429,10 +481,42 @@ export default function QuotationHistoryPage() {
                             bg-white dark:bg-[#3A3A3C]"
                         />
                       </th>
-                      <th className="w-1/4 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] hidden lg:table-cell">Customer Name</th>
-                      <th className="w-[45%] sm:w-2/3 lg:w-1/3 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D]">Number</th>
-                      <th className="w-1/6 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] hidden lg:table-cell">Amount</th>
-                      <th className="w-[35%] sm:w-1/4 lg:w-1/6 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D]">Created At</th>
+                      <th 
+                        className="w-1/4 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] hidden lg:table-cell cursor-pointer group"
+                        onClick={() => handleSort('customerName')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Customer Name
+                          {renderSortIcon('customerName')}
+                        </div>
+                      </th>
+                      <th 
+                        className="w-[45%] sm:w-2/3 lg:w-1/3 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] cursor-pointer group"
+                        onClick={() => handleSort('quotationNo')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Number
+                          {renderSortIcon('quotationNo')}
+                        </div>
+                      </th>
+                      <th 
+                        className="w-1/6 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] hidden lg:table-cell cursor-pointer group"
+                        onClick={() => handleSort('totalAmount')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Amount
+                          {renderSortIcon('totalAmount')}
+                        </div>
+                      </th>
+                      <th 
+                        className="w-[35%] sm:w-1/4 lg:w-1/6 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] cursor-pointer group"
+                        onClick={() => handleSort('createdAt')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Created At
+                          {renderSortIcon('createdAt')}
+                        </div>
+                      </th>
                       <th className="w-[20%] sm:w-[100px] px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D]">Actions</th>
                     </tr>
                   </thead>

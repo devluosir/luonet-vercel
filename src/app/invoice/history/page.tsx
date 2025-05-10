@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Search, Edit2, Trash2, Copy, Download, Upload } from 'lucide-react';
+import { ArrowLeft, Search, Edit2, Trash2, Copy, Download, Upload, ChevronUp, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { InvoiceHistory, InvoiceHistoryFilters } from '@/types/invoice-history';
 import { getInvoiceHistory, deleteInvoiceHistory, importInvoiceHistory } from '@/utils/invoiceHistory';
@@ -18,6 +18,13 @@ export default function InvoiceHistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<InvoiceHistoryFilters>({
     search: ''
+  });
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof InvoiceHistory | null;
+    direction: 'asc' | 'desc';
+  }>({
+    key: null,
+    direction: 'asc'
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -45,6 +52,38 @@ export default function InvoiceHistoryPage() {
     });
   }, [filters.search]);
 
+  // 处理排序
+  const handleSort = (key: keyof InvoiceHistory) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  // 获取排序后的数据
+  const getSortedHistory = useCallback((items: InvoiceHistory[]) => {
+    if (!sortConfig.key) return items;
+
+    return [...items].sort((a, b) => {
+      const aValue = a[sortConfig.key!];
+      const bValue = b[sortConfig.key!];
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortConfig.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc'
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+
+      return 0;
+    });
+  }, [sortConfig]);
+
   // 加载历史记录
   useEffect(() => {
     const loadHistory = () => {
@@ -52,7 +91,8 @@ export default function InvoiceHistoryPage() {
       try {
         const results = getInvoiceHistory();
         const filteredResults = getFilteredHistory(results);
-        setHistory(filteredResults);
+        const sortedResults = getSortedHistory(filteredResults);
+        setHistory(sortedResults);
       } catch (error) {
         console.error('Error loading history:', error);
       } finally {
@@ -61,7 +101,17 @@ export default function InvoiceHistoryPage() {
     };
 
     loadHistory();
-  }, [filters, getFilteredHistory]);
+  }, [filters, getFilteredHistory, getSortedHistory]);
+
+  // 渲染排序图标
+  const renderSortIcon = (key: keyof InvoiceHistory) => {
+    if (sortConfig.key !== key) {
+      return <ChevronUp className="w-4 h-4 opacity-0 group-hover:opacity-50" />;
+    }
+    return sortConfig.direction === 'asc' 
+      ? <ChevronUp className="w-4 h-4" />
+      : <ChevronDown className="w-4 h-4" />;
+  };
 
   // 处理删除
   const handleDelete = (id: string) => {
@@ -405,10 +455,42 @@ export default function InvoiceHistoryPage() {
                             bg-white dark:bg-[#3A3A3C]"
                         />
                       </th>
-                      <th className="w-1/4 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] hidden lg:table-cell">Customer Name</th>
-                      <th className="w-[45%] sm:w-2/3 lg:w-1/3 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D]">Invoice No.</th>
-                      <th className="w-1/6 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] hidden lg:table-cell">Amount</th>
-                      <th className="w-[35%] sm:w-1/4 lg:w-1/6 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D]">Created At</th>
+                      <th 
+                        className="w-1/4 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] hidden lg:table-cell cursor-pointer group"
+                        onClick={() => handleSort('customerName')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Customer Name
+                          {renderSortIcon('customerName')}
+                        </div>
+                      </th>
+                      <th 
+                        className="w-[45%] sm:w-2/3 lg:w-1/3 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] cursor-pointer group"
+                        onClick={() => handleSort('invoiceNo')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Invoice No.
+                          {renderSortIcon('invoiceNo')}
+                        </div>
+                      </th>
+                      <th 
+                        className="w-1/6 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] hidden lg:table-cell cursor-pointer group"
+                        onClick={() => handleSort('totalAmount')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Amount
+                          {renderSortIcon('totalAmount')}
+                        </div>
+                      </th>
+                      <th 
+                        className="w-[35%] sm:w-1/4 lg:w-1/6 px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D] cursor-pointer group"
+                        onClick={() => handleSort('createdAt')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Created At
+                          {renderSortIcon('createdAt')}
+                        </div>
+                      </th>
                       <th className="w-[20%] sm:w-[100px] px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium text-gray-500 dark:text-[#98989D]">Actions</th>
                     </tr>
                   </thead>
