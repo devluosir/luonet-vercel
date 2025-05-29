@@ -36,7 +36,7 @@ export default function InvoiceCopyPage({ params }: { params: { id: string } }) 
       const copiedData = {
         ...invoice.data,
         invoiceNo: '', // 清除发票号
-        date: new Date().toISOString(), // 更新日期
+        date: new Date().toISOString().split('T')[0], // 更新日期，使用 YYYY-MM-DD 格式
       };
 
       // 将复制的数据注入到 InvoicePage 组件中
