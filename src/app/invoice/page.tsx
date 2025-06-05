@@ -1258,17 +1258,20 @@ Beneficiary: Luo & Company Co., Limited`,
                               </span>
                             </div>
                             <div className="flex-1 px-4">
-                              <input
-                                type="text"
+                              <textarea
                                 value={fee.description}
                                 onChange={(e) => {
                                   const newFees = [...(invoiceData.otherFees || [])];
                                   newFees[index] = { ...fee, description: e.target.value };
                                   setInvoiceData(prev => ({ ...prev, otherFees: newFees }));
+                                  // 自动调整高度
+                                  e.target.style.height = '28px';
+                                  e.target.style.height = `${e.target.scrollHeight}px`;
                                 }}
                                 onDoubleClick={() => handleOtherFeeDoubleClick(index, 'description')}
                                 placeholder="Other Fee"
-                                className={`${tableInputClassName} text-center ${fee.highlight?.description ? highlightClass : ''}`}
+                                className={`${tableInputClassName} text-center whitespace-pre-wrap resize-y overflow-hidden ${fee.highlight?.description ? highlightClass : ''}`}
+                                style={{ height: '28px' }}
                               />
                             </div>
                             <div className="w-[160px] px-4">
