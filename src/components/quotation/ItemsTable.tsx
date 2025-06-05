@@ -610,10 +610,13 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                       </td>
                       <td colSpan={data.showDescription ? 6 : 5} className={`px-1 py-2
                         ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? '' : ''}`}>
-                        <input
-                          type="text"
+                        <textarea
                           value={fee.description}
-                          onChange={(e) => handleOtherFeeChange(index, 'description', e.target.value)}
+                          onChange={(e) => {
+                            handleOtherFeeChange(index, 'description', e.target.value);
+                            e.target.style.height = '28px';
+                            e.target.style.height = `${e.target.scrollHeight}px`;
+                          }}
                           onDoubleClick={() => handleOtherFeeDoubleClick(index, 'description')}
                           placeholder="Other Fee"
                           className={`w-full px-3 py-1.5 bg-transparent border border-transparent
@@ -621,9 +624,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            transition-all duration-200
+                            transition-all duration-200 whitespace-pre-wrap resize-y overflow-hidden
                             ${fee.highlight?.description ? highlightClass : ''}
                             ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}
+                          style={{ 
+                            height: '28px'
+                          }}
                         />
                       </td>
                       <td className={`w-[120px] min-w-[120px] px-1 py-2
