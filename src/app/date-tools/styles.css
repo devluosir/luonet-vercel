@@ -1,0 +1,221 @@
+.custom-date-input {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 16px;
+  text-align: center;
+  width: 100%;
+  padding-left: 2.5rem;
+  padding-right: 1rem;
+  color: #1f2937;
+  background: transparent;
+}
+
+.dark .custom-date-input {
+  color: #f3f4f6;
+}
+
+.date-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.date-placeholder {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: center;
+  color: #9CA3AF;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+  z-index: 1;
+}
+
+.dark .date-placeholder {
+  color: #6B7280;
+}
+
+.custom-date-input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: pointer;
+}
+
+.custom-date-input::-moz-calendar-picker-indicator {
+  opacity: 0;
+  display: none;
+}
+
+.custom-date-input::-ms-input-placeholder {
+  opacity: 0;
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .custom-date-input {
+    font-size: 14px;
+    padding-left: 2.5rem;
+    padding-right: 1rem;
+  }
+  .date-input-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
+.range-input-wrapper {
+  position: relative;
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.range-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(to right, 
+    rgb(239 68 68 / 0.3) 0%, 
+    rgb(239 68 68 / 0.2) 40%, 
+    rgb(59 130 246 / 0.2) 50%, 
+    rgb(34 197 94 / 0.2) 60%, 
+    rgb(34 197 94 / 0.3) 100%
+  );
+  border-radius: 999px;
+  outline: none;
+  padding: 0;
+  margin: 4px 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  background: white;
+  border: 2px solid rgb(59 130 246);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    0 0 15px rgba(59 130 246, 0.2);
+}
+
+.range-input::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  background: white;
+  border: 2px solid rgb(59 130 246);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    0 0 15px rgba(59 130 246, 0.2);
+}
+
+.range-input::-webkit-slider-thumb:hover {
+  background: rgb(59 130 246 / 0.1);
+  transform: scale(1.1);
+  box-shadow: 0 4px 6px rgb(0 0 0 / 0.1);
+}
+
+.range-input::-moz-range-thumb:hover {
+  background: rgb(59 130 246 / 0.1);
+  transform: scale(1.1);
+  box-shadow: 0 4px 6px rgb(0 0 0 / 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .range-input {
+    height: 8px;
+    background: linear-gradient(to right, 
+      rgb(239 68 68) 0%, 
+      rgb(239 68 68 / 0.9) 40%, 
+      rgb(59 130 246 / 0.9) 50%, 
+      rgb(34 197 94 / 0.9) 60%, 
+      rgb(34 197 94) 100%
+    );
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.4),
+      0 0 30px rgba(59, 130, 246, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .range-input::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+    background: rgb(59 130 246);
+    border: 3px solid rgb(147 197 253);
+    box-shadow: 
+      0 2px 12px rgba(59, 130, 246, 0.8),
+      0 0 35px rgba(59, 130, 246, 0.6);
+  }
+
+  .range-input::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+    background: rgb(59 130 246);
+    border: 3px solid rgb(147 197 253);
+    box-shadow: 
+      0 2px 12px rgba(59, 130, 246, 0.8),
+      0 0 35px rgba(59, 130, 246, 0.6);
+  }
+
+  .range-input::-webkit-slider-thumb:hover {
+    background: rgb(96 165 250);
+    border-color: rgb(191 219 254);
+    box-shadow: 
+      0 4px 15px rgba(59, 130, 246, 0.9),
+      0 0 45px rgba(59, 130, 246, 0.7);
+    transform: scale(1.2);
+  }
+
+  .range-input::-moz-range-thumb:hover {
+    background: rgb(96 165 250);
+    border-color: rgb(191 219 254);
+    box-shadow: 
+      0 4px 15px rgba(59, 130, 246, 0.9),
+      0 0 45px rgba(59, 130, 246, 0.7);
+    transform: scale(1.2);
+  }
+
+  .range-input::-webkit-slider-thumb:active {
+    background: rgb(147 197 253);
+    box-shadow: 
+      0 4px 15px rgba(59, 130, 246, 1),
+      0 0 50px rgba(59, 130, 246, 0.8);
+    transform: scale(1.15);
+  }
+
+  .range-input::-moz-range-thumb:active {
+    background: rgb(147 197 253);
+    box-shadow: 
+      0 4px 15px rgba(59, 130, 246, 1),
+      0 0 50px rgba(59, 130, 246, 0.8);
+    transform: scale(1.15);
+  }
+}
+
+input[type="number"] {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.range-input::-moz-focus-outer {
+  border: 0;
+}
+    

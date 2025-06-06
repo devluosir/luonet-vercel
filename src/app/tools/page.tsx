@@ -50,10 +50,10 @@ const MODULES = [
     color: 'from-orange-500 to-amber-500'
   },
   { 
-    id: 'feature1', 
-    name: '功能1', 
-    description: '待开发功能', 
-    path: '/review',
+    id: 'date-tools', 
+    name: '日期计算', 
+    description: '计算日期和天数', 
+    path: '/date-tools',
     icon: Star,
     color: 'from-purple-500 to-pink-500'
   },

@@ -27,7 +27,7 @@ const MODULES = [
   { id: 'ai-email', name: 'AI邮件助手', description: '智能生成商务邮件' },
   { id: 'quotation', name: '报价及确认', description: '生成报价单和销售确认单' },
   { id: 'invoice', name: '发票管理', description: '生成和管理发票' },
-  { id: 'feature1', name: '功能1', description: '待开发功能' },
+  { id: 'date-tools', name: '日期计算', description: '计算日期和天数' },
   { id: 'feature2', name: '功能2', description: '待开发功能' },
   { id: 'feature3', name: '功能3', description: '待开发功能' },
   { id: 'feature4', name: '功能4', description: '待开发功能' },
