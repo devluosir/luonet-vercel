@@ -208,12 +208,6 @@ input[type="number"] {
   font-variant-numeric: tabular-nums;
 }
 
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
 .range-input::-moz-focus-outer {
   border: 0;
 }
