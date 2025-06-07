@@ -39,12 +39,12 @@
 
 .custom-date-input::-webkit-calendar-picker-indicator {
   opacity: 0;
-  cursor: pointer;
+  display: none;
 }
 
 .custom-date-input::-moz-calendar-picker-indicator {
-  opacity: 0;
-  display: none;
+  opacity: 0 !important;
+  display: none !important;
 }
 
 .custom-date-input::-ms-input-placeholder {
@@ -217,5 +217,25 @@ input[type="number"]::-webkit-outer-spin-button {
 
 .range-input::-moz-focus-outer {
   border: 0;
+}
+
+/* Firefox 专用：彻底隐藏原生日历图标 */
+@-moz-document url-prefix() {
+  input[type="date"].custom-date-input {
+    color-scheme: light dark;
+    position: relative;
+    z-index: 1;
+  }
+  input[type="date"].custom-date-input::-webkit-calendar-picker-indicator,
+  input[type="date"].custom-date-input::-moz-calendar-picker-indicator {
+    opacity: 0 !important;
+    display: none !important;
+  }
+  input[type="date"].custom-date-input::-moz-focus-inner,
+  input[type="date"].custom-date-input::-moz-focus-outer {
+    border: 0;
+    opacity: 0;
+    display: none;
+  }
 }
     
