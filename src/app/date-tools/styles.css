@@ -39,12 +39,11 @@
 
 .custom-date-input::-webkit-calendar-picker-indicator {
   opacity: 0;
-  display: none;
+  cursor: pointer;
 }
 
 .custom-date-input::-moz-calendar-picker-indicator {
   opacity: 0 !important;
-  display: none !important;
 }
 
 .custom-date-input::-ms-input-placeholder {
