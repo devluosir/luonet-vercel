@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Download, Settings, Clipboard, History } from 'lucide-react';
+import { ArrowLeft, Download, Settings, Clipboard, History, Save } from 'lucide-react';
 import { generateInvoicePDF } from '@/utils/pdfGenerator';
 import { InvoiceTemplateConfig, InvoiceData, LineItem } from '@/types/invoice';
 import { format, addMonths } from 'date-fns';
@@ -109,6 +109,11 @@ Beneficiary: Luo & Company Co., Limited`,
     otherFees: []
   });
 
+  // 添加保存相关的状态
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
   // 清除注入的数据
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -143,8 +148,6 @@ Beneficiary: Luo & Company Co., Limited`,
   });
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
-  const [showPaymentTerms, setShowPaymentTerms] = useState(true);
-  const [additionalPaymentTerms, setAdditionalPaymentTerms] = useState('');
   const [editingFeeAmount, setEditingFeeAmount] = useState<string>('');
   const [editingFeeIndex, setEditingFeeIndex] = useState<number | null>(null);
   const [focusedCell, setFocusedCell] = useState<{
@@ -155,6 +158,7 @@ Beneficiary: Luo & Company Co., Limited`,
   // 重命名未使用的变量，添加下划线前缀
   const [_customUnits, _setCustomUnits] = useState<string[]>([]);
   const [_newUnit, _setNewUnit] = useState('');
+
 
   // 将 handleError 包装在 useCallback 中，并添加具体的错误类型
   const _handleError = useCallback((error: ErrorWithMessage | Error | unknown): string => {
@@ -391,15 +395,6 @@ Beneficiary: Luo & Company Co., Limited`,
       amountInWords: words
     }));
   }, [invoiceData.items, getTotalAmount, numberToWords]);
-
-  // 处理额外付款条款的变化
-  const handleAdditionalTermsChange = (value: string) => {
-    setAdditionalPaymentTerms(value);
-    setInvoiceData(prev => ({
-      ...prev,
-      additionalPaymentTerms: value
-    }));
-  };
 
   // 添加处理粘贴按钮点击的函数
   const handlePasteButtonClick = async () => {
@@ -705,6 +700,86 @@ Beneficiary: Luo & Company Co., Limited`,
     }));
   };
 
+  // 处理保存功能
+  const handleSave = useCallback(async () => {
+    if (!invoiceData.to.trim()) {
+      setSaveMessage('请填写客户名称');
+      setSaveSuccess(false);
+      setTimeout(() => setSaveMessage(''), 2000);
+      return;
+    }
+
+    if (invoiceData.items.length === 0 || (invoiceData.items.length === 1 && !invoiceData.items[0].partname)) {
+      setSaveMessage('请添加至少一个商品');
+      setSaveSuccess(false);
+      setTimeout(() => setSaveMessage(''), 2000);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const history = getInvoiceHistory();
+      const totalAmount = getTotalAmount();
+      
+      if (isEditMode && editId) {
+        // 更新现有发票
+        const updatedHistory = history.map(item => {
+          if (item.id === editId) {
+            return {
+              ...item,
+              customerName: invoiceData.to,
+              invoiceNo: invoiceData.invoiceNo,
+              totalAmount: totalAmount,
+              currency: invoiceData.currency,
+              data: invoiceData,
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return item;
+        });
+        
+        const saved = saveInvoiceHistory(updatedHistory);
+        if (saved) {
+          setSaveSuccess(true);
+          setSaveMessage('保存成功');
+        } else {
+          setSaveSuccess(false);
+          setSaveMessage('保存失败');
+        }
+      } else {
+        // 创建新发票记录
+        const newInvoice = {
+          id: uuidv4(),
+          customerName: invoiceData.to,
+          invoiceNo: invoiceData.invoiceNo,
+          totalAmount: totalAmount,
+          currency: invoiceData.currency,
+          data: invoiceData,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        const saved = addInvoiceHistory(newInvoice);
+        if (saved) {
+          setSaveSuccess(true);
+          setSaveMessage('保存成功');
+          setEditId(newInvoice.id);
+          setIsEditMode(true);
+        } else {
+          setSaveSuccess(false);
+          setSaveMessage('保存失败');
+        }
+      }
+    } catch (error) {
+      console.error('Error saving invoice:', error);
+      setSaveSuccess(false);
+      setSaveMessage('保存失败');
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveMessage(''), 2000);
+    }
+  }, [invoiceData, isEditMode, editId, getTotalAmount]);
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-[#000000] dark:text-gray-100">
       <div className="flex-1">
@@ -757,6 +832,29 @@ Beneficiary: Luo & Company Co., Limited`,
                     </Link>
                     <button
                       type="button"
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0 relative"
+                      title={isEditMode ? '保存修改' : '保存新记录'}
+                    >
+                      {isSaving ? (
+                        <svg className="animate-spin h-5 w-5 text-gray-600 dark:text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <Save className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      )}
+                      {saveMessage && (
+                        <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 text-xs text-white rounded-lg whitespace-nowrap ${
+                          saveSuccess ? 'bg-green-500' : 'bg-red-500'
+                        }`}>
+                          {saveMessage}
+                        </div>
+                      )}
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setShowSettings(!showSettings)}
                       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50"
                     >
@@ -772,6 +870,29 @@ Beneficiary: Luo & Company Co., Limited`,
                     >
                       <History className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </Link>
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0 relative"
+                      title={isEditMode ? '保存修改' : '保存新记录'}
+                    >
+                      {isSaving ? (
+                        <svg className="animate-spin h-5 w-5 text-gray-600 dark:text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <Save className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      )}
+                      {saveMessage && (
+                        <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 text-xs text-white rounded-lg whitespace-nowrap ${
+                          saveSuccess ? 'bg-green-500' : 'bg-red-500'
+                        }`}>
+                          {saveMessage}
+                        </div>
+                      )}
+                    </button>
                     <button
                       type="button"
                       onClick={() => setShowSettings(!showSettings)}
@@ -1138,7 +1259,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                 <input
                                   type="text"
                                   inputMode="numeric"
-                                  value={editingQuantityIndex === index ? editingQuantity : (item.quantity || '')}
+                                  value={editingQuantityIndex === index ? editingQuantity : item.quantity.toString()}
                                   onChange={e => {
                                     const inputValue = e.target.value;
                                     if (/^\d*$/.test(inputValue)) {
@@ -1193,7 +1314,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                 <input
                                   type="text"
                                   inputMode="numeric"
-                                  value={editingUnitPriceIndex === index ? editingUnitPrice : (item.unitPrice ? item.unitPrice.toFixed(2) : '')}
+                                  value={editingUnitPriceIndex === index ? editingUnitPrice : item.unitPrice.toFixed(2)}
                                   onChange={e => {
                                     const inputValue = e.target.value;
                                     if (/^\d*\.?\d{0,2}$/.test(inputValue) || inputValue === '') {
@@ -1278,7 +1399,7 @@ Beneficiary: Luo & Company Co., Limited`,
                               <input
                                 type="text"
                                 inputMode="decimal"
-                                value={editingFeeIndex === index ? editingFeeAmount : (fee.amount === 0 ? '' : fee.amount.toFixed(2))}
+                                value={editingFeeIndex === index ? editingFeeAmount : fee.amount.toFixed(2)}
                                 onChange={(e) => {
                                   const value = e.target.value;
                                   if (/^-?\d*\.?\d{0,2}$/.test(value) || value === '' || value === '-') {
@@ -1409,9 +1530,8 @@ Beneficiary: Luo & Company Co., Limited`,
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        checked={showPaymentTerms}
+                        checked={invoiceData.showPaymentTerms}
                         onChange={(e) => {
-                          setShowPaymentTerms(e.target.checked);
                           setInvoiceData(prev => ({
                             ...prev,
                             showPaymentTerms: e.target.checked
@@ -1444,8 +1564,11 @@ Beneficiary: Luo & Company Co., Limited`,
                     </div>
                     <div className="flex items-center gap-2">
                       <textarea
-                        value={additionalPaymentTerms}
-                        onChange={(e) => handleAdditionalTermsChange(e.target.value)}
+                        value={invoiceData.additionalPaymentTerms}
+                        onChange={(e) => setInvoiceData(prev => ({
+                          ...prev,
+                          additionalPaymentTerms: e.target.value
+                        }))}
                         placeholder="Enter additional remarks (each line will be a new payment term)"
                         className={`${inputClassName} min-h-[4em] resize dark:bg-[#1C1C1E]/90`}
                         rows={2}
@@ -1478,7 +1601,7 @@ Beneficiary: Luo & Company Co., Limited`,
                     shadow-sm hover:shadow-md dark:shadow-[#0A84FF]/10`}
                   >
                     <Download className="w-5 h-5" />
-                    {isEditMode ? 'Save Invoice' : 'Generate Invoice'}
+                    {isEditMode ? 'Save Changes & Generate' : 'Generate Invoice'}
                   </button>
 
                 <button

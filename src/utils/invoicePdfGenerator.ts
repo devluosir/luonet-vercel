@@ -283,8 +283,8 @@ async function renderInvoiceTable(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       ...(data.showDescription ? [{ content: item.description, styles: item.highlight?.description ? { textColor: [255, 0, 0] } : {} }] : []),
       { content: item.quantity || '', styles: item.highlight?.quantity ? { textColor: [255, 0, 0] } : {} },
       { content: item.quantity ? item.unit : '', styles: item.highlight?.unit ? { textColor: [255, 0, 0] } : {} },
-      { content: item.unitPrice ? Number(item.unitPrice).toFixed(2) : '', styles: item.highlight?.unitPrice ? { textColor: [255, 0, 0] } : {} },
-      { content: item.amount ? Number(item.amount).toFixed(2) : '', styles: item.highlight?.amount ? { textColor: [255, 0, 0] } : {} }
+      { content: Number(item.unitPrice).toFixed(2), styles: item.highlight?.unitPrice ? { textColor: [255, 0, 0] } : {} },
+      { content: Number(item.amount).toFixed(2), styles: item.highlight?.amount ? { textColor: [255, 0, 0] } : {} }
     ]),
     ...(data.otherFees || []).map(fee => [
       {
