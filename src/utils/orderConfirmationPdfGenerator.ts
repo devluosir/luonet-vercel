@@ -184,7 +184,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
             styles: item.highlight?.description ? { textColor: [255, 0, 0] } : {}
           }] : []),
           {
-            content: item.quantity === 0 ? '' : item.quantity,
+            content: item.quantity.toString(),
             styles: item.highlight?.quantity ? { textColor: [255, 0, 0] } : {}
           },
           {
@@ -192,11 +192,11 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
             styles: item.highlight?.unit ? { textColor: [255, 0, 0] } : {}
           },
           {
-            content: item.unitPrice === 0 ? '' : item.unitPrice.toFixed(2),
+            content: item.unitPrice.toFixed(2),
             styles: item.highlight?.unitPrice ? { textColor: [255, 0, 0] } : {}
           },
           {
-            content: item.amount === 0 ? '' : item.amount.toFixed(2),
+            content: item.amount.toFixed(2),
             styles: item.highlight?.amount ? { textColor: [255, 0, 0] } : {}
           },
           ...(data.showRemarks ? [{
@@ -215,7 +215,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
             }
           },
           {
-            content: fee.amount === 0 ? '' : fee.amount.toFixed(2),
+            content: fee.amount.toFixed(2),
             styles: {
               halign: 'center' as const,
               ...(fee.highlight?.amount ? { textColor: [255, 0, 0] } : {})

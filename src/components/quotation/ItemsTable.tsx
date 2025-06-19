@@ -439,7 +439,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                       <input
                         type="text"
                         inputMode="decimal"
-                        value={editingQtyIndex === index ? editingQtyAmount : (item.quantity === 0 ? '' : item.quantity.toString())}
+                        value={editingQtyIndex === index ? editingQtyAmount : item.quantity.toString()}
                         data-row={index}
                         data-field="quantity"
                         onChange={(e) => {
@@ -504,12 +504,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                       <input
                         type="text"
                         inputMode="decimal"
-                        value={editingPriceIndex === index ? editingPriceAmount : (item.unitPrice === 0 ? '' : item.unitPrice.toFixed(2))}
+                        value={editingPriceIndex === index ? editingPriceAmount : item.unitPrice.toFixed(2)}
                         data-row={index}
                         data-field="unitPrice"
                         onChange={(e) => {
                           const value = e.target.value;
-                          if (/^-?\d*\.?\d*$/.test(value)) {
+                          if (/^\d*\.?\d*$/.test(value)) {
                             setEditingPriceAmount(value);
                             handleItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
                           }
@@ -540,7 +540,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                       ${!data.showRemarks && index === data.items.length - 1 && !data.otherFees?.length ? 'rounded-br-2xl' : ''}`}>
                       <input
                         type="text"
-                        value={item.amount ? item.amount.toFixed(2) : ''}
+                        value={item.amount.toFixed(2)}
                         readOnly
                         onDoubleClick={() => handleDoubleClick(index, 'amount')}
                         className={`w-full px-3 py-1.5 bg-transparent
@@ -637,7 +637,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         <input
                           type="text"
                           inputMode="decimal"
-                          value={editingOtherFeeIndex === index ? editingOtherFeeAmount : (fee.amount === 0 ? '' : fee.amount.toFixed(2))}
+                          value={editingOtherFeeIndex === index ? editingOtherFeeAmount : fee.amount.toFixed(2)}
                           onChange={(e) => {
                             const value = e.target.value;
                             if (/^-?\d*\.?\d*$/.test(value)) {
