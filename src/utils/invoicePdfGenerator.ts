@@ -431,10 +431,13 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   const maxWidth = pageWidth - termLeftMargin - 15;
   let termCount = 1;
 
-  // 标题
+  // 标题使用粗体
   doc.setFont('NotoSansSC', 'bold');
   doc.text('Payment Terms:', margin, currentY);
   currentY += 5;
+
+  // 其他内容使用普通字体
+  doc.setFont('NotoSansSC', 'normal');
 
   if (data.showPaymentTerms && data.paymentDate) {
     const termNumber = `${termCount}.`;
@@ -443,7 +446,6 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
     const term = `Full paid not later than ${data.paymentDate} by telegraphic transfer.`;
     const parts = term.split(data.paymentDate);
     
-    doc.setFont('NotoSansSC', 'normal');
     if (parts[0]) {
       doc.text(parts[0], termLeftMargin, currentY);
       const firstWidth = doc.getTextWidth(parts[0]);
@@ -474,10 +476,10 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
         if (lines && lines.length > 0) {
           lines.forEach((line: string, index: number) => {
             if (line) {
-              doc.text(line, termLeftMargin, currentY + (index * 4));
+              doc.text(line, termLeftMargin, currentY + (index * 5));
             }
           });
-          currentY += (lines.length * 4) + 5;
+          currentY += lines.length * 5;
           termCount++;
         }
       }
