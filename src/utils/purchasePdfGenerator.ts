@@ -12,7 +12,7 @@ interface ExtendedJsPDF extends jsPDF {
   getNumberOfPages: () => number;
   saveGraphicsState: () => jsPDF;
   restoreGraphicsState: () => jsPDF;
-  setGState: (gState: any) => void;
+  setGState: (gState: any) => jsPDF;
   GState: new (options: any) => any;
 }
 
