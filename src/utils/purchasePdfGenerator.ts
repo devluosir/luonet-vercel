@@ -11,7 +11,7 @@ interface ExtendedJsPDF extends jsPDF {
   autoTable: (options: any) => void;
   getNumberOfPages: () => number;
   saveGraphicsState: () => void;
-  restoreGraphicsState: () => void;
+  restoreGraphicsState: () => jsPDF;
   setGState: (gState: any) => void;
   GState: new (options: any) => any;
 }
