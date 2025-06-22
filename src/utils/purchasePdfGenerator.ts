@@ -97,7 +97,8 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
 
     const rightInfoItems = [
       { label: 'Order No.:', value: data.orderNo },
-      { label: 'Date:', value: data.date }
+      { label: 'Date:', value: data.date },
+      { label: 'From:', value: data.from.charAt(0).toUpperCase() + data.from.slice(1) }
     ];
 
     // 绘制左侧基本信息
@@ -269,23 +270,21 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
 
     // 添加银行信息（如果启用）
     if (data.showBank) {
-      const bankInfo = [
-        '开票资料：',
-        '公司名称：上海飞罗贸易有限公司',
-        '公司住所：中国（上海）自由贸易区富特北路211号302部位368室',
-        '电话：4008930883',
-        '税号：913101150935185537',
-        '开户行及账号：中国银行上海市外高桥保税区支行 455969175704'
-      ];
+      const bankInfo = getBankInfo();
       currentY = checkAndAddPage(currentY, bankInfo.length * 4);
       
-      doc.setFont('NotoSansSC', 'bold');
       doc.setFontSize(9);
       
       bankInfo.forEach((line, index) => {
+        if (index === 0) {
+          doc.setFont('NotoSansSC', 'bold');
+        } else {
+          doc.setFont('NotoSansSC', 'normal');
+        }
         doc.text(line, contentMargin, currentY + (index * 4));
       });
-      currentY += 24;
+
+      currentY += bankInfo.length * 4;
     }
 
     currentY += 5;

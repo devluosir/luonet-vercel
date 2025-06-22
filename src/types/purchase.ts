@@ -28,6 +28,7 @@ export interface PurchaseOrderData {
   showBank: boolean;
   currency: 'USD' | 'EUR' | 'CNY';
   stampType: 'none' | 'shanghai' | 'hongkong'; // 印章类型
+  from: string;
 }
 
 export interface CustomWindow extends Window {
