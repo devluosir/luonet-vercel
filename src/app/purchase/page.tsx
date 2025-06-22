@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { Download, Settings, ChevronDown, ChevronUp, ArrowLeft, Save, History, Eye } from 'lucide-react';
@@ -44,6 +44,10 @@ export default function PurchaseOrderPage() {
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const router = useRouter();
 
+  const projectSpecificationRef = useRef<HTMLTextAreaElement>(null);
+  const deliveryInfoRef = useRef<HTMLTextAreaElement>(null);
+  const orderNumbersRef = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => {
     if (session?.user?.name) {
       setData(prevData => ({
@@ -52,6 +56,30 @@ export default function PurchaseOrderPage() {
       }));
     }
   }, [session]);
+
+  useEffect(() => {
+    const textarea = projectSpecificationRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [data.projectSpecification]);
+
+  useEffect(() => {
+    const textarea = deliveryInfoRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [data.deliveryInfo]);
+
+  useEffect(() => {
+    const textarea = orderNumbersRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [data.orderNumbers]);
 
   // 检查是否为编辑模式
   useEffect(() => {
@@ -325,8 +353,9 @@ export default function PurchaseOrderPage() {
                     </span>
                   </div>
                   <textarea
-                    className={inputClass}
-                    rows={3}
+                    ref={projectSpecificationRef}
+                    className={`${inputClass} resize-none overflow-hidden`}
+                    rows={1}
                     placeholder="项目规格描述（可多行输入）"
                     value={data.projectSpecification}
                     onChange={e => setData({ ...data, projectSpecification: e.target.value })}
@@ -336,13 +365,15 @@ export default function PurchaseOrderPage() {
 
               {/* 2. 付款条件 */}
               <div className="space-y-3">
-                <label className={subheadingClass}>2. 付款条件</label>
-                <input
-                  className={inputClass}
-                  value={data.paymentTerms}
-                  onChange={e => setData({ ...data, paymentTerms: e.target.value })}
-                  placeholder="交货后30天"
-                />
+                <div className="flex items-center gap-3">
+                  <label className={subheadingClass}>2. 付款条件</label>
+                  <input
+                    className={`${inputClass} flex-1`}
+                    value={data.paymentTerms}
+                    onChange={e => setData({ ...data, paymentTerms: e.target.value })}
+                    placeholder="交货后30天"
+                  />
+                </div>
               </div>
 
               {/* 3. 发票要求 */}
@@ -374,13 +405,13 @@ export default function PurchaseOrderPage() {
                       </>
                     )}
                   </button>
+                  <input
+                    className={`${inputClass} flex-1`}
+                    value={data.invoiceRequirements}
+                    onChange={e => setData({ ...data, invoiceRequirements: e.target.value })}
+                    placeholder="根据我司财务要求，开具发票。"
+                  />
                 </div>
-                <input
-                  className={inputClass}
-                  value={data.invoiceRequirements}
-                  onChange={e => setData({ ...data, invoiceRequirements: e.target.value })}
-                  placeholder="根据我司财务要求，开具发票。"
-                />
                 <BankInfoSection showBank={data.showBank} />
               </div>
 
@@ -392,21 +423,23 @@ export default function PurchaseOrderPage() {
                     <span className="text-gray-600 dark:text-gray-300 text-sm">收货人信息如下：</span>
                   </div>
                   <textarea
-                    className={inputClass}
-                    rows={2}
-                    placeholder="收货人信息（可多行输入或粘贴图片）"
+                    ref={deliveryInfoRef}
+                    className={`${inputClass} resize-none overflow-hidden`}
+                    rows={1}
+                    placeholder="收货人信息（可多行输入）"
                     value={data.deliveryInfo}
                     onChange={e => setData({ ...data, deliveryInfo: e.target.value })}
                   />
                 </div>
               </div>
 
-              {/* 5. 客户订单号码 */}
+              {/* 5. 客户的订单号码 */}
               <div className="space-y-3">
                 <label className={subheadingClass}>5. 客户的订单号码如下，请在交货时写在交货文件中和包装箱外部：</label>
                 <textarea
-                  className={inputClass}
-                  rows={2}
+                  ref={orderNumbersRef}
+                  className={`${inputClass} resize-none overflow-hidden`}
+                  rows={1}
                   placeholder="客户订单号码（可多行输入）"
                   value={data.orderNumbers}
                   onChange={e => setData({ ...data, orderNumbers: e.target.value })}
