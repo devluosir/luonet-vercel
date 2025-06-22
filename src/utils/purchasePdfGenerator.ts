@@ -1,4 +1,4 @@
-import jsPDF from 'jspdf';
+import jsPDF, { GState } from 'jspdf';
 import { PurchaseOrderData } from '@/types/purchase';
 import { loadImage, getStampImage } from '@/utils/pdfHelpers';
 import { getBankInfo } from '@/utils/bankInfo';
@@ -13,7 +13,7 @@ interface ExtendedJsPDF extends jsPDF {
   saveGraphicsState: () => jsPDF;
   restoreGraphicsState: () => jsPDF;
   setGState: (gState: any) => jsPDF;
-  GState: new (options: any) => any;
+  GState: (parameters: GState) => GState;
 }
 
 // 生成采购订单PDF
@@ -358,7 +358,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
             
             // 设置印章透明度为0.9
             doc.saveGraphicsState();
-            doc.setGState(new doc.GState({ opacity: 0.9 }));
+            doc.setGState(new GState({ opacity: 0.9 }));
             
             doc.addImage(stampImage, 'PNG', stampX, stampY, stampWidth, stampHeight);
             
