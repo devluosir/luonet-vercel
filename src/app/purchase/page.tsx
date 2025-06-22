@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Download, Settings, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
 import { SettingsPanel } from '@/components/purchase/SettingsPanel';
+import { BankInfoSection } from '@/components/purchase/BankInfoSection';
 import type { PurchaseOrderData } from '@/types/purchase';
 
 const defaultData: PurchaseOrderData = {
@@ -13,6 +14,7 @@ const defaultData: PurchaseOrderData = {
   yourRef: '',
   orderNo: '',
   date: new Date().toISOString().split('T')[0],
+  supplierQuoteDate: new Date().toISOString().split('T')[0],
   contractAmount: '',
   projectSpecification: '',
   paymentTerms: '交货后30天',
@@ -22,6 +24,7 @@ const defaultData: PurchaseOrderData = {
   showStamp: false,
   showBank: false,
   currency: 'CNY',
+  stampType: 'none',
 };
 
 export default function PurchaseOrderPage() {
@@ -93,7 +96,7 @@ export default function PurchaseOrderPage() {
           {/* 基本信息 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Attn:</label>
+              <label className={labelClass}>供应商 Attn:</label>
               <input
                 className={inputClass}
                 value={data.attn}
@@ -101,15 +104,16 @@ export default function PurchaseOrderPage() {
               />
             </div>
             <div>
-              <label className={labelClass}>Our ref:</label>
+              <label className={labelClass}>订单号 Order No.:</label>
               <input
                 className={inputClass}
-                value={data.ourRef}
-                onChange={e => setData({ ...data, ourRef: e.target.value })}
+                value={data.orderNo}
+                onChange={e => setData({ ...data, orderNo: e.target.value })}
               />
             </div>
+            
             <div>
-              <label className={labelClass}>Your ref:</label>
+              <label className={labelClass}>报价号码 Your ref:</label>
               <input
                 className={inputClass}
                 value={data.yourRef}
@@ -117,15 +121,25 @@ export default function PurchaseOrderPage() {
               />
             </div>
             <div>
-              <label className={labelClass}>Order No.:</label>
+              <label className={labelClass}>询价号码 Our ref:</label>
               <input
                 className={inputClass}
-                value={data.orderNo}
-                onChange={e => setData({ ...data, orderNo: e.target.value })}
+                value={data.ourRef}
+                onChange={e => setData({ ...data, ourRef: e.target.value })}
+              />
+            </div>
+           
+            <div>
+              <label className={labelClass}>报价日期 Quote Date:</label>
+              <input
+                type="date"
+                className={inputClass}
+                value={data.supplierQuoteDate}
+                onChange={e => setData({ ...data, supplierQuoteDate: e.target.value })}
               />
             </div>
             <div>
-              <label className={labelClass}>Date:</label>
+              <label className={labelClass}>采购订单日期 Date:</label>
               <input
                 type="date"
                 className={inputClass}
@@ -139,7 +153,7 @@ export default function PurchaseOrderPage() {
           <div className="space-y-2">
             <label className={subheadingClass}>1. 供货范围和成交价格</label>
             <p className="text-gray-600 dark:text-gray-300 text-sm">
-              客户确认贵司于<strong className="text-blue-600">{data.date || '日期'}</strong> <strong className="text-red-600">{data.yourRef || 'Your ref'}</strong>报价提供的项目价格、规格和交货条件；
+              客户确认贵司于<strong className="text-blue-600">{data.supplierQuoteDate || '日期'}</strong> <strong className="text-red-600">{data.yourRef || 'Your ref'}</strong>报价提供的项目价格、规格和交货条件；
             </p>
             <div className="flex flex-wrap items-baseline gap-2">
               <span className="text-gray-600 dark:text-gray-300 text-sm">
@@ -147,7 +161,7 @@ export default function PurchaseOrderPage() {
               </span>
               <input
                 className={`${inputClass} flex-1 min-w-[200px]`}
-                placeholder="合同价款"
+                placeholder="USD ***.00"
                 value={data.contractAmount}
                 onChange={e => setData({ ...data, contractAmount: e.target.value })}
               />
@@ -179,13 +193,41 @@ export default function PurchaseOrderPage() {
 
           {/* 3. 发票要求 */}
           <div className="space-y-2">
-            <label className={subheadingClass}>3. 发票要求</label>
+            <div className="flex items-center gap-2">
+              <label className={subheadingClass}>3. 发票要求</label>
+              <button
+                onClick={() => setData({ ...data, showBank: !data.showBank })}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 ${
+                  data.showBank 
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700' 
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+                title={data.showBank ? '隐藏开票资料' : '显示开票资料'}
+              >
+                {data.showBank ? (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span>开票资料</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>开票资料</span>
+                  </>
+                )}
+              </button>
+            </div>
             <input
               className={inputClass}
               value={data.invoiceRequirements}
               onChange={e => setData({ ...data, invoiceRequirements: e.target.value })}
-              placeholder="如前"
+              placeholder="根据我司财务要求，开具发票。"
             />
+            <BankInfoSection showBank={data.showBank} />
           </div>
 
           {/* 4. 关于交货 */}

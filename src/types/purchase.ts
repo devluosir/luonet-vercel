@@ -5,6 +5,7 @@ export interface PurchaseOrderData {
   yourRef: string;
   orderNo: string;
   date: string;
+  supplierQuoteDate: string; // 供应商报价日期
   
   // 供货范围和成交价格
   contractAmount: string;
@@ -26,6 +27,7 @@ export interface PurchaseOrderData {
   showStamp: boolean;
   showBank: boolean;
   currency: 'USD' | 'EUR' | 'CNY';
+  stampType: 'none' | 'shanghai' | 'hongkong'; // 印章类型
 }
 
 export interface CustomWindow extends Window {

@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { PurchaseOrderData } from '@/types/purchase';
-import { loadImage } from '@/utils/pdfHelpers';
+import { loadImage, getStampImage } from '@/utils/pdfHelpers';
+import { getBankInfo } from '@/utils/bankInfo';
 
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
@@ -9,6 +10,10 @@ interface ExtendedJsPDF extends jsPDF {
   };
   autoTable: (options: any) => void;
   getNumberOfPages: () => number;
+  saveGraphicsState: () => void;
+  restoreGraphicsState: () => void;
+  setGState: (gState: any) => void;
+  GState: new (options: any) => any;
 }
 
 // 生成采购订单PDF
@@ -27,6 +32,15 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
   const pageWidth = doc.internal.pageSize.width;
   const margin = 20;  // 页面边距
   let startY = margin;  // 初始化起始位置
+
+  const pageHeight = doc.internal.pageSize.height;
+  const checkAndAddPage = (y: number, needed = 20) => {
+    if (y + needed > pageHeight - margin) {
+      doc.addPage();
+      return margin;
+    }
+    return y;
+  };
 
   try {
     // 添加表头
@@ -70,6 +84,9 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     let currentY = startY;
     const leftMargin = 20;
     const maxWidth = pageWidth - 2 * margin;
+    const indent = 5;
+    const contentMargin = leftMargin + indent;
+    const contentMaxWidth = maxWidth - indent;
 
     // 基本信息区域 - 调整为左右两列布局
     const leftInfoItems = [
@@ -140,6 +157,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     currentY += 10;
 
     // 1. 供货范围和成交价格
+    currentY = checkAndAddPage(currentY, 25);
     doc.setFont('NotoSansSC', 'bold');
     doc.text('1. 供货范围和成交价格：', leftMargin, currentY);
     currentY += 6;
@@ -147,7 +165,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     doc.setFont('NotoSansSC', 'normal');
     doc.setFontSize(9);
     
-    let currentX = leftMargin;
+    let currentX = contentMargin;
 
     // Helper to draw text parts with different styles
     const drawPart = (text: string, style: 'normal' | 'bold', color: [number, number, number]) => {
@@ -159,7 +177,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
 
     // Draw parts of the line with specific styling
     drawPart('客户确认贵司于', 'normal', [0, 0, 0]);
-    drawPart(data.date, 'bold', [0, 0, 255]);
+    drawPart(data.supplierQuoteDate, 'bold', [0, 0, 255]);
     drawPart(' ', 'normal', [0, 0, 0]);
     drawPart(data.yourRef, 'bold', [0, 0, 255]);
 
@@ -181,36 +199,38 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
    
 
     const line2Text = '该订单的合同价款是：';
-    doc.text(line2Text, leftMargin, currentY);
+    doc.text(line2Text, contentMargin, currentY);
     doc.setFont('NotoSansSC', 'bold');
     doc.setTextColor(0, 0, 255);
     const line2TextWidth = doc.getTextWidth(line2Text);
-    doc.text(data.contractAmount, leftMargin + line2TextWidth + 2, currentY);
+    doc.text(data.contractAmount, contentMargin + line2TextWidth + 1, currentY);
     currentY += 5;
 
     doc.setFont('NotoSansSC', 'normal');
     doc.setTextColor(0, 0, 0);
-    doc.text('客户确认订单时对于项目的', leftMargin, currentY);
+    doc.text('客户确认订单时对于项目的', contentMargin, currentY);
     const specDescText = '规格描述';
     doc.setFont('NotoSansSC', 'bold');
     doc.setTextColor(0, 0, 255);
-    doc.text(specDescText, leftMargin + doc.getTextWidth('客户确认订单时对于项目的'), currentY);
+    doc.text(specDescText, contentMargin + doc.getTextWidth('客户确认订单时对于项目的'), currentY);
     doc.setFont('NotoSansSC', 'normal');
     doc.setTextColor(0, 0, 0);
-    doc.text('供你们参考：', leftMargin + doc.getTextWidth('客户确认订单时对于项目的规格描述'), currentY);
+    doc.text('供你们参考：', contentMargin + doc.getTextWidth('客户确认订单时对于项目的规格描述'), currentY);
     currentY += 5;
 
     // 项目规格描述（多行文本框）
     const specText = data.projectSpecification || '';
-    const wrappedSpecText = doc.splitTextToSize(specText, maxWidth);
+    const wrappedSpecText = doc.splitTextToSize(specText, contentMaxWidth);
+    currentY = checkAndAddPage(currentY, wrappedSpecText.length * 4);
     wrappedSpecText.forEach((line: string) => {
-      doc.text(line, leftMargin, currentY);
+      doc.text(line, contentMargin, currentY);
       currentY += 4;
     });
 
     currentY += 6;
 
     // 2. 付款条件
+    currentY = checkAndAddPage(currentY);
     doc.setFont('NotoSansSC', 'bold');
     doc.setTextColor(0, 0, 0);
     const paymentTitle = '2. 付款条件：';
@@ -227,6 +247,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     currentY += 6;
 
     // 3. 发票要求
+    currentY = checkAndAddPage(currentY);
     doc.setFont('NotoSansSC', 'bold');
     doc.setTextColor(0, 0, 0);
     const invoiceTitle = '3. 发票要求：';
@@ -234,15 +255,37 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     const invoiceTitleWidth = doc.getTextWidth(invoiceTitle);
     
     doc.setFont('NotoSansSC', 'normal');
-    const invoiceText = data.invoiceRequirements || '如前';
+    const invoiceText = data.invoiceRequirements || '根据我司财务要求，开具发票。';
     const invoiceContentX = leftMargin + invoiceTitleWidth;
     const wrappedInvoiceText = doc.splitTextToSize(invoiceText, maxWidth - invoiceTitleWidth);
     doc.text(wrappedInvoiceText, invoiceContentX, currentY);
     currentY += wrappedInvoiceText.length * 4;
 
+    // 添加银行信息（如果启用）
+    if (data.showBank) {
+      const bankInfo = [
+        '开票资料：',
+        '公司名称：上海飞罗贸易有限公司',
+        '公司住所：中国（上海）自由贸易区富特北路211号302部位368室',
+        '电话：4008930883',
+        '税号：913101150935185537',
+        '开户行及账号：中国银行上海市外高桥保税区支行 455969175704'
+      ];
+      currentY = checkAndAddPage(currentY, bankInfo.length * 4);
+      
+      doc.setFont('NotoSansSC', 'bold');
+      doc.setFontSize(9);
+      
+      bankInfo.forEach((line, index) => {
+        doc.text(line, contentMargin, currentY + (index * 4));
+      });
+      currentY += 24;
+    }
+
     currentY += 6;
 
     // 4. 关于交货
+    currentY = checkAndAddPage(currentY);
     doc.setFont('NotoSansSC', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text('4. 关于交货：', leftMargin, currentY);
@@ -250,22 +293,24 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     
     doc.setFont('NotoSansSC', 'normal');
     doc.setTextColor(0, 0, 255);
-    doc.text('收货人信息如下：', leftMargin, currentY);
+    doc.text('收货人信息如下：', contentMargin, currentY);
     currentY += 5;
 
     // 交货信息（多行文本框）
+    const deliveryText = data.deliveryInfo || 'TBD';
+    const wrappedDeliveryText = doc.splitTextToSize(deliveryText, contentMaxWidth);
+    currentY = checkAndAddPage(currentY, wrappedDeliveryText.length * 4);
     doc.setFont('NotoSansSC', 'normal');
     doc.setTextColor(0, 0, 0);
-    const deliveryText = data.deliveryInfo || 'TBD';
-    const wrappedDeliveryText = doc.splitTextToSize(deliveryText, maxWidth);
     wrappedDeliveryText.forEach((line: string) => {
-      doc.text(line, leftMargin, currentY);
+      doc.text(line, contentMargin, currentY);
       currentY += 4;
     });
 
     currentY += 6;
 
     // 5. 客户的订单号码
+    currentY = checkAndAddPage(currentY);
     doc.setFont('NotoSansSC', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text('5. 客户的订单号码如下，请在交货时写在交货文件中和包装箱外部：', leftMargin, currentY);
@@ -274,50 +319,54 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     doc.setFont('NotoSansSC', 'normal');
     doc.setTextColor(0, 0, 255);
     const orderNumbersText = data.orderNumbers || '';
-    const wrappedOrderNumbersText = doc.splitTextToSize(orderNumbersText, maxWidth);
+    const wrappedOrderNumbersText = doc.splitTextToSize(orderNumbersText, contentMaxWidth);
+    currentY = checkAndAddPage(currentY, wrappedOrderNumbersText.length * 4);
     wrappedOrderNumbersText.forEach((line: string) => {
-      doc.text(line, leftMargin, currentY);
+      doc.text(line, contentMargin, currentY);
       currentY += 4;
     });
 
     currentY += 10;
 
     // 结尾确认语
+    currentY = checkAndAddPage(currentY);
     doc.setFont('NotoSansSC', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text('上述订单，烦请确认！', leftMargin, currentY);
 
+
+
     // 添加印章（如果启用）
-    if (data.showStamp) {
+    if (data.stampType !== 'none') {
+      const stampHeight = data.stampType === 'shanghai' ? 40 : 34;
+      currentY = checkAndAddPage(currentY, stampHeight);
       try {
-        const stampImage = await loadImage('/images/stamp-shanghai.png');
-        if (stampImage) {
-          const stampSize = 40;
-          const stampX = pageWidth - stampSize - margin;
-          const stampY = currentY - 20;
-          doc.addImage(stampImage, 'PNG', stampX, stampY, stampSize, stampSize);
+        const stampImagePath = getStampImage(data.stampType);
+        if (stampImagePath) {
+          const stampImage = await loadImage(stampImagePath);
+          if (stampImage) {
+            // 根据印章类型设置尺寸
+            const stampWidth = data.stampType === 'shanghai' ? 40 : 73;
+            
+            const stampX = leftMargin; // 改为左对齐
+            const stampY = currentY += 5;
+            
+            // 设置印章透明度为0.9
+            doc.saveGraphicsState();
+            doc.setGState(new doc.GState({ opacity: 0.9 }));
+            
+            doc.addImage(stampImage, 'PNG', stampX, stampY, stampWidth, stampHeight);
+            
+            // 恢复透明度
+            doc.restoreGraphicsState();
+          }
         }
       } catch (error) {
         console.error('Error loading stamp image:', error);
       }
     }
 
-    // 添加银行信息（如果启用）
-    if (data.showBank) {
-      currentY += 10;
-      doc.setFont('NotoSansSC', 'normal');
-      doc.setFontSize(8);
-      const bankInfo = [
-        'Bank: Bank of China Shanghai Branch',
-        'Account Name: Shanghai MLUO Network Technology Co., Ltd.',
-        'Account No.: 1234567890123456789',
-        'SWIFT: BKCHCNBJ300'
-      ];
-      
-      bankInfo.forEach((line, index) => {
-        doc.text(line, leftMargin, currentY + (index * 4));
-      });
-    }
+
 
     // 添加页码 - 调整到右下角
     const pageCount = doc.getNumberOfPages();
