@@ -7,10 +7,10 @@ const DEFAULT_MODULES = [
   'ai-email',
   'quotation',
   'invoice',
-  'feature1',
-  'feature2',
+  'date-tools',
+  'purchase',
   'feature3',
-  'feature4',
+  'feature4'
 ];
 
 export async function GET() {

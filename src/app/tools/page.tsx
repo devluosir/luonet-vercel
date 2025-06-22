@@ -4,7 +4,20 @@ import { useEffect, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ProfileModal } from '@/components/profile/ProfileModal';
-import { Mail, FileText, Receipt, Star } from 'lucide-react';
+import { 
+  Mail, 
+  FileText, 
+  Receipt, 
+  Calendar, 
+  ShoppingCart, 
+  Settings, 
+  BarChart3, 
+  Users, 
+  Database, 
+  Zap,
+  Clock,
+  TrendingUp
+} from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Footer } from '@/components/Footer';
 
@@ -26,14 +39,6 @@ interface User {
 // 定义所有可用的模块
 const MODULES = [
   { 
-    id: 'ai-email', 
-    name: 'AI邮件助手', 
-    description: '智能生成商务邮件', 
-    path: '/mail',
-    icon: Mail,
-    color: 'from-blue-500 to-indigo-500'
-  },
-  { 
     id: 'quotation', 
     name: '报价及确认', 
     description: '生成报价单和销售确认单', 
@@ -50,21 +55,85 @@ const MODULES = [
     color: 'from-orange-500 to-amber-500'
   },
   { 
+    id: 'purchase', 
+    name: '采购订单', 
+    description: '生成给供应商的采购订单', 
+    path: '/purchase',
+    icon: ShoppingCart,
+    color: 'from-green-500 to-emerald-500'
+  },
+  { 
+    id: 'ai-email', 
+    name: 'AI邮件助手', 
+    description: '智能生成商务邮件', 
+    path: '/mail',
+    icon: Mail,
+    color: 'from-blue-500 to-indigo-500'
+  },
+  { 
     id: 'date-tools', 
     name: '日期计算', 
     description: '计算日期和天数', 
     path: '/date-tools',
-    icon: Star,
+    icon: Calendar,
     color: 'from-purple-500 to-pink-500'
   },
-  { id: 'feature2', name: '功能2', description: '待开发功能', path: '/tools/feature2' },
-  { id: 'feature3', name: '功能3', description: '待开发功能', path: '/tools/feature3' },
-  { id: 'feature4', name: '功能4', description: '待开发功能', path: '/tools/feature4' },
-  { id: 'feature5', name: '功能5', description: '待开发功能', path: '/tools/feature5' },
-  { id: 'feature6', name: '功能6', description: '待开发功能', path: '/tools/feature6' },
-  { id: 'feature7', name: '功能7', description: '待开发功能', path: '/tools/feature7' },
-  { id: 'feature8', name: '功能8', description: '待开发功能', path: '/tools/feature8' },
-  { id: 'feature9', name: '功能9', description: '待开发功能', path: '/tools/feature9' },
+  { 
+    id: 'feature4', 
+    name: '客户管理', 
+    description: '客户信息管理系统', 
+    path: '/tools/feature4',
+    icon: Users,
+    color: 'from-violet-500 to-purple-500'
+  },
+  { 
+    id: 'feature5', 
+    name: '库存管理', 
+    description: '产品库存跟踪', 
+    path: '/tools/feature5',
+    icon: Database,
+    color: 'from-yellow-500 to-orange-500'
+  },
+  { 
+    id: 'feature3', 
+    name: '数据分析', 
+    description: '业务数据分析和报表', 
+    path: '/tools/feature3',
+    icon: BarChart3,
+    color: 'from-cyan-500 to-blue-500'
+  },
+  { 
+    id: 'feature8', 
+    name: '销售预测', 
+    description: '销售趋势分析', 
+    path: '/tools/feature8',
+    icon: TrendingUp,
+    color: 'from-green-500 to-teal-500'
+  },
+  { 
+    id: 'feature7', 
+    name: '时间管理', 
+    description: '项目时间跟踪', 
+    path: '/tools/feature7',
+    icon: Clock,
+    color: 'from-indigo-500 to-blue-500'
+  },
+  { 
+    id: 'feature6', 
+    name: '自动化工具', 
+    description: '工作流程自动化', 
+    path: '/tools/feature6',
+    icon: Zap,
+    color: 'from-red-500 to-pink-500'
+  },
+  { 
+    id: 'feature9', 
+    name: '系统设置', 
+    description: '应用配置管理', 
+    path: '/tools/feature9',
+    icon: Settings,
+    color: 'from-gray-500 to-slate-500'
+  },
 ];
 
 // 使用dynamic导入避免hydration问题
@@ -167,7 +236,7 @@ export default function ToolsPage() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {availableModules.map((module) => {
-            const Icon = module.icon || Star;
+            const Icon = module.icon || Settings;
             return (
               <div
                 key={module.id}
