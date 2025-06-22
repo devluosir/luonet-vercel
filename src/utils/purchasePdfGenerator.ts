@@ -323,7 +323,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     
     doc.setFont('NotoSansSC', 'normal');
     doc.setTextColor(0, 0, 255);
-    const orderNumbersText = data.orderNumbers || '';
+    const orderNumbersText = data.orderNumbers || 'TBD';
     const wrappedOrderNumbersText = doc.splitTextToSize(orderNumbersText, contentMaxWidth);
     currentY = checkAndAddPage(currentY, wrappedOrderNumbersText.length * 4);
     wrappedOrderNumbersText.forEach((line: string) => {
