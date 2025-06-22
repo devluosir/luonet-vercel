@@ -50,6 +50,14 @@ export default function PurchaseOrderPage() {
     }
   };
 
+  const handleAmountBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const amount = parseFloat(value);
+    if (!isNaN(amount)) {
+      setData(prevData => ({ ...prevData, contractAmount: amount.toFixed(2) }));
+    }
+  };
+
   // 输入控件
   const inputClass =
     'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent';
@@ -155,15 +163,32 @@ export default function PurchaseOrderPage() {
             <p className="text-gray-600 dark:text-gray-300 text-sm">
               客户确认贵司于<strong className="text-blue-600">{data.supplierQuoteDate || '日期'}</strong> <strong className="text-red-600">{data.yourRef || 'Your ref'}</strong>报价提供的项目价格、规格和交货条件；
             </p>
-            <div className="flex flex-wrap items-baseline gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-gray-600 dark:text-gray-300 text-sm">
                 该订单的合同价款是：
               </span>
+              <div className="flex items-center gap-1">
+                {(['CNY', 'USD', 'EUR'] as const).map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setData({ ...data, currency: c })}
+                    className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                      data.currency === c
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
               <input
-                className={`${inputClass} flex-1 min-w-[200px]`}
-                placeholder="USD ***.00"
+                className={`${inputClass} flex-1 min-w-[150px]`}
+                placeholder="0.00"
                 value={data.contractAmount}
                 onChange={e => setData({ ...data, contractAmount: e.target.value })}
+                onBlur={handleAmountBlur}
               />
             </div>
             <div className="mt-2">

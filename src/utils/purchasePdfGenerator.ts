@@ -203,7 +203,10 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     doc.setFont('NotoSansSC', 'bold');
     doc.setTextColor(0, 0, 255);
     const line2TextWidth = doc.getTextWidth(line2Text);
-    doc.text(data.contractAmount, contentMargin + line2TextWidth + 1, currentY);
+    const amount = parseFloat(data.contractAmount) || 0;
+    const formattedAmount = amount.toFixed(2);
+    const fullContractAmount = `${data.currency} ${formattedAmount}`;
+    doc.text(fullContractAmount, contentMargin + line2TextWidth + 1, currentY);
     currentY += 5;
 
     doc.setFont('NotoSansSC', 'normal');
@@ -215,19 +218,22 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     doc.text(specDescText, contentMargin + doc.getTextWidth('客户确认订单时对于项目的'), currentY);
     doc.setFont('NotoSansSC', 'normal');
     doc.setTextColor(0, 0, 0);
-    doc.text('供你们参考：', contentMargin + doc.getTextWidth('客户确认订单时对于项目的规格描述'), currentY);
+    doc.text('供你们参考；', contentMargin + doc.getTextWidth('客户确认订单时对于项目的规格描述'), currentY);
     currentY += 5;
 
     // 项目规格描述（多行文本框）
     const specText = data.projectSpecification || '';
     const wrappedSpecText = doc.splitTextToSize(specText, contentMaxWidth);
-    currentY = checkAndAddPage(currentY, wrappedSpecText.length * 4);
-    wrappedSpecText.forEach((line: string) => {
-      doc.text(line, contentMargin, currentY);
-      currentY += 4;
-    });
-
-    currentY += 6;
+    if (wrappedSpecText.length > 0) {
+      currentY = checkAndAddPage(currentY, wrappedSpecText.length * 4); // Reduce line height
+      wrappedSpecText.forEach((line: string) => {
+        doc.text(line, contentMargin, currentY);
+        currentY += 4; 
+      });
+      currentY += 5; // Reduce extra space after the text block
+    } else {
+      // No extra space when there's no content
+    }
 
     // 2. 付款条件
     currentY = checkAndAddPage(currentY);
@@ -238,13 +244,13 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     const paymentTitleWidth = doc.getTextWidth(paymentTitle);
     
     doc.setFont('NotoSansSC', 'normal');
-    const paymentText = data.paymentTerms || '交货后30天';
+    const paymentText = data.paymentTerms || '交货后30天；';
     const paymentContentX = leftMargin + paymentTitleWidth;
     const wrappedPaymentText = doc.splitTextToSize(paymentText, maxWidth - paymentTitleWidth);
     doc.text(wrappedPaymentText, paymentContentX, currentY);
     currentY += wrappedPaymentText.length * 4;
 
-    currentY += 6;
+    currentY += 5;
 
     // 3. 发票要求
     currentY = checkAndAddPage(currentY);
@@ -282,7 +288,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       currentY += 24;
     }
 
-    currentY += 6;
+    currentY += 5;
 
     // 4. 关于交货
     currentY = checkAndAddPage(currentY);
