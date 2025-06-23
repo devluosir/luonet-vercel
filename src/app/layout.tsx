@@ -1,12 +1,30 @@
 import './globals.css'
 import { Providers } from './providers'
+import localFont from 'next/font/local'
 import { Inter } from 'next/font/google'
 import type { Metadata } from 'next'
 
-const inter = Inter({
-  subsets: ['latin', 'latin-ext'],
+const noto_sans_sc = localFont({
+  src: [
+    {
+      path: '../../public/fonts/NotoSansSC-Regular.ttf',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../../public/fonts/NotoSansSC-Bold.ttf',
+      weight: '700',
+      style: 'normal',
+    },
+  ],
   display: 'swap',
   preload: true,
+  variable: '--font-noto-sans-sc',
+})
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
   variable: '--font-inter',
 })
 
@@ -25,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning className={inter.variable}>
+    <html lang="zh-CN" suppressHydrationWarning className={`${noto_sans_sc.variable} ${inter.variable}`}>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -34,7 +52,7 @@ export default function RootLayout({
         <meta httpEquiv="Content-Language" content="zh-CN" />
         <meta name="google" content="notranslate" />
       </head>
-      <body className={inter.className} suppressHydrationWarning>
+      <body className={noto_sans_sc.className} suppressHydrationWarning>
         <Providers>
           {children}
         </Providers>
