@@ -3,8 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Search, Edit, Trash2, Download, Upload, FileText } from 'lucide-react';
+import { ArrowLeft, Search, Edit, Trash2, Download, Upload, FileText, Eye } from 'lucide-react';
 import { getPurchaseHistory, deletePurchaseHistory, exportPurchaseHistory, importPurchaseHistory, PurchaseHistory } from '@/utils/purchaseHistory';
+import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
+import { PurchaseOrderData } from '@/types/purchase';
+import { Footer } from '@/components/Footer';
 
 export default function PurchaseHistoryPage() {
   const [history, setHistory] = useState<PurchaseHistory[]>([]);
@@ -13,6 +16,8 @@ export default function PurchaseHistoryPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isPreviewing, setIsPreviewing] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -161,6 +166,27 @@ export default function PurchaseHistoryPage() {
     input.click();
   };
 
+  const handlePreview = async (id: string) => {
+    const record = history.find(item => item.id === id);
+    if (record) {
+      setIsPreviewing(id);
+      try {
+        const pdfBlob = await generatePurchaseOrderPDF(record.data as PurchaseOrderData, true);
+        const pdfDataUrl = URL.createObjectURL(pdfBlob);
+        setPreviewUrl(pdfDataUrl);
+      } catch (error) {
+        console.error('Error generating preview:', error);
+        alert('生成预览失败');
+      } finally {
+        setIsPreviewing(null);
+      }
+    }
+  };
+
+  const closePreview = () => {
+    setPreviewUrl(null);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('zh-CN', {
       year: 'numeric',
@@ -182,7 +208,7 @@ export default function PurchaseHistoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
-      <main className="flex-1">
+      <main className="flex-grow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
           <Link href="/purchase" className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7] transition-colors">
@@ -252,7 +278,7 @@ export default function PurchaseHistoryPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-[#3A3A3C]">
                     <tr>
-                      <th className="px-4 py-4 w-16">
+                      <th className="px-4 md:px-6 py-4 w-10 text-left">
                         <input 
                           type="checkbox"
                           className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:checked:bg-blue-500"
@@ -284,7 +310,7 @@ export default function PurchaseHistoryPage() {
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                     {history.map((item) => (
                       <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-[#3A3A3C] transition-colors">
-                        <td className="px-4 py-4">
+                        <td className="px-4 md:px-6 py-4 w-10">
                           <input
                             type="checkbox"
                             className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:checked:bg-blue-500"
@@ -309,6 +335,21 @@ export default function PurchaseHistoryPage() {
                         </td>
                         <td className="px-4 md:px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1 md:gap-2">
+                            <button
+                              onClick={() => handlePreview(item.id)}
+                              disabled={isPreviewing === item.id}
+                              className="p-1.5 md:p-2 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 transition-colors disabled:opacity-50"
+                              title="预览"
+                            >
+                              {isPreviewing === item.id ? (
+                                <svg className="animate-spin w-3.5 h-3.5 md:w-4 md:h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              ) : (
+                                <Eye className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                              )}
+                            </button>
                             <button
                               onClick={() => handleEdit(item.id)}
                               className="p-1.5 md:p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition-colors"
@@ -342,6 +383,31 @@ export default function PurchaseHistoryPage() {
           </div>
         </div>
       </main>
+
+      {/* Preview Modal */}
+      {previewUrl && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-[#000000]/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={closePreview}>
+          <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4 flex-shrink-0">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F5F5F7]">
+                预览采购订单
+              </h3>
+              <button
+                onClick={closePreview}
+                className="px-4 py-2 rounded-xl text-sm font-medium
+                  bg-gray-100 dark:bg-[#3A3A3C]
+                  text-gray-900 dark:text-[#F5F5F7]
+                  hover:bg-gray-200 dark:hover:bg-[#48484A] transition-colors"
+              >
+                关闭
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <iframe src={previewUrl} className="w-full h-full border-none rounded-lg" title="PDF Preview" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete confirmation dialog */}
       {showDeleteConfirm && (
@@ -408,6 +474,8 @@ export default function PurchaseHistoryPage() {
           </div>
         </div>
       )}
+
+      <Footer />
     </div>
   );
 } 

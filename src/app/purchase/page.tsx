@@ -10,6 +10,7 @@ import { BankInfoSection } from '@/components/purchase/BankInfoSection';
 import type { PurchaseOrderData } from '@/types/purchase';
 import { savePurchaseHistory } from '@/utils/purchaseHistory';
 import { useRouter } from 'next/navigation';
+import { Footer } from '@/components/Footer';
 
 const defaultData: PurchaseOrderData = {
   attn: '',
@@ -539,6 +540,7 @@ export default function PurchaseOrderPage() {
           </div>
         </div>
       )}
+      <Footer />
     </div>
   );
 }
