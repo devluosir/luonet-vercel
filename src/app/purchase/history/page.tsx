@@ -10,6 +10,7 @@ export default function PurchaseHistoryPage() {
   const [history, setHistory] = useState<PurchaseHistory[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   useEffect(() => {
@@ -19,6 +20,7 @@ export default function PurchaseHistoryPage() {
   const loadHistory = () => {
     const data = getPurchaseHistory({ search: searchTerm });
     setHistory(data);
+    setSelectedIds(new Set());
   };
 
   const handleDelete = async (id: string) => {
@@ -26,7 +28,7 @@ export default function PurchaseHistoryPage() {
     
     setIsDeleting(id);
     try {
-      const success = deletePurchaseHistory(id);
+      const success = deletePurchaseHistory([id]);
       if (success) {
         loadHistory();
       } else {
@@ -37,6 +39,43 @@ export default function PurchaseHistoryPage() {
       alert('删除失败');
     } finally {
       setIsDeleting(null);
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`确定要删除选中的 ${selectedIds.size} 条记录吗？`)) return;
+
+    try {
+      const success = deletePurchaseHistory(Array.from(selectedIds));
+      if (success) {
+        loadHistory();
+      } else {
+        alert('批量删除失败');
+      }
+    } catch (error) {
+      console.error('Error during bulk delete:', error);
+      alert('批量删除失败');
+    }
+  };
+
+  const handleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const newSelectedIds = new Set(prev);
+      if (newSelectedIds.has(id)) {
+        newSelectedIds.delete(id);
+      } else {
+        newSelectedIds.add(id);
+      }
+      return newSelectedIds;
+    });
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(new Set(history.map(item => item.id)));
+    } else {
+      setSelectedIds(new Set());
     }
   };
 
@@ -125,6 +164,16 @@ export default function PurchaseHistoryPage() {
               Purchase Order History
             </h1>
             <div className="flex items-center gap-2">
+              {selectedIds.size > 0 && (
+                  <button
+                    onClick={handleBulkDelete}
+                    className="p-2 rounded-lg bg-red-500 text-white hover:bg-red-600 flex items-center gap-2"
+                    title="批量删除"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <span>删除 ({selectedIds.size})</span>
+                  </button>
+              )}
               <button
                 onClick={handleExport}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
@@ -168,6 +217,15 @@ export default function PurchaseHistoryPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-[#3A3A3C]">
                     <tr>
+                      <th className="px-4 py-4">
+                        <input 
+                          type="checkbox"
+                          className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:checked:bg-blue-500"
+                          onChange={handleSelectAll}
+                          checked={history.length > 0 && selectedIds.size === history.length}
+                          disabled={history.length === 0}
+                        />
+                      </th>
                       <th className="hidden md:table-cell px-4 md:px-6 py-4 text-left text-sm font-medium text-gray-700 dark:text-gray-300 w-1/6">
                         供应商
                       </th>
@@ -191,6 +249,14 @@ export default function PurchaseHistoryPage() {
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                     {history.map((item) => (
                       <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-[#3A3A3C] transition-colors">
+                        <td className="px-4 py-4">
+                          <input
+                            type="checkbox"
+                            className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:checked:bg-blue-500"
+                            checked={selectedIds.has(item.id)}
+                            onChange={() => handleSelect(item.id)}
+                          />
+                        </td>
                         <td className="hidden md:table-cell px-4 md:px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                           {item.supplierName || '未填写'}
                         </td>
