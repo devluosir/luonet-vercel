@@ -360,7 +360,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
           const stampWidth = data.stampType === 'shanghai' ? 40 : 73;
 
           const stampX = leftMargin; // 改为左对齐
-          const stampY = currentY + (data.stampType === 'shanghai' ? -10 : 5);
+          const stampY = currentY + (data.stampType === 'shanghai' ? -5 : 5);
 
           currentY += 5; // 统一增加currentY，确保后续内容位置不变
 
