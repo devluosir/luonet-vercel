@@ -11,6 +11,8 @@ export default function PurchaseHistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -24,11 +26,14 @@ export default function PurchaseHistoryPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定要删除这条记录吗？')) return;
-    
-    setIsDeleting(id);
+    setShowDeleteConfirm(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!showDeleteConfirm) return;
+    setIsDeleting(showDeleteConfirm);
     try {
-      const success = deletePurchaseHistory([id]);
+      const success = deletePurchaseHistory([showDeleteConfirm]);
       if (success) {
         loadHistory();
       } else {
@@ -39,13 +44,17 @@ export default function PurchaseHistoryPage() {
       alert('删除失败');
     } finally {
       setIsDeleting(null);
+      setShowDeleteConfirm(null);
     }
-  };
+  }
 
   const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
-    if (!confirm(`确定要删除选中的 ${selectedIds.size} 条记录吗？`)) return;
+    setShowBatchDeleteConfirm(true);
+  };
 
+  const confirmBulkDelete = () => {
+    if (selectedIds.size === 0) return;
     try {
       const success = deletePurchaseHistory(Array.from(selectedIds));
       if (success) {
@@ -56,6 +65,8 @@ export default function PurchaseHistoryPage() {
     } catch (error) {
       console.error('Error during bulk delete:', error);
       alert('批量删除失败');
+    } finally {
+      setShowBatchDeleteConfirm(false);
     }
   };
 
@@ -90,14 +101,35 @@ export default function PurchaseHistoryPage() {
   };
 
   const handleExport = () => {
-    const data = exportPurchaseHistory();
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `purchase_history_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const allHistory = getPurchaseHistory({ search: searchTerm });
+      const dataToExport = selectedIds.size > 0
+        ? allHistory.filter(item => selectedIds.has(item.id))
+        : allHistory;
+
+      if (dataToExport.length === 0) {
+        alert("没有可导出的记录。");
+        return;
+      }
+
+      const jsonData = JSON.stringify(dataToExport, null, 2);
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      const date = new Date().toISOString().split('T')[0];
+      const prefix = selectedIds.size > 0 ? `selected-${selectedIds.size}` : 'all';
+      a.download = `purchase_history_${prefix}_${date}.json`;
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting purchase history:', error);
+      alert('导出失败');
+    }
   };
 
   const handleImport = () => {
@@ -176,17 +208,20 @@ export default function PurchaseHistoryPage() {
               )}
               <button
                 onClick={handleExport}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                className="h-10 px-4 rounded-xl text-sm font-medium bg-[#007AFF] hover:bg-[#0066CC] text-white flex items-center gap-2 whitespace-nowrap"
                 title="Export"
               >
-                <Download className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                <Upload className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline">Export</span>
+                {selectedIds.size > 0 && <span className="inline-flex">({selectedIds.size})</span>}
               </button>
               <button
                 onClick={handleImport}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                className="h-10 px-4 rounded-xl text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white hover:shadow-md flex items-center gap-2 whitespace-nowrap"
                 title="Import"
               >
-                <Upload className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                <Download className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline">Import</span>
               </button>
             </div>
           </div>
@@ -217,7 +252,7 @@ export default function PurchaseHistoryPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-[#3A3A3C]">
                     <tr>
-                      <th className="px-4 py-4">
+                      <th className="px-4 py-4 w-16">
                         <input 
                           type="checkbox"
                           className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:checked:bg-blue-500"
@@ -307,6 +342,72 @@ export default function PurchaseHistoryPage() {
           </div>
         </div>
       </main>
+
+      {/* Delete confirmation dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-[#000000]/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F5F5F7] mb-4">
+              确认删除
+            </h3>
+            <p className="text-gray-600 dark:text-[#98989D] mb-6">
+              您确定要删除此记录吗？此操作无法撤销。
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="px-4 py-2 rounded-xl text-sm font-medium
+                  bg-gray-100 dark:bg-[#3A3A3C]
+                  text-gray-900 dark:text-[#F5F5F7]
+                  hover:bg-gray-200 dark:hover:bg-[#48484A]"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-xl text-sm font-medium
+                  bg-red-600 hover:bg-red-700
+                  text-white"
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch delete confirmation dialog */}
+      {showBatchDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-[#000000]/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F5F5F7] mb-4">
+              确认批量删除
+            </h3>
+            <p className="text-gray-600 dark:text-[#98989D] mb-6">
+              您确定要删除选中的 {selectedIds.size} 条记录吗？此操作无法撤销。
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowBatchDeleteConfirm(false)}
+                className="px-4 py-2 rounded-xl text-sm font-medium
+                  bg-gray-100 dark:bg-[#3A3A3C]
+                  text-gray-900 dark:text-[#F5F5F7]
+                  hover:bg-gray-200 dark:hover:bg-[#48484A]"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmBulkDelete}
+                className="px-4 py-2 rounded-xl text-sm font-medium
+                  bg-red-600 hover:bg-red-700
+                  text-white"
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
