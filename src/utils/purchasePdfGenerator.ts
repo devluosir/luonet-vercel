@@ -335,18 +335,19 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
 
     currentY += 10;
 
-    // 结尾确认语
-    currentY = checkAndAddPage(currentY);
-    doc.setFont('NotoSansSC', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('上述订单，烦请确认！', leftMargin, currentY);
+    // 结尾确认语和印章
+    const confirmationText = '上述订单，烦请确认！';
+    const textHeight = 4; // 9pt字体大约4mm高
+    
+    // 检查分页，为印章和文字预留空间
+    const stampHeight = data.stampType === 'shanghai' ? 40 : 34;
+    const requiredHeight = data.stampType !== 'none' ? stampHeight + 5 : textHeight + 5;
+    let confirmationY = checkAndAddPage(currentY, requiredHeight);
+    
+    const textY = confirmationY + 10; // 定义文字的Y坐标
 
-
-
-    // 添加印章（如果启用）
+    // 1. 添加印章（如果启用），先绘制
     if (data.stampType !== 'none') {
-      const stampHeight = data.stampType === 'shanghai' ? 40 : 34;
-      currentY = checkAndAddPage(currentY, stampHeight);
       try {
         let stampImageBase64 = '';
         if (data.stampType === 'shanghai') {
@@ -359,23 +360,27 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
           const stampImage = `data:image/png;base64,${stampImageBase64}`;
           const stampWidth = data.stampType === 'shanghai' ? 40 : 73;
 
-          const stampX = leftMargin; // 改为左对齐
-          const stampY = currentY + (data.stampType === 'shanghai' ? -5 : 5);
-
-          currentY += 5; // 统一增加currentY，确保后续内容位置不变
+          const stampX = leftMargin;
+          // 将印章Y坐标设置在文字Y坐标之上，使其作为背景
+          const stampY = textY - 12;
 
           doc.saveGraphicsState();
           doc.setGState(new GState({ opacity: 0.9 }));
-
           doc.addImage(stampImage, 'PNG', stampX, stampY, stampWidth, stampHeight);
-
           doc.restoreGraphicsState();
         }
       } catch (error) {
         console.error('Error loading stamp image:', error);
       }
     }
+    
+    // 2. 结尾确认语，后绘制（使其位于上层）
+    doc.setFont('NotoSansSC', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(confirmationText, leftMargin, textY);
 
+    // 更新currentY，以便后续内容可以正确衔接
+    currentY = data.stampType !== 'none' ? textY + stampHeight - 15 : textY + 5;
 
 
     // 添加页码 - 调整到右下角
