@@ -1,7 +1,6 @@
 import './globals.css'
 import { Providers } from './providers'
 import localFont from 'next/font/local'
-import { Inter } from 'next/font/google'
 import type { Metadata } from 'next'
 
 const noto_sans_sc = localFont({
@@ -22,12 +21,6 @@ const noto_sans_sc = localFont({
   variable: '--font-noto-sans-sc',
 })
 
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-})
-
 export const metadata: Metadata = {
   title: 'Luo & Company',
   description: '专业的报价和订单确认系统',
@@ -43,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning className={`${noto_sans_sc.variable} ${inter.variable}`}>
+    <html lang="zh-CN" suppressHydrationWarning className={`${noto_sans_sc.variable}`}>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
