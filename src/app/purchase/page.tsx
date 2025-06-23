@@ -22,7 +22,7 @@ const defaultData: PurchaseOrderData = {
   contractAmount: '',
   projectSpecification: '',
   paymentTerms: '交货后30天',
-  invoiceRequirements: '',
+  invoiceRequirements: '如前；',
   deliveryInfo: '',
   orderNumbers: '',
   showStamp: false,
@@ -382,7 +382,14 @@ export default function PurchaseOrderPage() {
                 <div className="flex items-center gap-3">
                   <label className={subheadingClass}>3. 发票要求</label>
                   <button
-                    onClick={() => setData({ ...data, showBank: !data.showBank })}
+                    onClick={() => {
+                      const newShowBank = !data.showBank;
+                      setData({
+                        ...data,
+                        showBank: newShowBank,
+                        invoiceRequirements: newShowBank ? '请在发票开具前与我司财务确认；' : '如前；',
+                      });
+                    }}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                       data.showBank 
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700' 
@@ -410,7 +417,6 @@ export default function PurchaseOrderPage() {
                     className={`${inputClass} flex-1`}
                     value={data.invoiceRequirements}
                     onChange={e => setData({ ...data, invoiceRequirements: e.target.value })}
-                    placeholder="请在发票开具前与我司财务确认；"
                   />
                 </div>
                 <BankInfoSection showBank={data.showBank} />
