@@ -264,7 +264,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     const invoiceTitleWidth = doc.getTextWidth(invoiceTitle);
     
     doc.setFont('NotoSansSC', 'normal');
-    const invoiceText = data.invoiceRequirements || '根据我司财务要求，开具发票。';
+    const invoiceText = data.invoiceRequirements || '请在发票开具前与我司财务确认；';
     const invoiceContentX = leftMargin + invoiceTitleWidth;
     const wrappedInvoiceText = doc.splitTextToSize(invoiceText, maxWidth - invoiceTitleWidth);
     doc.text(wrappedInvoiceText, invoiceContentX, currentY);
@@ -344,7 +344,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     const requiredHeight = data.stampType !== 'none' ? stampHeight + 5 : textHeight + 5;
     let confirmationY = checkAndAddPage(currentY, requiredHeight);
     
-    const textY = confirmationY + 10; // 定义文字的Y坐标
+    const textY = confirmationY + 0; // 定义文字的Y坐标
 
     // 1. 添加印章（如果启用），先绘制
     if (data.stampType !== 'none') {
@@ -360,9 +360,14 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
           const stampImage = `data:image/png;base64,${stampImageBase64}`;
           const stampWidth = data.stampType === 'shanghai' ? 40 : 73;
 
-          const stampX = leftMargin;
-          // 将印章Y坐标设置在文字Y坐标之上，使其作为背景
-          const stampY = textY - 12;
+          let stampX = leftMargin;
+          let stampY = textY - 5; // 默认Y位置
+
+          if (data.stampType === 'shanghai') {
+            stampX += 10; // 上海印章右移10mm
+          } else if (data.stampType === 'hongkong') {
+            stampY += 5; // 香港印章下移5mm
+          }
 
           doc.saveGraphicsState();
           doc.setGState(new GState({ opacity: 0.9 }));

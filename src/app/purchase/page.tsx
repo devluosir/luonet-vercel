@@ -410,7 +410,7 @@ export default function PurchaseOrderPage() {
                     className={`${inputClass} flex-1`}
                     value={data.invoiceRequirements}
                     onChange={e => setData({ ...data, invoiceRequirements: e.target.value })}
-                    placeholder="根据我司财务要求，开具发票。"
+                    placeholder="请在发票开具前与我司财务确认；"
                   />
                 </div>
                 <BankInfoSection showBank={data.showBank} />
