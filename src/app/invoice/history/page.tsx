@@ -364,7 +364,7 @@ export default function InvoiceHistoryPage() {
       setIsPreviewing(id);
       try {
         const pdfDataUrl = await generateInvoicePDF(record.data as PDFGeneratorData, true);
-        setPreviewUrl(pdfDataUrl as string);
+        setPreviewUrl(pdfDataUrl);
       } catch (error) {
         console.error('Error generating preview:', error);
         alert('生成预览失败');

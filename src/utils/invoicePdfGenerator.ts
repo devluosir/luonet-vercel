@@ -91,8 +91,12 @@ interface ExtendedJsPDF extends jsPDF {
   getImageProperties: (image: string) => ImageProperties;
 }
 
-// 生成发票PDF
-export async function generateInvoicePDF(data: PDFGeneratorData, preview: boolean = false) {
+// 函数重载签名
+export async function generateInvoicePDF(data: PDFGeneratorData, preview: true): Promise<string>;
+export async function generateInvoicePDF(data: PDFGeneratorData, preview?: false): Promise<void>;
+
+// 生成发票PDF - 实现
+export async function generateInvoicePDF(data: PDFGeneratorData, preview: boolean = false): Promise<string | void> {
   // 创建 PDF 文档
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -171,7 +175,7 @@ export async function generateInvoicePDF(data: PDFGeneratorData, preview: boolea
     addPageNumbers(doc, pageWidth, pageHeight, margin);
 
     // 根据预览模式返回不同格式
-    return preview ? doc.output('bloburl') : saveInvoicePDF(doc, data);
+    return preview ? doc.output('bloburl').toString() : saveInvoicePDF(doc, data);
 
   } catch (error) {
     console.error('Error generating PDF:', error);
