@@ -2,6 +2,7 @@ import jsPDF, { GState } from 'jspdf';
 import { PurchaseOrderData } from '@/types/purchase';
 import { loadImage, getStampImage } from '@/utils/pdfHelpers';
 import { getBankInfo } from '@/utils/bankInfo';
+import { embeddedResources } from '@/lib/embedded-resources';
 
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
@@ -25,8 +26,10 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
   }) as ExtendedJsPDF;
 
   // 添加字体
-  doc.addFont('/fonts/NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
-  doc.addFont('/fonts/NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
+  doc.addFileToVFS('NotoSansSC-Regular.ttf', embeddedResources.notoSansSCRegular);
+  doc.addFont('NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
+  doc.addFileToVFS('NotoSansSC-Bold.ttf', embeddedResources.notoSansSCBold);
+  doc.addFont('NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
   doc.setFont('NotoSansSC', 'normal');
 
   const pageWidth = doc.internal.pageSize.width;
@@ -45,26 +48,25 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
   try {
     // 添加表头
     try {
-      const headerImage = await loadImage('/images/header-bilingual.png');
-      if (headerImage) {
-        const imgWidth = pageWidth - 30;  // 左右各留15mm
-        const imgHeight = (headerImage.height * imgWidth) / headerImage.width;
-        doc.addImage(
-          headerImage,
-          'PNG',
-          15,  // 左边距15mm
-          15,  // 上边距15mm
-          imgWidth,
-          imgHeight
-        );
-        doc.setFontSize(14);
-        doc.setFont('NotoSansSC', 'bold');
-        const title = 'PURCHASE ORDER';
-        const titleWidth = doc.getTextWidth(title);
-        const titleY = margin + imgHeight + 5;  // 标题Y坐标
-        doc.text(title, (pageWidth - titleWidth) / 2, titleY);  // 标题位置
-        startY = titleY + 10;  // 主体内容从标题下方开始
-      }
+      const headerImage = `data:image/png;base64,${embeddedResources.headerImage}`;
+      const imgProperties = doc.getImageProperties(headerImage);
+      const imgWidth = pageWidth - 30;  // 左右各留15mm
+      const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
+      doc.addImage(
+        headerImage,
+        'PNG',
+        15,  // 左边距15mm
+        15,  // 上边距15mm
+        imgWidth,
+        imgHeight
+      );
+      doc.setFontSize(14);
+      doc.setFont('NotoSansSC', 'bold');
+      const title = 'PURCHASE ORDER';
+      const titleWidth = doc.getTextWidth(title);
+      const titleY = margin + imgHeight + 5;  // 标题Y坐标
+      doc.text(title, (pageWidth - titleWidth) / 2, titleY);  // 标题位置
+      startY = titleY + 10;  // 主体内容从标题下方开始
     } catch (error) {
       console.error('Error processing header:', error);
       // 使用默认布局
@@ -346,25 +348,27 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       const stampHeight = data.stampType === 'shanghai' ? 40 : 34;
       currentY = checkAndAddPage(currentY, stampHeight);
       try {
-        const stampImagePath = getStampImage(data.stampType);
-        if (stampImagePath) {
-          const stampImage = await loadImage(stampImagePath);
-          if (stampImage) {
-            // 根据印章类型设置尺寸
-            const stampWidth = data.stampType === 'shanghai' ? 40 : 73;
-            
-            const stampX = leftMargin; // 改为左对齐
-            const stampY = currentY += 5;
-            
-            // 设置印章透明度为0.9
-            doc.saveGraphicsState();
-            doc.setGState(new GState({ opacity: 0.9 }));
-            
-            doc.addImage(stampImage, 'PNG', stampX, stampY, stampWidth, stampHeight);
-            
-            // 恢复透明度
-            doc.restoreGraphicsState();
-          }
+        let stampImageBase64 = '';
+        if (data.stampType === 'shanghai') {
+          stampImageBase64 = embeddedResources.shanghaiStamp;
+        } else if (data.stampType === 'hongkong') {
+          stampImageBase64 = embeddedResources.hongkongStamp;
+        }
+
+        if (stampImageBase64) {
+          const stampImage = `data:image/png;base64,${stampImageBase64}`;
+          const stampProperties = doc.getImageProperties(stampImage);
+          const stampWidth = data.stampType === 'shanghai' ? 40 : 73;
+
+          const stampX = leftMargin; // 改为左对齐
+          const stampY = currentY += 5;
+
+          doc.saveGraphicsState();
+          doc.setGState(new GState({ opacity: 0.9 }));
+
+          doc.addImage(stampImage, 'PNG', stampX, stampY, stampWidth, stampHeight);
+
+          doc.restoreGraphicsState();
         }
       } catch (error) {
         console.error('Error loading stamp image:', error);
