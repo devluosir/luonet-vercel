@@ -1,7 +1,8 @@
-import jsPDF from 'jspdf';
+import jsPDF, { ImageProperties } from 'jspdf';
 import 'jspdf-autotable';
 import { PDFGeneratorData } from '@/types/pdf';
-import { getHeaderImage, getInvoiceTitle, getStampImage, loadImage } from '@/utils/pdfHelpers';
+import { getInvoiceTitle } from '@/utils/pdfHelpers';
+import { embeddedResources } from '@/lib/embedded-resources';
 
 interface AutoTableOptions {
   startY: number;
@@ -87,6 +88,7 @@ interface ExtendedJsPDF extends jsPDF {
     finalY: number;
   };
   autoTable: (options: AutoTableOptions) => void;
+  getImageProperties: (image: string) => ImageProperties;
 }
 
 // 生成发票PDF
@@ -102,11 +104,10 @@ export async function generateInvoicePDF(data: PDFGeneratorData, preview: boolea
 
   try {
     // 添加字体
-    await Promise.all([
-      doc.addFont('/fonts/NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal'),
-      doc.addFont('/fonts/NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold')
-    ]);
-
+    doc.addFileToVFS('NotoSansSC-Regular.ttf', embeddedResources.notoSansSCRegular);
+    doc.addFont('NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
+    doc.addFileToVFS('NotoSansSC-Bold.ttf', embeddedResources.notoSansSCBold);
+    doc.addFont('NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
     doc.setFont('NotoSansSC', 'normal');
 
     const pageWidth = doc.internal.pageSize.width;
@@ -117,28 +118,27 @@ export async function generateInvoicePDF(data: PDFGeneratorData, preview: boolea
     // 添加表头
     if (data.templateConfig.headerType !== 'none') {
       try {
-        const headerImage = await getHeaderImage(data.templateConfig.headerType);
-        if (headerImage) {
-          const imgWidth = pageWidth - 30;  // 左右各留15mm
-          const imgHeight = (headerImage.height * imgWidth) / headerImage.width;
-          doc.addImage(
-            headerImage,
-            'PNG',
-            15,  // 左边距15mm
-            15,  // 上边距15mm
-            imgWidth,
-            imgHeight,
-            undefined,
-            'FAST'  // 使用快速压缩
-          );
-          doc.setFontSize(14);
-          doc.setFont('NotoSansSC', 'bold');
-          const title = getInvoiceTitle(data);
-          const titleWidth = doc.getTextWidth(title);
-          const titleY = margin + imgHeight + 5;  // 标题Y坐标
-          doc.text(String(title), (pageWidth - titleWidth) / 2, titleY);
-          startY = titleY + 10;
-        }
+        const headerImage = `data:image/png;base64,${embeddedResources.headerImage}`;
+        const imgProperties = doc.getImageProperties(headerImage);
+        const imgWidth = pageWidth - 30;  // 左右各留15mm
+        const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
+        doc.addImage(
+          headerImage,
+          'PNG',
+          15,  // 左边距15mm
+          15,  // 上边距15mm
+          imgWidth,
+          imgHeight,
+          undefined,
+          'FAST'  // 使用快速压缩
+        );
+        doc.setFontSize(14);
+        doc.setFont('NotoSansSC', 'bold');
+        const title = getInvoiceTitle(data);
+        const titleWidth = doc.getTextWidth(title);
+        const titleY = margin + imgHeight + 5;  // 标题Y坐标
+        doc.text(String(title), (pageWidth - titleWidth) / 2, titleY);
+        startY = titleY + 10;
       } catch (error) {
         console.error('Error processing header:', error);
         startY = handleHeaderError(doc, data, margin);
@@ -514,14 +514,22 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
 
 // 渲染印章
 async function renderStamp(doc: ExtendedJsPDF, data: PDFGeneratorData, startY: number, margin: number): Promise<void> {
-  const stampImage = getStampImage(data.templateConfig.stampType);
-  if (stampImage) {
+  if (data.templateConfig.stampType !== 'none') {
     try {
-      const stampImg = await loadImage(stampImage);
+      let stampImageBase64 = '';
       if (data.templateConfig.stampType === 'shanghai') {
-        doc.addImage(stampImg, 'PNG', margin, startY, 40, 40);
-      } else {
-        doc.addImage(stampImg, 'PNG', margin, startY, 73, 34);
+        stampImageBase64 = embeddedResources.shanghaiStamp;
+      } else if (data.templateConfig.stampType === 'hongkong') {
+        stampImageBase64 = embeddedResources.hongkongStamp;
+      }
+
+      if (stampImageBase64) {
+        const stampImage = `data:image/png;base64,${stampImageBase64}`;
+        if (data.templateConfig.stampType === 'shanghai') {
+          doc.addImage(stampImage, 'PNG', margin, startY, 40, 40);
+        } else {
+          doc.addImage(stampImage, 'PNG', margin, startY, 73, 34);
+        }
       }
     } catch (error) {
       console.error('Error loading stamp image:', error);

@@ -1,8 +1,8 @@
-import jsPDF from 'jspdf';
+import jsPDF, { ImageProperties } from 'jspdf';
 import 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
-import { loadImage } from '@/utils/pdfHelpers';
 import { UserOptions, RowInput } from 'jspdf-autotable';
+import { embeddedResources } from '@/lib/embedded-resources';
 
 // 扩展jsPDF类型
 type ExtendedJsPDF = jsPDF & {
@@ -15,6 +15,7 @@ type ExtendedJsPDF = jsPDF & {
   GState: new (options: { opacity: number }) => unknown;
   setGState: (gState: unknown) => void;
   getNumberOfPages: () => number;
+  getImageProperties: (image: string) => ImageProperties;
 }
 
 // 货币符号映射
@@ -44,8 +45,10 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
   }) as ExtendedJsPDF;
 
   // 添加字体
-  doc.addFont('/fonts/NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
-  doc.addFont('/fonts/NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
+  doc.addFileToVFS('NotoSansSC-Regular.ttf', embeddedResources.notoSansSCRegular);
+  doc.addFont('NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
+  doc.addFileToVFS('NotoSansSC-Bold.ttf', embeddedResources.notoSansSCBold);
+  doc.addFont('NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
   doc.setFont('NotoSansSC', 'normal');
 
   const pageWidth = doc.internal.pageSize.width;
@@ -55,20 +58,19 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
   try {
     // 添加表头
     try {
-      const headerImage = await loadImage('/images/header-bilingual.png');
-      if (headerImage) {
-        const imgWidth = pageWidth - 30;
-        const imgHeight = (headerImage.height * imgWidth) / headerImage.width;
-        doc.addImage(headerImage, 'PNG', 15, 15, imgWidth, imgHeight);
-        
-        doc.setFontSize(14);
-        doc.setFont('NotoSansSC', 'bold');
-        const title = 'SALES CONFIRMATION';
-        const titleWidth = doc.getTextWidth(title);
-        const titleY = margin + imgHeight + 5;
-        doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-        startY = titleY + 10;
-      }
+      const headerImage = `data:image/png;base64,${embeddedResources.headerImage}`;
+      const imgProperties = doc.getImageProperties(headerImage);
+      const imgWidth = pageWidth - 30;
+      const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
+      doc.addImage(headerImage, 'PNG', 15, 15, imgWidth, imgHeight);
+      
+      doc.setFontSize(14);
+      doc.setFont('NotoSansSC', 'bold');
+      const title = 'SALES CONFIRMATION';
+      const titleWidth = doc.getTextWidth(title);
+      const titleY = margin + imgHeight + 5;
+      doc.text(title, (pageWidth - titleWidth) / 2, titleY);
+      startY = titleY + 10;
     } catch (error) {
       console.error('Error processing header:', error);
       doc.setFontSize(14);
@@ -420,8 +422,9 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     // 如果印章会单独出现在下一页，则先放置印章
     if (data.showStamp && stampWillBeAlone) {
       try {
-        const stampImage = await loadImage('/images/stamp-hongkong.png');
-        if (!stampImage) {
+        const stampImage = `data:image/png;base64,${embeddedResources.hongkongStamp}`;
+        const imgProperties = doc.getImageProperties(stampImage);
+        if (!imgProperties) {
           throw new Error('Failed to load stamp image');
         }
 
@@ -686,9 +689,10 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     // 添加签名区域 - 仅在印章没有被提前放置时添加
     if (data.showStamp && !stampWillBeAlone) {
       try {
-        const stampImage = await loadImage('/images/stamp-hongkong.png');
-        if (!stampImage) {
-          throw new Error('Failed to load stamp image: Image is null');
+        const stampImage = `data:image/png;base64,${embeddedResources.hongkongStamp}`;
+        const imgProperties = doc.getImageProperties(stampImage);
+        if (!imgProperties) {
+          throw new Error('Failed to load stamp image');
         }
 
         // 计算页面底部边界和当前页剩余空间

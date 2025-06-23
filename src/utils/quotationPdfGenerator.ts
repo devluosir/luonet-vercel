@@ -1,8 +1,8 @@
-import jsPDF from 'jspdf';
+import jsPDF, { ImageProperties } from 'jspdf';
 import 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
-import { loadImage } from '@/utils/pdfHelpers';
 import { UserOptions, RowInput } from 'jspdf-autotable';
+import { embeddedResources } from '@/lib/embedded-resources';
 
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
@@ -11,6 +11,7 @@ interface ExtendedJsPDF extends jsPDF {
   };
   autoTable: (options: UserOptions) => void;
   getNumberOfPages: () => number;
+  getImageProperties: (image: string) => ImageProperties;
 }
 
 // 货币符号映射
@@ -41,8 +42,10 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
   }) as ExtendedJsPDF;
 
   // 添加字体
-  doc.addFont('/fonts/NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
-  doc.addFont('/fonts/NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
+  doc.addFileToVFS('NotoSansSC-Regular.ttf', embeddedResources.notoSansSCRegular);
+  doc.addFont('NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
+  doc.addFileToVFS('NotoSansSC-Bold.ttf', embeddedResources.notoSansSCBold);
+  doc.addFont('NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
   doc.setFont('NotoSansSC', 'normal');
 
   const pageWidth = doc.internal.pageSize.width;
@@ -52,26 +55,25 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
   try {
     // 添加表头
     try {
-      const headerImage = await loadImage('/images/header-bilingual.png');
-      if (headerImage) {
-        const imgWidth = pageWidth - 30;  // 左右各留15mm
-        const imgHeight = (headerImage.height * imgWidth) / headerImage.width;
-        doc.addImage(
-          headerImage,
-          'PNG',
-          15,  // 左边距15mm
-          15,  // 上边距15mm
-          imgWidth,
-          imgHeight
-        );
-        doc.setFontSize(14);
-        doc.setFont('NotoSansSC', 'bold');
-        const title = 'QUOTATION';
-        const titleWidth = doc.getTextWidth(title);
-        const titleY = margin + imgHeight + 5;  // 标题Y坐标
-        doc.text(title, (pageWidth - titleWidth) / 2, titleY);  // 标题位置
-        startY = titleY + 10;  // 主体内容从标题下方开始
-      }
+      const headerImage = `data:image/png;base64,${embeddedResources.headerImage}`;
+      const imgProperties = doc.getImageProperties(headerImage);
+      const imgWidth = pageWidth - 30;  // 左右各留15mm
+      const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
+      doc.addImage(
+        headerImage,
+        'PNG',
+        15,  // 左边距15mm
+        15,  // 上边距15mm
+        imgWidth,
+        imgHeight
+      );
+      doc.setFontSize(14);
+      doc.setFont('NotoSansSC', 'bold');
+      const title = 'QUOTATION';
+      const titleWidth = doc.getTextWidth(title);
+      const titleY = margin + imgHeight + 5;  // 标题Y坐标
+      doc.text(title, (pageWidth - titleWidth) / 2, titleY);  // 标题位置
+      startY = titleY + 10;  // 主体内容从标题下方开始
     } catch (error) {
       console.error('Error processing header:', error);
       // 使用默认布局

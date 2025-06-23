@@ -1,6 +1,5 @@
-import jsPDF, { GState } from 'jspdf';
+import jsPDF, { GState, ImageProperties } from 'jspdf';
 import { PurchaseOrderData } from '@/types/purchase';
-import { loadImage, getStampImage } from '@/utils/pdfHelpers';
 import { getBankInfo } from '@/utils/bankInfo';
 import { embeddedResources } from '@/lib/embedded-resources';
 
@@ -15,6 +14,7 @@ interface ExtendedJsPDF extends jsPDF {
   restoreGraphicsState: () => jsPDF;
   setGState: (gState: any) => jsPDF;
   GState: (parameters: GState) => GState;
+  getImageProperties: (image: string) => ImageProperties;
 }
 
 // 生成采购订单PDF
@@ -357,7 +357,6 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
 
         if (stampImageBase64) {
           const stampImage = `data:image/png;base64,${stampImageBase64}`;
-          const stampProperties = doc.getImageProperties(stampImage);
           const stampWidth = data.stampType === 'shanghai' ? 40 : 73;
 
           const stampX = leftMargin; // 改为左对齐
