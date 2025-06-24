@@ -124,6 +124,7 @@ export default function HistoryManagementPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showPreview, setShowPreview] = useState<string | null>(null);
+  const [showExportOptions, setShowExportOptions] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -372,32 +373,19 @@ export default function HistoryManagementPage() {
 
   // 处理导出
   const handleExport = () => {
-    // 显示导出选项
-    const exportOptions = [
-      { id: 'current', label: '导出当前选项卡数据' },
-      { id: 'all', label: '导出所有历史记录' },
-      { id: 'filtered', label: '导出筛选后的数据' }
-    ];
+    setShowExportOptions(true);
+  };
 
-    const selectedOption = prompt(
-      `请选择导出方式：\n${exportOptions.map((opt, index) => `${index + 1}. ${opt.label}`).join('\n')}\n\n请输入选项编号 (1-3)：`,
-      '1'
-    );
-
-    if (!selectedOption) return;
-
-    const optionIndex = parseInt(selectedOption) - 1;
-    if (optionIndex < 0 || optionIndex >= exportOptions.length) {
-      alert('无效的选项');
-      return;
-    }
-
+  // 执行导出
+  const executeExport = (exportType: 'current' | 'all' | 'filtered') => {
+    setShowExportOptions(false);
+    
     try {
       let jsonData = '';
       let fileName = '';
       let exportStats = '';
 
-      switch (exportOptions[optionIndex].id) {
+      switch (exportType) {
         case 'current':
           // 导出当前选项卡数据
           switch (activeTab) {
@@ -774,29 +762,98 @@ export default function HistoryManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#1C1C1E] dark:via-[#1A1A1C] dark:to-[#1E1E20] flex flex-col">
       <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
-          {/* 返回按钮 */}
-          <Link href="/tools" className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Link>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+          {/* 页面头部 */}
+          <div className="mb-8">
+            {/* 返回按钮 */}
+            <Link 
+              href="/tools" 
+              className="inline-flex items-center text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              <span className="text-sm font-medium">返回工具中心</span>
+            </Link>
 
-          {/* 页面标题 */}
-          <div className="mt-4 sm:mt-6 mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              历史记录管理中心
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              统一管理报价单、发票、采购订单的历史记录
-            </p>
+            {/* 页面标题 */}
+            <div className="text-center sm:text-left">
+              <div className="flex items-center justify-center sm:justify-start space-x-3 mb-3">
+                <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                  <Archive className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 dark:from-white dark:via-blue-100 dark:to-indigo-100 bg-clip-text text-transparent">
+                    历史记录管理中心
+                  </h1>
+                </div>
+              </div>
+              <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl">
+                统一管理报价单、发票、采购订单的历史记录，支持智能搜索、筛选和批量操作
+              </p>
+            </div>
+          </div>
+
+          {/* 统计卡片 */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {[
+              { 
+                id: 'quotation', 
+                name: '报价单', 
+                icon: FileText, 
+                color: 'blue',
+                count: getQuotationHistory().filter(item => item.type === 'quotation').length 
+              },
+              { 
+                id: 'confirmation', 
+                name: '销售确认', 
+                icon: Receipt, 
+                color: 'green',
+                count: getQuotationHistory().filter(item => item.type === 'confirmation').length 
+              },
+              { 
+                id: 'invoice', 
+                name: '发票', 
+                icon: Receipt, 
+                color: 'purple',
+                count: getInvoiceHistory().length 
+              },
+              { 
+                id: 'purchase', 
+                name: '采购单', 
+                icon: ShoppingCart, 
+                color: 'orange',
+                count: getPurchaseHistory().length 
+              }
+            ].map((stat) => (
+              <div 
+                key={stat.id}
+                className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200 cursor-pointer ${
+                  activeTab === stat.id ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
+                }`}
+                onClick={() => setActiveTab(stat.id as HistoryType)}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      {stat.name}
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      {stat.count.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className={`p-3 rounded-lg bg-${stat.color}-100 dark:bg-${stat.color}-900/30`}>
+                    <stat.icon className={`w-6 h-6 text-${stat.color}-600 dark:text-${stat.color}-400`} />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* 标签页 */}
-          <div className="mb-6">
-            <div className="border-b border-gray-200 dark:border-gray-700">
-              <nav className="-mb-px flex space-x-8">
+          <div className="mb-8">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <nav className="flex space-x-1 p-1">
                 {[
                   { id: 'quotation', name: '报价单', icon: FileText, count: getQuotationHistory().filter(item => item.type === 'quotation').length },
                   { id: 'confirmation', name: '销售确认', icon: Receipt, count: getQuotationHistory().filter(item => item.type === 'confirmation').length },
@@ -806,15 +863,19 @@ export default function HistoryManagementPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as HistoryType)}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                    className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-200 ${
                       activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                        ? 'bg-blue-500 text-white shadow-md'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                   >
                     <tab.icon className="w-4 h-4" />
                     <span>{tab.name}</span>
-                    <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full text-xs">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      activeTab === tab.id
+                        ? 'bg-white/20 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}>
                       {tab.count}
                     </span>
                   </button>
@@ -824,8 +885,8 @@ export default function HistoryManagementPage() {
           </div>
 
           {/* 工具栏 */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
               {/* 搜索和过滤 */}
               <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
                 <div className="relative">
@@ -835,16 +896,20 @@ export default function HistoryManagementPage() {
                     placeholder="搜索客户、单号..."
                     value={filters.search}
                     onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white w-full sm:w-64"
+                    className="pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white w-full sm:w-80 transition-all duration-200"
                   />
                 </div>
                 
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
+                  className={`flex items-center space-x-2 px-4 py-3 border rounded-xl transition-all duration-200 ${
+                    showFilters
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                      : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white'
+                  }`}
                 >
                   <Filter className="w-4 h-4" />
-                  <span>过滤</span>
+                  <span>高级过滤</span>
                 </button>
               </div>
 
@@ -852,7 +917,7 @@ export default function HistoryManagementPage() {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={loadHistory}
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  className="flex items-center space-x-2 px-4 py-3 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200"
                 >
                   <RefreshCw className="w-4 h-4" />
                   <span>刷新</span>
@@ -860,7 +925,7 @@ export default function HistoryManagementPage() {
                 
                 <button
                   onClick={handleImport}
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  className="flex items-center space-x-2 px-4 py-3 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl transition-all duration-200"
                 >
                   <Upload className="w-4 h-4" />
                   <span>导入</span>
@@ -868,7 +933,7 @@ export default function HistoryManagementPage() {
                 
                 <button
                   onClick={handleExport}
-                  className="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  className="flex items-center space-x-2 px-4 py-3 text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all duration-200"
                 >
                   <Download className="w-4 h-4" />
                   <span>导出</span>
@@ -877,7 +942,7 @@ export default function HistoryManagementPage() {
                 {selectedIds.size > 0 && (
                   <button
                     onClick={() => setShowDeleteConfirm('batch')}
-                    className="flex items-center space-x-2 px-4 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                    className="flex items-center space-x-2 px-4 py-3 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200"
                   >
                     <Trash2 className="w-4 h-4" />
                     <span>删除 ({selectedIds.size})</span>
@@ -888,8 +953,8 @@ export default function HistoryManagementPage() {
 
             {/* 过滤选项 */}
             {showFilters && (
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       日期范围
@@ -897,7 +962,7 @@ export default function HistoryManagementPage() {
                     <select
                       value={filters.dateRange}
                       onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200"
                     >
                       <option value="all">全部时间</option>
                       <option value="today">今天</option>
@@ -914,7 +979,7 @@ export default function HistoryManagementPage() {
                     <select
                       value={filters.amountRange}
                       onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as any }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200"
                     >
                       <option value="all">全部金额</option>
                       <option value="low">小于1万</option>
@@ -928,25 +993,28 @@ export default function HistoryManagementPage() {
           </div>
 
           {/* 历史记录列表 */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-gray-500 dark:text-gray-400">加载中...</div>
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mb-4"></div>
+                <div className="text-gray-600 dark:text-gray-400 font-medium">正在加载数据...</div>
               </div>
             ) : history.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Archive className="w-12 h-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
+                  <Archive className="w-12 h-12 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                   暂无历史记录
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400">
-                  当前没有找到符合条件的记录
+                <p className="text-gray-500 dark:text-gray-400 text-center max-w-md">
+                  当前没有找到符合条件的记录，请尝试调整筛选条件或导入数据
                 </p>
               </div>
             ) : (
               <>
                 {/* 表头 */}
-                <div className="bg-gray-50 dark:bg-gray-700 px-6 py-3 border-b border-gray-200 dark:border-gray-600">
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
                   <div className="grid grid-cols-12 gap-4 items-center">
                     <div className="col-span-1">
                       <input
@@ -959,13 +1027,13 @@ export default function HistoryManagementPage() {
                             setSelectedIds(new Set());
                           }
                         }}
-                        className="rounded border-gray-300 dark:border-gray-600"
+                        className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
                       />
                     </div>
                     <div className="col-span-3">
                       <button
                         onClick={() => handleSort('createdAt')}
-                        className="flex items-center space-x-1 text-left font-medium text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300"
+                        className="flex items-center space-x-1 text-left font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                       >
                         <span>创建时间</span>
                         {renderSortIcon('createdAt')}
@@ -974,26 +1042,26 @@ export default function HistoryManagementPage() {
                     <div className="col-span-2">
                       <button
                         onClick={() => handleSort('totalAmount')}
-                        className="flex items-center space-x-1 text-left font-medium text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300"
+                        className="flex items-center space-x-1 text-left font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                       >
                         <span>金额</span>
                         {renderSortIcon('totalAmount')}
                       </button>
                     </div>
                     <div className="col-span-3">
-                      <span className="font-medium text-gray-900 dark:text-white">客户/供应商</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">客户/供应商</span>
                     </div>
                     <div className="col-span-2">
-                      <span className="font-medium text-gray-900 dark:text-white">单号</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">单号</span>
                     </div>
                     <div className="col-span-1">
-                      <span className="font-medium text-gray-900 dark:text-white">操作</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">操作</span>
                     </div>
                   </div>
                 </div>
 
                 {/* 记录列表 */}
-                <div className="divide-y divide-gray-200 dark:divide-gray-600">
+                <div className="divide-y divide-gray-100 dark:divide-gray-700">
                   {history.map((item) => {
                     const Icon = getRecordIcon(item);
                     const isSelected = selectedIds.has(item.id);
@@ -1001,8 +1069,8 @@ export default function HistoryManagementPage() {
                     return (
                       <div
                         key={item.id}
-                        className={`px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                          isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                        className={`px-6 py-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 ${
+                          isSelected ? 'bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800' : ''
                         }`}
                       >
                         <div className="grid grid-cols-12 gap-4 items-center">
@@ -1019,20 +1087,20 @@ export default function HistoryManagementPage() {
                                 }
                                 setSelectedIds(newSelectedIds);
                               }}
-                              className="rounded border-gray-300 dark:border-gray-600"
+                              className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
                             />
                           </div>
                           
                           <div className="col-span-3">
                             <div className="flex items-center space-x-3">
-                              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                                <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                              <div className="p-2.5 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl">
+                                <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                               </div>
                               <div>
-                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                <div className="text-sm font-semibold text-gray-900 dark:text-white">
                                   {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full inline-block mt-1">
                                   {getRecordTypeName(item)}
                                 </div>
                               </div>
@@ -1040,19 +1108,19 @@ export default function HistoryManagementPage() {
                           </div>
                           
                           <div className="col-span-2">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            <div className="text-sm font-bold text-green-600 dark:text-green-400">
                               {item.currency} {item.totalAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                           </div>
                           
                           <div className="col-span-3">
-                            <div className="text-sm text-gray-900 dark:text-white">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
                               {getCustomerName(item)}
                             </div>
                           </div>
                           
                           <div className="col-span-2">
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                            <div className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded">
                               {getRecordNumber(item)}
                             </div>
                           </div>
@@ -1061,28 +1129,28 @@ export default function HistoryManagementPage() {
                             <div className="flex items-center space-x-1">
                               <button
                                 onClick={() => handlePreview(item.id)}
-                                className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                                className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
                                 title="预览"
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleEdit(item.id)}
-                                className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                                className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
                                 title="编辑"
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleCopy(item.id)}
-                                className="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400"
+                                className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200"
                                 title="复制"
                               >
                                 <Copy className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => setShowDeleteConfirm(item.id)}
-                                className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                                className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
                                 title="删除"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -1131,6 +1199,95 @@ export default function HistoryManagementPage() {
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 导出选择框 */}
+      {showExportOptions && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <Download className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  选择导出方式
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  请选择要导出的数据类型
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-3 mb-6">
+              <button
+                onClick={() => executeExport('current')}
+                className="w-full p-4 text-left bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      导出当前选项卡数据
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      仅导出当前查看的 {activeTab === 'quotation' ? '报价单' : activeTab === 'confirmation' ? '销售确认' : activeTab === 'invoice' ? '发票' : '采购单'} 数据
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => executeExport('all')}
+                className="w-full p-4 text-left bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-green-200 dark:border-green-800 hover:from-green-100 hover:to-emerald-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <Archive className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      导出所有历史记录
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      导出所有类型的历史记录，包含完整备份
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => executeExport('filtered')}
+                className="w-full p-4 text-left bg-gradient-to-r from-purple-50 to-violet-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-purple-200 dark:border-purple-800 hover:from-purple-100 hover:to-violet-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                    <Filter className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      导出筛选后的数据
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      导出当前筛选条件下的数据 ({history.length} 条)
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowExportOptions(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                取消
               </button>
             </div>
           </div>
