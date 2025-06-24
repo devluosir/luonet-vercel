@@ -182,7 +182,7 @@ export default function PurchaseHistoryTab({
           </button>
           <button
             onClick={() => onSort('orderNo')}
-            className="w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap"
+            className="w-24 sm:w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap"
           >
             采购单号
             <span className="ml-1 flex items-center">{renderSortIcon('orderNo')}</span>
@@ -201,7 +201,7 @@ export default function PurchaseHistoryTab({
             创建时间
             <span className="ml-1 flex items-center">{renderSortIcon('createdAt')}</span>
           </button>
-          <div className="w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
+          <div className="w-10 sm:w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
             操作
           </div>
         </div>
@@ -230,7 +230,7 @@ export default function PurchaseHistoryTab({
                 <div className="flex-1 min-w-0 truncate text-sm font-medium text-gray-900 dark:text-white pl-2" title={item.supplierName}>
                   {item.supplierName}
                 </div>
-                <div className="w-40 flex-shrink-0 px-2">
+                <div className="w-24 sm:w-40 flex-shrink-0">
                   <div className="whitespace-nowrap text-sm font-bold text-orange-600 dark:text-orange-400 font-mono">
                     {item.orderNo}
                   </div>
@@ -245,7 +245,7 @@ export default function PurchaseHistoryTab({
                     {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                   </div>
                 </div>
-                <div className="w-12 sm:w-32 flex-shrink-0 flex items-center justify-center ml-2 sm:ml-0">
+                <div className="w-10 sm:w-32 flex-shrink-0 flex items-center justify-center">
                   <div className="flex items-center justify-end space-x-1">
                     <button
                       onClick={() => onPreview(item.id)}
