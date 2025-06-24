@@ -1008,77 +1008,36 @@ export default function HistoryManagementPage() {
         {/* 高级过滤器 */}
         {showFilters && (
           <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 relative z-10">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-bold text-lg text-gray-900 dark:text-white">筛选条件</span>
-                <button
-                  onClick={() => setShowFilters(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg transition-colors"
-                  title="关闭筛选"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+              <div className="flex items-center space-x-3">
                 {/* 日期范围过滤 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    日期范围
-                  </label>
-                  <select
-                    value={filters.dateRange}
-                    onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">全部时间</option>
-                    <option value="today">今天</option>
-                    <option value="week">最近7天</option>
-                    <option value="month">最近30天</option>
-                    <option value="year">最近一年</option>
-                  </select>
-                </div>
-
+                <select
+                  value={filters.dateRange}
+                  onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="all">全部时间</option>
+                  <option value="today">今天</option>
+                  <option value="week">最近7天</option>
+                  <option value="month">最近30天</option>
+                  <option value="year">最近一年</option>
+                </select>
                 {/* 金额范围过滤 */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    金额范围
-                  </label>
-                  <select
-                    value={filters.amountRange}
-                    onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as any }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">全部金额</option>
-                    <option value="low">小于 10,000</option>
-                    <option value="medium">10,000 - 100,000</option>
-                    <option value="high">大于 100,000</option>
-                  </select>
-                </div>
-
-                {/* 记录统计 */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    记录统计
-                  </label>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    当前显示 {history.length} 条记录
-                    {selectedIds.size > 0 && (
-                      <span className="ml-2 text-blue-600 dark:text-blue-400">
-                        (已选择 {selectedIds.size} 条)
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-end space-x-2 mt-6">
+                <select
+                  value={filters.amountRange}
+                  onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as any }))}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="all">全部金额</option>
+                  <option value="low">小于 10,000</option>
+                  <option value="medium">10,000 - 100,000</option>
+                  <option value="high">大于 100,000</option>
+                </select>
+                {/* 重置按钮 */}
                 <button
-                  onClick={() => setFilters({ ...filters, search: '', dateRange: 'all', amountRange: 'all' })}
-                  className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                  onClick={() => setFilters({ ...filters, dateRange: 'all', amountRange: 'all' })}
+                  className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm"
                 >重置</button>
-                <button
-                  onClick={() => setShowFilters(false)}
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                >应用</button>
               </div>
             </div>
           </div>
