@@ -857,10 +857,7 @@ export default function HistoryManagementPage() {
             {/* 页面标题+操作区 */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
               <div className="flex items-center space-x-3">
-                <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-                  <Archive className="w-6 h-6 text-white" />
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 dark:from-white dark:via-blue-100 dark:to-indigo-100 bg-clip-text text-transparent">
+                <h1 className="text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]">
                   单据管理中心
                 </h1>
               </div>
@@ -872,8 +869,16 @@ export default function HistoryManagementPage() {
                     placeholder="搜索客户、单号..."
                     value={filters.search}
                     onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white w-full sm:w-80 transition-all duration-200"
+                    className="pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white w-full sm:w-80 transition-all duration-200"
                   />
+                  {filters.search && (
+                    <button
+                      onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
                 <button
                   onClick={handleImport}
@@ -903,8 +908,8 @@ export default function HistoryManagementPage() {
             </div>
           </div>
 
-          {/* 统计卡片 */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {/* 统计卡片 - 优化小屏幕布局 */}
+          <div className="grid grid-cols-4 gap-2 sm:gap-4 mb-8">
             {(() => {
               // 统计每个类型的匹配数量
               const searchLower = filters.search?.toLowerCase() || '';
@@ -965,22 +970,22 @@ export default function HistoryManagementPage() {
                 return (
                   <div
                     key={stat.id}
-                    className={`bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200 cursor-pointer ${
+                    className={`bg-white dark:bg-gray-800 rounded-xl p-2 sm:p-4 lg:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200 cursor-pointer ${
                       activeTab === stat.id ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
                     }`}
                     onClick={() => setActiveTab(stat.id as HistoryType)}
                   >
-                    <div className="flex items-center justify-between relative">
-                      <div>
-                        <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between relative">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
                           {stat.name}
                         </p>
-                        <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                        <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
                           {stat.count.toLocaleString()}
                         </p>
                       </div>
-                      <div className={`p-2 sm:p-3 rounded-lg ${stat.bgClass} relative`}>
-                        <stat.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${stat.iconClass}`} />
+                      <div className={`p-1.5 sm:p-2 lg:p-3 rounded-lg ${stat.bgClass} relative mt-2 sm:mt-0 sm:ml-2`}>
+                        <stat.icon className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ${stat.iconClass}`} />
                         {/* 搜索匹配徽标 */}
                         {filters.search && matchCount > 0 && (
                           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 shadow">
