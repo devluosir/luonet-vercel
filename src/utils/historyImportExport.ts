@@ -42,14 +42,20 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
       }
     } catch (parseError) {
       console.log('JSON解析失败，尝试修复格式问题');
+      console.error('原始解析错误:', parseError);
       // 尝试修复常见的JSON格式问题
       const fixedContent = content
         .replace(/\n/g, '')
         .replace(/\r/g, '')
         .replace(/\t/g, '')
         .trim();
-      parsedData = JSON.parse(fixedContent);
-      console.log('修复后JSON解析成功');
+      try {
+        parsedData = JSON.parse(fixedContent);
+        console.log('修复后JSON解析成功');
+      } catch (secondError) {
+        console.error('修复后仍然解析失败:', secondError);
+        return { success: false, error: 'JSON格式错误，无法解析文件内容' };
+      }
     }
 
     // 检查是否是综合数据格式（包含metadata字段）
@@ -77,6 +83,8 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
             results.otherTabs!.push('报价单');
           }
+        } else {
+          console.error('报价单导入失败');
         }
       }
 
@@ -92,6 +100,8 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
             results.otherTabs!.push('销售确认');
           }
+        } else {
+          console.error('销售确认导入失败');
         }
       }
 
@@ -107,6 +117,8 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           if (activeTab !== 'invoice') {
             results.otherTabs!.push('发票');
           }
+        } else {
+          console.error('发票导入失败');
         }
       }
 
@@ -122,6 +134,8 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           if (activeTab !== 'purchase') {
             results.otherTabs!.push('采购单');
           }
+        } else {
+          console.error('采购单导入失败');
         }
       }
 
@@ -207,6 +221,8 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
           results.otherTabs!.push('报价单');
         }
+      } else {
+        console.error('报价单导入失败');
       }
     }
 
@@ -220,6 +236,8 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
           results.otherTabs!.push('销售确认');
         }
+      } else {
+        console.error('销售确认导入失败');
       }
     }
 
@@ -233,6 +251,8 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         if (activeTab !== 'invoice') {
           results.otherTabs!.push('发票');
         }
+      } else {
+        console.error('发票导入失败');
       }
     }
 
@@ -246,6 +266,8 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         if (activeTab !== 'purchase') {
           results.otherTabs!.push('采购单');
         }
+      } else {
+        console.error('采购单导入失败');
       }
     }
 
@@ -259,7 +281,7 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
 
   } catch (error) {
     console.error('Smart import error:', error);
-    return { success: false, error: '文件解析失败' };
+    return { success: false, error: `文件解析失败: ${error instanceof Error ? error.message : '未知错误'}` };
   }
 };
 

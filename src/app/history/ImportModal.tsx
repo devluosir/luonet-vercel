@@ -29,6 +29,39 @@ export default function ImportModal({
     console.log('文件信息:', { name: file.name, size: file.size, type: file.type });
     
     try {
+      // 先测试文件读取
+      const content = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          console.log('ImportModal: 文件读取成功，内容长度:', result.length);
+          console.log('ImportModal: 文件内容前200字符:', result.substring(0, 200));
+          resolve(result);
+        };
+        reader.onerror = (error) => {
+          console.error('ImportModal: 文件读取失败:', error);
+          reject(new Error('文件读取失败'));
+        };
+        reader.readAsText(file);
+      });
+      
+      // 测试JSON解析
+      let parsedData;
+      try {
+        parsedData = JSON.parse(content);
+        console.log('ImportModal: JSON解析成功，数据类型:', typeof parsedData);
+        if (Array.isArray(parsedData)) {
+          console.log('ImportModal: 数据是数组，长度:', parsedData.length);
+        } else if (typeof parsedData === 'object') {
+          console.log('ImportModal: 数据是对象，键:', Object.keys(parsedData));
+        }
+      } catch (parseError) {
+        console.error('ImportModal: JSON解析失败:', parseError);
+        alert('文件格式错误：不是有效的JSON文件');
+        return;
+      }
+      
+      // 调用导入函数
       const result = await handleFileImport(file, activeTab);
       console.log('ImportModal: 导入结果:', result);
       
@@ -113,6 +146,77 @@ export default function ImportModal({
               onChange={handleImport}
             />
           </button>
+          
+          {/* 开发环境测试按钮 */}
+          {process.env.NODE_ENV === 'development' && (
+            <button
+              onClick={() => {
+                // 创建一个测试数据
+                const testData = {
+                  metadata: {
+                    exportDate: new Date().toISOString(),
+                    totalRecords: 1
+                  },
+                  quotation: [{
+                    id: 'test-' + Date.now(),
+                    type: 'quotation',
+                    customerName: '测试客户',
+                    quotationNo: 'TEST-001',
+                    totalAmount: 1000,
+                    currency: 'USD',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    data: {
+                      to: '测试客户',
+                      inquiryNo: 'INQ-001',
+                      quotationNo: 'TEST-001',
+                      date: new Date().toISOString().split('T')[0],
+                      from: 'Roger',
+                      currency: 'USD',
+                      items: [{
+                        id: 1,
+                        partName: '测试产品',
+                        description: '测试描述',
+                        quantity: 1,
+                        unit: 'PCS',
+                        unitPrice: 1000,
+                        amount: 1000,
+                        remarks: '',
+                        highlight: {}
+                      }],
+                      notes: '测试备注',
+                      amountInWords: 'One Thousand USD Only',
+                      showDescription: true,
+                      showRemarks: false,
+                      showBank: false,
+                      showStamp: false,
+                      contractNo: 'TEST-001',
+                      otherFees: [],
+                      customUnits: [],
+                      showPaymentTerms: false,
+                      showInvoiceReminder: false,
+                      additionalPaymentTerms: ''
+                    }
+                  }]
+                };
+                
+                const blob = new Blob([JSON.stringify(testData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'test_import_data.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                alert('测试文件已下载，请尝试导入此文件');
+              }}
+              className="w-full mt-2 p-2 text-sm bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-yellow-800 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-900/30 transition-colors"
+            >
+              下载测试文件（开发环境）
+            </button>
+          )}
         </div>
         
         <div className="flex justify-end">
