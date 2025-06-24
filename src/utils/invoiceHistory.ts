@@ -187,4 +187,15 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
     console.error('Error importing invoice history:', error);
     return false;
   }
+};
+
+// 导出历史记录
+export const exportInvoiceHistory = (): string => {
+  try {
+    const history = getInvoiceHistory();
+    return JSON.stringify(history, null, 2);
+  } catch (error) {
+    console.error('Error exporting invoice history:', error);
+    return '';
+  }
 }; 

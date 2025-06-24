@@ -7,8 +7,9 @@ const DEFAULT_MODULES = [
   'ai-email',
   'quotation',
   'invoice',
-  'date-tools',
   'purchase',
+  'history',
+  'date-tools',
   'feature3',
   'feature4'
 ];

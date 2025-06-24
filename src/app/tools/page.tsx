@@ -16,7 +16,8 @@ import {
   Database, 
   Zap,
   Clock,
-  TrendingUp
+  TrendingUp,
+  Archive
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Footer } from '@/components/Footer';
@@ -69,6 +70,14 @@ const MODULES = [
     path: '/mail',
     icon: Mail,
     color: 'from-blue-500 to-indigo-500'
+  },
+  { 
+    id: 'history', 
+    name: '历史记录管理', 
+    description: '统一管理报价单、发票、采购订单历史', 
+    path: '/history',
+    icon: Archive,
+    color: 'from-indigo-500 to-purple-500'
   },
   { 
     id: 'date-tools', 

@@ -76,6 +76,8 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     { id: 'ai-email', name: 'AI邮件助手' },
     { id: 'quotation', name: '报价及确认' },
     { id: 'invoice', name: '发票助手' },
+    { id: 'purchase', name: '采购订单' },
+    { id: 'history', name: '历史记录管理' },
   ].filter(module => 
     user.permissions.some(p => p.moduleId === module.id && p.canAccess)
   );
