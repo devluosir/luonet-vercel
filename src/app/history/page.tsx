@@ -372,26 +372,111 @@ export default function HistoryManagementPage() {
 
   // 处理导出
   const handleExport = () => {
+    // 显示导出选项
+    const exportOptions = [
+      { id: 'current', label: '导出当前选项卡数据' },
+      { id: 'all', label: '导出所有历史记录' },
+      { id: 'filtered', label: '导出筛选后的数据' }
+    ];
+
+    const selectedOption = prompt(
+      `请选择导出方式：\n${exportOptions.map((opt, index) => `${index + 1}. ${opt.label}`).join('\n')}\n\n请输入选项编号 (1-3)：`,
+      '1'
+    );
+
+    if (!selectedOption) return;
+
+    const optionIndex = parseInt(selectedOption) - 1;
+    if (optionIndex < 0 || optionIndex >= exportOptions.length) {
+      alert('无效的选项');
+      return;
+    }
+
     try {
       let jsonData = '';
       let fileName = '';
-      
-      switch (activeTab) {
-        case 'quotation':
-          jsonData = JSON.stringify(getQuotationHistory().filter(item => item.type === 'quotation'), null, 2);
-          fileName = `quotation_history_${format(new Date(), 'yyyy-MM-dd')}.json`;
+      let exportStats = '';
+
+      switch (exportOptions[optionIndex].id) {
+        case 'current':
+          // 导出当前选项卡数据
+          switch (activeTab) {
+            case 'quotation':
+              const quotationData = getQuotationHistory().filter(item => item.type === 'quotation');
+              jsonData = JSON.stringify(quotationData, null, 2);
+              fileName = `quotation_history_${format(new Date(), 'yyyy-MM-dd')}.json`;
+              exportStats = `报价单：${quotationData.length} 条`;
+              break;
+            case 'confirmation':
+              const confirmationData = getQuotationHistory().filter(item => item.type === 'confirmation');
+              jsonData = JSON.stringify(confirmationData, null, 2);
+              fileName = `confirmation_history_${format(new Date(), 'yyyy-MM-dd')}.json`;
+              exportStats = `销售确认：${confirmationData.length} 条`;
+              break;
+            case 'invoice':
+              jsonData = exportInvoiceHistory();
+              const invoiceData = getInvoiceHistory();
+              fileName = `invoice_history_${format(new Date(), 'yyyy-MM-dd')}.json`;
+              exportStats = `发票：${invoiceData.length} 条`;
+              break;
+            case 'purchase':
+              jsonData = exportPurchaseHistory();
+              const purchaseData = getPurchaseHistory();
+              fileName = `purchase_history_${format(new Date(), 'yyyy-MM-dd')}.json`;
+              exportStats = `采购单：${purchaseData.length} 条`;
+              break;
+          }
           break;
-        case 'confirmation':
-          jsonData = JSON.stringify(getQuotationHistory().filter(item => item.type === 'confirmation'), null, 2);
-          fileName = `confirmation_history_${format(new Date(), 'yyyy-MM-dd')}.json`;
+
+        case 'all':
+          // 导出所有历史记录
+          const allData = {
+            metadata: {
+              exportDate: new Date().toISOString(),
+              totalRecords: 0,
+              breakdown: {
+                quotation: 0,
+                confirmation: 0,
+                invoice: 0,
+                purchase: 0
+              }
+            },
+            quotation: getQuotationHistory().filter(item => item.type === 'quotation'),
+            confirmation: getQuotationHistory().filter(item => item.type === 'confirmation'),
+            invoice: getInvoiceHistory(),
+            purchase: getPurchaseHistory()
+          };
+
+          // 计算统计信息
+          allData.metadata.breakdown.quotation = allData.quotation.length;
+          allData.metadata.breakdown.confirmation = allData.confirmation.length;
+          allData.metadata.breakdown.invoice = allData.invoice.length;
+          allData.metadata.breakdown.purchase = allData.purchase.length;
+          allData.metadata.totalRecords = Object.values(allData.metadata.breakdown).reduce((sum, count) => sum + count, 0);
+
+          jsonData = JSON.stringify(allData, null, 2);
+          fileName = `all_history_records_${format(new Date(), 'yyyy-MM-dd')}.json`;
+          exportStats = `总计：${allData.metadata.totalRecords} 条\n` +
+            `报价单：${allData.metadata.breakdown.quotation} 条\n` +
+            `销售确认：${allData.metadata.breakdown.confirmation} 条\n` +
+            `发票：${allData.metadata.breakdown.invoice} 条\n` +
+            `采购单：${allData.metadata.breakdown.purchase} 条`;
           break;
-        case 'invoice':
-          jsonData = exportInvoiceHistory();
-          fileName = `invoice_history_${format(new Date(), 'yyyy-MM-dd')}.json`;
-          break;
-        case 'purchase':
-          jsonData = exportPurchaseHistory();
-          fileName = `purchase_history_${format(new Date(), 'yyyy-MM-dd')}.json`;
+
+        case 'filtered':
+          // 导出筛选后的数据
+          const filteredData = {
+            metadata: {
+              exportDate: new Date().toISOString(),
+              filters: filters,
+              totalRecords: history.length
+            },
+            records: history
+          };
+
+          jsonData = JSON.stringify(filteredData, null, 2);
+          fileName = `filtered_history_${format(new Date(), 'yyyy-MM-dd')}.json`;
+          exportStats = `筛选结果：${history.length} 条`;
           break;
       }
 
@@ -405,6 +490,11 @@ export default function HistoryManagementPage() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+
+        // 显示导出成功信息
+        alert(`导出成功！\n文件名：${fileName}\n${exportStats}`);
+      } else {
+        alert('没有数据可导出');
       }
     } catch (error) {
       console.error('Error exporting history:', error);
