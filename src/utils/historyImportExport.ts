@@ -61,7 +61,139 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
     // 检查是否是综合数据格式（包含metadata字段）
     if (parsedData && typeof parsedData === 'object' && 'metadata' in parsedData) {
       console.log('检测到综合数据格式');
-      // 综合数据格式
+      
+      // 检查是否是筛选数据格式（包含records字段）
+      if ('records' in parsedData && Array.isArray(parsedData.records)) {
+        console.log('检测到筛选数据格式，记录数量:', parsedData.records.length);
+        // 筛选数据格式，直接处理records数组
+        const records = parsedData.records;
+        const results: ImportResult = {
+          success: true,
+          details: [],
+          otherTabs: []
+        };
+
+        // 按类型分组数据
+        const quotationData = [];
+        const confirmationData = [];
+        const invoiceData = [];
+        const purchaseData = [];
+
+        for (const item of records) {
+          if (!item || typeof item !== 'object') continue;
+
+          // 识别数据类型
+          if ('quotationNo' in item && 'type' in item) {
+            // 报价单或确认书数据
+            if (item.type === 'quotation') {
+              quotationData.push(item);
+            } else if (item.type === 'confirmation') {
+              confirmationData.push(item);
+            }
+          } else if ('invoiceNo' in item && !('quotationNo' in item)) {
+            // 发票数据
+            invoiceData.push(item);
+          } else if ('orderNo' in item && 'supplierName' in item) {
+            // 采购单数据
+            purchaseData.push(item);
+          } else if ('data' in item && item.data) {
+            // 通过data字段判断类型
+            if (item.data.quotationNo && item.data.customerPO === undefined) {
+              // 报价单数据
+              quotationData.push({
+                ...item,
+                type: item.data.type || 'quotation'
+              });
+            } else if (item.data.invoiceNo || item.data.customerPO !== undefined) {
+              // 发票数据
+              invoiceData.push(item);
+            } else if (item.data.orderNo && item.data.supplierName) {
+              // 采购单数据
+              purchaseData.push(item);
+            }
+          }
+        }
+
+        console.log('筛选数据分组结果:', {
+          quotation: quotationData.length,
+          confirmation: confirmationData.length,
+          invoice: invoiceData.length,
+          purchase: purchaseData.length
+        });
+
+        // 执行导入
+        let totalImported = 0;
+
+        if (quotationData.length > 0) {
+          const quotationJson = JSON.stringify(quotationData);
+          const importSuccess = importQuotationHistory(quotationJson);
+          console.log('报价单导入结果:', importSuccess);
+          if (importSuccess) {
+            results.details!.push(`报价单：${quotationData.length} 条`);
+            totalImported += quotationData.length;
+            if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
+              results.otherTabs!.push('报价单');
+            }
+          } else {
+            console.error('报价单导入失败');
+          }
+        }
+
+        if (confirmationData.length > 0) {
+          const confirmationJson = JSON.stringify(confirmationData);
+          const importSuccess = importQuotationHistory(confirmationJson);
+          console.log('销售确认导入结果:', importSuccess);
+          if (importSuccess) {
+            results.details!.push(`销售确认：${confirmationData.length} 条`);
+            totalImported += confirmationData.length;
+            if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
+              results.otherTabs!.push('销售确认');
+            }
+          } else {
+            console.error('销售确认导入失败');
+          }
+        }
+
+        if (invoiceData.length > 0) {
+          const invoiceJson = JSON.stringify(invoiceData);
+          const importSuccess = importInvoiceHistory(invoiceJson);
+          console.log('发票导入结果:', importSuccess);
+          if (importSuccess) {
+            results.details!.push(`发票：${invoiceData.length} 条`);
+            totalImported += invoiceData.length;
+            if (activeTab !== 'invoice') {
+              results.otherTabs!.push('发票');
+            }
+          } else {
+            console.error('发票导入失败');
+          }
+        }
+
+        if (purchaseData.length > 0) {
+          const purchaseJson = JSON.stringify(purchaseData);
+          const importSuccess = importPurchaseHistory(purchaseJson);
+          console.log('采购单导入结果:', importSuccess);
+          if (importSuccess) {
+            results.details!.push(`采购单：${purchaseData.length} 条`);
+            totalImported += purchaseData.length;
+            if (activeTab !== 'purchase') {
+              results.otherTabs!.push('采购单');
+            }
+          } else {
+            console.error('采购单导入失败');
+          }
+        }
+
+        console.log('筛选数据导入完成，总计:', totalImported);
+        if (totalImported === 0) {
+          return { success: false, error: '筛选数据中未找到有效的历史记录数据' };
+        }
+
+        results.details!.unshift(`总计导入：${totalImported} 条记录`);
+        return results;
+      }
+      
+      // 综合数据格式（包含quotation、confirmation、invoice、purchase字段）
       const allData = parsedData;
       const results: ImportResult = {
         success: true,

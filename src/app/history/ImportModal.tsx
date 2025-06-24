@@ -112,7 +112,9 @@ export default function ImportModal({
               <div className="text-sm text-blue-800 dark:text-blue-200">
                 <div className="font-medium mb-1">导入说明：</div>
                 <ul className="space-y-1 text-xs">
-                  <li>• 支持单个类型或综合数据文件</li>
+                  <li>• 支持综合数据文件（包含所有类型）</li>
+                  <li>• 支持筛选数据文件（包含筛选结果）</li>
+                  <li>• 支持单个类型文件（报价单、发票等）</li>
                   <li>• 自动识别数据类型并导入到对应选项卡</li>
                   <li>• 重复数据将被覆盖</li>
                   <li>• 导入后会自动刷新页面数据</li>
@@ -149,73 +151,99 @@ export default function ImportModal({
           
           {/* 开发环境测试按钮 */}
           {process.env.NODE_ENV === 'development' && (
-            <button
-              onClick={() => {
-                // 创建一个测试数据
-                const testData = {
-                  metadata: {
-                    exportDate: new Date().toISOString(),
-                    totalRecords: 1
-                  },
-                  quotation: [{
-                    id: 'test-' + Date.now(),
-                    type: 'quotation',
-                    customerName: '测试客户',
-                    quotationNo: 'TEST-001',
-                    totalAmount: 1000,
-                    currency: 'USD',
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    data: {
-                      to: '测试客户',
-                      inquiryNo: 'INQ-001',
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  // 创建一个测试数据
+                  const testData = {
+                    metadata: {
+                      exportDate: new Date().toISOString(),
+                      totalRecords: 1
+                    },
+                    quotation: [{
+                      id: 'test-' + Date.now(),
+                      type: 'quotation',
+                      customerName: '测试客户',
                       quotationNo: 'TEST-001',
-                      date: new Date().toISOString().split('T')[0],
-                      from: 'Roger',
+                      totalAmount: 1000,
                       currency: 'USD',
-                      items: [{
-                        id: 1,
-                        partName: '测试产品',
-                        description: '测试描述',
-                        quantity: 1,
-                        unit: 'PCS',
-                        unitPrice: 1000,
-                        amount: 1000,
-                        remarks: '',
-                        highlight: {}
-                      }],
-                      notes: '测试备注',
-                      amountInWords: 'One Thousand USD Only',
-                      showDescription: true,
-                      showRemarks: false,
-                      showBank: false,
-                      showStamp: false,
-                      contractNo: 'TEST-001',
-                      otherFees: [],
-                      customUnits: [],
-                      showPaymentTerms: false,
-                      showInvoiceReminder: false,
-                      additionalPaymentTerms: ''
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      data: {
+                        to: '测试客户',
+                        inquiryNo: 'INQ-001',
+                        quotationNo: 'TEST-001',
+                        date: new Date().toISOString().split('T')[0],
+                        from: 'Roger',
+                        currency: 'USD',
+                        items: [{
+                          id: 1,
+                          partName: '测试产品',
+                          description: '测试描述',
+                          quantity: 1,
+                          unit: 'PCS',
+                          unitPrice: 1000,
+                          amount: 1000,
+                          remarks: '',
+                          highlight: {}
+                        }],
+                        notes: '测试备注',
+                        amountInWords: 'One Thousand USD Only',
+                        showDescription: true,
+                        showRemarks: false,
+                        showBank: false,
+                        showStamp: false,
+                        contractNo: 'TEST-001',
+                        otherFees: [],
+                        customUnits: [],
+                        showPaymentTerms: false,
+                        showInvoiceReminder: false,
+                        additionalPaymentTerms: ''
+                      }
+                    }]
+                  };
+                  
+                  const blob = new Blob([JSON.stringify(testData, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'test_import_data.json';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                  
+                  alert('测试文件已下载，请尝试导入此文件');
+                }}
+                className="w-full p-2 text-sm bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-yellow-800 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-900/30 transition-colors"
+              >
+                下载测试文件（开发环境）
+              </button>
+              
+              <button
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.json';
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (e) => {
+                        const content = e.target?.result as string;
+                        console.log('文件内容预览:', content);
+                        alert(`文件内容预览（前500字符）：\n\n${content.substring(0, 500)}${content.length > 500 ? '...' : ''}`);
+                      };
+                      reader.readAsText(file);
                     }
-                  }]
-                };
-                
-                const blob = new Blob([JSON.stringify(testData, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'test_import_data.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                alert('测试文件已下载，请尝试导入此文件');
-              }}
-              className="w-full mt-2 p-2 text-sm bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-yellow-800 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-900/30 transition-colors"
-            >
-              下载测试文件（开发环境）
-            </button>
+                  };
+                  input.click();
+                }}
+                className="w-full p-2 text-sm bg-purple-100 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg text-purple-800 dark:text-purple-200 hover:bg-purple-200 dark:hover:bg-purple-900/30 transition-colors"
+              >
+                预览文件内容（开发环境）
+              </button>
+            </div>
           )}
         </div>
         
