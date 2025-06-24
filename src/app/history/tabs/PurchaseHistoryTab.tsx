@@ -209,6 +209,13 @@ export default function PurchaseHistoryTab({
             创建时间
             <span className="ml-1 flex items-center">{renderSortIcon('createdAt')}</span>
           </button>
+          <button
+            onClick={() => onSort('updatedAt')}
+            className="hidden xl:flex w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-orange-600 dark:hover:text-orange-400 transition-colors items-center group whitespace-nowrap"
+          >
+            修改时间
+            <span className="ml-1 flex items-center">{renderSortIcon('updatedAt')}</span>
+          </button>
           <div className="w-10 sm:w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
             操作
           </div>
@@ -251,6 +258,11 @@ export default function PurchaseHistoryTab({
                 <div className="hidden lg:block w-40 flex-shrink-0">
                   <div className="text-sm text-gray-900 dark:text-white">
                     {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
+                  </div>
+                </div>
+                <div className="hidden xl:block w-40 flex-shrink-0">
+                  <div className="text-sm text-gray-900 dark:text-white">
+                    {format(new Date(item.updatedAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                   </div>
                 </div>
                 <div className="w-10 sm:w-32 flex-shrink-0 flex items-center justify-center">
