@@ -889,6 +889,17 @@ export default function HistoryManagementPage() {
                 >
                   <Download className="w-5 h-5" />
                 </button>
+                {selectedIds.size > 0 && (
+                  <button
+                    onClick={() => setShowDeleteConfirm('batch')}
+                    className="px-4 py-2 flex items-center bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                    title="批量删除"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    <span className="hidden sm:inline">批量删除</span>
+                    <span className="ml-1 bg-white bg-opacity-20 rounded px-1.5 py-0.5 text-xs font-bold">{selectedIds.size}</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
