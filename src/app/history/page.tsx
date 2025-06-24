@@ -1110,11 +1110,17 @@ export default function HistoryManagementPage() {
                                 <Copy className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => setShowDeleteConfirm(item.id)}
-                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
-                                title="删除"
+                                onClick={() => {
+                                  setShowPreview(null);
+                                  if (pdfPreviewUrl) {
+                                    URL.revokeObjectURL(pdfPreviewUrl);
+                                    setPdfPreviewUrl(null);
+                                  }
+                                }}
+                                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                title="关闭"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <X className="w-6 h-6" />
                               </button>
                             </div>
                           </div>
@@ -1274,194 +1280,127 @@ export default function HistoryManagementPage() {
       {/* 预览弹窗 */}
       {showPreview && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
             {/* 弹窗头部 */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <Eye className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            {(() => {
+              const item = history.find(h => h.id === showPreview);
+              if (!item) return (
+                <div className="p-8 text-center">
+                  <div className="text-gray-500 dark:text-gray-400">记录不存在</div>
                 </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    记录预览
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    查看记录详细信息和PDF预览
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setShowPreview(null);
-                  if (pdfPreviewUrl) {
-                    URL.revokeObjectURL(pdfPreviewUrl);
-                    setPdfPreviewUrl(null);
-                  }
-                }}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* 弹窗内容 */}
-            <div className="overflow-y-auto max-h-[calc(95vh-120px)]">
-              {(() => {
-                const item = history.find(h => h.id === showPreview);
-                if (!item) return (
-                  <div className="p-8 text-center">
-                    <div className="text-gray-500 dark:text-gray-400">记录不存在</div>
+              );
+              return (
+                <>
+                  <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        {(() => {
+                          const Icon = getRecordIcon(item);
+                          return <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
+                        })()}
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                        {getRecordTypeName(item)}
+                      </h3>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleEdit(item.id)}
+                        className="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:text-orange-400 dark:hover:bg-orange-900/20 rounded-lg transition-all duration-200"
+                        title="编辑"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleCopy(item.id)}
+                        className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200"
+                        title="复制"
+                      >
+                        <Copy className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowPreview(null);
+                          if (pdfPreviewUrl) {
+                            URL.revokeObjectURL(pdfPreviewUrl);
+                            setPdfPreviewUrl(null);
+                          }
+                        }}
+                        className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        title="关闭"
+                      >
+                        <X className="w-6 h-6" />
+                      </button>
+                    </div>
                   </div>
-                );
-
-                return (
-                  <div className="p-6 space-y-6">
-                    {/* 基本信息卡片 */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      {/* 基本信息 */}
-                      <div className="lg:col-span-2 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-600">
-                        <div className="flex items-center space-x-2 mb-4">
-                          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                            {(() => {
-                              const Icon = getRecordIcon(item);
-                              return <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
-                            })()}
+                  {/* 基本信息内容 */}
+                  <div className="p-6 pb-2">
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-600">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-center items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
+                            <span className="text-sm font-bold text-red-600 dark:text-blue-400">{getRecordNumber(item, activeTab)}</span>
                           </div>
-                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">基本信息</h4>
+                          <div className="flex justify-center items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
+                            <span className="text-sm font-bold text-gray-900 dark:text-white">{getCustomerName(item)}</span>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-3">
-                            <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
-                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">记录类型</span>
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{getRecordTypeName(item)}</span>
-                            </div>
-                            <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
-                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">单号</span>
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{getRecordNumber(item, activeTab)}</span>
-                            </div>
-                            <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
-                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">客户/供应商</span>
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{getCustomerName(item)}</span>
-                            </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">总金额</span>
+                            <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                              {item.currency} {item.totalAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
                           </div>
-                          <div className="space-y-3">
+                          <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">创建时间</span>
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                              {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm:ss', { locale: zhCN })}
+                            </span>
+                          </div>
+                          {'updatedAt' in item && (
                             <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
-                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">总金额</span>
-                              <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                                {item.currency} {item.totalAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
-                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">创建时间</span>
+                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">更新时间</span>
                               <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm:ss', { locale: zhCN })}
+                                {format(new Date(item.updatedAt), 'yyyy-MM-dd HH:mm:ss', { locale: zhCN })}
                               </span>
                             </div>
-                            {'updatedAt' in item && (
-                              <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
-                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">更新时间</span>
-                                <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                  {format(new Date(item.updatedAt), 'yyyy-MM-dd HH:mm:ss', { locale: zhCN })}
-                                </span>
-                              </div>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
-
-                      {/* 操作按钮 */}
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
-                        <div className="flex items-center space-x-2 mb-4">
-                          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                            <MoreHorizontal className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">操作</h4>
-                        </div>
-                        <div className="space-y-3">
-                          <button
-                            onClick={() => {
-                              setShowPreview(null);
-                              handleEdit(item.id);
-                            }}
-                            className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
-                          >
-                            <Edit className="w-4 h-4" />
-                            <span>编辑记录</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setShowPreview(null);
-                              handleCopy(item.id);
-                            }}
-                            className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
-                          >
-                            <Copy className="w-4 h-4" />
-                            <span>复制记录</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setShowPreview(null);
-                              setShowDeleteConfirm(item.id);
-                            }}
-                            className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            <span>删除记录</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* PDF预览 */}
-                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-600">
-                      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 min-h-[500px] flex items-center justify-center border border-gray-200 dark:border-gray-600">
-                        {isGeneratingPdf ? (
-                          <div className="flex flex-col items-center space-y-4">
-                            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
-                            <div className="text-center">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">正在生成PDF预览...</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">请稍候</p>
-                            </div>
-                          </div>
-                        ) : pdfPreviewUrl ? (
-                          <div className="w-full h-full">
-                            <iframe
-                              src={pdfPreviewUrl}
-                              className="w-full h-[600px] border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg"
-                              title="PDF预览"
-                            />
-                          </div>
-                        ) : (
-                          <div className="text-center text-gray-500 dark:text-gray-400">
-                            <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                            <p className="text-lg font-medium mb-2">无法生成PDF预览</p>
-                            <p className="text-sm">请检查记录数据是否完整</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* 详细数据（折叠显示） */}
-                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-600">
-                      <details className="group">
-                        <summary className="flex items-center space-x-2 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-                          <div className="p-2 bg-gray-100 dark:bg-gray-600 rounded-lg">
-                            <Archive className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                          </div>
-                          <span className="text-lg font-semibold text-gray-900 dark:text-white">详细数据</span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">(点击展开)</span>
-                        </summary>
-                        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 overflow-x-auto mt-4 border border-gray-200 dark:border-gray-600">
-                          <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                            {JSON.stringify(item.data, null, 2)}
-                          </pre>
-                        </div>
-                      </details>
                     </div>
                   </div>
-                );
-              })()}
-            </div>
+                  {/* PDF预览 */}
+                  <div className="m-6 mt-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-2 min-h-[600px] flex items-center justify-center border border-gray-200 dark:border-gray-600">
+                      {isGeneratingPdf ? (
+                        <div className="flex flex-col items-center space-y-4">
+                          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+                          <div className="text-center">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">正在生成PDF预览...</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">请稍候</p>
+                          </div>
+                        </div>
+                      ) : pdfPreviewUrl ? (
+                        <div className="w-full h-full">
+                          <iframe
+                            src={pdfPreviewUrl}
+                            className="w-full h-[700px] border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg"
+                            title="PDF预览"
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-center text-gray-500 dark:text-gray-400">
+                          <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                          <p className="text-lg font-medium mb-2">无法生成PDF预览</p>
+                          <p className="text-sm">请检查记录数据是否完整</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
