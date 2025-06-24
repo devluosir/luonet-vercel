@@ -430,11 +430,11 @@ export default function HistoryManagementPage() {
             if (importResult.success) {
               loadHistory();
               // 显示导入结果
-              const resultMessage = `导入成功！\n${importResult.details.join('\n')}`;
+              const resultMessage = `导入成功！\n${('details' in importResult ? importResult.details : []).join('\n')}`;
               alert(resultMessage);
               
               // 如果有数据导入到其他选项卡，提示用户
-              if (importResult.otherTabs.length > 0) {
+              if ('otherTabs' in importResult && importResult.otherTabs.length > 0) {
                 const switchMessage = `部分数据已导入到其他选项卡：${importResult.otherTabs.join('、')}\n是否要切换到对应选项卡查看？`;
                 if (confirm(switchMessage)) {
                   // 切换到第一个有数据的选项卡
