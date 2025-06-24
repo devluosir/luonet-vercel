@@ -974,20 +974,21 @@ export default function HistoryManagementPage() {
                   <Filter className="w-4 h-4" />
                 </button>
 
-                {/* 导入导出按钮 */}
+                {/* 导出按钮（蓝色，Download） */}
+                <button
+                  onClick={handleExport}
+                  className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
+                  title="导出"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+                {/* 导入按钮（绿色，Upload） */}
                 <button
                   onClick={handleImport}
                   className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-200"
                   title="导入"
                 >
                   <Upload className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={handleExport}
-                  className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
-                  title="导出"
-                >
-                  <Download className="w-5 h-5" />
                 </button>
                 {selectedIds.size > 0 && (
                   <button
