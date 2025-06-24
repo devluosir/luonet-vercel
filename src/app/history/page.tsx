@@ -424,36 +424,163 @@ export default function HistoryManagementPage() {
         reader.onload = (e) => {
           const content = e.target?.result as string;
           try {
-            let success = false;
+            // 智能识别文件类型并导入
+            const importResult = smartImport(content);
             
-            switch (activeTab) {
-              case 'quotation':
-              case 'confirmation':
-                success = importQuotationHistory(content);
-                break;
-              case 'invoice':
-                success = importInvoiceHistory(content);
-                break;
-              case 'purchase':
-                success = importPurchaseHistory(content);
-                break;
-            }
-
-            if (success) {
+            if (importResult.success) {
               loadHistory();
-              alert('导入成功');
+              // 显示导入结果
+              const resultMessage = `导入成功！\n${importResult.details.join('\n')}`;
+              alert(resultMessage);
+              
+              // 如果有数据导入到其他选项卡，提示用户
+              if (importResult.otherTabs.length > 0) {
+                const switchMessage = `部分数据已导入到其他选项卡：${importResult.otherTabs.join('、')}\n是否要切换到对应选项卡查看？`;
+                if (confirm(switchMessage)) {
+                  // 切换到第一个有数据的选项卡
+                  setActiveTab(importResult.otherTabs[0] as HistoryType);
+                }
+              }
             } else {
-              alert('导入失败');
+              alert(`导入失败：${importResult.error}`);
             }
           } catch (error) {
             console.error('Error importing:', error);
-            alert('导入失败');
+            alert('导入失败：文件格式错误');
           }
         };
         reader.readAsText(file);
       }
     };
     input.click();
+  };
+
+  // 智能导入函数
+  const smartImport = (content: string) => {
+    try {
+      let parsedData;
+      try {
+        parsedData = JSON.parse(content);
+      } catch (parseError) {
+        // 尝试修复常见的JSON格式问题
+        const fixedContent = content
+          .replace(/\n/g, '')
+          .replace(/\r/g, '')
+          .replace(/\t/g, '')
+          .trim();
+        parsedData = JSON.parse(fixedContent);
+      }
+
+      if (!Array.isArray(parsedData) || parsedData.length === 0) {
+        return { success: false, error: '文件格式错误：需要包含数据的JSON数组' };
+      }
+
+      const results = {
+        success: true,
+        details: [] as string[],
+        otherTabs: [] as string[],
+        error: ''
+      };
+
+      // 按类型分组数据
+      const quotationData = [];
+      const confirmationData = [];
+      const invoiceData = [];
+      const purchaseData = [];
+
+      for (const item of parsedData) {
+        if (!item || typeof item !== 'object') continue;
+
+        // 识别数据类型
+        if ('quotationNo' in item && 'type' in item) {
+          // 报价单或确认书数据
+          if (item.type === 'quotation') {
+            quotationData.push(item);
+          } else if (item.type === 'confirmation') {
+            confirmationData.push(item);
+          }
+        } else if ('invoiceNo' in item && !('quotationNo' in item)) {
+          // 发票数据
+          invoiceData.push(item);
+        } else if ('orderNo' in item && 'supplierName' in item) {
+          // 采购单数据
+          purchaseData.push(item);
+        } else if ('data' in item && item.data) {
+          // 通过data字段判断类型
+          if (item.data.quotationNo && item.data.customerPO === undefined) {
+            // 报价单数据
+            quotationData.push({
+              ...item,
+              type: item.data.type || 'quotation'
+            });
+          } else if (item.data.invoiceNo || item.data.customerPO !== undefined) {
+            // 发票数据
+            invoiceData.push(item);
+          } else if (item.data.orderNo && item.data.supplierName) {
+            // 采购单数据
+            purchaseData.push(item);
+          }
+        }
+      }
+
+      // 执行导入
+      let totalImported = 0;
+
+      if (quotationData.length > 0) {
+        const quotationJson = JSON.stringify(quotationData);
+        if (importQuotationHistory(quotationJson)) {
+          results.details.push(`报价单：${quotationData.length} 条`);
+          totalImported += quotationData.length;
+          if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
+            results.otherTabs.push('报价单');
+          }
+        }
+      }
+
+      if (confirmationData.length > 0) {
+        const confirmationJson = JSON.stringify(confirmationData);
+        if (importQuotationHistory(confirmationJson)) {
+          results.details.push(`销售确认：${confirmationData.length} 条`);
+          totalImported += confirmationData.length;
+          if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
+            results.otherTabs.push('销售确认');
+          }
+        }
+      }
+
+      if (invoiceData.length > 0) {
+        const invoiceJson = JSON.stringify(invoiceData);
+        if (importInvoiceHistory(invoiceJson)) {
+          results.details.push(`发票：${invoiceData.length} 条`);
+          totalImported += invoiceData.length;
+          if (activeTab !== 'invoice') {
+            results.otherTabs.push('发票');
+          }
+        }
+      }
+
+      if (purchaseData.length > 0) {
+        const purchaseJson = JSON.stringify(purchaseData);
+        if (importPurchaseHistory(purchaseJson)) {
+          results.details.push(`采购单：${purchaseData.length} 条`);
+          totalImported += purchaseData.length;
+          if (activeTab !== 'purchase') {
+            results.otherTabs.push('采购单');
+          }
+        }
+      }
+
+      if (totalImported === 0) {
+        return { success: false, error: '未能识别任何有效的历史记录数据' };
+      }
+
+      results.details.unshift(`总计导入：${totalImported} 条记录`);
+      return results;
+
+    } catch (error) {
+      console.error('Smart import error:', error);
+      return { success: false, error: '文件解析失败' };
+    }
   };
 
   // 获取记录类型图标
