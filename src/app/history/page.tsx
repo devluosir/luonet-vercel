@@ -884,6 +884,38 @@ export default function HistoryManagementPage() {
     };
   }, [pdfPreviewUrl]);
 
+  // 获取每个tab的搜索结果数量
+  const getTabCount = (tabType: HistoryType) => {
+    try {
+      let results: HistoryItem[] = [];
+      
+      switch (tabType) {
+        case 'quotation':
+          results = getQuotationHistory().filter(item => item.type === 'quotation');
+          break;
+        case 'confirmation':
+          results = getQuotationHistory().filter(item => item.type === 'confirmation');
+          break;
+        case 'invoice':
+          results = getInvoiceHistory().map(item => ({
+            ...item,
+            updatedAt: item.createdAt // 使用createdAt作为updatedAt
+          }));
+          break;
+        case 'purchase':
+          results = getPurchaseHistory();
+          break;
+      }
+
+      // 应用过滤条件
+      const filteredResults = getFilteredHistory(results);
+      return filteredResults.length;
+    } catch (error) {
+      console.error('Error getting tab count:', error);
+      return 0;
+    }
+  };
+
   // 避免闪烁，在客户端渲染前或activeTab未设置时返回空内容
   if (!mounted) {
     return null;
@@ -894,44 +926,131 @@ export default function HistoryManagementPage() {
       <div className="flex-1">
         {/* Header */}
         <div className="bg-white dark:bg-[#1c1c1e] shadow-sm dark:shadow-gray-800/30">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={handleBack}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
-              >
-                <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-              </button>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">单据管理中心</h1>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={handleImport}
-                className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-200"
-                title="导入"
-              >
-                <Upload className="w-5 h-5" />
-              </button>
-              <button
-                onClick={handleExport}
-                className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
-                title="导出"
-              >
-                <Download className="w-5 h-5" />
-              </button>
-              {selectedIds.size > 0 && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+              <div className="flex items-center space-x-4">
                 <button
-                  onClick={() => setShowDeleteConfirm('batch')}
-                  className="px-3 py-2 flex items-center bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-                  title="批量删除"
+                  onClick={handleBack}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  <span className="ml-1 bg-white bg-opacity-20 rounded px-1.5 py-0.5 text-xs font-bold">{selectedIds.size}</span>
+                  <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
                 </button>
-              )}
+                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">单据管理中心</h1>
+              </div>
+              <div className="flex items-center space-x-2">
+                {/* 搜索框 */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="搜索..."
+                    value={filters.search}
+                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                    className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent w-48 sm:w-64"
+                  />
+                </div>
+                
+                {/* 高级过滤按钮 */}
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`p-2 rounded-lg border transition-all duration-200 ${
+                    showFilters 
+                      ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400'
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                  title="高级过滤"
+                >
+                  <Filter className="w-4 h-4" />
+                </button>
+
+                {/* 导入导出按钮 */}
+                <button
+                  onClick={handleImport}
+                  className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-200"
+                  title="导入"
+                >
+                  <Upload className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleExport}
+                  className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
+                  title="导出"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+                {selectedIds.size > 0 && (
+                  <button
+                    onClick={() => setShowDeleteConfirm('batch')}
+                    className="px-3 py-2 flex items-center bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                    title="批量删除"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="ml-1 bg-white bg-opacity-20 rounded px-1.5 py-0.5 text-xs font-bold">{selectedIds.size}</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
+
+        {/* 高级过滤器 */}
+        {showFilters && (
+          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* 日期范围过滤 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    日期范围
+                  </label>
+                  <select
+                    value={filters.dateRange}
+                    onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">全部时间</option>
+                    <option value="today">今天</option>
+                    <option value="week">最近7天</option>
+                    <option value="month">最近30天</option>
+                    <option value="year">最近一年</option>
+                  </select>
+                </div>
+
+                {/* 金额范围过滤 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    金额范围
+                  </label>
+                  <select
+                    value={filters.amountRange}
+                    onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as any }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">全部金额</option>
+                    <option value="low">小于 10,000</option>
+                    <option value="medium">10,000 - 100,000</option>
+                    <option value="high">大于 100,000</option>
+                  </select>
+                </div>
+
+                {/* 记录统计 */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    记录统计
+                  </label>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    当前显示 {history.length} 条记录
+                    {selectedIds.size > 0 && (
+                      <span className="ml-2 text-blue-600 dark:text-blue-400">
+                        (已选择 {selectedIds.size} 条)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="bg-white dark:bg-[#1c1c1e] border-b border-gray-200 dark:border-gray-800">
@@ -944,6 +1063,7 @@ export default function HistoryManagementPage() {
                 { id: 'purchase', name: '采购单历史', icon: ShoppingCart }
               ].map((tab) => {
                 const Icon = tab.icon;
+                const count = getTabCount(tab.id as HistoryType);
                 return (
                   <button
                     key={tab.id}
@@ -956,6 +1076,13 @@ export default function HistoryManagementPage() {
                   >
                     <Icon className="h-4 w-4" />
                     <span>{tab.name}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                      activeTab === tab.id
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                    }`}>
+                      {count}
+                    </span>
                   </button>
                 );
               })}
@@ -966,90 +1093,6 @@ export default function HistoryManagementPage() {
         {/* Content */}
         <div className="flex-1 py-8 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
-            {/* Filters and Actions */}
-            <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="搜索..."
-                    value={filters.search}
-                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`p-2 rounded-lg border transition-all duration-200 ${
-                    showFilters 
-                      ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400'
-                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                  title="高级过滤"
-                >
-                  <Filter className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* 高级过滤器 */}
-            {showFilters && (
-              <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* 日期范围过滤 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      日期范围
-                    </label>
-                    <select
-                      value={filters.dateRange}
-                      onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="all">全部时间</option>
-                      <option value="today">今天</option>
-                      <option value="week">最近7天</option>
-                      <option value="month">最近30天</option>
-                      <option value="year">最近一年</option>
-                    </select>
-                  </div>
-
-                  {/* 金额范围过滤 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      金额范围
-                    </label>
-                    <select
-                      value={filters.amountRange}
-                      onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as any }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="all">全部金额</option>
-                      <option value="low">小于 10,000</option>
-                      <option value="medium">10,000 - 100,000</option>
-                      <option value="high">大于 100,000</option>
-                    </select>
-                  </div>
-
-                  {/* 记录统计 */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      记录统计
-                    </label>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      当前显示 {history.length} 条记录
-                      {selectedIds.size > 0 && (
-                        <span className="ml-2 text-blue-600 dark:text-blue-400">
-                          (已选择 {selectedIds.size} 条)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Tab Content */}
             <div className="bg-white dark:bg-[#1c1c1e] rounded-lg shadow-sm dark:shadow-gray-800/30">
               {activeTab === 'quotation' && (
