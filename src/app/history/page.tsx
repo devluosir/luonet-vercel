@@ -1025,7 +1025,7 @@ export default function HistoryManagementPage() {
                     <div className="flex-1 min-w-0 truncate font-semibold text-gray-900 dark:text-white pl-2">
                       客户/供应商
                     </div>
-                    <div className="w-40 flex-shrink-0 px-2 font-semibold text-gray-900 dark:text-white">
+                    <div className="w-28 sm:w-40 flex-shrink-0 px-1 sm:px-2 font-semibold text-gray-900 dark:text-white">
                       {activeTab === 'confirmation'
                         ? '订单号'
                         : activeTab === 'quotation'
@@ -1038,7 +1038,7 @@ export default function HistoryManagementPage() {
                     <div className="hidden lg:block w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white">
                       创建时间
                     </div>
-                    <div className="w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
+                    <div className="w-20 sm:w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
                       操作
                     </div>
                   </div>
@@ -1076,7 +1076,7 @@ export default function HistoryManagementPage() {
                           <div className="flex-1 min-w-0 truncate text-sm font-medium text-gray-900 dark:text-white pl-2" title={getCustomerName(item)}>
                             {getCustomerName(item)}
                           </div>
-                          <div className="w-40 flex-shrink-0 px-2">
+                          <div className="w-28 sm:w-40 flex-shrink-0 px-1 sm:px-2">
                             <div className="whitespace-nowrap text-sm font-bold text-blue-600 dark:text-blue-400 font-mono">
                               {getRecordNumber(item, activeTab)}
                             </div>
@@ -1091,18 +1091,8 @@ export default function HistoryManagementPage() {
                               {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                             </div>
                           </div>
-                          <div className="w-32 flex-shrink-0 flex items-center justify-center">
-                            {/* 小屏只显示查看按钮，其余sm及以上显示 */}
-                            <div className="flex items-center justify-end space-x-1 sm:hidden">
-                              <button
-                                onClick={() => handlePreview(item.id)}
-                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
-                                title="预览"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                            </div>
-                            <div className="hidden sm:flex items-center justify-end space-x-1">
+                          <div className="w-20 sm:w-32 flex-shrink-0 flex items-center justify-center">
+                            <div className="flex items-center justify-end space-x-1">
                               <button
                                 onClick={() => handlePreview(item.id)}
                                 className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
@@ -1112,30 +1102,24 @@ export default function HistoryManagementPage() {
                               </button>
                               <button
                                 onClick={() => handleEdit(item.id)}
-                                className="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:text-orange-400 dark:hover:bg-orange-900/20 rounded-lg transition-all duration-200"
+                                className="hidden sm:inline-flex p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:text-orange-400 dark:hover:bg-orange-900/20 rounded-lg transition-all duration-200"
                                 title="编辑"
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleCopy(item.id)}
-                                className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200"
+                                className="hidden sm:inline-flex p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200"
                                 title="复制"
                               >
                                 <Copy className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => {
-                                  setShowPreview(null);
-                                  if (pdfPreviewUrl) {
-                                    URL.revokeObjectURL(pdfPreviewUrl);
-                                    setPdfPreviewUrl(null);
-                                  }
-                                }}
-                                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                title="关闭"
+                                onClick={() => setShowDeleteConfirm(item.id)}
+                                className="hidden sm:inline-flex p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
+                                title="删除"
                               >
-                                <X className="w-6 h-6" />
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </div>
