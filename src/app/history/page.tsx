@@ -157,12 +157,33 @@ export default function HistoryManagementPage() {
 
   useEffect(() => {
     setMounted(true);
+    
+    // 组件卸载时的清理函数
+    return () => {
+      setHistory([]);
+      setSelectedIds(new Set());
+      setShowDeleteConfirm(null);
+      setShowExportOptions(false);
+      setShowPreview(null);
+    };
   }, []);
 
   // 处理返回按钮点击
   const handleBack = () => {
-    // 单据中心统一返回到工具页面
-    router.push('/tools');
+    // 清理状态和资源
+    setHistory([]);
+    setSelectedIds(new Set());
+    setShowDeleteConfirm(null);
+    setShowExportOptions(false);
+    setShowPreview(null);
+    
+    // 预加载tools页面
+    router.prefetch('/tools');
+    
+    // 延迟跳转，给清理操作一些时间
+    setTimeout(() => {
+      router.push('/tools');
+    }, 100);
   };
 
   // 获取过滤后的历史记录

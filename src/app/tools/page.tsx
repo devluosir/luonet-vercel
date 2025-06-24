@@ -161,6 +161,11 @@ const DynamicHeader = dynamic(() => import('@/components/Header').then(mod => mo
   )
 });
 
+// 预加载Header组件
+if (typeof window !== 'undefined') {
+  import('@/components/Header');
+}
+
 export default function ToolsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -171,7 +176,15 @@ export default function ToolsPage() {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    
+    // 预加载常用页面
+    if (typeof window !== 'undefined') {
+      router.prefetch('/quotation');
+      router.prefetch('/invoice');
+      router.prefetch('/purchase');
+      router.prefetch('/history');
+    }
+  }, [router]);
 
   const handleLogout = async () => {
     localStorage.removeItem('username');
@@ -189,12 +202,29 @@ export default function ToolsPage() {
     const fetchUser = async () => {
       try {
         setLoading(true);
+        
+        // 尝试从缓存获取用户信息
+        const cachedUser = sessionStorage.getItem('userInfo');
+        if (cachedUser) {
+          try {
+            const parsedUser = JSON.parse(cachedUser);
+            setUser(parsedUser);
+            setLoading(false);
+            return;
+          } catch (e) {
+            // 缓存解析失败，继续从API获取
+          }
+        }
+        
         const response = await fetch('/api/users/me');
         if (!response.ok) {
           throw new Error('获取用户信息失败');
         }
         const data = await response.json();
         setUser(data);
+        
+        // 缓存用户信息
+        sessionStorage.setItem('userInfo', JSON.stringify(data));
       } catch (error) {
         console.error('Error fetching user:', error);
       } finally {
@@ -214,6 +244,11 @@ export default function ToolsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-lg">加载中...</div>
+        {process.env.NODE_ENV === 'development' && (
+          <div className="text-sm text-gray-500 mt-2">
+            正在获取用户权限信息...
+          </div>
+        )}
       </div>
     );
   }
