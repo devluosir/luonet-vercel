@@ -43,6 +43,7 @@ export default function PurchaseOrderPage() {
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [generatingProgress, setGeneratingProgress] = useState(0);
+  const [isEditMode, setIsEditMode] = useState(false);
   const router = useRouter();
 
   const projectSpecificationRef = useRef<HTMLTextAreaElement>(null);
@@ -87,11 +88,14 @@ export default function PurchaseOrderPage() {
     if (typeof window !== 'undefined') {
       const injected = (window as any).__PURCHASE_DATA__;
       const injectedId = (window as any).__EDIT_ID__;
+      const editMode = (window as any).__EDIT_MODE__;
       if (injected) {
         setData(injected);
         setEditId(injectedId);
+        setIsEditMode(editMode || false);
         delete (window as any).__PURCHASE_DATA__;
         delete (window as any).__EDIT_ID__;
+        delete (window as any).__EDIT_MODE__;
       }
     }
   }, []);
@@ -184,9 +188,9 @@ export default function PurchaseOrderPage() {
       <main className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
-          <Link href="/tools" className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7] transition-colors">
+          <Link href={isEditMode ? "/history?tab=purchase" : "/tools"} className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7] transition-colors">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            {isEditMode ? '返回历史记录' : 'Back'}
           </Link>
 
           {/* 主卡片容器 */}
@@ -194,7 +198,7 @@ export default function PurchaseOrderPage() {
             {/* 标题和设置按钮 */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 dark:border-[#3A3A3C]">
               <h1 className="text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]">
-                Purchase Order
+                {isEditMode ? '编辑采购订单' : 'Purchase Order'}
               </h1>
               <div className="flex items-center gap-2">
                 <button

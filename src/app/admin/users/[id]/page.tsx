@@ -54,6 +54,8 @@ export default function UserDetailPage() {
 
   useEffect(() => {
     const fetchUser = async () => {
+      if (!params?.id) return;
+      
       try {
         setLoading(true);
         const response = await fetch(`/api/admin/users/${params.id}`);
@@ -77,10 +79,8 @@ export default function UserDetailPage() {
       }
     };
 
-    if (params.id) {
-      fetchUser();
-    }
-  }, [params.id]);
+    fetchUser();
+  }, [params?.id]);
 
   const handleTogglePermission = (moduleId: string, currentAccess: boolean) => {
     const newPermissions = new Map(pendingPermissions);

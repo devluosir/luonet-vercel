@@ -353,7 +353,7 @@ export default function HistoryManagementPage() {
         router.push(`/invoice/edit/${id}`);
         break;
       case 'purchase':
-        router.push(`/purchase?edit=${id}`);
+        router.push(`/purchase/edit/${id}`);
         break;
     }
   };
@@ -369,7 +369,7 @@ export default function HistoryManagementPage() {
         router.push(`/invoice/copy/${id}`);
         break;
       case 'purchase':
-        router.push(`/purchase?copy=${id}`);
+        router.push(`/purchase/copy/${id}`);
         break;
     }
   };
