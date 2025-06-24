@@ -195,72 +195,72 @@ export default function HistoryManagementPage() {
 
   // 获取过滤后的历史记录
   const getFilteredHistory = useCallback((items: HistoryItem[]) => {
-    return items.filter(item => {
-      // 搜索过滤
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        const searchableText = [
-          'customerName' in item ? item.customerName : '',
-          'supplierName' in item ? item.supplierName : '',
-          'quotationNo' in item ? item.quotationNo : '',
-          'orderNo' in item ? item.orderNo : '',
-          'invoiceNo' in item ? item.invoiceNo : ''
-        ].join(' ').toLowerCase();
+    try {
+      return items.filter(item => {
+        // 搜索过滤
+        if (filters.search) {
+          const searchLower = filters.search.toLowerCase();
+          const customerName = getCustomerName(item).toLowerCase();
+          const recordNumber = getRecordNumber(item, activeTab).toLowerCase();
+          
+          return customerName.includes(searchLower) || 
+                 recordNumber.includes(searchLower);
+        }
         
-        if (!searchableText.includes(searchLower)) {
-          return false;
+        // 类型过滤
+        if (filters.type !== 'all') {
+          if (activeTab === 'quotation' || activeTab === 'confirmation') {
+            return (item as QuotationHistory).type === filters.type;
+          }
+          // 对于发票和采购单，类型过滤不适用
+          return true;
         }
-      }
-
-      // 类型过滤
-      if (filters.type !== 'all') {
-        if (filters.type === 'quotation' && !('quotationNo' in item)) return false;
-        if (filters.type === 'invoice' && !('invoiceNo' in item)) return false;
-        if (filters.type === 'purchase' && !('orderNo' in item)) return false;
-      }
-
-      // 日期范围过滤
-      if (filters.dateRange !== 'all') {
-        const itemDate = new Date(item.createdAt);
-        const now = new Date();
-        const diffTime = Math.abs(now.getTime() - itemDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        switch (filters.dateRange) {
-          case 'today':
-            if (diffDays > 1) return false;
-            break;
-          case 'week':
-            if (diffDays > 7) return false;
-            break;
-          case 'month':
-            if (diffDays > 30) return false;
-            break;
-          case 'year':
-            if (diffDays > 365) return false;
-            break;
+        
+        // 日期范围过滤
+        if (filters.dateRange !== 'all') {
+          const itemDate = new Date(item.createdAt);
+          const now = new Date();
+          const diffTime = Math.abs(now.getTime() - itemDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          switch (filters.dateRange) {
+            case 'today':
+              return diffDays <= 1;
+            case 'week':
+              return diffDays <= 7;
+            case 'month':
+              return diffDays <= 30;
+            case 'year':
+              return diffDays <= 365;
+            default:
+              return true;
+          }
         }
-      }
-
-      // 金额范围过滤
-      if (filters.amountRange !== 'all') {
-        const amount = item.totalAmount;
-        switch (filters.amountRange) {
-          case 'low':
-            if (amount >= 10000) return false;
-            break;
-          case 'medium':
-            if (amount < 10000 || amount >= 100000) return false;
-            break;
-          case 'high':
-            if (amount < 100000) return false;
-            break;
+        
+        // 金额范围过滤
+        if (filters.amountRange !== 'all') {
+          const amount = item.totalAmount;
+          switch (filters.amountRange) {
+            case 'low':
+              return amount < 1000;
+            case 'medium':
+              return amount >= 1000 && amount < 10000;
+            case 'high':
+              return amount >= 10000;
+            default:
+              return true;
+          }
         }
+        
+        return true;
+      });
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error filtering history:', error);
       }
-
-      return true;
-    });
-  }, [filters]);
+      return items; // 返回原始数据，避免页面崩溃
+    }
+  }, [filters, activeTab]);
 
   // 获取排序后的数据
   const getSortedHistory = useCallback((items: HistoryItem[]) => {

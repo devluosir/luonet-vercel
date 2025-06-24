@@ -138,7 +138,9 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
     let cleanJsonData = jsonData;
     if (jsonData.charCodeAt(0) === 0xFEFF) {
       cleanJsonData = jsonData.slice(1);
-      console.log('Removed BOM marker from JSON data');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Removed BOM marker from JSON data');
+      }
     }
 
     // 尝试解析JSON
@@ -155,7 +157,9 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
           .replace(/\t/g, '')
           .trim();
         importedHistory = JSON.parse(fixedJson);
-        console.log('Successfully parsed JSON after fixing format issues');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Successfully parsed JSON after fixing format issues');
+        }
       } catch (secondError) {
         console.error('Failed to parse JSON even after cleanup:', secondError);
         return false;
@@ -172,7 +176,9 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
     const processedData = importedHistory.map(item => {
       // 基本验证：确保item是对象且有id
       if (!item || typeof item !== 'object' || !item.id) {
-        console.warn('Skipping invalid item:', item);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Skipping invalid item:', item);
+        }
         return null;
       }
 
@@ -180,7 +186,9 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
       if (item.data && item.data.customerPO !== undefined) {
         // 确保items数组存在
         if (!Array.isArray(item.data.items)) {
-          console.warn('Invalid items array in invoice data:', item);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Invalid items array in invoice data:', item);
+          }
           return item; // 返回原始项，不进行转换
         }
 
