@@ -1085,15 +1085,13 @@ export default function HistoryManagementPage() {
                         : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
-                    <span>{tab.name}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                      activeTab === tab.id
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                    }`}>
-                      {count}
+                    <span className="relative inline-block">
+                      <Icon className="h-4 w-4" />
+                      <span className="absolute -top-1 -right-2 min-w-[18px] h-4 px-1 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold shadow">
+                        {count}
+                      </span>
                     </span>
+                    <span>{tab.name}</span>
                   </button>
                 );
               })}
