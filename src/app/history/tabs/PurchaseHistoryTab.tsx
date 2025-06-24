@@ -58,6 +58,7 @@ interface Props {
   onSelect: (id: string, selected: boolean) => void;
   onSelectAll: (selected: boolean) => void;
   mainColor?: string;
+  refreshKey?: number;
 }
 
 export default function PurchaseHistoryTab({ 
@@ -71,7 +72,8 @@ export default function PurchaseHistoryTab({
   selectedIds,
   onSelect,
   onSelectAll,
-  mainColor
+  mainColor,
+  refreshKey
 }: Props) {
   const [history, setHistory] = useState<PurchaseHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -143,7 +145,7 @@ export default function PurchaseHistoryTab({
 
   useEffect(() => {
     loadHistory();
-  }, [loadHistory]);
+  }, [loadHistory, refreshKey]);
 
   const renderSortIcon = (key: string) => {
     if (sortConfig.key !== key) {

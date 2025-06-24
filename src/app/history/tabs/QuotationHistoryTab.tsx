@@ -59,6 +59,7 @@ interface Props {
   onSelect: (id: string, selected: boolean) => void;
   onSelectAll: (selected: boolean) => void;
   mainColor?: string;
+  refreshKey?: number;
 }
 
 export default function QuotationHistoryTab({ 
@@ -72,7 +73,8 @@ export default function QuotationHistoryTab({
   selectedIds,
   onSelect,
   onSelectAll,
-  mainColor
+  mainColor,
+  refreshKey
 }: Props) {
   const [history, setHistory] = useState<QuotationHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,7 +146,7 @@ export default function QuotationHistoryTab({
 
   useEffect(() => {
     loadHistory();
-  }, [loadHistory]);
+  }, [loadHistory, refreshKey]);
 
   const renderSortIcon = (key: string) => {
     if (sortConfig.key !== key) {

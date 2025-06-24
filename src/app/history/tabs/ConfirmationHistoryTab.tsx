@@ -58,6 +58,7 @@ interface Props {
   onSelect: (id: string, selected: boolean) => void;
   onSelectAll: (selected: boolean) => void;
   mainColor?: string;
+  refreshKey?: number;
 }
 
 export default function ConfirmationHistoryTab({ 
@@ -71,7 +72,8 @@ export default function ConfirmationHistoryTab({
   selectedIds,
   onSelect,
   onSelectAll,
-  mainColor
+  mainColor,
+  refreshKey
 }: Props) {
   const [history, setHistory] = useState<ConfirmationHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,7 +146,7 @@ export default function ConfirmationHistoryTab({
 
   useEffect(() => {
     loadHistory();
-  }, [loadHistory]);
+  }, [loadHistory, refreshKey]);
 
   const renderSortIcon = (key: string) => {
     if (sortConfig.key !== key) {

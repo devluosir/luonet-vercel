@@ -136,6 +136,7 @@ export default function HistoryManagementPage() {
   const [activeTab, setActiveTab] = useState<HistoryType>('quotation');
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [filters, setFilters] = useState<Filters>({
     search: '',
     type: 'all',
@@ -341,6 +342,7 @@ export default function HistoryManagementPage() {
         return newSet;
       });
       setShowDeleteConfirm(null);
+      setRefreshKey(prev => prev + 1);
     }
   };
 
@@ -368,6 +370,7 @@ export default function HistoryManagementPage() {
       loadHistory(); // 重新加载数据，而不是本地过滤
       setSelectedIds(new Set());
       setShowDeleteConfirm(null);
+      setRefreshKey(prev => prev + 1);
     }
   };
 
@@ -561,6 +564,7 @@ export default function HistoryManagementPage() {
             
             if (importResult.success) {
               loadHistory();
+              setRefreshKey(prev => prev + 1);
               // 显示导入结果
               const resultMessage = `导入成功！\n${('details' in importResult ? importResult.details : []).join('\n')}`;
               alert(resultMessage);
@@ -1127,6 +1131,7 @@ export default function HistoryManagementPage() {
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
                   mainColor={activeColor}
+                  refreshKey={refreshKey}
                 />
               )}
               {activeTab === 'confirmation' && (
@@ -1142,6 +1147,7 @@ export default function HistoryManagementPage() {
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
                   mainColor={activeColor}
+                  refreshKey={refreshKey}
                 />
               )}
               {activeTab === 'invoice' && (
@@ -1157,6 +1163,7 @@ export default function HistoryManagementPage() {
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
                   mainColor={activeColor}
+                  refreshKey={refreshKey}
                 />
               )}
               {activeTab === 'purchase' && (
@@ -1172,6 +1179,7 @@ export default function HistoryManagementPage() {
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
                   mainColor={activeColor}
+                  refreshKey={refreshKey}
                 />
               )}
             </div>
