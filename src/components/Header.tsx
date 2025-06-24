@@ -14,9 +14,10 @@ interface HeaderProps {
   };
   onLogout: () => void;
   onProfile: () => void;
+  title?: string;
 }
 
-export function Header({ user, onLogout, onProfile }: HeaderProps) {
+export function Header({ user, onLogout, onProfile, title = 'LC App' }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -49,7 +50,7 @@ export function Header({ user, onLogout, onProfile }: HeaderProps) {
             priority
             className="object-contain"
           />
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">智能助手面板</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h1>
         </div>
 
         <div className="flex items-center space-x-4">

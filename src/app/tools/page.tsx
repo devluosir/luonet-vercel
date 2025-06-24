@@ -229,6 +229,7 @@ export default function ToolsPage() {
             }}
             onLogout={handleLogout}
             onProfile={() => setShowProfileModal(true)}
+            title="App工具"
           />
 
           <ProfileModal
@@ -239,11 +240,7 @@ export default function ToolsPage() {
         </>
       )}
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8">
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">
-          我的工具箱
-        </h2>
-        
+      <div className="flex flex-col items-center justify-center w-full py-8 px-2">
         {availableModules.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-500 dark:text-gray-400 text-lg">
@@ -251,7 +248,7 @@ export default function ToolsPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+          <div className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 md:gap-7 lg:gap-8 justify-center">
             {availableModules.map((module) => {
               const Icon = module.icon || Settings;
               return (
