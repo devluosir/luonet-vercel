@@ -543,25 +543,126 @@ export default function HistoryManagementPage() {
   };
 
   // 获取选项卡数量
-  const getTabCount = (tabType: HistoryType) => {
+  const getTabCount = useCallback((tabType: HistoryType) => {
     try {
+      let results: HistoryItem[] = [];
+      
       switch (tabType) {
         case 'quotation':
-          return getQuotationHistory().filter(item => item.type === 'quotation').length;
+          results = getQuotationHistory().filter(item => item.type === 'quotation');
+          break;
         case 'confirmation':
-          return getQuotationHistory().filter(item => item.type === 'confirmation').length;
+          results = getQuotationHistory().filter(item => item.type === 'confirmation');
+          break;
         case 'invoice':
-          return getInvoiceHistory().length;
+          results = getInvoiceHistory().map(item => ({
+            ...item,
+            updatedAt: item.createdAt // 使用createdAt作为updatedAt
+          }));
+          break;
         case 'purchase':
-          return getPurchaseHistory().length;
-        default:
-          return 0;
+          results = getPurchaseHistory();
+          break;
       }
+
+      // 应用所有过滤条件
+      results = results.filter(item => {
+        // 搜索过滤
+        if (filters.search) {
+          const searchLower = filters.search.toLowerCase();
+          const customerName = getCustomerName(item).toLowerCase();
+          const recordNumber = getRecordNumber(item, tabType).toLowerCase();
+          
+          if (!customerName.includes(searchLower) && !recordNumber.includes(searchLower)) {
+            return false;
+          }
+        }
+        
+        // 类型过滤（对于报价单和确认书）
+        if (filters.type !== 'all') {
+          if (tabType === 'quotation' || tabType === 'confirmation') {
+            if ((item as QuotationHistory).type !== filters.type) {
+              return false;
+            }
+          }
+        }
+        
+        // 日期范围过滤
+        if (filters.dateRange !== 'all') {
+          const itemDate = new Date(item.createdAt);
+          const now = new Date();
+          const diffTime = Math.abs(now.getTime() - itemDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          switch (filters.dateRange) {
+            case 'today':
+              if (diffDays > 1) return false;
+              break;
+            case 'week':
+              if (diffDays > 7) return false;
+              break;
+            case 'month':
+              if (diffDays > 30) return false;
+              break;
+            case 'year':
+              if (diffDays > 365) return false;
+              break;
+          }
+        }
+        
+        // 金额范围过滤
+        if (filters.amountRange !== 'all') {
+          const amount = item.totalAmount;
+          switch (filters.amountRange) {
+            case 'low':
+              if (amount >= 1000) return false;
+              break;
+            case 'medium':
+              if (amount < 1000 || amount >= 10000) return false;
+              break;
+            case 'high':
+              if (amount < 10000) return false;
+              break;
+          }
+        }
+        
+        return true;
+      });
+
+      return results.length;
     } catch (error) {
       console.error('Error getting tab count:', error);
       return 0;
     }
-  };
+  }, [filters]);
+
+  // 获取搜索结果的徽章样式
+  const getSearchResultBadge = useCallback((tabType: HistoryType) => {
+    // 检查是否有任何过滤条件被应用
+    const hasFilters = filters.search || 
+                      filters.type !== 'all' || 
+                      filters.dateRange !== 'all' || 
+                      filters.amountRange !== 'all';
+    
+    if (!hasFilters) {
+      // 没有过滤时，返回默认的tab颜色徽章
+      switch (tabType) {
+        case 'quotation':
+          return 'text-blue-700 border-blue-400 bg-blue-50 dark:bg-blue-900/30';
+        case 'confirmation':
+          return 'text-green-700 border-green-400 bg-green-50 dark:bg-green-900/30';
+        case 'invoice':
+          return 'text-purple-700 border-purple-400 bg-purple-50 dark:bg-purple-900/30';
+        case 'purchase':
+          return 'text-orange-700 border-orange-400 bg-orange-50 dark:bg-orange-900/30';
+        default:
+          return 'text-blue-700 border-blue-400 bg-blue-50 dark:bg-blue-900/30';
+      }
+    } else {
+      // 有过滤时，返回红色徽章
+      return 'text-red-700 border-red-400 bg-red-50 dark:bg-red-900/30';
+    }
+  }, [filters]);
 
   // 主色调映射
   const tabColorMap = {
@@ -739,14 +840,15 @@ export default function HistoryManagementPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex space-x-8">
               {[
-                { id: 'quotation', name: '报价单', icon: FileText, badge: 'text-blue-700 border-blue-400 bg-blue-50 dark:bg-blue-900/30' },
-                { id: 'confirmation', name: '订单确认', icon: FileText, badge: 'text-green-700 border-green-400 bg-green-50 dark:bg-green-900/30' },
-                { id: 'invoice', name: '发票', icon: Receipt, badge: 'text-purple-700 border-purple-400 bg-purple-50 dark:bg-purple-900/30' },
-                { id: 'purchase', name: '采购单', icon: ShoppingCart, badge: 'text-orange-700 border-orange-400 bg-orange-50 dark:bg-orange-900/30' }
+                { id: 'quotation', name: '报价单', icon: FileText },
+                { id: 'confirmation', name: '订单确认', icon: FileText },
+                { id: 'invoice', name: '发票', icon: Receipt },
+                { id: 'purchase', name: '采购单', icon: ShoppingCart }
               ].map((tab) => {
                 const Icon = tab.icon;
                 const count = getTabCount(tab.id as HistoryType);
                 const isActive = activeTab === tab.id;
+                const badgeStyle = getSearchResultBadge(tab.id as HistoryType);
                 
                 // 根据tab类型设置对应的颜色
                 let activeClasses = '';
@@ -778,7 +880,7 @@ export default function HistoryManagementPage() {
                   >
                     <span className="relative inline-block">
                       <Icon className="h-4 w-4" />
-                      <span className={`absolute -top-1 -right-2 min-w-[18px] h-4 px-1 ${tab.badge} text-xs rounded-full flex items-center justify-center font-bold border-2 shadow-sm`}> 
+                      <span className={`absolute -top-1 -right-2 min-w-[18px] h-4 px-1 ${badgeStyle} text-xs rounded-full flex items-center justify-center font-bold border-2 shadow-sm`}> 
                         {count}
                       </span>
                     </span>
