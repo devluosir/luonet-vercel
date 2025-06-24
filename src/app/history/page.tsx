@@ -1068,10 +1068,10 @@ export default function HistoryManagementPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex space-x-8">
               {[
-                { id: 'quotation', name: '报价单历史', icon: FileText },
-                { id: 'confirmation', name: '订单确认书历史', icon: FileText },
-                { id: 'invoice', name: '发票历史', icon: Receipt },
-                { id: 'purchase', name: '采购单历史', icon: ShoppingCart }
+                { id: 'quotation', name: '报价单', icon: FileText },
+                { id: 'confirmation', name: '订单确认', icon: FileText },
+                { id: 'invoice', name: '发票', icon: Receipt },
+                { id: 'purchase', name: '采购单', icon: ShoppingCart }
               ].map((tab) => {
                 const Icon = tab.icon;
                 const count = getTabCount(tab.id as HistoryType);
