@@ -83,6 +83,7 @@ interface PurchaseHistory {
 interface InvoiceHistory {
   id: string;
   createdAt: string;
+  updatedAt: string;
   customerName: string;
   invoiceNo: string;
   totalAmount: number;

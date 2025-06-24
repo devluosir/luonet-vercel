@@ -100,12 +100,18 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
         return null;
       }
       
+      // 确保有 updatedAt 字段，如果没有则使用 createdAt
+      const itemWithUpdatedAt = {
+        ...item,
+        updatedAt: item.updatedAt || item.createdAt
+      };
+      
       // 如果是报价单数据，进行转换
       if (item.data && item.data.items) {
         // 确保items数组存在且有效
         if (!Array.isArray(item.data.items)) {
           console.warn('Invalid items array in quotation data:', item);
-          return item; // 返回原始项，不进行转换
+          return itemWithUpdatedAt; // 返回原始项，不进行转换
         }
         
         const convertedItems = item.data.items.map((lineItem: { partName?: string; id?: number; description?: string; quantity: number; unit: string; unitPrice: number; amount: number }) => {
@@ -123,7 +129,7 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
         });
 
         return {
-          ...item,
+          ...itemWithUpdatedAt,
           data: {
             ...item.data,
             items: convertedItems,
@@ -140,7 +146,7 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
           }
         };
       }
-      return item;
+      return itemWithUpdatedAt;
     }).filter(Boolean); // 过滤掉null项
     
     // 确保至少有一条有效记录

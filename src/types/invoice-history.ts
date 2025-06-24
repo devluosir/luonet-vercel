@@ -7,6 +7,7 @@ export interface InvoiceHistory {
   totalAmount: number;
   currency: 'USD' | 'CNY';
   createdAt: string;
+  updatedAt: string;
   data: InvoiceData;
 }
 
