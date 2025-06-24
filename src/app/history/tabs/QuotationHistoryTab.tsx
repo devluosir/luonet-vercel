@@ -286,7 +286,7 @@ export default function QuotationHistoryTab({
 
       {/* 金额统计 */}
       {history.length > 0 && (
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-t border-green-200 dark:border-green-800 px-4 py-3">
+        <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 border-t border-blue-200 dark:border-blue-800 px-4 py-3">
           <div className="text-right text-sm text-gray-700 dark:text-gray-300 font-medium">
             {Object.entries(history.reduce((acc, item) => {
               if (!acc[item.currency]) acc[item.currency] = 0;
@@ -295,7 +295,7 @@ export default function QuotationHistoryTab({
             }, {} as Record<string, number>)).map(([currency, total]) => (
               <span key={currency} className="mr-4">
                 {currency} 合计：
-                <span className="font-bold text-green-600 dark:text-green-400">{total.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span className="font-bold text-blue-600 dark:text-blue-400">{total.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </span>
             ))}
           </div>

@@ -1068,10 +1068,10 @@ export default function HistoryManagementPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex space-x-8">
               {[
-                { id: 'quotation', name: '报价单', icon: FileText },
-                { id: 'confirmation', name: '订单确认', icon: FileText },
-                { id: 'invoice', name: '发票', icon: Receipt },
-                { id: 'purchase', name: '采购单', icon: ShoppingCart }
+                { id: 'quotation', name: '报价单', icon: FileText, badge: 'text-blue-600 border-blue-400' },
+                { id: 'confirmation', name: '订单确认', icon: FileText, badge: 'text-green-600 border-green-400' },
+                { id: 'invoice', name: '发票', icon: Receipt, badge: 'text-purple-600 border-purple-400' },
+                { id: 'purchase', name: '采购单', icon: ShoppingCart, badge: 'text-orange-600 border-orange-400' }
               ].map((tab) => {
                 const Icon = tab.icon;
                 const count = getTabCount(tab.id as HistoryType);
@@ -1087,7 +1087,7 @@ export default function HistoryManagementPage() {
                   >
                     <span className="relative inline-block">
                       <Icon className="h-4 w-4" />
-                      <span className="absolute -top-1 -right-2 min-w-[18px] h-4 px-1 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold shadow">
+                      <span className={`absolute -top-1 -right-2 min-w-[18px] h-4 px-1 bg-transparent ${tab.badge} text-xs rounded-full flex items-center justify-center font-bold border-2`}> 
                         {count}
                       </span>
                     </span>
