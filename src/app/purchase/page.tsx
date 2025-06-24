@@ -221,7 +221,7 @@ export default function PurchaseOrderPage() {
                   )}
                 </button>
                 <Link
-                  href="/purchase/history"
+                  href="/history"
                   className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
                   title="历史记录"
                 >

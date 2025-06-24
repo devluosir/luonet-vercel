@@ -233,7 +233,7 @@ Beneficiary: Luo & Company Co., Limited`,
         await generateInvoicePDF(invoiceData);
         
         // 跳转到历史记录页面
-        router.push('/invoice/history');
+        router.push('/history');
       } else {
         // 生成新发票并保存到历史记录
         const newInvoice = {
@@ -257,7 +257,7 @@ Beneficiary: Luo & Company Co., Limited`,
         await generateInvoicePDF(invoiceData);
         
         // 跳转到历史记录页面
-        router.push('/invoice/history');
+        router.push('/history');
       }
     } catch (error) {
       console.error('Error handling submit:', error);
@@ -824,7 +824,7 @@ Beneficiary: Luo & Company Co., Limited`,
                       }`}
                     />
                     <Link
-                      href="/invoice/history"
+                      href="/history"
                       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0"
                       title="历史记录"
                     >
@@ -864,7 +864,7 @@ Beneficiary: Luo & Company Co., Limited`,
                   {/* 小屏时只显示设置按钮 */}
                   <div className="sm:hidden flex items-center gap-2">
                     <Link
-                      href="/invoice/history"
+                      href="/history"
                       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0"
                       title="历史记录"
                     >
