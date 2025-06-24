@@ -147,6 +147,7 @@ export default function HistoryManagementPage() {
   const [mounted, setMounted] = useState(false);
   const [previewItem, setPreviewItem] = useState<HistoryItem | null>(null);
   const [previewType, setPreviewType] = useState<'quotation'|'confirmation'|'invoice'|'purchase'>('quotation');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -320,8 +321,9 @@ export default function HistoryManagementPage() {
   };
 
   // 处理删除
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     try {
+      setIsDeleting(true);
       let success = false;
       
       switch (activeTab) {
@@ -344,27 +346,24 @@ export default function HistoryManagementPage() {
           newSet.delete(id);
           return newSet;
         });
+        // 强制刷新数据
+        setRefreshKey(prev => prev + 1);
+        loadHistory();
+        console.log('删除成功');
       } else {
-        alert('删除失败，请重试');
+        console.error('删除失败，请重试');
       }
     } catch (error) {
       console.error('Error deleting item:', error);
-      alert('删除失败，请重试');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   // 批量删除
-  const handleBatchDelete = () => {
-    if (selectedIds.size === 0) {
-      alert('请先选择要删除的记录');
-      return;
-    }
-
-    if (!confirm(`确定要删除选中的 ${selectedIds.size} 条记录吗？`)) {
-      return;
-    }
-
+  const handleBatchDelete = async () => {
     try {
+      setIsDeleting(true);
       let successCount = 0;
       const idsToDelete = Array.from(selectedIds);
 
@@ -392,13 +391,17 @@ export default function HistoryManagementPage() {
       if (successCount > 0) {
         setHistory(prev => prev.filter(item => !selectedIds.has(item.id)));
         setSelectedIds(new Set());
-        alert(`成功删除 ${successCount} 条记录`);
+        // 强制刷新数据
+        setRefreshKey(prev => prev + 1);
+        loadHistory();
+        console.log(`成功删除 ${successCount} 条记录`);
       } else {
-        alert('删除失败，请重试');
+        console.error('删除失败，请重试');
       }
     } catch (error) {
       console.error('Error batch deleting items:', error);
-      alert('批量删除失败，请重试');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -430,7 +433,6 @@ export default function HistoryManagementPage() {
       }
     } catch (error) {
       console.error('Error navigating to edit page:', error);
-      alert('跳转失败，请重试');
     }
   };
 
@@ -451,7 +453,6 @@ export default function HistoryManagementPage() {
       }
     } catch (error) {
       console.error('Error navigating to copy page:', error);
-      alert('跳转失败，请重试');
     }
   };
 
@@ -538,7 +539,6 @@ export default function HistoryManagementPage() {
       }
     } catch (error) {
       console.error('Error previewing item:', error);
-      alert('预览失败，请重试');
     }
   };
 
@@ -571,6 +571,41 @@ export default function HistoryManagementPage() {
     purchase: 'orange'
   };
   const activeColor = tabColorMap[activeTab] || 'blue';
+
+  // 处理键盘事件
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (showDeleteConfirm && !isDeleting) {
+        if (event.key === 'Escape') {
+          setShowDeleteConfirm(null);
+        } else if (event.key === 'Enter') {
+          event.preventDefault();
+          handleDeleteConfirm();
+        }
+      }
+    };
+
+    if (showDeleteConfirm) {
+      document.addEventListener('keydown', handleKeyDown);
+      // 禁用背景滚动
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [showDeleteConfirm, isDeleting]);
+
+  // 处理删除确认
+  const handleDeleteConfirm = async () => {
+    if (showDeleteConfirm === 'batch') {
+      await handleBatchDelete();
+    } else if (showDeleteConfirm) {
+      await handleDelete(showDeleteConfirm);
+    }
+    setShowDeleteConfirm(null);
+  };
 
   // 避免闪烁，在客户端渲染前或activeTab未设置时返回空内容
   if (!mounted) {
@@ -831,36 +866,139 @@ export default function HistoryManagementPage() {
 
       {/* 删除确认对话框 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-              确认删除
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {showDeleteConfirm === 'batch' 
-                ? `确定要删除选中的 ${selectedIds.size} 条记录吗？此操作不可撤销。`
-                : '确定要删除这条记录吗？此操作不可撤销。'
-              }
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => {
-                  if (showDeleteConfirm === 'batch') {
-                    handleBatchDelete();
-                  } else {
-                    handleDelete(showDeleteConfirm);
-                  }
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                删除
-              </button>
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isDeleting) {
+              setShowDeleteConfirm(null);
+            }
+          }}
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 scale-100 animate-in fade-in-0 zoom-in-95 relative">
+            {/* 关闭按钮 */}
+            <button
+              onClick={() => setShowDeleteConfirm(null)}
+              disabled={isDeleting}
+              className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="关闭对话框"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* 头部 */}
+            <div className="flex items-center p-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  确认删除
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {showDeleteConfirm === 'batch' ? '批量删除操作' : '单条记录删除'}
+                </p>
+              </div>
+            </div>
+
+            {/* 内容 */}
+            <div className="p-6 pt-4">
+              <div className="mb-6">
+                {showDeleteConfirm === 'batch' ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                      <div className="flex-shrink-0 w-8 h-8 bg-orange-100 dark:bg-orange-900/40 rounded-full flex items-center justify-center">
+                        <span className="text-orange-600 dark:text-orange-400 text-sm font-bold">
+                          {selectedIds.size}
+                        </span>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                          即将删除 {selectedIds.size} 条记录
+                        </p>
+                        <p className="text-xs text-orange-600 dark:text-orange-400">
+                          此操作将永久删除选中的记录
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                      <p>• 删除后数据将无法恢复</p>
+                      <p>• 请确认所有选中的记录都是需要删除的</p>
+                      <p>• 建议在删除前先导出备份</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                      <div className="flex-shrink-0 w-8 h-8 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center">
+                        <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                          即将删除此条记录
+                        </p>
+                        <p className="text-xs text-red-600 dark:text-red-400">
+                          此操作将永久删除该记录
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                      <p>• 删除后数据将无法恢复</p>
+                      <p>• 请确认此记录确实需要删除</p>
+                      <p>• 如需保留数据，请先导出备份</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 操作按钮 */}
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(null)}
+                  disabled={isDeleting}
+                  className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  disabled={isDeleting}
+                  className="px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:bg-red-700 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {isDeleting && (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  )}
+                  <span>
+                    {isDeleting 
+                      ? '删除中...' 
+                      : (showDeleteConfirm === 'batch' ? `删除 ${selectedIds.size} 条` : '确认删除')
+                    }
+                  </span>
+                </button>
+              </div>
+              
+              {/* 开发环境测试按钮 */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">开发环境测试：</p>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => {
+                        setSelectedIds(new Set(['test1', 'test2', 'test3']));
+                        setShowDeleteConfirm('batch');
+                      }}
+                      className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                    >
+                      测试批量删除
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm('test-single')}
+                      className="px-3 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded border border-green-200 dark:border-green-800 hover:bg-green-200 dark:hover:bg-green-900/50"
+                    >
+                      测试单条删除
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

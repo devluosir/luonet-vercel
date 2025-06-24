@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { Upload, FileText, AlertCircle } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Upload, FileText, AlertCircle, CheckCircle, XCircle, X } from 'lucide-react';
 import { handleFileImport } from '@/utils/historyImportExport';
 import type { HistoryType } from '@/utils/historyImportExport';
 
@@ -17,13 +17,36 @@ export default function ImportModal({
   onImportSuccess
 }: ImportModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; content: string } | null>(null);
 
   if (!isOpen) return null;
+
+  // 显示消息
+  const showMessage = (type: 'success' | 'error' | 'info', content: string) => {
+    setMessage({ type, content });
+    if (type === 'success') {
+      // 成功消息3秒后自动关闭
+      setTimeout(() => {
+        setMessage(null);
+        onImportSuccess?.();
+        onClose();
+      }, 3000);
+    }
+  };
+
+  // 清除消息
+  const clearMessage = () => {
+    setMessage(null);
+  };
 
   // 导入文件
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    setIsLoading(true);
+    clearMessage();
     
     console.log('ImportModal: 开始处理文件导入');
     console.log('文件信息:', { 
@@ -36,13 +59,15 @@ export default function ImportModal({
     // 检查文件大小（限制为10MB）
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      alert('文件过大，请选择小于10MB的文件');
+      showMessage('error', '文件过大，请选择小于10MB的文件');
+      setIsLoading(false);
       return;
     }
     
     // 检查文件类型
     if (!file.name.toLowerCase().endsWith('.json')) {
-      alert('请选择JSON格式的文件');
+      showMessage('error', '请选择JSON格式的文件');
+      setIsLoading(false);
       return;
     }
     
@@ -155,7 +180,8 @@ export default function ImportModal({
           if (process.env.NODE_ENV === 'development') {
             console.error('ImportModal: 修复后仍然解析失败:', secondError);
           }
-          alert('文件格式错误：不是有效的JSON文件，请检查文件内容');
+          showMessage('error', '文件格式错误：不是有效的JSON文件，请检查文件内容');
+          setIsLoading(false);
           return;
         }
       }
@@ -173,15 +199,13 @@ export default function ImportModal({
         if (process.env.NODE_ENV === 'development') {
           console.log('ImportModal: 显示成功消息:', message);
         }
-        alert(message);
-        onImportSuccess?.();
-        onClose();
+        showMessage('success', message);
       } else {
         const errorMessage = `导入失败：${result.error || '未知错误'}`;
         if (process.env.NODE_ENV === 'development') {
           console.error('ImportModal: 导入失败:', errorMessage);
         }
-        alert(errorMessage);
+        showMessage('error', errorMessage);
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
@@ -200,7 +224,9 @@ export default function ImportModal({
       } else if (error instanceof Error && error.message.includes('超时')) {
         errorMessage = '导入失败：文件读取超时，请尝试较小的文件';
       }
-      alert(errorMessage);
+      showMessage('error', errorMessage);
+    } finally {
+      setIsLoading(false);
     }
     
     // 清空文件输入
@@ -211,7 +237,17 @@ export default function ImportModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl relative">
+        {/* 关闭按钮 */}
+        <button
+          onClick={onClose}
+          disabled={isLoading}
+          className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="关闭对话框"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
         <div className="flex items-center space-x-3 mb-6">
           <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
             <Upload className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -225,6 +261,55 @@ export default function ImportModal({
             </p>
           </div>
         </div>
+        
+        {/* 消息显示 */}
+        {message && (
+          <div className={`mb-4 p-4 rounded-lg border ${
+            message.type === 'success' 
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+              : message.type === 'error'
+              ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+              : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+          }`}>
+            <div className="flex items-start space-x-3">
+              {message.type === 'success' ? (
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+              ) : message.type === 'error' ? (
+                <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              )}
+              <div className="flex-1">
+                <div className={`text-sm font-medium ${
+                  message.type === 'success' 
+                    ? 'text-green-800 dark:text-green-200' 
+                    : message.type === 'error'
+                    ? 'text-red-800 dark:text-red-200'
+                    : 'text-blue-800 dark:text-blue-200'
+                }`}>
+                  {message.type === 'success' ? '导入成功' : message.type === 'error' ? '导入失败' : '提示'}
+                </div>
+                <div className={`text-sm mt-1 whitespace-pre-line ${
+                  message.type === 'success' 
+                    ? 'text-green-700 dark:text-green-300' 
+                    : message.type === 'error'
+                    ? 'text-red-700 dark:text-red-300'
+                    : 'text-blue-700 dark:text-blue-300'
+                }`}>
+                  {message.content}
+                </div>
+              </div>
+              {message.type !== 'success' && (
+                <button
+                  onClick={clearMessage}
+                  className="p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         
         <div className="mb-6">
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
@@ -246,18 +331,23 @@ export default function ImportModal({
           
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="w-full p-4 text-left bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-green-200 dark:border-green-800 hover:from-green-100 hover:to-emerald-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
+            disabled={isLoading}
+            className="w-full p-4 text-left bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-green-200 dark:border-green-800 hover:from-green-100 hover:to-emerald-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <FileText className="w-4 h-4 text-green-600 dark:text-green-400" />
+                {isLoading ? (
+                  <div className="w-4 h-4 border-2 border-green-600 dark:border-green-400 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <FileText className="w-4 h-4 text-green-600 dark:text-green-400" />
+                )}
               </div>
               <div>
                 <div className="font-medium text-gray-900 dark:text-white">
-                  选择JSON文件
+                  {isLoading ? '正在导入...' : '选择JSON文件'}
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                  点击选择要导入的历史数据文件
+                  {isLoading ? '请稍候，正在处理文件' : '点击选择要导入的历史数据文件'}
                 </div>
               </div>
             </div>
@@ -267,6 +357,7 @@ export default function ImportModal({
               accept=".json"
               className="hidden"
               onChange={handleImport}
+              disabled={isLoading}
             />
           </button>
         </div>
@@ -274,7 +365,8 @@ export default function ImportModal({
         <div className="flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            disabled={isLoading}
+            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             取消
           </button>
