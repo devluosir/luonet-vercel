@@ -9,7 +9,7 @@ import { SettingsPanel } from '@/components/purchase/SettingsPanel';
 import { BankInfoSection } from '@/components/purchase/BankInfoSection';
 import type { PurchaseOrderData } from '@/types/purchase';
 import { savePurchaseHistory } from '@/utils/purchaseHistory';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Footer } from '@/components/Footer';
 
 const defaultData: PurchaseOrderData = {
@@ -45,6 +45,7 @@ export default function PurchaseOrderPage() {
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [isEditMode, setIsEditMode] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   const projectSpecificationRef = useRef<HTMLTextAreaElement>(null);
   const deliveryInfoRef = useRef<HTMLTextAreaElement>(null);
@@ -188,9 +189,12 @@ export default function PurchaseOrderPage() {
       <main className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
-          <Link href={isEditMode ? "/history?tab=purchase" : "/tools"} className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7] transition-colors">
+          <Link 
+            href={pathname?.includes('/edit/') || pathname?.includes('/copy/') ? '/history' : '/tools'} 
+            className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7] transition-colors"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            {isEditMode ? '返回历史记录' : 'Back'}
+            Back
           </Link>
 
           {/* 主卡片容器 */}

@@ -138,13 +138,8 @@ export default function HistoryManagementPage() {
 
   // 处理返回按钮点击
   const handleBack = () => {
-    // 检查是否有历史记录可以返回
-    if (window.history.length > 1) {
-      router.back();
-    } else {
-      // 如果没有历史记录，默认返回工具中心
-      router.push('/tools');
-    }
+    // 单据中心统一返回到工具页面
+    router.push('/tools');
   };
 
   // 获取过滤后的历史记录
@@ -986,7 +981,7 @@ export default function HistoryManagementPage() {
                     }`}
                     onClick={() => setActiveTab(stat.id as HistoryType)}
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between relative">
+                    <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
                           {stat.name}
@@ -995,7 +990,7 @@ export default function HistoryManagementPage() {
                           {stat.count.toLocaleString()}
                         </p>
                       </div>
-                      <div className={`p-1.5 sm:p-2 lg:p-3 rounded-lg ${stat.bgClass} relative mt-2 sm:mt-0 sm:ml-2`}>
+                      <div className={`p-1.5 sm:p-2 lg:p-3 rounded-lg ${stat.bgClass} relative ml-2`}>
                         <stat.icon className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ${stat.iconClass}`} />
                         {/* 搜索匹配徽标 */}
                         {filters.search && matchCount > 0 && (

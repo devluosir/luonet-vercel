@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Download, Settings, Clipboard, History, Save } from 'lucide-react';
 import { generateInvoicePDF } from '@/utils/pdfGenerator';
@@ -59,6 +59,7 @@ interface ErrorWithMessage {
 
 export default function InvoicePage() {
   const router = useRouter();
+  const pathname = usePathname();
   
   // 从 window 全局变量获取初始数据
   const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__INVOICE_DATA__) : null;
@@ -787,7 +788,10 @@ Beneficiary: Luo & Company Co., Limited`,
           <div className="max-w-7xl mx-auto space-y-8">
             {/* 返回按钮 */}
             <div className="flex items-center justify-between mb-6">
-              <Link href="/tools" className="inline-flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
+              <Link 
+                href={pathname?.includes('/edit/') || pathname?.includes('/copy/') ? '/history' : '/tools'} 
+                className="inline-flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+              >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
               </Link>
