@@ -939,7 +939,7 @@ export default function HistoryManagementPage() {
             <div className="flex space-x-8">
               {[
                 { id: 'quotation', name: '报价单历史', icon: FileText },
-                { id: 'confirmation', name: '订单确认书', icon: FileText },
+                { id: 'confirmation', name: '订单确认书历史', icon: FileText },
                 { id: 'invoice', name: '发票历史', icon: Receipt },
                 { id: 'purchase', name: '采购单历史', icon: ShoppingCart }
               ].map((tab) => {
@@ -979,8 +979,76 @@ export default function HistoryManagementPage() {
                     className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`p-2 rounded-lg border transition-all duration-200 ${
+                    showFilters 
+                      ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400'
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                  title="高级过滤"
+                >
+                  <Filter className="w-4 h-4" />
+                </button>
               </div>
             </div>
+
+            {/* 高级过滤器 */}
+            {showFilters && (
+              <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* 日期范围过滤 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      日期范围
+                    </label>
+                    <select
+                      value={filters.dateRange}
+                      onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="all">全部时间</option>
+                      <option value="today">今天</option>
+                      <option value="week">最近7天</option>
+                      <option value="month">最近30天</option>
+                      <option value="year">最近一年</option>
+                    </select>
+                  </div>
+
+                  {/* 金额范围过滤 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      金额范围
+                    </label>
+                    <select
+                      value={filters.amountRange}
+                      onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as any }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="all">全部金额</option>
+                      <option value="low">小于 10,000</option>
+                      <option value="medium">10,000 - 100,000</option>
+                      <option value="high">大于 100,000</option>
+                    </select>
+                  </div>
+
+                  {/* 记录统计 */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      记录统计
+                    </label>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      当前显示 {history.length} 条记录
+                      {selectedIds.size > 0 && (
+                        <span className="ml-2 text-blue-600 dark:text-blue-400">
+                          (已选择 {selectedIds.size} 条)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Tab Content */}
             <div className="bg-white dark:bg-[#1c1c1e] rounded-lg shadow-sm dark:shadow-gray-800/30">

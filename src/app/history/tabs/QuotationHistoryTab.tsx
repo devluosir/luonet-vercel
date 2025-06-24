@@ -174,18 +174,34 @@ export default function QuotationHistoryTab({
               className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
             />
           </div>
-          <div className="flex-1 min-w-0 truncate font-semibold text-gray-900 dark:text-white pl-2">
+          <button
+            onClick={() => onSort('customerName')}
+            className="flex-1 min-w-0 truncate font-semibold text-gray-900 dark:text-white pl-2 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group"
+          >
             客户名称
-          </div>
-          <div className="w-40 flex-shrink-0 px-2 font-semibold text-gray-900 dark:text-white">
+            {renderSortIcon('customerName')}
+          </button>
+          <button
+            onClick={() => onSort('quotationNo')}
+            className="w-40 flex-shrink-0 px-2 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group"
+          >
             询价号
-          </div>
-          <div className="hidden md:block w-36 flex-shrink-0 font-semibold text-gray-900 dark:text-white">
+            {renderSortIcon('quotationNo')}
+          </button>
+          <button
+            onClick={() => onSort('totalAmount')}
+            className="hidden md:block w-36 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group"
+          >
             金额
-          </div>
-          <div className="hidden lg:block w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white">
+            {renderSortIcon('totalAmount')}
+          </button>
+          <button
+            onClick={() => onSort('createdAt')}
+            className="hidden lg:block w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group"
+          >
             创建时间
-          </div>
+            {renderSortIcon('createdAt')}
+          </button>
           <div className="w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
             操作
           </div>
