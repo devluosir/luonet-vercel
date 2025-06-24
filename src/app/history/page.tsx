@@ -35,21 +35,15 @@ import { Footer } from '@/components/Footer';
 // 导入历史记录工具函数
 import { 
   getQuotationHistory, 
-  deleteQuotationHistory, 
-  exportQuotationHistory,
-  importQuotationHistory 
+  deleteQuotationHistory
 } from '@/utils/quotationHistory';
 import { 
   getPurchaseHistory, 
-  deletePurchaseHistory, 
-  exportPurchaseHistory,
-  importPurchaseHistory 
+  deletePurchaseHistory
 } from '@/utils/purchaseHistory';
 import { 
   getInvoiceHistory, 
-  deleteInvoiceHistory, 
-  exportInvoiceHistory,
-  importInvoiceHistory 
+  deleteInvoiceHistory
 } from '@/utils/invoiceHistory';
 
 // 类型定义
@@ -131,11 +125,8 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
 export default function HistoryManagementPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tabParam = searchParams?.get('tab');
-  const validTabs: HistoryType[] = ['quotation', 'confirmation', 'invoice', 'purchase'];
   const [activeTab, setActiveTab] = useState<HistoryType>('quotation');
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [filters, setFilters] = useState<Filters>({
     search: '',
@@ -153,9 +144,8 @@ export default function HistoryManagementPage() {
   const [showPreview, setShowPreview] = useState<string | null>(null);
   const [showExportOptions, setShowExportOptions] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [showPdfModal, setShowPdfModal] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [previewItem, setPreviewItem] = useState<any>(null);
+  const [previewItem, setPreviewItem] = useState<HistoryItem | null>(null);
   const [previewType, setPreviewType] = useState<'quotation'|'confirmation'|'invoice'|'purchase'>('quotation');
 
   useEffect(() => {
@@ -168,7 +158,6 @@ export default function HistoryManagementPage() {
       setShowDeleteConfirm(null);
       setShowExportOptions(false);
       setShowImportModal(false);
-      setShowPdfModal(false);
       setShowPreview(null);
     };
   }, []);
@@ -181,7 +170,6 @@ export default function HistoryManagementPage() {
     setShowDeleteConfirm(null);
     setShowExportOptions(false);
     setShowImportModal(false);
-    setShowPdfModal(false);
     setShowPreview(null);
     
     // 预加载tools页面
@@ -288,7 +276,6 @@ export default function HistoryManagementPage() {
 
   // 加载历史记录
   const loadHistory = useCallback(() => {
-    setLoading(true);
     try {
       let results: HistoryItem[] = [];
       
@@ -315,8 +302,6 @@ export default function HistoryManagementPage() {
       setHistory(sortedResults);
     } catch (error) {
       console.error('Error loading history:', error);
-    } finally {
-      setLoading(false);
     }
   }, [activeTab, getFilteredHistory, getSortedHistory]);
 
@@ -325,16 +310,6 @@ export default function HistoryManagementPage() {
       loadHistory();
     }
   }, [mounted, loadHistory]);
-
-  // 渲染排序图标
-  const renderSortIcon = (key: string) => {
-    if (sortConfig.key !== key) {
-      return <ChevronUp className="w-4 h-4 opacity-0 group-hover:opacity-50" />;
-    }
-    return sortConfig.direction === 'asc' 
-      ? <ChevronUp className="w-4 h-4" />
-      : <ChevronDown className="w-4 h-4" />;
-  };
 
   // 处理排序
   const handleSort = (key: string) => {
@@ -346,90 +321,137 @@ export default function HistoryManagementPage() {
 
   // 处理删除
   const handleDelete = (id: string) => {
-    let success = false;
-    
-    switch (activeTab) {
-      case 'quotation':
-      case 'confirmation':
-        success = deleteQuotationHistory(id);
-        break;
-      case 'invoice':
-        success = deleteInvoiceHistory(id);
-        break;
-      case 'purchase':
-        success = deletePurchaseHistory([id]);
-        break;
-    }
+    try {
+      let success = false;
+      
+      switch (activeTab) {
+        case 'quotation':
+        case 'confirmation':
+          success = deleteQuotationHistory(id);
+          break;
+        case 'invoice':
+          success = deleteInvoiceHistory(id);
+          break;
+        case 'purchase':
+          success = deletePurchaseHistory(id);
+          break;
+      }
 
-    if (success) {
-      loadHistory(); // 重新加载数据，而不是本地过滤
-      setSelectedIds(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(id);
-        return newSet;
-      });
-      setShowDeleteConfirm(null);
-      setRefreshKey(prev => prev + 1);
+      if (success) {
+        setHistory(prev => prev.filter(item => item.id !== id));
+        setSelectedIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      } else {
+        alert('删除失败，请重试');
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      alert('删除失败，请重试');
     }
   };
 
-  // 处理批量删除
+  // 批量删除
   const handleBatchDelete = () => {
-    if (selectedIds.size === 0) return;
-
-    const ids = Array.from(selectedIds);
-    let success = false;
-    
-    switch (activeTab) {
-      case 'quotation':
-      case 'confirmation':
-        success = ids.every(id => deleteQuotationHistory(id));
-        break;
-      case 'invoice':
-        success = ids.every(id => deleteInvoiceHistory(id));
-        break;
-      case 'purchase':
-        success = deletePurchaseHistory(ids);
-        break;
+    if (selectedIds.size === 0) {
+      alert('请先选择要删除的记录');
+      return;
     }
 
-    if (success) {
-      loadHistory(); // 重新加载数据，而不是本地过滤
-      setSelectedIds(new Set());
-      setShowDeleteConfirm(null);
-      setRefreshKey(prev => prev + 1);
+    if (!confirm(`确定要删除选中的 ${selectedIds.size} 条记录吗？`)) {
+      return;
+    }
+
+    try {
+      let successCount = 0;
+      const idsToDelete = Array.from(selectedIds);
+
+      idsToDelete.forEach(id => {
+        let success = false;
+        
+        switch (activeTab) {
+          case 'quotation':
+          case 'confirmation':
+            success = deleteQuotationHistory(id);
+            break;
+          case 'invoice':
+            success = deleteInvoiceHistory(id);
+            break;
+          case 'purchase':
+            success = deletePurchaseHistory(id);
+            break;
+        }
+
+        if (success) {
+          successCount++;
+        }
+      });
+
+      if (successCount > 0) {
+        setHistory(prev => prev.filter(item => !selectedIds.has(item.id)));
+        setSelectedIds(new Set());
+        alert(`成功删除 ${successCount} 条记录`);
+      } else {
+        alert('删除失败，请重试');
+      }
+    } catch (error) {
+      console.error('Error batch deleting items:', error);
+      alert('批量删除失败，请重试');
     }
   };
 
   // 处理编辑
   const handleEdit = (id: string) => {
-    switch (activeTab) {
-      case 'quotation':
-      case 'confirmation':
-        router.push(`/quotation/edit/${id}`);
-        break;
-      case 'invoice':
-        router.push(`/invoice/edit/${id}`);
-        break;
-      case 'purchase':
-        router.push(`/purchase/edit/${id}`);
-        break;
+    try {
+      let item;
+      
+      switch (activeTab) {
+        case 'quotation':
+        case 'confirmation':
+          item = getQuotationHistory().find(item => item.id === id);
+          if (item) {
+            router.push(`/quotation/edit/${id}`);
+          }
+          break;
+        case 'invoice':
+          item = getInvoiceHistory().find(item => item.id === id);
+          if (item) {
+            router.push(`/invoice/edit/${id}`);
+          }
+          break;
+        case 'purchase':
+          item = getPurchaseHistory().find(item => item.id === id);
+          if (item) {
+            router.push(`/purchase/edit/${id}`);
+          }
+          break;
+      }
+    } catch (error) {
+      console.error('Error navigating to edit page:', error);
+      alert('跳转失败，请重试');
     }
   };
 
   // 处理复制
   const handleCopy = (id: string) => {
-    switch (activeTab) {
-      case 'quotation':
-      case 'confirmation':
-        router.push(`/quotation/copy/${id}`);
-        break;
-      case 'invoice':
-        router.push(`/invoice/copy/${id}`);
-        break;
-      case 'purchase':
-        router.push(`/purchase/copy/${id}`);
-        break;
+    try {
+      switch (activeTab) {
+        case 'quotation':
+        case 'confirmation':
+          router.push(`/quotation/copy/${id}`);
+          break;
+        case 'invoice':
+          router.push(`/invoice/copy/${id}`);
+          break;
+        case 'purchase':
+          router.push(`/purchase/copy/${id}`);
+          break;
+      }
+    } catch (error) {
+      console.error('Error navigating to copy page:', error);
+      alert('跳转失败，请重试');
     }
   };
 
@@ -446,7 +468,7 @@ export default function HistoryManagementPage() {
     });
   };
 
-  // 处理全选
+  // 全选/取消全选
   const handleSelectAll = (selected: boolean) => {
     if (selected) {
       setSelectedIds(new Set(history.map(item => item.id)));
@@ -465,96 +487,76 @@ export default function HistoryManagementPage() {
     setShowImportModal(true);
   };
 
-  // 获取记录类型图标
-  const getRecordIcon = (item: HistoryItem) => {
-    if ('quotationNo' in item) {
-      return item.type === 'quotation' ? FileText : Receipt;
-    }
-    if ('invoiceNo' in item) {
-      return Receipt;
-    }
-    if ('orderNo' in item) {
-      return ShoppingCart;
-    }
-    return FileText;
-  };
-
-  // 获取记录类型名称
-  const getRecordTypeName = (item: HistoryItem) => {
-    if ('quotationNo' in item) {
-      return item.type === 'quotation' ? '报价单' : '确认书';
-    }
-    if ('invoiceNo' in item) {
-      return '发票';
-    }
-    if ('orderNo' in item) {
-      return '采购单';
-    }
-    return '文档';
-  };
-
   // 获取记录编号
   const getRecordNumber = (item: HistoryItem, activeTab: HistoryType) => {
-    if (activeTab === 'confirmation' && 'quotationNo' in item) {
-      return item.data?.contractNo || item.quotationNo;
+    switch (activeTab) {
+      case 'quotation':
+      case 'confirmation':
+        return (item as QuotationHistory).quotationNo;
+      case 'invoice':
+        return (item as InvoiceHistory).invoiceNo;
+      case 'purchase':
+        return (item as PurchaseHistory).orderNo;
+      default:
+        return '';
     }
-    if (activeTab === 'quotation' && 'quotationNo' in item) {
-      return item.quotationNo;
-    }
-    if ('invoiceNo' in item) return item.invoiceNo;
-    if ('orderNo' in item) return item.orderNo;
-    return '';
   };
 
-  // 获取客户/供应商名称
+  // 获取客户名称
   const getCustomerName = (item: HistoryItem) => {
-    if ('customerName' in item) return item.customerName;
-    if ('supplierName' in item) return item.supplierName;
+    if ('customerName' in item) {
+      return item.customerName;
+    }
+    if ('supplierName' in item) {
+      return item.supplierName;
+    }
     return '';
   };
 
   // 处理预览
   const handlePreview = (id: string) => {
-    setShowPreview(id);
-    const item = history.find(h => h.id === id);
-    setPreviewItem(item);
-    if (item) {
-      if ('quotationNo' in item) {
-        setPreviewType(item.type === 'quotation' ? 'quotation' : 'confirmation');
-      } else if ('invoiceNo' in item) {
-        setPreviewType('invoice');
-      } else if ('orderNo' in item) {
-        setPreviewType('purchase');
+    try {
+      let item;
+      
+      switch (activeTab) {
+        case 'quotation':
+        case 'confirmation':
+          item = getQuotationHistory().find(item => item.id === id);
+          break;
+        case 'invoice':
+          item = getInvoiceHistory().find(item => item.id === id);
+          break;
+        case 'purchase':
+          item = getPurchaseHistory().find(item => item.id === id);
+          break;
       }
+
+      if (item) {
+        setPreviewItem(item);
+        setPreviewType(activeTab);
+        setShowPreview(id);
+      }
+    } catch (error) {
+      console.error('Error previewing item:', error);
+      alert('预览失败，请重试');
     }
   };
 
-  // 获取每个tab的搜索结果数量
+  // 获取选项卡数量
   const getTabCount = (tabType: HistoryType) => {
     try {
-      let results: HistoryItem[] = [];
-      
       switch (tabType) {
         case 'quotation':
-          results = getQuotationHistory().filter(item => item.type === 'quotation');
-          break;
+          return getQuotationHistory().filter(item => item.type === 'quotation').length;
         case 'confirmation':
-          results = getQuotationHistory().filter(item => item.type === 'confirmation');
-          break;
+          return getQuotationHistory().filter(item => item.type === 'confirmation').length;
         case 'invoice':
-          results = getInvoiceHistory().map(item => ({
-            ...item,
-            updatedAt: item.createdAt // 使用createdAt作为updatedAt
-          }));
-          break;
+          return getInvoiceHistory().length;
         case 'purchase':
-          results = getPurchaseHistory();
-          break;
+          return getPurchaseHistory().length;
+        default:
+          return 0;
       }
-
-      // 应用过滤条件
-      const filteredResults = getFilteredHistory(results);
-      return filteredResults.length;
     } catch (error) {
       console.error('Error getting tab count:', error);
       return 0;

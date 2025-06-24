@@ -14,6 +14,20 @@ import {
 
 export type HistoryType = 'quotation' | 'confirmation' | 'invoice' | 'purchase';
 
+export interface HistoryItem {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  customerName?: string;
+  supplierName?: string;
+  quotationNo?: string;
+  invoiceNo?: string;
+  orderNo?: string;
+  totalAmount: number;
+  currency: string;
+  data: any;
+}
+
 export interface ImportResult {
   success: boolean;
   details?: string[];
@@ -418,7 +432,7 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
 };
 
 // 执行导出
-export const executeExport = (exportType: 'current' | 'all' | 'filtered', activeTab: HistoryType, filteredData?: any[]): ExportResult => {
+export const executeExport = (exportType: 'current' | 'all' | 'filtered', activeTab: HistoryType, filteredData?: HistoryItem[]): ExportResult => {
   let jsonData = '';
   let fileName = '';
   let exportStats = '';
@@ -544,11 +558,11 @@ export const handleFileImport = (file: File, activeTab: HistoryType): Promise<Im
       } catch (error) {
         console.error('handleFileImport: Error importing:', error);
         console.error('handleFileImport: 错误详情:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
+          name: error instanceof Error ? error.name : 'Unknown',
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined
         });
-        reject({ success: false, error: `文件格式错误: ${error.message}` });
+        reject({ success: false, error: `文件格式错误: ${error instanceof Error ? error.message : String(error)}` });
       }
     };
     
@@ -572,7 +586,7 @@ export const handleFileImport = (file: File, activeTab: HistoryType): Promise<Im
       reader.readAsText(file);
     } catch (readError) {
       console.error('handleFileImport: 读取文件时发生错误:', readError);
-      reject({ success: false, error: `读取文件失败: ${readError.message}` });
+      reject({ success: false, error: `读取文件失败: ${readError instanceof Error ? readError.message : String(readError)}` });
     }
   });
 }; 

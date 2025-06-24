@@ -107,11 +107,10 @@ export const getPurchaseHistoryById = (id: string): PurchaseHistory | null => {
 };
 
 // 删除历史记录
-export const deletePurchaseHistory = (ids: string[]): boolean => {
+export const deletePurchaseHistory = (id: string): boolean => {
   try {
     const history = getPurchaseHistory();
-    const idsToDelete = new Set(ids);
-    const filtered = history.filter(item => !idsToDelete.has(item.id));
+    const filtered = history.filter(item => item.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
     return true;
   } catch (error) {

@@ -1,12 +1,12 @@
 import { Download, Archive, FileText } from 'lucide-react';
 import { executeExport, downloadFile } from '@/utils/historyImportExport';
-import type { HistoryType } from '@/utils/historyImportExport';
+import type { HistoryType, HistoryItem } from '@/utils/historyImportExport';
 
 interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
   activeTab: HistoryType;
-  filteredData: any[];
+  filteredData?: HistoryItem[];
 }
 
 export default function ExportModal({
