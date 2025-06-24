@@ -136,6 +136,17 @@ export default function HistoryManagementPage() {
     setMounted(true);
   }, []);
 
+  // 处理返回按钮点击
+  const handleBack = () => {
+    // 检查是否有历史记录可以返回
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      // 如果没有历史记录，默认返回工具中心
+      router.push('/tools');
+    }
+  };
+
   // 获取过滤后的历史记录
   const getFilteredHistory = useCallback((items: HistoryItem[]) => {
     return items.filter(item => {
@@ -846,13 +857,13 @@ export default function HistoryManagementPage() {
           {/* 页面头部 */}
           <div className="mb-8">
             {/* 返回按钮 */}
-            <Link 
-              href="/tools" 
+            <button 
+              onClick={handleBack}
               className="inline-flex items-center text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-4"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="text-sm font-medium">返回工具中心</span>
-            </Link>
+              <span className="text-sm font-medium">返回</span>
+            </button>
 
             {/* 页面标题+操作区 */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
