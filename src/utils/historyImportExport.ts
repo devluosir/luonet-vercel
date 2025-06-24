@@ -528,29 +528,51 @@ export const downloadFile = (jsonData: string, fileName: string) => {
 // 处理文件导入
 export const handleFileImport = (file: File, activeTab: HistoryType): Promise<ImportResult> => {
   return new Promise((resolve, reject) => {
-    console.log('开始导入文件:', file.name, '大小:', file.size);
+    console.log('handleFileImport: 开始导入文件:', file.name, '大小:', file.size);
     const reader = new FileReader();
     
     reader.onload = (e) => {
       const content = e.target?.result as string;
-      console.log('文件内容长度:', content.length);
-      console.log('文件内容前100字符:', content.substring(0, 100));
+      console.log('handleFileImport: 文件内容长度:', content.length);
+      console.log('handleFileImport: 文件内容前100字符:', content.substring(0, 100));
       
       try {
+        console.log('handleFileImport: 调用smartImport函数');
         const importResult = smartImport(content, activeTab);
-        console.log('导入结果:', importResult);
+        console.log('handleFileImport: 导入结果:', importResult);
         resolve(importResult);
       } catch (error) {
-        console.error('Error importing:', error);
-        reject({ success: false, error: '文件格式错误' });
+        console.error('handleFileImport: Error importing:', error);
+        console.error('handleFileImport: 错误详情:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+        reject({ success: false, error: `文件格式错误: ${error.message}` });
       }
     };
     
     reader.onerror = (error) => {
-      console.error('文件读取失败:', error);
+      console.error('handleFileImport: 文件读取失败:', error);
+      console.error('handleFileImport: 错误详情:', {
+        error: error,
+        readyState: reader.readyState,
+        result: reader.result
+      });
       reject({ success: false, error: '文件读取失败，请重试' });
     };
     
-    reader.readAsText(file);
+    reader.onabort = () => {
+      console.error('handleFileImport: 文件读取被中断');
+      reject({ success: false, error: '文件读取被中断' });
+    };
+    
+    try {
+      console.log('handleFileImport: 开始读取文件');
+      reader.readAsText(file);
+    } catch (readError) {
+      console.error('handleFileImport: 读取文件时发生错误:', readError);
+      reject({ success: false, error: `读取文件失败: ${readError.message}` });
+    }
   });
 }; 
