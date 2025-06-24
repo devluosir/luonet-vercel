@@ -1045,12 +1045,12 @@ export default function HistoryManagementPage() {
                             {getCustomerName(item)}
                           </div>
                           <div className="w-40 flex-shrink-0 px-2">
-                            <div className="whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded">
+                            <div className="whitespace-nowrap text-sm font-bold text-blue-600 dark:text-blue-400 font-mono">
                               {getRecordNumber(item, activeTab)}
                             </div>
                           </div>
                           <div className="hidden md:block w-36 flex-shrink-0">
-                            <span className="font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
+                            <span className="whitespace-nowrap text-sm text-gray-900 dark:text-white">
                               {item.currency} {item.totalAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
