@@ -895,62 +895,94 @@ export default function HistoryManagementPage() {
 
           {/* 统计卡片 */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {[
-              {
-                id: 'quotation',
-                name: '报价单',
-                icon: FileText,
-                iconClass: 'text-blue-600',
-                bgClass: 'bg-blue-100',
-                count: getQuotationHistory().filter(item => item.type === 'quotation').length
-              },
-              {
-                id: 'confirmation',
-                name: '销售确认',
-                icon: Receipt,
-                iconClass: 'text-green-600',
-                bgClass: 'bg-green-100',
-                count: getQuotationHistory().filter(item => item.type === 'confirmation').length
-              },
-              {
-                id: 'invoice',
-                name: '发票',
-                icon: Receipt,
-                iconClass: 'text-purple-600',
-                bgClass: 'bg-purple-100',
-                count: getInvoiceHistory().length
-              },
-              {
-                id: 'purchase',
-                name: '采购单',
-                icon: ShoppingCart,
-                iconClass: 'text-orange-600',
-                bgClass: 'bg-orange-100',
-                count: getPurchaseHistory().length
-              }
-            ].map((stat) => (
-              <div
-                key={stat.id}
-                className={`bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200 cursor-pointer ${
-                  activeTab === stat.id ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
-                }`}
-                onClick={() => setActiveTab(stat.id as HistoryType)}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      {stat.name}
-                    </p>
-                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                      {stat.count.toLocaleString()}
-                    </p>
+            {(() => {
+              // 统计每个类型的匹配数量
+              const searchLower = filters.search?.toLowerCase() || '';
+              const getMatchCount = (type: HistoryType) => {
+                let items: HistoryItem[] = [];
+                if (type === 'quotation') items = getQuotationHistory().filter(item => item.type === 'quotation');
+                if (type === 'confirmation') items = getQuotationHistory().filter(item => item.type === 'confirmation');
+                if (type === 'invoice') items = getInvoiceHistory();
+                if (type === 'purchase') items = getPurchaseHistory();
+                if (!searchLower) return 0;
+                return items.filter(item => {
+                  const searchableText = [
+                    'customerName' in item ? item.customerName : '',
+                    'supplierName' in item ? item.supplierName : '',
+                    'quotationNo' in item ? item.quotationNo : '',
+                    'orderNo' in item ? item.orderNo : '',
+                    'invoiceNo' in item ? item.invoiceNo : ''
+                  ].join(' ').toLowerCase();
+                  return searchableText.includes(searchLower);
+                }).length;
+              };
+              const statList = [
+                {
+                  id: 'quotation',
+                  name: '报价单',
+                  icon: FileText,
+                  iconClass: 'text-blue-600',
+                  bgClass: 'bg-blue-100',
+                  count: getQuotationHistory().filter(item => item.type === 'quotation').length
+                },
+                {
+                  id: 'confirmation',
+                  name: '销售确认',
+                  icon: Receipt,
+                  iconClass: 'text-green-600',
+                  bgClass: 'bg-green-100',
+                  count: getQuotationHistory().filter(item => item.type === 'confirmation').length
+                },
+                {
+                  id: 'invoice',
+                  name: '发票',
+                  icon: Receipt,
+                  iconClass: 'text-purple-600',
+                  bgClass: 'bg-purple-100',
+                  count: getInvoiceHistory().length
+                },
+                {
+                  id: 'purchase',
+                  name: '采购单',
+                  icon: ShoppingCart,
+                  iconClass: 'text-orange-600',
+                  bgClass: 'bg-orange-100',
+                  count: getPurchaseHistory().length
+                }
+              ];
+              return statList.map((stat) => {
+                const matchCount = getMatchCount(stat.id as HistoryType);
+                return (
+                  <div
+                    key={stat.id}
+                    className={`bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200 cursor-pointer ${
+                      activeTab === stat.id ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
+                    }`}
+                    onClick={() => setActiveTab(stat.id as HistoryType)}
+                  >
+                    <div className="flex items-center justify-between relative">
+                      <div>
+                        <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          {stat.name}
+                        </p>
+                        <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                          {stat.count.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className={`p-2 sm:p-3 rounded-lg ${stat.bgClass} relative`}>
+                        <stat.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${stat.iconClass}`} />
+                        {/* 搜索匹配徽标 */}
+                        {filters.search && matchCount > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 shadow">
+                            {matchCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className={`p-2 sm:p-3 rounded-lg ${stat.bgClass}`}>
-                    <stat.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${stat.iconClass}`} />
-                  </div>
-                </div>
-              </div>
-            ))}
+                );
+              });
+            })()}
           </div>
 
           {/* 历史记录列表 */}
