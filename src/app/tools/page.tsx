@@ -239,55 +239,76 @@ export default function ToolsPage() {
         </>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">
           我的工具箱
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {availableModules.map((module) => {
-            const Icon = module.icon || Settings;
-            return (
-              <div
-                key={module.id}
-                className="group relative bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-xl 
-                         rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                         hover:-translate-y-1 cursor-pointer
-                         border border-gray-200/30 dark:border-gray-800/30
-                         dark:hover:border-gray-700/50"
-                onClick={() => router.push(module.path)}
-              >
-                <div 
-                  className={`absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity duration-300 ease-in-out ${module.color || 'from-gray-500 to-gray-600'}`}
-                ></div>
-                <div className="p-6">
-                  <div className="flex items-center space-x-4 mb-4">
-                    <div className={`p-3 rounded-lg bg-gradient-to-br ${module.color || 'from-gray-500 to-gray-600'}`}>
-                      <Icon className="w-6 h-6 text-white" />
+        
+        {availableModules.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-500 dark:text-gray-400 text-lg">
+              暂无可用工具，请联系管理员分配权限
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+            {availableModules.map((module) => {
+              const Icon = module.icon || Settings;
+              return (
+                <div
+                  key={module.id}
+                  className="group relative bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-xl 
+                           rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 ease-in-out
+                           hover:-translate-y-1 cursor-pointer
+                           border border-gray-200/30 dark:border-gray-800/30
+                           dark:hover:border-gray-700/50
+                           min-h-[140px] sm:min-h-[160px] md:min-h-[180px]
+                           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                           dark:focus:ring-offset-gray-900"
+                  onClick={() => router.push(module.path)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      router.push(module.path);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`打开${module.name}`}
+                >
+                  <div 
+                    className={`absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity duration-300 ease-in-out ${module.color || 'from-gray-500 to-gray-600'}`}
+                  ></div>
+                  <div className="p-3 sm:p-4 md:p-5 lg:p-6 h-full flex flex-col">
+                    <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 mb-2 sm:mb-3 md:mb-4">
+                      <div className={`p-2 sm:p-2.5 md:p-3 rounded-lg bg-gradient-to-br ${module.color || 'from-gray-500 to-gray-600'} flex-shrink-0`}>
+                        <Icon className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
+                      </div>
+                      <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-white line-clamp-2">
+                        {module.name}
+                      </h3>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {module.name}
-                    </h3>
-                  </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    {module.description}
-                  </p>
-                  <div className="flex items-center text-sm font-medium 
-                              text-blue-600 group-hover:text-blue-500 
-                              dark:text-blue-400 dark:group-hover:text-blue-300
-                              transition-colors duration-300">
-                    开始使用
-                    <svg className="ml-2 h-5 w-5 transform group-hover:translate-x-1 transition-transform duration-300" 
-                         viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" 
-                            d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" 
-                            clipRule="evenodd" />
-                    </svg>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-3 sm:mb-4 flex-grow line-clamp-3">
+                      {module.description}
+                    </p>
+                    <div className="flex items-center text-xs sm:text-sm font-medium 
+                                text-blue-600 group-hover:text-blue-500 
+                                dark:text-blue-400 dark:group-hover:text-blue-300
+                                transition-colors duration-300 mt-auto">
+                      开始使用
+                      <svg className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 transform group-hover:translate-x-1 transition-transform duration-300" 
+                           viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" 
+                              d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" 
+                              clipRule="evenodd" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
       </div>
       <Footer />
