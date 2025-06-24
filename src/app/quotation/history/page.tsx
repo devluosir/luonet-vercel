@@ -523,7 +523,11 @@ export default function QuotationHistoryPage() {
                           onClick={() => handleSort('quotationNo')}
                         >
                           <div className="flex items-center gap-1">
-                            Number
+                            {filters.type === 'confirmation'
+                              ? '订单号'
+                              : filters.type === 'quotation'
+                                ? '询价号'
+                                : '单号'}
                             {renderSortIcon('quotationNo')}
                           </div>
                         </th>

@@ -690,8 +690,13 @@ export default function HistoryManagementPage() {
   };
 
   // 获取记录编号
-  const getRecordNumber = (item: HistoryItem) => {
-    if ('quotationNo' in item) return item.quotationNo;
+  const getRecordNumber = (item: HistoryItem, activeTab: HistoryType) => {
+    if (activeTab === 'confirmation' && 'quotationNo' in item) {
+      return item.data?.contractNo || item.quotationNo;
+    }
+    if (activeTab === 'quotation' && 'quotationNo' in item) {
+      return item.quotationNo;
+    }
     if ('invoiceNo' in item) return item.invoiceNo;
     if ('orderNo' in item) return item.orderNo;
     return '';
@@ -764,7 +769,7 @@ export default function HistoryManagementPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#1C1C1E] dark:via-[#1A1A1C] dark:to-[#1E1E20] flex flex-col">
       <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <div className="max-w-full mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-8">
           {/* 页面头部 */}
           <div className="mb-8">
             {/* 返回按钮 */}
@@ -848,40 +853,6 @@ export default function HistoryManagementPage() {
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* 标签页 */}
-          <div className="mb-8">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <nav className="flex space-x-1 p-1">
-                {[
-                  { id: 'quotation', name: '报价单', icon: FileText, count: getQuotationHistory().filter(item => item.type === 'quotation').length },
-                  { id: 'confirmation', name: '销售确认', icon: Receipt, count: getQuotationHistory().filter(item => item.type === 'confirmation').length },
-                  { id: 'invoice', name: '发票', icon: Receipt, count: getInvoiceHistory().length },
-                  { id: 'purchase', name: '采购单', icon: ShoppingCart, count: getPurchaseHistory().length }
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as HistoryType)}
-                    className={`flex-1 py-3 px-4 rounded-lg font-medium text-sm flex items-center justify-center space-x-2 transition-all duration-200 ${
-                      activeTab === tab.id
-                        ? 'bg-blue-500 text-white shadow-md'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <tab.icon className="w-4 h-4" />
-                    <span>{tab.name}</span>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      activeTab === tab.id
-                        ? 'bg-white/20 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                    }`}>
-                      {tab.count}
-                    </span>
-                  </button>
-                ))}
-              </nav>
-            </div>
           </div>
 
           {/* 工具栏 */}
@@ -1014,11 +985,10 @@ export default function HistoryManagementPage() {
             ) : (
               <>
                 {/* 表头 */}
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
-                  <div className="grid grid-cols-12 gap-4 items-center">
-                    <div className="col-span-1">
-                      <input
-                        type="checkbox"
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-2 sm:px-4 py-4 border-b border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center w-full">
+                    <div className="w-6 flex-shrink-0 flex items-center justify-center">
+                      <input type="checkbox"
                         checked={selectedIds.size === history.length && history.length > 0}
                         onChange={(e) => {
                           if (e.target.checked) {
@@ -1030,32 +1000,24 @@ export default function HistoryManagementPage() {
                         className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
                       />
                     </div>
-                    <div className="col-span-3">
-                      <button
-                        onClick={() => handleSort('createdAt')}
-                        className="flex items-center space-x-1 text-left font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                      >
-                        <span>创建时间</span>
-                        {renderSortIcon('createdAt')}
-                      </button>
+                    <div className="flex-1 min-w-0 truncate font-semibold text-gray-900 dark:text-white pl-2">
+                      客户/供应商
                     </div>
-                    <div className="col-span-2">
-                      <button
-                        onClick={() => handleSort('totalAmount')}
-                        className="flex items-center space-x-1 text-left font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                      >
-                        <span>金额</span>
-                        {renderSortIcon('totalAmount')}
-                      </button>
+                    <div className="w-28 md:w-36 lg:w-44 flex-shrink-0 px-2 font-semibold text-gray-900 dark:text-white">
+                      {activeTab === 'confirmation'
+                        ? '订单号'
+                        : activeTab === 'quotation'
+                          ? '询价号'
+                          : '单号'}
                     </div>
-                    <div className="col-span-3">
-                      <span className="font-semibold text-gray-900 dark:text-white">客户/供应商</span>
+                    <div className="hidden md:block md:w-40 lg:w-48 flex-shrink-0 font-semibold text-gray-900 dark:text-white">
+                      金额
                     </div>
-                    <div className="col-span-2">
-                      <span className="font-semibold text-gray-900 dark:text-white">单号</span>
+                    <div className="hidden lg:block w-36 flex-shrink-0 font-semibold text-gray-900 dark:text-white">
+                      创建时间
                     </div>
-                    <div className="col-span-1">
-                      <span className="font-semibold text-gray-900 dark:text-white">操作</span>
+                    <div className="w-20 md:w-28 lg:w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
+                      操作
                     </div>
                   </div>
                 </div>
@@ -1065,16 +1027,15 @@ export default function HistoryManagementPage() {
                   {history.map((item) => {
                     const Icon = getRecordIcon(item);
                     const isSelected = selectedIds.has(item.id);
-                    
                     return (
                       <div
                         key={item.id}
-                        className={`px-6 py-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 ${
+                        className={`px-2 sm:px-4 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 ${
                           isSelected ? 'bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800' : ''
                         }`}
                       >
-                        <div className="grid grid-cols-12 gap-4 items-center">
-                          <div className="col-span-1">
+                        <div className="flex items-center w-full">
+                          <div className="w-6 flex-shrink-0 flex items-center justify-center">
                             <input
                               type="checkbox"
                               checked={isSelected}
@@ -1090,43 +1051,36 @@ export default function HistoryManagementPage() {
                               className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
                             />
                           </div>
-                          
-                          <div className="col-span-3">
-                            <div className="flex items-center space-x-3">
-                              <div className="p-2.5 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl">
-                                <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                              </div>
-                              <div>
-                                <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                                  {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full inline-block mt-1">
-                                  {getRecordTypeName(item)}
-                                </div>
-                              </div>
+                          <div className="flex-1 min-w-0 truncate text-sm font-medium text-gray-900 dark:text-white pl-2" title={getCustomerName(item)}>
+                            {getCustomerName(item)}
+                          </div>
+                          <div className="w-28 md:w-36 lg:w-44 flex-shrink-0 px-2">
+                            <div className="whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded">
+                              {getRecordNumber(item, activeTab)}
                             </div>
                           </div>
-                          
-                          <div className="col-span-2">
-                            <div className="text-sm font-bold text-green-600 dark:text-green-400">
+                          <div className="hidden md:block md:w-40 lg:w-48 flex-shrink-0">
+                            <span className="font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
                               {item.currency} {item.totalAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="hidden lg:block w-36 flex-shrink-0">
+                            <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                              {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                             </div>
                           </div>
-                          
-                          <div className="col-span-3">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {getCustomerName(item)}
+                          <div className="w-20 md:w-28 lg:w-32 flex-shrink-0 flex items-center justify-center">
+                            {/* 小屏只显示查看按钮，其余sm及以上显示 */}
+                            <div className="flex items-center justify-end space-x-1 sm:hidden">
+                              <button
+                                onClick={() => handlePreview(item.id)}
+                                className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+                                title="预览"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
                             </div>
-                          </div>
-                          
-                          <div className="col-span-2">
-                            <div className="text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded">
-                              {getRecordNumber(item)}
-                            </div>
-                          </div>
-                          
-                          <div className="col-span-1">
-                            <div className="flex items-center space-x-1">
+                            <div className="hidden sm:flex items-center justify-end space-x-1">
                               <button
                                 onClick={() => handlePreview(item.id)}
                                 className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
@@ -1162,6 +1116,22 @@ export default function HistoryManagementPage() {
                     );
                   })}
                 </div>
+
+                {/* 金额统计 */}
+                {history.length > 0 && (
+                  <div className="mt-2 text-right text-sm text-gray-600 dark:text-gray-400">
+                    {Object.entries(history.reduce((acc, item) => {
+                      if (!acc[item.currency]) acc[item.currency] = 0;
+                      acc[item.currency] += item.totalAmount;
+                      return acc;
+                    }, {} as Record<string, number>)).map(([currency, total]) => (
+                      <span key={currency} className="mr-4">
+                        {currency} 合计：
+                        <span className="font-bold text-green-600">{total.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -1360,7 +1330,7 @@ export default function HistoryManagementPage() {
                             </div>
                             <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
                               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">单号</span>
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{getRecordNumber(item)}</span>
+                              <span className="text-sm font-semibold text-gray-900 dark:text-white">{getRecordNumber(item, activeTab)}</span>
                             </div>
                             <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
                               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">客户/供应商</span>
