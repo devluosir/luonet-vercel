@@ -916,6 +916,15 @@ export default function HistoryManagementPage() {
     }
   };
 
+  // 主色调映射
+  const tabColorMap = {
+    quotation: 'blue',
+    confirmation: 'green',
+    invoice: 'purple',
+    purchase: 'orange'
+  };
+  const activeColor = tabColorMap[activeTab] || 'blue';
+
   // 避免闪烁，在客户端渲染前或activeTab未设置时返回空内容
   if (!mounted) {
     return null;
@@ -1059,11 +1068,10 @@ export default function HistoryManagementPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as HistoryType)}
-                    className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
-                      activeTab === tab.id
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
+                    className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200
+                      ${activeTab === tab.id
+                        ? `border-${tabColorMap[tab.id]}-500 text-${tabColorMap[tab.id]}-600 dark:text-${tabColorMap[tab.id]}-400`
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                   >
                     <span className="relative inline-block">
                       <Icon className="h-4 w-4" />
@@ -1096,6 +1104,7 @@ export default function HistoryManagementPage() {
                   selectedIds={selectedIds}
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
+                  mainColor={activeColor}
                 />
               )}
               {activeTab === 'confirmation' && (
@@ -1110,6 +1119,7 @@ export default function HistoryManagementPage() {
                   selectedIds={selectedIds}
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
+                  mainColor={activeColor}
                 />
               )}
               {activeTab === 'invoice' && (
@@ -1124,6 +1134,7 @@ export default function HistoryManagementPage() {
                   selectedIds={selectedIds}
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
+                  mainColor={activeColor}
                 />
               )}
               {activeTab === 'purchase' && (
@@ -1138,6 +1149,7 @@ export default function HistoryManagementPage() {
                   selectedIds={selectedIds}
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
+                  mainColor={activeColor}
                 />
               )}
             </div>

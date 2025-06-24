@@ -176,28 +176,28 @@ export default function QuotationHistoryTab({
           </div>
           <button
             onClick={() => onSort('customerName')}
-            className="flex-1 min-w-0 truncate font-semibold text-gray-900 dark:text-white pl-2 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap"
+            className={`flex-1 min-w-0 truncate font-semibold pl-2 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap text-${mainColor}-600 dark:text-${mainColor}-400`}
           >
             客户名称
             <span className="ml-1 flex items-center">{renderSortIcon('customerName')}</span>
           </button>
           <button
             onClick={() => onSort('quotationNo')}
-            className="w-24 sm:w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap"
+            className={`w-24 sm:w-40 flex-shrink-0 font-semibold pl-2 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap text-${mainColor}-600 dark:text-${mainColor}-400`}
           >
             询价号
             <span className="ml-1 flex items-center">{renderSortIcon('quotationNo')}</span>
           </button>
           <button
             onClick={() => onSort('totalAmount')}
-            className="hidden md:flex w-36 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors items-center group whitespace-nowrap"
+            className={`hidden md:flex w-36 flex-shrink-0 font-semibold pl-2 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap text-${mainColor}-600 dark:text-${mainColor}-400`}
           >
             金额
             <span className="ml-1 flex items-center">{renderSortIcon('totalAmount')}</span>
           </button>
           <button
             onClick={() => onSort('createdAt')}
-            className="hidden lg:flex w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors items-center group whitespace-nowrap"
+            className={`hidden lg:flex w-40 flex-shrink-0 font-semibold pl-2 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap text-${mainColor}-600 dark:text-${mainColor}-400`}
           >
             创建时间
             <span className="ml-1 flex items-center">{renderSortIcon('createdAt')}</span>

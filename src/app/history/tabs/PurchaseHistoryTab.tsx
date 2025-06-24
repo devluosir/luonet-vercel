@@ -175,7 +175,7 @@ export default function PurchaseHistoryTab({
           </div>
           <button
             onClick={() => onSort('supplierName')}
-            className="flex-1 min-w-0 truncate font-semibold text-gray-900 dark:text-white pl-2 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap"
+            className={`flex-1 min-w-0 truncate font-semibold pl-2 text-left hover:text-orange-600 dark:hover:text-orange-400 transition-colors flex items-center group whitespace-nowrap text-${mainColor}-600 dark:text-${mainColor}-400`}
           >
             供应商名称
             <span className="ml-1 flex items-center">{renderSortIcon('supplierName')}</span>

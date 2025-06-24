@@ -176,7 +176,7 @@ export default function InvoiceHistoryTab({
           </div>
           <button
             onClick={() => onSort('customerName')}
-            className="flex-1 min-w-0 truncate font-semibold text-gray-900 dark:text-white pl-2 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap"
+            className={`flex-1 min-w-0 truncate font-semibold pl-2 text-left hover:text-purple-600 dark:hover:text-purple-400 transition-colors flex items-center group whitespace-nowrap text-${mainColor}-600 dark:text-${mainColor}-400`}
           >
             客户名称
             <span className="ml-1 flex items-center">{renderSortIcon('customerName')}</span>
