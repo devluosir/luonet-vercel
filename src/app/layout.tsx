@@ -17,7 +17,7 @@ const noto_sans_sc = localFont({
     },
   ],
   display: 'swap',
-  preload: true,
+  preload: false,
   variable: '--font-noto-sans-sc',
 })
 
@@ -44,6 +44,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Luo & Company" />
         <meta httpEquiv="Content-Language" content="zh-CN" />
         <meta name="google" content="notranslate" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </head>
       <body className={noto_sans_sc.className} suppressHydrationWarning>
         <Providers>

@@ -105,6 +105,28 @@ interface Filters {
   amountRange: 'all' | 'low' | 'medium' | 'high';
 }
 
+import dynamic from 'next/dynamic';
+
+const QuotationHistoryTab = dynamic(() => import('./tabs/QuotationHistoryTab'), {
+  loading: () => <div className="py-8 text-center text-gray-400">正在加载报价单历史...</div>,
+  ssr: false
+});
+
+const ConfirmationHistoryTab = dynamic(() => import('./tabs/ConfirmationHistoryTab'), {
+  loading: () => <div className="py-8 text-center text-gray-400">正在加载订单确认书历史...</div>,
+  ssr: false
+});
+
+const InvoiceHistoryTab = dynamic(() => import('./tabs/InvoiceHistoryTab'), {
+  loading: () => <div className="py-8 text-center text-gray-400">正在加载发票历史...</div>,
+  ssr: false
+});
+
+const PurchaseHistoryTab = dynamic(() => import('./tabs/PurchaseHistoryTab'), {
+  loading: () => <div className="py-8 text-center text-gray-400">正在加载采购单历史...</div>,
+  ssr: false
+});
+
 export default function HistoryManagementPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -846,587 +868,90 @@ export default function HistoryManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-[#1C1C1E] dark:via-[#1A1A1C] dark:to-[#1E1E20] flex flex-col">
-      <main className="flex-1">
-        <div className="max-w-full mx-auto px-2 sm:px-4 md:px-6 py-4 sm:py-8">
-          {/* 页面头部 */}
-          <div className="mb-8">
-            {/* 返回按钮 */}
-            <button 
-              onClick={handleBack}
-              className="inline-flex items-center text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              <span className="text-sm font-medium">返回</span>
-            </button>
+    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-black">
+      <div className="flex-1">
+        {/* Header */}
+        <div className="bg-white dark:bg-[#1c1c1e] shadow-sm dark:shadow-gray-800/30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleBack}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              </button>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">单据管理中心</h1>
+            </div>
+          </div>
+        </div>
 
-            {/* 页面标题+操作区 */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
-              <div className="flex items-center space-x-3">
-                <h1 className="text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]">
-                  单据管理中心
-                </h1>
-              </div>
-              <div className="flex items-center space-x-2 mt-4 sm:mt-0">
+        {/* Tab Navigation */}
+        <div className="bg-white dark:bg-[#1c1c1e] border-b border-gray-200 dark:border-gray-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex space-x-8">
+              {[
+                { id: 'quotation', name: '报价单历史', icon: FileText },
+                { id: 'confirmation', name: '订单确认书', icon: FileText },
+                { id: 'invoice', name: '发票历史', icon: Receipt },
+                { id: 'purchase', name: '采购单历史', icon: ShoppingCart }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as HistoryType)}
+                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                      activeTab === tab.id
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{tab.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 py-8 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Filters and Actions */}
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+              <div className="flex items-center space-x-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="搜索客户、单号..."
+                    placeholder="搜索..."
                     value={filters.search}
                     onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white w-full sm:w-80 transition-all duration-200"
+                    className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  {filters.search && (
-                    <button
-                      onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
                 </div>
-                <button
-                  onClick={handleImport}
-                  className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-white hover:bg-gradient-to-br hover:from-green-400 hover:to-emerald-400 dark:hover:from-green-600 dark:hover:to-emerald-600 transition-all duration-200"
-                  title="导入"
-                >
-                  <Upload className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={handleExport}
-                  className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-white hover:bg-gradient-to-br hover:from-purple-400 hover:to-violet-400 dark:hover:from-purple-600 dark:hover:to-violet-600 transition-all duration-200"
-                  title="导出"
-                >
-                  <Download className="w-5 h-5" />
-                </button>
-                {selectedIds.size > 0 && (
-                  <button
-                    onClick={() => setShowDeleteConfirm('batch')}
-                    className="px-3 py-2 flex items-center bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
-                    title="批量删除"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="ml-1 bg-white bg-opacity-20 rounded px-1.5 py-0.5 text-xs font-bold">{selectedIds.size}</span>
-                  </button>
-                )}
               </div>
             </div>
-          </div>
 
-          {/* 统计卡片 - 优化小屏幕布局 */}
-          <div className="grid grid-cols-4 gap-2 sm:gap-4 mb-8">
-            {(() => {
-              // 统计每个类型的匹配数量
-              const searchLower = filters.search?.toLowerCase() || '';
-              const getMatchCount = (type: HistoryType) => {
-                let items: HistoryItem[] = [];
-                if (type === 'quotation') items = getQuotationHistory().filter(item => item.type === 'quotation');
-                if (type === 'confirmation') items = getQuotationHistory().filter(item => item.type === 'confirmation');
-                if (type === 'invoice') items = getInvoiceHistory();
-                if (type === 'purchase') items = getPurchaseHistory();
-                if (!searchLower) return 0;
-                return items.filter(item => {
-                  const searchableText = [
-                    'customerName' in item ? item.customerName : '',
-                    'supplierName' in item ? item.supplierName : '',
-                    'quotationNo' in item ? item.quotationNo : '',
-                    'orderNo' in item ? item.orderNo : '',
-                    'invoiceNo' in item ? item.invoiceNo : ''
-                  ].join(' ').toLowerCase();
-                  return searchableText.includes(searchLower);
-                }).length;
-              };
-              const statList = [
-                {
-                  id: 'quotation',
-                  name: '报价单',
-                  icon: FileText,
-                  iconClass: 'text-blue-600',
-                  bgClass: 'bg-blue-100',
-                  count: getQuotationHistory().filter(item => item.type === 'quotation').length
-                },
-                {
-                  id: 'confirmation',
-                  name: '销售确认',
-                  icon: Receipt,
-                  iconClass: 'text-green-600',
-                  bgClass: 'bg-green-100',
-                  count: getQuotationHistory().filter(item => item.type === 'confirmation').length
-                },
-                {
-                  id: 'invoice',
-                  name: '发票',
-                  icon: Receipt,
-                  iconClass: 'text-purple-600',
-                  bgClass: 'bg-purple-100',
-                  count: getInvoiceHistory().length
-                },
-                {
-                  id: 'purchase',
-                  name: '采购单',
-                  icon: ShoppingCart,
-                  iconClass: 'text-orange-600',
-                  bgClass: 'bg-orange-100',
-                  count: getPurchaseHistory().length
-                }
-              ];
-              return statList.map((stat) => {
-                const matchCount = getMatchCount(stat.id as HistoryType);
-                return (
-                  <div
-                    key={stat.id}
-                    className={`bg-white dark:bg-gray-800 rounded-xl p-2 sm:p-4 lg:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200 cursor-pointer ${
-                      activeTab === stat.id ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
-                    }`}
-                    onClick={() => setActiveTab(stat.id as HistoryType)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
-                          {stat.name}
-                        </p>
-                        <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
-                          {stat.count.toLocaleString()}
-                        </p>
-                      </div>
-                      <div className={`p-1.5 sm:p-2 lg:p-3 rounded-lg ${stat.bgClass} relative ml-2`}>
-                        <stat.icon className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ${stat.iconClass}`} />
-                        {/* 搜索匹配徽标 */}
-                        {filters.search && matchCount > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 shadow">
-                            {matchCount}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
-
-          {/* 历史记录列表 */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mb-4"></div>
-                <div className="text-gray-600 dark:text-gray-400 font-medium">正在加载数据...</div>
-              </div>
-            ) : history.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
-                  <Archive className="w-12 h-12 text-gray-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                  暂无历史记录
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400 text-center max-w-md">
-                  当前没有找到符合条件的记录，请尝试调整筛选条件或导入数据
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* 表头 */}
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-2 sm:px-4 py-4 border-b border-gray-200 dark:border-gray-600">
-                  <div className="flex items-center w-full">
-                    <div className="w-6 flex-shrink-0 flex items-center justify-center">
-                      <input type="checkbox"
-                        checked={selectedIds.size === history.length && history.length > 0}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedIds(new Set(history.map(item => item.id)));
-                          } else {
-                            setSelectedIds(new Set());
-                          }
-                        }}
-                        className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0 truncate font-semibold text-gray-900 dark:text-white pl-2">
-                      客户/供应商
-                    </div>
-                    <div className="w-28 sm:w-40 flex-shrink-0 px-1 sm:px-2 font-semibold text-gray-900 dark:text-white">
-                      {activeTab === 'confirmation'
-                        ? '订单号'
-                        : activeTab === 'quotation'
-                          ? '询价号'
-                          : '单号'}
-                    </div>
-                    <div className="hidden md:block w-36 flex-shrink-0 font-semibold text-gray-900 dark:text-white">
-                      金额
-                    </div>
-                    <div className="hidden lg:block w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white">
-                      创建时间
-                    </div>
-                    <div className="w-20 sm:w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
-                      操作
-                    </div>
-                  </div>
-                </div>
-
-                {/* 记录列表 */}
-                <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {history.map((item) => {
-                    const Icon = getRecordIcon(item);
-                    const isSelected = selectedIds.has(item.id);
-                    return (
-                      <div
-                        key={item.id}
-                        className={`px-2 sm:px-4 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 ${
-                          isSelected ? 'bg-blue-50 dark:bg-blue-900/20 ring-1 ring-blue-200 dark:ring-blue-800' : ''
-                        }`}
-                      >
-                        <div className="flex items-center w-full">
-                          <div className="w-6 flex-shrink-0 flex items-center justify-center">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const newSelectedIds = new Set(selectedIds);
-                                if (e.target.checked) {
-                                  newSelectedIds.add(item.id);
-                                } else {
-                                  newSelectedIds.delete(item.id);
-                                }
-                                setSelectedIds(newSelectedIds);
-                              }}
-                              className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0 truncate text-sm font-medium text-gray-900 dark:text-white pl-2" title={getCustomerName(item)}>
-                            {getCustomerName(item)}
-                          </div>
-                          <div className="w-28 sm:w-40 flex-shrink-0 px-1 sm:px-2">
-                            <div className="whitespace-nowrap text-sm font-bold text-blue-600 dark:text-blue-400 font-mono">
-                              {getRecordNumber(item, activeTab)}
-                            </div>
-                          </div>
-                          <div className="hidden md:block w-36 flex-shrink-0">
-                            <span className="whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                              {item.currency} {item.totalAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                          <div className="hidden lg:block w-40 flex-shrink-0">
-                            <div className="text-sm text-gray-900 dark:text-white">
-                              {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
-                            </div>
-                          </div>
-                          <div className="w-20 sm:w-32 flex-shrink-0 flex items-center justify-center">
-                            <div className="flex items-center justify-end space-x-1">
-                              <button
-                                onClick={() => handlePreview(item.id)}
-                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
-                                title="预览"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleEdit(item.id)}
-                                className="hidden sm:inline-flex p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:text-orange-400 dark:hover:bg-orange-900/20 rounded-lg transition-all duration-200"
-                                title="编辑"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleCopy(item.id)}
-                                className="hidden sm:inline-flex p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200"
-                                title="复制"
-                              >
-                                <Copy className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => setShowDeleteConfirm(item.id)}
-                                className="hidden sm:inline-flex p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
-                                title="删除"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* 金额统计 */}
-                {history.length > 0 && (
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-t border-green-200 dark:border-green-800 px-4 py-3">
-                    <div className="text-right text-sm text-gray-700 dark:text-gray-300 font-medium">
-                      {Object.entries(history.reduce((acc, item) => {
-                        if (!acc[item.currency]) acc[item.currency] = 0;
-                        acc[item.currency] += item.totalAmount;
-                        return acc;
-                      }, {} as Record<string, number>)).map(([currency, total]) => (
-                        <span key={currency} className="mr-4">
-                          {currency} 合计：
-                          <span className="font-bold text-green-600 dark:text-green-400">{total.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </main>
-
-      {/* 删除确认对话框 */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-              确认删除
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {showDeleteConfirm === 'batch' 
-                ? `确定要删除选中的 ${selectedIds.size} 条记录吗？此操作不可撤销。`
-                : '确定要删除这条记录吗？此操作不可撤销。'
-              }
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => {
-                  if (showDeleteConfirm === 'batch') {
-                    handleBatchDelete();
-                  } else {
-                    handleDelete(showDeleteConfirm);
-                  }
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                删除
-              </button>
+            {/* Tab Content */}
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-lg shadow-sm dark:shadow-gray-800/30">
+              {activeTab === 'quotation' && (
+                <QuotationHistoryTab filters={filters} sortConfig={sortConfig} />
+              )}
+              {activeTab === 'confirmation' && (
+                <ConfirmationHistoryTab filters={filters} sortConfig={sortConfig} />
+              )}
+              {activeTab === 'invoice' && (
+                <InvoiceHistoryTab filters={filters} sortConfig={sortConfig} />
+              )}
+              {activeTab === 'purchase' && (
+                <PurchaseHistoryTab filters={filters} sortConfig={sortConfig} />
+              )}
             </div>
           </div>
         </div>
-      )}
-
-      {/* 导出选择框 */}
-      {showExportOptions && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Download className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  选择导出方式
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  请选择要导出的数据类型
-                </p>
-              </div>
-            </div>
-            
-            <div className="space-y-3 mb-6">
-              <button
-                onClick={() => executeExport('current')}
-                className="w-full p-4 text-left bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                    <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">
-                      导出当前选项卡数据
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      仅导出当前查看的 {activeTab === 'quotation' ? '报价单' : activeTab === 'confirmation' ? '销售确认' : activeTab === 'invoice' ? '发票' : '采购单'} 数据
-                    </div>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => executeExport('all')}
-                className="w-full p-4 text-left bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-green-200 dark:border-green-800 hover:from-green-100 hover:to-emerald-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                    <Archive className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">
-                      导出所有历史记录
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      导出所有类型的历史记录，包含完整备份
-                    </div>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => executeExport('filtered')}
-                className="w-full p-4 text-left bg-gradient-to-r from-purple-50 to-violet-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-purple-200 dark:border-purple-800 hover:from-purple-100 hover:to-violet-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                    <Filter className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">
-                      导出筛选后的数据
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      导出当前筛选条件下的数据 ({history.length} 条)
-                    </div>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowExportOptions(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              >
-                取消
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 预览弹窗 */}
-      {showPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
-            {/* 弹窗头部 */}
-            {(() => {
-              const item = history.find(h => h.id === showPreview);
-              if (!item) return (
-                <div className="p-8 text-center">
-                  <div className="text-gray-500 dark:text-gray-400">记录不存在</div>
-                </div>
-              );
-              return (
-                <>
-                  <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                        {(() => {
-                          const Icon = getRecordIcon(item);
-                          return <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
-                        })()}
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                        {getRecordTypeName(item)}
-                      </h3>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleEdit(item.id)}
-                        className="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:text-orange-400 dark:hover:bg-orange-900/20 rounded-lg transition-all duration-200"
-                        title="编辑"
-                      >
-                        <Edit className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleCopy(item.id)}
-                        className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200"
-                        title="复制"
-                      >
-                        <Copy className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowPreview(null);
-                          if (pdfPreviewUrl) {
-                            URL.revokeObjectURL(pdfPreviewUrl);
-                            setPdfPreviewUrl(null);
-                          }
-                        }}
-                        className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                        title="关闭"
-                      >
-                        <X className="w-6 h-6" />
-                      </button>
-                    </div>
-                  </div>
-                  {/* 基本信息内容 */}
-                  <div className="p-6 pb-2">
-                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-600">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <div className="flex justify-center items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
-                            <span className="text-sm font-bold text-red-600 dark:text-blue-400">{getRecordNumber(item, activeTab)}</span>
-                          </div>
-                          <div className="flex justify-center items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">{getCustomerName(item)}</span>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
-                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">总金额</span>
-                            <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                              {item.currency} {item.totalAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
-                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">创建时间</span>
-                            <span className="text-sm text-gray-900 dark:text-white">
-                              {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
-                            </span>
-                          </div>
-                          {'updatedAt' in item && (
-                            <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
-                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">更新时间</span>
-                              <span className="text-sm text-gray-900 dark:text-white">
-                                {format(new Date(item.updatedAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  {/* PDF预览 */}
-                  <div className="m-6 mt-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl p-2 min-h-[600px] flex items-center justify-center border border-gray-200 dark:border-gray-600">
-                      {isGeneratingPdf ? (
-                        <div className="flex flex-col items-center space-y-4">
-                          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
-                          <div className="text-center">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">正在生成PDF预览...</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">请稍候</p>
-                          </div>
-                        </div>
-                      ) : pdfPreviewUrl ? (
-                        <div className="w-full h-full">
-                          <iframe
-                            src={pdfPreviewUrl}
-                            className="w-full h-[700px] border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg"
-                            title="PDF预览"
-                          />
-                        </div>
-                      ) : (
-                        <div className="text-center text-gray-500 dark:text-gray-400">
-                          <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                          <p className="text-lg font-medium mb-2">无法生成PDF预览</p>
-                          <p className="text-sm">请检查记录数据是否完整</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
-
+      </div>
       <Footer />
     </div>
   );

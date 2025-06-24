@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { performanceMonitor, optimizePerformance } from '@/utils/performance';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -14,8 +15,34 @@ export default function LoginPage() {
   const { data: session } = useSession();
 
   useEffect(() => {
+    // 性能监控
+    performanceMonitor.startTimer('page_load');
+    
+    // 性能优化
+    optimizePerformance.optimizeFontLoading();
+    optimizePerformance.cleanupUnusedResources();
+    
+    // 监控资源加载
+    performanceMonitor.monitorResourceLoading();
+
     if (session) {
       router.push('/tools');
+    }
+
+    // 页面加载完成后的性能记录
+    const handleLoad = () => {
+      performanceMonitor.endTimer('page_load');
+      const metrics = performanceMonitor.getPageLoadMetrics();
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📊 页面加载性能:', metrics);
+      }
+    };
+
+    if (document.readyState === 'complete') {
+      handleLoad();
+    } else {
+      window.addEventListener('load', handleLoad);
+      return () => window.removeEventListener('load', handleLoad);
     }
   }, [session, router]);
 
@@ -24,12 +51,16 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
+    performanceMonitor.startTimer('login_request');
+
     try {
       const result = await signIn('credentials', {
         username,
         password,
         redirect: false,
       });
+
+      performanceMonitor.endTimer('login_request');
 
       if (!result) {
         setError('登录请求失败，请重试');
@@ -46,6 +77,7 @@ export default function LoginPage() {
       localStorage.setItem('username', formattedUsername);
       router.push('/tools');
     } catch (error) {
+      performanceMonitor.endTimer('login_request');
       console.error('登录错误:', error);
       setError('登录过程中发生错误，请重试');
     } finally {
@@ -64,6 +96,8 @@ export default function LoginPage() {
             height={80}
             className="object-contain"
             priority
+            placeholder="blur"
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
           />
         </div>
         <h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
@@ -88,6 +122,7 @@ export default function LoginPage() {
                   onChange={(e) => setUsername(e.target.value)}
                   className="appearance-none block w-full px-3 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white text-base"
                   placeholder="请输入用户名"
+                  autoComplete="username"
                 />
               </div>
             </div>
@@ -106,6 +141,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full px-3 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white text-base"
                   placeholder="请输入密码"
+                  autoComplete="current-password"
                 />
               </div>
             </div>
@@ -124,7 +160,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700"
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700 transition-colors duration-200"
               >
                 {loading ? '登录中...' : '登录 →'}
               </button>

@@ -147,7 +147,18 @@ const MODULES = [
 
 // 使用dynamic导入避免hydration问题
 const DynamicHeader = dynamic(() => import('@/components/Header').then(mod => mod.Header), {
-  ssr: false
+  ssr: true,
+  loading: () => (
+    <div className="bg-white dark:bg-[#1c1c1e] shadow-sm dark:shadow-gray-800/30">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <div className="flex items-center space-x-4">
+          <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        </div>
+        <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+      </div>
+    </div>
+  )
 });
 
 export default function ToolsPage() {
