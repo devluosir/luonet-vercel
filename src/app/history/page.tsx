@@ -1007,8 +1007,18 @@ export default function HistoryManagementPage() {
 
         {/* 高级过滤器 */}
         {showFilters && (
-          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 relative z-10">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <div className="flex justify-between items-center mb-4">
+                <span className="font-bold text-lg text-gray-900 dark:text-white">筛选条件</span>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg transition-colors"
+                  title="关闭筛选"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* 日期范围过滤 */}
                 <div>
@@ -1059,6 +1069,16 @@ export default function HistoryManagementPage() {
                     )}
                   </div>
                 </div>
+              </div>
+              <div className="flex justify-end space-x-2 mt-6">
+                <button
+                  onClick={() => setFilters({ ...filters, search: '', dateRange: 'all', amountRange: 'all' })}
+                  className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                >重置</button>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >应用</button>
               </div>
             </div>
           </div>
