@@ -854,21 +854,42 @@ export default function HistoryManagementPage() {
               <span className="text-sm font-medium">返回工具中心</span>
             </Link>
 
-            {/* 页面标题 */}
-            <div className="text-center sm:text-left">
-              <div className="flex items-center justify-center sm:justify-start space-x-3 mb-3">
+            {/* 页面标题+操作区 */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
+              <div className="flex items-center space-x-3">
                 <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
                   <Archive className="w-6 h-6 text-white" />
                 </div>
-                <div>
-                  <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 dark:from-white dark:via-blue-100 dark:to-indigo-100 bg-clip-text text-transparent">
-                    历史记录管理中心
-                  </h1>
-                </div>
+                <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 dark:from-white dark:via-blue-100 dark:to-indigo-100 bg-clip-text text-transparent">
+                  单据管理中心
+                </h1>
               </div>
-              <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl">
-                统一管理报价单、发票、采购订单的历史记录，支持智能搜索、筛选和批量操作
-              </p>
+              <div className="flex items-center space-x-2 mt-4 sm:mt-0">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="搜索客户、单号..."
+                    value={filters.search}
+                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                    className="pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white w-full sm:w-80 transition-all duration-200"
+                  />
+                </div>
+                <button
+                  onClick={handleImport}
+                  className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-white hover:bg-gradient-to-br hover:from-green-400 hover:to-emerald-400 dark:hover:from-green-600 dark:hover:to-emerald-600 transition-all duration-200"
+                  title="导入"
+                >
+                  <Upload className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleExport}
+                  className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-white hover:bg-gradient-to-br hover:from-purple-400 hover:to-violet-400 dark:hover:from-purple-600 dark:hover:to-violet-600 transition-all duration-200"
+                  title="导出"
+                >
+                  <Download className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -910,134 +931,26 @@ export default function HistoryManagementPage() {
             ].map((stat) => (
               <div
                 key={stat.id}
-                className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200 cursor-pointer ${
+                className={`bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200 cursor-pointer ${
                   activeTab === stat.id ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
                 }`}
                 onClick={() => setActiveTab(stat.id as HistoryType)}
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
                       {stat.name}
                     </p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                       {stat.count.toLocaleString()}
                     </p>
                   </div>
-                  <div className={`p-3 rounded-lg ${stat.bgClass}`}>
-                    <stat.icon className={`w-6 h-6 ${stat.iconClass}`} />
+                  <div className={`p-2 sm:p-3 rounded-lg ${stat.bgClass}`}>
+                    <stat.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${stat.iconClass}`} />
                   </div>
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* 工具栏 */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-              {/* 搜索和过滤 */}
-              <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="搜索客户、单号..."
-                    value={filters.search}
-                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white w-full sm:w-80 transition-all duration-200"
-                  />
-                </div>
-                
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={`flex items-center space-x-2 px-4 py-3 border rounded-xl transition-all duration-200 ${
-                    showFilters
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                      : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white'
-                  }`}
-                >
-                  <Filter className="w-4 h-4" />
-                  <span>高级过滤</span>
-                </button>
-              </div>
-
-              {/* 操作按钮 */}
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={loadHistory}
-                  className="flex items-center space-x-2 px-4 py-3 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>刷新</span>
-                </button>
-                
-                <button
-                  onClick={handleImport}
-                  className="flex items-center space-x-2 px-4 py-3 text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl transition-all duration-200"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span>导入</span>
-                </button>
-                
-                <button
-                  onClick={handleExport}
-                  className="flex items-center space-x-2 px-4 py-3 text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all duration-200"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>导出</span>
-                </button>
-
-                {selectedIds.size > 0 && (
-                  <button
-                    onClick={() => setShowDeleteConfirm('batch')}
-                    className="flex items-center space-x-2 px-4 py-3 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>删除 ({selectedIds.size})</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* 过滤选项 */}
-            {showFilters && (
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      日期范围
-                    </label>
-                    <select
-                      value={filters.dateRange}
-                      onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200"
-                    >
-                      <option value="all">全部时间</option>
-                      <option value="today">今天</option>
-                      <option value="week">最近7天</option>
-                      <option value="month">最近30天</option>
-                      <option value="year">最近一年</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      金额范围
-                    </label>
-                    <select
-                      value={filters.amountRange}
-                      onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as any }))}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all duration-200"
-                    >
-                      <option value="all">全部金额</option>
-                      <option value="low">小于1万</option>
-                      <option value="medium">1万-10万</option>
-                      <option value="high">大于10万</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* 历史记录列表 */}
