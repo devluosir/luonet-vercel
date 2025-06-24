@@ -31,10 +31,6 @@ import {
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { Footer } from '@/components/Footer';
-import { generateQuotationPDF } from '@/utils/quotationPdfGenerator';
-import { generateOrderConfirmationPDF } from '@/utils/orderConfirmationPdfGenerator';
-import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
-import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
 
 // 导入历史记录工具函数
 import { 
@@ -128,6 +124,9 @@ const PurchaseHistoryTab = dynamic(() => import('./tabs/PurchaseHistoryTab'), {
   ssr: false
 });
 
+const ImportExportModal = dynamic(() => import('./ImportExportModal'), { ssr: false });
+const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
+
 export default function HistoryManagementPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -152,9 +151,9 @@ export default function HistoryManagementPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showPreview, setShowPreview] = useState<string | null>(null);
   const [showExportOptions, setShowExportOptions] = useState(false);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [previewItem, setPreviewItem] = useState<any>(null);
+  const [previewType, setPreviewType] = useState<'quotation'|'confirmation'|'invoice'|'purchase'>('quotation');
 
   useEffect(() => {
     setMounted(true);
@@ -555,12 +554,17 @@ export default function HistoryManagementPage() {
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
+        console.log('开始导入文件:', file.name, '大小:', file.size);
         const reader = new FileReader();
         reader.onload = (e) => {
           const content = e.target?.result as string;
+          console.log('文件内容长度:', content.length);
+          console.log('文件内容前100字符:', content.substring(0, 100));
+          
           try {
-            // 智能识别文件类型并导入
+            // 智能导入函数
             const importResult = smartImport(content);
+            console.log('导入结果:', importResult);
             
             if (importResult.success) {
               loadHistory();
@@ -578,6 +582,7 @@ export default function HistoryManagementPage() {
                 }
               }
             } else {
+              console.error('导入失败:', importResult.error);
               alert(`导入失败：${importResult.error}`);
             }
           } catch (error) {
@@ -585,7 +590,13 @@ export default function HistoryManagementPage() {
             alert('导入失败：文件格式错误');
           }
         };
+        reader.onerror = (error) => {
+          console.error('文件读取失败:', error);
+          alert('文件读取失败，请重试');
+        };
         reader.readAsText(file);
+      } else {
+        console.log('没有选择文件');
       }
     };
     input.click();
@@ -594,10 +605,18 @@ export default function HistoryManagementPage() {
   // 智能导入函数
   const smartImport = (content: string) => {
     try {
+      console.log('开始智能导入，内容长度:', content.length);
       let parsedData;
       try {
         parsedData = JSON.parse(content);
+        console.log('JSON解析成功，数据类型:', typeof parsedData);
+        if (Array.isArray(parsedData)) {
+          console.log('数据是数组，长度:', parsedData.length);
+        } else if (typeof parsedData === 'object') {
+          console.log('数据是对象，键:', Object.keys(parsedData));
+        }
       } catch (parseError) {
+        console.log('JSON解析失败，尝试修复格式问题');
         // 尝试修复常见的JSON格式问题
         const fixedContent = content
           .replace(/\n/g, '')
@@ -605,10 +624,12 @@ export default function HistoryManagementPage() {
           .replace(/\t/g, '')
           .trim();
         parsedData = JSON.parse(fixedContent);
+        console.log('修复后JSON解析成功');
       }
 
       // 检查是否是综合数据格式（包含metadata字段）
       if (parsedData && typeof parsedData === 'object' && 'metadata' in parsedData) {
+        console.log('检测到综合数据格式');
         // 综合数据格式
         const allData = parsedData;
         const results = {
@@ -622,8 +643,11 @@ export default function HistoryManagementPage() {
 
         // 处理报价单数据
         if (allData.quotation && Array.isArray(allData.quotation) && allData.quotation.length > 0) {
+          console.log('处理报价单数据，数量:', allData.quotation.length);
           const quotationJson = JSON.stringify(allData.quotation);
-          if (importQuotationHistory(quotationJson)) {
+          const importSuccess = importQuotationHistory(quotationJson);
+          console.log('报价单导入结果:', importSuccess);
+          if (importSuccess) {
             results.details.push(`报价单：${allData.quotation.length} 条`);
             totalImported += allData.quotation.length;
             if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
@@ -634,8 +658,11 @@ export default function HistoryManagementPage() {
 
         // 处理销售确认数据
         if (allData.confirmation && Array.isArray(allData.confirmation) && allData.confirmation.length > 0) {
+          console.log('处理销售确认数据，数量:', allData.confirmation.length);
           const confirmationJson = JSON.stringify(allData.confirmation);
-          if (importQuotationHistory(confirmationJson)) {
+          const importSuccess = importQuotationHistory(confirmationJson);
+          console.log('销售确认导入结果:', importSuccess);
+          if (importSuccess) {
             results.details.push(`销售确认：${allData.confirmation.length} 条`);
             totalImported += allData.confirmation.length;
             if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
@@ -646,8 +673,11 @@ export default function HistoryManagementPage() {
 
         // 处理发票数据
         if (allData.invoice && Array.isArray(allData.invoice) && allData.invoice.length > 0) {
+          console.log('处理发票数据，数量:', allData.invoice.length);
           const invoiceJson = JSON.stringify(allData.invoice);
-          if (importInvoiceHistory(invoiceJson)) {
+          const importSuccess = importInvoiceHistory(invoiceJson);
+          console.log('发票导入结果:', importSuccess);
+          if (importSuccess) {
             results.details.push(`发票：${allData.invoice.length} 条`);
             totalImported += allData.invoice.length;
             if (activeTab !== 'invoice') {
@@ -658,8 +688,11 @@ export default function HistoryManagementPage() {
 
         // 处理采购单数据
         if (allData.purchase && Array.isArray(allData.purchase) && allData.purchase.length > 0) {
+          console.log('处理采购单数据，数量:', allData.purchase.length);
           const purchaseJson = JSON.stringify(allData.purchase);
-          if (importPurchaseHistory(purchaseJson)) {
+          const importSuccess = importPurchaseHistory(purchaseJson);
+          console.log('采购单导入结果:', importSuccess);
+          if (importSuccess) {
             results.details.push(`采购单：${allData.purchase.length} 条`);
             totalImported += allData.purchase.length;
             if (activeTab !== 'purchase') {
@@ -668,6 +701,7 @@ export default function HistoryManagementPage() {
           }
         }
 
+        console.log('综合数据导入完成，总计:', totalImported);
         if (totalImported === 0) {
           return { success: false, error: '综合数据中未找到有效的历史记录数据' };
         }
@@ -676,6 +710,7 @@ export default function HistoryManagementPage() {
         return results;
       }
 
+      console.log('检测到数组格式数据');
       // 原有的数组格式处理逻辑
       if (!Array.isArray(parsedData) || parsedData.length === 0) {
         return { success: false, error: '文件格式错误：需要包含数据的JSON数组或综合数据格式' };
@@ -729,12 +764,21 @@ export default function HistoryManagementPage() {
         }
       }
 
+      console.log('数据分组结果:', {
+        quotation: quotationData.length,
+        confirmation: confirmationData.length,
+        invoice: invoiceData.length,
+        purchase: purchaseData.length
+      });
+
       // 执行导入
       let totalImported = 0;
 
       if (quotationData.length > 0) {
         const quotationJson = JSON.stringify(quotationData);
-        if (importQuotationHistory(quotationJson)) {
+        const importSuccess = importQuotationHistory(quotationJson);
+        console.log('报价单导入结果:', importSuccess);
+        if (importSuccess) {
           results.details.push(`报价单：${quotationData.length} 条`);
           totalImported += quotationData.length;
           if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
@@ -745,7 +789,9 @@ export default function HistoryManagementPage() {
 
       if (confirmationData.length > 0) {
         const confirmationJson = JSON.stringify(confirmationData);
-        if (importQuotationHistory(confirmationJson)) {
+        const importSuccess = importQuotationHistory(confirmationJson);
+        console.log('销售确认导入结果:', importSuccess);
+        if (importSuccess) {
           results.details.push(`销售确认：${confirmationData.length} 条`);
           totalImported += confirmationData.length;
           if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
@@ -756,7 +802,9 @@ export default function HistoryManagementPage() {
 
       if (invoiceData.length > 0) {
         const invoiceJson = JSON.stringify(invoiceData);
-        if (importInvoiceHistory(invoiceJson)) {
+        const importSuccess = importInvoiceHistory(invoiceJson);
+        console.log('发票导入结果:', importSuccess);
+        if (importSuccess) {
           results.details.push(`发票：${invoiceData.length} 条`);
           totalImported += invoiceData.length;
           if (activeTab !== 'invoice') {
@@ -767,7 +815,9 @@ export default function HistoryManagementPage() {
 
       if (purchaseData.length > 0) {
         const purchaseJson = JSON.stringify(purchaseData);
-        if (importPurchaseHistory(purchaseJson)) {
+        const importSuccess = importPurchaseHistory(purchaseJson);
+        console.log('采购单导入结果:', importSuccess);
+        if (importSuccess) {
           results.details.push(`采购单：${purchaseData.length} 条`);
           totalImported += purchaseData.length;
           if (activeTab !== 'purchase') {
@@ -776,6 +826,7 @@ export default function HistoryManagementPage() {
         }
       }
 
+      console.log('数组格式导入完成，总计:', totalImported);
       if (totalImported === 0) {
         return { success: false, error: '未能识别任何有效的历史记录数据' };
       }
@@ -840,54 +891,18 @@ export default function HistoryManagementPage() {
   // 处理预览
   const handlePreview = (id: string) => {
     setShowPreview(id);
-    generatePdfPreview(id);
-  };
-
-  // 生成PDF预览
-  const generatePdfPreview = async (id: string) => {
-    setIsGeneratingPdf(true);
-    setPdfPreviewUrl(null);
-    
-    try {
-      const item = history.find(h => h.id === id);
-      if (!item) return;
-
-      let pdfUrl: string | null = null;
-
-      // 根据记录类型生成对应的PDF
+    const item = history.find(h => h.id === id);
+    setPreviewItem(item);
+    if (item) {
       if ('quotationNo' in item) {
-        if (item.type === 'quotation') {
-          const pdfBlob = await generateQuotationPDF(item.data, true);
-          pdfUrl = URL.createObjectURL(pdfBlob);
-        } else {
-          const pdfBlob = await generateOrderConfirmationPDF(item.data, true);
-          pdfUrl = URL.createObjectURL(pdfBlob);
-        }
+        setPreviewType(item.type === 'quotation' ? 'quotation' : 'confirmation');
       } else if ('invoiceNo' in item) {
-        pdfUrl = await generateInvoicePDF(item.data, true);
+        setPreviewType('invoice');
       } else if ('orderNo' in item) {
-        const pdfBlob = await generatePurchaseOrderPDF(item.data, true);
-        pdfUrl = URL.createObjectURL(pdfBlob);
+        setPreviewType('purchase');
       }
-
-      if (pdfUrl) {
-        setPdfPreviewUrl(pdfUrl);
-      }
-    } catch (error) {
-      console.error('Error generating PDF preview:', error);
-    } finally {
-      setIsGeneratingPdf(false);
     }
   };
-
-  // 清理PDF预览URL
-  useEffect(() => {
-    return () => {
-      if (pdfPreviewUrl) {
-        URL.revokeObjectURL(pdfPreviewUrl);
-      }
-    };
-  }, [pdfPreviewUrl]);
 
   // 获取每个tab的搜索结果数量
   const getTabCount = (tabType: HistoryType) => {
@@ -1224,134 +1239,22 @@ export default function HistoryManagementPage() {
         </div>
       )}
 
-      {/* 导出选择框 */}
-      {showExportOptions && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Download className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  选择导出方式
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  请选择要导出的数据类型
-                </p>
-              </div>
-            </div>
-            
-            <div className="space-y-3 mb-6">
-              <button
-                onClick={() => executeExport('current')}
-                className="w-full p-4 text-left bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                    <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">
-                      导出当前选项卡数据
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      仅导出当前查看的 {activeTab === 'quotation' ? '报价单' : activeTab === 'confirmation' ? '销售确认' : activeTab === 'invoice' ? '发票' : '采购单'} 数据
-                    </div>
-                  </div>
-                </div>
-              </button>
+      {/* 导入导出弹窗 */}
+      <ImportExportModal
+        isOpen={showExportOptions}
+        onClose={() => setShowExportOptions(false)}
+        activeTab={activeTab}
+        filteredData={history}
+        onImportSuccess={() => { setRefreshKey(prev => prev + 1); loadHistory(); }}
+      />
 
-              <button
-                onClick={() => executeExport('all')}
-                className="w-full p-4 text-left bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-green-200 dark:border-green-800 hover:from-green-100 hover:to-emerald-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                    <Archive className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">
-                      导出所有历史记录
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      导出所有类型的历史记录，包含完整备份
-                    </div>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowExportOptions(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              >
-                取消
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 预览弹窗 */}
-      {showPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {/* 动态标题 */}
-                {(() => {
-                  const item = history.find(h => h.id === showPreview);
-                  if (!item) return 'PDF预览';
-                  if ('quotationNo' in item) {
-                    return item.type === 'quotation' ? '报价单 PDF 预览' : '订单确认 PDF 预览';
-                  }
-                  if ('invoiceNo' in item) return '发票 PDF 预览';
-                  if ('orderNo' in item) return '采购单 PDF 预览';
-                  return 'PDF预览';
-                })()}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowPreview(null);
-                  if (pdfPreviewUrl) {
-                    URL.revokeObjectURL(pdfPreviewUrl);
-                    setPdfPreviewUrl(null);
-                  }
-                }}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="bg-white dark:bg-gray-800 rounded-b-xl flex items-center justify-center border border-gray-200 dark:border-gray-600" style={{padding:0}}>
-              {isGeneratingPdf ? (
-                <div className="flex flex-col items-center space-y-4 py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">正在生成PDF预览...</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">请稍候</p>
-                  </div>
-                </div>
-              ) : pdfPreviewUrl ? (
-                <iframe
-                  src={pdfPreviewUrl}
-                  className="w-full h-[80vh] border-0 rounded-b-xl"
-                  title="PDF预览"
-                  style={{margin:0, padding:0}}
-                />
-              ) : (
-                <div className="text-center text-gray-500 dark:text-gray-400 py-12">
-                  <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium mb-2">无法生成PDF预览</p>
-                  <p className="text-sm">请检查记录数据是否完整</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* PDF预览弹窗 */}
+      <PDFPreviewModal
+        isOpen={!!showPreview}
+        onClose={() => setShowPreview(null)}
+        item={previewItem}
+        itemType={previewType}
+      />
 
       <Footer />
     </div>
