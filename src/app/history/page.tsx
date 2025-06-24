@@ -334,7 +334,7 @@ export default function HistoryManagementPage() {
     }
 
     if (success) {
-      setHistory(prev => prev.filter(item => item.id !== id));
+      loadHistory(); // 重新加载数据，而不是本地过滤
       setSelectedIds(prev => {
         const newSet = new Set(prev);
         newSet.delete(id);
@@ -365,7 +365,7 @@ export default function HistoryManagementPage() {
     }
 
     if (success) {
-      setHistory(prev => prev.filter(item => !selectedIds.has(item.id)));
+      loadHistory(); // 重新加载数据，而不是本地过滤
       setSelectedIds(new Set());
       setShowDeleteConfirm(null);
     }
