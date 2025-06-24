@@ -77,6 +77,8 @@ export default function InvoiceHistoryTab({
     setLoading(true);
     try {
       let results = getInvoiceHistory();
+      // 只保留真正的发票数据
+      results = results.filter(item => !!item.invoiceNo);
       // 搜索过滤
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
@@ -174,31 +176,31 @@ export default function InvoiceHistoryTab({
           </div>
           <button
             onClick={() => onSort('customerName')}
-            className="flex-1 min-w-0 truncate font-semibold text-gray-900 dark:text-white pl-2 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group"
+            className="flex-1 min-w-0 truncate font-semibold text-gray-900 dark:text-white pl-2 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap"
           >
             客户名称
-            {renderSortIcon('customerName')}
+            <span className="ml-1 flex items-center">{renderSortIcon('customerName')}</span>
           </button>
           <button
             onClick={() => onSort('invoiceNo')}
-            className="w-40 flex-shrink-0 px-2 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group"
+            className="w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap"
           >
             发票号
-            {renderSortIcon('invoiceNo')}
+            <span className="ml-1 flex items-center">{renderSortIcon('invoiceNo')}</span>
           </button>
           <button
             onClick={() => onSort('totalAmount')}
-            className="hidden md:block w-36 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group"
+            className="hidden md:flex w-36 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors items-center group whitespace-nowrap"
           >
             金额
-            {renderSortIcon('totalAmount')}
+            <span className="ml-1 flex items-center">{renderSortIcon('totalAmount')}</span>
           </button>
           <button
             onClick={() => onSort('createdAt')}
-            className="hidden lg:block w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group"
+            className="hidden lg:flex w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors items-center group whitespace-nowrap"
           >
             创建时间
-            {renderSortIcon('createdAt')}
+            <span className="ml-1 flex items-center">{renderSortIcon('createdAt')}</span>
           </button>
           <div className="w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
             操作
