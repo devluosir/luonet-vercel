@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   FileText, 
@@ -107,6 +107,9 @@ interface Filters {
 
 export default function HistoryManagementPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get('tab');
+  const validTabs: HistoryType[] = ['quotation', 'confirmation', 'invoice', 'purchase'];
   const [activeTab, setActiveTab] = useState<HistoryType>('quotation');
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -761,7 +764,7 @@ export default function HistoryManagementPage() {
     };
   }, [pdfPreviewUrl]);
 
-  // 避免闪烁，在客户端渲染前返回空内容
+  // 避免闪烁，在客户端渲染前或activeTab未设置时返回空内容
   if (!mounted) {
     return null;
   }
@@ -802,36 +805,40 @@ export default function HistoryManagementPage() {
           {/* 统计卡片 */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {[
-              { 
-                id: 'quotation', 
-                name: '报价单', 
-                icon: FileText, 
-                color: 'blue',
-                count: getQuotationHistory().filter(item => item.type === 'quotation').length 
+              {
+                id: 'quotation',
+                name: '报价单',
+                icon: FileText,
+                iconClass: 'text-blue-600',
+                bgClass: 'bg-blue-100',
+                count: getQuotationHistory().filter(item => item.type === 'quotation').length
               },
-              { 
-                id: 'confirmation', 
-                name: '销售确认', 
-                icon: Receipt, 
-                color: 'green',
-                count: getQuotationHistory().filter(item => item.type === 'confirmation').length 
+              {
+                id: 'confirmation',
+                name: '销售确认',
+                icon: Receipt,
+                iconClass: 'text-green-600',
+                bgClass: 'bg-green-100',
+                count: getQuotationHistory().filter(item => item.type === 'confirmation').length
               },
-              { 
-                id: 'invoice', 
-                name: '发票', 
-                icon: Receipt, 
-                color: 'purple',
-                count: getInvoiceHistory().length 
+              {
+                id: 'invoice',
+                name: '发票',
+                icon: Receipt,
+                iconClass: 'text-purple-600',
+                bgClass: 'bg-purple-100',
+                count: getInvoiceHistory().length
               },
-              { 
-                id: 'purchase', 
-                name: '采购单', 
-                icon: ShoppingCart, 
-                color: 'orange',
-                count: getPurchaseHistory().length 
+              {
+                id: 'purchase',
+                name: '采购单',
+                icon: ShoppingCart,
+                iconClass: 'text-orange-600',
+                bgClass: 'bg-orange-100',
+                count: getPurchaseHistory().length
               }
             ].map((stat) => (
-              <div 
+              <div
                 key={stat.id}
                 className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200 cursor-pointer ${
                   activeTab === stat.id ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
@@ -847,8 +854,8 @@ export default function HistoryManagementPage() {
                       {stat.count.toLocaleString()}
                     </p>
                   </div>
-                  <div className={`p-3 rounded-lg bg-${stat.color}-100 dark:bg-${stat.color}-900/30`}>
-                    <stat.icon className={`w-6 h-6 text-${stat.color}-600 dark:text-${stat.color}-400`} />
+                  <div className={`p-3 rounded-lg ${stat.bgClass}`}>
+                    <stat.icon className={`w-6 h-6 ${stat.iconClass}`} />
                   </div>
                 </div>
               </div>
@@ -1003,20 +1010,20 @@ export default function HistoryManagementPage() {
                     <div className="flex-1 min-w-0 truncate font-semibold text-gray-900 dark:text-white pl-2">
                       客户/供应商
                     </div>
-                    <div className="w-28 md:w-36 lg:w-44 flex-shrink-0 px-2 font-semibold text-gray-900 dark:text-white">
+                    <div className="w-40 flex-shrink-0 px-2 font-semibold text-gray-900 dark:text-white">
                       {activeTab === 'confirmation'
                         ? '订单号'
                         : activeTab === 'quotation'
                           ? '询价号'
                           : '单号'}
                     </div>
-                    <div className="hidden md:block md:w-40 lg:w-48 flex-shrink-0 font-semibold text-gray-900 dark:text-white">
+                    <div className="hidden md:block w-36 flex-shrink-0 font-semibold text-gray-900 dark:text-white">
                       金额
                     </div>
-                    <div className="hidden lg:block w-36 flex-shrink-0 font-semibold text-gray-900 dark:text-white">
+                    <div className="hidden lg:block w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white">
                       创建时间
                     </div>
-                    <div className="w-20 md:w-28 lg:w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
+                    <div className="w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
                       操作
                     </div>
                   </div>
@@ -1054,27 +1061,27 @@ export default function HistoryManagementPage() {
                           <div className="flex-1 min-w-0 truncate text-sm font-medium text-gray-900 dark:text-white pl-2" title={getCustomerName(item)}>
                             {getCustomerName(item)}
                           </div>
-                          <div className="w-28 md:w-36 lg:w-44 flex-shrink-0 px-2">
+                          <div className="w-40 flex-shrink-0 px-2">
                             <div className="whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded">
                               {getRecordNumber(item, activeTab)}
                             </div>
                           </div>
-                          <div className="hidden md:block md:w-40 lg:w-48 flex-shrink-0">
+                          <div className="hidden md:block w-36 flex-shrink-0">
                             <span className="font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
                               {item.currency} {item.totalAmount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
-                          <div className="hidden lg:block w-36 flex-shrink-0">
+                          <div className="hidden lg:block w-40 flex-shrink-0">
                             <div className="text-sm font-semibold text-gray-900 dark:text-white">
                               {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                             </div>
                           </div>
-                          <div className="w-20 md:w-28 lg:w-32 flex-shrink-0 flex items-center justify-center">
+                          <div className="w-32 flex-shrink-0 flex items-center justify-center">
                             {/* 小屏只显示查看按钮，其余sm及以上显示 */}
                             <div className="flex items-center justify-end space-x-1 sm:hidden">
                               <button
                                 onClick={() => handlePreview(item.id)}
-                                className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
                                 title="预览"
                               >
                                 <Eye className="w-4 h-4" />
@@ -1083,28 +1090,28 @@ export default function HistoryManagementPage() {
                             <div className="hidden sm:flex items-center justify-end space-x-1">
                               <button
                                 onClick={() => handlePreview(item.id)}
-                                className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
                                 title="预览"
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleEdit(item.id)}
-                                className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+                                className="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:text-orange-400 dark:hover:bg-orange-900/20 rounded-lg transition-all duration-200"
                                 title="编辑"
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleCopy(item.id)}
-                                className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200"
+                                className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:text-green-400 dark:hover:bg-green-900/20 rounded-lg transition-all duration-200"
                                 title="复制"
                               >
                                 <Copy className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => setShowDeleteConfirm(item.id)}
-                                className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
+                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
                                 title="删除"
                               >
                                 <Trash2 className="w-4 h-4" />
