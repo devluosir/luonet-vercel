@@ -1063,12 +1063,6 @@ export default function HistoryManagementPage() {
 
                     {/* PDF预览 */}
                     <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-600">
-                      <div className="flex items-center space-x-2 mb-4">
-                        <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                          <FileText className="w-4 h-4 text-red-600 dark:text-red-400" />
-                        </div>
-                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white">PDF预览</h4>
-                      </div>
                       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 min-h-[500px] flex items-center justify-center border border-gray-200 dark:border-gray-600">
                         {isGeneratingPdf ? (
                           <div className="flex flex-col items-center space-y-4">
