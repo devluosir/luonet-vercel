@@ -58,6 +58,7 @@ interface Props {
   selectedIds: Set<string>;
   onSelect: (id: string, selected: boolean) => void;
   onSelectAll: (selected: boolean) => void;
+  mainColor?: string;
 }
 
 export default function QuotationHistoryTab({ 
