@@ -245,7 +245,7 @@ export default function PurchaseHistoryTab({
                     {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                   </div>
                 </div>
-                <div className="w-32 flex-shrink-0 flex items-center justify-center">
+                <div className="w-32 flex-shrink-0 flex items-center justify-center ml-2 sm:ml-0">
                   <div className="flex items-center justify-end space-x-1">
                     <button
                       onClick={() => onPreview(item.id)}
