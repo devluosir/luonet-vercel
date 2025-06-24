@@ -64,7 +64,7 @@ export function Header({ user, onLogout, onProfile, title = 'LC App' }: HeaderPr
             </button>
 
             {showDropdown && (
-              <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-[#2c2c2e] ring-1 ring-black ring-opacity-5 dark:ring-white/10">
+              <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-[#2c2c2e] ring-1 ring-black ring-opacity-5 dark:ring-white/10 z-[9999]">
                 <div className="py-1">
                   <button
                     onClick={() => {

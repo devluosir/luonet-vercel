@@ -71,14 +71,23 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     }
   };
 
-  // 获取已开通的模块列表
-  const availableModules = [
-    { id: 'ai-email', name: 'AI邮件助手' },
+  // 与主工具箱保持一致，且名称与首页一致
+  const MODULES = [
     { id: 'quotation', name: '报价及确认' },
     { id: 'invoice', name: '发票助手' },
     { id: 'purchase', name: '采购订单' },
-    { id: 'history', name: '历史记录管理' },
-  ].filter(module => 
+    { id: 'ai-email', name: 'AI邮件助手' },
+    { id: 'history', name: '单据管理中心' },
+    { id: 'date-tools', name: '日期计算' },
+    { id: 'feature4', name: '客户管理' },
+    { id: 'feature5', name: '库存管理' },
+    { id: 'feature3', name: '数据分析' },
+    { id: 'feature8', name: '销售预测' },
+    { id: 'feature7', name: '时间管理' },
+    { id: 'feature6', name: '自动化工具' },
+    { id: 'feature9', name: '系统设置' },
+  ];
+  const availableModules = MODULES.filter(module => 
     user.permissions.some(p => p.moduleId === module.id && p.canAccess)
   );
 
