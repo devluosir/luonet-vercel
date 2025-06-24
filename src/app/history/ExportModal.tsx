@@ -1,45 +1,21 @@
-import { useRef } from 'react';
-import { Download, Upload, Archive, FileText } from 'lucide-react';
-import { executeExport, smartImport, downloadFile } from '@/utils/historyImportExport';
+import { Download, Archive, FileText } from 'lucide-react';
+import { executeExport, downloadFile } from '@/utils/historyImportExport';
 import type { HistoryType } from '@/utils/historyImportExport';
 
-interface ImportExportModalProps {
+interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
   activeTab: HistoryType;
   filteredData: any[];
-  onImportSuccess?: () => void;
 }
 
-export default function ImportExportModal({
+export default function ExportModal({
   isOpen,
   onClose,
   activeTab,
-  filteredData,
-  onImportSuccess
-}: ImportExportModalProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  filteredData
+}: ExportModalProps) {
   if (!isOpen) return null;
-
-  // 导入文件
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const content = ev.target?.result as string;
-      const result = smartImport(content, activeTab);
-      if (result.success) {
-        alert('导入成功！\n' + (result.details || []).join('\n'));
-        onImportSuccess?.();
-        onClose();
-      } else {
-        alert('导入失败：' + (result.error || '未知错误'));
-      }
-    };
-    reader.readAsText(file);
-  };
 
   // 导出
   const handleExport = (type: 'current' | 'all' | 'filtered') => {
@@ -61,10 +37,10 @@ export default function ImportExportModal({
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              导入/导出历史记录
+              导出历史记录
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              支持全量、筛选、单Tab导入导出
+              选择导出方式
             </p>
           </div>
         </div>
@@ -81,6 +57,9 @@ export default function ImportExportModal({
                 <div className="font-medium text-gray-900 dark:text-white">
                   导出当前选项卡数据
                 </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  仅导出当前显示的{activeTab === 'quotation' ? '报价单' : activeTab === 'confirmation' ? '销售确认' : activeTab === 'invoice' ? '发票' : '采购单'}数据
+                </div>
               </div>
             </div>
           </button>
@@ -96,30 +75,29 @@ export default function ImportExportModal({
                 <div className="font-medium text-gray-900 dark:text-white">
                   导出所有历史记录
                 </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  导出所有类型的完整历史数据
+                </div>
               </div>
             </div>
           </button>
           <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full p-4 text-left bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-yellow-200 dark:border-yellow-800 hover:from-yellow-100 hover:to-orange-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
+            onClick={() => handleExport('filtered')}
+            className="w-full p-4 text-left bg-gradient-to-r from-purple-50 to-violet-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-purple-200 dark:border-purple-800 hover:from-purple-100 hover:to-violet-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
           >
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                <Upload className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
                 <div className="font-medium text-gray-900 dark:text-white">
-                  导入历史记录
+                  导出筛选结果
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  导出当前筛选条件下的数据
                 </div>
               </div>
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".json"
-              className="hidden"
-              onChange={handleImport}
-            />
           </button>
         </div>
         <div className="flex justify-end">
