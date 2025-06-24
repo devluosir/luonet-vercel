@@ -552,8 +552,78 @@ export default function HistoryManagementPage() {
         parsedData = JSON.parse(fixedContent);
       }
 
+      // 检查是否是综合数据格式（包含metadata字段）
+      if (parsedData && typeof parsedData === 'object' && 'metadata' in parsedData) {
+        // 综合数据格式
+        const allData = parsedData;
+        const results = {
+          success: true,
+          details: [] as string[],
+          otherTabs: [] as string[],
+          error: ''
+        };
+
+        let totalImported = 0;
+
+        // 处理报价单数据
+        if (allData.quotation && Array.isArray(allData.quotation) && allData.quotation.length > 0) {
+          const quotationJson = JSON.stringify(allData.quotation);
+          if (importQuotationHistory(quotationJson)) {
+            results.details.push(`报价单：${allData.quotation.length} 条`);
+            totalImported += allData.quotation.length;
+            if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
+              results.otherTabs.push('报价单');
+            }
+          }
+        }
+
+        // 处理销售确认数据
+        if (allData.confirmation && Array.isArray(allData.confirmation) && allData.confirmation.length > 0) {
+          const confirmationJson = JSON.stringify(allData.confirmation);
+          if (importQuotationHistory(confirmationJson)) {
+            results.details.push(`销售确认：${allData.confirmation.length} 条`);
+            totalImported += allData.confirmation.length;
+            if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
+              results.otherTabs.push('销售确认');
+            }
+          }
+        }
+
+        // 处理发票数据
+        if (allData.invoice && Array.isArray(allData.invoice) && allData.invoice.length > 0) {
+          const invoiceJson = JSON.stringify(allData.invoice);
+          if (importInvoiceHistory(invoiceJson)) {
+            results.details.push(`发票：${allData.invoice.length} 条`);
+            totalImported += allData.invoice.length;
+            if (activeTab !== 'invoice') {
+              results.otherTabs.push('发票');
+            }
+          }
+        }
+
+        // 处理采购单数据
+        if (allData.purchase && Array.isArray(allData.purchase) && allData.purchase.length > 0) {
+          const purchaseJson = JSON.stringify(allData.purchase);
+          if (importPurchaseHistory(purchaseJson)) {
+            results.details.push(`采购单：${allData.purchase.length} 条`);
+            totalImported += allData.purchase.length;
+            if (activeTab !== 'purchase') {
+              results.otherTabs.push('采购单');
+            }
+          }
+        }
+
+        if (totalImported === 0) {
+          return { success: false, error: '综合数据中未找到有效的历史记录数据' };
+        }
+
+        results.details.unshift(`总计导入：${totalImported} 条记录`);
+        return results;
+      }
+
+      // 原有的数组格式处理逻辑
       if (!Array.isArray(parsedData) || parsedData.length === 0) {
-        return { success: false, error: '文件格式错误：需要包含数据的JSON数组' };
+        return { success: false, error: '文件格式错误：需要包含数据的JSON数组或综合数据格式' };
       }
 
       const results = {
