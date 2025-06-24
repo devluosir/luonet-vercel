@@ -166,7 +166,13 @@ export default function InvoiceHistoryTab({
   return (
     <div className="overflow-hidden">
       {/* 表头 */}
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 px-4 py-4 border-b border-gray-200 dark:border-gray-600">
+      <div className={`bg-gradient-to-r px-4 py-4 border-b border-gray-200 dark:border-gray-600 ${
+        mainColor === 'blue' ? 'from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10' :
+        mainColor === 'green' ? 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' :
+        mainColor === 'purple' ? 'from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20' :
+        mainColor === 'orange' ? 'from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20' :
+        'from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800'
+      }`}>
         <div className="flex items-center w-full">
           <div className="w-6 flex-shrink-0 flex items-center justify-center">
             <input 
@@ -178,28 +184,28 @@ export default function InvoiceHistoryTab({
           </div>
           <button
             onClick={() => onSort('customerName')}
-            className={`flex-1 min-w-0 truncate font-semibold pl-2 text-left hover:text-purple-600 dark:hover:text-purple-400 transition-colors flex items-center group whitespace-nowrap text-${mainColor}-600 dark:text-${mainColor}-400`}
+            className="flex-1 min-w-0 truncate font-semibold pl-2 text-left hover:text-purple-600 dark:hover:text-purple-400 transition-colors flex items-center group whitespace-nowrap text-gray-900 dark:text-white"
           >
             客户名称
             <span className="ml-1 flex items-center">{renderSortIcon('customerName')}</span>
           </button>
           <button
             onClick={() => onSort('invoiceNo')}
-            className="w-24 sm:w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap"
+            className="w-24 sm:w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-purple-600 dark:hover:text-purple-400 transition-colors flex items-center group whitespace-nowrap"
           >
             发票号
             <span className="ml-1 flex items-center">{renderSortIcon('invoiceNo')}</span>
           </button>
           <button
             onClick={() => onSort('totalAmount')}
-            className="hidden md:flex w-36 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors items-center group whitespace-nowrap"
+            className="hidden md:flex w-36 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-purple-600 dark:hover:text-purple-400 transition-colors items-center group whitespace-nowrap"
           >
             金额
             <span className="ml-1 flex items-center">{renderSortIcon('totalAmount')}</span>
           </button>
           <button
             onClick={() => onSort('createdAt')}
-            className="hidden lg:flex w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors items-center group whitespace-nowrap"
+            className="hidden lg:flex w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-purple-600 dark:hover:text-purple-400 transition-colors items-center group whitespace-nowrap"
           >
             创建时间
             <span className="ml-1 flex items-center">{renderSortIcon('createdAt')}</span>
