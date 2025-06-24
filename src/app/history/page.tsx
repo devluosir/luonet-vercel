@@ -1087,7 +1087,7 @@ export default function HistoryManagementPage() {
                             </span>
                           </div>
                           <div className="hidden lg:block w-40 flex-shrink-0">
-                            <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                            <div className="text-sm text-gray-900 dark:text-white">
                               {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                             </div>
                           </div>
@@ -1371,15 +1371,15 @@ export default function HistoryManagementPage() {
                           </div>
                           <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
                             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">创建时间</span>
-                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                              {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm:ss', { locale: zhCN })}
+                            <span className="text-sm text-gray-900 dark:text-white">
+                              {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                             </span>
                           </div>
                           {'updatedAt' in item && (
                             <div className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded-lg">
                               <span className="text-sm font-medium text-gray-600 dark:text-gray-400">更新时间</span>
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                                {format(new Date(item.updatedAt), 'yyyy-MM-dd HH:mm:ss', { locale: zhCN })}
+                              <span className="text-sm text-gray-900 dark:text-white">
+                                {format(new Date(item.updatedAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                               </span>
                             </div>
                           )}
