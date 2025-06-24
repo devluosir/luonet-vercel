@@ -1068,10 +1068,10 @@ export default function HistoryManagementPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex space-x-8">
               {[
-                { id: 'quotation', name: '报价单', icon: FileText, badge: 'text-blue-600 border-blue-400' },
-                { id: 'confirmation', name: '订单确认', icon: FileText, badge: 'text-green-600 border-green-400' },
-                { id: 'invoice', name: '发票', icon: Receipt, badge: 'text-purple-600 border-purple-400' },
-                { id: 'purchase', name: '采购单', icon: ShoppingCart, badge: 'text-orange-600 border-orange-400' }
+                { id: 'quotation', name: '报价单', icon: FileText, badge: 'text-blue-700 border-blue-400 bg-blue-50 dark:bg-blue-900/30' },
+                { id: 'confirmation', name: '订单确认', icon: FileText, badge: 'text-green-700 border-green-400 bg-green-50 dark:bg-green-900/30' },
+                { id: 'invoice', name: '发票', icon: Receipt, badge: 'text-purple-700 border-purple-400 bg-purple-50 dark:bg-purple-900/30' },
+                { id: 'purchase', name: '采购单', icon: ShoppingCart, badge: 'text-orange-700 border-orange-400 bg-orange-50 dark:bg-orange-900/30' }
               ].map((tab) => {
                 const Icon = tab.icon;
                 const count = getTabCount(tab.id as HistoryType);
@@ -1079,7 +1079,7 @@ export default function HistoryManagementPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as HistoryType)}
-                    className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                    className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
                       activeTab === tab.id
                         ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                         : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -1087,7 +1087,7 @@ export default function HistoryManagementPage() {
                   >
                     <span className="relative inline-block">
                       <Icon className="h-4 w-4" />
-                      <span className={`absolute -top-1 -right-2 min-w-[18px] h-4 px-1 bg-transparent ${tab.badge} text-xs rounded-full flex items-center justify-center font-bold border-2`}> 
+                      <span className={`absolute -top-1 -right-2 min-w-[18px] h-4 px-1 ${tab.badge} text-xs rounded-full flex items-center justify-center font-bold border-2 shadow-sm`}> 
                         {count}
                       </span>
                     </span>
