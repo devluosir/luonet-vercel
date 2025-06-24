@@ -1080,7 +1080,7 @@ export default function HistoryManagementPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="flex-1 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             {/* Tab Content */}
             <div className="bg-white dark:bg-[#1c1c1e] rounded-lg">
