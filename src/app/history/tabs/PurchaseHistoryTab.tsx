@@ -27,9 +27,28 @@ interface Filters {
 interface Props {
   filters: Filters;
   sortConfig: SortConfig;
+  onSort: (key: string) => void;
+  onEdit: (id: string) => void;
+  onCopy: (id: string) => void;
+  onDelete: (id: string) => void;
+  onPreview: (id: string) => void;
+  selectedIds: Set<string>;
+  onSelect: (id: string, selected: boolean) => void;
+  onSelectAll: (selected: boolean) => void;
 }
 
-export default function PurchaseHistoryTab({ filters, sortConfig }: Props) {
+export default function PurchaseHistoryTab({ 
+  filters, 
+  sortConfig, 
+  onSort, 
+  onEdit, 
+  onCopy, 
+  onDelete, 
+  onPreview,
+  selectedIds,
+  onSelect,
+  onSelectAll
+}: Props) {
   const [history, setHistory] = useState<PurchaseHistory[]>([]);
   const [loading, setLoading] = useState(true);
 

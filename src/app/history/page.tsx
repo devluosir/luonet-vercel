@@ -402,6 +402,28 @@ export default function HistoryManagementPage() {
     }
   };
 
+  // 处理选择
+  const handleSelect = (id: string, selected: boolean) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(id);
+      } else {
+        newSet.delete(id);
+      }
+      return newSet;
+    });
+  };
+
+  // 处理全选
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedIds(new Set(history.map(item => item.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
   // 处理导出
   const handleExport = () => {
     setShowExportOptions(true);
@@ -882,6 +904,32 @@ export default function HistoryManagementPage() {
               </button>
               <h1 className="text-xl font-semibold text-gray-900 dark:text-white">单据管理中心</h1>
             </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleImport}
+                className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-200"
+                title="导入"
+              >
+                <Upload className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleExport}
+                className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
+                title="导出"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={() => setShowDeleteConfirm('batch')}
+                  className="px-3 py-2 flex items-center bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                  title="批量删除"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span className="ml-1 bg-white bg-opacity-20 rounded px-1.5 py-0.5 text-xs font-bold">{selectedIds.size}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -937,21 +985,223 @@ export default function HistoryManagementPage() {
             {/* Tab Content */}
             <div className="bg-white dark:bg-[#1c1c1e] rounded-lg shadow-sm dark:shadow-gray-800/30">
               {activeTab === 'quotation' && (
-                <QuotationHistoryTab filters={filters} sortConfig={sortConfig} />
+                <QuotationHistoryTab 
+                  filters={filters} 
+                  sortConfig={sortConfig}
+                  onSort={handleSort}
+                  onEdit={handleEdit}
+                  onCopy={handleCopy}
+                  onDelete={(id) => setShowDeleteConfirm(id)}
+                  onPreview={handlePreview}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelect}
+                  onSelectAll={handleSelectAll}
+                />
               )}
               {activeTab === 'confirmation' && (
-                <ConfirmationHistoryTab filters={filters} sortConfig={sortConfig} />
+                <ConfirmationHistoryTab 
+                  filters={filters} 
+                  sortConfig={sortConfig}
+                  onSort={handleSort}
+                  onEdit={handleEdit}
+                  onCopy={handleCopy}
+                  onDelete={(id) => setShowDeleteConfirm(id)}
+                  onPreview={handlePreview}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelect}
+                  onSelectAll={handleSelectAll}
+                />
               )}
               {activeTab === 'invoice' && (
-                <InvoiceHistoryTab filters={filters} sortConfig={sortConfig} />
+                <InvoiceHistoryTab 
+                  filters={filters} 
+                  sortConfig={sortConfig}
+                  onSort={handleSort}
+                  onEdit={handleEdit}
+                  onCopy={handleCopy}
+                  onDelete={(id) => setShowDeleteConfirm(id)}
+                  onPreview={handlePreview}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelect}
+                  onSelectAll={handleSelectAll}
+                />
               )}
               {activeTab === 'purchase' && (
-                <PurchaseHistoryTab filters={filters} sortConfig={sortConfig} />
+                <PurchaseHistoryTab 
+                  filters={filters} 
+                  sortConfig={sortConfig}
+                  onSort={handleSort}
+                  onEdit={handleEdit}
+                  onCopy={handleCopy}
+                  onDelete={(id) => setShowDeleteConfirm(id)}
+                  onPreview={handlePreview}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelect}
+                  onSelectAll={handleSelectAll}
+                />
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* 删除确认对话框 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              确认删除
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              {showDeleteConfirm === 'batch' 
+                ? `确定要删除选中的 ${selectedIds.size} 条记录吗？此操作不可撤销。`
+                : '确定要删除这条记录吗？此操作不可撤销。'
+              }
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  if (showDeleteConfirm === 'batch') {
+                    handleBatchDelete();
+                  } else {
+                    handleDelete(showDeleteConfirm);
+                  }
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 导出选择框 */}
+      {showExportOptions && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <Download className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  选择导出方式
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  请选择要导出的数据类型
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-3 mb-6">
+              <button
+                onClick={() => executeExport('current')}
+                className="w-full p-4 text-left bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      导出当前选项卡数据
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      仅导出当前查看的 {activeTab === 'quotation' ? '报价单' : activeTab === 'confirmation' ? '销售确认' : activeTab === 'invoice' ? '发票' : '采购单'} 数据
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => executeExport('all')}
+                className="w-full p-4 text-left bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-green-200 dark:border-green-800 hover:from-green-100 hover:to-emerald-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <Archive className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      导出所有历史记录
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      导出所有类型的历史记录，包含完整备份
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowExportOptions(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 预览弹窗 */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">PDF预览</h3>
+              <button
+                onClick={() => {
+                  setShowPreview(null);
+                  if (pdfPreviewUrl) {
+                    URL.revokeObjectURL(pdfPreviewUrl);
+                    setPdfPreviewUrl(null);
+                  }
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-2 min-h-[600px] flex items-center justify-center border border-gray-200 dark:border-gray-600">
+                {isGeneratingPdf ? (
+                  <div className="flex flex-col items-center space-y-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">正在生成PDF预览...</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">请稍候</p>
+                    </div>
+                  </div>
+                ) : pdfPreviewUrl ? (
+                  <div className="w-full h-full">
+                    <iframe
+                      src={pdfPreviewUrl}
+                      className="w-full h-[700px] border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg"
+                      title="PDF预览"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 dark:text-gray-400">
+                    <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">无法生成PDF预览</p>
+                    <p className="text-sm">请检查记录数据是否完整</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   );
