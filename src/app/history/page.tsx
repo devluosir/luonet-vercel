@@ -1202,17 +1202,19 @@ export default function HistoryManagementPage() {
 
                 {/* 金额统计 */}
                 {history.length > 0 && (
-                  <div className="mt-2 text-right text-sm text-gray-600 dark:text-gray-400">
-                    {Object.entries(history.reduce((acc, item) => {
-                      if (!acc[item.currency]) acc[item.currency] = 0;
-                      acc[item.currency] += item.totalAmount;
-                      return acc;
-                    }, {} as Record<string, number>)).map(([currency, total]) => (
-                      <span key={currency} className="mr-4">
-                        {currency} 合计：
-                        <span className="font-bold text-green-600">{total.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </span>
-                    ))}
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-t border-green-200 dark:border-green-800 px-4 py-3">
+                    <div className="text-right text-sm text-gray-700 dark:text-gray-300 font-medium">
+                      {Object.entries(history.reduce((acc, item) => {
+                        if (!acc[item.currency]) acc[item.currency] = 0;
+                        acc[item.currency] += item.totalAmount;
+                        return acc;
+                      }, {} as Record<string, number>)).map(([currency, total]) => (
+                        <span key={currency} className="mr-4">
+                          {currency} 合计：
+                          <span className="font-bold text-green-600 dark:text-green-400">{total.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
               </>
