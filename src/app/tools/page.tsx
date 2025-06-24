@@ -73,7 +73,7 @@ const MODULES = [
   },
   { 
     id: 'history', 
-    name: '历史记录管理', 
+    name: '单据管理中心', 
     description: '统一管理报价单、发票、采购订单历史', 
     path: '/history',
     icon: Archive,
