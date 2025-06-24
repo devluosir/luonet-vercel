@@ -70,7 +70,8 @@ export default function PurchaseHistoryTab({
   onPreview,
   selectedIds,
   onSelect,
-  onSelectAll
+  onSelectAll,
+  mainColor
 }: Props) {
   const [history, setHistory] = useState<PurchaseHistory[]>([]);
   const [loading, setLoading] = useState(true);

@@ -68,7 +68,8 @@ export default function InvoiceHistoryTab({
   onPreview,
   selectedIds,
   onSelect,
-  onSelectAll
+  onSelectAll,
+  mainColor
 }: Props) {
   const [history, setHistory] = useState<InvoiceHistory[]>([]);
   const [loading, setLoading] = useState(true);

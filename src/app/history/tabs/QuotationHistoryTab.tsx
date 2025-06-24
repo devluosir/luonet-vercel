@@ -71,7 +71,8 @@ export default function QuotationHistoryTab({
   onPreview,
   selectedIds,
   onSelect,
-  onSelectAll
+  onSelectAll,
+  mainColor
 }: Props) {
   const [history, setHistory] = useState<QuotationHistory[]>([]);
   const [loading, setLoading] = useState(true);

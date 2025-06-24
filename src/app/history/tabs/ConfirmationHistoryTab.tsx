@@ -70,7 +70,8 @@ export default function ConfirmationHistoryTab({
   onPreview,
   selectedIds,
   onSelect,
-  onSelectAll
+  onSelectAll,
+  mainColor
 }: Props) {
   const [history, setHistory] = useState<ConfirmationHistory[]>([]);
   const [loading, setLoading] = useState(true);
