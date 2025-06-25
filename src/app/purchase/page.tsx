@@ -8,9 +8,10 @@ import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
 import { SettingsPanel } from '@/components/purchase/SettingsPanel';
 import { BankInfoSection } from '@/components/purchase/BankInfoSection';
 import type { PurchaseOrderData } from '@/types/purchase';
-import { savePurchaseHistory } from '@/utils/purchaseHistory';
+import { savePurchaseHistory, getPurchaseHistory } from '@/utils/purchaseHistory';
 import { useRouter, usePathname } from 'next/navigation';
 import { Footer } from '@/components/Footer';
+import { v4 as uuidv4 } from 'uuid';
 
 const defaultData: PurchaseOrderData = {
   attn: '',
@@ -168,8 +169,16 @@ export default function PurchaseOrderPage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      savePurchaseHistory(data, editId);
-      setSaveMessage('保存成功');
+      const saved = savePurchaseHistory(data, editId);
+      if (saved) {
+        setSaveMessage('保存成功');
+        if (!editId) {
+          setEditId(saved.id);
+          setIsEditMode(true);
+        }
+      } else {
+        setSaveMessage('保存失败');
+      }
     } catch {
       setSaveMessage('保存失败');
     } finally {

@@ -40,20 +40,20 @@ interface User {
 // 定义所有可用的模块
 const MODULES = [
   { 
+    id: 'history', 
+    name: '单据管理中心', 
+    description: '统一管理报价单、发票、采购订单历史', 
+    path: '/history',
+    icon: Archive,
+    color: 'from-indigo-500 to-purple-500'
+  },
+  { 
     id: 'quotation', 
     name: '报价及确认', 
     description: '生成报价单和销售确认单', 
     path: '/quotation',
     icon: FileText,
     color: 'from-emerald-500 to-teal-500'
-  },
-  { 
-    id: 'invoice', 
-    name: '发票助手', 
-    description: '生成和管理发票', 
-    path: '/invoice',
-    icon: Receipt,
-    color: 'from-orange-500 to-amber-500'
   },
   { 
     id: 'purchase', 
@@ -64,6 +64,15 @@ const MODULES = [
     color: 'from-green-500 to-emerald-500'
   },
   { 
+    id: 'invoice', 
+    name: '发票助手', 
+    description: '生成和管理发票', 
+    path: '/invoice',
+    icon: Receipt,
+    color: 'from-orange-500 to-amber-500'
+  },
+
+  { 
     id: 'ai-email', 
     name: 'AI邮件助手', 
     description: '智能生成商务邮件', 
@@ -71,14 +80,7 @@ const MODULES = [
     icon: Mail,
     color: 'from-blue-500 to-indigo-500'
   },
-  { 
-    id: 'history', 
-    name: '单据管理中心', 
-    description: '统一管理报价单、发票、采购订单历史', 
-    path: '/history',
-    icon: Archive,
-    color: 'from-indigo-500 to-purple-500'
-  },
+
   { 
     id: 'date-tools', 
     name: '日期计算', 
