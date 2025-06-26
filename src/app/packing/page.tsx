@@ -64,8 +64,6 @@ interface PackingData {
   // 收货人信息
   consignee: {
     name: string;
-    address: string;
-    contact: string;
   };
   
   items: PackingItem[];
@@ -96,9 +94,7 @@ export default function PackingPage() {
     date: format(new Date(), 'yyyy-MM-dd'),
     
     consignee: {
-      name: '',
-      address: '',
-      contact: ''
+      name: ''
     },
     
     items: [{
@@ -220,7 +216,7 @@ export default function PackingPage() {
   // 保存
   const handleSave = useCallback(async () => {
     if (!packingData.consignee.name.trim()) {
-      setSaveMessage('请填写收货人名称');
+      setSaveMessage('请填写收货人信息');
       setSaveSuccess(false);
       setTimeout(() => setSaveMessage(''), 2000);
       return;
@@ -455,51 +451,16 @@ export default function PackingPage() {
                 {/* 收货人信息 */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium text-gray-800 dark:text-[#F5F5F7]">To:</h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                        公司名称 *
-                      </label>
-                      <input
-                        type="text"
-                        value={packingData.consignee.name}
-                        onChange={(e) => setPackingData(prev => ({ 
-                          ...prev, 
-                          consignee: { ...prev.consignee, name: e.target.value }
-                        }))}
-                        className={inputClassName}
-                        placeholder="收货人公司名称"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                        地址
-                      </label>
-                      <textarea
-                        value={packingData.consignee.address}
-                        onChange={(e) => setPackingData(prev => ({ 
-                          ...prev, 
-                          consignee: { ...prev.consignee, address: e.target.value }
-                        }))}
-                        className={`${inputClassName} min-h-[80px] resize-none`}
-                        placeholder="收货人地址"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                        联系方式
-                      </label>
-                      <input
-                        type="text"
-                        value={packingData.consignee.contact}
-                        onChange={(e) => setPackingData(prev => ({ 
-                          ...prev, 
-                          consignee: { ...prev.consignee, contact: e.target.value }
-                        }))}
-                        className={inputClassName}
-                        placeholder="联系电话/邮箱"
-                      />
-                    </div>
+                  <div>
+                    <textarea
+                      value={packingData.consignee.name}
+                      onChange={(e) => setPackingData(prev => ({ 
+                        ...prev, 
+                        consignee: { ...prev.consignee, name: e.target.value }
+                      }))}
+                      className={`${inputClassName} min-h-[120px] resize-none`}
+                      placeholder="请输入收货人信息，包括公司名称、地址、联系方式等..."
+                    />
                   </div>
                 </div>
               </div>
