@@ -57,16 +57,9 @@ interface PackingItem {
 }
 
 interface PackingData {
-  packingNo: string;
+  orderNo: string;
   invoiceNo: string;
   date: string;
-  
-  // 发货人信息
-  shipper: {
-    name: string;
-    address: string;
-    contact: string;
-  };
   
   // 收货人信息
   consignee: {
@@ -78,9 +71,11 @@ interface PackingData {
   items: PackingItem[];
   currency: string;
   remarks: string;
+  showMarkingNo: boolean;
   showDimensions: boolean;
   showWeight: boolean;
   showPackageQty: boolean;
+  showPrice: boolean;
 }
 
 export default function PackingPage() {
@@ -96,15 +91,9 @@ export default function PackingPage() {
   const [previewUrl, setPreviewUrl] = useState<string>('');
 
   const [packingData, setPackingData] = useState<PackingData>({
-    packingNo: '',
+    orderNo: '',
     invoiceNo: '',
     date: format(new Date(), 'yyyy-MM-dd'),
-    
-    shipper: {
-      name: 'Luo & Company Co., Limited',
-      address: 'Room 1501, 15/F, South Tower, World Finance Centre, Harbour City, 17 Canton Road, Tsim Sha Tsui, Kowloon, Hong Kong',
-      contact: 'Tel: +852 2234 5678'
-    },
     
     consignee: {
       name: '',
@@ -129,9 +118,11 @@ export default function PackingPage() {
     
     currency: 'USD',
     remarks: '',
+    showMarkingNo: true,
     showDimensions: true,
     showWeight: true,
-    showPackageQty: true
+    showPackageQty: true,
+    showPrice: true
   });
 
   // 计算总价
@@ -335,6 +326,15 @@ export default function PackingPage() {
                     <label className="flex items-center">
                       <input
                         type="checkbox"
+                        checked={packingData.showMarkingNo}
+                        onChange={(e) => setPackingData(prev => ({ ...prev, showMarkingNo: e.target.checked }))}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">显示唛头</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
                         checked={packingData.showDimensions}
                         onChange={(e) => setPackingData(prev => ({ ...prev, showDimensions: e.target.checked }))}
                         className="mr-2"
@@ -359,41 +359,89 @@ export default function PackingPage() {
                       />
                       <span className="text-sm text-gray-600 dark:text-gray-400">显示包裹数量</span>
                     </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={packingData.showPrice}
+                        onChange={(e) => setPackingData(prev => ({ ...prev, showPrice: e.target.checked }))}
+                        className="mr-2"
+                      />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">显示价格</span>
+                    </label>
+                  </div>
+                  
+                  <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">货币选择</h3>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPackingData(prev => ({ ...prev, currency: 'USD' }))}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          packingData.currency === 'USD' 
+                            ? 'bg-[#007AFF] text-white' 
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        $ USD
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPackingData(prev => ({ ...prev, currency: 'EUR' }))}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          packingData.currency === 'EUR' 
+                            ? 'bg-[#007AFF] text-white' 
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        € EUR
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPackingData(prev => ({ ...prev, currency: 'CNY' }))}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          packingData.currency === 'CNY' 
+                            ? 'bg-[#007AFF] text-white' 
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        ¥ CNY
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* 基本信息区域 */}
               <div className="px-4 sm:px-6 py-4 space-y-6">
-                {/* 箱单号和发票号 */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Order No和Invoice No */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                      箱单号 *
+                      Order No. *
                     </label>
                     <input
                       type="text"
-                      value={packingData.packingNo}
-                      onChange={(e) => setPackingData(prev => ({ ...prev, packingNo: e.target.value }))}
+                      value={packingData.orderNo}
+                      onChange={(e) => setPackingData(prev => ({ ...prev, orderNo: e.target.value }))}
                       className={inputClassName}
-                      placeholder="请输入箱单号"
+                      placeholder="Please enter order number"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                      发票号
+                      Invoice No.
                     </label>
                     <input
                       type="text"
                       value={packingData.invoiceNo}
                       onChange={(e) => setPackingData(prev => ({ ...prev, invoiceNo: e.target.value }))}
                       className={inputClassName}
-                      placeholder="请输入发票号"
+                      placeholder="Please enter invoice number"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                      日期 *
+                      Date *
                     </label>
                     <input
                       type="date"
@@ -402,76 +450,12 @@ export default function PackingPage() {
                       className={inputClassName}
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                      货币
-                    </label>
-                    <select
-                      value={packingData.currency}
-                      onChange={(e) => setPackingData(prev => ({ ...prev, currency: e.target.value }))}
-                      className={inputClassName}
-                    >
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                      <option value="CNY">CNY</option>
-                    </select>
-                  </div>
                 </div>
 
-                {/* 发货人和收货人信息 */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* 发货人信息 */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-800 dark:text-[#F5F5F7]">发货人信息</h3>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                        公司名称
-                      </label>
-                      <input
-                        type="text"
-                        value={packingData.shipper.name}
-                        onChange={(e) => setPackingData(prev => ({ 
-                          ...prev, 
-                          shipper: { ...prev.shipper, name: e.target.value }
-                        }))}
-                        className={inputClassName}
-                        placeholder="发货人公司名称"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                        地址
-                      </label>
-                      <textarea
-                        value={packingData.shipper.address}
-                        onChange={(e) => setPackingData(prev => ({ 
-                          ...prev, 
-                          shipper: { ...prev.shipper, address: e.target.value }
-                        }))}
-                        className={`${inputClassName} min-h-[80px] resize-none`}
-                        placeholder="发货人地址"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                        联系方式
-                      </label>
-                      <input
-                        type="text"
-                        value={packingData.shipper.contact}
-                        onChange={(e) => setPackingData(prev => ({ 
-                          ...prev, 
-                          shipper: { ...prev.shipper, contact: e.target.value }
-                        }))}
-                        className={inputClassName}
-                        placeholder="联系电话/邮箱"
-                      />
-                    </div>
-                  </div>
-
-                  {/* 收货人信息 */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-800 dark:text-[#F5F5F7]">收货人信息</h3>
+                {/* 收货人信息 */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-gray-800 dark:text-[#F5F5F7]">To:</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
                         公司名称 *
@@ -526,12 +510,18 @@ export default function PackingPage() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-gray-50 dark:bg-[#1C1C1E]">
-                        <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">唛头</th>
+                        {packingData.showMarkingNo && (
+                          <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">唛头</th>
+                        )}
                         <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">序号</th>
                         <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">描述</th>
                         <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">数量</th>
-                        <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">单价</th>
-                        <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">总价</th>
+                        {packingData.showPrice && (
+                          <>
+                            <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">单价</th>
+                            <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">总价</th>
+                          </>
+                        )}
                         {packingData.showWeight && (
                           <>
                             <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">净重(kg)</th>
@@ -550,15 +540,17 @@ export default function PackingPage() {
                     <tbody>
                       {packingData.items.map((item, index) => (
                         <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-[#1C1C1E]/50">
-                          <td className="border border-gray-200 dark:border-[#3A3A3C] p-1">
-                            <input
-                              type="text"
-                              value={item.markingNo}
-                              onChange={(e) => updateLineItem(index, 'markingNo', e.target.value)}
-                              className={tableInputClassName}
-                              placeholder="唛头"
-                            />
-                          </td>
+                          {packingData.showMarkingNo && (
+                            <td className="border border-gray-200 dark:border-[#3A3A3C] p-1">
+                              <input
+                                type="text"
+                                value={item.markingNo}
+                                onChange={(e) => updateLineItem(index, 'markingNo', e.target.value)}
+                                className={tableInputClassName}
+                                placeholder="唛头"
+                              />
+                            </td>
+                          )}
                           <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-20">
                             <input
                               type="text"
@@ -588,23 +580,27 @@ export default function PackingPage() {
                               step="1"
                             />
                           </td>
-                          <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-28">
-                            <input
-                              type="number"
-                              value={item.unitPrice || ''}
-                              onChange={(e) => updateLineItem(index, 'unitPrice', e.target.value)}
-                              className={numberInputClassName}
-                              placeholder="0.00"
-                              min="0"
-                              step="0.01"
-                            />
-                          </td>
-                          <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-28">
-                            <div className="text-center py-2 text-sm font-medium text-gray-800 dark:text-gray-100">
-                              {packingData.currency === 'USD' ? '$' : packingData.currency === 'EUR' ? '€' : '¥'}
-                              {item.totalPrice.toFixed(2)}
-                            </div>
-                          </td>
+                          {packingData.showPrice && (
+                            <>
+                              <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-28">
+                                <input
+                                  type="number"
+                                  value={item.unitPrice || ''}
+                                  onChange={(e) => updateLineItem(index, 'unitPrice', e.target.value)}
+                                  className={numberInputClassName}
+                                  placeholder="0.00"
+                                  min="0"
+                                  step="0.01"
+                                />
+                              </td>
+                              <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-28">
+                                <div className="text-center py-2 text-sm font-medium text-gray-800 dark:text-gray-100">
+                                  {packingData.currency === 'USD' ? '$' : packingData.currency === 'EUR' ? '€' : '¥'}
+                                  {item.totalPrice.toFixed(2)}
+                                </div>
+                              </td>
+                            </>
+                          )}
                           {packingData.showWeight && (
                             <>
                               <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-24">
@@ -669,13 +665,19 @@ export default function PackingPage() {
                       ))}
                       {/* 总计行 */}
                       <tr className="bg-gray-100 dark:bg-[#1C1C1E] font-medium">
-                        <td colSpan={5} className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-right">
+                        <td colSpan={
+                          (packingData.showMarkingNo ? 1 : 0) + 
+                          3 + // 序号、描述、数量
+                          (packingData.showPrice ? 1 : 0) // 单价列
+                        } className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-right">
                           总计:
                         </td>
-                        <td className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-center">
-                          {packingData.currency === 'USD' ? '$' : packingData.currency === 'EUR' ? '€' : '¥'}
-                          {totals.totalPrice.toFixed(2)}
-                        </td>
+                        {packingData.showPrice && (
+                          <td className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-center">
+                            {packingData.currency === 'USD' ? '$' : packingData.currency === 'EUR' ? '€' : '¥'}
+                            {totals.totalPrice.toFixed(2)}
+                          </td>
+                        )}
                         {packingData.showWeight && (
                           <>
                             <td className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-center">
