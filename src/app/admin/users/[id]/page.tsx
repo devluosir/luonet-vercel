@@ -24,13 +24,13 @@ interface User {
 
 // 定义所有可用的模块
 const MODULES = [
-  { id: 'ai-email', name: 'AI邮件助手', description: '智能生成商务邮件' },
-  { id: 'quotation', name: '报价及确认', description: '生成报价单和销售确认单' },
-  { id: 'invoice', name: '发票管理', description: '生成和管理发票' },
-  { id: 'purchase', name: '采购订单', description: '生成给供应商的采购订单' },
   { id: 'history', name: '单据管理中心', description: '统一管理报价单、发票、采购订单历史' },
+  { id: 'quotation', name: '报价及确认', description: '生成报价单和销售确认单' },
+  { id: 'purchase', name: '采购订单', description: '生成给供应商的采购订单' },
+  { id: 'packing', name: '箱单发票', description: '生成和管理箱单发票' },
+  { id: 'invoice', name: '发票管理', description: '生成和管理发票' },
+  { id: 'ai-email', name: 'AI邮件助手', description: '智能生成商务邮件' },
   { id: 'date-tools', name: '日期计算', description: '计算日期和天数' },
-  { id: 'feature3', name: '功能3', description: '待开发功能' },
   { id: 'feature4', name: '功能4', description: '待开发功能' },
   { id: 'feature5', name: '功能5', description: '待开发功能' },
   { id: 'feature6', name: '功能6', description: '待开发功能' },

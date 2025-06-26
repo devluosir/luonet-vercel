@@ -63,6 +63,14 @@ const MODULES = [
     icon: ShoppingCart,
     color: 'from-green-500 to-emerald-500'
   },
+  {
+    id: 'packing-invoice',
+    name: '箱单发票',
+    description: '生成和管理箱单发票',
+    path: '/packing',
+    icon: Archive,
+    color: 'from-blue-500 to-green-500'
+  },
   { 
     id: 'invoice', 
     name: '发票助手', 
@@ -145,6 +153,7 @@ const MODULES = [
     icon: Settings,
     color: 'from-gray-500 to-slate-500'
   },
+
 ];
 
 // 使用dynamic导入避免hydration问题
