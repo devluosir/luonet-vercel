@@ -132,13 +132,19 @@ export default function PackingPage() {
       const newItems = [...prev.items];
       const item = { ...newItems[index] };
       
-      if (field === 'quantity' || field === 'unitPrice') {
+      // 数值字段需要转换为数字
+      if (field === 'quantity' || field === 'unitPrice' || field === 'netWeight' || field === 'grossWeight' || field === 'packageQty') {
         item[field] = typeof value === 'string' ? parseFloat(value) || 0 : value;
-        item.totalPrice = calculateTotalPrice(
-          field === 'quantity' ? item.quantity : newItems[index].quantity,
-          field === 'unitPrice' ? item.unitPrice : newItems[index].unitPrice
-        );
+        
+        // 如果是数量或单价变化，重新计算总价
+        if (field === 'quantity' || field === 'unitPrice') {
+          item.totalPrice = calculateTotalPrice(
+            field === 'quantity' ? item.quantity : newItems[index].quantity,
+            field === 'unitPrice' ? item.unitPrice : newItems[index].unitPrice
+          );
+        }
       } else {
+        // 字符串字段直接赋值
         (item as any)[field] = value;
       }
       
