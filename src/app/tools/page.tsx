@@ -64,7 +64,7 @@ const MODULES = [
     color: 'from-green-500 to-emerald-500'
   },
   {
-    id: 'packing-invoice',
+    id: 'packing',
     name: '箱单发票',
     description: '生成和管理箱单发票',
     path: '/packing',
