@@ -71,10 +71,10 @@ interface PackingData {
   remarks: string;
   showMarkingNo: boolean;
   showDimensions: boolean;
-  showWeight: boolean;
-  showPackageQty: boolean;
+  showWeightAndPackage: boolean;
   showPrice: boolean;
   dimensionUnit: string;
+  documentType: 'proforma' | 'packing' | 'both';
 }
 
 export default function PackingPage() {
@@ -117,10 +117,10 @@ export default function PackingPage() {
     remarks: '',
     showMarkingNo: true,
     showDimensions: true,
-    showWeight: true,
-    showPackageQty: true,
+    showWeightAndPackage: true,
     showPrice: true,
-    dimensionUnit: 'cm'
+    dimensionUnit: 'cm',
+    documentType: 'both'
   });
 
   // 计算总价
@@ -224,7 +224,7 @@ export default function PackingPage() {
   // 保存
   const handleSave = useCallback(async () => {
     if (!packingData.consignee.name.trim()) {
-      setSaveMessage('请填写收货人信息');
+      setSaveMessage('Please fill in consignee information');
       setSaveSuccess(false);
       setTimeout(() => setSaveMessage(''), 2000);
       return;
@@ -237,11 +237,11 @@ export default function PackingPage() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setSaveSuccess(true);
-      setSaveMessage('保存成功');
+      setSaveMessage('Saved successfully');
     } catch (error) {
       console.error('Error saving:', error);
       setSaveSuccess(false);
-      setSaveMessage('保存失败');
+      setSaveMessage('Save failed');
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveMessage(''), 2000);
@@ -263,10 +263,10 @@ export default function PackingPage() {
           {/* 返回按钮 */}
           <Link 
             href="/tools" 
-            className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
+            className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7] transition-colors duration-200"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            返回
+            Back
           </Link>
 
           {/* 主卡片容器 */}
@@ -276,8 +276,20 @@ export default function PackingPage() {
               <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 dark:border-[#3A3A3C]">
                 <div className="flex items-center gap-4">
                   <h1 className={titleClassName}>
-                    箱单发票
+                    Generate {
+                      packingData.documentType === 'proforma' ? 'Proforma Invoice' :
+                      packingData.documentType === 'packing' ? 'Packing List' :
+                      'Proforma Invoice & Packing List'
+                    }
                   </h1>
+                  <button
+                    type="button"
+                    onClick={() => {/* TODO: 添加剪贴板功能 */}}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                    title="Paste from clipboard"
+                  >
+                    <Clipboard className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                  </button>
                 </div>
                 <div className="flex items-center gap-2">
                   <Link
@@ -314,7 +326,7 @@ export default function PackingPage() {
                     type="button"
                     onClick={() => setShowSettings(!showSettings)}
                     className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
-                    title="设置"
+                    title="Settings"
                   >
                     <Settings className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                   </button>
@@ -324,483 +336,528 @@ export default function PackingPage() {
               {/* 设置面板 */}
               <div className={`overflow-hidden transition-all duration-300 ease-in-out
                 ${showSettings ? 'opacity-100 px-4 sm:px-6 py-6 h-auto' : 'opacity-0 px-0 py-0 h-0'}`}>
-                <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-xl p-4 space-y-4">
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">显示选项</h3>
-                  <div className="flex flex-wrap gap-4">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={packingData.showMarkingNo}
-                        onChange={(e) => setPackingData(prev => ({ ...prev, showMarkingNo: e.target.checked }))}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">显示唛头</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={packingData.showDimensions}
-                        onChange={(e) => setPackingData(prev => ({ ...prev, showDimensions: e.target.checked }))}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">显示尺寸</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={packingData.showWeight}
-                        onChange={(e) => setPackingData(prev => ({ ...prev, showWeight: e.target.checked }))}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">显示重量</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={packingData.showPackageQty}
-                        onChange={(e) => setPackingData(prev => ({ ...prev, showPackageQty: e.target.checked }))}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">显示包裹数量</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={packingData.showPrice}
-                        onChange={(e) => setPackingData(prev => ({ ...prev, showPrice: e.target.checked }))}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">显示价格</span>
-                    </label>
-                  </div>
+                <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-xl p-4 sm:p-6 space-y-6">
                   
-                  <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">货币选择</h3>
-                    <div className="flex gap-2">
+                  {/* 文档类型选择 */}
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Document Type</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <button
                         type="button"
-                        onClick={() => setPackingData(prev => ({ ...prev, currency: 'USD' }))}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          packingData.currency === 'USD' 
-                            ? 'bg-[#007AFF] text-white' 
+                        onClick={() => setPackingData(prev => ({ ...prev, documentType: 'proforma' }))}
+                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-center ${
+                          packingData.documentType === 'proforma' 
+                            ? 'bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/25' 
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }`}
                       >
-                        $ USD
+                        Proforma Invoice
                       </button>
                       <button
                         type="button"
-                        onClick={() => setPackingData(prev => ({ ...prev, currency: 'EUR' }))}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          packingData.currency === 'EUR' 
-                            ? 'bg-[#007AFF] text-white' 
+                        onClick={() => setPackingData(prev => ({ ...prev, documentType: 'packing' }))}
+                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-center ${
+                          packingData.documentType === 'packing' 
+                            ? 'bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/25' 
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }`}
                       >
-                        € EUR
+                        Packing List
                       </button>
                       <button
                         type="button"
-                        onClick={() => setPackingData(prev => ({ ...prev, currency: 'CNY' }))}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          packingData.currency === 'CNY' 
-                            ? 'bg-[#007AFF] text-white' 
+                        onClick={() => setPackingData(prev => ({ ...prev, documentType: 'both' }))}
+                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-center ${
+                          packingData.documentType === 'both' 
+                            ? 'bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/25' 
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }`}
                       >
-                        ¥ CNY
+                        Proforma Invoice & Packing List
                       </button>
                     </div>
                   </div>
-                  
-                  <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">尺寸单位</h3>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPackingData(prev => ({ ...prev, dimensionUnit: 'cm' }))}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          packingData.dimensionUnit === 'cm' 
-                            ? 'bg-[#007AFF] text-white' 
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        📏 cm
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPackingData(prev => ({ ...prev, dimensionUnit: 'mm' }))}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          packingData.dimensionUnit === 'mm' 
-                            ? 'bg-[#007AFF] text-white' 
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        📐 mm
-                      </button>
+
+                  {/* 显示选项 */}
+                  <div className="border-t border-gray-200 dark:border-gray-600 pt-4 space-y-4">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Display Options</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={packingData.showMarkingNo}
+                          onChange={(e) => setPackingData(prev => ({ ...prev, showMarkingNo: e.target.checked }))}
+                          className="w-4 h-4 text-[#007AFF] bg-gray-100 border-gray-300 rounded focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Marking No.</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={packingData.showDimensions}
+                          onChange={(e) => setPackingData(prev => ({ ...prev, showDimensions: e.target.checked }))}
+                          className="w-4 h-4 text-[#007AFF] bg-gray-100 border-gray-300 rounded focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        />
+                        <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                          Dimensions 
+                          <span className="inline-flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setPackingData(prev => ({ ...prev, dimensionUnit: 'cm' }))}
+                              className={`text-xs px-1.5 py-0.5 rounded transition-all duration-200 ${
+                                packingData.dimensionUnit === 'cm' 
+                                  ? 'bg-[#007AFF] text-white' 
+                                  : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-500'
+                              }`}
+                              title="Centimeters"
+                            >
+                              📏
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPackingData(prev => ({ ...prev, dimensionUnit: 'mm' }))}
+                              className={`text-xs px-1.5 py-0.5 rounded transition-all duration-200 ${
+                                packingData.dimensionUnit === 'mm' 
+                                  ? 'bg-[#007AFF] text-white' 
+                                  : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-500'
+                              }`}
+                              title="Millimeters"
+                            >
+                              📐
+                            </button>
+                          </span>
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={packingData.showWeightAndPackage}
+                          onChange={(e) => setPackingData(prev => ({ ...prev, showWeightAndPackage: e.target.checked }))}
+                          className="w-4 h-4 text-[#007AFF] bg-gray-100 border-gray-300 rounded focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Weight & Package</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={packingData.showPrice}
+                          onChange={(e) => setPackingData(prev => ({ ...prev, showPrice: e.target.checked }))}
+                          className="w-4 h-4 text-[#007AFF] bg-gray-100 border-gray-300 rounded focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        />
+                        <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                          Price 
+                          <span className="inline-flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setPackingData(prev => ({ ...prev, currency: 'USD' }))}
+                              className={`text-xs px-1.5 py-0.5 rounded transition-all duration-200 ${
+                                packingData.currency === 'USD' 
+                                  ? 'bg-[#007AFF] text-white' 
+                                  : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-500'
+                              }`}
+                              title="US Dollar"
+                            >
+                              $
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPackingData(prev => ({ ...prev, currency: 'EUR' }))}
+                              className={`text-xs px-1.5 py-0.5 rounded transition-all duration-200 ${
+                                packingData.currency === 'EUR' 
+                                  ? 'bg-[#007AFF] text-white' 
+                                  : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-500'
+                              }`}
+                              title="Euro"
+                            >
+                              €
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPackingData(prev => ({ ...prev, currency: 'CNY' }))}
+                              className={`text-xs px-1.5 py-0.5 rounded transition-all duration-200 ${
+                                packingData.currency === 'CNY' 
+                                  ? 'bg-[#007AFF] text-white' 
+                                  : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-500'
+                              }`}
+                              title="Chinese Yuan"
+                            >
+                              ¥
+                            </button>
+                          </span>
+                        </span>
+                      </label>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* 基本信息区域 */}
-              <div className="px-4 sm:px-6 py-4 space-y-6">
-                {/* Order No和Invoice No */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                      Order No. *
-                    </label>
-                    <input
-                      type="text"
-                      value={packingData.orderNo}
-                      onChange={(e) => setPackingData(prev => ({ ...prev, orderNo: e.target.value }))}
-                      className={inputClassName}
-                      placeholder="Please enter order number"
-                    />
+              <div className="px-4 sm:px-6 py-4 sm:py-6">
+                <div className="space-y-6">
+                  {/* 订单信息行 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
+                        Order No. *
+                      </label>
+                      <input
+                        type="text"
+                        value={packingData.orderNo}
+                        onChange={(e) => setPackingData(prev => ({ ...prev, orderNo: e.target.value }))}
+                        className={inputClassName}
+                        placeholder="Enter order number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
+                        Invoice No.
+                      </label>
+                      <input
+                        type="text"
+                        value={packingData.invoiceNo}
+                        onChange={(e) => setPackingData(prev => ({ ...prev, invoiceNo: e.target.value }))}
+                        className={inputClassName}
+                        placeholder="Enter invoice number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
+                        Date *
+                      </label>
+                      <input
+                        type="date"
+                        value={packingData.date}
+                        onChange={(e) => setPackingData(prev => ({ ...prev, date: e.target.value }))}
+                        className={inputClassName}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                      Invoice No.
-                    </label>
-                    <input
-                      type="text"
-                      value={packingData.invoiceNo}
-                      onChange={(e) => setPackingData(prev => ({ ...prev, invoiceNo: e.target.value }))}
-                      className={inputClassName}
-                      placeholder="Please enter invoice number"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                      Date *
-                    </label>
-                    <input
-                      type="date"
-                      value={packingData.date}
-                      onChange={(e) => setPackingData(prev => ({ ...prev, date: e.target.value }))}
-                      className={inputClassName}
-                    />
-                  </div>
-                </div>
 
-                {/* 收货人信息 */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-gray-800 dark:text-[#F5F5F7]">To:</h3>
-                  <div>
-                    <textarea
-                      value={packingData.consignee.name}
-                      onChange={(e) => setPackingData(prev => ({ 
-                        ...prev, 
-                        consignee: { ...prev.consignee, name: e.target.value }
-                      }))}
-                      className={`${inputClassName} min-h-[120px] resize-none`}
-                      placeholder="请输入收货人信息，包括公司名称、地址、联系方式等..."
-                    />
+                  {/* 收货人信息区域 */}
+                  <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-xl p-4 sm:p-6 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">Consignee</h3>
+                      <div className="h-px flex-1 bg-gradient-to-r from-gray-200 dark:from-gray-600 to-transparent"></div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
+                        Ship To *
+                      </label>
+                      <textarea
+                        value={packingData.consignee.name}
+                        onChange={(e) => setPackingData(prev => ({ 
+                          ...prev, 
+                          consignee: { ...prev.consignee, name: e.target.value }
+                        }))}
+                        className={`${inputClassName} min-h-[120px] resize-none`}
+                        placeholder="Enter consignee information including company name, address, contact details..."
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* 商品表格区域 */}
-              <div className="px-4 sm:px-6 py-4">
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-50 dark:bg-[#1C1C1E]">
-                        {packingData.showMarkingNo && (
-                          <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">唛头</th>
-                        )}
-                        <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">序号</th>
-                        <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">描述</th>
-                        <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">数量</th>
-                        {packingData.showPrice && (
-                          <>
-                            <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">单价</th>
-                            <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">总价</th>
-                          </>
-                        )}
-                        {packingData.showWeight && (
-                          <>
-                            <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">净重(kg)</th>
-                            <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">毛重(kg)</th>
-                          </>
-                        )}
-                        {packingData.showPackageQty && (
-                          <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">包裹数量</th>
-                        )}
-                        {packingData.showDimensions && (
-                          <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">尺寸({packingData.dimensionUnit})</th>
-                        )}
-                        <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-center text-sm font-medium text-gray-600 dark:text-[#98989D] w-16">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {packingData.items.map((item, index) => (
-                        <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-[#1C1C1E]/50">
-                          {packingData.showMarkingNo && (
-                            <td className="border border-gray-200 dark:border-[#3A3A3C] p-1">
-                              <input
-                                type="text"
-                                value={item.markingNo}
-                                onChange={(e) => updateLineItem(index, 'markingNo', e.target.value)}
-                                className={tableInputClassName}
-                                placeholder="唛头"
-                              />
-                            </td>
-                          )}
-                          <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-20">
-                            <input
-                              type="text"
-                              value={item.serialNo}
-                              onChange={(e) => updateLineItem(index, 'serialNo', e.target.value)}
-                              className={tableInputClassName}
-                              placeholder="序号"
-                            />
-                          </td>
-                          <td className="border border-gray-200 dark:border-[#3A3A3C] p-1">
-                            <input
-                              type="text"
-                              value={item.description}
-                              onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                              className={`${tableInputClassName} text-left`}
-                              placeholder="商品描述"
-                            />
-                          </td>
-                          <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-24">
-                            <input
-                              type="number"
-                              value={item.quantity || ''}
-                              onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
-                              className={numberInputClassName}
-                              placeholder="0"
-                              min="0"
-                              step="1"
-                            />
-                          </td>
-                          {packingData.showPrice && (
-                            <>
-                              <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-28">
+              <div className="px-0 sm:px-6 py-4">
+                <div className="space-y-4">
+                  <div className="px-4 sm:px-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">Items</h3>
+                    </div>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <div className="min-w-full bg-white dark:bg-[#2C2C2E] rounded-xl border border-gray-200 dark:border-[#3A3A3C] overflow-hidden">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50 dark:bg-[#1C1C1E] border-b border-gray-200 dark:border-[#3A3A3C]">
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider w-12">No.</th>
+                            {packingData.showMarkingNo && (
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Marking No.</th>
+                            )}
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Description</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Qty</th>
+                            {packingData.showPrice && (
+                              <>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Unit Price</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Amount</th>
+                              </>
+                            )}
+                            {packingData.showWeightAndPackage && (
+                              <>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Net Weight (kg)</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Gross Weight (kg)</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Package Qty</th>
+                              </>
+                            )}
+                            {packingData.showDimensions && (
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Dimensions ({packingData.dimensionUnit})</th>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 dark:divide-[#3A3A3C]">
+                          {packingData.items.map((item, index) => (
+                            <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-[#1C1C1E]/50 transition-colors duration-200">
+                              <td className="px-4 py-3 w-12 text-center">
+                                <span 
+                                  className={`flex items-center justify-center w-6 h-6 rounded-full 
+                                    text-xs transition-all duration-200 ${
+                                    packingData.items.length > 1 
+                                      ? 'text-gray-500 dark:text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 cursor-pointer'
+                                      : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                                  }`}
+                                  onClick={() => packingData.items.length > 1 && handleDeleteLine(index)}
+                                  title={packingData.items.length > 1 ? "Click to delete" : "Cannot delete the last item"}
+                                >
+                                  {index + 1}
+                                </span>
+                              </td>
+                              {packingData.showMarkingNo && (
+                                <td className="px-4 py-3">
+                                  <input
+                                    type="text"
+                                    value={item.markingNo}
+                                    onChange={(e) => updateLineItem(index, 'markingNo', e.target.value)}
+                                    className={`${tableInputClassName} text-left`}
+                                    placeholder="Marking"
+                                  />
+                                </td>
+                              )}
+                              <td className="px-4 py-3">
                                 <input
-                                  type="number"
-                                  value={item.unitPrice || ''}
-                                  onChange={(e) => updateLineItem(index, 'unitPrice', e.target.value)}
-                                  className={numberInputClassName}
-                                  placeholder="0.00"
-                                  min="0"
-                                  step="0.01"
+                                  type="text"
+                                  value={item.description}
+                                  onChange={(e) => updateLineItem(index, 'description', e.target.value)}
+                                  className={`${tableInputClassName} text-left`}
+                                  placeholder="Description"
                                 />
                               </td>
-                              <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-28">
-                                <div className="text-center py-2 text-sm font-medium text-gray-800 dark:text-gray-100">
-                                  {packingData.currency === 'USD' ? '$' : packingData.currency === 'EUR' ? '€' : '¥'}
-                                  {item.totalPrice.toFixed(2)}
-                                </div>
-                              </td>
-                            </>
-                          )}
-                          {packingData.showWeight && (
-                            <>
-                              <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-24">
+                              <td className="px-4 py-3 w-24">
                                 <input
                                   type="number"
-                                  value={item.netWeight || ''}
-                                  onChange={(e) => updateLineItem(index, 'netWeight', e.target.value)}
+                                  value={item.quantity || ''}
+                                  onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
                                   className={numberInputClassName}
-                                  placeholder="0.00"
+                                  placeholder="0"
                                   min="0"
-                                  step="0.01"
+                                  step="1"
                                 />
                               </td>
-                              <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-24">
-                                <input
-                                  type="number"
-                                  value={item.grossWeight || ''}
-                                  onChange={(e) => updateLineItem(index, 'grossWeight', e.target.value)}
-                                  className={numberInputClassName}
-                                  placeholder="0.00"
-                                  min="0"
-                                  step="0.01"
-                                />
-                              </td>
-                            </>
-                          )}
-                          {packingData.showPackageQty && (
-                            <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 w-24">
-                              <input
-                                type="number"
-                                value={item.packageQty || ''}
-                                onChange={(e) => updateLineItem(index, 'packageQty', e.target.value)}
-                                className={numberInputClassName}
-                                placeholder="0"
-                                min="0"
-                                step="1"
-                              />
-                            </td>
-                          )}
-                          {packingData.showDimensions && (
-                            <td className="border border-gray-200 dark:border-[#3A3A3C] p-1">
-                              <input
-                                type="text"
-                                value={item.dimensions}
-                                onChange={(e) => updateLineItem(index, 'dimensions', e.target.value)}
-                                className={tableInputClassName}
-                                placeholder="长×宽×高"
-                              />
-                            </td>
-                          )}
-                          <td className="border border-gray-200 dark:border-[#3A3A3C] p-1 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteLine(index)}
-                              disabled={packingData.items.length === 1}
-                              className="text-red-500 hover:text-red-700 disabled:text-gray-400 disabled:cursor-not-allowed text-sm"
-                            >
-                              删除
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {/* 总计行 */}
-                      <tr className="bg-gray-100 dark:bg-[#1C1C1E] font-medium">
-                        <td colSpan={
-                          (packingData.showMarkingNo ? 1 : 0) + 
-                          3 + // 序号、描述、数量
-                          (packingData.showPrice ? 1 : 0) // 单价列
-                        } className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-right">
-                          总计:
-                        </td>
-                        {packingData.showPrice && (
-                          <td className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-center">
-                            {packingData.currency === 'USD' ? '$' : packingData.currency === 'EUR' ? '€' : '¥'}
-                            {totals.totalPrice.toFixed(2)}
-                          </td>
-                        )}
-                        {packingData.showWeight && (
-                          <>
-                            <td className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-center">
-                              {totals.netWeight.toFixed(2)}
-                            </td>
-                            <td className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-center">
-                              {totals.grossWeight.toFixed(2)}
-                            </td>
-                          </>
-                        )}
-                        {packingData.showPackageQty && (
-                          <td className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-center">
-                            {totals.packageQty}
-                          </td>
-                        )}
-                        {packingData.showDimensions && (
-                          <td className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2"></td>
-                        )}
-                        <td className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2"></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                              {packingData.showPrice && (
+                                <>
+                                  <td className="px-4 py-3 w-28">
+                                    <input
+                                      type="number"
+                                      value={item.unitPrice || ''}
+                                      onChange={(e) => updateLineItem(index, 'unitPrice', e.target.value)}
+                                      className={numberInputClassName}
+                                      placeholder="0.00"
+                                      min="0"
+                                      step="0.01"
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3 w-28">
+                                    <div className="text-center py-2 text-sm font-medium text-gray-800 dark:text-gray-100">
+                                      {packingData.currency === 'USD' ? '$' : packingData.currency === 'EUR' ? '€' : '¥'}
+                                      {item.totalPrice.toFixed(2)}
+                                    </div>
+                                  </td>
+                                </>
+                              )}
+                              {packingData.showWeightAndPackage && (
+                                <>
+                                  <td className="px-4 py-3 w-24">
+                                    <input
+                                      type="number"
+                                      value={item.netWeight || ''}
+                                      onChange={(e) => updateLineItem(index, 'netWeight', e.target.value)}
+                                      className={numberInputClassName}
+                                      placeholder="0.00"
+                                      min="0"
+                                      step="0.01"
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3 w-24">
+                                    <input
+                                      type="number"
+                                      value={item.grossWeight || ''}
+                                      onChange={(e) => updateLineItem(index, 'grossWeight', e.target.value)}
+                                      className={numberInputClassName}
+                                      placeholder="0.00"
+                                      min="0"
+                                      step="0.01"
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3 w-24">
+                                    <input
+                                      type="number"
+                                      value={item.packageQty || ''}
+                                      onChange={(e) => updateLineItem(index, 'packageQty', e.target.value)}
+                                      className={numberInputClassName}
+                                      placeholder="0"
+                                      min="0"
+                                      step="1"
+                                    />
+                                  </td>
+                                </>
+                              )}
+                              {packingData.showDimensions && (
+                                <td className="px-4 py-3">
+                                  <input
+                                    type="text"
+                                    value={item.dimensions}
+                                    onChange={(e) => updateLineItem(index, 'dimensions', e.target.value)}
+                                    className={`${tableInputClassName} text-left`}
+                                    placeholder="L×W×H"
+                                  />
+                                </td>
+                              )}
 
-                {/* 添加行按钮 */}
-                <div className="mt-4 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={handleAddLine}
-                    className="px-3 h-7 rounded-lg
-                      bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
-                      hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
-                      text-[#007AFF] dark:text-[#0A84FF]
-                      text-[13px] font-medium
-                      flex items-center gap-1
-                      transition-all duration-200"
-                  >
-                    <span className="text-lg leading-none translate-y-[-1px]">+</span>
-                    <span>添加行</span>
-                  </button>
+                            </tr>
+                          ))}
+                          
+                          {/* 总计行 */}
+                          <tr className="bg-gray-50 dark:bg-[#1C1C1E] font-semibold border-t-2 border-gray-300 dark:border-gray-600">
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                type="button"
+                                onClick={handleAddLine}
+                                className="flex items-center justify-center w-6 h-6 rounded-full
+                                  bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
+                                  hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
+                                  text-[#007AFF] dark:text-[#0A84FF]
+                                  text-sm font-medium
+                                  transition-all duration-200"
+                                title="Add new line"
+                              >
+                                +
+                              </button>
+                            </td>
+                            <td colSpan={
+                              (packingData.showMarkingNo ? 1 : 0) + 
+                              2 + // 描述、数量
+                              (packingData.showPrice ? 1 : 0) // 单价列
+                            } className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
+                              Total:
+                            </td>
+                            {packingData.showPrice && (
+                              <td className="px-4 py-3 text-center font-bold text-gray-900 dark:text-gray-100">
+                                {packingData.currency === 'USD' ? '$' : packingData.currency === 'EUR' ? '€' : '¥'}
+                                {totals.totalPrice.toFixed(2)}
+                              </td>
+                            )}
+                            {packingData.showWeightAndPackage && (
+                              <>
+                                <td className="px-4 py-3 text-center font-bold text-gray-900 dark:text-gray-100">
+                                  {totals.netWeight.toFixed(2)}
+                                </td>
+                                <td className="px-4 py-3 text-center font-bold text-gray-900 dark:text-gray-100">
+                                  {totals.grossWeight.toFixed(2)}
+                                </td>
+                                <td className="px-4 py-3 text-center font-bold text-gray-900 dark:text-gray-100">
+                                  {totals.packageQty}
+                                </td>
+                              </>
+                            )}
+                            {packingData.showDimensions && (
+                              <td className="px-4 py-3"></td>
+                            )}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* 备注区域 */}
-              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 dark:border-[#3A3A3C]">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                    备注
-                  </label>
-                  <textarea
-                    value={packingData.remarks}
-                    onChange={(e) => setPackingData(prev => ({ ...prev, remarks: e.target.value }))}
-                    className={`${inputClassName} min-h-[80px] resize-none`}
-                    placeholder="请输入备注信息..."
-                  />
+              <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-100 dark:border-[#3A3A3C]">
+                <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-xl p-4 sm:p-6 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">Remarks</h3>
+                    <div className="h-px flex-1 bg-gradient-to-r from-gray-200 dark:from-gray-600 to-transparent"></div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
+                      Additional Notes
+                    </label>
+                    <textarea
+                      value={packingData.remarks}
+                      onChange={(e) => setPackingData(prev => ({ ...prev, remarks: e.target.value }))}
+                      className={`${inputClassName} min-h-[100px] resize-none`}
+                      placeholder="Enter any additional remarks or special instructions..."
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* 生成按钮和预览按钮 */}
-              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 dark:border-[#3A3A3C]">
+              <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-100 dark:border-[#3A3A3C] bg-gray-50 dark:bg-[#1C1C1E] rounded-b-2xl sm:rounded-b-3xl">
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <div className="w-full sm:w-auto sm:min-w-[180px]">
-                    <button
-                      type="button"
-                      onClick={handleGenerate}
-                      disabled={isGenerating}
-                      className={`${buttonClassName}
-                        bg-[#007AFF] hover:bg-[#0063CC] dark:bg-[#0A84FF] dark:hover:bg-[#0070E0]
-                        text-white font-medium
-                        shadow-sm shadow-[#007AFF]/20 dark:shadow-[#0A84FF]/20
-                        hover:shadow-lg hover:shadow-[#007AFF]/25 dark:hover:shadow-[#0A84FF]/25
-                        active:scale-[0.98] active:shadow-inner active:bg-[#0052CC] dark:active:bg-[#0063CC]
-                        transform transition-all duration-75 ease-out
-                        w-full h-10
-                        disabled:opacity-50 disabled:cursor-not-allowed
-                        ${isGenerating ? 'scale-[0.98] shadow-inner bg-[#0052CC] dark:bg-[#0063CC]' : ''}`}
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        {isGenerating ? (
-                          <>
-                            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span>生成中...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Download className="w-4 h-4" />
-                            <span>生成箱单</span>
-                          </>
-                        )}
-                      </div>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={isGenerating}
+                    className={`${buttonClassName}
+                      bg-[#007AFF] hover:bg-[#0063CC] dark:bg-[#0A84FF] dark:hover:bg-[#0070E0]
+                      text-white font-medium
+                      shadow-lg shadow-[#007AFF]/25 dark:shadow-[#0A84FF]/25
+                      hover:shadow-xl hover:shadow-[#007AFF]/30 dark:hover:shadow-[#0A84FF]/30
+                      active:scale-[0.98] active:shadow-inner active:bg-[#0052CC] dark:active:bg-[#0063CC]
+                      transform transition-all duration-200 ease-out
+                      flex-1 sm:flex-none sm:min-w-[180px] h-12
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                      ${isGenerating ? 'scale-[0.98] shadow-inner bg-[#0052CC] dark:bg-[#0063CC]' : ''}`}
+                  >
+                    <div className="flex items-center justify-center gap-2.5">
+                      {isGenerating ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Generating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-5 h-5" />
+                          <span>Generate PDF</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
 
                   <button
                     type="button"
                     onClick={handlePreview}
                     disabled={isLoading}
                     className={`${buttonClassName}
-                      bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
+                      bg-white dark:bg-[#2C2C2E]
                       text-[#007AFF] dark:text-[#0A84FF] font-medium
-                      border border-[#007AFF]/20 dark:border-[#0A84FF]/20
-                      hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
-                      hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30
-                      active:bg-[#007AFF]/[0.16] dark:active:bg-[#0A84FF]/[0.16]
+                      border-2 border-[#007AFF]/20 dark:border-[#0A84FF]/20
+                      hover:bg-[#007AFF]/[0.05] dark:hover:bg-[#0A84FF]/[0.05]
+                      hover:border-[#007AFF]/40 dark:hover:border-[#0A84FF]/40
+                      active:bg-[#007AFF]/[0.08] dark:active:bg-[#0A84FF]/[0.08]
                       active:scale-[0.98] active:shadow-inner
-                      transform transition-all duration-75 ease-out
-                      w-full sm:w-auto sm:min-w-[120px] h-10
+                      transform transition-all duration-200 ease-out
+                      flex-1 sm:flex-none sm:min-w-[140px] h-12
                       disabled:opacity-50 disabled:cursor-not-allowed
-                      ${isLoading ? 'scale-[0.98] shadow-inner bg-[#007AFF]/[0.16] dark:bg-[#0A84FF]/[0.16]' : ''}`}
+                      shadow-sm hover:shadow-md
+                      ${isLoading ? 'scale-[0.98] shadow-inner bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]' : ''}`}
                   >
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center justify-center gap-2.5">
                       {isLoading ? (
                         <>
-                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
-                          <span>预览中...</span>
+                          <span>Previewing...</span>
                         </>
                       ) : (
                         <>
-                          <Eye className="w-4 h-4" />
-                          <span>预览</span>
+                          <Eye className="w-5 h-5" />
+                          <span>Preview</span>
                         </>
                       )}
                     </div>
