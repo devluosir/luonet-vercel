@@ -74,6 +74,7 @@ interface PackingData {
   showWeight: boolean;
   showPackageQty: boolean;
   showPrice: boolean;
+  dimensionUnit: string;
 }
 
 export default function PackingPage() {
@@ -118,7 +119,8 @@ export default function PackingPage() {
     showDimensions: true,
     showWeight: true,
     showPackageQty: true,
-    showPrice: true
+    showPrice: true,
+    dimensionUnit: 'cm'
   });
 
   // 计算总价
@@ -410,6 +412,34 @@ export default function PackingPage() {
                       </button>
                     </div>
                   </div>
+                  
+                  <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">尺寸单位</h3>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPackingData(prev => ({ ...prev, dimensionUnit: 'cm' }))}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          packingData.dimensionUnit === 'cm' 
+                            ? 'bg-[#007AFF] text-white' 
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        📏 cm
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPackingData(prev => ({ ...prev, dimensionUnit: 'mm' }))}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          packingData.dimensionUnit === 'mm' 
+                            ? 'bg-[#007AFF] text-white' 
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        📐 mm
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -499,7 +529,7 @@ export default function PackingPage() {
                           <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">包裹数量</th>
                         )}
                         {packingData.showDimensions && (
-                          <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">尺寸(cm)</th>
+                          <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-left text-sm font-medium text-gray-600 dark:text-[#98989D]">尺寸({packingData.dimensionUnit})</th>
                         )}
                         <th className="border border-gray-200 dark:border-[#3A3A3C] px-3 py-2 text-center text-sm font-medium text-gray-600 dark:text-[#98989D] w-16">操作</th>
                       </tr>
