@@ -7,6 +7,7 @@ import {
   FileText, 
   Receipt, 
   ShoppingCart, 
+  Package,
   Search, 
   Filter, 
   Download, 
@@ -45,6 +46,10 @@ import {
   getInvoiceHistory, 
   deleteInvoiceHistory
 } from '@/utils/invoiceHistory';
+import { 
+  getPackingHistory, 
+  deletePackingHistory
+} from '@/utils/packingHistory';
 
 // 类型定义
 interface QuotationHistory {
@@ -81,8 +86,21 @@ interface InvoiceHistory {
   data: any;
 }
 
-type HistoryType = 'quotation' | 'confirmation' | 'invoice' | 'purchase';
-type HistoryItem = QuotationHistory | PurchaseHistory | InvoiceHistory;
+interface PackingHistory {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  consigneeName: string;
+  invoiceNo: string;
+  orderNo: string;
+  totalAmount: number;
+  currency: string;
+  documentType: 'proforma' | 'packing' | 'both';
+  data: any;
+}
+
+type HistoryType = 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
+type HistoryItem = QuotationHistory | PurchaseHistory | InvoiceHistory | PackingHistory;
 
 interface SortConfig {
   key: string;
@@ -115,6 +133,11 @@ const InvoiceHistoryTab = dynamic(() => import('./tabs/InvoiceHistoryTab'), {
 
 const PurchaseHistoryTab = dynamic(() => import('./tabs/PurchaseHistoryTab'), {
   loading: () => <div className="py-8 text-center text-gray-400">正在加载采购单历史...</div>,
+  ssr: false
+});
+
+const PackingHistoryTab = dynamic(() => import('./tabs/PackingHistoryTab'), {
+  loading: () => <div className="py-8 text-center text-gray-400">正在加载装箱单历史...</div>,
   ssr: false
 });
 
@@ -296,6 +319,12 @@ export default function HistoryManagementPage() {
         case 'purchase':
           results = getPurchaseHistory();
           break;
+        case 'packing':
+          results = getPackingHistory().map(item => ({
+            ...item,
+            updatedAt: item.createdAt // 使用createdAt作为updatedAt
+          }));
+          break;
       }
 
       const filteredResults = getFilteredHistory(results);
@@ -336,6 +365,9 @@ export default function HistoryManagementPage() {
           break;
         case 'purchase':
           success = deletePurchaseHistory(id);
+          break;
+        case 'packing':
+          success = deletePackingHistory(id);
           break;
       }
 
@@ -380,6 +412,9 @@ export default function HistoryManagementPage() {
             break;
           case 'purchase':
             success = deletePurchaseHistory(id);
+            break;
+          case 'packing':
+            success = deletePackingHistory(id);
             break;
         }
 
@@ -430,6 +465,12 @@ export default function HistoryManagementPage() {
             router.push(`/purchase/edit/${id}`);
           }
           break;
+        case 'packing':
+          item = getPackingHistory().find(item => item.id === id);
+          if (item) {
+            router.push(`/packing/edit/${id}`);
+          }
+          break;
       }
     } catch (error) {
       console.error('Error navigating to edit page:', error);
@@ -449,6 +490,9 @@ export default function HistoryManagementPage() {
           break;
         case 'purchase':
           router.push(`/purchase/copy/${id}`);
+          break;
+        case 'packing':
+          router.push(`/packing/copy/${id}`);
           break;
       }
     } catch (error) {
@@ -498,6 +542,8 @@ export default function HistoryManagementPage() {
         return (item as InvoiceHistory).invoiceNo;
       case 'purchase':
         return (item as PurchaseHistory).orderNo;
+      case 'packing':
+        return (item as PackingHistory).invoiceNo;
       default:
         return '';
     }
@@ -510,6 +556,9 @@ export default function HistoryManagementPage() {
     }
     if ('supplierName' in item) {
       return item.supplierName;
+    }
+    if ('consigneeName' in item) {
+      return item.consigneeName;
     }
     return '';
   };
@@ -529,6 +578,9 @@ export default function HistoryManagementPage() {
           break;
         case 'purchase':
           item = getPurchaseHistory().find(item => item.id === id);
+          break;
+        case 'packing':
+          item = getPackingHistory().find(item => item.id === id);
           break;
       }
 
@@ -562,6 +614,12 @@ export default function HistoryManagementPage() {
           break;
         case 'purchase':
           results = getPurchaseHistory();
+          break;
+        case 'packing':
+          results = getPackingHistory().map(item => ({
+            ...item,
+            updatedAt: item.createdAt // 使用createdAt作为updatedAt
+          }));
           break;
       }
 
@@ -655,6 +713,8 @@ export default function HistoryManagementPage() {
           return 'text-purple-700 border-purple-400 bg-purple-50 dark:bg-purple-900/30';
         case 'purchase':
           return 'text-orange-700 border-orange-400 bg-orange-50 dark:bg-orange-900/30';
+        case 'packing':
+          return 'text-teal-700 border-teal-400 bg-teal-50 dark:bg-teal-900/30';
         default:
           return 'text-blue-700 border-blue-400 bg-blue-50 dark:bg-blue-900/30';
       }
@@ -669,7 +729,8 @@ export default function HistoryManagementPage() {
     quotation: 'blue',
     confirmation: 'green',
     invoice: 'purple',
-    purchase: 'orange'
+    purchase: 'orange',
+    packing: 'teal'
   };
   const activeColor = tabColorMap[activeTab] || 'blue';
 
@@ -843,7 +904,8 @@ export default function HistoryManagementPage() {
                 { id: 'quotation', name: '报价单', icon: FileText },
                 { id: 'confirmation', name: '订单确认', icon: FileText },
                 { id: 'invoice', name: '发票', icon: Receipt },
-                { id: 'purchase', name: '采购单', icon: ShoppingCart }
+                { id: 'purchase', name: '采购单', icon: ShoppingCart },
+                { id: 'packing', name: '装箱单', icon: Package }
               ].map((tab) => {
                 const Icon = tab.icon;
                 const count = getTabCount(tab.id as HistoryType);
@@ -865,6 +927,9 @@ export default function HistoryManagementPage() {
                       break;
                     case 'purchase':
                       activeClasses = 'border-orange-500 text-orange-600 dark:text-orange-400';
+                      break;
+                    case 'packing':
+                      activeClasses = 'border-teal-500 text-teal-600 dark:text-teal-400';
                       break;
                     default:
                       activeClasses = 'border-blue-500 text-blue-600 dark:text-blue-400';
@@ -947,6 +1012,22 @@ export default function HistoryManagementPage() {
               )}
               {activeTab === 'purchase' && (
                 <PurchaseHistoryTab 
+                  filters={filters} 
+                  sortConfig={sortConfig}
+                  onSort={handleSort}
+                  onEdit={handleEdit}
+                  onCopy={handleCopy}
+                  onDelete={(id) => setShowDeleteConfirm(id)}
+                  onPreview={handlePreview}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelect}
+                  onSelectAll={handleSelectAll}
+                  mainColor={activeColor}
+                  refreshKey={refreshKey}
+                />
+              )}
+              {activeTab === 'packing' && (
+                <PackingHistoryTab 
                   filters={filters} 
                   sortConfig={sortConfig}
                   onSort={handleSort}

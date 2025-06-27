@@ -10,6 +10,7 @@ import { generatePackingListPDF } from '@/utils/packingPdfGenerator';
 import { ItemsTable } from '@/components/packinglist/ItemsTable';
 import { SettingsPanel } from '@/components/packinglist/SettingsPanel';
 import { ShippingMarksModal } from '@/components/packinglist/ShippingMarksModal';
+import { savePackingHistory, getPackingHistoryById } from '@/utils/packingHistory';
 
 // 基础样式定义
 const inputClassName = `w-full px-4 py-2.5 rounded-2xl
@@ -78,9 +79,19 @@ interface PackingData {
   customUnits?: string[];
 }
 
+interface CustomWindow extends Window {
+  __PACKING_DATA__?: PackingData;
+  __EDIT_MODE__?: boolean;
+  __EDIT_ID__?: string;
+}
+
 export default function PackingPage() {
   const router = useRouter();
   const pathname = usePathname();
+  
+  // 从 window 全局变量获取初始数据
+  const _initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__PACKING_DATA__) : null;
+  const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
   
   const [showSettings, setShowSettings] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -91,8 +102,9 @@ export default function PackingPage() {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [showPreview, setShowPreview] = useState(false);
   const [showShippingMarksModal, setShowShippingMarksModal] = useState(false);
+  const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
 
-  const [packingData, setPackingData] = useState<PackingData>({
+  const [packingData, setPackingData] = useState<PackingData>(_initialData || {
     orderNo: '',
     invoiceNo: '',
     date: format(new Date(), 'yyyy-MM-dd'),
@@ -135,6 +147,32 @@ export default function PackingPage() {
     },
     customUnits: []
   });
+
+  // 清除注入的数据
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // 获取并保存编辑模式状态
+      const customWindow = window as unknown as CustomWindow;
+      const editId = customWindow.__EDIT_ID__;
+      
+      if (editId !== undefined) {
+        setEditId(editId);
+      }
+
+      // 清除注入的数据
+      delete customWindow.__PACKING_DATA__;
+      delete customWindow.__EDIT_MODE__;
+      delete customWindow.__EDIT_ID__;
+    }
+  }, []);
+
+  // 从 URL 获取编辑 ID
+  useEffect(() => {
+    if (pathname?.startsWith('/packing/edit/')) {
+      const id = pathname.split('/').pop();
+      setEditId(id);
+    }
+  }, [pathname]);
 
   // 计算总价
   const calculateTotalPrice = useCallback((quantity: number, unitPrice: number) => {
@@ -265,6 +303,15 @@ export default function PackingPage() {
         return;
       }
 
+      // 获取编辑 ID（从 URL 或 state）
+      const existingId = editId || (pathname?.startsWith('/packing/edit/') ? pathname.split('/').pop() : undefined);
+      
+      // 保存记录
+      const saveResult = await savePackingHistory(packingData, existingId);
+      if (saveResult && !editId) {
+        setEditId(saveResult.id);
+      }
+
       // 生成PDF
       await generatePackingListPDF(packingData);
       alert('Packing list generated successfully!');
@@ -274,7 +321,7 @@ export default function PackingPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [packingData]);
+  }, [packingData, editId, pathname]);
 
   // 预览
   const handlePreview = useCallback(async () => {
@@ -311,12 +358,21 @@ export default function PackingPage() {
 
     setIsSaving(true);
     try {
-      // 这里添加保存逻辑
-      console.log('Saving packing list...', packingData);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 使用 URL 中的 ID 或现有的 editId
+      const id = pathname?.startsWith('/packing/edit/') ? pathname.split('/').pop() : editId;
       
-      setSaveSuccess(true);
-      setSaveMessage('Saved successfully');
+      const result = await savePackingHistory(packingData, id);
+      if (result) {
+        setSaveSuccess(true);
+        setSaveMessage('Saved successfully');
+        // 更新 editId，确保后续的保存操作会更新同一条记录
+        if (!editId) {
+          setEditId(result.id);
+        }
+      } else {
+        setSaveSuccess(false);
+        setSaveMessage('Save failed');
+      }
     } catch (error) {
       console.error('Error saving:', error);
       setSaveSuccess(false);
@@ -325,7 +381,7 @@ export default function PackingPage() {
       setIsSaving(false);
       setTimeout(() => setSaveMessage(''), 2000);
     }
-  }, [packingData]);
+  }, [packingData, editId, pathname]);
 
   // 计算总计
   const totals = packingData.items.reduce((acc, item) => ({
@@ -350,7 +406,7 @@ export default function PackingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
           <Link 
-            href="/tools" 
+            href={pathname?.includes('/edit/') || pathname?.includes('/copy/') ? '/history' : '/tools'} 
             className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7] transition-colors duration-200"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -392,7 +448,7 @@ export default function PackingPage() {
                     onClick={handleSave}
                     disabled={isSaving}
                     className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0 relative"
-                    title="保存"
+                    title={editId ? '保存修改' : '保存新记录'}
                   >
                     {isSaving ? (
                       <svg className="animate-spin h-5 w-5 text-gray-600 dark:text-[#98989D]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -642,12 +698,17 @@ export default function PackingPage() {
                           </svg>
                           <span>Generating...</span>
                         </>
-                      ) : (
-                        <>
-                          <Download className="w-5 h-5" />
-                          <span>Generate PDF</span>
-                        </>
-                      )}
+                                              ) : (pathname?.startsWith('/packing/edit/') || editId) ? (
+                          <>
+                            <Download className="w-5 h-5" />
+                            <span>Save Changes & Generate</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-5 h-5" />
+                            <span>Generate PDF</span>
+                          </>
+                        )}
                     </div>
                   </button>
 

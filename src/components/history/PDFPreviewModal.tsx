@@ -6,12 +6,13 @@ import { generateQuotationPDF } from '@/utils/quotationPdfGenerator';
 import { generateOrderConfirmationPDF } from '@/utils/orderConfirmationPdfGenerator';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
 import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
+import { generatePackingListPDF } from '@/utils/packingPdfGenerator';
 
 interface PDFPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   item: any;
-  itemType: 'quotation' | 'confirmation' | 'invoice' | 'purchase';
+  itemType: 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
 }
 
 export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDFPreviewModalProps) {
@@ -40,6 +41,8 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
       } else if (itemType === 'purchase') {
         const pdfBlob = await generatePurchaseOrderPDF(item.data, true);
         pdfUrl = URL.createObjectURL(pdfBlob);
+      } else if (itemType === 'packing') {
+        pdfUrl = await generatePackingListPDF(item.data, true);
       }
 
       if (pdfUrl) {
@@ -63,6 +66,8 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         return '发票 PDF 预览';
       case 'purchase':
         return '采购单 PDF 预览';
+      case 'packing':
+        return '装箱单 PDF 预览';
       default:
         return 'PDF 预览';
     }
