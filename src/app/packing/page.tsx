@@ -6,6 +6,10 @@ import Link from 'next/link';
 import { ArrowLeft, Download, Settings, Clipboard, History, Save, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { Footer } from '@/components/Footer';
+import { generatePackingListPDF } from '@/utils/packingPdfGenerator';
+import { ItemsTable } from '@/components/packinglist/ItemsTable';
+import { SettingsPanel } from '@/components/packinglist/SettingsPanel';
+import { ShippingMarksModal } from '@/components/packinglist/ShippingMarksModal';
 
 // 基础样式定义
 const inputClassName = `w-full px-4 py-2.5 rounded-2xl
@@ -18,21 +22,7 @@ const inputClassName = `w-full px-4 py-2.5 rounded-2xl
   hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
   shadow-sm hover:shadow-md`;
 
-const tableInputClassName = `w-full px-3 py-2 rounded-xl
-  bg-transparent backdrop-blur-sm
-  border border-transparent
-  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20
-  text-[14px] leading-relaxed text-gray-800 dark:text-gray-100
-  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
-  transition-all duration-300 ease-out
-  hover:bg-[#007AFF]/5 dark:hover:bg-[#0A84FF]/5
-  text-center whitespace-pre-wrap`;
 
-const numberInputClassName = `${tableInputClassName}
-  [appearance:textfield] 
-  [&::-webkit-outer-spin-button]:appearance-none 
-  [&::-webkit-inner-spin-button]:appearance-none
-  text-center`;
 
 // 标题样式
 const titleClassName = `text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]`;
@@ -43,9 +33,9 @@ const buttonClassName = `px-4 py-2 rounded-xl text-sm font-medium
 
 interface PackingItem {
   id: number;
-  markingNo: string;
   serialNo: string;
   description: string;
+  hsCode: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -66,15 +56,26 @@ interface PackingData {
     name: string;
   };
   
+  // 唛头信息
+  markingNo: string;
+  
   items: PackingItem[];
   currency: string;
   remarks: string;
-  showMarkingNo: boolean;
+  remarkOptions: {
+    shipsSpares: boolean;
+    customsPurpose: boolean;
+  };
+  showHsCode: boolean;
   showDimensions: boolean;
   showWeightAndPackage: boolean;
   showPrice: boolean;
   dimensionUnit: string;
   documentType: 'proforma' | 'packing' | 'both';
+  templateConfig: {
+    headerType: 'none' | 'bilingual' | 'english';
+    stampType: 'none' | 'shanghai' | 'hongkong';
+  };
 }
 
 export default function PackingPage() {
@@ -88,6 +89,8 @@ export default function PackingPage() {
   const [saveMessage, setSaveMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [showPreview, setShowPreview] = useState(false);
+  const [showShippingMarksModal, setShowShippingMarksModal] = useState(false);
 
   const [packingData, setPackingData] = useState<PackingData>({
     orderNo: '',
@@ -98,11 +101,13 @@ export default function PackingPage() {
       name: ''
     },
     
+    markingNo: '',
+    
     items: [{
       id: 1,
-      markingNo: '',
       serialNo: '1',
       description: '',
+      hsCode: '',
       quantity: 0,
       unitPrice: 0,
       totalPrice: 0,
@@ -115,12 +120,20 @@ export default function PackingPage() {
     
     currency: 'USD',
     remarks: '',
-    showMarkingNo: true,
-    showDimensions: true,
+    remarkOptions: {
+      shipsSpares: true,
+      customsPurpose: true,
+    },
+    showHsCode: false,
+    showDimensions: false,
     showWeightAndPackage: true,
-    showPrice: true,
+    showPrice: false,
     dimensionUnit: 'cm',
-    documentType: 'both'
+    documentType: 'packing',
+    templateConfig: {
+      headerType: 'bilingual',
+      stampType: 'none'
+    }
   });
 
   // 计算总价
@@ -161,9 +174,9 @@ export default function PackingPage() {
       ...prev,
       items: [...prev.items, {
         id: prev.items.length + 1,
-        markingNo: '',
         serialNo: (prev.items.length + 1).toString(),
         description: '',
+        hsCode: '',
         quantity: 0,
         unitPrice: 0,
         totalPrice: 0,
@@ -186,22 +199,54 @@ export default function PackingPage() {
     }
   };
 
+  // 设置面板回调函数
+  const handleDocumentTypeChange = (type: 'proforma' | 'packing' | 'both') => {
+    setPackingData(prev => {
+      const updates: Partial<PackingData> = { documentType: type };
+      
+      // 根据文档类型自动调整显示选项
+      switch (type) {
+        case 'proforma':
+          updates.showPrice = true;
+          updates.showWeightAndPackage = false;
+          break;
+        case 'packing':
+          updates.showPrice = false;
+          updates.showWeightAndPackage = true;
+          break;
+        case 'both':
+          updates.showPrice = true;
+          updates.showWeightAndPackage = true;
+          break;
+      }
+      
+      return { ...prev, ...updates };
+    });
+  };
+
   // 生成PDF
   const handleGenerate = useCallback(async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setIsGenerating(true);
     
     try {
-      // 这里添加生成PDF的逻辑
-      console.log('Generating packing list PDF...', packingData);
-      
-      // 模拟生成过程
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      alert('箱单生成成功！');
+      // 验证必填字段
+      if (!packingData.consignee.name.trim()) {
+        alert('Please fill in consignee information');
+        return;
+      }
+
+      if (!packingData.orderNo.trim() && !packingData.invoiceNo.trim()) {
+        alert('Please fill in Order No. or Invoice No.');
+        return;
+      }
+
+      // 生成PDF
+      await generatePackingListPDF(packingData);
+      alert('Packing list generated successfully!');
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('生成箱单失败，请稍后重试');
+      alert('Failed to generate packing list. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -211,11 +256,21 @@ export default function PackingPage() {
   const handlePreview = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 这里添加预览逻辑
-      console.log('Previewing packing list...', packingData);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 验证必填字段
+      if (!packingData.consignee.name.trim()) {
+        alert('Please fill in consignee information');
+        return;
+      }
+
+      // 生成预览URL
+      const pdfUrl = await generatePackingListPDF(packingData, true);
+      if (pdfUrl) {
+        setPreviewUrl(pdfUrl);
+        setShowPreview(true);
+      }
     } catch (error) {
       console.error('Preview failed:', error);
+      alert('Failed to generate preview. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -255,6 +310,15 @@ export default function PackingPage() {
     grossWeight: acc.grossWeight + item.grossWeight,
     packageQty: acc.packageQty + item.packageQty
   }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
+
+  // 清理预览URL
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
@@ -334,224 +398,119 @@ export default function PackingPage() {
               </div>
 
               {/* 设置面板 */}
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out
-                ${showSettings ? 'opacity-100 px-4 sm:px-6 py-6 h-auto' : 'opacity-0 px-0 py-0 h-0'}`}>
-                <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-xl p-4 sm:p-6 space-y-6">
-                  
-                  {/* 文档类型选择 */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Document Type</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setPackingData(prev => ({ ...prev, documentType: 'proforma' }))}
-                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-center ${
-                          packingData.documentType === 'proforma' 
-                            ? 'bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/25' 
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        Proforma Invoice
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPackingData(prev => ({ ...prev, documentType: 'packing' }))}
-                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-center ${
-                          packingData.documentType === 'packing' 
-                            ? 'bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/25' 
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        Packing List
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPackingData(prev => ({ ...prev, documentType: 'both' }))}
-                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-center ${
-                          packingData.documentType === 'both' 
-                            ? 'bg-[#007AFF] text-white shadow-lg shadow-[#007AFF]/25' 
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        Proforma Invoice & Packing List
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 显示选项 */}
-                  <div className="border-t border-gray-200 dark:border-gray-600 pt-4 space-y-4">
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Display Options</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={packingData.showMarkingNo}
-                          onChange={(e) => setPackingData(prev => ({ ...prev, showMarkingNo: e.target.checked }))}
-                          className="w-4 h-4 text-[#007AFF] bg-gray-100 border-gray-300 rounded focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                        />
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Marking No.</span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={packingData.showDimensions}
-                          onChange={(e) => setPackingData(prev => ({ ...prev, showDimensions: e.target.checked }))}
-                          className="w-4 h-4 text-[#007AFF] bg-gray-100 border-gray-300 rounded focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                        />
-                        <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                          Dimensions 
-                          <span className="inline-flex gap-1">
-                            <button
-                              type="button"
-                              onClick={() => setPackingData(prev => ({ ...prev, dimensionUnit: 'cm' }))}
-                              className={`text-xs px-1.5 py-0.5 rounded transition-all duration-200 ${
-                                packingData.dimensionUnit === 'cm' 
-                                  ? 'bg-[#007AFF] text-white' 
-                                  : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-500'
-                              }`}
-                              title="Centimeters"
-                            >
-                              📏
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPackingData(prev => ({ ...prev, dimensionUnit: 'mm' }))}
-                              className={`text-xs px-1.5 py-0.5 rounded transition-all duration-200 ${
-                                packingData.dimensionUnit === 'mm' 
-                                  ? 'bg-[#007AFF] text-white' 
-                                  : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-500'
-                              }`}
-                              title="Millimeters"
-                            >
-                              📐
-                            </button>
-                          </span>
-                        </span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={packingData.showWeightAndPackage}
-                          onChange={(e) => setPackingData(prev => ({ ...prev, showWeightAndPackage: e.target.checked }))}
-                          className="w-4 h-4 text-[#007AFF] bg-gray-100 border-gray-300 rounded focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                        />
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Weight & Package</span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={packingData.showPrice}
-                          onChange={(e) => setPackingData(prev => ({ ...prev, showPrice: e.target.checked }))}
-                          className="w-4 h-4 text-[#007AFF] bg-gray-100 border-gray-300 rounded focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                        />
-                        <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                          Price 
-                          <span className="inline-flex gap-1">
-                            <button
-                              type="button"
-                              onClick={() => setPackingData(prev => ({ ...prev, currency: 'USD' }))}
-                              className={`text-xs px-1.5 py-0.5 rounded transition-all duration-200 ${
-                                packingData.currency === 'USD' 
-                                  ? 'bg-[#007AFF] text-white' 
-                                  : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-500'
-                              }`}
-                              title="US Dollar"
-                            >
-                              $
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPackingData(prev => ({ ...prev, currency: 'EUR' }))}
-                              className={`text-xs px-1.5 py-0.5 rounded transition-all duration-200 ${
-                                packingData.currency === 'EUR' 
-                                  ? 'bg-[#007AFF] text-white' 
-                                  : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-500'
-                              }`}
-                              title="Euro"
-                            >
-                              €
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPackingData(prev => ({ ...prev, currency: 'CNY' }))}
-                              className={`text-xs px-1.5 py-0.5 rounded transition-all duration-200 ${
-                                packingData.currency === 'CNY' 
-                                  ? 'bg-[#007AFF] text-white' 
-                                  : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-500'
-                              }`}
-                              title="Chinese Yuan"
-                            >
-                              ¥
-                            </button>
-                          </span>
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <SettingsPanel
+                isVisible={showSettings}
+                documentType={packingData.documentType}
+                showHsCode={packingData.showHsCode}
+                showDimensions={packingData.showDimensions}
+                showWeightAndPackage={packingData.showWeightAndPackage}
+                showPrice={packingData.showPrice}
+                dimensionUnit={packingData.dimensionUnit}
+                currency={packingData.currency}
+                headerType={packingData.templateConfig.headerType}
+                stampType={packingData.templateConfig.stampType}
+                onDocumentTypeChange={handleDocumentTypeChange}
+                onToggleHsCode={(show) => setPackingData(prev => ({ ...prev, showHsCode: show }))}
+                onToggleDimensions={(show) => setPackingData(prev => ({ ...prev, showDimensions: show }))}
+                onToggleWeightAndPackage={(show) => setPackingData(prev => ({ ...prev, showWeightAndPackage: show }))}
+                onTogglePrice={(show) => setPackingData(prev => ({ ...prev, showPrice: show }))}
+                onDimensionUnitChange={(unit) => setPackingData(prev => ({ ...prev, dimensionUnit: unit }))}
+                onCurrencyChange={(currency) => setPackingData(prev => ({ ...prev, currency }))}
+                onHeaderTypeChange={(headerType) => setPackingData(prev => ({ 
+                  ...prev, 
+                  templateConfig: { ...prev.templateConfig, headerType } 
+                }))}
+                onStampTypeChange={(stampType) => setPackingData(prev => ({ 
+                  ...prev, 
+                  templateConfig: { ...prev.templateConfig, stampType } 
+                }))}
+              />
 
               {/* 基本信息区域 */}
               <div className="px-4 sm:px-6 py-4 sm:py-6">
                 <div className="space-y-6">
-                  {/* 订单信息行 */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                        Order No. *
-                      </label>
-                      <input
-                        type="text"
-                        value={packingData.orderNo}
-                        onChange={(e) => setPackingData(prev => ({ ...prev, orderNo: e.target.value }))}
-                        className={inputClassName}
-                        placeholder="Enter order number"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                        Invoice No.
-                      </label>
-                      <input
-                        type="text"
-                        value={packingData.invoiceNo}
-                        onChange={(e) => setPackingData(prev => ({ ...prev, invoiceNo: e.target.value }))}
-                        className={inputClassName}
-                        placeholder="Enter invoice number"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                        Date *
-                      </label>
-                      <input
-                        type="date"
-                        value={packingData.date}
-                        onChange={(e) => setPackingData(prev => ({ ...prev, date: e.target.value }))}
-                        className={inputClassName}
-                      />
-                    </div>
-                  </div>
+                  {/* Consignee和订单信息并排布局 */}
+                  <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-xl p-4 sm:p-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* 左侧：Consignee + Order No. */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">Consignee</h3>
+                          <div className="h-px flex-1 bg-gradient-to-r from-gray-200 dark:from-gray-600 to-transparent"></div>
+                        </div>
+                        <textarea
+                          value={packingData.consignee.name}
+                          onChange={(e) => setPackingData(prev => ({ 
+                            ...prev, 
+                            consignee: { ...prev.consignee, name: e.target.value }
+                          }))}
+                          className={`${inputClassName} min-h-[120px] resize-none`}
+                          placeholder="Enter consignee information including company name, address, contact details..."
+                        />
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
+                            Order No. *
+                          </label>
+                          <input
+                            type="text"
+                            value={packingData.orderNo}
+                            onChange={(e) => setPackingData(prev => ({ ...prev, orderNo: e.target.value }))}
+                            className={inputClassName}
+                            placeholder="Enter order number"
+                          />
+                        </div>
+                      </div>
 
-                  {/* 收货人信息区域 */}
-                  <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-xl p-4 sm:p-6 space-y-4">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">Consignee</h3>
-                      <div className="h-px flex-1 bg-gradient-to-r from-gray-200 dark:from-gray-600 to-transparent"></div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                        Ship To *
-                      </label>
-                      <textarea
-                        value={packingData.consignee.name}
-                        onChange={(e) => setPackingData(prev => ({ 
-                          ...prev, 
-                          consignee: { ...prev.consignee, name: e.target.value }
-                        }))}
-                        className={`${inputClassName} min-h-[120px] resize-none`}
-                        placeholder="Enter consignee information including company name, address, contact details..."
-                      />
+                      {/* 右侧：Invoice No. + Date + Shipping Marks */}
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
+                            Invoice No.
+                          </label>
+                          <input
+                            type="text"
+                            value={packingData.invoiceNo}
+                            onChange={(e) => setPackingData(prev => ({ ...prev, invoiceNo: e.target.value }))}
+                            className={inputClassName}
+                            placeholder="Enter invoice number"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
+                            Date *
+                          </label>
+                          <input
+                            type="date"
+                            value={packingData.date}
+                            onChange={(e) => setPackingData(prev => ({ ...prev, date: e.target.value }))}
+                            className={inputClassName}
+                          />
+                        </div>
+                        
+                        {/* Shipping Marks */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
+                              Shipping Marks
+                            </label>
+                            {packingData.markingNo && (
+                              <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
+                                Configured
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowShippingMarksModal(true)}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-[#3A3A3C] hover:bg-gray-200 dark:hover:bg-[#48484A] hover:text-gray-700 dark:hover:text-gray-300 rounded-lg transition-all duration-200"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            {packingData.markingNo ? 'Edit Marks' : 'Add Marks'}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -559,234 +518,77 @@ export default function PackingPage() {
 
               {/* 商品表格区域 */}
               <div className="px-0 sm:px-6 py-4">
-                <div className="space-y-4">
-                  <div className="px-4 sm:px-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">Items</h3>
-                    </div>
-                  </div>
-                  
-                  <div className="overflow-x-auto">
-                    <div className="min-w-full bg-white dark:bg-[#2C2C2E] rounded-xl border border-gray-200 dark:border-[#3A3A3C] overflow-hidden">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="bg-gray-50 dark:bg-[#1C1C1E] border-b border-gray-200 dark:border-[#3A3A3C]">
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider w-12">No.</th>
-                            {packingData.showMarkingNo && (
-                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Marking No.</th>
-                            )}
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Description</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Qty</th>
-                            {packingData.showPrice && (
-                              <>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Unit Price</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Amount</th>
-                              </>
-                            )}
-                            {packingData.showWeightAndPackage && (
-                              <>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Net Weight (kg)</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Gross Weight (kg)</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Package Qty</th>
-                              </>
-                            )}
-                            {packingData.showDimensions && (
-                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider">Dimensions ({packingData.dimensionUnit})</th>
-                            )}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-[#3A3A3C]">
-                          {packingData.items.map((item, index) => (
-                            <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-[#1C1C1E]/50 transition-colors duration-200">
-                              <td className="px-4 py-3 w-12 text-center">
-                                <span 
-                                  className={`flex items-center justify-center w-6 h-6 rounded-full 
-                                    text-xs transition-all duration-200 ${
-                                    packingData.items.length > 1 
-                                      ? 'text-gray-500 dark:text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 cursor-pointer'
-                                      : 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                                  }`}
-                                  onClick={() => packingData.items.length > 1 && handleDeleteLine(index)}
-                                  title={packingData.items.length > 1 ? "Click to delete" : "Cannot delete the last item"}
-                                >
-                                  {index + 1}
-                                </span>
-                              </td>
-                              {packingData.showMarkingNo && (
-                                <td className="px-4 py-3">
-                                  <input
-                                    type="text"
-                                    value={item.markingNo}
-                                    onChange={(e) => updateLineItem(index, 'markingNo', e.target.value)}
-                                    className={`${tableInputClassName} text-left`}
-                                    placeholder="Marking"
-                                  />
-                                </td>
-                              )}
-                              <td className="px-4 py-3">
-                                <input
-                                  type="text"
-                                  value={item.description}
-                                  onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                                  className={`${tableInputClassName} text-left`}
-                                  placeholder="Description"
-                                />
-                              </td>
-                              <td className="px-4 py-3 w-24">
-                                <input
-                                  type="number"
-                                  value={item.quantity || ''}
-                                  onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
-                                  className={numberInputClassName}
-                                  placeholder="0"
-                                  min="0"
-                                  step="1"
-                                />
-                              </td>
-                              {packingData.showPrice && (
-                                <>
-                                  <td className="px-4 py-3 w-28">
-                                    <input
-                                      type="number"
-                                      value={item.unitPrice || ''}
-                                      onChange={(e) => updateLineItem(index, 'unitPrice', e.target.value)}
-                                      className={numberInputClassName}
-                                      placeholder="0.00"
-                                      min="0"
-                                      step="0.01"
-                                    />
-                                  </td>
-                                  <td className="px-4 py-3 w-28">
-                                    <div className="text-center py-2 text-sm font-medium text-gray-800 dark:text-gray-100">
-                                      {packingData.currency === 'USD' ? '$' : packingData.currency === 'EUR' ? '€' : '¥'}
-                                      {item.totalPrice.toFixed(2)}
-                                    </div>
-                                  </td>
-                                </>
-                              )}
-                              {packingData.showWeightAndPackage && (
-                                <>
-                                  <td className="px-4 py-3 w-24">
-                                    <input
-                                      type="number"
-                                      value={item.netWeight || ''}
-                                      onChange={(e) => updateLineItem(index, 'netWeight', e.target.value)}
-                                      className={numberInputClassName}
-                                      placeholder="0.00"
-                                      min="0"
-                                      step="0.01"
-                                    />
-                                  </td>
-                                  <td className="px-4 py-3 w-24">
-                                    <input
-                                      type="number"
-                                      value={item.grossWeight || ''}
-                                      onChange={(e) => updateLineItem(index, 'grossWeight', e.target.value)}
-                                      className={numberInputClassName}
-                                      placeholder="0.00"
-                                      min="0"
-                                      step="0.01"
-                                    />
-                                  </td>
-                                  <td className="px-4 py-3 w-24">
-                                    <input
-                                      type="number"
-                                      value={item.packageQty || ''}
-                                      onChange={(e) => updateLineItem(index, 'packageQty', e.target.value)}
-                                      className={numberInputClassName}
-                                      placeholder="0"
-                                      min="0"
-                                      step="1"
-                                    />
-                                  </td>
-                                </>
-                              )}
-                              {packingData.showDimensions && (
-                                <td className="px-4 py-3">
-                                  <input
-                                    type="text"
-                                    value={item.dimensions}
-                                    onChange={(e) => updateLineItem(index, 'dimensions', e.target.value)}
-                                    className={`${tableInputClassName} text-left`}
-                                    placeholder="L×W×H"
-                                  />
-                                </td>
-                              )}
-
-                            </tr>
-                          ))}
-                          
-                          {/* 总计行 */}
-                          <tr className="bg-gray-50 dark:bg-[#1C1C1E] font-semibold border-t-2 border-gray-300 dark:border-gray-600">
-                            <td className="px-4 py-3 text-center">
-                              <button
-                                type="button"
-                                onClick={handleAddLine}
-                                className="flex items-center justify-center w-6 h-6 rounded-full
-                                  bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
-                                  hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
-                                  text-[#007AFF] dark:text-[#0A84FF]
-                                  text-sm font-medium
-                                  transition-all duration-200"
-                                title="Add new line"
-                              >
-                                +
-                              </button>
-                            </td>
-                            <td colSpan={
-                              (packingData.showMarkingNo ? 1 : 0) + 
-                              2 + // 描述、数量
-                              (packingData.showPrice ? 1 : 0) // 单价列
-                            } className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
-                              Total:
-                            </td>
-                            {packingData.showPrice && (
-                              <td className="px-4 py-3 text-center font-bold text-gray-900 dark:text-gray-100">
-                                {packingData.currency === 'USD' ? '$' : packingData.currency === 'EUR' ? '€' : '¥'}
-                                {totals.totalPrice.toFixed(2)}
-                              </td>
-                            )}
-                            {packingData.showWeightAndPackage && (
-                              <>
-                                <td className="px-4 py-3 text-center font-bold text-gray-900 dark:text-gray-100">
-                                  {totals.netWeight.toFixed(2)}
-                                </td>
-                                <td className="px-4 py-3 text-center font-bold text-gray-900 dark:text-gray-100">
-                                  {totals.grossWeight.toFixed(2)}
-                                </td>
-                                <td className="px-4 py-3 text-center font-bold text-gray-900 dark:text-gray-100">
-                                  {totals.packageQty}
-                                </td>
-                              </>
-                            )}
-                            {packingData.showDimensions && (
-                              <td className="px-4 py-3"></td>
-                            )}
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
+                <ItemsTable
+                  data={{
+                    items: packingData.items,
+                    showHsCode: packingData.showHsCode,
+                    showDimensions: packingData.showDimensions,
+                    showWeightAndPackage: packingData.showWeightAndPackage,
+                    showPrice: packingData.showPrice,
+                    dimensionUnit: packingData.dimensionUnit,
+                    currency: packingData.currency
+                  }}
+                  onItemChange={updateLineItem}
+                  onAddLine={handleAddLine}
+                  onDeleteLine={handleDeleteLine}
+                  totals={totals}
+                />
               </div>
 
               {/* 备注区域 */}
               <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-100 dark:border-[#3A3A3C]">
                 <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-xl p-4 sm:p-6 space-y-4">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">Remarks</h3>
-                    <div className="h-px flex-1 bg-gradient-to-r from-gray-200 dark:from-gray-600 to-transparent"></div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                      Additional Notes
-                    </label>
-                    <textarea
-                      value={packingData.remarks}
-                      onChange={(e) => setPackingData(prev => ({ ...prev, remarks: e.target.value }))}
-                      className={`${inputClassName} min-h-[100px] resize-none`}
-                      placeholder="Enter any additional remarks or special instructions..."
-                    />
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Remarks:</h3>
+                    
+                    {/* 固定选项 */}
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={packingData.remarkOptions.shipsSpares}
+                          onChange={(e) => setPackingData(prev => ({
+                            ...prev,
+                            remarkOptions: {
+                              ...prev.remarkOptions,
+                              shipsSpares: e.target.checked
+                            }
+                          }))}
+                          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300 select-none">
+                          SHIP'S SPARES IN TRANSIT
+                        </span>
+                      </label>
+                      
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={packingData.remarkOptions.customsPurpose}
+                          onChange={(e) => setPackingData(prev => ({
+                            ...prev,
+                            remarkOptions: {
+                              ...prev.remarkOptions,
+                              customsPurpose: e.target.checked
+                            }
+                          }))}
+                          className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300 select-none">
+                          FOR CUSTOMS PURPOSE ONLY
+                        </span>
+                      </label>
+                    </div>
+                    
+                    {/* 自定义备注文本框 */}
+                    <div>
+                      <textarea
+                        value={packingData.remarks}
+                        onChange={(e) => setPackingData(prev => ({ ...prev, remarks: e.target.value }))}
+                        className={`${inputClassName} min-h-[80px] resize-none`}
+                        placeholder="Enter any additional remarks or special instructions..."
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -869,6 +671,90 @@ export default function PackingPage() {
         </div>
       </main>
       <Footer />
+      
+      {/* PDF 预览模态框 */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="flex flex-col p-4 border-b border-gray-200 dark:border-gray-800">
+              {/* 标题和关闭按钮 */}
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Preview Packing List</h3>
+                <button
+                  onClick={() => {
+                    setShowPreview(false);
+                    setPreviewUrl('');
+                  }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* 箱单信息 */}
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 dark:text-gray-400">Document Type:</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
+                    {packingData.documentType === 'proforma' ? 'Proforma Invoice' :
+                     packingData.documentType === 'packing' ? 'Packing List' :
+                     'Proforma Invoice & Packing List'}
+                  </span>
+                </div>
+                {packingData.orderNo && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 dark:text-gray-400">Order No:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{packingData.orderNo}</span>
+                  </div>
+                )}
+                {packingData.invoiceNo && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 dark:text-gray-400">Invoice No:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{packingData.invoiceNo}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 dark:text-gray-400">Date:</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{packingData.date}</span>
+                </div>
+                {packingData.showPrice && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500 dark:text-gray-400">Currency:</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {packingData.currency === 'USD' ? 'US Dollar' : packingData.currency === 'EUR' ? 'Euro' : 'Chinese Yuan'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500 dark:text-gray-400">Total Amount:</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {packingData.currency === 'USD' ? '$' : packingData.currency === 'EUR' ? '€' : '¥'}{totals.totalPrice.toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 bg-gray-100 dark:bg-black p-4">
+              <iframe
+                src={previewUrl}
+                className="w-full h-full rounded-lg bg-white dark:bg-[#1C1C1E] shadow-lg"
+                title="PDF Preview"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shipping Marks Modal */}
+      <ShippingMarksModal
+        isOpen={showShippingMarksModal}
+        onClose={() => setShowShippingMarksModal(false)}
+        value={packingData.markingNo}
+        onChange={(value) => setPackingData(prev => ({ ...prev, markingNo: value }))}
+      />
     </div>
   );
 }
