@@ -2,6 +2,97 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 全局样式 */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* iOS设备输入框优化 */
+@supports (-webkit-appearance: none) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    /* 确保iOS设备上光标可见 */
+    caret-color: #2563eb;
+    -webkit-appearance: none;
+    appearance: none;
+    
+    /* 优化触摸体验 */
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: text;
+    user-select: text;
+    
+    /* 防止iOS自动放大 */
+    font-size: max(16px, 1em);
+  }
+  
+  /* 暗色模式下的光标颜色 */
+  @media (prefers-color-scheme: dark) {
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    textarea,
+    select {
+      caret-color: #60a5fa;
+    }
+  }
+}
+
+/* 针对WebKit浏览器的特殊处理 */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  input:focus,
+  textarea:focus,
+  select:focus {
+    /* 强制显示光标 */
+    caret-color: #2563eb !important;
+    outline: none;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    input:focus,
+    textarea:focus,
+    select:focus {
+      caret-color: #60a5fa !important;
+    }
+  }
+}
+
+/* 移动设备优化 */
+@media screen and (max-width: 768px) {
+  /* 防止iOS设备自动放大输入框 */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important;
+    transform: scale(1);
+    -webkit-transform: scale(1);
+  }
+  
+  /* 确保表格输入框在移动设备上的可见性 */
+  table input,
+  table textarea,
+  table select {
+    min-height: 32px;
+    line-height: 1.2;
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -18,12 +109,6 @@
     --card-border: #262626;
     --blue-accent: #3b82f6;
   }
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
 /* 文本截断样式 */

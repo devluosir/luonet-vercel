@@ -15,7 +15,18 @@ export default {
         background: "var(--background)",
         foreground: "var(--foreground)",
       },
+      caretColor: {
+        'blue-600': '#2563eb',
+        'blue-400': '#60a5fa',
+      }
     },
   },
+  safelist: [
+    'caret-blue-600',
+    'caret-blue-400',
+    'dark:caret-blue-400',
+    '-webkit-appearance-none',
+    'touch-manipulation'
+  ],
   plugins: [],
 } satisfies Config;

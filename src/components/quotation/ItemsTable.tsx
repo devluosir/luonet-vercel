@@ -340,7 +340,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
           <div className={`border border-[#E5E5EA] dark:border-[#2C2C2E]
             bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl overflow-hidden
             ${(data.otherFees ?? []).length > 0 ? 'rounded-t-2xl' : 'rounded-2xl'}`}>
-            <table className="min-w-full">
+            <table className="min-w-full divide-y divide-[#E5E5EA] dark:divide-[#2C2C2E] table-fixed">
               <thead>
                 <tr className={`bg-[#F5F5F7] dark:bg-[#3A3A3C]
                   border-b border-[#E5E5EA] dark:border-[#48484A]
@@ -401,7 +401,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                          caret-blue-600 dark:caret-blue-400
                           transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
+                          -webkit-appearance-none touch-manipulation
                           ${item.highlight?.partName ? highlightClass : ''}`}
                         style={{ 
                           height: '28px'
@@ -427,7 +429,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                            caret-blue-600 dark:caret-blue-400
                             transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
+                            -webkit-appearance-none touch-manipulation
                             ${item.highlight?.description ? highlightClass : ''}`}
                           style={{ 
                             height: '28px'
@@ -466,8 +470,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                          caret-blue-600 dark:caret-blue-400
                           transition-all duration-200 text-center
                           [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                          -webkit-appearance-none touch-manipulation
                           ${item.highlight?.quantity ? highlightClass : ''}`}
                       />
                     </td>
@@ -486,8 +492,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                          caret-blue-600 dark:caret-blue-400
                           transition-all duration-200 text-center cursor-pointer
-                          appearance-none
+                          appearance-none -webkit-appearance-none touch-manipulation
                           ${item.highlight?.unit ? highlightClass : ''}`}
                       >
                         {availableUnits.map(unit => {
@@ -531,8 +538,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                          caret-blue-600 dark:caret-blue-400
                           transition-all duration-200 text-center
                           [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                          -webkit-appearance-none touch-manipulation
                           ${item.highlight?.unitPrice ? highlightClass : ''}`}
                       />
                     </td>
@@ -546,6 +555,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         className={`w-full px-3 py-1.5 bg-transparent
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                          caret-blue-600 dark:caret-blue-400
                           transition-all duration-200 text-center
                           ${item.highlight?.amount ? highlightClass : ''}`}
                       />
@@ -570,7 +580,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                            caret-blue-600 dark:caret-blue-400
                             transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
+                            -webkit-appearance-none touch-manipulation
                             ${item.highlight?.remarks ? highlightClass : ''}`}
                           style={{ 
                             height: '28px'
@@ -624,7 +636,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                            caret-blue-600 dark:caret-blue-400
                             transition-all duration-200 whitespace-pre-wrap resize-y overflow-hidden
+                            -webkit-appearance-none touch-manipulation
                             ${fee.highlight?.description ? highlightClass : ''}
                             ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}
                           style={{ 
@@ -660,8 +674,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                            caret-blue-600 dark:caret-blue-400
                             transition-all duration-200
                             [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                            -webkit-appearance-none touch-manipulation
                             ${fee.highlight?.amount ? highlightClass : ''}
                             ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}
                         />
@@ -682,6 +698,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                               hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                               text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                               placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                              caret-blue-600 dark:caret-blue-400
                               transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
                               ${fee.highlight?.remarks ? highlightClass : ''}`}
                             style={{ 

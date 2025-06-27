@@ -12,6 +12,7 @@ import { savePurchaseHistory, getPurchaseHistory } from '@/utils/purchaseHistory
 import { useRouter, usePathname } from 'next/navigation';
 import { Footer } from '@/components/Footer';
 import { v4 as uuidv4 } from 'uuid';
+import PDFPreviewComponent from '@/components/PDFPreviewComponent';
 
 const defaultData: PurchaseOrderData = {
   attn: '',
@@ -538,30 +539,13 @@ export default function PurchaseOrderPage() {
       </main>
       {/* PDF预览弹窗 */}
       {pdfPreviewUrl && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-[#000000]/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#2C2C2E] w-full max-w-5xl h-[90vh] rounded-2xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-[#3A3A3C]">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-[#F5F5F7]">
-                PDF预览
-              </h3>
-              <button
-                onClick={() => setPdfPreviewUrl(null)}
-                className="text-gray-500 hover:text-gray-700 dark:text-[#98989D] dark:hover:text-[#F5F5F7]"
-              >
-                <span className="sr-only">关闭</span>
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 p-4">
-              <iframe
-                src={pdfPreviewUrl}
-                className="w-full h-full rounded-lg border border-gray-200 dark:border-[#3A3A3C]"
-              />
-            </div>
-          </div>
-        </div>
+        <PDFPreviewComponent 
+          pdfUrl={pdfPreviewUrl}
+          onClose={() => setPdfPreviewUrl(null)}
+          title="采购订单 PDF 预览"
+          data={data}
+          itemType="purchase"
+        />
       )}
       <Footer />
     </div>
