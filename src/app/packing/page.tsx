@@ -297,12 +297,6 @@ export default function PackingPage() {
     setIsGenerating(true);
     
     try {
-      // 验证必填字段
-      if (!packingData.invoiceNo.trim()) {
-        alert('Please fill in Invoice No.');
-        return;
-      }
-
       // 获取编辑 ID（从 URL 或 state）
       const existingId = editId || (pathname?.startsWith('/packing/edit/') ? pathname.split('/').pop() : undefined);
       
@@ -327,12 +321,6 @@ export default function PackingPage() {
   const handlePreview = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 验证必填字段
-      if (!packingData.invoiceNo.trim()) {
-        alert('Please fill in Invoice No.');
-        return;
-      }
-
       // 生成预览URL
       const pdfUrl = await generatePackingListPDF(packingData, true);
       if (pdfUrl) {
@@ -349,13 +337,6 @@ export default function PackingPage() {
 
   // 保存
   const handleSave = useCallback(async () => {
-    if (!packingData.invoiceNo.trim()) {
-      setSaveMessage('Please fill in Invoice No.');
-      setSaveSuccess(false);
-      setTimeout(() => setSaveMessage(''), 2000);
-      return;
-    }
-
     setIsSaving(true);
     try {
       // 使用 URL 中的 ID 或现有的 editId
@@ -545,14 +526,23 @@ export default function PackingPage() {
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                            Invoice No. *
+                            Invoice No.
                           </label>
                           <input
                             type="text"
                             value={packingData.invoiceNo}
                             onChange={(e) => setPackingData(prev => ({ ...prev, invoiceNo: e.target.value }))}
-                            className={inputClassName}
-                            placeholder="Enter invoice number"
+                            className={`w-full px-4 py-2.5 rounded-xl backdrop-blur-lg
+                              bg-[#007AFF]/[0.03] dark:bg-[#0A84FF]/[0.03]
+                              border border-[#007AFF]/20 dark:border-[#0A84FF]/20
+                              focus:outline-none focus:ring-2 
+                              focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20
+                              hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30
+                              text-[15px] leading-relaxed font-medium
+                              text-[#007AFF] dark:text-[#0A84FF]
+                              placeholder:text-[#007AFF]/60 dark:placeholder:text-[#0A84FF]/60
+                              transition-all duration-300`}
+                            placeholder="Invoice No. *"
                           />
                         </div>
                         <div className="space-y-2">
