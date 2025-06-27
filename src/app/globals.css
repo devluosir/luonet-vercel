@@ -24,7 +24,8 @@ body {
   textarea,
   select {
     /* 确保iOS设备上光标可见 */
-    caret-color: #2563eb;
+    caret-color: #2563eb !important;
+    -webkit-caret-color: #2563eb !important;
     -webkit-appearance: none;
     appearance: none;
     
@@ -46,7 +47,8 @@ body {
     input[type="password"],
     textarea,
     select {
-      caret-color: #60a5fa;
+      caret-color: #60a5fa !important;
+      -webkit-caret-color: #60a5fa !important;
     }
   }
 }
@@ -58,6 +60,7 @@ body {
   select:focus {
     /* 强制显示光标 */
     caret-color: #2563eb !important;
+    -webkit-caret-color: #2563eb !important;
     outline: none;
   }
   
@@ -66,6 +69,29 @@ body {
     textarea:focus,
     select:focus {
       caret-color: #60a5fa !important;
+      -webkit-caret-color: #60a5fa !important;
+    }
+  }
+}
+
+/* 专门针对iOS Safari的强制光标显示 */
+@media screen and (max-width: 1024px) and (-webkit-min-device-pixel-ratio: 1) {
+  input,
+  textarea,
+  select {
+    caret-color: #2563eb !important;
+    -webkit-caret-color: #2563eb !important;
+    -webkit-text-fill-color: initial !important;
+    -webkit-opacity: 1 !important;
+    opacity: 1 !important;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    input,
+    textarea,
+    select {
+      caret-color: #60a5fa !important;
+      -webkit-caret-color: #60a5fa !important;
     }
   }
 }

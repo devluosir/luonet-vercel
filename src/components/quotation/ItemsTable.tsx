@@ -401,12 +401,13 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          caret-blue-600 dark:caret-blue-400
                           transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
                           -webkit-appearance-none touch-manipulation
                           ${item.highlight?.partName ? highlightClass : ''}`}
                         style={{ 
-                          height: '28px'
+                          height: '28px',
+                          caretColor: '#2563eb',
+                          WebkitCaretColor: '#2563eb'
                         }}
                       />
                     </td>
@@ -429,12 +430,13 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            caret-blue-600 dark:caret-blue-400
                             transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
                             -webkit-appearance-none touch-manipulation
                             ${item.highlight?.description ? highlightClass : ''}`}
                           style={{ 
-                            height: '28px'
+                            height: '28px',
+                            caretColor: '#2563eb',
+                            WebkitCaretColor: '#2563eb'
                           }}
                         />
                       </td>
@@ -470,11 +472,14 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          caret-blue-600 dark:caret-blue-400
                           transition-all duration-200 text-center
                           [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                           -webkit-appearance-none touch-manipulation
                           ${item.highlight?.quantity ? highlightClass : ''}`}
+                        style={{
+                          caretColor: '#2563eb',
+                          WebkitCaretColor: '#2563eb'
+                        }}
                       />
                     </td>
                     <td className="w-[80px] min-w-[80px] px-1 py-2">
@@ -492,10 +497,13 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          caret-blue-600 dark:caret-blue-400
                           transition-all duration-200 text-center cursor-pointer
                           appearance-none -webkit-appearance-none touch-manipulation
                           ${item.highlight?.unit ? highlightClass : ''}`}
+                        style={{
+                          caretColor: '#2563eb',
+                          WebkitCaretColor: '#2563eb'
+                        }}
                       >
                         {availableUnits.map(unit => {
                           const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) ? getUnitDisplay(unit, item.quantity) : unit;
@@ -538,11 +546,14 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          caret-blue-600 dark:caret-blue-400
                           transition-all duration-200 text-center
                           [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                           -webkit-appearance-none touch-manipulation
                           ${item.highlight?.unitPrice ? highlightClass : ''}`}
+                        style={{
+                          caretColor: '#2563eb',
+                          WebkitCaretColor: '#2563eb'
+                        }}
                       />
                     </td>
                     <td className={`w-[100px] min-w-[100px] px-1 py-2
@@ -555,9 +566,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         className={`w-full px-3 py-1.5 bg-transparent
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          caret-blue-600 dark:caret-blue-400
                           transition-all duration-200 text-center
                           ${item.highlight?.amount ? highlightClass : ''}`}
+                        style={{
+                          caretColor: '#2563eb',
+                          WebkitCaretColor: '#2563eb'
+                        }}
                       />
                     </td>
                     {data.showRemarks && (
@@ -580,12 +594,13 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            caret-blue-600 dark:caret-blue-400
                             transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
                             -webkit-appearance-none touch-manipulation
                             ${item.highlight?.remarks ? highlightClass : ''}`}
                           style={{ 
-                            height: '28px'
+                            height: '28px',
+                            caretColor: '#2563eb',
+                            WebkitCaretColor: '#2563eb'
                           }}
                         />
                       </td>
@@ -636,13 +651,14 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            caret-blue-600 dark:caret-blue-400
                             transition-all duration-200 whitespace-pre-wrap resize-y overflow-hidden
                             -webkit-appearance-none touch-manipulation
                             ${fee.highlight?.description ? highlightClass : ''}
                             ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}
                           style={{ 
-                            height: '28px'
+                            height: '28px',
+                            caretColor: '#2563eb',
+                            WebkitCaretColor: '#2563eb'
                           }}
                         />
                       </td>
@@ -674,12 +690,15 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            caret-blue-600 dark:caret-blue-400
                             transition-all duration-200
                             [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                             -webkit-appearance-none touch-manipulation
                             ${fee.highlight?.amount ? highlightClass : ''}
                             ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}
+                          style={{
+                            caretColor: '#2563eb',
+                            WebkitCaretColor: '#2563eb'
+                          }}
                         />
                       </td>
                       {data.showRemarks && (
@@ -698,11 +717,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                               hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                               text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                               placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              caret-blue-600 dark:caret-blue-400
                               transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
                               ${fee.highlight?.remarks ? highlightClass : ''}`}
                             style={{ 
-                              height: '28px'
+                              height: '28px',
+                              caretColor: '#2563eb',
+                              WebkitCaretColor: '#2563eb'
                             }}
                           />
                         </td>
