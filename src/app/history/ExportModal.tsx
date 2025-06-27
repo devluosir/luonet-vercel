@@ -145,7 +145,7 @@ export default function ExportModal({
                   导出当前选项卡数据
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                  仅导出当前显示的{activeTab === 'quotation' ? '报价单' : activeTab === 'confirmation' ? '销售确认' : activeTab === 'invoice' ? '发票' : '采购单'}数据
+                  仅导出当前显示的{activeTab === 'quotation' ? '报价单' : activeTab === 'confirmation' ? '销售确认' : activeTab === 'invoice' ? '发票' : activeTab === 'purchase' ? '采购单' : '装箱单'}数据
                 </div>
               </div>
             </div>

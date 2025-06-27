@@ -1,18 +1,22 @@
 import { format } from 'date-fns';
-import { 
-  getQuotationHistory, 
-  importQuotationHistory 
+import {
+  getQuotationHistory,
+  importQuotationHistory
 } from './quotationHistory';
-import { 
-  getPurchaseHistory, 
-  importPurchaseHistory 
+import {
+  getPurchaseHistory,
+  importPurchaseHistory
 } from './purchaseHistory';
-import { 
-  getInvoiceHistory, 
-  importInvoiceHistory 
+import {
+  getInvoiceHistory,
+  importInvoiceHistory
 } from './invoiceHistory';
+import {
+  getPackingHistory,
+  importPackingHistory
+} from './packingHistory';
 
-export type HistoryType = 'quotation' | 'confirmation' | 'invoice' | 'purchase';
+export type HistoryType = 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
 
 export interface HistoryItem {
   id: string;
@@ -20,11 +24,13 @@ export interface HistoryItem {
   updatedAt: string;
   customerName?: string;
   supplierName?: string;
+  consigneeName?: string;
   quotationNo?: string;
   invoiceNo?: string;
   orderNo?: string;
   totalAmount: number;
   currency: string;
+  documentType?: string;
   data: any;
 }
 
@@ -92,6 +98,7 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         const confirmationData = [];
         const invoiceData = [];
         const purchaseData = [];
+        const packingData = [];
 
         for (const item of records) {
           if (!item || typeof item !== 'object') continue;
@@ -104,12 +111,15 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
             } else if (item.type === 'confirmation') {
               confirmationData.push(item);
             }
-          } else if ('invoiceNo' in item && !('quotationNo' in item)) {
+          } else if ('invoiceNo' in item && !('quotationNo' in item) && !('consigneeName' in item)) {
             // 发票数据
             invoiceData.push(item);
           } else if ('orderNo' in item && 'supplierName' in item) {
             // 采购单数据
             purchaseData.push(item);
+          } else if ('consigneeName' in item || ('invoiceNo' in item && 'documentType' in item)) {
+            // 装箱单数据
+            packingData.push(item);
           } else if ('data' in item && item.data) {
             // 通过data字段判断类型
             if (item.data.quotationNo && item.data.customerPO === undefined) {
@@ -118,6 +128,9 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
                 ...item,
                 type: item.data.type || 'quotation'
               });
+            } else if (item.data.invoiceNo && item.data.consignee) {
+              // 装箱单数据
+              packingData.push(item);
             } else if (item.data.invoiceNo || item.data.customerPO !== undefined) {
               // 发票数据
               invoiceData.push(item);
@@ -132,7 +145,8 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           quotation: quotationData.length,
           confirmation: confirmationData.length,
           invoice: invoiceData.length,
-          purchase: purchaseData.length
+          purchase: purchaseData.length,
+          packing: packingData.length
         });
 
         // 执行导入
@@ -195,6 +209,21 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
             }
           } else {
             console.error('采购单导入失败');
+          }
+        }
+
+        if (packingData.length > 0) {
+          const packingJson = JSON.stringify(packingData);
+          const importSuccess = importPackingHistory(packingJson);
+          console.log('装箱单导入结果:', importSuccess);
+          if (importSuccess) {
+            results.details!.push(`装箱单：${packingData.length} 条`);
+            totalImported += packingData.length;
+            if (activeTab !== 'packing') {
+              results.otherTabs!.push('装箱单');
+            }
+          } else {
+            console.error('装箱单导入失败');
           }
         }
 
@@ -285,6 +314,23 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         }
       }
 
+      // 处理装箱单数据
+      if (allData.packing && Array.isArray(allData.packing) && allData.packing.length > 0) {
+        console.log('处理装箱单数据，数量:', allData.packing.length);
+        const packingJson = JSON.stringify(allData.packing);
+        const importSuccess = importPackingHistory(packingJson);
+        console.log('装箱单导入结果:', importSuccess);
+        if (importSuccess) {
+          results.details!.push(`装箱单：${allData.packing.length} 条`);
+          totalImported += allData.packing.length;
+          if (activeTab !== 'packing') {
+            results.otherTabs!.push('装箱单');
+          }
+        } else {
+          console.error('装箱单导入失败');
+        }
+      }
+
       console.log('综合数据导入完成，总计:', totalImported);
       if (totalImported === 0) {
         return { success: false, error: '综合数据中未找到有效的历史记录数据' };
@@ -311,6 +357,7 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
     const confirmationData = [];
     const invoiceData = [];
     const purchaseData = [];
+    const packingData = [];
 
     for (const item of parsedData) {
       if (!item || typeof item !== 'object') continue;
@@ -323,12 +370,15 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         } else if (item.type === 'confirmation') {
           confirmationData.push(item);
         }
-      } else if ('invoiceNo' in item && !('quotationNo' in item)) {
+      } else if ('invoiceNo' in item && !('quotationNo' in item) && !('consigneeName' in item)) {
         // 发票数据
         invoiceData.push(item);
       } else if ('orderNo' in item && 'supplierName' in item) {
         // 采购单数据
         purchaseData.push(item);
+      } else if ('consigneeName' in item || ('invoiceNo' in item && 'documentType' in item)) {
+        // 装箱单数据
+        packingData.push(item);
       } else if ('data' in item && item.data) {
         // 通过data字段判断类型
         if (item.data.quotationNo && item.data.customerPO === undefined) {
@@ -337,6 +387,9 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
             ...item,
             type: item.data.type || 'quotation'
           });
+        } else if (item.data.invoiceNo && item.data.consignee) {
+          // 装箱单数据
+          packingData.push(item);
         } else if (item.data.invoiceNo || item.data.customerPO !== undefined) {
           // 发票数据
           invoiceData.push(item);
@@ -351,7 +404,8 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
       quotation: quotationData.length,
       confirmation: confirmationData.length,
       invoice: invoiceData.length,
-      purchase: purchaseData.length
+      purchase: purchaseData.length,
+      packing: packingData.length
     });
 
     // 执行导入
@@ -417,6 +471,21 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
       }
     }
 
+    if (packingData.length > 0) {
+      const packingJson = JSON.stringify(packingData);
+      const importSuccess = importPackingHistory(packingJson);
+      console.log('装箱单导入结果:', importSuccess);
+      if (importSuccess) {
+        results.details!.push(`装箱单：${packingData.length} 条`);
+        totalImported += packingData.length;
+        if (activeTab !== 'packing') {
+          results.otherTabs!.push('装箱单');
+        }
+      } else {
+        console.error('装箱单导入失败');
+      }
+    }
+
     console.log('数组格式导入完成，总计:', totalImported);
     if (totalImported === 0) {
       return { success: false, error: '未能识别任何有效的历史记录数据' };
@@ -465,6 +534,12 @@ export const executeExport = (exportType: 'current' | 'all' | 'filtered', active
           fileName = `purchase_history_${format(new Date(), 'yyyy-MM-dd')}.json`;
           exportStats = `采购单：${purchaseData.length} 条`;
           break;
+        case 'packing':
+          jsonData = JSON.stringify(getPackingHistory(), null, 2);
+          const packingData = getPackingHistory();
+          fileName = `packing_history_${format(new Date(), 'yyyy-MM-dd')}.json`;
+          exportStats = `装箱单：${packingData.length} 条`;
+          break;
       }
       break;
 
@@ -478,13 +553,15 @@ export const executeExport = (exportType: 'current' | 'all' | 'filtered', active
             quotation: 0,
             confirmation: 0,
             invoice: 0,
-            purchase: 0
+            purchase: 0,
+            packing: 0
           }
         },
         quotation: getQuotationHistory().filter(item => item.type === 'quotation'),
         confirmation: getQuotationHistory().filter(item => item.type === 'confirmation'),
         invoice: getInvoiceHistory(),
-        purchase: getPurchaseHistory()
+        purchase: getPurchaseHistory(),
+        packing: getPackingHistory()
       };
 
       // 计算统计信息
@@ -492,6 +569,7 @@ export const executeExport = (exportType: 'current' | 'all' | 'filtered', active
       allData.metadata.breakdown.confirmation = allData.confirmation.length;
       allData.metadata.breakdown.invoice = allData.invoice.length;
       allData.metadata.breakdown.purchase = allData.purchase.length;
+      allData.metadata.breakdown.packing = allData.packing.length;
       allData.metadata.totalRecords = Object.values(allData.metadata.breakdown).reduce((sum, count) => sum + count, 0);
 
       jsonData = JSON.stringify(allData, null, 2);
@@ -500,7 +578,8 @@ export const executeExport = (exportType: 'current' | 'all' | 'filtered', active
         `报价单：${allData.metadata.breakdown.quotation} 条\n` +
         `销售确认：${allData.metadata.breakdown.confirmation} 条\n` +
         `发票：${allData.metadata.breakdown.invoice} 条\n` +
-        `采购单：${allData.metadata.breakdown.purchase} 条`;
+        `采购单：${allData.metadata.breakdown.purchase} 条\n` +
+        `装箱单：${allData.metadata.breakdown.packing} 条`;
       break;
 
     case 'filtered':

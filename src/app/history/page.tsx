@@ -169,7 +169,7 @@ export default function HistoryManagementPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [previewItem, setPreviewItem] = useState<HistoryItem | null>(null);
-  const [previewType, setPreviewType] = useState<'quotation'|'confirmation'|'invoice'|'purchase'>('quotation');
+  const [previewType, setPreviewType] = useState<'quotation'|'confirmation'|'invoice'|'purchase'|'packing'>('quotation');
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
