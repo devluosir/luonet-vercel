@@ -77,7 +77,7 @@ export const getInvoiceTitle: InvoiceTitleGetter = (data) => {
 // 计算总金额
 export function getTotalAmount(items: PDFGeneratorData['items']) {
   return items.reduce((sum, item) => sum + item.amount, 0);
-}
+} 
 
 // 错误处理
 export const handlePdfError = (error: unknown): string => {
@@ -102,10 +102,16 @@ export const supportsPDFPreview = () => {
   // 检测是否为移动设备
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
   
-  // 检测Android设备 - Android浏览器对PDF内嵌支持较差
+  // 检测Android设备 - 现代Android Chrome浏览器支持PDF预览
   const isAndroid = /Android/i.test(userAgent);
   if (isAndroid) {
-    return false;
+    // 检测是否为Chrome浏览器（支持PDF预览）
+    const isChrome = /Chrome/i.test(userAgent);
+    const isFirefox = /Firefox/i.test(userAgent);
+    const isEdge = /Edge/i.test(userAgent);
+    
+    // Chrome、Firefox、Edge通常支持PDF预览
+    return isChrome || isFirefox || isEdge;
   }
   
   // 检测iOS设备 - Safari支持PDF预览
@@ -197,7 +203,7 @@ export const handlePDFPreview = (
       deviceInfo,
       canPreview: false,
       message: deviceInfo.isAndroid 
-        ? '安卓设备不支持在线PDF预览，请下载文件查看'
+        ? '当前浏览器不支持在线PDF预览，请下载文件查看或尝试使用Chrome浏览器'
         : '您的设备不支持在线PDF预览，请下载文件查看'
     };
   }

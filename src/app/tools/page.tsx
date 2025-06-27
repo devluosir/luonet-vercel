@@ -382,8 +382,8 @@ export default function ToolsPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-xs sm:text-sm lg:text-base font-semibold text-gray-900 dark:text-white leading-tight line-clamp-2">
-                          {module.name}
-                        </h3>
+                        {module.name}
+                      </h3>
                       </div>
                     </div>
                     

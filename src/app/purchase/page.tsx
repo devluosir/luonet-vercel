@@ -545,7 +545,7 @@ export default function PurchaseOrderPage() {
           title="采购订单 PDF 预览"
           data={data}
           itemType="purchase"
-        />
+              />
       )}
       <Footer />
     </div>

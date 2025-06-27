@@ -30,17 +30,28 @@ export default function PDFPreviewComponent({
 }: PDFPreviewComponentProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [isLoadingPDF, setIsLoadingPDF] = useState(true);
   
   const deviceInfo = getDeviceInfo();
   const previewInfo = handlePDFPreview(pdfUrl, {
-    autoDetectDevice: true,
+    autoDetectDevice: false, // 改为false，让我们自己控制预览逻辑
     showDownloadButton,
     showOpenInNewTab
   });
 
   // 检测iframe加载失败
   const handleIframeError = () => {
+    console.log('PDF iframe加载失败，切换到fallback模式');
+    setIsLoadingPDF(false);
     setShowFallback(true);
+  };
+
+  // 检测iframe是否成功加载
+  const handleIframeLoad = () => {
+    setIframeLoaded(true);
+    setIsLoadingPDF(false);
+    console.log('PDF iframe加载成功');
   };
 
   // 下载PDF
@@ -135,7 +146,7 @@ export default function PDFPreviewComponent({
 
         {/* 内容区域 */}
         <div className="flex-1 p-4">
-          {previewInfo.shouldShowFallback || showFallback ? (
+          {(!deviceInfo.canPreviewPDF && !deviceInfo.isAndroid) || showFallback ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center max-w-md">
                 <FileText className="w-16 h-16 mx-auto mb-4 text-blue-500 opacity-70" />
@@ -177,34 +188,70 @@ export default function PDFPreviewComponent({
                 {deviceInfo.isAndroid && (
                   <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
                     <p className="text-xs text-amber-700 dark:text-amber-400">
-                      💡 提示：安卓设备建议下载PDF后使用专业阅读器查看
+                      💡 提示：如需更好的预览体验，建议使用Chrome浏览器或下载PDF文件查看
                     </p>
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <iframe
-              src={pdfUrl}
-              className="w-full h-full rounded-lg border border-gray-200 dark:border-[#3A3A3C]"
-              title="PDF预览"
-              onError={handleIframeError}
-              onLoad={() => {
-                // 检测iframe是否成功加载PDF
-                const iframe = document.querySelector('iframe[src="' + pdfUrl + '"]') as HTMLIFrameElement;
-                if (iframe) {
-                  try {
-                    // 尝试访问iframe内容，如果失败则显示fallback
+            <div className="relative w-full h-full">
+              {/* 加载指示器 */}
+              {isLoadingPDF && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-[#2C2C2E]/80 backdrop-blur-sm rounded-lg z-10">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mx-auto mb-3"></div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {deviceInfo.isAndroid ? '正在尝试预览PDF...' : '正在加载PDF...'}
+                    </p>
+                    {deviceInfo.isAndroid && (
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                        如果无法预览，将自动切换到下载模式
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              <iframe
+                src={pdfUrl}
+                className="w-full h-full rounded-lg border border-gray-200 dark:border-[#3A3A3C]"
+                title="PDF预览"
+                onError={handleIframeError}
+                onLoad={() => {
+                  handleIframeLoad();
+                  // 对于安卓设备，设置超时检测
+                  if (deviceInfo.isAndroid) {
                     setTimeout(() => {
-                      if (iframe.contentDocument === null) {
-                        setShowFallback(true);
+                      // 检查iframe是否成功显示PDF内容
+                      const iframe = document.querySelector('iframe[src="' + pdfUrl + '"]') as HTMLIFrameElement;
+                      if (iframe) {
+                        try {
+                          // 检查iframe内容是否可访问
+                          const contentDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                          if (!contentDoc || contentDoc.title.includes('无法显示') || contentDoc.title.includes('not found')) {
+                            console.log('安卓设备PDF内容加载失败，切换到fallback模式');
+                            setIsLoadingPDF(false);
+                            setShowFallback(true);
+                          }
+                        } catch (e) {
+                          console.log('安卓设备PDF访问受限，切换到fallback模式');
+                          setIsLoadingPDF(false);
+                          setShowFallback(true);
+                        }
                       }
-                    }, 2000);
-                  } catch (e) {
-                    setShowFallback(true);
+                    }, 2000); // 2秒后检测
                   }
-                }
-              }}
+                  
+                  // 设置总体超时，防止永远加载
+                  setTimeout(() => {
+                    if (isLoadingPDF) {
+                      console.log('PDF加载超时，切换到fallback模式');
+                      setIsLoadingPDF(false);
+                      setShowFallback(true);
+                    }
+                  }, 5000); // 5秒总超时
+                }}
             />
           )}
         </div>

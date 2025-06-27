@@ -163,7 +163,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
   useEffect(() => {
     if (isOpen && item) {
       if (canPreview) {
-        generatePdfPreview();
+      generatePdfPreview();
       }
     }
   }, [isOpen, item, itemType, canPreview]);
@@ -200,13 +200,13 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
             </button>
             
             {/* 关闭按钮 */}
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
         </div>
         
         <div className="bg-white dark:bg-gray-800 rounded-b-xl flex items-center justify-center border border-gray-200 dark:border-gray-600" style={{padding:0}}>
