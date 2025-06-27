@@ -638,7 +638,7 @@ export default function PackingPage() {
                           className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
                         />
                         <span className="text-sm text-gray-700 dark:text-gray-300 select-none">
-                          SHIP'S SPARES IN TRANSIT
+                          SHIP&apos;S SPARES IN TRANSIT
                         </span>
                       </label>
                       
