@@ -334,17 +334,17 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
   // 计算描述列的动态宽度
   let descriptionWidth: number | 'auto' = 'auto';
   if (isCompact) {
-    // 为各个固定列预留空间
-    let reservedWidth = 8; // No.列
-    if (data.showHsCode) reservedWidth += 20; // HS Code列 - 增加宽度
-    reservedWidth += 10 + 10; // Qty + Unit列
-    if (data.showPrice) reservedWidth += 18 + 18; // U/Price + Amount列 - 缩小Amount列
-    if (data.showWeightAndPackage) reservedWidth += 14 + 14 + 10; // N.W. + G.W. + Pkgs列
-    if (data.showDimensions) reservedWidth += 25; // Dimensions列
+    // 为各个固定列预留空间 - 优化列宽分配
+    let reservedWidth = 10; // No.列 - 稍微增加
+    if (data.showHsCode) reservedWidth += 22; // HS Code列 - 增加宽度以防止长数字换行
+    reservedWidth += 12 + 12; // Qty + Unit列 - 稍微增加
+    if (data.showPrice) reservedWidth += 16 + 20; // U/Price + Amount列 - 调整比例
+    if (data.showWeightAndPackage) reservedWidth += 15 + 15 + 12; // N.W. + G.W. + Pkgs列 - 稍微增加
+    if (data.showDimensions) reservedWidth += 22; // Dimensions列 - 稍微减少
     
     // 页面可用宽度约为170mm（A4宽度210mm - 左右边距各15mm - 表格内边距）
     const availableWidth = 170;
-    descriptionWidth = Math.max(35, availableWidth - reservedWidth);
+    descriptionWidth = Math.max(30, availableWidth - reservedWidth); // 描述列最小宽度调整为30
   }
   
   // 使用 autoTable 绘制表格
@@ -357,7 +357,9 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
       cellPadding: isCompact ? 1.5 : 2,
       font: 'NotoSansSC',
       lineWidth: 0.1,
-      lineColor: [200, 200, 200]
+      lineColor: [200, 200, 200],
+      halign: 'center',
+      valign: 'middle'
     },
     headStyles: {
       fillColor: [240, 240, 240],
@@ -366,7 +368,8 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
       fontSize: isCompact ? 7 : 8,
       cellPadding: isCompact ? 2 : 3,
       minCellHeight: isCompact ? 12 : 10,
-      valign: 'middle'
+      valign: 'middle',
+      halign: 'center'
     },
     alternateRowStyles: {
       fillColor: [250, 250, 250]
@@ -380,30 +383,43 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
         data.cell.styles.fontStyle = 'bold';
         data.cell.styles.fillColor = [240, 240, 240]; // 稍微突出的背景色
       }
+      
+      // 设置第一列表头"No."不换行
+      if (data.section === 'head' && data.column.index === 0) {
+        data.cell.styles.overflow = 'hidden';
+        data.cell.styles.cellWidth = 'wrap';
+      }
+      
+      // 设置HS Code列不换行（如果显示HS Code且是第3列）
+      if (data.showHsCode && data.column.index === 2) {
+        data.cell.styles.overflow = 'hidden';
+        data.cell.styles.cellWidth = 'wrap';
+      }
     },
     columnStyles: {
-      0: { halign: 'center', cellWidth: isCompact ? 8 : 10 }, // No.
+      0: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 10 : 12, overflow: 'hidden' }, // No. - 稍微增加
       1: { 
-        halign: 'center', // Description也居中
+        halign: 'left', // Description左对齐，便于阅读
+        valign: 'middle',
         cellWidth: descriptionWidth
       }, // Description
-      ...(data.showHsCode ? {
-        [2]: { halign: 'center', cellWidth: isCompact ? 20 : 22 } // HS Code
-      } : {}),
-      [2 + (data.showHsCode ? 1 : 0)]: { halign: 'center', cellWidth: isCompact ? 10 : 12 }, // Qty
-      [3 + (data.showHsCode ? 1 : 0)]: { halign: 'center', cellWidth: isCompact ? 10 : 12 }, // Unit
-      ...(data.showPrice ? {
-        [getColumnIndex(data, 'unitPrice')]: { halign: 'center', cellWidth: isCompact ? 18 : 20 }, // U/Price - 改为居中
-        [getColumnIndex(data, 'amount')]: { halign: 'center', cellWidth: isCompact ? 18 : 20 } // Amount - 改为居中
-      } : {}),
-      ...(data.showWeightAndPackage ? {
-        [getColumnIndex(data, 'netWeight')]: { halign: 'center', cellWidth: isCompact ? 14 : 16 }, // N.W.
-        [getColumnIndex(data, 'grossWeight')]: { halign: 'center', cellWidth: isCompact ? 14 : 16 }, // G.W.
-        [getColumnIndex(data, 'packageQty')]: { halign: 'center', cellWidth: isCompact ? 10 : 12 } // Pkgs
-      } : {}),
-      ...(data.showDimensions ? {
-        [tableHeaders.length - 1]: { halign: 'center', cellWidth: isCompact ? 25 : 30 } // Dimensions
-      } : {})
+              ...(data.showHsCode ? {
+          [2]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 22 : 25, overflow: 'hidden' } // HS Code - 增加宽度，防止换行
+        } : {}),
+        [2 + (data.showHsCode ? 1 : 0)]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 12 : 14 }, // Qty - 稍微增加
+        [3 + (data.showHsCode ? 1 : 0)]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 12 : 14 }, // Unit - 稍微增加
+              ...(data.showPrice ? {
+          [getColumnIndex(data, 'unitPrice')]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 16 : 18 }, // U/Price - 调整
+          [getColumnIndex(data, 'amount')]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 20 : 22 } // Amount - 稍微增加
+        } : {}),
+              ...(data.showWeightAndPackage ? {
+          [getColumnIndex(data, 'netWeight')]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 15 : 17 }, // N.W. - 稍微增加
+          [getColumnIndex(data, 'grossWeight')]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 15 : 17 }, // G.W. - 稍微增加
+          [getColumnIndex(data, 'packageQty')]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 12 : 14 } // Pkgs - 稍微增加
+        } : {}),
+              ...(data.showDimensions ? {
+          [tableHeaders.length - 1]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 22 : 25 } // Dimensions - 稍微减少
+        } : {})
     },
     margin: { left: 15, right: 15 },
     tableWidth: 'auto',

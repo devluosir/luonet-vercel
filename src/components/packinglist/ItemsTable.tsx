@@ -137,7 +137,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
             <thead>
               <tr className="bg-gray-50 dark:bg-[#1C1C1E] border-b border-gray-200 dark:border-[#3A3A3C]">
                 <th className="px-2 py-3 text-center text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider w-12">No.</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider" style={{width: `${data.showHsCode ? '35%' : '45%'}`}}>Description</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider" style={{width: `${data.showHsCode ? '25%' : '30%'}`}}>Description</th>
                 {data.showHsCode && (
                   <th className="px-2 py-3 text-left text-xs font-semibold text-gray-600 dark:text-[#98989D] uppercase tracking-wider w-24">HS Code</th>
                 )}
