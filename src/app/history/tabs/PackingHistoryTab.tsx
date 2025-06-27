@@ -38,7 +38,7 @@ interface PackingHistory {
 
 interface Filters {
   search: string;
-  type: 'proforma' | 'packing' | 'both' | 'all';
+  type: any;
   dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
   amountRange: 'all' | 'low' | 'medium' | 'high';
 }
@@ -94,8 +94,16 @@ export default function PackingHistoryTab({
         if (!matches) return false;
       }
       
-      // 文档类型过滤
-      if (filters.type !== 'all' && item.documentType !== filters.type) {
+      // 文档类型过滤 - 只有当类型是装箱单相关类型时才进行过滤
+      if (filters.type !== 'all' && filters.type !== 'packing') {
+        // 如果过滤类型不是 'all' 且不是 'packing'，并且不是装箱单相关类型，则不显示
+        if (!['proforma', 'packing', 'both'].includes(filters.type)) {
+          return false;
+        }
+      }
+      
+      // 如果是装箱单相关的具体类型过滤
+      if (['proforma', 'packing', 'both'].includes(filters.type) && item.documentType !== filters.type) {
         return false;
       }
       
