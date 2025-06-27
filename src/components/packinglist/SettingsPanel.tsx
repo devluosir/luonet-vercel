@@ -10,7 +10,6 @@ interface SettingsPanelProps {
   dimensionUnit: string;
   currency: string;
   headerType: 'none' | 'bilingual' | 'english';
-  stampType: 'none' | 'shanghai' | 'hongkong';
   onDocumentTypeChange: (type: 'proforma' | 'packing' | 'both') => void;
   onToggleHsCode: (show: boolean) => void;
   onToggleDimensions: (show: boolean) => void;
@@ -19,7 +18,6 @@ interface SettingsPanelProps {
   onDimensionUnitChange: (unit: string) => void;
   onCurrencyChange: (currency: string) => void;
   onHeaderTypeChange: (type: 'none' | 'bilingual' | 'english') => void;
-  onStampTypeChange: (type: 'none' | 'shanghai' | 'hongkong') => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -32,7 +30,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   dimensionUnit,
   currency,
   headerType,
-  stampType,
   onDocumentTypeChange,
   onToggleHsCode,
   onToggleDimensions,
@@ -40,8 +37,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onTogglePrice,
   onDimensionUnitChange,
   onCurrencyChange,
-  onHeaderTypeChange,
-  onStampTypeChange
+  onHeaderTypeChange
 }) => {
   return (
     <div className={`overflow-hidden transition-all duration-300 ease-in-out
@@ -92,50 +88,22 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
         {/* 模板设置 */}
         <div className="border-t border-gray-200 dark:border-gray-600 pt-2">
-          <div className="grid grid-cols-2 gap-3">
-            {/* 文件头类型 */}
-            <div>
-              <div className="flex flex-wrap gap-1.5">
-                {['none', 'bilingual', 'english'].map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      headerType === type
-                        ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
-                        : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
-                    }`}
-                    onClick={() => onHeaderTypeChange(type as 'none' | 'bilingual' | 'english')}
-                  >
-                    {type === 'none' ? 'None' : type === 'bilingual' ? 'Bilingual' : 'English'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 印章类型 */}
-            <div>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  { value: 'none', label: 'None' },
-                  { value: 'shanghai', label: 'Shanghai' },
-                  { value: 'hongkong', label: 'Hong Kong' }
-                ].map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      stampType === value
-                        ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
-                        : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
-                    }`}
-                    onClick={() => onStampTypeChange(value as 'none' | 'shanghai' | 'hongkong')}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* 文件头类型 */}
+          <div className="flex flex-wrap gap-1.5">
+            {['none', 'bilingual', 'english'].map((type) => (
+              <button
+                key={type}
+                type="button"
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  headerType === type
+                    ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
+                    : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
+                }`}
+                onClick={() => onHeaderTypeChange(type as 'none' | 'bilingual' | 'english')}
+              >
+                {type === 'none' ? 'None' : type === 'bilingual' ? 'Bilingual' : 'English'}
+              </button>
+            ))}
           </div>
         </div>
 

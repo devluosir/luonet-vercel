@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { X, Eye, Download, Printer } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Download, FileText } from 'lucide-react';
+import { generateShippingMarksPDF } from '@/utils/shippingMarksPdfGenerator';
 
 interface ShippingMarksModalProps {
   isOpen: boolean;
@@ -14,53 +15,22 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
   value,
   onChange
 }) => {
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string>('');
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [pdfOrientation, setPdfOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [fontSize, setFontSize] = useState<number>(12);
+
+  const richTextRef = useRef<HTMLTextAreaElement>(null);
+
+
 
   if (!isOpen) return null;
 
-  const handlePreview = () => {
-    setIsPreviewMode(!isPreviewMode);
-  };
-
-  const handlePrint = () => {
-    if (value.trim()) {
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Shipping Marks</title>
-              <style>
-                body {
-                  font-family: Arial, sans-serif;
-                  padding: 20px;
-                  line-height: 1.6;
-                }
-                .shipping-marks {
-                  border: 2px solid #000;
-                  padding: 20px;
-                  white-space: pre-wrap;
-                  font-size: 14px;
-                  text-align: left;
-                }
-                @media print {
-                  body { margin: 0; }
-                  .shipping-marks { border: 2px solid #000; }
-                }
-              </style>
-            </head>
-            <body>
-              <h2>Shipping Marks</h2>
-              <div class="shipping-marks">${value.replace(/\n/g, '<br>')}</div>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
-      }
-    }
+  const handleSaveAndClose = () => {
+    // 文本已经通过 onChange 同步，直接关闭即可
+    onClose();
   };
 
   const handleExportPDF = async () => {
@@ -68,38 +38,55 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
     
     setIsGenerating(true);
     try {
-      // 这里可以集成PDF生成库，比如jsPDF
-      console.log('Exporting Shipping Marks to PDF...', value);
-      
-      // 模拟PDF生成过程
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // 创建简单的PDF下载（实际项目中应该使用专业的PDF库）
-      const blob = new Blob([value], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'shipping-marks.txt';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
+      await generateShippingMarksPDF(value, false, pdfOrientation, fontSize, 'bold', '#000000');
     } catch (error) {
       console.error('Error exporting PDF:', error);
+      alert('PDF生成失败，请重试');
     } finally {
       setIsGenerating(false);
     }
   };
+
+  const handlePDFPreview = async () => {
+    if (!value.trim()) return;
+    
+    setIsGeneratingPreview(true);
+    try {
+      const previewUrl = await generateShippingMarksPDF(value, true, pdfOrientation, fontSize, 'bold', '#000000') as string;
+      setPdfPreviewUrl(previewUrl);
+      setShowPDFPreview(true);
+    } catch (error) {
+      console.error('Error generating PDF preview:', error);
+      alert('PDF预览生成失败，请重试');
+    } finally {
+      setIsGeneratingPreview(false);
+    }
+  };
+
+  const closePDFPreview = () => {
+    setShowPDFPreview(false);
+    if (pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl('');
+    }
+  };
+
+
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
         {/* 标题栏 */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-[#3A3A3C]">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]">
-            Shipping Marks
-          </h2>
+          <div className="flex items-center gap-3">
+            <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]">
+              Shipping Marks
+            </h2>
+            <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+              {value.length} 字符
+            </span>
+          </div>
           <button
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] transition-colors"
@@ -108,114 +95,185 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
           </button>
         </div>
 
-        {/* 工具栏 */}
-        <div className="flex items-center gap-2 p-4 border-b border-gray-200 dark:border-[#3A3A3C] bg-gray-50 dark:bg-[#1C1C1E]">
-          <button
-            onClick={handlePreview}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              isPreviewMode
-                ? 'bg-[#007AFF] text-white shadow-sm'
-                : 'bg-white dark:bg-[#2C2C2E] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#3A3A3C]'
-            }`}
-          >
-            <Eye className="w-4 h-4" />
-            {isPreviewMode ? 'Edit' : 'Preview'}
-          </button>
-          
-          <button
-            onClick={handlePrint}
-            disabled={!value.trim()}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-white dark:bg-[#2C2C2E] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#3A3A3C] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-          >
-            <Printer className="w-4 h-4" />
-            Print
-          </button>
-          
-          <button
-            onClick={handleExportPDF}
-            disabled={!value.trim() || isGenerating}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-[#007AFF] text-white hover:bg-[#0063CC] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-          >
-            {isGenerating ? (
-              <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
-            {isGenerating ? 'Exporting...' : 'Export PDF'}
-          </button>
-        </div>
 
-        {/* 内容区域 */}
-        <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 200px)' }}>
-          {isPreviewMode ? (
-            /* 预览模式 */
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-800 dark:text-[#F5F5F7]">Preview</h3>
-              <div className="border-2 border-gray-300 dark:border-gray-600 rounded-lg p-6 bg-white dark:bg-[#1C1C1E] min-h-[300px]">
-                {value ? (
-                  <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200 leading-relaxed text-left">
-                    {value}
-                  </pre>
-                ) : (
-                  <div className="text-gray-400 dark:text-gray-500 italic text-left">
-                    No shipping marks entered
-                  </div>
-                )}
+
+        {/* PDF设置栏 */}
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-[#3A3A3C] bg-white dark:bg-[#2C2C2E]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">PDF方向:</span>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setPdfOrientation('portrait')}
+                    className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
+                      pdfOrientation === 'portrait'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    📄 纵向
+                  </button>
+                  <button
+                    onClick={() => setPdfOrientation('landscape')}
+                    className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${
+                      pdfOrientation === 'landscape'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    📃 横向
+                  </button>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">PDF字号:</span>
+                <select
+                  value={fontSize}
+                  onChange={(e) => setFontSize(Number(e.target.value))}
+                  className="px-3 py-1.5 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                >
+                  {[8, 10, 12, 14, 16, 18, 20, 22, 24].map(size => (
+                    <option key={size} value={size}>{size}pt</option>
+                  ))}
+                </select>
               </div>
             </div>
-          ) : (
-            /* 编辑模式 */
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-800 dark:text-[#F5F5F7]">Edit Shipping Marks</h3>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {value.length} characters
-                </span>
-              </div>
-              <textarea
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="w-full h-96 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#1C1C1E] text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30 resize-none font-mono text-sm leading-relaxed"
-                placeholder="Enter shipping marks, marking numbers, or any special shipping instructions...
 
-Example:
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePDFPreview}
+                disabled={!value.trim() || isGeneratingPreview}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isGeneratingPreview ? (
+                  <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <FileText className="w-4 h-4" />
+                )}
+                PDF预览
+              </button>
+              
+              <button
+                onClick={handleExportPDF}
+                disabled={!value.trim() || isGenerating}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isGenerating ? (
+                  <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                导出PDF
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 文本编辑区域 */}
+        <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 400px)' }}>
+          <div className="space-y-4">
+            <textarea
+              ref={richTextRef}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              className="w-full h-96 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-[#1C1C1E] text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none font-mono text-sm leading-relaxed"
+              placeholder="输入运输标记、标识号码或特殊运输说明...
+
+示例:
 FRAGILE - HANDLE WITH CARE
 THIS SIDE UP
 Made in China
 Export to: USA
 Order No: ORD-2024-001"
-              />
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                <p>💡 Tips:</p>
-                <ul className="list-disc list-inside space-y-1 mt-1">
-                  <li>Use line breaks to separate different marks</li>
-                  <li>Include handling instructions if needed</li>
-                  <li>Add order references for tracking</li>
-                </ul>
-              </div>
+            />
+            
+            <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+              <p className="font-medium mb-2">💡 使用提示:</p>
+              <ul className="space-y-1">
+                <li>• 直接输入运输标记内容</li>
+                <li>• 使用换行分隔不同的标记</li>
+                <li>• PDF字号通过下方设置调整</li>
+                <li>• PDF导出使用统一的粗体黑色格式</li>
+              </ul>
             </div>
-          )}
+          </div>
         </div>
 
         {/* 底部按钮 */}
         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-[#3A3A3C] bg-gray-50 dark:bg-[#1C1C1E]">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#3A3A3C] rounded-lg transition-colors"
+            className="px-6 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#3A3A3C] rounded-lg transition-colors"
           >
-            Cancel
+            取消
           </button>
           <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium bg-[#007AFF] text-white hover:bg-[#0063CC] rounded-lg transition-colors"
+            onClick={handleSaveAndClose}
+            className="px-6 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
           >
-            Save & Close
+            保存并关闭
           </button>
         </div>
       </div>
+      
+      {/* PDF 预览模态框 */}
+      {showPDFPreview && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">PDF预览</h3>
+                <div className="flex gap-2">
+                  <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full">
+                    {pdfOrientation === 'portrait' ? '📄 纵向' : '📃 横向'}
+                  </span>
+                  <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">
+                    {fontSize}pt
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportPDF}
+                  disabled={isGenerating}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+                >
+                  {isGenerating ? (
+                    <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  {isGenerating ? '下载中...' : '下载PDF'}
+                </button>
+                <button
+                  onClick={closePDFPreview}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 bg-gray-100 dark:bg-black p-4">
+              <iframe
+                src={pdfPreviewUrl}
+                className="w-full h-full rounded-lg bg-white shadow-lg"
+                title="PDF预览"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }; 

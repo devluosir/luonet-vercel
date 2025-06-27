@@ -74,8 +74,8 @@ interface PackingData {
   documentType: 'proforma' | 'packing' | 'both';
   templateConfig: {
     headerType: 'none' | 'bilingual' | 'english';
-    stampType: 'none' | 'shanghai' | 'hongkong';
   };
+  customUnits?: string[];
 }
 
 export default function PackingPage() {
@@ -131,9 +131,9 @@ export default function PackingPage() {
     dimensionUnit: 'cm',
     documentType: 'packing',
     templateConfig: {
-      headerType: 'bilingual',
-      stampType: 'none'
-    }
+      headerType: 'bilingual'
+    },
+    customUnits: []
   });
 
   // 计算总价
@@ -141,21 +141,50 @@ export default function PackingPage() {
     return quantity * unitPrice;
   }, []);
 
+  // 默认单位列表（需要单复数变化的单位）
+  const defaultUnits = ['pc', 'set', 'length'] as const;
+
+  // 处理单位的单复数
+  const getUnitDisplay = (baseUnit: string, quantity: number) => {
+    if (defaultUnits.includes(baseUnit as typeof defaultUnits[number])) {
+      return quantity > 1 ? `${baseUnit}s` : baseUnit;
+    }
+    return baseUnit; // 自定义单位不变化单复数
+  };
+
   // 更新行项目
   const updateLineItem = (index: number, field: keyof PackingItem, value: string | number) => {
     setPackingData(prev => {
       const newItems = [...prev.items];
       const item = { ...newItems[index] };
       
-      // 数值字段需要转换为数字
-      if (field === 'quantity' || field === 'unitPrice' || field === 'netWeight' || field === 'grossWeight' || field === 'packageQty') {
+      if (field === 'unit') {
+        // 处理单位变更，根据当前数量决定是否需要复数形式
+        const baseUnit = value.toString().replace(/s$/, '');
+        const quantity = newItems[index].quantity;
+        item.unit = defaultUnits.includes(baseUnit as typeof defaultUnits[number]) 
+          ? getUnitDisplay(baseUnit, quantity) 
+          : value.toString();
+      } else if (field === 'quantity') {
+        // 更新数量时，同时更新单位的单复数
+        const quantity = Number(value);
+        const baseUnit = newItems[index].unit.replace(/s$/, '');
+        item.quantity = quantity;
+        item.unit = defaultUnits.includes(baseUnit as typeof defaultUnits[number]) 
+          ? getUnitDisplay(baseUnit, quantity) 
+          : newItems[index].unit;
+        
+        // 如果是数量变化，重新计算总价
+        item.totalPrice = calculateTotalPrice(quantity, newItems[index].unitPrice);
+      } else if (field === 'unitPrice' || field === 'netWeight' || field === 'grossWeight' || field === 'packageQty') {
+        // 其他数值字段需要转换为数字
         item[field] = typeof value === 'string' ? parseFloat(value) || 0 : value;
         
-        // 如果是数量或单价变化，重新计算总价
-        if (field === 'quantity' || field === 'unitPrice') {
+        // 如果是单价变化，重新计算总价
+        if (field === 'unitPrice') {
           item.totalPrice = calculateTotalPrice(
-            field === 'quantity' ? item.quantity : newItems[index].quantity,
-            field === 'unitPrice' ? item.unitPrice : newItems[index].unitPrice
+            newItems[index].quantity,
+            item.unitPrice
           );
         }
       } else {
@@ -231,13 +260,8 @@ export default function PackingPage() {
     
     try {
       // 验证必填字段
-      if (!packingData.consignee.name.trim()) {
-        alert('Please fill in consignee information');
-        return;
-      }
-
-      if (!packingData.orderNo.trim() && !packingData.invoiceNo.trim()) {
-        alert('Please fill in Order No. or Invoice No.');
+      if (!packingData.invoiceNo.trim()) {
+        alert('Please fill in Invoice No.');
         return;
       }
 
@@ -257,8 +281,8 @@ export default function PackingPage() {
     setIsLoading(true);
     try {
       // 验证必填字段
-      if (!packingData.consignee.name.trim()) {
-        alert('Please fill in consignee information');
+      if (!packingData.invoiceNo.trim()) {
+        alert('Please fill in Invoice No.');
         return;
       }
 
@@ -278,8 +302,8 @@ export default function PackingPage() {
 
   // 保存
   const handleSave = useCallback(async () => {
-    if (!packingData.consignee.name.trim()) {
-      setSaveMessage('Please fill in consignee information');
+    if (!packingData.invoiceNo.trim()) {
+      setSaveMessage('Please fill in Invoice No.');
       setSaveSuccess(false);
       setTimeout(() => setSaveMessage(''), 2000);
       return;
@@ -408,7 +432,6 @@ export default function PackingPage() {
                 dimensionUnit={packingData.dimensionUnit}
                 currency={packingData.currency}
                 headerType={packingData.templateConfig.headerType}
-                stampType={packingData.templateConfig.stampType}
                 onDocumentTypeChange={handleDocumentTypeChange}
                 onToggleHsCode={(show) => setPackingData(prev => ({ ...prev, showHsCode: show }))}
                 onToggleDimensions={(show) => setPackingData(prev => ({ ...prev, showDimensions: show }))}
@@ -420,10 +443,6 @@ export default function PackingPage() {
                   ...prev, 
                   templateConfig: { ...prev.templateConfig, headerType } 
                 }))}
-                onStampTypeChange={(stampType) => setPackingData(prev => ({ 
-                  ...prev, 
-                  templateConfig: { ...prev.templateConfig, stampType } 
-                }))}
               />
 
               {/* 基本信息区域 */}
@@ -434,22 +453,25 @@ export default function PackingPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* 左侧：Consignee + Order No. */}
                       <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">Consignee</h3>
-                          <div className="h-px flex-1 bg-gradient-to-r from-gray-200 dark:from-gray-600 to-transparent"></div>
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">Consignee</h3>
+                            <div className="h-px flex-1 bg-gradient-to-r from-gray-200 dark:from-gray-600 to-transparent"></div>
+                          </div>
+                          <textarea
+                            value={packingData.consignee.name}
+                            onChange={(e) => setPackingData(prev => ({ 
+                              ...prev, 
+                              consignee: { ...prev.consignee, name: e.target.value }
+                            }))}
+                            className={`${inputClassName} min-h-[120px] resize-none`}
+                            placeholder="Enter consignee information including company name, address, contact details..."
+                          />
                         </div>
-                        <textarea
-                          value={packingData.consignee.name}
-                          onChange={(e) => setPackingData(prev => ({ 
-                            ...prev, 
-                            consignee: { ...prev.consignee, name: e.target.value }
-                          }))}
-                          className={`${inputClassName} min-h-[120px] resize-none`}
-                          placeholder="Enter consignee information including company name, address, contact details..."
-                        />
+                        
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                            Order No. *
+                            Order No.
                           </label>
                           <input
                             type="text"
@@ -465,7 +487,7 @@ export default function PackingPage() {
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                            Invoice No.
+                            Invoice No. *
                           </label>
                           <input
                             type="text"
@@ -477,7 +499,7 @@ export default function PackingPage() {
                         </div>
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                            Date *
+                            Date
                           </label>
                           <input
                             type="date"

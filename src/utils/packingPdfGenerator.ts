@@ -46,7 +46,6 @@ interface PackingData {
   documentType: 'proforma' | 'packing' | 'both';
   templateConfig: {
     headerType: 'none' | 'bilingual' | 'english';
-    stampType: 'none' | 'shanghai' | 'hongkong';
   };
 }
 
@@ -81,27 +80,35 @@ export async function generatePackingListPDF(data: PackingData, preview: boolean
     // 添加表头
     if (data.templateConfig.headerType !== 'none') {
       try {
-        const headerImage = `data:image/png;base64,${embeddedResources.headerImage}`;
-        const imgProperties = doc.getImageProperties(headerImage);
-        const imgWidth = pageWidth - 30;  // 左右各留15mm
-        const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
-        doc.addImage(
-          headerImage,
-          'PNG',
-          15,  // 左边距15mm
-          15,  // 上边距15mm
-          imgWidth,
-          imgHeight,
-          undefined,
-          'FAST'  // 使用快速压缩
-        );
-        doc.setFontSize(16);
-        doc.setFont('NotoSansSC', 'bold');
-        const title = getPackingListTitle(data);
-        const titleWidth = doc.getTextWidth(title);
-        const titleY = margin + imgHeight + 5;  // 标题Y坐标
-        doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-        currentY = titleY + 15;
+        // 根据headerType选择对应的表头图片
+        const headerImageBase64 = getHeaderImage(data.templateConfig.headerType);
+
+        if (headerImageBase64) {
+          const headerImage = `data:image/png;base64,${headerImageBase64}`;
+          const imgProperties = (doc as any).getImageProperties(headerImage);
+          const imgWidth = pageWidth - 30;  // 左右各留15mm
+          const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
+          doc.addImage(
+            headerImage,
+            'PNG',
+            15,  // 左边距15mm
+            15,  // 上边距15mm
+            imgWidth,
+            imgHeight,
+            undefined,
+            'FAST'  // 使用快速压缩
+          );
+          doc.setFontSize(16);
+          doc.setFont('NotoSansSC', 'bold');
+          const title = getPackingListTitle(data);
+          const titleWidth = doc.getTextWidth(title);
+          const titleY = margin + imgHeight + 5;  // 标题Y坐标
+          doc.text(title, (pageWidth - titleWidth) / 2, titleY);
+          currentY = titleY + 20;
+        } else {
+          // 如果没有找到对应的表头图片，使用无表头的处理方式
+          currentY = handleNoHeader(doc, data, margin, pageWidth);
+        }
       } catch (error) {
         console.error('Error processing header:', error);
         currentY = handleHeaderError(doc, data, margin, pageWidth);
@@ -113,19 +120,18 @@ export async function generatePackingListPDF(data: PackingData, preview: boolean
     // 基本信息区域（包含 SHIP'S SPARES IN TRANSIT）
     currentY = renderBasicInfo(doc, data, currentY, pageWidth, margin);
 
-    // 运输标记
-    if (data.markingNo) {
-      currentY = renderShippingMarks(doc, data, currentY, pageWidth, margin);
-    }
+    // 运输标记 - 已取消显示
+    // if (data.markingNo) {
+    //   currentY = renderShippingMarks(doc, data, currentY, pageWidth, margin);
+    // }
 
-    // 商品表格
+    // 商品表格 - 紧跟在基本信息后
     currentY = await renderPackingTable(doc, data, currentY);
 
     // 备注
     currentY = renderRemarks(doc, data, currentY, pageWidth, margin);
 
-    // 添加印章
-    await renderStamp(doc, data, currentY, margin);
+
 
     // 添加页码
     addPageNumbers(doc, pageWidth, pageHeight, margin);
@@ -136,6 +142,20 @@ export async function generatePackingListPDF(data: PackingData, preview: boolean
   } catch (error) {
     console.error('Error generating packing list PDF:', error);
     throw error;
+  }
+}
+
+// 获取表头图片
+function getHeaderImage(headerType: 'none' | 'bilingual' | 'english'): string {
+  switch (headerType) {
+    case 'bilingual':
+      // 使用双语表头图片
+      return embeddedResources.headerImage;
+    case 'english':
+      // 使用英文表头图片
+      return embeddedResources.headerEnglish;
+    default:
+      return '';
   }
 }
 
@@ -170,39 +190,50 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
   doc.setFontSize(10);
   doc.setFont('NotoSansSC', 'normal');
 
-  // 左侧：收货人信息
+  // 左侧：收货人信息（增加宽度）
   doc.setFont('NotoSansSC', 'bold');
   doc.text('Consignee:', margin, currentY);
   doc.setFont('NotoSansSC', 'normal');
   
+  let leftY = currentY;
   if (data.consignee.name.trim()) {
-    const consigneeLines = doc.splitTextToSize(data.consignee.name.trim(), 100);
+    // 增加收件人信息的宽度从100增加到130
+    const consigneeLines = doc.splitTextToSize(data.consignee.name.trim(), 130);
     consigneeLines.forEach((line: string, index: number) => {
-      doc.text(String(line), margin, currentY + 5 + (index * 4));
+      doc.text(String(line), margin, leftY + 5 + (index * 4));
     });
-    currentY += 5 + (consigneeLines.length * 4);
+    leftY += 5 + (consigneeLines.length * 4) + 5;
+  } else {
+    leftY += 10;
   }
 
-  // 右侧：订单信息
-  let rightY = startY;
-  const colonX = rightMargin - 15;
-
+  // 左侧：Order No.（在Consignee下方，支持自动换行）
   if (data.orderNo) {
-    doc.setFontSize(10);
     doc.setFont('NotoSansSC', 'bold');
-    doc.text('Order No.', colonX - 2, rightY, { align: 'right' });
-    doc.text(':', colonX, rightY);
-    doc.setFont('NotoSansSC', 'normal');
-    doc.text(data.orderNo, colonX + 3, rightY);
-    rightY += 5;
+    doc.text('Order No.:', margin, leftY);
+    doc.setFont('NotoSansSC', 'bold'); // Order No.的值使用粗体
+    
+    // Order No.支持自动换行，最大宽度130
+    const orderNoLines = doc.splitTextToSize(data.orderNo, 130);
+    orderNoLines.forEach((line: string, index: number) => {
+      doc.text(String(line), margin + 25, leftY + (index * 4));
+    });
+    leftY += (orderNoLines.length * 4) + 5;
   }
+
+  // 右侧：Invoice No. + Date（调整位置更靠中间）
+  let rightY = startY;
+  const rightStartX = pageWidth * 0.65; // 从页面65%位置开始，而不是太靠右
+  const colonX = rightStartX + 30; // 冒号位置
 
   if (data.invoiceNo) {
     doc.setFont('NotoSansSC', 'bold');
     doc.text('Invoice No.', colonX - 2, rightY, { align: 'right' });
     doc.text(':', colonX, rightY);
-    doc.setFont('NotoSansSC', 'normal');
+    doc.setFont('NotoSansSC', 'bold');
+    doc.setTextColor(0, 122, 255); // 设置为蓝色 (RGB: 0, 122, 255)
     doc.text(data.invoiceNo, colonX + 3, rightY);
+    doc.setTextColor(0, 0, 0); // 重置为黑色
     rightY += 5;
   }
 
@@ -212,7 +243,7 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
   doc.setFont('NotoSansSC', 'normal');
   doc.text(data.date, colonX + 3, rightY);
 
-  return Math.max(currentY + 10, rightY + 10);
+  return Math.max(leftY, rightY);
 }
 
 // 渲染运输标记
@@ -230,20 +261,21 @@ function renderShippingMarks(doc: ExtendedJsPDF, data: PackingData, startY: numb
     doc.text(String(line), margin, currentY + (index * 4));
   });
   
-  return currentY + (markingLines.length * 4) + 10;
+  return currentY + (markingLines.length * 4) + 15;
 }
 
 // 渲染商品表格
 async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY: number): Promise<number> {
-  // 构建表头
+  // 构建表头 - 优化换行显示
   const tableHeaders = [
     'No.',
     'Description',
     ...(data.showHsCode ? ['HS Code'] : []),
     'Qty',
-    ...(data.showPrice ? ['Unit Price', 'Amount'] : []),
-    ...(data.showWeightAndPackage ? ['Net Weight (kg)', 'Gross Weight (kg)', 'Package Qty'] : []),
-    ...(data.showDimensions ? [`Dimensions (${data.dimensionUnit})`] : [])
+    'Unit',
+    ...(data.showPrice ? ['U/Price', 'Amount'] : []),
+    ...(data.showWeightAndPackage ? ['N.W.\n(kg)', 'G.W.\n(kg)', 'Pkgs'] : []),
+    ...(data.showDimensions ? [`Dimensions\n(${data.dimensionUnit})`] : [])
   ];
 
   // 构建表格数据
@@ -252,6 +284,7 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
     item.description,
     ...(data.showHsCode ? [item.hsCode] : []),
     item.quantity || '',
+    item.unit || '',
     ...(data.showPrice ? [
       item.unitPrice.toFixed(2),
       `${getCurrencySymbol(data.currency)}${item.totalPrice.toFixed(2)}`
@@ -278,6 +311,7 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
       'Total:',
       ...(data.showHsCode ? [''] : []),
       '',
+      '', // Unit列为空
       ...(data.showPrice ? [
         '',
         `${getCurrencySymbol(data.currency)}${totals.totalPrice.toFixed(2)}`
@@ -293,42 +327,90 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
     tableBody.push(totalRow);
   }
 
+  // 计算列数以优化布局
+  const totalColumns = tableHeaders.length;
+  const isCompact = totalColumns > 7; // 当列数超过7列时使用紧凑布局
+  
+  // 计算描述列的动态宽度
+  let descriptionWidth: number | 'auto' = 'auto';
+  if (isCompact) {
+    // 为各个固定列预留空间
+    let reservedWidth = 8; // No.列
+    if (data.showHsCode) reservedWidth += 20; // HS Code列 - 增加宽度
+    reservedWidth += 10 + 10; // Qty + Unit列
+    if (data.showPrice) reservedWidth += 18 + 18; // U/Price + Amount列 - 缩小Amount列
+    if (data.showWeightAndPackage) reservedWidth += 14 + 14 + 10; // N.W. + G.W. + Pkgs列
+    if (data.showDimensions) reservedWidth += 25; // Dimensions列
+    
+    // 页面可用宽度约为170mm（A4宽度210mm - 左右边距各15mm - 表格内边距）
+    const availableWidth = 170;
+    descriptionWidth = Math.max(35, availableWidth - reservedWidth);
+  }
+  
   // 使用 autoTable 绘制表格
   doc.autoTable({
     startY: startY,
     head: [tableHeaders],
     body: tableBody,
     styles: {
-      fontSize: 8,
-      cellPadding: 2,
-      font: 'NotoSansSC'
+      fontSize: isCompact ? 7 : 8,
+      cellPadding: isCompact ? 1.5 : 2,
+      font: 'NotoSansSC',
+      lineWidth: 0.1,
+      lineColor: [200, 200, 200]
     },
     headStyles: {
       fillColor: [240, 240, 240],
       textColor: [0, 0, 0],
-      fontStyle: 'bold'
+      fontStyle: 'bold',
+      fontSize: isCompact ? 7 : 8,
+      cellPadding: isCompact ? 2 : 3,
+      minCellHeight: isCompact ? 12 : 10,
+      valign: 'middle'
     },
     alternateRowStyles: {
       fillColor: [250, 250, 250]
     },
+    didParseCell: function(data: any) {
+      // 检查是否为Total行 - 通过检查第二列是否包含"Total:"
+      if (data.section === 'body' && 
+          data.row.cells && data.row.cells[1] && 
+          data.row.cells[1].raw && 
+          data.row.cells[1].raw.toString().includes('Total:')) {
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.fillColor = [240, 240, 240]; // 稍微突出的背景色
+      }
+    },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 12 }, // No.
-      1: { halign: 'left', cellWidth: 'auto' }, // Description
+      0: { halign: 'center', cellWidth: isCompact ? 8 : 10 }, // No.
+      1: { 
+        halign: 'center', // Description也居中
+        cellWidth: descriptionWidth
+      }, // Description
+      ...(data.showHsCode ? {
+        [2]: { halign: 'center', cellWidth: isCompact ? 20 : 22 } // HS Code
+      } : {}),
+      [2 + (data.showHsCode ? 1 : 0)]: { halign: 'center', cellWidth: isCompact ? 10 : 12 }, // Qty
+      [3 + (data.showHsCode ? 1 : 0)]: { halign: 'center', cellWidth: isCompact ? 10 : 12 }, // Unit
       ...(data.showPrice ? {
-        [getColumnIndex(data, 'unitPrice')]: { halign: 'right' },
-        [getColumnIndex(data, 'amount')]: { halign: 'right' }
+        [getColumnIndex(data, 'unitPrice')]: { halign: 'center', cellWidth: isCompact ? 18 : 20 }, // U/Price - 改为居中
+        [getColumnIndex(data, 'amount')]: { halign: 'center', cellWidth: isCompact ? 18 : 20 } // Amount - 改为居中
       } : {}),
       ...(data.showWeightAndPackage ? {
-        [getColumnIndex(data, 'netWeight')]: { halign: 'center' },
-        [getColumnIndex(data, 'grossWeight')]: { halign: 'center' },
-        [getColumnIndex(data, 'packageQty')]: { halign: 'center' }
+        [getColumnIndex(data, 'netWeight')]: { halign: 'center', cellWidth: isCompact ? 14 : 16 }, // N.W.
+        [getColumnIndex(data, 'grossWeight')]: { halign: 'center', cellWidth: isCompact ? 14 : 16 }, // G.W.
+        [getColumnIndex(data, 'packageQty')]: { halign: 'center', cellWidth: isCompact ? 10 : 12 } // Pkgs
+      } : {}),
+      ...(data.showDimensions ? {
+        [tableHeaders.length - 1]: { halign: 'center', cellWidth: isCompact ? 25 : 30 } // Dimensions
       } : {})
     },
-    margin: { left: 20, right: 20 },
-    tableWidth: 'auto'
+    margin: { left: 15, right: 15 },
+    tableWidth: 'auto',
+    theme: 'grid'
   });
 
-  return (doc as any).lastAutoTable.finalY + 10;
+  return (doc as any).lastAutoTable.finalY + 15;
 }
 
 // 获取列索引
@@ -336,7 +418,7 @@ function getColumnIndex(data: PackingData, columnType: string): number {
   let index = 2; // No. + Description
   
   if (data.showHsCode) index++;
-  index++; // Qty
+  index += 2; // Qty + Unit
   
   if (columnType === 'unitPrice' && data.showPrice) return index;
   if (data.showPrice) index += 2; // Unit Price + Amount
@@ -363,44 +445,63 @@ function renderRemarks(doc: ExtendedJsPDF, data: PackingData, startY: number, pa
   let currentY = startY;
   
   // 检查是否有备注内容
-  const hasFixedRemarks = data.remarkOptions.shipsSpares || data.remarkOptions.customsPurpose;
   const hasCustomRemarks = data.remarks.trim();
+  const hasCustomsPurpose = data.remarkOptions.customsPurpose;
   
-  if (!hasFixedRemarks && !hasCustomRemarks) {
+  // 如果没有任何备注内容，直接返回
+  if (!hasCustomRemarks && !hasCustomsPurpose) {
     return currentY;
   }
   
   doc.setFontSize(10);
+  doc.setFont('NotoSansSC', 'normal');
+  
+  // 如果仅有"FOR CUSTOMS PURPOSE ONLY"选项而没有自定义备注
+  if (!hasCustomRemarks && hasCustomsPurpose) {
+    doc.text('FOR CUSTOMS PURPOSE ONLY', margin, currentY);
+    return currentY + 5;
+  }
+  
+  // 如果有自定义备注，显示Notes标题和编号
   doc.setFont('NotoSansSC', 'bold');
-  doc.text('Remarks:', margin, currentY);
+  doc.text('Notes:', margin, currentY);
   currentY += 5;
   
   doc.setFont('NotoSansSC', 'normal');
   
-  // 固定备注（SHIP'S SPARES IN TRANSIT 已在标题下方显示，这里不重复）
-  if (data.remarkOptions.customsPurpose) {
-    doc.text('• FOR CUSTOMS PURPOSE ONLY', margin, currentY);
-    currentY += 5;
-  }
+  // 收集所有需要显示的备注项
+  const noteItems: string[] = [];
   
-  // 自定义备注
+  // 添加自定义备注（按行分割）
   if (hasCustomRemarks) {
-    const remarksLines = doc.splitTextToSize(data.remarks, pageWidth - (margin * 2));
-    remarksLines.forEach((line: string, index: number) => {
-      doc.text(String(line), margin, currentY + (index * 4));
-    });
-    currentY += remarksLines.length * 4;
+    const customRemarkLines = data.remarks.split('\n').filter(line => line.trim());
+    noteItems.push(...customRemarkLines);
   }
   
-  return currentY + 5;
+  // 如果选中了 "FOR CUSTOMS PURPOSE ONLY"，添加到列表中
+  if (hasCustomsPurpose) {
+    noteItems.push('FOR CUSTOMS PURPOSE ONLY');
+  }
+  
+  // 自动编号显示所有备注项
+  noteItems.forEach((item, index) => {
+    const numberedText = `${index + 1}. ${item.trim()}`;
+    const itemLines = doc.splitTextToSize(numberedText, pageWidth - (margin * 2));
+    itemLines.forEach((line: string, lineIndex: number) => {
+      doc.text(String(line), margin, currentY + (lineIndex * 4));
+    });
+    currentY += itemLines.length * 4 + 2; // 每个项目间增加2mm间距
+  });
+  
+  return currentY + 3;
 }
 
 // 添加页码
 function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: number, margin: number): void {
-  const totalPages = doc.getNumberOfPages();
+  const totalPages = (doc as any).getNumberOfPages();
   
   for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
+    (doc as any).setPage(i);
     doc.setFillColor(255, 255, 255);
     doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
     
@@ -410,8 +511,6 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
   }
 }
 
-
-
 // 处理表头错误的情况
 function handleHeaderError(doc: ExtendedJsPDF, data: PackingData, margin: number, pageWidth: number): number {
   doc.setFontSize(16);
@@ -420,7 +519,7 @@ function handleHeaderError(doc: ExtendedJsPDF, data: PackingData, margin: number
   const titleWidth = doc.getTextWidth(title);
   const titleY = margin + 5;
   doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-  return titleY + 15;
+  return titleY + 20;
 }
 
 // 处理无表头的情况
@@ -431,33 +530,10 @@ function handleNoHeader(doc: ExtendedJsPDF, data: PackingData, margin: number, p
   const titleWidth = doc.getTextWidth(title);
   const titleY = margin + 5;
   doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-  return titleY + 15;
+  return titleY + 20;
 }
 
-// 渲染印章
-async function renderStamp(doc: ExtendedJsPDF, data: PackingData, startY: number, margin: number): Promise<void> {
-  if (data.templateConfig.stampType !== 'none') {
-    try {
-      let stampImageBase64 = '';
-      if (data.templateConfig.stampType === 'shanghai') {
-        stampImageBase64 = embeddedResources.shanghaiStamp;
-      } else if (data.templateConfig.stampType === 'hongkong') {
-        stampImageBase64 = embeddedResources.hongkongStamp;
-      }
 
-      if (stampImageBase64) {
-        const stampImage = `data:image/png;base64,${stampImageBase64}`;
-        if (data.templateConfig.stampType === 'shanghai') {
-          doc.addImage(stampImage, 'PNG', margin, startY, 40, 40);
-        } else {
-          doc.addImage(stampImage, 'PNG', margin, startY, 73, 34);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading stamp image:', error);
-    }
-  }
-}
 
 // 保存 PDF
 function savePackingListPDF(doc: ExtendedJsPDF, data: PackingData): void {

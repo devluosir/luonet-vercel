@@ -15,6 +15,10 @@ const resources = [
     path: path.join(__dirname, '../public/images/header-bilingual.png'),
   },
   {
+    name: 'headerEnglish',
+    path: path.join(__dirname, '../public/images/header-english.png'),
+  },
+  {
     name: 'shanghaiStamp',
     path: path.join(__dirname, '../public/images/stamp-shanghai.png'),
   },
