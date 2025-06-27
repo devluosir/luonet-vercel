@@ -488,6 +488,7 @@ export default function PackingPage() {
                 dimensionUnit={packingData.dimensionUnit}
                 currency={packingData.currency}
                 headerType={packingData.templateConfig.headerType}
+                customUnits={packingData.customUnits}
                 onDocumentTypeChange={handleDocumentTypeChange}
                 onToggleHsCode={(show) => setPackingData(prev => ({ ...prev, showHsCode: show }))}
                 onToggleDimensions={(show) => setPackingData(prev => ({ ...prev, showDimensions: show }))}
@@ -499,6 +500,7 @@ export default function PackingPage() {
                   ...prev, 
                   templateConfig: { ...prev.templateConfig, headerType } 
                 }))}
+                onCustomUnitsChange={(units) => setPackingData(prev => ({ ...prev, customUnits: units }))}
               />
 
               {/* 基本信息区域 */}
@@ -604,7 +606,8 @@ export default function PackingPage() {
                     showWeightAndPackage: packingData.showWeightAndPackage,
                     showPrice: packingData.showPrice,
                     dimensionUnit: packingData.dimensionUnit,
-                    currency: packingData.currency
+                    currency: packingData.currency,
+                    customUnits: packingData.customUnits
                   }}
                   onItemChange={updateLineItem}
                   onAddLine={handleAddLine}

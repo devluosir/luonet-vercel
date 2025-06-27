@@ -278,6 +278,10 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
     ...(data.showDimensions ? [`Dimensions\n(${data.dimensionUnit})`] : [])
   ];
 
+  // 计算列数以优化布局
+  const totalColumns = tableHeaders.length;
+  const isCompact = totalColumns > 7; // 当列数超过7列时使用紧凑布局
+
   // 构建表格数据
   const tableBody = data.items.map((item, index) => [
     index + 1,
@@ -307,14 +311,14 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
     }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
 
     const totalRow = [
-      '',
-      'Total:',
-      ...(data.showHsCode ? [''] : []),
-      '',
+      '', // No.列为空
+      '', // Description列为空（将被手动绘制的Total:覆盖）
+      ...(data.showHsCode ? [''] : []), // HS Code列为空
+      '', // Qty列为空
       '', // Unit列为空
       ...(data.showPrice ? [
-        '',
-        `${getCurrencySymbol(data.currency)}${totals.totalPrice.toFixed(2)}`
+        '', // U/Price列为空（将被合并）
+        `${getCurrencySymbol(data.currency)}${totals.totalPrice.toFixed(2)}` // Amount列显示总价
       ] : []),
       ...(data.showWeightAndPackage ? [
         totals.netWeight.toFixed(2),
@@ -327,10 +331,6 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
     tableBody.push(totalRow);
   }
 
-  // 计算列数以优化布局
-  const totalColumns = tableHeaders.length;
-  const isCompact = totalColumns > 7; // 当列数超过7列时使用紧凑布局
-  
   // 计算描述列的动态宽度
   let descriptionWidth: number | 'auto' = 'auto';
   if (isCompact) {
@@ -348,6 +348,7 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
   }
   
   // 使用 autoTable 绘制表格
+  let tableResult: any;
   doc.autoTable({
     startY: startY,
     head: [tableHeaders],
@@ -374,28 +375,35 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
     alternateRowStyles: {
       fillColor: [250, 250, 250]
     },
-    didParseCell: function(data: any) {
-      // 检查是否为Total行 - 通过检查第二列是否包含"Total:"
-      if (data.section === 'body' && 
-          data.row.cells && data.row.cells[1] && 
-          data.row.cells[1].raw && 
-          data.row.cells[1].raw.toString().includes('Total:')) {
-        data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.fillColor = [240, 240, 240]; // 稍微突出的背景色
+    didParseCell: function(cellData: any) {
+      // 检查是否为Total行 - 通过检查Description列是否包含"Total:"
+      const isLastRow = cellData.section === 'body' && 
+                       cellData.row.index === cellData.table.body.length - 1;
+      
+      if (isLastRow) {
+        // 设置Total行的样式
+        cellData.cell.styles.fontStyle = 'bold';
+        cellData.cell.styles.fillColor = [240, 240, 240]; // 稍微突出的背景色
       }
       
       // 设置第一列表头"No."不换行
-      if (data.section === 'head' && data.column.index === 0) {
-        data.cell.styles.overflow = 'hidden';
-        data.cell.styles.cellWidth = 'wrap';
+      if (cellData.section === 'head' && cellData.column.index === 0) {
+        cellData.cell.styles.overflow = 'hidden';
+        cellData.cell.styles.cellWidth = 'wrap';
       }
       
       // 设置HS Code列不换行（如果显示HS Code且是第3列）
-      if (data.showHsCode && data.column.index === 2) {
-        data.cell.styles.overflow = 'hidden';
-        data.cell.styles.cellWidth = 'wrap';
+      if (data.showHsCode && cellData.column.index === 2) {
+        cellData.cell.styles.overflow = 'hidden';
+        cellData.cell.styles.cellWidth = 'wrap';
       }
     },
+    didDrawPage: function(data: any) {
+      // 保存表格数据用于后续处理
+      tableResult = data;
+    },
+
+
     columnStyles: {
       0: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 10 : 12, overflow: 'hidden' }, // No. - 稍微增加
       1: { 
@@ -425,6 +433,54 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
     tableWidth: 'auto',
     theme: 'grid'
   });
+
+  // 如果有总计行，手动绘制合并的单元格
+  if (data.showPrice || data.showWeightAndPackage) {
+    const finalY = (doc as any).lastAutoTable.finalY;
+    const table = (doc as any).lastAutoTable;
+    
+    if (table && table.body && table.body.length > 0) {
+      // 获取最后一行（总计行）的信息
+      const lastRowIndex = table.body.length - 1;
+      const lastRow = table.body[lastRowIndex];
+      
+      if (lastRow && lastRow.cells) {
+                 // 计算需要合并的列数（No. + Description + 可能的HS Code + Qty + Unit + 可能的U/Price）
+         let mergeEndCol = 2; // No. + Description
+         if (data.showHsCode) mergeEndCol += 1; // HS Code
+         mergeEndCol += 2; // Qty + Unit
+         if (data.showPrice) mergeEndCol += 1; // U/Price（但不包括Amount列，Amount列要显示总价）
+        
+        // 获取合并区域的位置和尺寸
+        const firstCell = lastRow.cells[0];
+        const lastMergeCell = lastRow.cells[mergeEndCol - 1];
+        
+        if (firstCell && lastMergeCell) {
+          const mergeX = firstCell.x;
+          const mergeY = firstCell.y;
+          const mergeWidth = (lastMergeCell.x + lastMergeCell.width) - firstCell.x;
+          const mergeHeight = firstCell.height;
+          
+          // 绘制合并的背景
+          doc.setFillColor(240, 240, 240);
+          doc.rect(mergeX, mergeY, mergeWidth, mergeHeight, 'F');
+          
+          // 绘制边框
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.1);
+          doc.rect(mergeX, mergeY, mergeWidth, mergeHeight, 'S');
+          
+          // 绘制居中的Total文本
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(isCompact ? 7 : 8);
+          doc.setFont('NotoSansSC', 'bold');
+          const textX = mergeX + mergeWidth / 2;
+          const textY = mergeY + mergeHeight / 2 + 1;
+          doc.text('Total:', textX, textY, { align: 'center' });
+        }
+      }
+    }
+  }
 
   return (doc as any).lastAutoTable.finalY + 15;
 }
