@@ -173,7 +173,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                     text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                     placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                    transition-all duration-200 resize-none overflow-hidden min-h-[60px]"
+                    transition-all duration-200 resize-none overflow-hidden min-h-[60px]
+                    ios-optimized-input"
                   placeholder="Enter product description..."
                 />
               </div>
@@ -189,7 +190,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                       focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                       text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                      placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
+                      placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                      ios-optimized-input"
                     placeholder="HS Code"
                   />
                 </div>
@@ -205,7 +207,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                       focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                       text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
-                      [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                      ios-optimized-input"
                     placeholder="0"
                   />
                 </div>
@@ -218,7 +221,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     onChange={(e) => handleUnitChange(index, e.target.value)}
                   className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                       focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                      text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center cursor-pointer appearance-none"
+                      text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center cursor-pointer appearance-none
+                      ios-optimized-input"
                   >
                     {availableUnits.map(unit => {
                       const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
@@ -244,7 +248,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       onChange={(e) => onItemChange(index, 'unitPrice', parseFloat(e.target.value) || 0)}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center"
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
+                        ios-optimized-input"
                       placeholder="0.00"
                       step="0.01"
                     />
@@ -273,7 +278,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       onChange={(e) => onItemChange(index, 'netWeight', parseFloat(e.target.value) || 0)}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center"
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
+                        ios-optimized-input"
                       placeholder="0.00"
                       step="0.01"
                     />
@@ -286,7 +292,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       onChange={(e) => onItemChange(index, 'grossWeight', parseFloat(e.target.value) || 0)}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center"
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
+                        ios-optimized-input"
                       placeholder="0.00"
                       step="0.01"
                     />
@@ -299,7 +306,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       onChange={(e) => onItemChange(index, 'packageQty', parseInt(e.target.value) || 0)}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center"
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
+                        ios-optimized-input"
                       placeholder="0"
                     />
               </div>
@@ -318,7 +326,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
                     className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                       focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                      text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center"
+                      text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
+                      ios-optimized-input"
                     placeholder="L×W×H"
                   />
                 </div>
@@ -442,7 +451,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden"
+                          transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
+                          ios-optimized-input"
                         style={{ height: '28px' }}
                         placeholder="Enter product description..."
                         onKeyDown={(e) => {
@@ -463,7 +473,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                             transition-all duration-200 text-center"
+                             transition-all duration-200 text-center
+                             ios-optimized-input"
                            placeholder="HS Code"
                          />
                        </td>
@@ -485,7 +496,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                           transition-all duration-200 text-center
-                          [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                          ios-optimized-input"
                         placeholder="0"
                       />
                     </td>
@@ -499,7 +511,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                           transition-all duration-200 text-center cursor-pointer
-                          appearance-none"
+                          appearance-none ios-optimized-input"
                       >
                         {availableUnits.map(unit => {
                           const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
@@ -532,7 +544,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                               placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                               transition-all duration-200 text-center
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                              ios-optimized-input"
                             placeholder="0.00"
                           />
                         </td>
@@ -567,7 +580,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                               placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                               transition-all duration-200 text-center
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                              ios-optimized-input"
                             placeholder="0.00"
                           />
                         </td>
@@ -588,7 +602,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                               placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                               transition-all duration-200 text-center
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                              ios-optimized-input"
                             placeholder="0.00"
                           />
                         </td>
@@ -609,7 +624,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                               placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                               transition-all duration-200 text-center
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                              ios-optimized-input"
                             placeholder="0"
                           />
                         </td>
@@ -626,7 +642,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            transition-all duration-200 text-center"
+                            transition-all duration-200 text-center
+                            ios-optimized-input"
                           placeholder="L×W×H"
                         />
                       </td>
