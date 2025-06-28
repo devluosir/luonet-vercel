@@ -543,23 +543,8 @@ export default function PackingPage() {
                             type="text"
                             value={packingData.invoiceNo}
                             onChange={(e) => setPackingData(prev => ({ ...prev, invoiceNo: e.target.value }))}
-                            className={`w-full px-4 py-2.5 rounded-xl backdrop-blur-lg
-                              bg-[#007AFF]/[0.03] dark:bg-[#0A84FF]/[0.03]
-                              border border-[#007AFF]/20 dark:border-[#0A84FF]/20
-                              focus:outline-none focus:ring-2 
-                              focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20
-                              hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30
-                              text-[15px] leading-relaxed font-medium
-                              text-[#007AFF] dark:text-[#0A84FF]
-                              placeholder:text-[#007AFF]/60 dark:placeholder:text-[#0A84FF]/60
-                              transition-all duration-300`}
-                            style={{
-                              caretColor: '#007AFF',
-                              WebkitCaretColor: '#007AFF',
-                              WebkitTextFillColor: 'initial',
-                              WebkitOpacity: 1,
-                              opacity: 1
-                            } as React.CSSProperties}
+                            className={inputClassName}
+                            style={iosCaretStyle}
                             placeholder="Invoice No. *"
                           />
                         </div>
