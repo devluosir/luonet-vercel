@@ -39,15 +39,17 @@ export const getIOSVersion = (): number | null => {
 export const optimizeIOSInput = (element: HTMLInputElement | HTMLTextAreaElement): void => {
   if (!isIOSDevice()) return;
   
+  const style = element.style as any; // 使用类型断言访问WebKit属性
+  
   // 确保光标可见
   element.style.caretColor = '#2563eb';
-  element.style.webkitAppearance = 'none';
+  style.webkitAppearance = 'none';
   element.style.appearance = 'none';
   
   // 优化触摸体验
   element.style.touchAction = 'manipulation';
-  element.style.webkitTouchCallout = 'none';
-  element.style.webkitUserSelect = 'text';
+  style.webkitTouchCallout = 'none';
+  style.webkitUserSelect = 'text';
   element.style.userSelect = 'text';
   
   // 防止自动放大
@@ -109,7 +111,7 @@ export const getIOSOptimizedInputProps = () => {
       WebkitUserSelect: 'text',
       userSelect: 'text',
       fontSize: 'max(16px, 1em)'
-    },
+    } as React.CSSProperties,
     onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const element = e.target;
       element.style.caretColor = '#2563eb';

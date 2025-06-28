@@ -14,7 +14,7 @@ const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
 const defaultUnits = ['pc', 'set', 'length'] as const;
 
 // iOS光标优化的内联样式
-const iosCaretStyle = {
+const iosCaretStyle: any = {
   caretColor: '#2563eb',
   WebkitCaretColor: '#2563eb',
   WebkitTextFillColor: 'initial',
@@ -23,7 +23,7 @@ const iosCaretStyle = {
 };
 
 // 暗色模式的光标颜色
-const iosCaretStyleDark = {
+const iosCaretStyleDark: any = {
   caretColor: '#60a5fa',
   WebkitCaretColor: '#60a5fa',
   WebkitTextFillColor: 'initial',
@@ -60,13 +60,15 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
   }, []);
 
   // iOS输入框优化处理函数
-  const handleIOSInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleIOSInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const element = e.target;
+    const style = element.style as any; // 使用类型断言来访问WebKit属性
+    
     // 强制设置光标颜色
     element.style.caretColor = isDarkMode ? '#60a5fa' : '#2563eb';
-    element.style.webkitCaretColor = isDarkMode ? '#60a5fa' : '#2563eb';
-    element.style.webkitTextFillColor = 'initial';
-    element.style.webkitOpacity = '1';
+    style.webkitCaretColor = isDarkMode ? '#60a5fa' : '#2563eb';
+    style.webkitTextFillColor = 'initial';
+    style.webkitOpacity = '1';
     element.style.opacity = '1';
     
     // 延迟滚动到可视区域，避免键盘遮挡
