@@ -88,9 +88,9 @@ export const handlePdfError = (error: unknown): string => {
 };
 
 // 扩展jsPDF类型以支持新字体
-export interface ExtendedJsPDF extends jsPDF {
-  addFileToVFS(filename: string, content: string): void;
-}
+export type ExtendedJsPDF = jsPDF & {
+  addFileToVFS?: (filename: string, content: string) => void;
+};
 
 // 检测设备是否支持PDF内嵌预览
 export const supportsPDFPreview = () => {
