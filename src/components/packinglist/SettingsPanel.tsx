@@ -132,35 +132,35 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Show:</span>
             
             {/* HS Code */}
-            <label className="flex items-center gap-1 cursor-pointer">
+            <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
               <input
                 type="checkbox"
                 checked={showHsCode}
                 onChange={(e) => onToggleHsCode(e.target.checked)}
-                className="w-3 h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1"
+                className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
               />
               <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">HS</span>
             </label>
             
             {/* Weight & Package */}
-            <label className="flex items-center gap-1 cursor-pointer">
+            <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
               <input
                 type="checkbox"
                 checked={showWeightAndPackage}
                 onChange={(e) => onToggleWeightAndPackage(e.target.checked)}
-                className="w-3 h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1"
+                className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
               />
               <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Weight</span>
             </label>
             
             {/* Dimensions */}
             <div className="flex items-center gap-1">
-              <label className="flex items-center gap-1 cursor-pointer">
+              <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
                 <input
                   type="checkbox"
                   checked={showDimensions}
                   onChange={(e) => onToggleDimensions(e.target.checked)}
-                  className="w-3 h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1"
+                  className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
                 />
                 <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Size</span>
               </label>
@@ -192,12 +192,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             
             {/* Price */}
             <div className="flex items-center gap-1">
-              <label className="flex items-center gap-1 cursor-pointer">
+              <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
                 <input
                   type="checkbox"
                   checked={showPrice}
                   onChange={(e) => onTogglePrice(e.target.checked)}
-                  className="w-3 h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1"
+                  className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
                 />
                 <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Price</span>
               </label>

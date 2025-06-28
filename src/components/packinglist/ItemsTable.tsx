@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 // 表格输入框基础样式
 const baseInputClassName = `w-full px-2 py-1.5 rounded-lg
@@ -79,6 +79,64 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 }) => {
   // 可用单位列表
   const availableUnits = [...defaultUnits, ...(data.customUnits || [])] as const;
+
+  // 编辑状态管理
+  const [editingQtyIndex, setEditingQtyIndex] = useState<number | null>(null);
+  const [editingQtyAmount, setEditingQtyAmount] = useState<string>('');
+  const [editingNetWeightIndex, setEditingNetWeightIndex] = useState<number | null>(null);
+  const [editingNetWeightAmount, setEditingNetWeightAmount] = useState<string>('');
+  const [editingGrossWeightIndex, setEditingGrossWeightIndex] = useState<number | null>(null);
+  const [editingGrossWeightAmount, setEditingGrossWeightAmount] = useState<string>('');
+  const [editingPackageQtyIndex, setEditingPackageQtyIndex] = useState<number | null>(null);
+  const [editingPackageQtyAmount, setEditingPackageQtyAmount] = useState<string>('');
+  const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
+  const [editingUnitPriceAmount, setEditingUnitPriceAmount] = useState<string>('');
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // 检测暗色模式
+  useEffect(() => {
+    const checkDarkMode = () => {
+      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setIsDarkMode(isDark);
+    };
+
+    checkDarkMode();
+    
+    if (window.matchMedia) {
+      const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      darkModeQuery.addEventListener('change', checkDarkMode);
+      return () => darkModeQuery.removeEventListener('change', checkDarkMode);
+    }
+  }, []);
+
+  // iOS光标优化样式
+  const iosCaretStyle = {
+    caretColor: '#007AFF',
+    WebkitCaretColor: '#007AFF',
+  } as React.CSSProperties;
+
+  const iosCaretStyleDark = {
+    caretColor: '#0A84FF',
+    WebkitCaretColor: '#0A84FF',
+  } as React.CSSProperties;
+
+  // iOS输入框优化处理函数
+  const handleIOSInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const element = e.target;
+    
+    // 设置光标颜色
+    element.style.caretColor = isDarkMode ? '#0A84FF' : '#007AFF';
+    (element.style as any).webkitCaretColor = isDarkMode ? '#0A84FF' : '#007AFF';
+    
+    // 延迟滚动到可视区域，避免键盘遮挡
+    setTimeout(() => {
+      element.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center',
+        inline: 'nearest'
+      });
+    }, 300);
+  };
 
   // 初始化函数，用于调整所有textarea的高度
   const initializeTextareaHeights = useCallback(() => {
@@ -202,17 +260,35 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               <div>
                   <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
                   <input
-                    type="number"
-                    value={item.quantity > 0 ? item.quantity : ''}
-                    onChange={(e) => handleQuantityChange(index, e.target.value)}
+                    type="text"
+                    inputMode="numeric"
+                    value={editingQtyIndex === index ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (/^\d*$/.test(value)) {
+                        setEditingQtyAmount(value);
+                        handleQuantityChange(index, value === '' ? 0 : parseInt(value));
+                      }
+                    }}
+                    onFocus={(e) => {
+                      setEditingQtyIndex(index);
+                      setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
+                      e.target.select();
+                      handleIOSInputFocus(e);
+                    }}
+                    onBlur={() => {
+                      setEditingQtyIndex(null);
+                      setEditingQtyAmount('');
+                    }}
                   className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                       focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                       text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                       [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                       ios-optimized-input"
                     placeholder="0"
-                    min="0"
-                    step="1"
+                    style={{
+                      ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                    }}
                   />
                 </div>
               
@@ -246,15 +322,34 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   <div>
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit Price</label>
                     <input
-                      type="number"
-                      value={item.unitPrice.toFixed(2)}
-                      onChange={(e) => onItemChange(index, 'unitPrice', parseFloat(e.target.value) || 0)}
+                      type="text"
+                      inputMode="decimal"
+                      value={editingUnitPriceIndex === index ? editingUnitPriceAmount : item.unitPrice.toFixed(2)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^\d*\.?\d*$/.test(value)) {
+                          setEditingUnitPriceAmount(value);
+                          onItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
+                        }
+                      }}
+                      onFocus={(e) => {
+                        setEditingUnitPriceIndex(index);
+                        setEditingUnitPriceAmount(item.unitPrice === 0 ? '' : item.unitPrice.toString());
+                        e.target.select();
+                        handleIOSInputFocus(e);
+                      }}
+                      onBlur={() => {
+                        setEditingUnitPriceIndex(null);
+                        setEditingUnitPriceAmount('');
+                      }}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                         text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                         ios-optimized-input"
                       placeholder="0.00"
-                      step="0.01"
+                      style={{
+                        ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                      }}
                     />
                   </div>
                   <div>
@@ -276,54 +371,108 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   <div>
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Net Weight (kg)</label>
                     <input
-                      type="number"
-                      value={item.netWeight > 0 ? item.netWeight.toFixed(2) : ''}
-                      onChange={(e) => onItemChange(index, 'netWeight', parseFloat(e.target.value) || 0)}
-                      onBlur={(e) => {
-                        const value = parseFloat(e.target.value) || 0;
-                        if (value > 0) {
-                          onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
+                      type="text"
+                      inputMode="decimal"
+                      value={editingNetWeightIndex === index ? editingNetWeightAmount : (item.netWeight > 0 ? item.netWeight.toFixed(2) : '')}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^\d*\.?\d*$/.test(value)) {
+                          setEditingNetWeightAmount(value);
+                          onItemChange(index, 'netWeight', value === '' ? 0 : parseFloat(value));
                         }
                       }}
+                      onFocus={(e) => {
+                        setEditingNetWeightIndex(index);
+                        setEditingNetWeightAmount(item.netWeight === 0 ? '' : item.netWeight.toString());
+                        e.target.select();
+                        handleIOSInputFocus(e);
+                      }}
+                                                  onBlur={(e) => {
+                              setEditingNetWeightIndex(null);
+                              setEditingNetWeightAmount('');
+                              const value = parseFloat(e.target.value) || 0;
+                              if (value > 0) {
+                                onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
+                              }
+                            }}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                         text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                         ios-optimized-input"
                       placeholder="0.00"
-                      step="0.01"
+                      style={{
+                        ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                      }}
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Gross Weight (kg)</label>
                     <input
-                      type="number"
-                      value={item.grossWeight > 0 ? item.grossWeight.toFixed(2) : ''}
-                      onChange={(e) => onItemChange(index, 'grossWeight', parseFloat(e.target.value) || 0)}
-                      onBlur={(e) => {
-                        const value = parseFloat(e.target.value) || 0;
-                        if (value > 0) {
-                          onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
+                      type="text"
+                      inputMode="decimal"
+                      value={editingGrossWeightIndex === index ? editingGrossWeightAmount : (item.grossWeight > 0 ? item.grossWeight.toFixed(2) : '')}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^\d*\.?\d*$/.test(value)) {
+                          setEditingGrossWeightAmount(value);
+                          onItemChange(index, 'grossWeight', value === '' ? 0 : parseFloat(value));
                         }
                       }}
+                      onFocus={(e) => {
+                        setEditingGrossWeightIndex(index);
+                        setEditingGrossWeightAmount(item.grossWeight === 0 ? '' : item.grossWeight.toString());
+                        e.target.select();
+                        handleIOSInputFocus(e);
+                      }}
+                                                  onBlur={(e) => {
+                              setEditingGrossWeightIndex(null);
+                              setEditingGrossWeightAmount('');
+                              const value = parseFloat(e.target.value) || 0;
+                              if (value > 0) {
+                                onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
+                              }
+                            }}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                         text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                         ios-optimized-input"
                       placeholder="0.00"
-                      step="0.01"
+                      style={{
+                        ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                      }}
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Packages</label>
                     <input
-                      type="number"
-                      value={item.packageQty > 0 ? item.packageQty : ''}
-                      onChange={(e) => onItemChange(index, 'packageQty', parseInt(e.target.value) || 0)}
+                      type="text"
+                      inputMode="numeric"
+                      value={editingPackageQtyIndex === index ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^\d*$/.test(value)) {
+                          setEditingPackageQtyAmount(value);
+                          onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
+                        }
+                      }}
+                      onFocus={(e) => {
+                        setEditingPackageQtyIndex(index);
+                        setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
+                        e.target.select();
+                        handleIOSInputFocus(e);
+                      }}
+                      onBlur={() => {
+                        setEditingPackageQtyIndex(null);
+                        setEditingPackageQtyAmount('');
+                      }}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                         text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                         ios-optimized-input"
                       placeholder="0"
+                      style={{
+                        ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                      }}
                     />
               </div>
                 </>
@@ -498,12 +647,23 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       <input
                         type="text"
                         inputMode="numeric"
-                        value={item.quantity > 0 ? item.quantity.toString() : ''}
+                        value={editingQtyIndex === index ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
                         onChange={(e) => {
                           const value = e.target.value;
                           if (/^\d*$/.test(value)) {
+                            setEditingQtyAmount(value);
                             handleQuantityChange(index, value === '' ? 0 : parseInt(value));
                           }
+                        }}
+                        onFocus={(e) => {
+                          setEditingQtyIndex(index);
+                          setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
+                          e.target.select();
+                          handleIOSInputFocus(e);
+                        }}
+                        onBlur={() => {
+                          setEditingQtyIndex(null);
+                          setEditingQtyAmount('');
                         }}
                         className="w-full px-3 py-1.5 bg-transparent border border-transparent
                           focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
@@ -514,6 +674,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                           ios-optimized-input"
                         placeholder="0"
+                        style={{
+                          ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                        }}
                       />
                     </td>
                       <td className="w-[80px] px-1 py-2">
@@ -546,12 +709,23 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={item.unitPrice.toFixed(2)}
+                            value={editingUnitPriceIndex === index ? editingUnitPriceAmount : item.unitPrice.toFixed(2)}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*\.?\d*$/.test(value)) {
+                                setEditingUnitPriceAmount(value);
                                 onItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
                               }
+                            }}
+                            onFocus={(e) => {
+                              setEditingUnitPriceIndex(index);
+                              setEditingUnitPriceAmount(item.unitPrice === 0 ? '' : item.unitPrice.toString());
+                              e.target.select();
+                              handleIOSInputFocus(e);
+                            }}
+                            onBlur={() => {
+                              setEditingUnitPriceIndex(null);
+                              setEditingUnitPriceAmount('');
                             }}
                             className="w-full px-3 py-1.5 bg-transparent border border-transparent
                               focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
@@ -562,6 +736,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                               ios-optimized-input"
                             placeholder="0.00"
+                            style={{
+                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                            }}
                           />
                         </td>
                           <td className="w-[100px] px-1 py-2">
@@ -582,19 +759,28 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={item.netWeight > 0 ? item.netWeight.toFixed(2) : ''}
+                            value={editingNetWeightIndex === index ? editingNetWeightAmount : (item.netWeight > 0 ? item.netWeight.toFixed(2) : '')}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*\.?\d*$/.test(value)) {
+                                setEditingNetWeightAmount(value);
                                 onItemChange(index, 'netWeight', value === '' ? 0 : parseFloat(value));
                               }
                             }}
-                            onBlur={(e) => {
-                              const value = parseFloat(e.target.value) || 0;
-                              if (value > 0) {
-                                onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
-                              }
+                            onFocus={(e) => {
+                              setEditingNetWeightIndex(index);
+                              setEditingNetWeightAmount(item.netWeight === 0 ? '' : item.netWeight.toString());
+                              e.target.select();
+                              handleIOSInputFocus(e);
                             }}
+                                                  onBlur={(e) => {
+                        setEditingNetWeightIndex(null);
+                        setEditingNetWeightAmount('');
+                        const value = parseFloat(e.target.value) || 0;
+                        if (value > 0) {
+                          onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
+                        }
+                      }}
                             className="w-full px-3 py-1.5 bg-transparent border border-transparent
                               focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                               hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
@@ -604,25 +790,37 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                               ios-optimized-input"
                             placeholder="0.00"
+                            style={{
+                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                            }}
                           />
                         </td>
                           <td className="w-[100px] px-1 py-2">
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={item.grossWeight > 0 ? item.grossWeight.toFixed(2) : ''}
+                            value={editingGrossWeightIndex === index ? editingGrossWeightAmount : (item.grossWeight > 0 ? item.grossWeight.toFixed(2) : '')}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*\.?\d*$/.test(value)) {
+                                setEditingGrossWeightAmount(value);
                                 onItemChange(index, 'grossWeight', value === '' ? 0 : parseFloat(value));
                               }
                             }}
-                            onBlur={(e) => {
-                              const value = parseFloat(e.target.value) || 0;
-                              if (value > 0) {
-                                onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
-                              }
+                            onFocus={(e) => {
+                              setEditingGrossWeightIndex(index);
+                              setEditingGrossWeightAmount(item.grossWeight === 0 ? '' : item.grossWeight.toString());
+                              e.target.select();
+                              handleIOSInputFocus(e);
                             }}
+                                                  onBlur={(e) => {
+                        setEditingGrossWeightIndex(null);
+                        setEditingGrossWeightAmount('');
+                        const value = parseFloat(e.target.value) || 0;
+                        if (value > 0) {
+                          onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
+                        }
+                      }}
                             className="w-full px-3 py-1.5 bg-transparent border border-transparent
                               focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                               hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
@@ -632,18 +830,32 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                               ios-optimized-input"
                             placeholder="0.00"
+                            style={{
+                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                            }}
                           />
                         </td>
                           <td className="w-[80px] px-1 py-2">
                           <input
                             type="text"
-                            inputMode="decimal"
-                            value={item.packageQty > 0 ? item.packageQty.toString() : ''}
+                            inputMode="numeric"
+                            value={editingPackageQtyIndex === index ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*$/.test(value)) {
+                                setEditingPackageQtyAmount(value);
                                 onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
                               }
+                            }}
+                            onFocus={(e) => {
+                              setEditingPackageQtyIndex(index);
+                              setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
+                              e.target.select();
+                              handleIOSInputFocus(e);
+                            }}
+                            onBlur={() => {
+                              setEditingPackageQtyIndex(null);
+                              setEditingPackageQtyAmount('');
                             }}
                             className="w-full px-3 py-1.5 bg-transparent border border-transparent
                               focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
@@ -654,6 +866,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                               ios-optimized-input"
                             placeholder="0"
+                            style={{
+                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                            }}
                           />
                         </td>
                       </>
