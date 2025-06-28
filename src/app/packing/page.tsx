@@ -23,6 +23,15 @@ const inputClassName = `w-full px-4 py-2.5 rounded-2xl
   hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
   shadow-sm hover:shadow-md`;
 
+// iOS光标优化样式
+const iosCaretStyle = {
+  caretColor: '#007AFF',
+  WebkitCaretColor: '#007AFF',
+  WebkitTextFillColor: 'initial',
+  WebkitOpacity: 1,
+  opacity: 1
+} as React.CSSProperties;
+
 
 
 // 标题样式
@@ -504,6 +513,7 @@ export default function PackingPage() {
                               consignee: { ...prev.consignee, name: e.target.value }
                             }))}
                             className={`${inputClassName} min-h-[120px] resize-none`}
+                            style={iosCaretStyle}
                             placeholder="Enter consignee information including company name, address, contact details..."
                           />
                         </div>
@@ -517,6 +527,7 @@ export default function PackingPage() {
                             value={packingData.orderNo}
                             onChange={(e) => setPackingData(prev => ({ ...prev, orderNo: e.target.value }))}
                             className={inputClassName}
+                            style={iosCaretStyle}
                             placeholder="Enter order number"
                           />
                         </div>
@@ -542,6 +553,13 @@ export default function PackingPage() {
                               text-[#007AFF] dark:text-[#0A84FF]
                               placeholder:text-[#007AFF]/60 dark:placeholder:text-[#0A84FF]/60
                               transition-all duration-300`}
+                            style={{
+                              caretColor: '#007AFF',
+                              WebkitCaretColor: '#007AFF',
+                              WebkitTextFillColor: 'initial',
+                              WebkitOpacity: 1,
+                              opacity: 1
+                            } as React.CSSProperties}
                             placeholder="Invoice No. *"
                           />
                         </div>
@@ -554,6 +572,7 @@ export default function PackingPage() {
                             value={packingData.date}
                             onChange={(e) => setPackingData(prev => ({ ...prev, date: e.target.value }))}
                             className={inputClassName}
+                            style={iosCaretStyle}
                           />
                         </div>
                         
@@ -657,6 +676,7 @@ export default function PackingPage() {
                         value={packingData.remarks}
                         onChange={(e) => setPackingData(prev => ({ ...prev, remarks: e.target.value }))}
                         className={`${inputClassName} min-h-[80px] resize-none`}
+                        style={iosCaretStyle}
                         placeholder="Enter any additional remarks or special instructions..."
                       />
                     </div>

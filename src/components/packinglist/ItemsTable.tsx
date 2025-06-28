@@ -142,8 +142,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
   return (
     <div className="space-y-0">
-      {/* 移动端卡片视图 */}
-      <div className="block sm:hidden space-y-4">
+      {/* 移动端和平板卡片视图 - 调整断点为 xl (1280px) */}
+      <div className="block xl:hidden space-y-4">
         {data.items.map((item, index) => (
           <div key={item.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
@@ -158,9 +158,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               )}
             </div>
             
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* 描述 */}
-              <div>
+              <div className="sm:col-span-2">
                 <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
                 <textarea
                   value={item.description}
@@ -169,7 +169,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     e.target.style.height = '28px';
                     e.target.style.height = `${e.target.scrollHeight}px`;
                   }}
-                  className="w-full px-3 py-1.5 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                  className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                     focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                     text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                     placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
@@ -178,46 +178,151 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 />
               </div>
               
-              {/* 数量和单位 */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* HS Code */}
+              {data.showHsCode && (
                 <div>
-                  <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
+                  <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">HS Code</label>
                   <input
-                    type="number"
-                    value={item.quantity || ''}
-                    onChange={(e) => handleQuantityChange(index, e.target.value)}
-                    className="w-full px-3 py-1.5 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                    type="text"
+                    value={item.hsCode}
+                    onChange={(e) => onItemChange(index, 'hsCode', e.target.value)}
+                    className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                       focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                      text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
-                      [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    placeholder="0"
+                      text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                      placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
+                    placeholder="HS Code"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
-                  <select
-                    value={item.unit}
-                    onChange={(e) => handleUnitChange(index, e.target.value)}
-                    className="w-full px-3 py-1.5 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                      focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                      text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center cursor-pointer appearance-none"
-                  >
-                    {availableUnits.map(unit => {
-                      const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
-                        ? getUnitDisplay(unit, item.quantity) 
-                        : unit;
-                      return (
-                        <option key={unit} value={displayUnit}>
-                          {displayUnit}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
+              )}
+              
+              {/* 数量 */}
+              <div>
+                <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
+                <input
+                  type="number"
+                  value={item.quantity || ''}
+                  onChange={(e) => handleQuantityChange(index, e.target.value)}
+                  className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                    focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                    text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
+                    [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  placeholder="0"
+                />
+              </div>
+              
+              {/* 单位 */}
+              <div>
+                <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
+                <select
+                  value={item.unit}
+                  onChange={(e) => handleUnitChange(index, e.target.value)}
+                  className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                    focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                    text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center cursor-pointer appearance-none"
+                >
+                  {availableUnits.map(unit => {
+                    const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
+                      ? getUnitDisplay(unit, item.quantity) 
+                      : unit;
+                    return (
+                      <option key={unit} value={displayUnit}>
+                        {displayUnit}
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
 
-              {/* 其他字段根据设置显示 */}
-              {/* ... 其他移动端字段保持不变 ... */}
+              {/* 价格相关字段 */}
+              {data.showPrice && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit Price</label>
+                    <input
+                      type="number"
+                      value={item.unitPrice.toFixed(2)}
+                      onChange={(e) => onItemChange(index, 'unitPrice', parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center"
+                      placeholder="0.00"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Total Amount</label>
+                    <input
+                      type="text"
+                      value={`${data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}${item.totalPrice.toFixed(2)}`}
+                      readOnly
+                      className="w-full px-3 py-2 bg-gray-50 dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center cursor-default"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* 重量和包装字段 */}
+              {data.showWeightAndPackage && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Net Weight (kg)</label>
+                    <input
+                      type="number"
+                      value={item.netWeight.toFixed(2)}
+                      onChange={(e) => onItemChange(index, 'netWeight', parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center"
+                      placeholder="0.00"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Gross Weight (kg)</label>
+                    <input
+                      type="number"
+                      value={item.grossWeight.toFixed(2)}
+                      onChange={(e) => onItemChange(index, 'grossWeight', parseFloat(e.target.value) || 0)}
+                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center"
+                      placeholder="0.00"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Packages</label>
+                    <input
+                      type="number"
+                      value={item.packageQty || ''}
+                      onChange={(e) => onItemChange(index, 'packageQty', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center"
+                      placeholder="0"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* 尺寸字段 */}
+              {data.showDimensions && (
+                <div className={data.showWeightAndPackage ? "" : "sm:col-span-2"}>
+                  <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">
+                    Dimensions ({data.dimensionUnit})
+                  </label>
+                  <input
+                    type="text"
+                    value={item.dimensions}
+                    onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
+                    className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                      focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                      text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center"
+                    placeholder="L×W×H"
+                  />
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -232,318 +337,361 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
         >
           + Add Item
         </button>
+
+        {/* 移动端总计信息 */}
+        {(data.showPrice || data.showWeightAndPackage) && (
+          <div className="bg-[#F5F5F7] dark:bg-[#3A3A3C] rounded-2xl p-4 border border-[#E5E5EA] dark:border-[#48484A]">
+            <h3 className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-3">Totals</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {data.showPrice && (
+                <div className="text-center">
+                  <div className="text-xs text-[#86868B] dark:text-[#86868B]">Total Amount</div>
+                  <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    {data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}
+                    {totals.totalPrice.toFixed(2)}
+                  </div>
+                </div>
+              )}
+              {data.showWeightAndPackage && (
+                <>
+                  <div className="text-center">
+                    <div className="text-xs text-[#86868B] dark:text-[#86868B]">Net Weight</div>
+                    <div className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {totals.netWeight.toFixed(2)} kg
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-[#86868B] dark:text-[#86868B]">Gross Weight</div>
+                    <div className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {totals.grossWeight.toFixed(2)} kg
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-[#86868B] dark:text-[#86868B]">Total Packages</div>
+                    <div className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {totals.packageQty}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* 桌面端表格视图 - 采用报价页面风格 */}
-      <div className="hidden sm:block overflow-x-auto">
-        <div className="inline-block min-w-full align-middle">
-          <div className="border border-[#E5E5EA] dark:border-[#2C2C2E]
-            bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl overflow-hidden rounded-2xl">
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-[#F5F5F7] dark:bg-[#3A3A3C] border-b border-[#E5E5EA] dark:border-[#48484A]">
-                  <th className="w-[50px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">No.</th>
-                  <th className="min-w-[150px] w-fit px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Description</th>
-                                     {data.showHsCode && (
-                     <th className="w-[120px] min-w-[120px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">HS Code</th>
-                   )}
-                  <th className="w-[80px] min-w-[80px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
-                  <th className="w-[80px] min-w-[80px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
-                  {data.showPrice && (
-                    <>
-                      <th className="w-[100px] min-w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
-                      <th className="w-[100px] min-w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
-                    </>
-                  )}
-                  {data.showWeightAndPackage && (
-                    <>
-                      <th className="w-[100px] min-w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">N.W.(kg)</th>
-                      <th className="w-[100px] min-w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">G.W.(kg)</th>
-                      <th className="w-[80px] min-w-[80px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Pkgs</th>
-                    </>
-                  )}
-                  {data.showDimensions && (
-                    <th className="w-[120px] min-w-[120px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Dimensions ({data.dimensionUnit})</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="bg-white/90 dark:bg-[#1C1C1E]/90">
-                {data.items.map((item, index) => (
-                  <tr key={item.id} className="border-t border-[#E5E5EA] dark:border-[#2C2C2E]">
-                    <td className="w-[50px] px-1 py-2 text-center text-sm bg-white/90 dark:bg-[#1C1C1E]/90">
-                      <span 
-                        className="flex items-center justify-center w-5 h-5 rounded-full 
-                          text-xs text-gray-400
-                          hover:bg-red-100 hover:text-red-600 
-                          cursor-pointer transition-colors"
-                        onClick={() => handleSoftDelete(index)}
-                        title="Click to delete"
-                      >
-                        {index + 1}
-                      </span>
-                    </td>
-                    <td className="min-w-[150px] w-fit px-1 py-2 bg-white/90 dark:bg-[#1C1C1E]/90">
-                      <textarea
-                        value={item.description}
-                        onChange={(e) => {
-                          onItemChange(index, 'description', e.target.value);
-                          e.target.style.height = '28px';
-                          e.target.style.height = `${e.target.scrollHeight}px`;
-                        }}
-                        className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                          focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                          hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                          placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden"
-                        style={{ height: '28px' }}
-                        placeholder="Enter product description..."
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.stopPropagation();
-                          }
-                        }}
-                      />
-                    </td>
-                                         {data.showHsCode && (
-                       <td className="w-[120px] min-w-[120px] px-1 py-2">
-                         <input
-                           type="text"
-                           value={item.hsCode}
-                           onChange={(e) => onItemChange(index, 'hsCode', e.target.value)}
-                           className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                             transition-all duration-200 text-center"
-                           placeholder="HS Code"
-                         />
-                       </td>
-                     )}
-                    <td className="w-[80px] min-w-[80px] px-1 py-2">
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={item.quantity.toString()}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (/^\d*$/.test(value)) {
-                            handleQuantityChange(index, value === '' ? 0 : parseInt(value));
-                          }
-                        }}
-                        className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                          focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                          hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                          placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          transition-all duration-200 text-center
-                          [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        placeholder="0"
-                      />
-                    </td>
-                    <td className="w-[80px] min-w-[80px] px-1 py-2">
-                      <select
-                        value={item.unit}
-                        onChange={(e) => handleUnitChange(index, e.target.value)}
-                        className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                          focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                          hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                          placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          transition-all duration-200 text-center cursor-pointer
-                          appearance-none"
-                      >
-                        {availableUnits.map(unit => {
-                          const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
-                            ? getUnitDisplay(unit, item.quantity) 
-                            : unit;
-                          return (
-                            <option key={unit} value={displayUnit}>
-                              {displayUnit}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </td>
+      {/* 桌面端表格视图 - 只在超大屏幕显示 */}
+      <div className="hidden xl:block">
+        {/* 表格容器 - 改进水平滚动 */}
+        <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+          <div className="inline-block min-w-full align-middle">
+            <div className="border border-[#E5E5EA] dark:border-[#2C2C2E]
+              bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl overflow-hidden rounded-2xl">
+              <table className="min-w-full table-fixed" style={{ minWidth: '1200px' }}>
+                <thead>
+                  <tr className="bg-[#F5F5F7] dark:bg-[#3A3A3C] border-b border-[#E5E5EA] dark:border-[#48484A]">
+                    <th className="w-[50px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">No.</th>
+                    <th className="w-[200px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Description</th>
+                    {data.showHsCode && (
+                      <th className="w-[120px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">HS Code</th>
+                    )}
+                    <th className="w-[80px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
+                    <th className="w-[80px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
                     {data.showPrice && (
                       <>
-                        <td className="w-[100px] min-w-[100px] px-1 py-2">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={item.unitPrice.toFixed(2)}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*\.?\d*$/.test(value)) {
-                                onItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
-                              }
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            placeholder="0.00"
-                          />
-                        </td>
-                        <td className="w-[100px] min-w-[100px] px-1 py-2">
-                          <input
-                            type="text"
-                            value={`${data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}${item.totalPrice.toFixed(2)}`}
-                            readOnly
-                            className="w-full px-3 py-1.5 bg-transparent
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              transition-all duration-200 text-center cursor-default"
-                          />
-                        </td>
+                        <th className="w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
+                        <th className="w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
                       </>
                     )}
                     {data.showWeightAndPackage && (
                       <>
-                        <td className="w-[100px] min-w-[100px] px-1 py-2">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={item.netWeight.toFixed(2)}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*\.?\d*$/.test(value)) {
-                                onItemChange(index, 'netWeight', value === '' ? 0 : parseFloat(value));
-                              }
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            placeholder="0.00"
-                          />
-                        </td>
-                        <td className="w-[100px] min-w-[100px] px-1 py-2">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={item.grossWeight.toFixed(2)}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*\.?\d*$/.test(value)) {
-                                onItemChange(index, 'grossWeight', value === '' ? 0 : parseFloat(value));
-                              }
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            placeholder="0.00"
-                          />
-                        </td>
-                        <td className="w-[80px] min-w-[80px] px-1 py-2">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={item.packageQty.toString()}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*$/.test(value)) {
-                                onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
-                              }
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            placeholder="0"
-                          />
-                        </td>
+                        <th className="w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">N.W.(kg)</th>
+                        <th className="w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">G.W.(kg)</th>
+                        <th className="w-[80px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Pkgs</th>
                       </>
                     )}
                     {data.showDimensions && (
-                      <td className="w-[120px] min-w-[120px] px-1 py-2">
-                        <input
-                          type="text"
-                          value={item.dimensions}
-                          onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
+                      <th className="w-[120px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Dimensions ({data.dimensionUnit})</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="bg-white/90 dark:bg-[#1C1C1E]/90">
+                  {data.items.map((item, index) => (
+                    <tr key={item.id} className="border-t border-[#E5E5EA] dark:border-[#2C2C2E]">
+                      <td className="w-[50px] px-1 py-2 text-center text-sm bg-white/90 dark:bg-[#1C1C1E]/90">
+                        <span 
+                          className="flex items-center justify-center w-5 h-5 rounded-full 
+                            text-xs text-gray-400
+                            hover:bg-red-100 hover:text-red-600 
+                            cursor-pointer transition-colors"
+                          onClick={() => handleSoftDelete(index)}
+                          title="Click to delete"
+                        >
+                          {index + 1}
+                        </span>
+                      </td>
+                      <td className="w-[200px] px-1 py-2 bg-white/90 dark:bg-[#1C1C1E]/90">
+                        <textarea
+                          value={item.description}
+                          onChange={(e) => {
+                            onItemChange(index, 'description', e.target.value);
+                            e.target.style.height = '28px';
+                            e.target.style.height = `${e.target.scrollHeight}px`;
+                          }}
                           className="w-full px-3 py-1.5 bg-transparent border border-transparent
                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            transition-all duration-200 text-center"
-                          placeholder="L×W×H"
+                            transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden"
+                          style={{ height: '28px' }}
+                          placeholder="Enter product description..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.stopPropagation();
+                            }
+                          }}
                         />
                       </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-                     </div>
+                      {data.showHsCode && (
+                        <td className="w-[120px] px-1 py-2">
+                          <input
+                            type="text"
+                            value={item.hsCode}
+                            onChange={(e) => onItemChange(index, 'hsCode', e.target.value)}
+                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                              transition-all duration-200 text-center"
+                            placeholder="HS Code"
+                          />
+                        </td>
+                      )}
+                      <td className="w-[80px] px-1 py-2">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={item.quantity.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*$/.test(value)) {
+                              handleQuantityChange(index, value === '' ? 0 : parseInt(value));
+                            }
+                          }}
+                          className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                            transition-all duration-200 text-center
+                            [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          placeholder="0"
+                        />
+                      </td>
+                      <td className="w-[80px] px-1 py-2">
+                        <select
+                          value={item.unit}
+                          onChange={(e) => handleUnitChange(index, e.target.value)}
+                          className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                            transition-all duration-200 text-center cursor-pointer
+                            appearance-none"
+                        >
+                          {availableUnits.map(unit => {
+                            const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
+                              ? getUnitDisplay(unit, item.quantity) 
+                              : unit;
+                            return (
+                              <option key={unit} value={displayUnit}>
+                                {displayUnit}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </td>
+                      {data.showPrice && (
+                        <>
+                          <td className="w-[100px] px-1 py-2">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={item.unitPrice.toFixed(2)}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (/^\d*\.?\d*$/.test(value)) {
+                                  onItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
+                                }
+                              }}
+                              className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                                focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                                hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                                text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                                placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                                transition-all duration-200 text-center
+                                [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              placeholder="0.00"
+                            />
+                          </td>
+                          <td className="w-[100px] px-1 py-2">
+                            <input
+                              type="text"
+                              value={`${data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}${item.totalPrice.toFixed(2)}`}
+                              readOnly
+                              className="w-full px-3 py-1.5 bg-transparent
+                                text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                                transition-all duration-200 text-center cursor-default"
+                            />
+                          </td>
+                        </>
+                      )}
+                      {data.showWeightAndPackage && (
+                        <>
+                          <td className="w-[100px] px-1 py-2">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={item.netWeight.toFixed(2)}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (/^\d*\.?\d*$/.test(value)) {
+                                  onItemChange(index, 'netWeight', value === '' ? 0 : parseFloat(value));
+                                }
+                              }}
+                              className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                                focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                                hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                                text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                                placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                                transition-all duration-200 text-center
+                                [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              placeholder="0.00"
+                            />
+                          </td>
+                          <td className="w-[100px] px-1 py-2">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={item.grossWeight.toFixed(2)}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (/^\d*\.?\d*$/.test(value)) {
+                                  onItemChange(index, 'grossWeight', value === '' ? 0 : parseFloat(value));
+                                }
+                              }}
+                              className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                                focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                                hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                                text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                                placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                                transition-all duration-200 text-center
+                                [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              placeholder="0.00"
+                            />
+                          </td>
+                          <td className="w-[80px] px-1 py-2">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={item.packageQty.toString()}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (/^\d*$/.test(value)) {
+                                  onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
+                                }
+                              }}
+                              className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                                focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                                hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                                text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                                placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                                transition-all duration-200 text-center
+                                [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              placeholder="0"
+                            />
+                          </td>
+                        </>
+                      )}
+                      {data.showDimensions && (
+                        <td className="w-[120px] px-1 py-2">
+                          <input
+                            type="text"
+                            value={item.dimensions}
+                            onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
+                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                              transition-all duration-200 text-center"
+                            placeholder="L×W×H"
+                          />
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
            
-           {/* 添加行按钮和总计信息 */}
-           <div className="mt-4 bg-[#F5F5F7] dark:bg-[#3A3A3C] rounded-2xl p-4 border border-[#E5E5EA] dark:border-[#48484A]">
-             <div className="flex flex-wrap gap-6 justify-between items-center">
-               {/* 添加行按钮 */}
-               <button
-                 type="button"
-                 onClick={onAddLine}
-                 className="px-4 py-2 bg-[#007AFF] dark:bg-[#0A84FF] text-white rounded-lg
-                   hover:bg-[#0063CC] dark:hover:bg-[#0070E0] transition-colors
-                   text-sm font-medium"
-               >
-                 + Add Line
-               </button>
-               
-               {/* 总计信息 */}
-               {(data.showPrice || data.showWeightAndPackage) ? (
-                 <div className="flex flex-wrap gap-6">
-                {data.showPrice && (
-                  <div className="text-right">
-                    <div className="text-sm text-[#86868B] dark:text-[#86868B]">Total Amount</div>
-                    <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                      {data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}
-                      {totals.totalPrice.toFixed(2)}
-                    </div>
-                  </div>
-                )}
-                {data.showWeightAndPackage && (
-                  <>
-                    <div className="text-right">
-                      <div className="text-sm text-[#86868B] dark:text-[#86868B]">Net Weight</div>
-                      <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                        {totals.netWeight.toFixed(2)} kg
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-[#86868B] dark:text-[#86868B]">Gross Weight</div>
-                      <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                        {totals.grossWeight.toFixed(2)} kg
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-[#86868B] dark:text-[#86868B]">Total Packages</div>
-                      <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                        {totals.packageQty}
-                      </div>
-                    </div>
-                                     </>
+            {/* 桌面端添加按钮和总计信息 */}
+            <div className="mt-4 bg-[#F5F5F7] dark:bg-[#3A3A3C] rounded-2xl p-4 border border-[#E5E5EA] dark:border-[#48484A]">
+              <div className="flex flex-wrap gap-6 justify-between items-center">
+                {/* 添加行按钮 */}
+                <button
+                  type="button"
+                  onClick={onAddLine}
+                  className="px-4 py-2 bg-[#007AFF] dark:bg-[#0A84FF] text-white rounded-lg
+                    hover:bg-[#0063CC] dark:hover:bg-[#0070E0] transition-colors
+                    text-sm font-medium"
+                >
+                  + Add Line
+                </button>
+                
+                {/* 总计信息 */}
+                {(data.showPrice || data.showWeightAndPackage) ? (
+                  <div className="flex flex-wrap gap-6">
+                 {data.showPrice && (
+                   <div className="text-right">
+                     <div className="text-sm text-[#86868B] dark:text-[#86868B]">Total Amount</div>
+                     <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                       {data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}
+                       {totals.totalPrice.toFixed(2)}
+                     </div>
+                   </div>
                  )}
-                 </div>
-               ) : (
-                 <div></div>
-               )}
-             </div>
-           </div>
+                 {data.showWeightAndPackage && (
+                   <>
+                     <div className="text-right">
+                       <div className="text-sm text-[#86868B] dark:text-[#86868B]">Net Weight</div>
+                       <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                         {totals.netWeight.toFixed(2)} kg
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <div className="text-sm text-[#86868B] dark:text-[#86868B]">Gross Weight</div>
+                       <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                         {totals.grossWeight.toFixed(2)} kg
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <div className="text-sm text-[#86868B] dark:text-[#86868B]">Total Packages</div>
+                       <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                         {totals.packageQty}
+                       </div>
+                     </div>
+                   </>
+                 )}
+                  </div>
+                ) : (
+                  <div></div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -19,6 +19,15 @@ const inputClassName = `w-full px-4 py-2.5 rounded-xl
   placeholder:text-gray-400/60 dark:placeholder:text-gray-500/40
   transition-all duration-300`;
 
+// iOS光标优化样式
+const iosCaretStyle = {
+  caretColor: '#007AFF',
+  WebkitCaretColor: '#007AFF',
+  WebkitTextFillColor: 'initial',
+  WebkitOpacity: 1,
+  opacity: 1
+} as React.CSSProperties;
+
 const labelClassName = `block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1.5`;
 
 interface SavedCustomer {
@@ -156,6 +165,13 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
               focus:outline-none focus:ring-2 
               text-[15px] leading-relaxed
               transition-all duration-300`}
+            style={{
+              caretColor: type === 'quotation' ? '#007AFF' : '#007AFF',
+              WebkitCaretColor: type === 'quotation' ? '#007AFF' : '#007AFF',
+              WebkitTextFillColor: 'initial',
+              WebkitOpacity: 1,
+              opacity: 1
+            } as React.CSSProperties}
             required={type === 'quotation'}
           />
         </div>
@@ -176,6 +192,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
               bg-[right_0.5rem_center] 
               bg-no-repeat
               pr-8`}
+            style={iosCaretStyle}
           >
             <option value="Roger">Roger</option>
             <option value="Sharon">Sharon</option>
@@ -196,6 +213,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
               placeholder="Enter customer name and address"
               rows={3}
               className={`${inputClassName} min-h-[100px]`}
+              style={iosCaretStyle}
             />
             <div className="absolute right-2 bottom-2 flex gap-2">
               <button
