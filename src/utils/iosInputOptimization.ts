@@ -38,91 +38,29 @@ export const getIOSVersion = (): number | null => {
 };
 
 /**
- * 优化iOS设备上的输入框元素 - 增强版本
+ * 优化iOS设备上的输入框元素 - 简化版本
  */
 export const optimizeIOSInput = (element: HTMLInputElement | HTMLTextAreaElement): void => {
   if (!isIOSDevice()) return;
   
-  const style = element.style as any;
-  
-  // 强制设置光标颜色和样式 - 确保在所有层级都可见
+  // 简化的光标优化
   element.style.caretColor = '#007AFF';
-  style.webkitCaretColor = '#007AFF';
-  style.webkitAppearance = 'none';
-  element.style.appearance = 'none';
-  style.webkitTextFillColor = 'initial';
-  style.webkitOpacity = '1';
-  element.style.opacity = '1';
+  (element.style as any).webkitCaretColor = '#007AFF';
   
-  // 设置层级确保光标在正确位置
-  element.style.position = 'relative';
-  element.style.zIndex = '1';
-  
-  // 添加硬件加速确保渲染正确
-  style.webkitTransform = 'translateZ(0)';
-  element.style.transform = 'translateZ(0)';
-  style.willChange = 'transform';
-  
-  // 优化触摸体验
+  // 基础触摸优化
   element.style.touchAction = 'manipulation';
-  style.webkitTouchCallout = 'none';
-  style.webkitUserSelect = 'text';
-  element.style.userSelect = 'text';
-  
-  // 确保背景不会遮挡光标
-  element.style.backgroundClip = 'padding-box';
+  (element.style as any).webkitAppearance = 'none';
+  element.style.appearance = 'none';
   
   // 防止自动放大
   if (parseFloat(getComputedStyle(element).fontSize) < 16) {
     element.style.fontSize = '16px';
   }
   
-  // 添加CSS类确保样式应用
+  // 添加CSS类
   if (!element.classList.contains('ios-optimized-input')) {
     element.classList.add('ios-optimized-input');
   }
-  
-  // 添加focus事件优化
-  const handleFocus = () => {
-    // 焦点时进一步强化光标可见性
-    element.style.caretColor = '#007AFF';
-    style.webkitCaretColor = '#007AFF';
-    element.style.zIndex = '2';
-    style.webkitTransform = 'translateZ(1px)';
-    element.style.transform = 'translateZ(1px)';
-    
-    // 确保输入框在可视区域内
-    setTimeout(() => {
-      if (element.scrollIntoView) {
-        element.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'nearest'
-        });
-      }
-    }, 100);
-  };
-  
-  const handleBlur = () => {
-    // 失焦时重置层级
-    element.style.zIndex = '1';
-    style.webkitTransform = 'translateZ(0)';
-    element.style.transform = 'translateZ(0)';
-  };
-  
-  // 移除旧的事件监听器（如果存在）
-  element.removeEventListener('focus', handleFocus);
-  element.removeEventListener('blur', handleBlur);
-  
-  // 添加新的事件监听器
-  element.addEventListener('focus', handleFocus);
-  element.addEventListener('blur', handleBlur);
-  
-  // 添加input事件确保持续优化
-  element.addEventListener('input', () => {
-    element.style.caretColor = '#007AFF';
-    style.webkitCaretColor = '#007AFF';
-  });
 };
 
 /**
@@ -136,40 +74,7 @@ export const optimizeAllInputs = (): void => {
 };
 
 /**
- * 为页面添加变化监听器，自动优化新添加的输入框
- */
-export const setupMutationObserver = (): MutationObserver | null => {
-  if (!isIOSDevice() || typeof window === 'undefined') return null;
-  
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          const element = node as Element;
-          
-          // 检查新添加的元素是否为输入框
-          if (element.matches('input, textarea, select')) {
-            optimizeIOSInput(element as HTMLInputElement | HTMLTextAreaElement);
-          }
-          
-          // 检查新添加的元素内部是否包含输入框
-          const inputs = element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea, select');
-          inputs.forEach(optimizeIOSInput);
-        }
-      });
-    });
-  });
-  
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-  
-  return observer;
-};
-
-/**
- * 全局初始化iOS输入优化
+ * 全局初始化iOS输入优化 - 简化版本
  */
 export const initIOSOptimization = (): void => {
   if (!isIOSDevice()) return;
@@ -179,50 +84,30 @@ export const initIOSOptimization = (): void => {
     // 优化现有的所有输入框
     optimizeAllInputs();
     
-    // 设置变化监听器
-    setupMutationObserver();
+    // 简化的变化监听器
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node as Element;
+            
+            // 检查新添加的输入框
+            if (element.matches('input, textarea, select')) {
+              optimizeIOSInput(element as HTMLInputElement | HTMLTextAreaElement);
+            }
+            
+            // 检查内部输入框
+            const inputs = element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea, select');
+            inputs.forEach(optimizeIOSInput);
+          }
+        });
+      });
+    });
     
-    // 添加全局CSS强制规则
-    const style = document.createElement('style');
-    style.textContent = `
-      /* iOS强制光标优化 */
-      input, textarea, select {
-        caret-color: #007AFF !important;
-        -webkit-caret-color: #007AFF !important;
-        -webkit-text-fill-color: initial !important;
-        -webkit-opacity: 1 !important;
-        opacity: 1 !important;
-        position: relative !important;
-        z-index: 1 !important;
-        -webkit-transform: translateZ(0) !important;
-        transform: translateZ(0) !important;
-      }
-      
-      input:focus, textarea:focus, select:focus {
-        caret-color: #007AFF !important;
-        -webkit-caret-color: #007AFF !important;
-        z-index: 2 !important;
-        -webkit-transform: translateZ(1px) !important;
-        transform: translateZ(1px) !important;
-      }
-      
-      .ios-optimized-input {
-        caret-color: #007AFF !important;
-        -webkit-caret-color: #007AFF !important;
-        -webkit-text-fill-color: initial !important;
-        -webkit-opacity: 1 !important;
-        opacity: 1 !important;
-        -webkit-appearance: none !important;
-        appearance: none !important;
-        position: relative !important;
-        z-index: 1 !important;
-        -webkit-transform: translateZ(0) !important;
-        transform: translateZ(0) !important;
-        background-clip: padding-box !important;
-        will-change: transform !important;
-      }
-    `;
-    document.head.appendChild(style);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
   };
   
   if (document.readyState === 'loading') {

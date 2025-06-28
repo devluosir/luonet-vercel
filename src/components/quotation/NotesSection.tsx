@@ -6,19 +6,22 @@ interface NotesSectionProps {
   onChange: (data: QuotationData) => void;
 }
 
-// iOS光标优化样式
+// 参考invoice页面的简洁样式 - iOS兼容性更好
+const textareaClassName = `w-full px-4 py-2.5 rounded-2xl
+  bg-white/95 dark:bg-[#1c1c1e]/95
+  border border-[#007AFF]/10 dark:border-[#0A84FF]/10
+  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
+  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
+  text-[15px] leading-relaxed text-gray-800 dark:text-gray-100
+  transition-all duration-300 ease-out
+  hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
+  shadow-sm hover:shadow-md
+  ios-optimized-input`;
+
+// iOS光标优化样式 - 简化版本
 const iosCaretStyle = {
   caretColor: '#007AFF',
   WebkitCaretColor: '#007AFF',
-  WebkitTextFillColor: 'initial',
-  WebkitOpacity: 1,
-  opacity: 1,
-  WebkitAppearance: 'none',
-  appearance: 'none',
-  touchAction: 'manipulation',
-  WebkitTouchCallout: 'none',
-  WebkitUserSelect: 'text',
-  userSelect: 'text'
 } as React.CSSProperties;
 
 export function NotesSection({ data, onChange }: NotesSectionProps) {
@@ -95,24 +98,13 @@ export function NotesSection({ data, onChange }: NotesSectionProps) {
                   });
                   adjustHeight(e.target);
                 }}
-                className="w-full px-4 py-2.5 rounded-xl
-                  bg-transparent
-                  border border-transparent
-                  focus:outline-none focus:ring-[3px] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20
-                  text-[15px] leading-[1.4] tracking-[-0.01em]
-                  text-[#1D1D1F] dark:text-[#F5F5F7]
-                  placeholder:text-[#86868B] dark:placeholder:text-[#98989D]
-                  transition-all duration-200
-                  hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                  resize-none whitespace-pre-wrap break-words"
+                className={textareaClassName}
                 rows={1}
                 style={{
                   height: 'auto',
                   minHeight: '41px',
                   overflow: 'hidden',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  wordBreak: 'break-word',
-                  overflowWrap: 'break-word',
+                  resize: 'none',
                   ...iosCaretStyle
                 }}
                 onInput={(e) => {

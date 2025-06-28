@@ -5,19 +5,22 @@ interface PaymentTermsSectionProps {
   onChange: (data: QuotationData) => void;
 }
 
-// iOS光标优化样式
+// 参考invoice页面的简洁样式 - iOS兼容性更好
+const inputClassName = `w-full px-4 py-2.5 rounded-2xl
+  bg-white/95 dark:bg-[#1c1c1e]/95
+  border border-[#007AFF]/10 dark:border-[#0A84FF]/10
+  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
+  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
+  text-[15px] leading-relaxed text-gray-800 dark:text-gray-100
+  transition-all duration-300 ease-out
+  hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
+  shadow-sm hover:shadow-md
+  ios-optimized-input`;
+
+// iOS光标优化样式 - 简化版本
 const iosCaretStyle = {
   caretColor: '#007AFF',
   WebkitCaretColor: '#007AFF',
-  WebkitTextFillColor: 'initial',
-  WebkitOpacity: 1,
-  opacity: 1,
-  WebkitAppearance: 'none',
-  appearance: 'none',
-  touchAction: 'manipulation',
-  WebkitTouchCallout: 'none',
-  WebkitUserSelect: 'text',
-  userSelect: 'text'
 } as React.CSSProperties;
 
 export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps) {
@@ -48,13 +51,15 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
                   ...data,
                   paymentDate: e.target.value
                 })}
-                className="px-3 py-1 rounded-xl ios-optimized-input
+                className={`px-3 py-1 rounded-2xl
                   bg-white/95 dark:bg-[#1c1c1e]/95
                   border border-[#007AFF]/10 dark:border-[#0A84FF]/10
                   focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
                   text-red-500 dark:text-red-400
                   text-[14px]
-                  transition-all duration-300 ease-out"
+                  transition-all duration-300 ease-out
+                  shadow-sm hover:shadow-md
+                  ios-optimized-input`}
                 style={{ 
                   colorScheme: 'light dark',
                   width: '150px',
@@ -77,15 +82,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
                 additionalPaymentTerms: e.target.value
               })}
               placeholder="Enter additional remarks (each line will be a new payment term)"
-              className="w-full px-4 py-2.5 rounded-2xl ios-optimized-input
-                bg-white/95 dark:bg-[#1c1c1e]/95
-                border border-[#007AFF]/10 dark:border-[#0A84FF]/10
-                focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
-                placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
-                text-[15px] leading-relaxed text-gray-800 dark:text-gray-100
-                transition-all duration-300 ease-out
-                hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
-                min-h-[4em] resize"
+              className={inputClassName}
               style={iosCaretStyle}
               rows={2}
             />

@@ -15,7 +15,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* iOS设备输入框优化 - 强制版本 */
+/* iOS设备输入框优化 - 简化版本 */
 @supports (-webkit-appearance: none) {
   input[type="text"],
   input[type="number"],
@@ -24,7 +24,7 @@ body {
   input[type="date"],
   textarea,
   select {
-    /* 确保iOS设备上光标可见 - 使用与组件一致的颜色 */
+    /* 确保iOS设备上光标可见 */
     caret-color: #007AFF !important;
     -webkit-caret-color: #007AFF !important;
     -webkit-appearance: none !important;
@@ -43,18 +43,6 @@ body {
     -webkit-text-fill-color: initial !important;
     -webkit-opacity: 1 !important;
     opacity: 1 !important;
-    
-    /* 强制光标显示在正确层级 */
-    position: relative !important;
-    z-index: 1 !important;
-    
-    /* 确保背景不会遮挡光标 */
-    background-clip: padding-box !important;
-    
-    /* iOS Safari 特殊优化 */
-    -webkit-transform: translateZ(0) !important;
-    transform: translateZ(0) !important;
-    will-change: transform !important;
   }
   
   /* 暗色模式下的光标颜色 */
@@ -80,11 +68,6 @@ body {
     -webkit-text-fill-color: initial !important;
     -webkit-opacity: 1 !important;
     opacity: 1 !important;
-    z-index: 2 !important;
-    
-    /* 确保焦点时光标最可见 */
-    -webkit-transform: translateZ(1px) !important;
-    transform: translateZ(1px) !important;
   }
   
   /* 暗色模式下焦点时的光标颜色 */
@@ -107,123 +90,13 @@ body {
   opacity: 1 !important;
   -webkit-appearance: none !important;
   appearance: none !important;
-  position: relative !important;
-  z-index: 1 !important;
-  -webkit-transform: translateZ(0) !important;
-  transform: translateZ(0) !important;
 }
 
-/* iOS Safari 专用优化 */
-@media screen and (-webkit-min-device-pixel-ratio: 1) {
-  input,
-  textarea,
-  select {
-    /* 强制重绘确保光标显示 */
-    -webkit-transform: translate3d(0, 0, 0) !important;
-    transform: translate3d(0, 0, 0) !important;
-    
-    /* 确保文本渲染正确 */
-    -webkit-font-smoothing: antialiased !important;
-    -moz-osx-font-smoothing: grayscale !important;
-    
-    /* 光标颜色强制设置 */
-    caret-color: #007AFF !important;
-    -webkit-caret-color: #007AFF !important;
-  }
-}
 
-/* 针对WebKit浏览器的特殊处理 */
-@media screen and (-webkit-min-device-pixel-ratio: 0) {
-  input:focus,
-  textarea:focus,
-  select:focus {
-    /* 强制显示光标 */
-    caret-color: #007AFF !important;
-    -webkit-caret-color: #007AFF !important;
-    outline: none !important;
-    -webkit-text-fill-color: initial !important;
-    -webkit-opacity: 1 !important;
-    opacity: 1 !important;
-  }
-  
-  @media (prefers-color-scheme: dark) {
-    input:focus,
-    textarea:focus,
-    select:focus {
-      caret-color: #0A84FF !important;
-      -webkit-caret-color: #0A84FF !important;
-    }
-  }
-}
 
-/* 专门针对iOS Safari的强制光标显示 */
-@media screen and (max-width: 1024px) and (-webkit-min-device-pixel-ratio: 1) {
-  input,
-  textarea,
-  select {
-    caret-color: #007AFF !important;
-    -webkit-caret-color: #007AFF !important;
-    -webkit-text-fill-color: initial !important;
-    -webkit-opacity: 1 !important;
-    opacity: 1 !important;
-    /* 确保背景透明度不影响光标 */
-    background-clip: padding-box !important;
-    /* 强制硬件加速以确保渲染 */
-    -webkit-transform: translateZ(0) !important;
-    transform: translateZ(0) !important;
-    will-change: auto !important;
-    /* 强制移除WebKit默认样式 */
-    -webkit-appearance: none !important;
-    appearance: none !important;
-  }
-  
-  /* 确保focus状态下光标可见 */
-  input:focus,
-  textarea:focus,
-  select:focus {
-    caret-color: #007AFF !important;
-    -webkit-caret-color: #007AFF !important;
-    -webkit-text-fill-color: initial !important;
-    -webkit-opacity: 1 !important;
-    opacity: 1 !important;
-    /* 强制重绘 */
-    -webkit-transform: translateZ(0) !important;
-    transform: translateZ(0) !important;
-  }
-  
-  /* 表格内的输入框特殊处理 */
-  table input,
-  table textarea,
-  table select {
-    caret-color: #007AFF !important;
-    -webkit-caret-color: #007AFF !important;
-    position: relative !important;
-    z-index: 1 !important;
-  }
-  
-  @media (prefers-color-scheme: dark) {
-    input,
-    textarea,
-    select {
-      caret-color: #0A84FF !important;
-      -webkit-caret-color: #0A84FF !important;
-    }
-    
-    input:focus,
-    textarea:focus,
-    select:focus {
-      caret-color: #0A84FF !important;
-      -webkit-caret-color: #0A84FF !important;
-    }
-    
-    table input,
-    table textarea,
-    table select {
-      caret-color: #0A84FF !important;
-      -webkit-caret-color: #0A84FF !important;
-    }
-  }
-}
+
+
+
 
 /* 移动设备优化 */
 @media screen and (max-width: 768px) {

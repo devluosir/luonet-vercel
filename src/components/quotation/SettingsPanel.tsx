@@ -13,30 +13,22 @@ const settingsPanelClassName = `bg-[#007AFF]/5 dark:bg-[#0A84FF]/5 backdrop-blur
   shadow-lg shadow-[#007AFF]/5 dark:shadow-[#0A84FF]/5
   p-4`;
 
-const inputClassName = `w-full px-4 py-2.5 rounded-xl
-  bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-lg
-  border border-gray-200/30 dark:border-[#2c2c2e]/50
-  focus:outline-none focus:ring-2 
-  focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-  hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30
-  text-[15px] leading-relaxed
-  text-gray-800 dark:text-gray-200
-  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/40
-  transition-all duration-300`;
+// 参考invoice页面的简洁样式 - iOS兼容性更好
+const inputClassName = `w-full px-4 py-2.5 rounded-2xl
+  bg-white/95 dark:bg-[#1c1c1e]/95
+  border border-[#007AFF]/10 dark:border-[#0A84FF]/10
+  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
+  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
+  text-[15px] leading-relaxed text-gray-800 dark:text-gray-100
+  transition-all duration-300 ease-out
+  hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
+  shadow-sm hover:shadow-md
+  ios-optimized-input`;
 
-// iOS光标优化样式
+// iOS光标优化样式 - 简化版本
 const iosCaretStyle = {
   caretColor: '#007AFF',
   WebkitCaretColor: '#007AFF',
-  WebkitTextFillColor: 'initial',
-  WebkitOpacity: 1,
-  opacity: 1,
-  WebkitAppearance: 'none',
-  appearance: 'none',
-  touchAction: 'manipulation',
-  WebkitTouchCallout: 'none',
-  WebkitUserSelect: 'text',
-  userSelect: 'text'
 } as React.CSSProperties;
 
 const radioGroupClassName = `flex p-1 gap-2
@@ -90,13 +82,16 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             }
           }}
           placeholder="Add custom unit"
-          className="w-32 px-3 py-1.5 rounded-lg ios-optimized-input
-            bg-white/90 dark:bg-[#1c1c1e]/90
-            border border-gray-200/30 dark:border-[#2c2c2e]/50
-            focus:outline-none focus:ring-2
-            focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-            placeholder:text-[#86868B]"
+          className="w-32 px-3 py-1.5 rounded-2xl
+            bg-white/95 dark:bg-[#1c1c1e]/95
+            border border-[#007AFF]/10 dark:border-[#0A84FF]/10
+            focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
+            text-[13px] text-gray-800 dark:text-gray-100
+            placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
+            transition-all duration-300 ease-out
+            hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
+            shadow-sm hover:shadow-md
+            ios-optimized-input"
           style={iosCaretStyle}
         />
         {showSuccess && (
@@ -161,7 +156,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             type="date"
             value={data.date}
             onChange={e => onChange({ ...data, date: e.target.value })}
-            className={`${inputClassName} ios-optimized-input w-[130px]`}
+            className={`${inputClassName} w-[130px]`}
             style={iosCaretStyle}
           />
            {/* 币种选择 */}
@@ -339,7 +334,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             type="date"
             value={data.date}
             onChange={e => onChange({ ...data, date: e.target.value })}
-            className={`${inputClassName} ios-optimized-input w-[130px]`}
+            className={`${inputClassName} w-[130px]`}
             style={iosCaretStyle}
           />
         </div>
@@ -515,7 +510,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             type="date"
             value={data.date}
             onChange={e => onChange({ ...data, date: e.target.value })}
-            className={`${inputClassName} ios-optimized-input w-[130px]`}
+            className={`${inputClassName} w-[130px]`}
             style={iosCaretStyle}
           />
         </div>
