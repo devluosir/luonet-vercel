@@ -202,7 +202,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   return (
     <div className="space-y-0">
       {/* 移动端和平板卡片视图 - 调整断点为 xl (1280px) */}
-      <div className="block xl:hidden space-y-4">
+      <div className="block lg:hidden space-y-4">
         {data.items.map((item, index) => (
           <div key={item.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
@@ -552,45 +552,52 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
         )}
       </div>
 
-      {/* 桌面端表格视图 - 只在超大屏幕显示 */}
-      <div className="hidden xl:block">
-        {/* 表格容器 - 改进水平滚动 */}
+      {/* 桌面端表格视图 - 中屏及以上显示 */}
+      <div className="hidden lg:block">
+        {/* 表格容器 - 自适应宽度 */}
         <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
         <div className="inline-block min-w-full align-middle">
           <div className="border border-[#E5E5EA] dark:border-[#2C2C2E]
             bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl overflow-hidden rounded-2xl">
-              <table className="min-w-full table-fixed" style={{ minWidth: '1200px' }}>
+              <table className="w-full table-fixed">
               <thead>
                 <tr className="bg-[#F5F5F7] dark:bg-[#3A3A3C] border-b border-[#E5E5EA] dark:border-[#48484A]">
-                  <th className="w-[50px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">No.</th>
-                    <th className="w-[200px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Description</th>
+                  <th className="w-12 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">No.</th>
+                    <th className={`px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] ${
+                      // 动态计算 Description 列宽
+                      data.showHsCode && data.showPrice && data.showWeightAndPackage && data.showDimensions 
+                        ? 'w-1/6' // 最复杂情况
+                        : data.showPrice && data.showWeightAndPackage
+                        ? 'w-1/4' // 中等复杂
+                        : 'w-1/3' // 简单情况
+                    }`}>Description</th>
                                      {data.showHsCode && (
-                      <th className="w-[120px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">HS Code</th>
+                      <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">HS Code</th>
                    )}
-                    <th className="w-[80px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
-                    <th className="w-[80px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
+                    <th className="w-16 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
+                    <th className="w-16 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
                   {data.showPrice && (
                     <>
-                        <th className="w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
-                        <th className="w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
+                        <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
+                        <th className="w-28 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
                     </>
                   )}
                   {data.showWeightAndPackage && (
                     <>
-                        <th className="w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">N.W.(kg)</th>
-                        <th className="w-[100px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">G.W.(kg)</th>
-                        <th className="w-[80px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Pkgs</th>
+                        <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">N.W.(kg)</th>
+                        <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">G.W.(kg)</th>
+                        <th className="w-16 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Pkgs</th>
                     </>
                   )}
                   {data.showDimensions && (
-                      <th className="w-[120px] px-1 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Dimensions ({data.dimensionUnit})</th>
+                      <th className="w-32 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Dimensions ({data.dimensionUnit})</th>
                   )}
                 </tr>
               </thead>
               <tbody className="bg-white/90 dark:bg-[#1C1C1E]/90">
                 {data.items.map((item, index) => (
                   <tr key={item.id} className="border-t border-[#E5E5EA] dark:border-[#2C2C2E]">
-                    <td className="w-[50px] px-1 py-2 text-center text-sm bg-white/90 dark:bg-[#1C1C1E]/90">
+                    <td className="w-12 px-2 py-2 text-center text-sm bg-white/90 dark:bg-[#1C1C1E]/90">
                       <span 
                         className="flex items-center justify-center w-5 h-5 rounded-full 
                           text-xs text-gray-400
@@ -602,7 +609,14 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         {index + 1}
                       </span>
                     </td>
-                      <td className="w-[200px] px-1 py-2 bg-white/90 dark:bg-[#1C1C1E]/90">
+                      <td className={`px-2 py-2 bg-white/90 dark:bg-[#1C1C1E]/90 ${
+                        // 动态计算 Description 列宽，与表头保持一致
+                        data.showHsCode && data.showPrice && data.showWeightAndPackage && data.showDimensions 
+                          ? 'w-1/6' // 最复杂情况
+                          : data.showPrice && data.showWeightAndPackage
+                          ? 'w-1/4' // 中等复杂
+                          : 'w-1/3' // 简单情况
+                      }`}>
                       <textarea
                         value={item.description}
                         onChange={(e) => {
@@ -627,7 +641,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       />
                     </td>
                                          {data.showHsCode && (
-                        <td className="w-[120px] px-1 py-2">
+                        <td className="w-24 px-2 py-2">
                          <input
                            type="text"
                            value={item.hsCode}
@@ -643,7 +657,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                          />
                        </td>
                      )}
-                      <td className="w-[80px] px-1 py-2">
+                      <td className="w-16 px-2 py-2">
                       <input
                         type="text"
                         inputMode="numeric"
@@ -679,7 +693,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         }}
                       />
                     </td>
-                      <td className="w-[80px] px-1 py-2">
+                      <td className="w-16 px-2 py-2">
                       <select
                         value={item.unit}
                         onChange={(e) => handleUnitChange(index, e.target.value)}
@@ -705,7 +719,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     </td>
                     {data.showPrice && (
                       <>
-                          <td className="w-[100px] px-1 py-2">
+                          <td className="w-24 px-2 py-2">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -741,7 +755,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             }}
                           />
                         </td>
-                          <td className="w-[100px] px-1 py-2">
+                          <td className="w-28 px-2 py-2">
                           <input
                             type="text"
                             value={`${data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}${item.totalPrice.toFixed(2)}`}
@@ -755,7 +769,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     )}
                     {data.showWeightAndPackage && (
                       <>
-                          <td className="w-[100px] px-1 py-2">
+                          <td className="w-24 px-2 py-2">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -795,7 +809,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             }}
                           />
                         </td>
-                          <td className="w-[100px] px-1 py-2">
+                          <td className="w-24 px-2 py-2">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -835,7 +849,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             }}
                           />
                         </td>
-                          <td className="w-[80px] px-1 py-2">
+                          <td className="w-16 px-2 py-2">
                           <input
                             type="text"
                             inputMode="numeric"
@@ -874,7 +888,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       </>
                     )}
                     {data.showDimensions && (
-                        <td className="w-[120px] px-1 py-2">
+                        <td className="w-32 px-2 py-2">
                         <input
                           type="text"
                           value={item.dimensions}
