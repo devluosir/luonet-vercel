@@ -904,9 +904,9 @@ export default function HistoryManagementPage() {
               {[
                 { id: 'quotation', name: '报价单', shortName: '报价', icon: FileText },
                 { id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText },
-                { id: 'invoice', name: '发票', shortName: '发票', icon: Receipt },
                 { id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart },
-                { id: 'packing', name: '装箱单', shortName: '装箱', icon: Package }
+                { id: 'packing', name: '装箱单', shortName: '装箱', icon: Package },
+                { id: 'invoice', name: '发票', shortName: '发票', icon: Receipt }
               ].map((tab) => {
                 const Icon = tab.icon;
                 const count = getTabCount(tab.id as HistoryType);
