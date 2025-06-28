@@ -6,6 +6,15 @@ interface NotesSectionProps {
   onChange: (data: QuotationData) => void;
 }
 
+// iOS光标优化样式
+const iosCaretStyle = {
+  caretColor: '#007AFF',
+  WebkitCaretColor: '#007AFF',
+  WebkitTextFillColor: 'initial',
+  WebkitOpacity: 1,
+  opacity: 1
+} as React.CSSProperties;
+
 export function NotesSection({ data, onChange }: NotesSectionProps) {
   const textareaRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
@@ -97,7 +106,12 @@ export function NotesSection({ data, onChange }: NotesSectionProps) {
                   overflow: 'hidden',
                   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                   wordBreak: 'break-word',
-                  overflowWrap: 'break-word'
+                  overflowWrap: 'break-word',
+                  caretColor: '#007AFF',
+                  WebkitCaretColor: '#007AFF',
+                  WebkitTextFillColor: 'initial',
+                  WebkitOpacity: 1,
+                  opacity: 1
                 }}
                 onInput={(e) => {
                   adjustHeight(e.target as HTMLTextAreaElement);

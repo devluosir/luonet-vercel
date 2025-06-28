@@ -5,6 +5,15 @@ interface PaymentTermsSectionProps {
   onChange: (data: QuotationData) => void;
 }
 
+// iOS光标优化样式
+const iosCaretStyle = {
+  caretColor: '#007AFF',
+  WebkitCaretColor: '#007AFF',
+  WebkitTextFillColor: 'initial',
+  WebkitOpacity: 1,
+  opacity: 1
+} as React.CSSProperties;
+
 export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps) {
   return (
     <div className="space-y-4">
@@ -46,7 +55,12 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
                   minWidth: '150px',
                   maxWidth: '150px',
                   flexShrink: 0,
-                  flexGrow: 0
+                  flexGrow: 0,
+                  caretColor: '#007AFF',
+                  WebkitCaretColor: '#007AFF',
+                  WebkitTextFillColor: 'initial',
+                  WebkitOpacity: 1,
+                  opacity: 1
                 }}
                 pattern="\d{4}-\d{2}-\d{2}"
               />
@@ -70,6 +84,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
                 transition-all duration-300 ease-out
                 hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
                 min-h-[4em] resize"
+              style={iosCaretStyle}
               rows={2}
             />
           </div>

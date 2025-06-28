@@ -336,6 +336,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
             onChange={e => onChange({ ...data, inquiryNo: e.target.value })}
             placeholder="Inquiry No."
             className={inputClassName}
+            style={iosCaretStyle}
           />
         </div>
         {type === 'confirmation' && (
@@ -358,6 +359,13 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
                 text-[#007AFF] dark:text-[#0A84FF]
                 placeholder:text-[#007AFF]/40 dark:placeholder:text-[#0A84FF]/40
                 transition-all duration-300`}
+              style={{
+                caretColor: '#007AFF',
+                WebkitCaretColor: '#007AFF',
+                WebkitTextFillColor: 'initial',
+                WebkitOpacity: 1,
+                opacity: 1
+              } as React.CSSProperties}
               required
             />
           </div>
