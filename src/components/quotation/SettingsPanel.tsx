@@ -24,6 +24,15 @@ const inputClassName = `w-full px-4 py-2.5 rounded-xl
   placeholder:text-gray-400/60 dark:placeholder:text-gray-500/40
   transition-all duration-300`;
 
+// iOS光标优化样式
+const iosCaretStyle = {
+  caretColor: '#007AFF',
+  WebkitCaretColor: '#007AFF',
+  WebkitTextFillColor: 'initial',
+  WebkitOpacity: 1,
+  opacity: 1
+} as React.CSSProperties;
+
 const radioGroupClassName = `flex p-1 gap-2
   bg-gray-100/50 dark:bg-gray-900/50 
   rounded-lg
@@ -82,6 +91,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
             placeholder:text-[#86868B]"
+          style={iosCaretStyle}
         />
         {showSuccess && (
           <div className="absolute left-0 right-0 -bottom-6 text-center text-xs text-green-500 dark:text-green-400
@@ -146,6 +156,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             value={data.date}
             onChange={e => onChange({ ...data, date: e.target.value })}
             className={`${inputClassName} w-[130px]`}
+            style={iosCaretStyle}
           />
            {/* 币种选择 */}
            <div className={`${radioGroupClassName} h-[38px] w-[120px]`}>
@@ -323,6 +334,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             value={data.date}
             onChange={e => onChange({ ...data, date: e.target.value })}
             className={`${inputClassName} w-[130px]`}
+            style={iosCaretStyle}
           />
         </div>
 
@@ -498,6 +510,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             value={data.date}
             onChange={e => onChange({ ...data, date: e.target.value })}
             className={`${inputClassName} w-[130px]`}
+            style={iosCaretStyle}
           />
         </div>
 
