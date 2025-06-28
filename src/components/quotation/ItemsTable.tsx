@@ -13,6 +13,24 @@ const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
 // 默认单位列表（需要单复数变化的单位）
 const defaultUnits = ['pc', 'set', 'length'] as const;
 
+// iOS光标优化的内联样式
+const iosCaretStyle = {
+  caretColor: '#2563eb',
+  WebkitCaretColor: '#2563eb',
+  WebkitTextFillColor: 'initial',
+  WebkitOpacity: 1,
+  opacity: 1
+};
+
+// 暗色模式的光标颜色
+const iosCaretStyleDark = {
+  caretColor: '#60a5fa',
+  WebkitCaretColor: '#60a5fa',
+  WebkitTextFillColor: 'initial',
+  WebkitOpacity: 1,
+  opacity: 1
+};
+
 export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
   // 可用单位列表
   const availableUnits = [...defaultUnits, ...(data.customUnits || [])] as const;
@@ -23,6 +41,43 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
   const [editingQtyAmount, setEditingQtyAmount] = useState<string>('');
   const [editingOtherFeeIndex, setEditingOtherFeeIndex] = useState<number | null>(null);
   const [editingOtherFeeAmount, setEditingOtherFeeAmount] = useState<string>('');
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // 检测暗色模式
+  useEffect(() => {
+    const checkDarkMode = () => {
+      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setIsDarkMode(isDark);
+    };
+
+    checkDarkMode();
+    
+    if (window.matchMedia) {
+      const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      darkModeQuery.addEventListener('change', checkDarkMode);
+      return () => darkModeQuery.removeEventListener('change', checkDarkMode);
+    }
+  }, []);
+
+  // iOS输入框优化处理函数
+  const handleIOSInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const element = e.target;
+    // 强制设置光标颜色
+    element.style.caretColor = isDarkMode ? '#60a5fa' : '#2563eb';
+    element.style.webkitCaretColor = isDarkMode ? '#60a5fa' : '#2563eb';
+    element.style.webkitTextFillColor = 'initial';
+    element.style.webkitOpacity = '1';
+    element.style.opacity = '1';
+    
+    // 延迟滚动到可视区域，避免键盘遮挡
+    setTimeout(() => {
+      element.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center',
+        inline: 'nearest'
+      });
+    }, 300);
+  };
 
   // 添加表格宽度设置的逻辑
   useEffect(() => {
@@ -396,6 +451,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         onDoubleClick={() => handleDoubleClick(index, 'partName')}
                         onKeyDown={(e) => handleKeyDown(e, index, 'partName')}
                         onPaste={(e) => handleCellPaste(e, index, 'partName')}
+                        onFocus={handleIOSInputFocus}
                         className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                           focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
@@ -406,8 +462,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           ${item.highlight?.partName ? highlightClass : ''}`}
                         style={{ 
                           height: '28px',
-                          caretColor: '#2563eb',
-                          WebkitCaretColor: '#2563eb'
+                          ...iosCaretStyle,
+                          ...(isDarkMode ? iosCaretStyleDark : {})
                         }}
                       />
                     </td>
@@ -425,6 +481,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           onDoubleClick={() => handleDoubleClick(index, 'description')}
                           onKeyDown={(e) => handleKeyDown(e, index, 'description')}
                           onPaste={(e) => handleCellPaste(e, index, 'description')}
+                          onFocus={handleIOSInputFocus}
                           className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
@@ -435,8 +492,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             ${item.highlight?.description ? highlightClass : ''}`}
                           style={{ 
                             height: '28px',
-                            caretColor: '#2563eb',
-                            WebkitCaretColor: '#2563eb'
+                            ...iosCaretStyle,
+                            ...(isDarkMode ? iosCaretStyleDark : {})
                           }}
                         />
                       </td>
@@ -462,6 +519,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           setEditingQtyIndex(index);
                           setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
                           e.target.select();
+                          handleIOSInputFocus(e);
                         }}
                         onBlur={() => {
                           setEditingQtyIndex(null);
@@ -477,8 +535,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           -webkit-appearance-none touch-manipulation
                           ${item.highlight?.quantity ? highlightClass : ''}`}
                         style={{
-                          caretColor: '#2563eb',
-                          WebkitCaretColor: '#2563eb'
+                          ...iosCaretStyle,
+                          ...(isDarkMode ? iosCaretStyleDark : {})
                         }}
                       />
                     </td>
@@ -492,6 +550,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         }}
                         onDoubleClick={() => handleDoubleClick(index, 'unit')}
                         onKeyDown={(e) => handleKeyDown(e, index, 'unit')}
+                        onFocus={handleIOSInputFocus}
                         className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                           focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
@@ -501,8 +560,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           appearance-none -webkit-appearance-none touch-manipulation
                           ${item.highlight?.unit ? highlightClass : ''}`}
                         style={{
-                          caretColor: '#2563eb',
-                          WebkitCaretColor: '#2563eb'
+                          ...iosCaretStyle,
+                          ...(isDarkMode ? iosCaretStyleDark : {})
                         }}
                       >
                         {availableUnits.map(unit => {
@@ -536,6 +595,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           setEditingPriceIndex(index);
                           setEditingPriceAmount(item.unitPrice === 0 ? '' : item.unitPrice.toString());
                           e.target.select();
+                          handleIOSInputFocus(e);
                         }}
                         onBlur={() => {
                           setEditingPriceIndex(null);
@@ -551,8 +611,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           -webkit-appearance-none touch-manipulation
                           ${item.highlight?.unitPrice ? highlightClass : ''}`}
                         style={{
-                          caretColor: '#2563eb',
-                          WebkitCaretColor: '#2563eb'
+                          ...iosCaretStyle,
+                          ...(isDarkMode ? iosCaretStyleDark : {})
                         }}
                       />
                     </td>
@@ -569,8 +629,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           transition-all duration-200 text-center
                           ${item.highlight?.amount ? highlightClass : ''}`}
                         style={{
-                          caretColor: '#2563eb',
-                          WebkitCaretColor: '#2563eb'
+                          ...iosCaretStyle,
+                          ...(isDarkMode ? iosCaretStyleDark : {})
                         }}
                       />
                     </td>
@@ -589,6 +649,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           onDoubleClick={() => handleDoubleClick(index, 'remarks')}
                           onKeyDown={(e) => handleKeyDown(e, index, 'remarks')}
                           onPaste={(e) => handleCellPaste(e, index, 'remarks')}
+                          onFocus={handleIOSInputFocus}
                           className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
@@ -599,8 +660,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             ${item.highlight?.remarks ? highlightClass : ''}`}
                           style={{ 
                             height: '28px',
-                            caretColor: '#2563eb',
-                            WebkitCaretColor: '#2563eb'
+                            ...iosCaretStyle,
+                            ...(isDarkMode ? iosCaretStyleDark : {})
                           }}
                         />
                       </td>
@@ -657,8 +718,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}
                           style={{ 
                             height: '28px',
-                            caretColor: '#2563eb',
-                            WebkitCaretColor: '#2563eb'
+                            ...iosCaretStyle,
+                            ...(isDarkMode ? iosCaretStyleDark : {})
                           }}
                         />
                       </td>
@@ -680,6 +741,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             setEditingOtherFeeIndex(index);
                             setEditingOtherFeeAmount(fee.amount === 0 ? '' : fee.amount.toString());
                             e.target.select();
+                            handleIOSInputFocus(e);
                           }}
                           onBlur={() => {
                             setEditingOtherFeeIndex(null);
@@ -696,8 +758,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             ${fee.highlight?.amount ? highlightClass : ''}
                             ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}
                           style={{
-                            caretColor: '#2563eb',
-                            WebkitCaretColor: '#2563eb'
+                            ...iosCaretStyle,
+                            ...(isDarkMode ? iosCaretStyleDark : {})
                           }}
                         />
                       </td>
@@ -721,8 +783,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                               ${fee.highlight?.remarks ? highlightClass : ''}`}
                             style={{ 
                               height: '28px',
-                              caretColor: '#2563eb',
-                              WebkitCaretColor: '#2563eb'
+                              ...iosCaretStyle,
+                              ...(isDarkMode ? iosCaretStyleDark : {})
                             }}
                           />
                         </td>

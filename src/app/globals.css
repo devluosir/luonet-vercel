@@ -84,12 +84,56 @@ body {
     -webkit-text-fill-color: initial !important;
     -webkit-opacity: 1 !important;
     opacity: 1 !important;
+    /* 确保背景透明度不影响光标 */
+    background-clip: padding-box !important;
+    /* 强制硬件加速以确保渲染 */
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+    will-change: auto !important;
+  }
+  
+  /* 确保focus状态下光标可见 */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    caret-color: #2563eb !important;
+    -webkit-caret-color: #2563eb !important;
+    -webkit-text-fill-color: initial !important;
+    -webkit-opacity: 1 !important;
+    opacity: 1 !important;
+    /* 强制重绘 */
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+  }
+  
+  /* 表格内的输入框特殊处理 */
+  table input,
+  table textarea,
+  table select {
+    caret-color: #2563eb !important;
+    -webkit-caret-color: #2563eb !important;
+    position: relative !important;
+    z-index: 1 !important;
   }
   
   @media (prefers-color-scheme: dark) {
     input,
     textarea,
     select {
+      caret-color: #60a5fa !important;
+      -webkit-caret-color: #60a5fa !important;
+    }
+    
+    input:focus,
+    textarea:focus,
+    select:focus {
+      caret-color: #60a5fa !important;
+      -webkit-caret-color: #60a5fa !important;
+    }
+    
+    table input,
+    table textarea,
+    table select {
       caret-color: #60a5fa !important;
       -webkit-caret-color: #60a5fa !important;
     }

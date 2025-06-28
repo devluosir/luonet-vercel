@@ -252,7 +252,8 @@ export default function PDFPreviewComponent({
                     }
                   }, 5000); // 5秒总超时
                 }}
-            />
+              />
+            </div>
           )}
         </div>
       </div>
