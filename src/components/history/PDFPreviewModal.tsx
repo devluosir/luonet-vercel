@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, FileText, Download, ExternalLink } from 'lucide-react';
+import { X, FileText, Download, ExternalLink, Smartphone } from 'lucide-react';
 import { generateQuotationPDF } from '@/utils/quotationPdfGenerator';
 import { generateOrderConfirmationPDF } from '@/utils/orderConfirmationPdfGenerator';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
@@ -112,17 +112,17 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
   const getPreviewTitle = () => {
     switch (itemType) {
       case 'quotation':
-        return '报价单 PDF 预览';
+        return '报价单预览';
       case 'confirmation':
-        return '订单确认 PDF 预览';
+        return '订单确认预览';
       case 'invoice':
-        return '发票 PDF 预览';
+        return '发票预览';
       case 'purchase':
-        return '采购单 PDF 预览';
+        return '采购单预览';
       case 'packing':
-        return '装箱单 PDF 预览';
+        return '装箱单预览';
       default:
-        return 'PDF 预览';
+        return 'PDF预览';
     }
   };
 
@@ -144,6 +144,119 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
 
   if (!isOpen) return null;
 
+  // 安卓设备专用简化界面
+  if (deviceInfo.isAndroid) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden">
+          {/* 简化的头部 */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700">
+            <div className="flex items-center gap-2">
+              <Smartphone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                {getPreviewTitle()}
+              </h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          {/* 内容区域 */}
+          <div className="p-6">
+            {isGeneratingPdf ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-10 w-10 border-3 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">正在生成PDF...</p>
+              </div>
+            ) : (
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                  <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                </div>
+                
+                <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  PDF已准备就绪
+                </h4>
+                
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                  选择您的查看方式
+                </p>
+                
+                {/* 主操作按钮 */}
+                <div className="space-y-3">
+                  {/* 推荐操作 - 新窗口打开 */}
+                  {pdfPreviewUrl && deviceInfo.browser.name === 'Chrome' && (
+                    <button
+                      onClick={openInNewTab}
+                      className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-lg"
+                    >
+                      <ExternalLink className="w-5 h-5" />
+                      <span>浏览器中查看</span>
+                      <span className="px-2 py-0.5 bg-blue-500 text-xs rounded-full">推荐</span>
+                    </button>
+                  )}
+                  
+                  {/* 下载按钮 */}
+                  <button
+                    onClick={downloadPDF}
+                    disabled={isGeneratingPdf}
+                    className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-medium transition-colors shadow-md ${
+                      deviceInfo.browser.name === 'Chrome' 
+                        ? 'border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700' 
+                        : 'bg-green-600 text-white hover:bg-green-700 shadow-lg'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {isGeneratingPdf ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-current border-t-transparent"></div>
+                        <span>生成中...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-5 h-5" />
+                        <span>下载到手机</span>
+                        {deviceInfo.browser.name !== 'Chrome' && (
+                          <span className="px-2 py-0.5 bg-green-500 text-xs rounded-full">推荐</span>
+                        )}
+                      </>
+                    )}
+                  </button>
+                  
+                  {/* 备用选项 - 只有在Chrome中才显示 */}
+                  {pdfPreviewUrl && deviceInfo.browser.name === 'Chrome' && (
+                    <button
+                      onClick={downloadPDF}
+                      disabled={isGeneratingPdf}
+                      className="w-full flex items-center justify-center gap-3 px-6 py-3 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>或者下载到手机</span>
+                    </button>
+                  )}
+                </div>
+                
+                {/* 简化的提示信息 */}
+                {deviceInfo.browser.name !== 'Chrome' && (
+                  <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                    <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                      <span>💡</span>
+                      <span>建议使用Chrome浏览器以获得更好的预览体验</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 桌面端界面保持原样
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
@@ -152,16 +265,6 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
               {getPreviewTitle()}
             </h3>
-            {deviceInfo.isAndroid && (
-              <div className="flex gap-2">
-                <span className="px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">
-                  安卓设备
-                </span>
-                <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">
-                  {deviceInfo.browser.name}
-                </span>
-              </div>
-            )}
           </div>
           <div className="flex items-center gap-2">
             {/* 新窗口打开按钮 */}
@@ -169,7 +272,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
               <button
                 onClick={openInNewTab}
                 className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                title={deviceInfo.isAndroid ? "在新窗口打开（推荐）" : "在新窗口打开"}
+                title="在新窗口打开"
               >
                 <ExternalLink className="w-5 h-5" />
               </button>
@@ -186,13 +289,13 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
             </button>
             
             {/* 关闭按钮 */}
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
         
         <div className="bg-white dark:bg-gray-800 rounded-b-xl flex items-center justify-center border border-gray-200 dark:border-gray-600" style={{padding:0}}>
@@ -204,11 +307,11 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">请稍候</p>
               </div>
             </div>
-          ) : showDownloadFallback || deviceInfo.isAndroid ? (
+          ) : showDownloadFallback ? (
             <div className="text-center py-12 px-6 max-w-lg mx-auto">
               <FileText className="w-16 h-16 mx-auto mb-4 text-blue-500 opacity-70" />
               <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                {deviceInfo.isAndroid ? 'PDF查看方式' : 'PDF预览'}
+                PDF预览
               </h4>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 {previewInfo.message || '选择您偏好的PDF查看方式'}
@@ -258,25 +361,6 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                   </button>
                 )}
               </div>
-              
-              {deviceInfo.isAndroid && (
-                <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                  <div className="flex items-start gap-3">
-                    <div className="text-amber-600 dark:text-amber-400 text-lg">💡</div>
-                    <div className="text-left">
-                      <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-1">
-                        安卓设备优化建议
-                      </p>
-                      <p className="text-xs text-amber-600 dark:text-amber-500">
-                        {deviceInfo.browser.name === 'Chrome' 
-                          ? '• 点击"新窗口打开"可在Chrome中查看PDF\n• 或直接下载到本地使用PDF阅读器打开'
-                          : '• 建议下载PDF文件查看\n• 或使用Chrome浏览器访问本页面'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           ) : pdfPreviewUrl ? (
             <iframe

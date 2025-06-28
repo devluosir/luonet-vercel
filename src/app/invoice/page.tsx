@@ -12,6 +12,10 @@ import { CustomerSection } from '@/components/invoice/CustomerSection';
 import ItemsTable from '@/components/invoice/ItemsTable';
 import { addInvoiceHistory, getInvoiceHistory, saveInvoiceHistory } from '@/utils/invoiceHistory';
 import { v4 as uuidv4 } from 'uuid';
+import dynamic from 'next/dynamic';
+
+// 动态导入PDFPreviewModal
+const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
 
 // 添加高亮样式常量
 const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
@@ -150,7 +154,7 @@ Beneficiary: Luo & Company Co., Limited`,
     stampType: 'none'
   });
   const [showPreview, setShowPreview] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [previewItem, setPreviewItem] = useState<any>(null);
   const [editingFeeAmount, setEditingFeeAmount] = useState<string>('');
   const [editingFeeIndex, setEditingFeeIndex] = useState<number | null>(null);
   const [focusedCell, setFocusedCell] = useState<{
@@ -1303,11 +1307,20 @@ Beneficiary: Luo & Company Co., Limited`,
                     type="button"
                     onClick={async () => {
                       try {
-                        const pdfUrl = await generateInvoicePDF(invoiceData, true);
-                        if (pdfUrl) {
-                          setPreviewUrl(pdfUrl.toString());
-                          setShowPreview(true);
-                        }
+                        // 准备预览数据，包装成历史记录格式
+                        const previewData = {
+                          id: editId || 'preview',
+                          createdAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString(),
+                          customerName: invoiceData.to.name || invoiceData.to || 'Unknown',
+                          invoiceNo: invoiceData.invoiceNo || 'N/A',
+                          totalAmount: getTotalAmount(),
+                          currency: invoiceData.currency,
+                          data: invoiceData
+                        };
+                        
+                        setPreviewItem(previewData);
+                        setShowPreview(true);
                       } catch (error) {
                         console.error('Error previewing PDF:', error);
                       }
@@ -1335,61 +1348,16 @@ Beneficiary: Luo & Company Co., Limited`,
         </div>
       </div>
 
-      {/* PDF 预览模态框 */}
-      {showPreview && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="flex flex-col p-4 border-b border-gray-200 dark:border-gray-800">
-              {/* 标题和关闭按钮 */}
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Preview Invoice</h3>
-                <button
-                  onClick={() => {
-                    setShowPreview(false);
-                    setPreviewUrl('');
-                  }}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                >
-                  <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              {/* 发票信息 */}
-              <div className="flex flex-wrap gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 dark:text-gray-400">Invoice No:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{invoiceData.invoiceNo || 'N/A'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 dark:text-gray-400">Date:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{invoiceData.date}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 dark:text-gray-400">Currency:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {invoiceData.currency === 'USD' ? 'US Dollar' : 'Chinese Yuan'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 dark:text-gray-400">Total Amount:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {invoiceData.currency === 'USD' ? '$' : '¥'}{getTotalAmount().toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="flex-1 bg-gray-100 dark:bg-black p-4">
-              <iframe
-                src={previewUrl}
-                className="w-full h-full rounded-lg bg-white dark:bg-[#1C1C1E] shadow-lg"
-                title="PDF Preview"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* PDF预览弹窗 - 使用统一的组件 */}
+      <PDFPreviewModal
+        isOpen={showPreview}
+        onClose={() => {
+          setShowPreview(false);
+          setPreviewItem(null);
+        }}
+        item={previewItem}
+        itemType="invoice"
+      />
 
       <Footer />
     </div>

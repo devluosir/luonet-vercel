@@ -19,7 +19,7 @@ import { Footer } from '@/components/Footer';
 import { parseExcelData, convertExcelToLineItems } from '@/utils/excelPasteHandler';
 import { PaymentTermsSection } from '@/components/quotation/PaymentTermsSection';
 import { saveQuotationHistory } from '@/utils/quotationHistory';
-import PDFPreviewComponent from '@/components/PDFPreviewComponent';
+import dynamic from 'next/dynamic';
 import { initIOSOptimization } from '@/utils/iosInputOptimization';
 
 // 标题样式
@@ -28,6 +28,9 @@ const titleClassName = `text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]`
 // 按钮基础样式
 const buttonClassName = `px-4 py-2 rounded-xl text-sm font-medium 
   transition-all duration-300`;
+
+// 动态导入PDFPreviewModal
+const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
 
 interface CustomWindow extends Window {
   __QUOTATION_DATA__?: QuotationData;
@@ -47,7 +50,8 @@ export default function QuotationPage() {
 
   const [activeTab, setActiveTab] = useState<'quotation' | 'confirmation'>(initialType || 'quotation');
   const [showSettings, setShowSettings] = useState(false);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewItem, setPreviewItem] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState(0);
@@ -171,7 +175,8 @@ export default function QuotationPage() {
   // 添加PDF预览事件监听器
   useEffect(() => {
     const handlePdfPreview = (event: CustomEvent<string>) => {
-      setPdfPreviewUrl(event.detail);
+      setPreviewItem(event.detail);
+      setShowPreview(true);
     };
 
     window.addEventListener('pdf-preview', handlePdfPreview as EventListener);
@@ -247,30 +252,28 @@ export default function QuotationPage() {
     e.preventDefault();
   }, []);
 
-  const handlePreview = useCallback(async () => {
-    flushSync(() => {
-      setIsLoading(true);
-    });
-    
+  const handlePreview = async () => {
     try {
-      if (activeTab === 'quotation') {
-        const pdfBlob = await generateQuotationPDF(data, true);
-        const url = URL.createObjectURL(pdfBlob);
-        setPdfPreviewUrl(url);
-      } else {
-        const pdfBlob = await generateOrderConfirmationPDF(data, true);
-        const url = URL.createObjectURL(pdfBlob);
-        setPdfPreviewUrl(url);
-      }
-    } catch (error: unknown) {
-      const errorMessage = handleError(error);
-      console.error('PDF generation failed:', errorMessage);
-    } finally {
-      flushSync(() => {
-        setIsLoading(false);
-      });
+      // 准备预览数据，包装成历史记录格式  
+      const previewData = {
+        id: editId || 'preview',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        type: activeTab,
+        customerName: data.customerInfo.name || 'Unknown',
+        quotationNo: data.quotationNo || 'N/A', 
+        totalAmount: calculateTotalAmount(),
+        currency: data.currency,
+        data: data
+      };
+      
+      setPreviewItem(previewData);
+      setShowPreview(true);
+    } catch (err) {
+      console.error('Preview failed:', err);
+      alert('预览PDF失败');
     }
-  }, [activeTab, data, handleError]);
+  };
 
   // 将 handleGlobalPaste 包装在 useCallback 中
   const handleGlobalPaste = useCallback((data: string | LineItem[]) => {
@@ -790,16 +793,17 @@ export default function QuotationPage() {
         </div>
       </main>
 
-      {/* PDF预览弹窗 */}
-      {pdfPreviewUrl && (
-        <PDFPreviewComponent 
-          pdfUrl={pdfPreviewUrl}
-          onClose={() => setPdfPreviewUrl(null)}
-          title="PDF Preview"
-          data={data}
-          itemType={activeTab}
-        />
-      )}
+      {/* PDF预览弹窗 - 使用统一的组件 */}
+      <PDFPreviewModal
+        isOpen={showPreview}
+        onClose={() => {
+          setShowPreview(false);
+          setPreviewItem(null);
+        }}
+        item={previewItem}
+        itemType={activeTab as 'quotation' | 'confirmation'}
+      />
+
       <Footer />
     </div>
   );

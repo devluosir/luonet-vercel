@@ -11,6 +11,10 @@ import { ItemsTable } from '@/components/packinglist/ItemsTable';
 import { SettingsPanel } from '@/components/packinglist/SettingsPanel';
 import { ShippingMarksModal } from '@/components/packinglist/ShippingMarksModal';
 import { savePackingHistory, getPackingHistoryById } from '@/utils/packingHistory';
+import dynamic from 'next/dynamic';
+
+// 动态导入PDFPreviewModal
+const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
 
 // 基础样式定义
 const inputClassName = `w-full px-4 py-2.5 rounded-2xl
@@ -108,10 +112,10 @@ export default function PackingPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string>('');
   const [showPreview, setShowPreview] = useState(false);
   const [showShippingMarksModal, setShowShippingMarksModal] = useState(false);
   const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
+  const [previewItem, setPreviewItem] = useState<any>(null);
 
   const [packingData, setPackingData] = useState<PackingData>(_initialData || {
     orderNo: '',
@@ -326,23 +330,41 @@ export default function PackingPage() {
     }
   }, [packingData, editId, pathname]);
 
-  // 预览
+  // 预览功能
   const handlePreview = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 生成预览URL
-      const pdfUrl = await generatePackingListPDF(packingData, true);
-      if (pdfUrl) {
-        setPreviewUrl(pdfUrl);
-        setShowPreview(true);
-      }
+      // 计算总价
+      const calculatedTotals = packingData.items.reduce((acc, item) => ({
+        totalPrice: acc.totalPrice + item.totalPrice,
+        netWeight: acc.netWeight + item.netWeight,
+        grossWeight: acc.grossWeight + item.grossWeight,
+        packageQty: acc.packageQty + item.packageQty
+      }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
+
+      // 准备预览数据，包装成历史记录格式
+      const previewData = {
+        id: editId || 'preview',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        consigneeName: packingData.consignee.name || 'Unknown',
+        invoiceNo: packingData.invoiceNo || 'N/A',
+        orderNo: packingData.orderNo || 'N/A',
+        totalAmount: calculatedTotals.totalPrice,
+        currency: packingData.currency,
+        documentType: packingData.documentType,
+        data: packingData
+      };
+      
+      setPreviewItem(previewData);
+      setShowPreview(true);
     } catch (error) {
       console.error('Preview failed:', error);
       alert('Failed to generate preview. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  }, [packingData]);
+  }, [packingData, editId]);
 
   // 保存
   const handleSave = useCallback(async () => {
@@ -380,15 +402,6 @@ export default function PackingPage() {
     grossWeight: acc.grossWeight + item.grossWeight,
     packageQty: acc.packageQty + item.packageQty
   }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
-
-  // 清理预览URL
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
@@ -753,81 +766,16 @@ export default function PackingPage() {
       </main>
       <Footer />
       
-      {/* PDF 预览模态框 */}
-      {showPreview && (
-        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#1C1C1E] rounded-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="flex flex-col p-4 border-b border-gray-200 dark:border-gray-800">
-              {/* 标题和关闭按钮 */}
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Preview Packing List</h3>
-                <button
-                  onClick={() => {
-                    setShowPreview(false);
-                    setPreviewUrl('');
-                  }}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                >
-                  <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              {/* 箱单信息 */}
-              <div className="flex flex-wrap gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 dark:text-gray-400">Document Type:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {packingData.documentType === 'proforma' ? 'Proforma Invoice' :
-                     packingData.documentType === 'packing' ? 'Packing List' :
-                     'Proforma Invoice & Packing List'}
-                  </span>
-                </div>
-                {packingData.orderNo && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 dark:text-gray-400">Order No:</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{packingData.orderNo}</span>
-                  </div>
-                )}
-                {packingData.invoiceNo && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 dark:text-gray-400">Invoice No:</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{packingData.invoiceNo}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 dark:text-gray-400">Date:</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{packingData.date}</span>
-                </div>
-                {packingData.showPrice && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500 dark:text-gray-400">Currency:</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">
-                        {packingData.currency === 'USD' ? 'US Dollar' : packingData.currency === 'EUR' ? 'Euro' : 'Chinese Yuan'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500 dark:text-gray-400">Total Amount:</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">
-                        {packingData.currency === 'USD' ? '$' : packingData.currency === 'EUR' ? '€' : '¥'}{totals.totalPrice.toFixed(2)}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-            <div className="flex-1 bg-gray-100 dark:bg-black p-4">
-              <iframe
-                src={previewUrl}
-                className="w-full h-full rounded-lg bg-white dark:bg-[#1C1C1E] shadow-lg"
-                title="PDF Preview"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* PDF预览弹窗 - 使用统一的组件 */}
+      <PDFPreviewModal
+        isOpen={showPreview}
+        onClose={() => {
+          setShowPreview(false);
+          setPreviewItem(null);
+        }}
+        item={previewItem}
+        itemType="packing"
+      />
 
       {/* Shipping Marks Modal */}
       <ShippingMarksModal

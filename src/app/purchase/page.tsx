@@ -12,7 +12,10 @@ import { savePurchaseHistory, getPurchaseHistory } from '@/utils/purchaseHistory
 import { useRouter, usePathname } from 'next/navigation';
 import { Footer } from '@/components/Footer';
 import { v4 as uuidv4 } from 'uuid';
-import PDFPreviewComponent from '@/components/PDFPreviewComponent';
+import dynamic from 'next/dynamic';
+
+// 动态导入PDFPreviewModal
+const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
 
 const defaultData: PurchaseOrderData = {
   attn: '',
@@ -43,7 +46,8 @@ export default function PurchaseOrderPage() {
   const [saveMessage, setSaveMessage] = useState('');
   const [editId, setEditId] = useState<string | undefined>(undefined);
   const [isPreviewing, setIsPreviewing] = useState(false);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewItem, setPreviewItem] = useState<any>(null);
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [isEditMode, setIsEditMode] = useState(false);
   const router = useRouter();
@@ -147,15 +151,24 @@ export default function PurchaseOrderPage() {
 
   // 预览PDF
   const handlePreview = async () => {
-    setIsPreviewing(true);
     try {
-      const blob = await generatePurchaseOrderPDF(data, true);
-      const url = URL.createObjectURL(blob);
-      setPdfPreviewUrl(url);
+      // 准备预览数据，包装成历史记录格式
+      const previewData = {
+        id: editId || 'preview',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        supplierName: data.from || 'Unknown',
+        orderNo: data.orderNo || 'N/A',
+        totalAmount: parseFloat(data.contractAmount) || 0,
+        currency: data.currency,
+        data: data
+      };
+      
+      setPreviewItem(previewData);
+      setShowPreview(true);
     } catch (err) {
+      console.error('Preview failed:', err);
       alert('预览PDF失败');
-    } finally {
-      setIsPreviewing(false);
     }
   };
 
@@ -537,16 +550,18 @@ export default function PurchaseOrderPage() {
           </div>
         </div>
       </main>
-      {/* PDF预览弹窗 */}
-      {pdfPreviewUrl && (
-        <PDFPreviewComponent 
-          pdfUrl={pdfPreviewUrl}
-          onClose={() => setPdfPreviewUrl(null)}
-          title="采购订单 PDF 预览"
-          data={data}
-          itemType="purchase"
-              />
-      )}
+
+      {/* PDF预览弹窗 - 使用统一的组件 */}
+      <PDFPreviewModal
+        isOpen={showPreview}
+        onClose={() => {
+          setShowPreview(false);
+          setPreviewItem(null);
+        }}
+        item={previewItem}
+        itemType="purchase"
+      />
+
       <Footer />
     </div>
   );
