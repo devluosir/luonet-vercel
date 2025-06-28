@@ -155,13 +155,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             
             {/* Dimensions */}
             <div className="flex items-center gap-1">
-              <input
-                type="checkbox"
-                checked={showDimensions}
-                onChange={(e) => onToggleDimensions(e.target.checked)}
-                className="w-3 h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1"
-              />
-              <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Size</span>
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showDimensions}
+                  onChange={(e) => onToggleDimensions(e.target.checked)}
+                  className="w-3 h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1"
+                />
+                <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Size</span>
+              </label>
               <div className="flex gap-0.5 ml-1">
                 <button
                   type="button"
@@ -190,13 +192,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             
             {/* Price */}
             <div className="flex items-center gap-1">
-              <input
-                type="checkbox"
-                checked={showPrice}
-                onChange={(e) => onTogglePrice(e.target.checked)}
-                className="w-3 h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1"
-              />
-              <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Price</span>
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showPrice}
+                  onChange={(e) => onTogglePrice(e.target.checked)}
+                  className="w-3 h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1"
+                />
+                <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Price</span>
+              </label>
               <div className="flex gap-0.5 ml-1">
                 <button
                   type="button"

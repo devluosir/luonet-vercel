@@ -119,15 +119,16 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     onItemChange(index, 'unit', newUnit);
   };
 
-  // 处理数量变更时同时更新单位
+  // 处理数量变更时同时更新单位（确保只接受整数）
   const handleQuantityChange = (index: number, value: string | number) => {
-    const quantity = Number(value);
+    // 确保只接受整数
+    const quantity = typeof value === 'string' ? parseInt(value) || 0 : Math.floor(Number(value));
     const baseUnit = data.items[index].unit.replace(/s$/, '');
     const newUnit = defaultUnits.includes(baseUnit as typeof defaultUnits[number]) 
       ? getUnitDisplay(baseUnit, quantity) 
       : data.items[index].unit;
     
-    onItemChange(index, 'quantity', value);
+    onItemChange(index, 'quantity', quantity);
     if (newUnit !== data.items[index].unit) {
       onItemChange(index, 'unit', newUnit);
     }
@@ -202,7 +203,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
                   <input
                     type="number"
-                    value={item.quantity || ''}
+                    value={item.quantity > 0 ? item.quantity : ''}
                     onChange={(e) => handleQuantityChange(index, e.target.value)}
                   className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                       focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
@@ -210,6 +211,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                       ios-optimized-input"
                     placeholder="0"
+                    min="0"
+                    step="1"
                   />
                 </div>
               
@@ -274,8 +277,14 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Net Weight (kg)</label>
                     <input
                       type="number"
-                      value={item.netWeight.toFixed(2)}
+                      value={item.netWeight > 0 ? item.netWeight.toFixed(2) : ''}
                       onChange={(e) => onItemChange(index, 'netWeight', parseFloat(e.target.value) || 0)}
+                      onBlur={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        if (value > 0) {
+                          onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
+                        }
+                      }}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                         text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
@@ -288,8 +297,14 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Gross Weight (kg)</label>
                     <input
                       type="number"
-                      value={item.grossWeight.toFixed(2)}
+                      value={item.grossWeight > 0 ? item.grossWeight.toFixed(2) : ''}
                       onChange={(e) => onItemChange(index, 'grossWeight', parseFloat(e.target.value) || 0)}
+                      onBlur={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        if (value > 0) {
+                          onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
+                        }
+                      }}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                         text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
@@ -302,7 +317,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Packages</label>
                     <input
                       type="number"
-                      value={item.packageQty || ''}
+                      value={item.packageQty > 0 ? item.packageQty : ''}
                       onChange={(e) => onItemChange(index, 'packageQty', parseInt(e.target.value) || 0)}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
@@ -482,8 +497,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       <td className="w-[80px] px-1 py-2">
                       <input
                         type="text"
-                        inputMode="decimal"
-                        value={item.quantity.toString()}
+                        inputMode="numeric"
+                        value={item.quantity > 0 ? item.quantity.toString() : ''}
                         onChange={(e) => {
                           const value = e.target.value;
                           if (/^\d*$/.test(value)) {
@@ -567,11 +582,17 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={item.netWeight.toFixed(2)}
+                            value={item.netWeight > 0 ? item.netWeight.toFixed(2) : ''}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*\.?\d*$/.test(value)) {
                                 onItemChange(index, 'netWeight', value === '' ? 0 : parseFloat(value));
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const value = parseFloat(e.target.value) || 0;
+                              if (value > 0) {
+                                onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
                               }
                             }}
                             className="w-full px-3 py-1.5 bg-transparent border border-transparent
@@ -589,11 +610,17 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={item.grossWeight.toFixed(2)}
+                            value={item.grossWeight > 0 ? item.grossWeight.toFixed(2) : ''}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*\.?\d*$/.test(value)) {
                                 onItemChange(index, 'grossWeight', value === '' ? 0 : parseFloat(value));
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const value = parseFloat(e.target.value) || 0;
+                              if (value > 0) {
+                                onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
                               }
                             }}
                             className="w-full px-3 py-1.5 bg-transparent border border-transparent
@@ -611,7 +638,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={item.packageQty.toString()}
+                            value={item.packageQty > 0 ? item.packageQty.toString() : ''}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*$/.test(value)) {

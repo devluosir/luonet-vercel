@@ -213,8 +213,8 @@ export default function PackingPage() {
           ? getUnitDisplay(baseUnit, quantity) 
           : value.toString();
       } else if (field === 'quantity') {
-        // 更新数量时，同时更新单位的单复数
-        const quantity = Number(value);
+        // 更新数量时，同时更新单位的单复数（确保只接受整数）
+        const quantity = typeof value === 'string' ? parseInt(value) || 0 : Math.floor(Number(value));
         const baseUnit = newItems[index].unit.replace(/s$/, '');
         item.quantity = quantity;
         item.unit = defaultUnits.includes(baseUnit as typeof defaultUnits[number]) 
