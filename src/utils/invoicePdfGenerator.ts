@@ -212,7 +212,7 @@ async function renderCustomerInfo(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   let currentY = startY;
 
   // 右上角信息区域
-  const rightMargin = pageWidth - 20;
+  const rightMargin = pageWidth - 25;  // 增加右边距，向左移动
   const rightInfoY = startY;
   const colonX = rightMargin - 15;  // 冒号的固定位置
   
