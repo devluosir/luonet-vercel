@@ -107,11 +107,7 @@ export function NotesSection({ data, onChange }: NotesSectionProps) {
                   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                   wordBreak: 'break-word',
                   overflowWrap: 'break-word',
-                  caretColor: '#007AFF',
-                  WebkitCaretColor: '#007AFF',
-                  WebkitTextFillColor: 'initial',
-                  WebkitOpacity: 1,
-                  opacity: 1
+                  ...iosCaretStyle
                 }}
                 onInput={(e) => {
                   adjustHeight(e.target as HTMLTextAreaElement);
