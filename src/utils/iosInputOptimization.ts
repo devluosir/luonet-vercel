@@ -6,8 +6,8 @@
 export const isIOSDevice = (): boolean => {
   if (typeof window === 'undefined') return false;
   
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 };
 
 /**
@@ -17,7 +17,11 @@ export const isIOSSafari = (): boolean => {
   if (typeof window === 'undefined') return false;
   
   const ua = navigator.userAgent;
-  return isIOSDevice() && /Safari/.test(ua) && !/CriOS|FxiOS|OPiOS|mercury/.test(ua);
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua) && !/CriOS/.test(ua);
+  
+  return isIOS && isSafari;
 };
 
 /**
@@ -34,14 +38,14 @@ export const getIOSVersion = (): number | null => {
 };
 
 /**
- * 优化iOS设备上的输入框元素
+ * 优化iOS设备上的输入框元素 - 增强版本
  */
 export const optimizeIOSInput = (element: HTMLInputElement | HTMLTextAreaElement): void => {
   if (!isIOSDevice()) return;
   
-  const style = element.style as any; // 使用类型断言访问WebKit属性
+  const style = element.style as any;
   
-  // 确保光标可见 - 使用与组件一致的颜色
+  // 强制设置光标颜色和样式 - 确保在所有层级都可见
   element.style.caretColor = '#007AFF';
   style.webkitCaretColor = '#007AFF';
   style.webkitAppearance = 'none';
@@ -50,150 +54,107 @@ export const optimizeIOSInput = (element: HTMLInputElement | HTMLTextAreaElement
   style.webkitOpacity = '1';
   element.style.opacity = '1';
   
+  // 设置层级确保光标在正确位置
+  element.style.position = 'relative';
+  element.style.zIndex = '1';
+  
+  // 添加硬件加速确保渲染正确
+  style.webkitTransform = 'translateZ(0)';
+  element.style.transform = 'translateZ(0)';
+  style.willChange = 'transform';
+  
   // 优化触摸体验
   element.style.touchAction = 'manipulation';
   style.webkitTouchCallout = 'none';
   style.webkitUserSelect = 'text';
   element.style.userSelect = 'text';
   
+  // 确保背景不会遮挡光标
+  element.style.backgroundClip = 'padding-box';
+  
   // 防止自动放大
   if (parseFloat(getComputedStyle(element).fontSize) < 16) {
     element.style.fontSize = '16px';
   }
   
+  // 添加CSS类确保样式应用
+  if (!element.classList.contains('ios-optimized-input')) {
+    element.classList.add('ios-optimized-input');
+  }
+  
   // 添加focus事件优化
-  element.addEventListener('focus', () => {
-    // 强制显示光标
+  const handleFocus = () => {
+    // 焦点时进一步强化光标可见性
     element.style.caretColor = '#007AFF';
     style.webkitCaretColor = '#007AFF';
-    style.webkitTextFillColor = 'initial';
-    style.webkitOpacity = '1';
-    element.style.opacity = '1';
+    element.style.zIndex = '2';
+    style.webkitTransform = 'translateZ(1px)';
+    element.style.transform = 'translateZ(1px)';
     
-    // 延迟滚动到可视区域
+    // 确保输入框在可视区域内
     setTimeout(() => {
-      element.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center',
-        inline: 'nearest'
-      });
-    }, 300);
-  });
-  
-  // 处理暗色模式
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    element.style.caretColor = '#0A84FF';
-    style.webkitCaretColor = '#0A84FF';
-    element.addEventListener('focus', () => {
-      element.style.caretColor = '#0A84FF';
-      style.webkitCaretColor = '#0A84FF';
-      style.webkitTextFillColor = 'initial';
-      style.webkitOpacity = '1';
-      element.style.opacity = '1';
-    });
-  }
-};
-
-/**
- * 为表格中的所有输入框应用iOS优化
- */
-export const optimizeTableInputsForIOS = (tableElement: HTMLTableElement): void => {
-  if (!isIOSDevice()) return;
-  
-  const inputs = tableElement.querySelectorAll('input, textarea, select');
-  inputs.forEach((input) => {
-    if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
-      optimizeIOSInput(input);
-    }
-  });
-};
-
-/**
- * 创建iOS优化的输入框属性对象
- */
-export const getIOSOptimizedInputProps = () => {
-  if (!isIOSDevice()) return {};
-  
-  return {
-    style: {
-      caretColor: '#007AFF',
-      WebkitCaretColor: '#007AFF',
-      WebkitAppearance: 'none',
-      appearance: 'none',
-      touchAction: 'manipulation',
-      WebkitTouchCallout: 'none',
-      WebkitUserSelect: 'text',
-      userSelect: 'text',
-      WebkitTextFillColor: 'initial',
-      WebkitOpacity: 1,
-      opacity: 1,
-      fontSize: 'max(16px, 1em)'
-    } as React.CSSProperties,
-    onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const element = e.target;
-      const style = element.style as any;
-      element.style.caretColor = '#007AFF';
-      style.webkitCaretColor = '#007AFF';
-      style.webkitTextFillColor = 'initial';
-      style.webkitOpacity = '1';
-      element.style.opacity = '1';
-      
-      // 延迟滚动以避免键盘遮挡
-      setTimeout(() => {
+      if (element.scrollIntoView) {
         element.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'center',
           inline: 'nearest'
         });
-      }, 300);
-    }
+      }
+    }, 100);
   };
+  
+  const handleBlur = () => {
+    // 失焦时重置层级
+    element.style.zIndex = '1';
+    style.webkitTransform = 'translateZ(0)';
+    element.style.transform = 'translateZ(0)';
+  };
+  
+  // 移除旧的事件监听器（如果存在）
+  element.removeEventListener('focus', handleFocus);
+  element.removeEventListener('blur', handleBlur);
+  
+  // 添加新的事件监听器
+  element.addEventListener('focus', handleFocus);
+  element.addEventListener('blur', handleBlur);
+  
+  // 添加input事件确保持续优化
+  element.addEventListener('input', () => {
+    element.style.caretColor = '#007AFF';
+    style.webkitCaretColor = '#007AFF';
+  });
 };
 
 /**
- * 初始化页面iOS优化
+ * 批量优化页面上的所有输入框
  */
-export const initIOSOptimization = (): void => {
+export const optimizeAllInputs = (): void => {
   if (!isIOSDevice()) return;
   
-  // 添加iOS专用样式类
-  document.documentElement.classList.add('ios-device');
+  const inputs = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea, select');
+  inputs.forEach(optimizeIOSInput);
+};
+
+/**
+ * 为页面添加变化监听器，自动优化新添加的输入框
+ */
+export const setupMutationObserver = (): MutationObserver | null => {
+  if (!isIOSDevice() || typeof window === 'undefined') return null;
   
-  if (isIOSSafari()) {
-    document.documentElement.classList.add('ios-safari');
-  }
-  
-  // 监听暗色模式变化
-  if (window.matchMedia) {
-    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const updateCaretColor = (isDark: boolean) => {
-      const color = isDark ? '#0A84FF' : '#007AFF';
-      document.documentElement.style.setProperty('--ios-caret-color', color);
-    };
-    
-    updateCaretColor(darkModeQuery.matches);
-    darkModeQuery.addEventListener('change', (e) => updateCaretColor(e.matches));
-  }
-  
-  // 动态优化页面中的输入框
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
           const element = node as Element;
           
-          // 直接是输入框
-          if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-            optimizeIOSInput(element);
+          // 检查新添加的元素是否为输入框
+          if (element.matches('input, textarea, select')) {
+            optimizeIOSInput(element as HTMLInputElement | HTMLTextAreaElement);
           }
           
-          // 包含输入框的元素
-          const inputs = element.querySelectorAll?.('input, textarea');
-          inputs?.forEach((input) => {
-            if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
-              optimizeIOSInput(input);
-            }
-          });
+          // 检查新添加的元素内部是否包含输入框
+          const inputs = element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea, select');
+          inputs.forEach(optimizeIOSInput);
         }
       });
     });
@@ -203,4 +164,70 @@ export const initIOSOptimization = (): void => {
     childList: true,
     subtree: true
   });
+  
+  return observer;
+};
+
+/**
+ * 全局初始化iOS输入优化
+ */
+export const initIOSOptimization = (): void => {
+  if (!isIOSDevice()) return;
+  
+  // 等待DOM完全加载
+  const init = () => {
+    // 优化现有的所有输入框
+    optimizeAllInputs();
+    
+    // 设置变化监听器
+    setupMutationObserver();
+    
+    // 添加全局CSS强制规则
+    const style = document.createElement('style');
+    style.textContent = `
+      /* iOS强制光标优化 */
+      input, textarea, select {
+        caret-color: #007AFF !important;
+        -webkit-caret-color: #007AFF !important;
+        -webkit-text-fill-color: initial !important;
+        -webkit-opacity: 1 !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 1 !important;
+        -webkit-transform: translateZ(0) !important;
+        transform: translateZ(0) !important;
+      }
+      
+      input:focus, textarea:focus, select:focus {
+        caret-color: #007AFF !important;
+        -webkit-caret-color: #007AFF !important;
+        z-index: 2 !important;
+        -webkit-transform: translateZ(1px) !important;
+        transform: translateZ(1px) !important;
+      }
+      
+      .ios-optimized-input {
+        caret-color: #007AFF !important;
+        -webkit-caret-color: #007AFF !important;
+        -webkit-text-fill-color: initial !important;
+        -webkit-opacity: 1 !important;
+        opacity: 1 !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        position: relative !important;
+        z-index: 1 !important;
+        -webkit-transform: translateZ(0) !important;
+        transform: translateZ(0) !important;
+        background-clip: padding-box !important;
+        will-change: transform !important;
+      }
+    `;
+    document.head.appendChild(style);
+  };
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 }; 

@@ -90,7 +90,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             }
           }}
           placeholder="Add custom unit"
-          className="w-32 px-3 py-1.5 rounded-lg
+          className="w-32 px-3 py-1.5 rounded-lg ios-optimized-input
             bg-white/90 dark:bg-[#1c1c1e]/90
             border border-gray-200/30 dark:border-[#2c2c2e]/50
             focus:outline-none focus:ring-2
@@ -161,7 +161,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             type="date"
             value={data.date}
             onChange={e => onChange({ ...data, date: e.target.value })}
-            className={`${inputClassName} w-[130px]`}
+            className={`${inputClassName} ios-optimized-input w-[130px]`}
             style={iosCaretStyle}
           />
            {/* 币种选择 */}
@@ -339,7 +339,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             type="date"
             value={data.date}
             onChange={e => onChange({ ...data, date: e.target.value })}
-            className={`${inputClassName} w-[130px]`}
+            className={`${inputClassName} ios-optimized-input w-[130px]`}
             style={iosCaretStyle}
           />
         </div>
@@ -515,7 +515,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
             type="date"
             value={data.date}
             onChange={e => onChange({ ...data, date: e.target.value })}
-            className={`${inputClassName} w-[130px]`}
+            className={`${inputClassName} ios-optimized-input w-[130px]`}
             style={iosCaretStyle}
           />
         </div>

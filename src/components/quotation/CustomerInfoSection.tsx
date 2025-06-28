@@ -152,7 +152,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
             value={data.quotationNo}
             onChange={e => onChange({ ...data, quotationNo: e.target.value })}
             placeholder={type === 'quotation' ? "Quotation No. *" : "Quotation No."}
-            className={`w-full px-4 py-2.5 rounded-xl backdrop-blur-lg
+            className={`w-full px-4 py-2.5 rounded-xl backdrop-blur-lg ios-optimized-input
               ${type === 'quotation' 
                 ? `bg-[#007AFF]/[0.03] dark:bg-[#0A84FF]/[0.03]
                    border border-[#007AFF]/20 dark:border-[#0A84FF]/20
@@ -171,13 +171,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
               focus:outline-none focus:ring-2 
               text-[15px] leading-relaxed
               transition-all duration-300`}
-            style={{
-              caretColor: type === 'quotation' ? '#007AFF' : '#007AFF',
-              WebkitCaretColor: type === 'quotation' ? '#007AFF' : '#007AFF',
-              WebkitTextFillColor: 'initial',
-              WebkitOpacity: 1,
-              opacity: 1
-            } as React.CSSProperties}
+            style={iosCaretStyle}
             required={type === 'quotation'}
           />
         </div>
@@ -192,7 +186,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
                 notes: getDefaultNotes(newValue, type)
               });
             }}
-            className={`${inputClassName} appearance-none 
+            className={`${inputClassName} ios-optimized-input appearance-none 
               bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3e%3cpolyline points="6 9 12 15 18 9"%3e%3c/polyline%3e%3c/svg%3e')] 
               bg-[length:1em_1em] 
               bg-[right_0.5rem_center] 
@@ -218,7 +212,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
               onChange={e => onChange({ ...data, to: e.target.value })}
               placeholder="Enter customer name and address"
               rows={3}
-              className={`${inputClassName} min-h-[100px]`}
+              className={`${inputClassName} ios-optimized-input min-h-[100px]`}
               style={iosCaretStyle}
             />
             <div className="absolute right-2 bottom-2 flex gap-2">
@@ -341,7 +335,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
             value={data.inquiryNo}
             onChange={e => onChange({ ...data, inquiryNo: e.target.value })}
             placeholder="Inquiry No."
-            className={inputClassName}
+            className={`${inputClassName} ios-optimized-input`}
             style={iosCaretStyle}
           />
         </div>
@@ -355,7 +349,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
               value={data.contractNo}
               onChange={e => onChange({ ...data, contractNo: e.target.value })}
               placeholder="Contract No."
-              className={`w-full px-4 py-2.5 rounded-xl
+              className={`w-full px-4 py-2.5 rounded-xl ios-optimized-input
                 bg-[#007AFF]/[0.03] dark:bg-[#0A84FF]/[0.03] backdrop-blur-lg
                 border border-[#007AFF]/20 dark:border-[#0A84FF]/20
                 focus:outline-none focus:ring-2 
@@ -365,13 +359,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
                 text-[#007AFF] dark:text-[#0A84FF]
                 placeholder:text-[#007AFF]/40 dark:placeholder:text-[#0A84FF]/40
                 transition-all duration-300`}
-              style={{
-                caretColor: '#007AFF',
-                WebkitCaretColor: '#007AFF',
-                WebkitTextFillColor: 'initial',
-                WebkitOpacity: 1,
-                opacity: 1
-              } as React.CSSProperties}
+              style={iosCaretStyle}
               required
             />
           </div>

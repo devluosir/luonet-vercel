@@ -48,7 +48,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
                   ...data,
                   paymentDate: e.target.value
                 })}
-                className="px-3 py-1 rounded-xl
+                className="px-3 py-1 rounded-xl ios-optimized-input
                   bg-white/95 dark:bg-[#1c1c1e]/95
                   border border-[#007AFF]/10 dark:border-[#0A84FF]/10
                   focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
@@ -77,7 +77,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
                 additionalPaymentTerms: e.target.value
               })}
               placeholder="Enter additional remarks (each line will be a new payment term)"
-              className="w-full px-4 py-2.5 rounded-2xl
+              className="w-full px-4 py-2.5 rounded-2xl ios-optimized-input
                 bg-white/95 dark:bg-[#1c1c1e]/95
                 border border-[#007AFF]/10 dark:border-[#0A84FF]/10
                 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30

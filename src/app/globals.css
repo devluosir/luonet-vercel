@@ -15,7 +15,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* iOS设备输入框优化 */
+/* iOS设备输入框优化 - 强制版本 */
 @supports (-webkit-appearance: none) {
   input[type="text"],
   input[type="number"],
@@ -43,6 +43,18 @@ body {
     -webkit-text-fill-color: initial !important;
     -webkit-opacity: 1 !important;
     opacity: 1 !important;
+    
+    /* 强制光标显示在正确层级 */
+    position: relative !important;
+    z-index: 1 !important;
+    
+    /* 确保背景不会遮挡光标 */
+    background-clip: padding-box !important;
+    
+    /* iOS Safari 特殊优化 */
+    -webkit-transform: translateZ(0) !important;
+    transform: translateZ(0) !important;
+    will-change: transform !important;
   }
   
   /* 暗色模式下的光标颜色 */
@@ -57,6 +69,66 @@ body {
       caret-color: #0A84FF !important;
       -webkit-caret-color: #0A84FF !important;
     }
+  }
+  
+  /* 输入框获得焦点时的额外优化 */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    caret-color: #007AFF !important;
+    -webkit-caret-color: #007AFF !important;
+    -webkit-text-fill-color: initial !important;
+    -webkit-opacity: 1 !important;
+    opacity: 1 !important;
+    z-index: 2 !important;
+    
+    /* 确保焦点时光标最可见 */
+    -webkit-transform: translateZ(1px) !important;
+    transform: translateZ(1px) !important;
+  }
+  
+  /* 暗色模式下焦点时的光标颜色 */
+  @media (prefers-color-scheme: dark) {
+    input:focus,
+    textarea:focus,
+    select:focus {
+      caret-color: #0A84FF !important;
+      -webkit-caret-color: #0A84FF !important;
+    }
+  }
+}
+
+/* 针对特定类名的额外优化 */
+.ios-optimized-input {
+  caret-color: #007AFF !important;
+  -webkit-caret-color: #007AFF !important;
+  -webkit-text-fill-color: initial !important;
+  -webkit-opacity: 1 !important;
+  opacity: 1 !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  position: relative !important;
+  z-index: 1 !important;
+  -webkit-transform: translateZ(0) !important;
+  transform: translateZ(0) !important;
+}
+
+/* iOS Safari 专用优化 */
+@media screen and (-webkit-min-device-pixel-ratio: 1) {
+  input,
+  textarea,
+  select {
+    /* 强制重绘确保光标显示 */
+    -webkit-transform: translate3d(0, 0, 0) !important;
+    transform: translate3d(0, 0, 0) !important;
+    
+    /* 确保文本渲染正确 */
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    
+    /* 光标颜色强制设置 */
+    caret-color: #007AFF !important;
+    -webkit-caret-color: #007AFF !important;
   }
 }
 
