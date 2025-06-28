@@ -101,16 +101,12 @@ export const supportsPDFPreview = () => {
   // 检测是否为移动设备
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
   
-  // 检测Android设备 - 现代Android Chrome浏览器支持PDF预览
+  // 检测Android设备 - 安卓设备对PDF内嵌预览支持很差，建议直接使用fallback
   const isAndroid = /Android/i.test(userAgent);
   if (isAndroid) {
-    // 检测是否为Chrome浏览器（支持PDF预览）
-    const isChrome = /Chrome/i.test(userAgent);
-    const isFirefox = /Firefox/i.test(userAgent);
-    const isEdge = /Edge/i.test(userAgent);
-    
-    // Chrome、Firefox、Edge通常支持PDF预览
-    return isChrome || isFirefox || isEdge;
+    // 安卓设备即使是Chrome浏览器，iframe PDF预览也经常失败
+    // 为了更好的用户体验，建议安卓设备直接使用下载/新窗口打开方式
+    return false;
   }
   
   // 检测iOS设备 - Safari支持PDF预览
@@ -121,8 +117,7 @@ export const supportsPDFPreview = () => {
   
   // 桌面端浏览器通常支持PDF预览
   if (!isMobile) {
-    // 检测是否为现代浏览器
-    return 'PDFObject' in window || 'navigator' in window;
+    return true;
   }
   
   // 其他移动设备，保守处理
@@ -136,6 +131,41 @@ export const isMobileDevice = () => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 };
 
+// 获取浏览器信息
+export const getBrowserInfo = () => {
+  if (typeof window === 'undefined') {
+    return { name: 'unknown', version: 0 };
+  }
+  
+  const userAgent = navigator.userAgent;
+  
+  // 检测Chrome
+  const chromeMatch = userAgent.match(/Chrome\/(\d+)/);
+  if (chromeMatch) {
+    return { name: 'Chrome', version: parseInt(chromeMatch[1]) };
+  }
+  
+  // 检测Firefox
+  const firefoxMatch = userAgent.match(/Firefox\/(\d+)/);
+  if (firefoxMatch) {
+    return { name: 'Firefox', version: parseInt(firefoxMatch[1]) };
+  }
+  
+  // 检测Safari
+  const safariMatch = userAgent.match(/Safari\/(\d+)/);
+  if (safariMatch && !userAgent.includes('Chrome')) {
+    return { name: 'Safari', version: parseInt(safariMatch[1]) };
+  }
+  
+  // 检测Edge
+  const edgeMatch = userAgent.match(/Edge\/(\d+)/);
+  if (edgeMatch) {
+    return { name: 'Edge', version: parseInt(edgeMatch[1]) };
+  }
+  
+  return { name: 'unknown', version: 0 };
+};
+
 // 获取设备信息
 export const getDeviceInfo = () => {
   if (typeof window === 'undefined') {
@@ -144,7 +174,9 @@ export const getDeviceInfo = () => {
       isAndroid: false,
       isIOS: false,
       isDesktop: true,
-      canPreviewPDF: false
+      canPreviewPDF: false,
+      browser: { name: 'unknown', version: 0 },
+      recommendedAction: 'download'
     };
   }
   
@@ -153,13 +185,33 @@ export const getDeviceInfo = () => {
   const isAndroid = /Android/i.test(userAgent);
   const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
   const isDesktop = !isMobile;
+  const browser = getBrowserInfo();
+  
+  // 获取推荐操作
+  let recommendedAction: 'preview' | 'download' | 'newTab' = 'preview';
+  
+  if (isAndroid) {
+    // 安卓设备推荐下载或新窗口打开
+    recommendedAction = browser.name === 'Chrome' ? 'newTab' : 'download';
+  } else if (isIOS) {
+    // iOS设备可以预览
+    recommendedAction = 'preview';
+  } else if (isDesktop) {
+    // 桌面端可以预览
+    recommendedAction = 'preview';
+  } else {
+    // 其他移动设备推荐下载
+    recommendedAction = 'download';
+  }
   
   return {
     isMobile,
     isAndroid,
     isIOS,
     isDesktop,
-    canPreviewPDF: supportsPDFPreview()
+    canPreviewPDF: supportsPDFPreview(),
+    browser,
+    recommendedAction
   };
 };
 
@@ -169,6 +221,7 @@ export interface PDFPreviewOptions {
   showDownloadButton?: boolean;
   showOpenInNewTab?: boolean;
   autoDetectDevice?: boolean;
+  forceAndroidFallback?: boolean;
 }
 
 // 处理PDF预览的通用函数
@@ -180,7 +233,8 @@ export const handlePDFPreview = (
     fallbackToDownload = true,
     showDownloadButton = true,
     showOpenInNewTab = true,
-    autoDetectDevice = true
+    autoDetectDevice = true,
+    forceAndroidFallback = true
   } = options;
   
   const deviceInfo = getDeviceInfo();
@@ -190,7 +244,19 @@ export const handlePDFPreview = (
       shouldShowIframe: false,
       shouldShowFallback: true,
       deviceInfo,
-      canPreview: false
+      canPreview: false,
+      message: '无法生成PDF预览'
+    };
+  }
+  
+  // 安卓设备强制使用fallback模式
+  if (forceAndroidFallback && deviceInfo.isAndroid) {
+    return {
+      shouldShowIframe: false,
+      shouldShowFallback: true,
+      deviceInfo,
+      canPreview: false,
+      message: getAndroidFallbackMessage(deviceInfo.browser)
     };
   }
   
@@ -202,7 +268,7 @@ export const handlePDFPreview = (
       deviceInfo,
       canPreview: false,
       message: deviceInfo.isAndroid 
-        ? '当前浏览器不支持在线PDF预览，请下载文件查看或尝试使用Chrome浏览器'
+        ? getAndroidFallbackMessage(deviceInfo.browser)
         : '您的设备不支持在线PDF预览，请下载文件查看'
     };
   }
@@ -215,10 +281,32 @@ export const handlePDFPreview = (
   };
 };
 
+// 获取安卓设备的fallback提示信息
+const getAndroidFallbackMessage = (browser: { name: string; version: number }) => {
+  if (browser.name === 'Chrome') {
+    return '安卓Chrome浏览器建议在新窗口中打开PDF，或直接下载查看以获得最佳体验';
+  } else if (browser.name === 'Firefox') {
+    return '安卓Firefox浏览器建议下载PDF文件查看，或尝试在新窗口中打开';
+  } else {
+    return '安卓设备建议下载PDF文件查看，或使用Chrome浏览器在新窗口中打开';
+  }
+};
+
 // 在新窗口中打开PDF
 export const openPDFInNewTab = (pdfUrl: string) => {
   if (pdfUrl) {
-    window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+    // 安卓设备在新窗口打开时使用特殊处理
+    const deviceInfo = getDeviceInfo();
+    if (deviceInfo.isAndroid) {
+      // 安卓设备添加下载提示
+      const newWindow = window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+      if (!newWindow) {
+        // 如果弹窗被阻止，提示用户
+        alert('弹窗被阻止，请允许弹窗或直接下载PDF文件查看');
+      }
+    } else {
+      window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+    }
   }
 };
 

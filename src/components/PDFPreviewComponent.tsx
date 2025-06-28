@@ -32,13 +32,23 @@ export default function PDFPreviewComponent({
   const [showFallback, setShowFallback] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [isLoadingPDF, setIsLoadingPDF] = useState(true);
+  const [attemptedIframeLoad, setAttemptedIframeLoad] = useState(false);
   
   const deviceInfo = getDeviceInfo();
   const previewInfo = handlePDFPreview(pdfUrl, {
-    autoDetectDevice: false, // 改为false，让我们自己控制预览逻辑
+    autoDetectDevice: true,
+    forceAndroidFallback: true, // 强制安卓设备使用fallback
     showDownloadButton,
     showOpenInNewTab
   });
+
+  // 组件挂载时检查是否应该直接显示fallback
+  useEffect(() => {
+    if (deviceInfo.isAndroid || !deviceInfo.canPreviewPDF) {
+      setIsLoadingPDF(false);
+      setShowFallback(true);
+    }
+  }, [deviceInfo.isAndroid, deviceInfo.canPreviewPDF]);
 
   // 检测iframe加载失败
   const handleIframeError = () => {
@@ -51,6 +61,7 @@ export default function PDFPreviewComponent({
   const handleIframeLoad = () => {
     setIframeLoaded(true);
     setIsLoadingPDF(false);
+    setAttemptedIframeLoad(true);
     console.log('PDF iframe加载成功');
   };
 
@@ -104,19 +115,24 @@ export default function PDFPreviewComponent({
               {title}
             </h3>
             {deviceInfo.isAndroid && (
-              <span className="px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">
-                安卓设备
-              </span>
+              <div className="flex gap-2">
+                <span className="px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">
+                  安卓设备
+                </span>
+                <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">
+                  {deviceInfo.browser.name}
+                </span>
+              </div>
             )}
           </div>
           
           <div className="flex items-center gap-2">
             {/* 新窗口打开按钮 */}
-            {showOpenInNewTab && previewInfo.canPreview && (
+            {showOpenInNewTab && (
               <button
                 onClick={handleOpenInNewTab}
                 className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                title="在新窗口打开"
+                title={deviceInfo.isAndroid ? "在新窗口打开（推荐）" : "在新窗口打开"}
               >
                 <ExternalLink className="w-5 h-5" />
               </button>
@@ -146,20 +162,37 @@ export default function PDFPreviewComponent({
 
         {/* 内容区域 */}
         <div className="flex-1 p-4">
-          {(!deviceInfo.canPreviewPDF && !deviceInfo.isAndroid) || showFallback ? (
+          {showFallback || deviceInfo.isAndroid ? (
             <div className="h-full flex items-center justify-center">
-              <div className="text-center max-w-md">
+              <div className="text-center max-w-lg">
                 <FileText className="w-16 h-16 mx-auto mb-4 text-blue-500 opacity-70" />
-                <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">PDF预览</h4>
+                <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  {deviceInfo.isAndroid ? 'PDF查看方式' : 'PDF预览'}
+                </h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                  {previewInfo.message || '无法在此处预览PDF，请下载文件查看'}
+                  {previewInfo.message || '选择您偏好的PDF查看方式'}
                 </p>
                 
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  {/* 推荐操作按钮 */}
+                  {deviceInfo.recommendedAction === 'newTab' && (
+                    <button
+                      onClick={handleOpenInNewTab}
+                      className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>新窗口打开 (推荐)</span>
+                    </button>
+                  )}
+                  
                   <button
                     onClick={handleDownload}
                     disabled={isDownloading}
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors ${
+                      deviceInfo.recommendedAction === 'download' 
+                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                        : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {isDownloading ? (
                       <>
@@ -169,12 +202,12 @@ export default function PDFPreviewComponent({
                     ) : (
                       <>
                         <Download className="w-4 h-4" />
-                        <span>下载PDF</span>
+                        <span>下载PDF {deviceInfo.recommendedAction === 'download' ? '(推荐)' : ''}</span>
                       </>
                     )}
                   </button>
                   
-                  {previewInfo.canPreview && (
+                  {deviceInfo.recommendedAction !== 'newTab' && showOpenInNewTab && (
                     <button
                       onClick={handleOpenInNewTab}
                       className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -186,10 +219,31 @@ export default function PDFPreviewComponent({
                 </div>
                 
                 {deviceInfo.isAndroid && (
-                  <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
-                      💡 提示：如需更好的预览体验，建议使用Chrome浏览器或下载PDF文件查看
-                    </p>
+                  <div className="mt-6 space-y-3">
+                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <div className="flex items-start gap-3">
+                        <div className="text-amber-600 dark:text-amber-400 text-lg">💡</div>
+                        <div className="text-left">
+                          <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-1">
+                            安卓设备优化建议
+                          </p>
+                          <p className="text-xs text-amber-600 dark:text-amber-500">
+                            {deviceInfo.browser.name === 'Chrome' 
+                              ? '• 点击"新窗口打开"可在Chrome中查看PDF\n• 或直接下载到本地使用PDF阅读器打开'
+                              : '• 建议下载PDF文件查看\n• 或使用Chrome浏览器访问本页面'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {deviceInfo.browser.name !== 'Chrome' && (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <p className="text-xs text-blue-700 dark:text-blue-400">
+                          🔍 为获得最佳体验，建议使用Chrome浏览器访问
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -197,18 +251,13 @@ export default function PDFPreviewComponent({
           ) : (
             <div className="relative w-full h-full">
               {/* 加载指示器 */}
-              {isLoadingPDF && (
+              {isLoadingPDF && !attemptedIframeLoad && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-[#2C2C2E]/80 backdrop-blur-sm rounded-lg z-10">
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mx-auto mb-3"></div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {deviceInfo.isAndroid ? '正在尝试预览PDF...' : '正在加载PDF...'}
+                      正在加载PDF预览...
                     </p>
-                    {deviceInfo.isAndroid && (
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        如果无法预览，将自动切换到下载模式
-                      </p>
-                    )}
                   </div>
                 </div>
               )}
@@ -218,40 +267,7 @@ export default function PDFPreviewComponent({
                 className="w-full h-full rounded-lg border border-gray-200 dark:border-[#3A3A3C]"
                 title="PDF预览"
                 onError={handleIframeError}
-                onLoad={() => {
-                  handleIframeLoad();
-                  // 对于安卓设备，设置超时检测
-                  if (deviceInfo.isAndroid) {
-                    setTimeout(() => {
-                      // 检查iframe是否成功显示PDF内容
-                      const iframe = document.querySelector('iframe[src="' + pdfUrl + '"]') as HTMLIFrameElement;
-                      if (iframe) {
-                        try {
-                          // 检查iframe内容是否可访问
-                          const contentDoc = iframe.contentDocument || iframe.contentWindow?.document;
-                          if (!contentDoc || contentDoc.title.includes('无法显示') || contentDoc.title.includes('not found')) {
-                            console.log('安卓设备PDF内容加载失败，切换到fallback模式');
-                            setIsLoadingPDF(false);
-                            setShowFallback(true);
-                          }
-                        } catch (e) {
-                          console.log('安卓设备PDF访问受限，切换到fallback模式');
-                          setIsLoadingPDF(false);
-                          setShowFallback(true);
-                        }
-                      }
-                    }, 2000); // 2秒后检测
-                  }
-                  
-                  // 设置总体超时，防止永远加载
-                  setTimeout(() => {
-                    if (isLoadingPDF) {
-                      console.log('PDF加载超时，切换到fallback模式');
-                      setIsLoadingPDF(false);
-                      setShowFallback(true);
-                    }
-                  }, 5000); // 5秒总超时
-                }}
+                onLoad={handleIframeLoad}
               />
             </div>
           )}
