@@ -45,8 +45,6 @@ export default function RootLayout({
         <meta httpEquiv="Content-Language" content="zh-CN" />
         <meta name="google" content="notranslate" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </head>
       <body className={noto_sans_sc.className} suppressHydrationWarning>
         <Providers>
