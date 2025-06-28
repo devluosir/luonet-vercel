@@ -260,9 +260,9 @@ export default function QuotationPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         type: activeTab,
-        customerName: data.customerInfo.name || 'Unknown',
+        customerName: data.to || 'Unknown',
         quotationNo: data.quotationNo || 'N/A', 
-        totalAmount: calculateTotalAmount(),
+        totalAmount: data.items.reduce((sum, item) => sum + item.amount, 0) + (data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0),
         currency: data.currency,
         data: data
       };
