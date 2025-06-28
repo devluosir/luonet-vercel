@@ -898,14 +898,15 @@ export default function HistoryManagementPage() {
 
         {/* Tab Navigation */}
         <div className="bg-white dark:bg-[#1c1c1e] border-b border-gray-200 dark:border-gray-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex space-x-8">
+          <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+            {/* 小屏时使用可滚动的flex，大屏时使用正常间距，所有屏幕都居中 */}
+            <div className="flex justify-center space-x-2 sm:space-x-4 lg:space-x-8 overflow-x-auto scrollbar-hide">
               {[
-                { id: 'quotation', name: '报价单', icon: FileText },
-                { id: 'confirmation', name: '订单确认', icon: FileText },
-                { id: 'invoice', name: '发票', icon: Receipt },
-                { id: 'purchase', name: '采购单', icon: ShoppingCart },
-                { id: 'packing', name: '装箱单', icon: Package }
+                { id: 'quotation', name: '报价单', shortName: '报价', icon: FileText },
+                { id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText },
+                { id: 'invoice', name: '发票', shortName: '发票', icon: Receipt },
+                { id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart },
+                { id: 'packing', name: '装箱单', shortName: '装箱', icon: Package }
               ].map((tab) => {
                 const Icon = tab.icon;
                 const count = getTabCount(tab.id as HistoryType);
@@ -940,16 +941,18 @@ export default function HistoryManagementPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as HistoryType)}
-                    className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200
+                    className={`flex items-center space-x-1.5 sm:space-x-2 py-2 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors duration-200 whitespace-nowrap flex-shrink-0
                       ${isActive ? activeClasses : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                   >
                     <span className="relative inline-block">
-                      <Icon className="h-4 w-4" />
-                      <span className={`absolute -top-1 -right-2 min-w-[18px] h-4 px-1 ${badgeStyle} text-xs rounded-full flex items-center justify-center font-bold border-2 shadow-sm`}> 
+                      <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className={`absolute -top-0.5 sm:-top-1 -right-1.5 sm:-right-2 min-w-[16px] sm:min-w-[18px] h-3.5 sm:h-4 px-1 sm:px-1 ${badgeStyle} text-[10px] sm:text-xs rounded-full flex items-center justify-center font-bold border border-white dark:border-gray-800 shadow-sm`}> 
                         {count}
                       </span>
                     </span>
-                    <span>{tab.name}</span>
+                    {/* 小屏显示简化字，大屏显示完整名称 */}
+                    <span className="inline sm:hidden">{tab.shortName}</span>
+                    <span className="hidden sm:inline">{tab.name}</span>
                   </button>
                 );
               })}

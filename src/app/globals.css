@@ -187,6 +187,16 @@ table .ios-optimized-input {
   overflow: hidden;
 }
 
+/* 滚动条隐藏样式 */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari and Opera */
+}
+
 /* 动画样式 */
 @keyframes fadeIn {
   from {

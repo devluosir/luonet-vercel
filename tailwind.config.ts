@@ -8,6 +8,9 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'xs': '475px',  // 额外的小屏断点
+      },
       fontFamily: {
         sans: ['var(--font-noto-sans-sc)', 'var(--font-inter)', 'sans-serif'],
       },
