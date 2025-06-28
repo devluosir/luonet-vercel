@@ -56,12 +56,8 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
                   maxWidth: '150px',
                   flexShrink: 0,
                   flexGrow: 0,
-                  caretColor: '#007AFF',
-                  WebkitCaretColor: '#007AFF',
-                  WebkitTextFillColor: 'initial',
-                  WebkitOpacity: 1,
-                  opacity: 1
-                }}
+                  ...iosCaretStyle
+                } as React.CSSProperties}
                 pattern="\d{4}-\d{2}-\d{2}"
               />
               <span className="text-sm text-gray-600 dark:text-gray-400">by telegraphic transfer.</span>
