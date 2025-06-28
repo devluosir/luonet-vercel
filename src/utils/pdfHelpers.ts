@@ -90,7 +90,6 @@ export const handlePdfError = (error: unknown): string => {
 // 扩展jsPDF类型以支持新字体
 export interface ExtendedJsPDF extends jsPDF {
   addFileToVFS(filename: string, content: string): void;
-  addFont(postScriptName: string, fontName: string, fontStyle: string): string;
 }
 
 // 检测设备是否支持PDF内嵌预览
