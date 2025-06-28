@@ -13,22 +13,34 @@ const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
 // 默认单位列表（需要单复数变化的单位）
 const defaultUnits = ['pc', 'set', 'length'] as const;
 
-// iOS光标优化的内联样式
+// iOS光标优化的内联样式 - 统一使用007AFF颜色
 const iosCaretStyle: any = {
-  caretColor: '#2563eb',
-  WebkitCaretColor: '#2563eb',
+  caretColor: '#007AFF',
+  WebkitCaretColor: '#007AFF',
   WebkitTextFillColor: 'initial',
   WebkitOpacity: 1,
-  opacity: 1
+  opacity: 1,
+  WebkitAppearance: 'none',
+  appearance: 'none',
+  touchAction: 'manipulation',
+  WebkitTouchCallout: 'none',
+  WebkitUserSelect: 'text',
+  userSelect: 'text'
 };
 
 // 暗色模式的光标颜色
 const iosCaretStyleDark: any = {
-  caretColor: '#60a5fa',
-  WebkitCaretColor: '#60a5fa',
+  caretColor: '#0A84FF',
+  WebkitCaretColor: '#0A84FF',
   WebkitTextFillColor: 'initial',
   WebkitOpacity: 1,
-  opacity: 1
+  opacity: 1,
+  WebkitAppearance: 'none',
+  appearance: 'none',
+  touchAction: 'manipulation',
+  WebkitTouchCallout: 'none',
+  WebkitUserSelect: 'text',
+  userSelect: 'text'
 };
 
 export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
@@ -65,8 +77,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
     const style = element.style as any; // 使用类型断言来访问WebKit属性
     
     // 强制设置光标颜色
-    element.style.caretColor = isDarkMode ? '#60a5fa' : '#2563eb';
-    style.webkitCaretColor = isDarkMode ? '#60a5fa' : '#2563eb';
+    element.style.caretColor = isDarkMode ? '#0A84FF' : '#007AFF';
+    style.webkitCaretColor = isDarkMode ? '#0A84FF' : '#007AFF';
     style.webkitTextFillColor = 'initial';
     style.webkitOpacity = '1';
     element.style.opacity = '1';

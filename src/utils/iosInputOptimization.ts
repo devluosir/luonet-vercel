@@ -41,10 +41,14 @@ export const optimizeIOSInput = (element: HTMLInputElement | HTMLTextAreaElement
   
   const style = element.style as any; // 使用类型断言访问WebKit属性
   
-  // 确保光标可见
-  element.style.caretColor = '#2563eb';
+  // 确保光标可见 - 使用与组件一致的颜色
+  element.style.caretColor = '#007AFF';
+  style.webkitCaretColor = '#007AFF';
   style.webkitAppearance = 'none';
   element.style.appearance = 'none';
+  style.webkitTextFillColor = 'initial';
+  style.webkitOpacity = '1';
+  element.style.opacity = '1';
   
   // 优化触摸体验
   element.style.touchAction = 'manipulation';
@@ -60,7 +64,11 @@ export const optimizeIOSInput = (element: HTMLInputElement | HTMLTextAreaElement
   // 添加focus事件优化
   element.addEventListener('focus', () => {
     // 强制显示光标
-    element.style.caretColor = '#2563eb';
+    element.style.caretColor = '#007AFF';
+    style.webkitCaretColor = '#007AFF';
+    style.webkitTextFillColor = 'initial';
+    style.webkitOpacity = '1';
+    element.style.opacity = '1';
     
     // 延迟滚动到可视区域
     setTimeout(() => {
@@ -74,9 +82,14 @@ export const optimizeIOSInput = (element: HTMLInputElement | HTMLTextAreaElement
   
   // 处理暗色模式
   if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    element.style.caretColor = '#60a5fa';
+    element.style.caretColor = '#0A84FF';
+    style.webkitCaretColor = '#0A84FF';
     element.addEventListener('focus', () => {
-      element.style.caretColor = '#60a5fa';
+      element.style.caretColor = '#0A84FF';
+      style.webkitCaretColor = '#0A84FF';
+      style.webkitTextFillColor = 'initial';
+      style.webkitOpacity = '1';
+      element.style.opacity = '1';
     });
   }
 };
@@ -103,18 +116,27 @@ export const getIOSOptimizedInputProps = () => {
   
   return {
     style: {
-      caretColor: '#2563eb',
+      caretColor: '#007AFF',
+      WebkitCaretColor: '#007AFF',
       WebkitAppearance: 'none',
       appearance: 'none',
       touchAction: 'manipulation',
       WebkitTouchCallout: 'none',
       WebkitUserSelect: 'text',
       userSelect: 'text',
+      WebkitTextFillColor: 'initial',
+      WebkitOpacity: 1,
+      opacity: 1,
       fontSize: 'max(16px, 1em)'
     } as React.CSSProperties,
     onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const element = e.target;
-      element.style.caretColor = '#2563eb';
+      const style = element.style as any;
+      element.style.caretColor = '#007AFF';
+      style.webkitCaretColor = '#007AFF';
+      style.webkitTextFillColor = 'initial';
+      style.webkitOpacity = '1';
+      element.style.opacity = '1';
       
       // 延迟滚动以避免键盘遮挡
       setTimeout(() => {
@@ -145,7 +167,7 @@ export const initIOSOptimization = (): void => {
   if (window.matchMedia) {
     const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const updateCaretColor = (isDark: boolean) => {
-      const color = isDark ? '#60a5fa' : '#2563eb';
+      const color = isDark ? '#0A84FF' : '#007AFF';
       document.documentElement.style.setProperty('--ios-caret-color', color);
     };
     

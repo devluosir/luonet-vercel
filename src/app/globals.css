@@ -21,22 +21,28 @@ body {
   input[type="number"],
   input[type="email"],
   input[type="password"],
+  input[type="date"],
   textarea,
   select {
-    /* 确保iOS设备上光标可见 */
-    caret-color: #2563eb !important;
-    -webkit-caret-color: #2563eb !important;
-    -webkit-appearance: none;
-    appearance: none;
+    /* 确保iOS设备上光标可见 - 使用与组件一致的颜色 */
+    caret-color: #007AFF !important;
+    -webkit-caret-color: #007AFF !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
     
     /* 优化触摸体验 */
-    touch-action: manipulation;
-    -webkit-touch-callout: none;
-    -webkit-user-select: text;
-    user-select: text;
+    touch-action: manipulation !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: text !important;
+    user-select: text !important;
     
     /* 防止iOS自动放大 */
-    font-size: max(16px, 1em);
+    font-size: max(16px, 1em) !important;
+    
+    /* 确保文本填充和透明度 */
+    -webkit-text-fill-color: initial !important;
+    -webkit-opacity: 1 !important;
+    opacity: 1 !important;
   }
   
   /* 暗色模式下的光标颜色 */
@@ -45,10 +51,11 @@ body {
     input[type="number"],
     input[type="email"],
     input[type="password"],
+    input[type="date"],
     textarea,
     select {
-      caret-color: #60a5fa !important;
-      -webkit-caret-color: #60a5fa !important;
+      caret-color: #0A84FF !important;
+      -webkit-caret-color: #0A84FF !important;
     }
   }
 }
@@ -59,17 +66,20 @@ body {
   textarea:focus,
   select:focus {
     /* 强制显示光标 */
-    caret-color: #2563eb !important;
-    -webkit-caret-color: #2563eb !important;
-    outline: none;
+    caret-color: #007AFF !important;
+    -webkit-caret-color: #007AFF !important;
+    outline: none !important;
+    -webkit-text-fill-color: initial !important;
+    -webkit-opacity: 1 !important;
+    opacity: 1 !important;
   }
   
   @media (prefers-color-scheme: dark) {
     input:focus,
     textarea:focus,
     select:focus {
-      caret-color: #60a5fa !important;
-      -webkit-caret-color: #60a5fa !important;
+      caret-color: #0A84FF !important;
+      -webkit-caret-color: #0A84FF !important;
     }
   }
 }
@@ -79,8 +89,8 @@ body {
   input,
   textarea,
   select {
-    caret-color: #2563eb !important;
-    -webkit-caret-color: #2563eb !important;
+    caret-color: #007AFF !important;
+    -webkit-caret-color: #007AFF !important;
     -webkit-text-fill-color: initial !important;
     -webkit-opacity: 1 !important;
     opacity: 1 !important;
@@ -90,14 +100,17 @@ body {
     -webkit-transform: translateZ(0) !important;
     transform: translateZ(0) !important;
     will-change: auto !important;
+    /* 强制移除WebKit默认样式 */
+    -webkit-appearance: none !important;
+    appearance: none !important;
   }
   
   /* 确保focus状态下光标可见 */
   input:focus,
   textarea:focus,
   select:focus {
-    caret-color: #2563eb !important;
-    -webkit-caret-color: #2563eb !important;
+    caret-color: #007AFF !important;
+    -webkit-caret-color: #007AFF !important;
     -webkit-text-fill-color: initial !important;
     -webkit-opacity: 1 !important;
     opacity: 1 !important;
@@ -110,8 +123,8 @@ body {
   table input,
   table textarea,
   table select {
-    caret-color: #2563eb !important;
-    -webkit-caret-color: #2563eb !important;
+    caret-color: #007AFF !important;
+    -webkit-caret-color: #007AFF !important;
     position: relative !important;
     z-index: 1 !important;
   }
@@ -120,22 +133,22 @@ body {
     input,
     textarea,
     select {
-      caret-color: #60a5fa !important;
-      -webkit-caret-color: #60a5fa !important;
+      caret-color: #0A84FF !important;
+      -webkit-caret-color: #0A84FF !important;
     }
     
     input:focus,
     textarea:focus,
     select:focus {
-      caret-color: #60a5fa !important;
-      -webkit-caret-color: #60a5fa !important;
+      caret-color: #0A84FF !important;
+      -webkit-caret-color: #0A84FF !important;
     }
     
     table input,
     table textarea,
     table select {
-      caret-color: #60a5fa !important;
-      -webkit-caret-color: #60a5fa !important;
+      caret-color: #0A84FF !important;
+      -webkit-caret-color: #0A84FF !important;
     }
   }
 }

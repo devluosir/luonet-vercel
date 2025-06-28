@@ -12,7 +12,13 @@ const iosCaretStyle = {
   WebkitCaretColor: '#007AFF',
   WebkitTextFillColor: 'initial',
   WebkitOpacity: 1,
-  opacity: 1
+  opacity: 1,
+  WebkitAppearance: 'none',
+  appearance: 'none',
+  touchAction: 'manipulation',
+  WebkitTouchCallout: 'none',
+  WebkitUserSelect: 'text',
+  userSelect: 'text'
 } as React.CSSProperties;
 
 export function NotesSection({ data, onChange }: NotesSectionProps) {

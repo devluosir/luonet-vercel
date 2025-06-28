@@ -30,7 +30,13 @@ const iosCaretStyle = {
   WebkitCaretColor: '#007AFF',
   WebkitTextFillColor: 'initial',
   WebkitOpacity: 1,
-  opacity: 1
+  opacity: 1,
+  WebkitAppearance: 'none',
+  appearance: 'none',
+  touchAction: 'manipulation',
+  WebkitTouchCallout: 'none',
+  WebkitUserSelect: 'text',
+  userSelect: 'text'
 } as React.CSSProperties;
 
 const radioGroupClassName = `flex p-1 gap-2
