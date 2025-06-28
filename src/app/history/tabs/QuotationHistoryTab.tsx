@@ -181,7 +181,12 @@ export default function QuotationHistoryTab({
               type="checkbox"
               checked={selectedIds.size === history.length && history.length > 0}
               onChange={(e) => onSelectAll(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
+              className="rounded border-gray-300 dark:border-gray-400 
+                         bg-white dark:bg-gray-800
+                         text-blue-600 dark:text-blue-400 
+                         focus:ring-blue-500 focus:ring-2
+                         checked:bg-blue-600 dark:checked:bg-blue-500
+                         checked:border-blue-600 dark:checked:border-blue-500"
             />
           </div>
           <button
@@ -242,7 +247,12 @@ export default function QuotationHistoryTab({
                     type="checkbox"
                     checked={isSelected}
                     onChange={(e) => onSelect(item.id, e.target.checked)}
-                    className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
+                    className="rounded border-gray-300 dark:border-gray-400 
+                               bg-white dark:bg-gray-800
+                               text-blue-600 dark:text-blue-400 
+                               focus:ring-blue-500 focus:ring-2
+                               checked:bg-blue-600 dark:checked:bg-blue-500
+                               checked:border-blue-600 dark:checked:border-blue-500"
                   />
                 </div>
                 <div className="flex-1 min-w-0 truncate text-sm font-medium text-gray-900 dark:text-white pl-2" title={item.customerName}>

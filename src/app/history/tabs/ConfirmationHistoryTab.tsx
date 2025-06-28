@@ -181,7 +181,12 @@ export default function ConfirmationHistoryTab({
               type="checkbox"
               checked={selectedIds.size === history.length && history.length > 0}
               onChange={(e) => onSelectAll(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
+              className="rounded border-gray-300 dark:border-gray-400 
+                         bg-white dark:bg-gray-800
+                         text-green-600 dark:text-green-400 
+                         focus:ring-blue-500 focus:ring-2
+                         checked:bg-green-600 dark:checked:bg-green-500
+                         checked:border-green-600 dark:checked:border-green-500"
             />
           </div>
           <button
@@ -243,7 +248,12 @@ export default function ConfirmationHistoryTab({
                     type="checkbox"
                     checked={isSelected}
                     onChange={(e) => onSelect(item.id, e.target.checked)}
-                    className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
+                    className="rounded border-gray-300 dark:border-gray-400 
+                               bg-white dark:bg-gray-800
+                               text-green-600 dark:text-green-400 
+                               focus:ring-blue-500 focus:ring-2
+                               checked:bg-green-600 dark:checked:bg-green-500
+                               checked:border-green-600 dark:checked:border-green-500"
                   />
                 </div>
                 <div className="flex-1 min-w-0 truncate text-sm font-medium text-gray-900 dark:text-white pl-2" title={item.customerName}>

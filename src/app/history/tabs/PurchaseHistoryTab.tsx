@@ -180,7 +180,12 @@ export default function PurchaseHistoryTab({
               type="checkbox"
               checked={selectedIds.size === history.length && history.length > 0}
               onChange={(e) => onSelectAll(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
+              className="rounded border-gray-300 dark:border-gray-400 
+                         bg-white dark:bg-gray-800
+                         text-orange-600 dark:text-orange-400 
+                         focus:ring-blue-500 focus:ring-2
+                         checked:bg-orange-600 dark:checked:bg-orange-500
+                         checked:border-orange-600 dark:checked:border-orange-500"
             />
           </div>
           <button
@@ -241,7 +246,12 @@ export default function PurchaseHistoryTab({
                     type="checkbox"
                     checked={isSelected}
                     onChange={(e) => onSelect(item.id, e.target.checked)}
-                    className="rounded border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:ring-2"
+                    className="rounded border-gray-300 dark:border-gray-400 
+                               bg-white dark:bg-gray-800
+                               text-orange-600 dark:text-orange-400 
+                               focus:ring-blue-500 focus:ring-2
+                               checked:bg-orange-600 dark:checked:bg-orange-500
+                               checked:border-orange-600 dark:checked:border-orange-500"
                   />
                 </div>
                 <div className="flex-1 min-w-0 truncate text-sm font-medium text-gray-900 dark:text-white pl-2" title={item.supplierName}>
