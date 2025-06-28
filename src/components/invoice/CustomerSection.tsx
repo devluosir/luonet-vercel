@@ -21,7 +21,9 @@ const inputClassName = `w-full px-4 py-2.5 rounded-2xl
   placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
   text-[15px] leading-relaxed text-gray-800 dark:text-gray-100
   transition-all duration-300 ease-out
-  hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20`;
+  hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
+  shadow-sm hover:shadow-md
+  ios-optimized-input`;
 
 export function CustomerSection({ to, customerPO, onChange }: CustomerSectionProps) {
   const [savedCustomers, setSavedCustomers] = useState<SavedCustomer[]>([]);

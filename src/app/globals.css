@@ -90,6 +90,39 @@ body {
   opacity: 1 !important;
   -webkit-appearance: none !important;
   appearance: none !important;
+  touch-action: manipulation !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+
+/* 暗色模式下.ios-optimized-input的光标颜色 */
+@media (prefers-color-scheme: dark) {
+  .ios-optimized-input {
+    caret-color: #0A84FF !important;
+    -webkit-caret-color: #0A84FF !important;
+  }
+}
+
+/* 针对表格内输入框的特殊优化 */
+table .ios-optimized-input {
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+}
+
+/* iOS Safari特殊修复 */
+@supports (-webkit-touch-callout: none) {
+  .ios-optimized-input:focus {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-text-fill-color: initial !important;
+    opacity: 1 !important;
+    -webkit-opacity: 1 !important;
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
+  }
 }
 
 

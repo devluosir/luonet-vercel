@@ -13,35 +13,17 @@ const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
 // 默认单位列表（需要单复数变化的单位）
 const defaultUnits = ['pc', 'set', 'length'] as const;
 
-// iOS光标优化的内联样式 - 统一使用007AFF颜色
-const iosCaretStyle: any = {
+// 简化的iOS光标优化样式 - 与invoice页面保持一致
+const iosCaretStyle = {
   caretColor: '#007AFF',
   WebkitCaretColor: '#007AFF',
-  WebkitTextFillColor: 'initial',
-  WebkitOpacity: 1,
-  opacity: 1,
-  WebkitAppearance: 'none',
-  appearance: 'none',
-  touchAction: 'manipulation',
-  WebkitTouchCallout: 'none',
-  WebkitUserSelect: 'text',
-  userSelect: 'text'
-};
+} as React.CSSProperties;
 
 // 暗色模式的光标颜色
-const iosCaretStyleDark: any = {
+const iosCaretStyleDark = {
   caretColor: '#0A84FF',
   WebkitCaretColor: '#0A84FF',
-  WebkitTextFillColor: 'initial',
-  WebkitOpacity: 1,
-  opacity: 1,
-  WebkitAppearance: 'none',
-  appearance: 'none',
-  touchAction: 'manipulation',
-  WebkitTouchCallout: 'none',
-  WebkitUserSelect: 'text',
-  userSelect: 'text'
-};
+} as React.CSSProperties;
 
 export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
   // 可用单位列表
@@ -71,17 +53,13 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
     }
   }, []);
 
-  // iOS输入框优化处理函数
+  // 简化的iOS输入框优化处理函数
   const handleIOSInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const element = e.target;
-    const style = element.style as any; // 使用类型断言来访问WebKit属性
     
-    // 强制设置光标颜色
+    // 设置光标颜色
     element.style.caretColor = isDarkMode ? '#0A84FF' : '#007AFF';
-    style.webkitCaretColor = isDarkMode ? '#0A84FF' : '#007AFF';
-    style.webkitTextFillColor = 'initial';
-    style.webkitOpacity = '1';
-    element.style.opacity = '1';
+    (element.style as any).webkitCaretColor = isDarkMode ? '#0A84FF' : '#007AFF';
     
     // 延迟滚动到可视区域，避免键盘遮挡
     setTimeout(() => {
@@ -472,12 +450,11 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                           transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
-                          -webkit-appearance-none touch-manipulation
+                          ios-optimized-input
                           ${item.highlight?.partName ? highlightClass : ''}`}
                         style={{ 
                           height: '28px',
-                          ...iosCaretStyle,
-                          ...(isDarkMode ? iosCaretStyleDark : {})
+                          ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                         }}
                       />
                     </td>
@@ -502,12 +479,11 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                             transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
-                            -webkit-appearance-none touch-manipulation
+                            ios-optimized-input
                             ${item.highlight?.description ? highlightClass : ''}`}
                           style={{ 
                             height: '28px',
-                            ...iosCaretStyle,
-                            ...(isDarkMode ? iosCaretStyleDark : {})
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                           }}
                         />
                       </td>
@@ -546,11 +522,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                           transition-all duration-200 text-center
                           [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                          -webkit-appearance-none touch-manipulation
+                          ios-optimized-input
                           ${item.highlight?.quantity ? highlightClass : ''}`}
                         style={{
-                          ...iosCaretStyle,
-                          ...(isDarkMode ? iosCaretStyleDark : {})
+                          ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                         }}
                       />
                     </td>
@@ -571,11 +546,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                           transition-all duration-200 text-center cursor-pointer
-                          appearance-none -webkit-appearance-none touch-manipulation
+                          appearance-none ios-optimized-input
                           ${item.highlight?.unit ? highlightClass : ''}`}
                         style={{
-                          ...iosCaretStyle,
-                          ...(isDarkMode ? iosCaretStyleDark : {})
+                          ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                         }}
                       >
                         {availableUnits.map(unit => {
@@ -622,11 +596,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                           transition-all duration-200 text-center
                           [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                          -webkit-appearance-none touch-manipulation
+                          ios-optimized-input
                           ${item.highlight?.unitPrice ? highlightClass : ''}`}
                         style={{
-                          ...iosCaretStyle,
-                          ...(isDarkMode ? iosCaretStyleDark : {})
+                          ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                         }}
                       />
                     </td>
@@ -641,10 +614,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                           transition-all duration-200 text-center
+                          ios-optimized-input
                           ${item.highlight?.amount ? highlightClass : ''}`}
                         style={{
-                          ...iosCaretStyle,
-                          ...(isDarkMode ? iosCaretStyleDark : {})
+                          ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                         }}
                       />
                     </td>
@@ -670,12 +643,11 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                             transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
-                            -webkit-appearance-none touch-manipulation
+                            ios-optimized-input
                             ${item.highlight?.remarks ? highlightClass : ''}`}
                           style={{ 
                             height: '28px',
-                            ...iosCaretStyle,
-                            ...(isDarkMode ? iosCaretStyleDark : {})
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                           }}
                         />
                       </td>
@@ -727,13 +699,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                             transition-all duration-200 whitespace-pre-wrap resize-y overflow-hidden
-                            -webkit-appearance-none touch-manipulation
+                            ios-optimized-input
                             ${fee.highlight?.description ? highlightClass : ''}
                             ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}
                           style={{ 
                             height: '28px',
-                            ...iosCaretStyle,
-                            ...(isDarkMode ? iosCaretStyleDark : {})
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                           }}
                         />
                       </td>
@@ -768,12 +739,11 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                             transition-all duration-200
                             [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                            -webkit-appearance-none touch-manipulation
+                            ios-optimized-input
                             ${fee.highlight?.amount ? highlightClass : ''}
                             ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}
                           style={{
-                            ...iosCaretStyle,
-                            ...(isDarkMode ? iosCaretStyleDark : {})
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                           }}
                         />
                       </td>
@@ -794,11 +764,11 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                               text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                               placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                               transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
+                              ios-optimized-input
                               ${fee.highlight?.remarks ? highlightClass : ''}`}
                             style={{ 
                               height: '28px',
-                              ...iosCaretStyle,
-                              ...(isDarkMode ? iosCaretStyleDark : {})
+                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                             }}
                           />
                         </td>

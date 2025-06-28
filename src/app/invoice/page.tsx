@@ -37,7 +37,8 @@ const tableInputClassName = `w-full px-3 py-2 rounded-xl
   placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
   transition-all duration-300 ease-out
   hover:bg-[#007AFF]/5 dark:hover:bg-[#0A84FF]/5
-  text-center whitespace-pre-wrap`;
+  text-center whitespace-pre-wrap
+  ios-optimized-input`;
 
 const numberInputClassName = `${tableInputClassName}
   [appearance:textfield] 
