@@ -69,7 +69,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
                   transition-all duration-300 ease-out
                   shadow-sm hover:shadow-md
                   ios-optimized-input
-                  w-[140px] sm:w-[160px] md:w-[170px] flex-shrink-0`}
+                  w-[130px] sm:w-[150px] md:w-[160px] flex-shrink-0`}
                 style={{ 
                   colorScheme: 'light dark',
                   ...iosCaretStyle

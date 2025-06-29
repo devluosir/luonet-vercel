@@ -148,7 +148,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
             required={type === 'quotation'}
           />
         </div>
-        <div className="w-[140px] sm:w-[160px] md:w-[170px]">
+        <div className="w-[160px] sm:w-[160px] md:w-[170px]">
           <input
             type="date"
             value={data.date}
