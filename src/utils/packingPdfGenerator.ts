@@ -266,6 +266,17 @@ function renderShippingMarks(doc: ExtendedJsPDF, data: PackingData, startY: numb
 
 // 渲染商品表格
 async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY: number): Promise<number> {
+  // 默认单位列表（需要单复数变化的单位）
+  const defaultUnits = ['pc', 'set', 'length'];
+  
+  // 处理单位的单复数
+  const getUnitDisplay = (baseUnit: string, quantity: number) => {
+    if (defaultUnits.includes(baseUnit)) {
+      return quantity > 1 ? `${baseUnit}s` : baseUnit;
+    }
+    return baseUnit; // 自定义单位不变化单复数
+  };
+
   // 构建表头 - 优化换行显示
   const tableHeaders = [
     'No.',
@@ -283,23 +294,31 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
   const isCompact = totalColumns > 7; // 当列数超过7列时使用紧凑布局
 
   // 构建表格数据
-  const tableBody = data.items.map((item, index) => [
-    index + 1,
-    item.description,
-    ...(data.showHsCode ? [item.hsCode] : []),
-    item.quantity || '',
-    item.unit || '',
-    ...(data.showPrice ? [
-      item.unitPrice.toFixed(2),
-      `${getCurrencySymbol(data.currency)}${item.totalPrice.toFixed(2)}`
-    ] : []),
-    ...(data.showWeightAndPackage ? [
-      item.netWeight.toFixed(2),
-      item.grossWeight.toFixed(2),
-      item.packageQty || ''
-    ] : []),
-    ...(data.showDimensions ? [item.dimensions] : [])
-  ]);
+  const tableBody = data.items.map((item, index) => {
+    const quantity = item.quantity || 0;
+    const originalUnit = item.unit || 'pc';
+    // 去掉原单位可能的复数后缀，然后根据数量重新处理
+    const baseUnit = originalUnit.replace(/s$/, '');
+    const correctedUnit = getUnitDisplay(baseUnit, quantity);
+
+    return [
+      index + 1,
+      item.description,
+      ...(data.showHsCode ? [item.hsCode] : []),
+      quantity || '',
+      correctedUnit,
+      ...(data.showPrice ? [
+        item.unitPrice.toFixed(2),
+        `${getCurrencySymbol(data.currency)}${item.totalPrice.toFixed(2)}`
+      ] : []),
+      ...(data.showWeightAndPackage ? [
+        item.netWeight.toFixed(2),
+        item.grossWeight.toFixed(2),
+        item.packageQty || ''
+      ] : []),
+      ...(data.showDimensions ? [item.dimensions] : [])
+    ];
+  });
 
   // 添加总计行
   if (data.showPrice || data.showWeightAndPackage) {

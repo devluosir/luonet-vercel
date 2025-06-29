@@ -525,21 +525,40 @@ export default function HistoryManagementPage() {
 
   // 转换订单确认数据到装箱单数据
   const convertConfirmationToPacking = (confirmationData: any) => {
-    const packingItems = confirmationData.items.map((item: any, index: number) => ({
-      id: index + 1,
-      serialNo: (index + 1).toString(),
-      // 合并 partName 和 description
-      description: [item.partName, item.description].filter(Boolean).join(' - '),
-      hsCode: '',
-      quantity: item.quantity || 0,
-      unitPrice: item.unitPrice || 0,
-      totalPrice: item.amount || 0,
-      netWeight: 0,
-      grossWeight: 0,
-      packageQty: 0,
-      dimensions: '',
-      unit: item.unit || 'pc'
-    }));
+    // 默认单位列表（需要单复数变化的单位）
+    const defaultUnits = ['pc', 'set', 'length'];
+    
+    // 处理单位的单复数
+    const getUnitDisplay = (baseUnit: string, quantity: number) => {
+      if (defaultUnits.includes(baseUnit)) {
+        return quantity > 1 ? `${baseUnit}s` : baseUnit;
+      }
+      return baseUnit; // 自定义单位不变化单复数
+    };
+
+    const packingItems = confirmationData.items.map((item: any, index: number) => {
+      const quantity = item.quantity || 0;
+      const originalUnit = item.unit || 'pc';
+      // 去掉原单位可能的复数后缀，然后根据数量重新处理
+      const baseUnit = originalUnit.replace(/s$/, '');
+      const correctedUnit = getUnitDisplay(baseUnit, quantity);
+
+      return {
+        id: index + 1,
+        serialNo: (index + 1).toString(),
+        // 合并 partName 和 description
+        description: [item.partName, item.description].filter(Boolean).join(' - '),
+        hsCode: '',
+        quantity,
+        unitPrice: item.unitPrice || 0,
+        totalPrice: item.amount || 0,
+        netWeight: 0,
+        grossWeight: 0,
+        packageQty: 0,
+        dimensions: '',
+        unit: correctedUnit
+      };
+    });
 
     return {
       orderNo: confirmationData.inquiryNo || '',
