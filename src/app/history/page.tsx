@@ -500,6 +500,78 @@ export default function HistoryManagementPage() {
     }
   };
 
+  // 处理转换（从订单确认转到装箱单）
+  const handleConvert = (id: string) => {
+    try {
+      if (activeTab === 'confirmation') {
+        // 查找订单确认记录
+        const confirmationItem = getQuotationHistory().find(item => item.id === id && item.type === 'confirmation');
+        if (confirmationItem && confirmationItem.data) {
+          // 转换数据格式
+          const packingData = convertConfirmationToPacking(confirmationItem.data);
+          
+          // 将数据存储到全局变量供packing页面使用
+          (window as any).__PACKING_DATA__ = packingData;
+          (window as any).__EDIT_MODE__ = false;
+          
+          // 跳转到装箱单页面
+          router.push('/packing');
+        }
+      }
+    } catch (error) {
+      console.error('Error converting to packing:', error);
+    }
+  };
+
+  // 转换订单确认数据到装箱单数据
+  const convertConfirmationToPacking = (confirmationData: any) => {
+    const packingItems = confirmationData.items.map((item: any, index: number) => ({
+      id: index + 1,
+      serialNo: (index + 1).toString(),
+      // 合并 partName 和 description
+      description: [item.partName, item.description].filter(Boolean).join(' - '),
+      hsCode: '',
+      quantity: item.quantity || 0,
+      unitPrice: item.unitPrice || 0,
+      totalPrice: item.amount || 0,
+      netWeight: 0,
+      grossWeight: 0,
+      packageQty: 0,
+      dimensions: '',
+      unit: item.unit || 'pc'
+    }));
+
+    return {
+      orderNo: confirmationData.inquiryNo || '',
+      invoiceNo: confirmationData.contractNo || '', // contractNo -> invoiceNo
+      date: confirmationData.date || new Date().toISOString().split('T')[0],
+      
+      consignee: {
+        name: confirmationData.to || ''
+      },
+      
+      markingNo: '',
+      
+      items: packingItems,
+      currency: confirmationData.currency || 'USD',
+      remarks: '',
+      remarkOptions: {
+        shipsSpares: true,
+        customsPurpose: true,
+      },
+      showHsCode: false,
+      showDimensions: false,
+      showWeightAndPackage: true,
+      showPrice: false,
+      dimensionUnit: 'cm',
+      documentType: 'packing' as const,
+      templateConfig: {
+        headerType: 'bilingual' as const
+      },
+      customUnits: confirmationData.customUnits || []
+    };
+  };
+
   // 处理选择
   const handleSelect = (id: string, selected: boolean) => {
     setSelectedIds(prev => {
@@ -990,6 +1062,7 @@ export default function HistoryManagementPage() {
                   onCopy={handleCopy}
                   onDelete={(id) => setShowDeleteConfirm(id)}
                   onPreview={handlePreview}
+                  onConvert={handleConvert}
                   selectedIds={selectedIds}
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}

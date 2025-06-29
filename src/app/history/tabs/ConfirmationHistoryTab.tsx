@@ -20,7 +20,8 @@ import {
   RefreshCw,
   Archive,
   Star,
-  X
+  X,
+  Package
 } from 'lucide-react';
 
 interface ConfirmationHistory {
@@ -54,6 +55,7 @@ interface Props {
   onCopy: (id: string) => void;
   onDelete: (id: string) => void;
   onPreview: (id: string) => void;
+  onConvert: (id: string) => void;
   selectedIds: Set<string>;
   onSelect: (id: string, selected: boolean) => void;
   onSelectAll: (selected: boolean) => void;
@@ -69,6 +71,7 @@ export default function ConfirmationHistoryTab({
   onCopy, 
   onDelete, 
   onPreview,
+  onConvert,
   selectedIds,
   onSelect,
   onSelectAll,
@@ -287,6 +290,13 @@ export default function ConfirmationHistoryTab({
                       title="预览"
                     >
                       <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onConvert(item.id)}
+                      className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:text-purple-400 dark:hover:bg-purple-900/20 rounded-lg transition-all duration-200"
+                      title="转换为装箱单"
+                    >
+                      <Package className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => onEdit(item.id)}
