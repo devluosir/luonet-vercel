@@ -1,5 +1,4 @@
 import type { QuotationData } from '@/types/quotation';
-import { getDefaultNotes } from '@/utils/getDefaultNotes';
 import { useState, useEffect } from 'react';
 
 interface CustomerInfoSectionProps {
@@ -149,31 +148,15 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
             required={type === 'quotation'}
           />
         </div>
-        <div className="w-[110px] sm:w-[200px]">
-          <select
-            value={data.from}
-            onChange={e => {
-              const newValue = e.target.value;
-              onChange({
-                ...data,
-                from: newValue,
-                notes: getDefaultNotes(newValue, type)
-              });
-            }}
-            className={`${inputClassName} appearance-none 
-              bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3e%3cpolyline points="6 9 12 15 18 9"%3e%3c/polyline%3e%3c/svg%3e')] 
-              bg-[length:1em_1em] 
-              bg-[right_0.5rem_center] 
-              bg-no-repeat
-              pr-8`}
+        <div className="w-[130px] sm:w-[150px]">
+          <input
+            type="date"
+            value={data.date}
+            onChange={e => onChange({ ...data, date: e.target.value })}
+            className={inputClassName}
             style={iosCaretStyle}
-          >
-            <option value="Roger">Roger</option>
-            <option value="Sharon">Sharon</option>
-            <option value="Emily">Emily</option>
-            <option value="Summer">Summer</option>
-            <option value="Nina">Nina</option>
-          </select>
+            required
+          />
         </div>
       </div>
 

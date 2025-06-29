@@ -9,54 +9,63 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({ data, onDataChange }: SettingsPanelProps) {
   const fromOptions = ['Roger', 'Sharon', 'Emily', 'Summer', 'Nina'];
-  if (data.from && !fromOptions.includes(data.from)) {
+  // 大小写不敏感的重复检查
+  if (data.from && !fromOptions.some(option => option.toLowerCase() === data.from.toLowerCase())) {
     fromOptions.unshift(data.from);
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-[#3A3A3C] rounded-xl border border-gray-200 dark:border-gray-600">
-      <div className="p-4 sm:p-6">
-        <div className="space-y-4">
-          {/* From 和 印章设置 - 响应式布局 */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center lg:justify-end gap-4 lg:gap-6">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">From:</span>
-              <select
-                value={data.from}
-                onChange={(e) => onDataChange({ ...data, from: e.target.value })}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-              >
-                {fromOptions.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
+    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50 rounded-lg p-3 shadow-sm">
+      
+      {/* 响应式布局容器 */}
+      <div className="flex flex-wrap items-center gap-3 text-xs">
+        
+        {/* 第一组：From */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">From:</span>
+          <select
+            value={data.from}
+            onChange={(e) => onDataChange({ ...data, from: e.target.value })}
+            className="px-2 py-1 rounded text-[11px] font-medium
+              bg-white/90 dark:bg-[#1c1c1e]/90
+              border border-gray-200/30 dark:border-[#2c2c2e]/50
+              focus:outline-none focus:ring-1
+              focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
+              text-gray-800 dark:text-gray-200"
+          >
+            {fromOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Stamp:</span>
-              <div className="flex gap-2">
-                {[
-                  { value: 'none', label: 'None' },
-                  { value: 'shanghai', label: 'Shanghai' },
-                  { value: 'hongkong', label: 'Hongkong' }
-                ].map((stamp) => (
-                  <button
-                    key={stamp.value}
-                    type="button"
-                    onClick={() => onDataChange({ ...data, stampType: stamp.value as 'none' | 'shanghai' | 'hongkong' })}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                      data.stampType === stamp.value
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {stamp.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* 分隔线 */}
+        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+
+        {/* 第二组：Stamp */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Stamp:</span>
+          <div className="flex gap-1">
+            {[
+              { value: 'none', label: 'None' },
+              { value: 'shanghai', label: 'SH' },
+              { value: 'hongkong', label: 'HK' }
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onDataChange({ ...data, stampType: option.value as 'none' | 'shanghai' | 'hongkong' })}
+                className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                  data.stampType === option.value 
+                    ? 'bg-[#007AFF] text-white shadow-sm' 
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>

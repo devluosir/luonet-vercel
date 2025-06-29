@@ -1,4 +1,5 @@
 import type { QuotationData } from '@/types/quotation';
+import { getDefaultNotes } from '@/utils/getDefaultNotes';
 import { useState } from 'react';
 
 interface SettingsPanelProps {
@@ -7,54 +8,16 @@ interface SettingsPanelProps {
   activeTab: 'quotation' | 'confirmation';
 }
 
-const settingsPanelClassName = `bg-[#007AFF]/5 dark:bg-[#0A84FF]/5 backdrop-blur-xl
-  border border-[#007AFF]/10 dark:border-[#0A84FF]/10
-  rounded-2xl overflow-hidden
-  shadow-lg shadow-[#007AFF]/5 dark:shadow-[#0A84FF]/5
-  p-4`;
-
-// 参考invoice页面的简洁样式 - iOS兼容性更好
-const inputClassName = `w-full px-4 py-2.5 rounded-2xl
-  bg-white/95 dark:bg-[#1c1c1e]/95
-  border border-[#007AFF]/10 dark:border-[#0A84FF]/10
-  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
-  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
-  text-[15px] leading-relaxed text-gray-800 dark:text-gray-100
-  transition-all duration-300 ease-out
-  hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
-  shadow-sm hover:shadow-md
-  ios-optimized-input`;
-
-// iOS光标优化样式 - 简化版本
-const iosCaretStyle = {
-  caretColor: '#007AFF',
-  WebkitCaretColor: '#007AFF',
-} as React.CSSProperties;
-
-const radioGroupClassName = `flex p-1 gap-2
-  bg-gray-100/50 dark:bg-gray-900/50 
-  rounded-lg
-  border border-gray-200/50 dark:border-gray-700/50`;
-
-const radioButtonClassName = `flex items-center justify-center px-3 py-1.5
-  rounded-lg
-  text-xs font-medium
-  transition-all duration-200
-  cursor-pointer
-  min-w-[36px]
-  border border-transparent
-  hover:shadow-md
-  active:scale-[0.97]`;
-
-const radioButtonActiveClassName = `bg-white dark:bg-[#1c1c1e] 
-  text-[#007AFF] dark:text-[#0A84FF]
-  shadow-md
-  border-gray-200/50 dark:border-gray-700/50`;
-
 export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps) {
-  const [showTableSettings, setShowTableSettings] = useState(false);
   const [customUnit, setCustomUnit] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // 动态处理From选项
+  const fromOptions = ['Roger', 'Sharon', 'Emily', 'Summer', 'Nina'];
+  // 大小写不敏感的重复检查
+  if (data.from && !fromOptions.some(option => option.toLowerCase() === data.from.toLowerCase())) {
+    fromOptions.unshift(data.from);
+  }
 
   const handleAddCustomUnit = () => {
     if (customUnit && !(data.customUnits || []).includes(customUnit)) {
@@ -68,618 +31,214 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
     }
   };
 
-  const renderCustomUnitInput = () => (
-    <div className="flex items-center gap-2">
-      <div className="relative">
-        <input
-          type="text"
-          value={customUnit}
-          onChange={e => setCustomUnit(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              handleAddCustomUnit();
-            }
-          }}
-          placeholder="Add custom unit"
-          className="w-32 px-3 py-1.5 rounded-2xl
-            bg-white/95 dark:bg-[#1c1c1e]/95
-            border border-[#007AFF]/10 dark:border-[#0A84FF]/10
-            focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
-            text-[13px] text-gray-800 dark:text-gray-100
-            placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
-            transition-all duration-300 ease-out
-            hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
-            shadow-sm hover:shadow-md
-            ios-optimized-input"
-          style={iosCaretStyle}
-        />
-        {showSuccess && (
-          <div className="absolute left-0 right-0 -bottom-6 text-center text-xs text-green-500 dark:text-green-400
-            animate-[fadeIn_0.2s_ease-in,fadeOut_0.2s_ease-out_1.8s]">
-            Unit added successfully
-          </div>
-        )}
-      </div>
-      <button
-        type="button"
-        onClick={handleAddCustomUnit}
-        className="px-3 py-1.5 rounded-lg
-          bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
-          hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
-          text-[#007AFF] dark:text-[#0A84FF]
-          text-[13px] font-medium"
-      >
-        Add
-      </button>
-    </div>
-  );
-
-  const renderCustomUnits = () => (data.customUnits || []).length > 0 && (
-    <div className="flex flex-wrap gap-2 mt-2">
-      {(data.customUnits || []).map((unit, index) => (
-        <div
-          key={index}
-          className="flex items-center gap-1 px-2 py-1 rounded-lg
-            bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
-            text-[#007AFF] dark:text-[#0A84FF]
-            text-[13px]"
-        >
-          <span>{unit}</span>
-          <button
-            type="button"
-            onClick={() => {
-              const newUnits = (data.customUnits || []).filter((_, i) => i !== index);
-              onChange({
-                ...data,
-                customUnits: newUnits
-              });
-            }}
-            className="ml-1 w-4 h-4 flex items-center justify-center
-              hover:bg-[#007AFF]/20 dark:hover:bg-[#0A84FF]/20
-              rounded-full"
-          >
-            ×
-          </button>
-        </div>
-      ))}
-    </div>
-  );
+  const handleRemoveCustomUnit = (index: number) => {
+    const newUnits = (data.customUnits || []).filter((_, i) => i !== index);
+    onChange({
+      ...data,
+      customUnits: newUnits
+    });
+  };
 
   return (
-    <div className={settingsPanelClassName}>
-      {/* 小屏布局 */}
-      <div className="flex flex-col gap-4 sm:hidden">
-        {/* 第一行：日期和币种 */}
-        <div className="flex items-center justify-center gap-4">
-          <input
-            type="date"
-            value={data.date}
-            onChange={e => onChange({ ...data, date: e.target.value })}
-            className={`${inputClassName} w-[130px]`}
-            style={iosCaretStyle}
-          />
-           {/* 币种选择 */}
-           <div className={`${radioGroupClassName} h-[38px] w-[120px]`}>
-            <label
-              className={`${radioButtonClassName} ${
-                data.currency === 'USD' ? radioButtonActiveClassName : 
-                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
-              }`}
-            >
-              <input
-                type="radio"
-                name="currency"
-                value="USD"
-                checked={data.currency === 'USD'}
-                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
-                className="sr-only"
-              />
-              <span>$</span>
-            </label>
-            <label
-              className={`${radioButtonClassName} ${
-                data.currency === 'EUR' ? radioButtonActiveClassName : 
-                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
-              }`}
-            >
-              <input
-                type="radio"
-                name="currency"
-                value="EUR"
-                checked={data.currency === 'EUR'}
-                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
-                className="sr-only"
-              />
-              <span>€</span>
-            </label>
-            <label
-              className={`${radioButtonClassName} ${
-                data.currency === 'CNY' ? radioButtonActiveClassName : 
-                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
-              }`}
-            >
-              <input
-                type="radio"
-                name="currency"
-                value="CNY"
-                checked={data.currency === 'CNY'}
-                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
-                className="sr-only"
-              />
-              <span>¥</span>
-            </label>
+    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50 rounded-lg p-3 shadow-sm">
+      
+      {/* 响应式布局容器 */}
+      <div className="flex flex-wrap items-center gap-3 text-xs">
+        
+        {/* 第一组：来源 */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">From:</span>
+          <select
+            value={data.from}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              onChange({
+                ...data,
+                from: newValue,
+                notes: getDefaultNotes(newValue, activeTab)
+              });
+            }}
+            className="px-2 py-1 rounded text-[11px] font-medium
+              bg-white/90 dark:bg-[#1c1c1e]/90
+              border border-gray-200/30 dark:border-[#2c2c2e]/50
+              focus:outline-none focus:ring-1
+              focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
+              text-gray-800 dark:text-gray-200"
+          >
+            {fromOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* 分隔线 */}
+        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+
+        {/* 第二组：币种 */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Currency:</span>
+          <div className="flex gap-1">
+            {[
+              { value: 'USD', label: '$' },
+              { value: 'EUR', label: '€' },
+              { value: 'CNY', label: '¥' }
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onChange({ ...data, currency: option.value as 'USD' | 'EUR' | 'CNY' })}
+                className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                  data.currency === option.value 
+                    ? 'bg-[#007AFF] text-white shadow-sm' 
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* 第二行：Bank复选框和币种选择 */}
-        <div className="flex items-center justify-center gap-4">
-                {/* HK Stamp复选框 */}
-                {activeTab === 'confirmation' && (
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={data.showStamp}
-                      onChange={e => onChange({ ...data, showStamp: e.target.checked })}
-                      className="w-3.5 h-3.5 rounded 
-                        border-gray-300 dark:border-gray-600
-                        text-[#007AFF] dark:text-[#0A84FF]
-                        focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                        cursor-pointer"
-                    />
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      HK Stamp
-                    </span>
-                  </label>
-                )}
+        {/* 分隔线 */}
+        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
-          {/* Bank复选框 */}
+        {/* 换行控制：小屏换行，中屏不换行 */}
+        <div className="w-full sm:w-auto"></div>
+
+        {/* 第三组：表格显示选项 */}
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Show:</span>
+          
+          {/* Description */}
+          <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
+            <input
+              type="checkbox"
+              checked={data.showDescription}
+              onChange={(e) => onChange({ ...data, showDescription: e.target.checked })}
+              className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+            />
+            <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Desc</span>
+          </label>
+          
+          {/* Remarks */}
+          <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
+            <input
+              type="checkbox"
+              checked={data.showRemarks}
+              onChange={(e) => onChange({ ...data, showRemarks: e.target.checked })}
+              className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+            />
+            <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Remarks</span>
+          </label>
+          
+
+
+          {/* Bank - 只在确认订单模式显示 */}
           {activeTab === 'confirmation' && (
-            <label className="flex items-center gap-2 cursor-pointer h-[38px] px-4 shrink-0">
+            <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
               <input
                 type="checkbox"
                 checked={data.showBank}
-                onChange={e => onChange({ ...data, showBank: e.target.checked })}
-                className="w-3.5 h-3.5 rounded 
-                  border-gray-300 dark:border-gray-600
-                  text-[#007AFF] dark:text-[#0A84FF]
-                  focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                  cursor-pointer"
+                onChange={(e) => onChange({ ...data, showBank: e.target.checked })}
+                className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
               />
-              <span className="text-xs text-gray-600 dark:text-gray-400">
-                Bank
-              </span>
+              <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Bank</span>
             </label>
           )}
 
-          {/* 表格设置按钮 */}
-          <button
-            type="button"
-            onClick={() => setShowTableSettings(!showTableSettings)}
-            className={`h-[38px] px-4 rounded-lg
-              ${showTableSettings ? 'bg-[#007AFF]/10 dark:bg-[#0A84FF]/10' : 'hover:bg-[#007AFF]/5 dark:hover:bg-[#0A84FF]/5'}
-              text-[#007AFF] dark:text-[#0A84FF]
-              text-xs font-medium
-              transition-all duration-200
-              flex items-center gap-2`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="3" y1="9" x2="21" y2="9"></line>
-              <line x1="3" y1="15" x2="21" y2="15"></line>
-              <line x1="9" y1="3" x2="9" y2="21"></line>
-              <line x1="15" y1="3" x2="15" y2="21"></line>
-            </svg>
-            <span>Table</span>
-          </button>        
-        </div>
-
-        {/* 表格设置展开面板 */}
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out
-          ${showTableSettings ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}
-        >
-          <div className="pt-2 pb-4 px-4 bg-[#007AFF]/5 dark:bg-[#0A84FF]/5 rounded-xl">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap gap-4">
-                {/* Description复选框 */}
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={data.showDescription}
-                    onChange={e => onChange({ ...data, showDescription: e.target.checked })}
-                    className="w-3.5 h-3.5 rounded 
-                      border-gray-300 dark:border-gray-600
-                      text-[#007AFF] dark:text-[#0A84FF]
-                      focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                      cursor-pointer"
-                  />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    Description
-                  </span>
-                </label>
-                
-                {/* Remarks复选框 */}
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={data.showRemarks}
-                    onChange={e => onChange({ ...data, showRemarks: e.target.checked })}
-                    className="w-3.5 h-3.5 rounded 
-                      border-gray-300 dark:border-gray-600
-                      text-[#007AFF] dark:text-[#0A84FF]
-                      focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                      cursor-pointer"
-                  />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    Remarks
-                  </span>
-                </label>
-
-              {/* 自定义单位输入区域 */}  
-                {renderCustomUnitInput()}
-                {renderCustomUnits()}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 第三行：移除原有的 HK Stamp 和 Description/Remarks 复选框组 */}
-      </div>
-
-      {/* 中屏布局 */}
-      <div className="hidden sm:flex lg:hidden flex-col gap-4">
-        {/* 第一行：日期和名字 */}
-        <div className="flex items-center justify-center gap-4">
-          <input
-            type="date"
-            value={data.date}
-            onChange={e => onChange({ ...data, date: e.target.value })}
-            className={`${inputClassName} w-[130px]`}
-            style={iosCaretStyle}
-          />
-        </div>
-
-        {/* 第二行：Bank复选框和币种选择 */}
-        <div className="flex items-center justify-center gap-4">
-
-                {/* HK Stamp复选框 */}
-                {activeTab === 'confirmation' && (
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={data.showStamp}
-                      onChange={e => onChange({ ...data, showStamp: e.target.checked })}
-                      className="w-3.5 h-3.5 rounded 
-                        border-gray-300 dark:border-gray-600
-                        text-[#007AFF] dark:text-[#0A84FF]
-                        focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                        cursor-pointer"
-                    />
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      HK Stamp
-                    </span>
-                  </label>
-                )}
-          {/* Bank复选框 */}
+          {/* Stamp - 只在确认订单模式显示 */}
           {activeTab === 'confirmation' && (
-            <label className="flex items-center gap-2 cursor-pointer h-[38px] px-4 shrink-0">
+            <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
               <input
                 type="checkbox"
-                checked={data.showBank}
-                onChange={e => onChange({ ...data, showBank: e.target.checked })}
-                className="w-3.5 h-3.5 rounded 
-                  border-gray-300 dark:border-gray-600
-                  text-[#007AFF] dark:text-[#0A84FF]
-                  focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                  cursor-pointer"
+                checked={data.showStamp}
+                onChange={(e) => onChange({ ...data, showStamp: e.target.checked })}
+                className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
               />
-              <span className="text-xs text-gray-600 dark:text-gray-400">
-                Bank
-              </span>
+              <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">HK Stamp</span>
             </label>
           )}
-          {/* 表格设置按钮 */}
-          <button
-            type="button"
-            onClick={() => setShowTableSettings(!showTableSettings)}
-            className={`h-[38px] px-4 rounded-lg
-              ${showTableSettings ? 'bg-[#007AFF]/10 dark:bg-[#0A84FF]/10' : 'hover:bg-[#007AFF]/5 dark:hover:bg-[#0A84FF]/5'}
-              text-[#007AFF] dark:text-[#0A84FF]
-              text-xs font-medium
-              transition-all duration-200
-              flex items-center gap-2`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="3" y1="9" x2="21" y2="9"></line>
-              <line x1="3" y1="15" x2="21" y2="15"></line>
-              <line x1="9" y1="3" x2="9" y2="21"></line>
-              <line x1="15" y1="3" x2="15" y2="21"></line>
-            </svg>
-            <span>Table</span>
-          </button>
-          {/* 币种选择 */}
-          <div className={`${radioGroupClassName} h-[38px] w-[120px] shrink-0`}>
-            <label
-              className={`${radioButtonClassName} ${
-                data.currency === 'USD' ? radioButtonActiveClassName : 
-                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
-              }`}
-            >
-              <input
-                type="radio"
-                name="currency"
-                value="USD"
-                checked={data.currency === 'USD'}
-                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
-                className="sr-only"
-              />
-              <span>$</span>
-            </label>
-            <label
-              className={`${radioButtonClassName} ${
-                data.currency === 'EUR' ? radioButtonActiveClassName : 
-                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
-              }`}
-            >
-              <input
-                type="radio"
-                name="currency"
-                value="EUR"
-                checked={data.currency === 'EUR'}
-                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
-                className="sr-only"
-              />
-              <span>€</span>
-            </label>
-            <label
-              className={`${radioButtonClassName} ${
-                data.currency === 'CNY' ? radioButtonActiveClassName : 
-                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
-              }`}
-            >
-              <input
-                type="radio"
-                name="currency"
-                value="CNY"
-                checked={data.currency === 'CNY'}
-                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
-                className="sr-only"
-              />
-              <span>¥</span>
-            </label>
-          </div>
         </div>
 
-        {/* 表格设置展开面板 */}
-        <div className={`overflow-hidden transition-all duration-300 ease-in-out
-          ${showTableSettings ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}
-        >
-          <div className="pt-2 pb-4 px-4 bg-[#007AFF]/5 dark:bg-[#0A84FF]/5 rounded-xl">
-            <div className="flex flex-col gap-4 items-center">
-              <div className="flex flex-wrap gap-4">
-                {/* Description复选框 */}
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={data.showDescription}
-                    onChange={e => onChange({ ...data, showDescription: e.target.checked })}
-                    className="w-3.5 h-3.5 rounded 
-                      border-gray-300 dark:border-gray-600
-                      text-[#007AFF] dark:text-[#0A84FF]
-                      focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                      cursor-pointer"
-                  />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    Description
-                  </span>
-                </label>
-                
-                {/* Remarks复选框 */}
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={data.showRemarks}
-                    onChange={e => onChange({ ...data, showRemarks: e.target.checked })}
-                    className="w-3.5 h-3.5 rounded 
-                      border-gray-300 dark:border-gray-600
-                      text-[#007AFF] dark:text-[#0A84FF]
-                      focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                      cursor-pointer"
-                  />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    Remarks
-                  </span>
-                </label>
+        {/* 分隔线 */}
+        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
+        {/* 换行控制：小屏和中屏换行，大屏不换行 */}
+        <div className="w-full lg:w-auto"></div>
 
-              {/* 自定义单位输入区域 */}             
-                {renderCustomUnitInput()}
-                {renderCustomUnits()}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 大屏布局 */}
-      <div className="hidden lg:flex items-center justify-between gap-4">
-        {/* 日期和名字 */}
-        <div className="flex items-center gap-4">
-          <input
-            type="date"
-            value={data.date}
-            onChange={e => onChange({ ...data, date: e.target.value })}
-            className={`${inputClassName} w-[130px]`}
-            style={iosCaretStyle}
-          />
-        </div>
-
-        {/* 控制组 */}
-        <div className="flex items-center gap-4">
-              {/* HK Stamp复选框 */}
-              {activeTab === 'confirmation' && (
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={data.showStamp}
-                    onChange={e => onChange({ ...data, showStamp: e.target.checked })}
-                    className="w-3.5 h-3.5 rounded 
-                      border-gray-300 dark:border-gray-600
-                      text-[#007AFF] dark:text-[#0A84FF]
-                      focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                      cursor-pointer"
-                  />
-                  <span className="text-xs text-gray-600 dark:text-gray-400">
-                    HK Stamp
-                  </span>
-                </label>
+        {/* 第四组：自定义单位 */}
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Units:</span>
+          
+          {/* 自定义单位输入 */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <input
+                type="text"
+                value={customUnit}
+                onChange={e => setCustomUnit(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCustomUnit();
+                  }
+                }}
+                placeholder="Add custom unit"
+                className="w-24 px-2 py-1 rounded text-[9px]
+                  bg-white/90 dark:bg-[#1c1c1e]/90
+                  border border-gray-200/30 dark:border-[#2c2c2e]/50
+                  focus:outline-none focus:ring-1
+                  focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
+                  text-gray-800 dark:text-gray-200
+                  placeholder:text-gray-400"
+                style={{ caretColor: '#007AFF' }}
+              />
+              {showSuccess && (
+                <div className="absolute left-0 right-0 -bottom-5 text-center text-[9px] text-green-500 dark:text-green-400
+                  animate-[fadeIn_0.2s_ease-in,fadeOut_0.2s_ease-out_1.8s]">
+                  Added
+                </div>
               )}
-
-          {/* Bank复选框 */}
-          {activeTab === 'confirmation' && (
-            <label className="flex items-center gap-2 cursor-pointer h-[38px] px-4 shrink-0">
-              <input
-                type="checkbox"
-                checked={data.showBank}
-                onChange={e => onChange({ ...data, showBank: e.target.checked })}
-                className="w-3.5 h-3.5 rounded 
-                  border-gray-300 dark:border-gray-600
-                  text-[#007AFF] dark:text-[#0A84FF]
-                  focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                  cursor-pointer"
-              />
-              <span className="text-xs text-gray-600 dark:text-gray-400">
-                Bank
-              </span>
-            </label>
-          )}
-
-          {/* 表格设置按钮 */}
-          <button
-            type="button"
-            onClick={() => setShowTableSettings(!showTableSettings)}
-            className={`h-[38px] px-4 rounded-lg
-              ${showTableSettings ? 'bg-[#007AFF]/10 dark:bg-[#0A84FF]/10' : 'hover:bg-[#007AFF]/5 dark:hover:bg-[#0A84FF]/5'}
-              text-[#007AFF] dark:text-[#0A84FF]
-              text-xs font-medium
-              transition-all duration-200
-              flex items-center gap-2`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="3" y1="9" x2="21" y2="9"></line>
-              <line x1="3" y1="15" x2="21" y2="15"></line>
-              <line x1="9" y1="3" x2="9" y2="21"></line>
-              <line x1="15" y1="3" x2="15" y2="21"></line>
-            </svg>
-            <span>Table</span>
-          </button>
-
-
-          {/* 币种选择 */}
-          <div className={`${radioGroupClassName} h-[38px] w-[120px] shrink-0`}>
-            <label
-              className={`${radioButtonClassName} ${
-                data.currency === 'USD' ? radioButtonActiveClassName : 
-                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
-              }`}
-            >
-              <input
-                type="radio"
-                name="currency"
-                value="USD"
-                checked={data.currency === 'USD'}
-                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
-                className="sr-only"
-              />
-              <span>$</span>
-            </label>
-            <label
-              className={`${radioButtonClassName} ${
-                data.currency === 'EUR' ? radioButtonActiveClassName : 
-                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
-              }`}
-            >
-              <input
-                type="radio"
-                name="currency"
-                value="EUR"
-                checked={data.currency === 'EUR'}
-                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
-                className="sr-only"
-              />
-              <span>€</span>
-            </label>
-            <label
-              className={`${radioButtonClassName} ${
-                data.currency === 'CNY' ? radioButtonActiveClassName : 
-                'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#1c1c1e]/60'
-              }`}
-            >
-              <input
-                type="radio"
-                name="currency"
-                value="CNY"
-                checked={data.currency === 'CNY'}
-                onChange={e => onChange({ ...data, currency: e.target.value as 'USD' | 'EUR' | 'CNY' })}
-                className="sr-only"
-              />
-              <span>¥</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      {/* 大屏布局的表格设置展开面板 */}
-      <div className={`hidden lg:block overflow-hidden transition-all duration-300 ease-in-out mt-4
-        ${showTableSettings ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'}`}
-      >
-        <div className="pt-2 pb-4 px-4 bg-[#007AFF]/5 dark:bg-[#0A84FF]/5 rounded-xl">
-          <div className="flex flex-col gap-4 items-end">
-            <div className="flex flex-wrap gap-4">
-              {/* Description复选框 */}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={data.showDescription}
-                  onChange={e => onChange({ ...data, showDescription: e.target.checked })}
-                  className="w-3.5 h-3.5 rounded 
-                    border-gray-300 dark:border-gray-600
-                    text-[#007AFF] dark:text-[#0A84FF]
-                    focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                    cursor-pointer"
-                />
-                <span className="text-xs text-gray-600 dark:text-gray-400">
-                  Description
-                </span>
-              </label>
-              
-              {/* Remarks复选框 */}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={data.showRemarks}
-                  onChange={e => onChange({ ...data, showRemarks: e.target.checked })}
-                  className="w-3.5 h-3.5 rounded 
-                    border-gray-300 dark:border-gray-600
-                    text-[#007AFF] dark:text-[#0A84FF]
-                    focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                    cursor-pointer"
-                />
-                <span className="text-xs text-gray-600 dark:text-gray-400">
-                  Remarks
-                </span>
-              </label>
-
-
-
-            {/* 自定义单位输入区域 */}
-            {renderCustomUnitInput()}
-            {renderCustomUnits()}
             </div>
-
+            <button
+              type="button"
+              onClick={handleAddCustomUnit}
+              className="px-2 py-1 rounded text-[9px] font-medium
+                bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
+                hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
+                text-[#007AFF] dark:text-[#0A84FF]"
+            >
+              +
+            </button>
           </div>
+
+          {/* 已添加的自定义单位 */}
+          {(data.customUnits || []).length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {(data.customUnits || []).map((unit, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded
+                    bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
+                    text-[#007AFF] dark:text-[#0A84FF]
+                    text-[9px]"
+                >
+                  <span>{unit}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCustomUnit(index)}
+                    className="w-3 h-3 flex items-center justify-center
+                      hover:bg-[#007AFF]/20 dark:hover:bg-[#0A84FF]/20
+                      rounded-full text-[8px]"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

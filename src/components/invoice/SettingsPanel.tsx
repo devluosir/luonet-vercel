@@ -1,4 +1,3 @@
-import { RadioGroup } from '@headlessui/react';
 import { InvoiceTemplateConfig } from '@/types/invoice';
 
 interface SettingsPanelProps {
@@ -8,110 +7,88 @@ interface SettingsPanelProps {
 
 export default function SettingsPanel({ config, onChange }: SettingsPanelProps) {
   return (
-    <div className="p-6 space-y-6">
-      <h2 className="text-2xl font-bold">Invoice Template Settings</h2>
+    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50 rounded-lg p-3 shadow-sm">
       
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-medium mb-2">Header Type</h3>
-          <RadioGroup value={config.headerType} onChange={(value) => onChange({ ...config, headerType: value })}>
-            <div className="space-x-4">
-              <RadioGroup.Option value="bilingual">
-                {({ checked }) => (
-                  <span className={`inline-flex items-center ${checked ? 'text-blue-600' : ''}`}>
-                    <span className={`w-4 h-4 mr-2 rounded-full border ${checked ? 'border-blue-600' : 'border-gray-300'}`}>
-                      {checked && <span className="block w-2 h-2 mx-auto mt-1 bg-blue-600 rounded-full" />}
-                    </span>
-                    Bilingual Header
-                  </span>
-                )}
-              </RadioGroup.Option>
-              <RadioGroup.Option value="english">
-                {({ checked }) => (
-                  <span className={`inline-flex items-center ${checked ? 'text-blue-600' : ''}`}>
-                    <span className={`w-4 h-4 mr-2 rounded-full border ${checked ? 'border-blue-600' : 'border-gray-300'}`}>
-                      {checked && <span className="block w-2 h-2 mx-auto mt-1 bg-blue-600 rounded-full" />}
-                    </span>
-                    English Header
-                  </span>
-                )}
-              </RadioGroup.Option>
-            </div>
-          </RadioGroup>
+      {/* 响应式布局容器 */}
+      <div className="flex flex-wrap items-center gap-3 text-xs">
+        
+        {/* 第一组：Header Type */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Header:</span>
+          <div className="flex gap-1">
+            {[
+              { value: 'bilingual', label: 'CN+EN' },
+              { value: 'english', label: 'EN' }
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onChange({ ...config, headerType: option.value as 'bilingual' | 'english' })}
+                className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                  config.headerType === option.value 
+                    ? 'bg-[#007AFF] text-white shadow-sm' 
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div>
-          <h3 className="text-lg font-medium mb-2">Invoice Type</h3>
-          <RadioGroup value={config.invoiceType} onChange={(value) => onChange({ ...config, invoiceType: value })}>
-            <div className="space-x-4">
-              <RadioGroup.Option value="commercial">
-                {({ checked }) => (
-                  <span className={`inline-flex items-center ${checked ? 'text-blue-600' : ''}`}>
-                    <span className={`w-4 h-4 mr-2 rounded-full border ${checked ? 'border-blue-600' : 'border-gray-300'}`}>
-                      {checked && <span className="block w-2 h-2 mx-auto mt-1 bg-blue-600 rounded-full" />}
-                    </span>
-                    Commercial Invoice
-                  </span>
-                )}
-              </RadioGroup.Option>
-              <RadioGroup.Option value="proforma">
-                {({ checked }) => (
-                  <span className={`inline-flex items-center ${checked ? 'text-blue-600' : ''}`}>
-                    <span className={`w-4 h-4 mr-2 rounded-full border ${checked ? 'border-blue-600' : 'border-gray-300'}`}>
-                      {checked && <span className="block w-2 h-2 mx-auto mt-1 bg-blue-600 rounded-full" />}
-                    </span>
-                    Proforma Invoice
-                  </span>
-                )}
-              </RadioGroup.Option>
-            </div>
-          </RadioGroup>
+        {/* 分隔线 */}
+        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+
+        {/* 第二组：Invoice Type */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Type:</span>
+          <div className="flex gap-1">
+            {[
+              { value: 'commercial', label: 'Commercial' },
+              { value: 'proforma', label: 'Proforma' }
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onChange({ ...config, invoiceType: option.value as 'commercial' | 'proforma' })}
+                className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                  config.invoiceType === option.value 
+                    ? 'bg-[#007AFF] text-white shadow-sm' 
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div>
-          <h3 className="text-lg font-medium mb-2">Company Stamp</h3>
-          <RadioGroup value={config.stampType} onChange={(value) => onChange({ ...config, stampType: value })}>
-            <div className="space-x-4">
-              <RadioGroup.Option value="shanghai">
-                {({ checked }) => (
-                  <span className={`inline-flex items-center ${checked ? 'text-blue-600' : ''}`}>
-                    <span className={`w-4 h-4 mr-2 rounded-full border ${checked ? 'border-blue-600' : 'border-gray-300'}`}>
-                      {checked && <span className="block w-2 h-2 mx-auto mt-1 bg-blue-600 rounded-full" />}
-                    </span>
-                    Shanghai Company
-                  </span>
-                )}
-              </RadioGroup.Option>
-              <RadioGroup.Option value="hongkong">
-                {({ checked }) => (
-                  <span className={`inline-flex items-center ${checked ? 'text-blue-600' : ''}`}>
-                    <span className={`w-4 h-4 mr-2 rounded-full border ${checked ? 'border-blue-600' : 'border-gray-300'}`}>
-                      {checked && <span className="block w-2 h-2 mx-auto mt-1 bg-blue-600 rounded-full" />}
-                    </span>
-                    Hong Kong Company
-                  </span>
-                )}
-              </RadioGroup.Option>
-            </div>
-          </RadioGroup>
-        </div>
-      </div>
+        {/* 分隔线 */}
+        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
-      <div className="flex justify-end space-x-4 pt-4 border-t">
-        <button
-          type="button"
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-          onClick={() => onChange(config)}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-          onClick={() => onChange(config)}
-        >
-          Confirm
-        </button>
+        {/* 第三组：Company Stamp */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Stamp:</span>
+          <div className="flex gap-1">
+            {[
+              { value: 'shanghai', label: 'SH' },
+              { value: 'hongkong', label: 'HK' }
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onChange({ ...config, stampType: option.value as 'shanghai' | 'hongkong' })}
+                className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                  config.stampType === option.value 
+                    ? 'bg-[#007AFF] text-white shadow-sm' 
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

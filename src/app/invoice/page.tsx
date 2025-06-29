@@ -914,162 +914,203 @@ Beneficiary: Luo & Company Co., Limited`,
                 </div>
 
                 {/* 设置面板 */}
-                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showSettings ? 'max-h-none opacity-100 mb-8' : 'max-h-0 opacity-0'}`}>
-                  <div className="bg-gray-50 dark:bg-[#1C1C1E]/70 p-4 rounded-xl border border-gray-200/30 dark:border-white/10">
-                    <div className="space-y-3">
-                      {/* 第一行：日期和货币 */}
-                      <div className="flex items-center gap-3">
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showSettings ? 'opacity-100 px-4 sm:px-6 py-2 h-auto mb-8' : 'opacity-0 px-0 py-0 h-0'}`}>
+                  <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50 rounded-lg p-3 shadow-sm">
+                    
+                    {/* 响应式布局容器 */}
+                    <div className="flex flex-wrap items-center gap-3 text-xs">
+                      
+                      {/* 第一组：日期 */}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Date:</span>
                         <input
                           type="date"
                           value={invoiceData.date}
                           onChange={(e) => setInvoiceData(prev => ({ ...prev, date: e.target.value }))}
-                          className={`${inputClassName} dark:bg-[#1C1C1E]/90 w-[160px]`}
+                          className="w-32 px-2 py-1 rounded text-[11px]
+                            bg-white/90 dark:bg-[#1c1c1e]/90
+                            border border-gray-200/30 dark:border-[#2c2c2e]/50
+                            focus:outline-none focus:ring-1
+                            focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
+                            text-gray-800 dark:text-gray-200"
+                          style={{ caretColor: '#007AFF' }}
                           required
-                          pattern="\d{4}-\d{2}-\d{2}"
                         />
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                              invoiceData.currency === 'USD' 
-                                ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white' 
-                                : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
-                            }`}
-                            onClick={() => setInvoiceData(prev => ({ ...prev, currency: 'USD' }))}
-                          >
-                            $
-                          </button>
-                          <button
-                            type="button"
-                            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${
-                              invoiceData.currency === 'CNY' 
-                                ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white' 
-                                : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
-                            }`}
-                            onClick={() => setInvoiceData(prev => ({ ...prev, currency: 'CNY' }))}
-                          >
-                            ¥
-                          </button>
+                      </div>
+
+                      {/* 分隔线 */}
+                      <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+
+                      {/* 第二组：币种 */}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Currency:</span>
+                        <div className="flex gap-1">
+                          {[
+                            { value: 'USD', label: '$' },
+                            { value: 'CNY', label: '¥' }
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setInvoiceData(prev => ({ ...prev, currency: option.value as 'USD' | 'CNY' }))}
+                              className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                                invoiceData.currency === option.value 
+                                  ? 'bg-[#007AFF] text-white shadow-sm' 
+                                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
                         </div>
                       </div>
 
-                      {/* 第二行：模板设置 */}
-                      <div className="grid grid-cols-3 gap-3">
-                        {/* 抬头类型 */}
-                        <div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {['none', 'bilingual', 'english'].map((type) => (
-                              <button
-                                key={type}
-                                type="button"
-                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                                  invoiceData.templateConfig.headerType === type
-                                    ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
-                                    : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
-                                }`}
-                                onClick={() => setInvoiceData(prev => ({
-                                  ...prev,
-                                  templateConfig: {
-                                    ...prev.templateConfig,
-                                    headerType: type as 'none' | 'bilingual' | 'english'
-                                  }
-                                }))}
-                              >
-                                {type === 'none' ? 'None' : type === 'bilingual' ? 'Bilingual' : 'English'}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                      {/* 分隔线 */}
+                      <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
-                        {/* 发票类型 */}
-                        <div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {[
-                              { value: 'invoice', label: 'Invoice' },
-                              { value: 'commercial', label: 'Commercial' },
-                              { value: 'proforma', label: 'Proforma' }
-                            ].map(({ value, label }) => (
-                              <button
-                                key={value}
-                                type="button"
-                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                                  invoiceData.templateConfig.invoiceType === value
-                                    ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
-                                    : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
-                                }`}
-                                onClick={() => setInvoiceData(prev => ({
-                                  ...prev,
-                                  templateConfig: {
-                                    ...prev.templateConfig,
-                                    invoiceType: value as 'invoice' | 'commercial' | 'proforma'
-                                  }
-                                }))}
-                              >
-                                {label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* 印章类型 */}
-                        <div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {[
-                              { value: 'none', label: 'None' },
-                              { value: 'shanghai', label: 'Shanghai' },
-                              { value: 'hongkong', label: 'Hong Kong' }
-                            ].map(({ value, label }) => (
-                              <button
-                                key={value}
-                                type="button"
-                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                                  invoiceData.templateConfig.stampType === value
-                                    ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
-                                    : 'bg-white/90 dark:bg-[#1c1c1e]/90 text-gray-600 dark:text-gray-400 border border-gray-200/30 dark:border-white/10'
-                                }`}
-                                onClick={() => setInvoiceData(prev => ({
-                                  ...prev,
-                                  templateConfig: {
-                                    ...prev.templateConfig,
-                                    stampType: value as 'none' | 'shanghai' | 'hongkong'
-                                  }
-                                }))}
-                              >
-                                {label}
-                              </button>
-                            ))}
-                          </div>
+                      {/* 第三组：Header */}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Header:</span>
+                        <div className="flex gap-1">
+                          {[
+                            { value: 'none', label: 'None' },
+                            { value: 'bilingual', label: 'CN+EN' },
+                            { value: 'english', label: 'EN' }
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setInvoiceData(prev => ({
+                                ...prev,
+                                templateConfig: {
+                                  ...prev.templateConfig,
+                                  headerType: option.value as 'none' | 'bilingual' | 'english'
+                                }
+                              }))}
+                              className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                                invoiceData.templateConfig.headerType === option.value 
+                                  ? 'bg-[#007AFF] text-white shadow-sm' 
+                                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
                         </div>
                       </div>
 
-                      {/* 第三行：显示选项 */}
-                      <div className="flex items-center gap-4 pt-1">
-                        <label className="flex items-center gap-2">
+                      {/* 分隔线 */}
+                      <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+
+                      {/* 换行控制：小屏换行，中屏不换行 */}
+                      <div className="w-full sm:w-auto"></div>
+
+                      {/* 第四组：Type */}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Type:</span>
+                        <div className="flex gap-1">
+                          {[
+                            { value: 'invoice', label: 'Invoice' },
+                            { value: 'commercial', label: 'Commercial' },
+                            { value: 'proforma', label: 'Proforma' }
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setInvoiceData(prev => ({
+                                ...prev,
+                                templateConfig: {
+                                  ...prev.templateConfig,
+                                  invoiceType: option.value as 'invoice' | 'commercial' | 'proforma'
+                                }
+                              }))}
+                              className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                                invoiceData.templateConfig.invoiceType === option.value 
+                                  ? 'bg-[#007AFF] text-white shadow-sm' 
+                                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 分隔线 */}
+                      <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+
+                      {/* 第五组：Stamp */}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Stamp:</span>
+                        <div className="flex gap-1">
+                          {[
+                            { value: 'none', label: 'None' },
+                            { value: 'shanghai', label: 'SH' },
+                            { value: 'hongkong', label: 'HK' }
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setInvoiceData(prev => ({
+                                ...prev,
+                                templateConfig: {
+                                  ...prev.templateConfig,
+                                  stampType: option.value as 'none' | 'shanghai' | 'hongkong'
+                                }
+                              }))}
+                              className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                                invoiceData.templateConfig.stampType === option.value 
+                                  ? 'bg-[#007AFF] text-white shadow-sm' 
+                                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 分隔线 */}
+                      <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+
+                      {/* 换行控制：小屏和中屏换行，大屏不换行 */}
+                      <div className="w-full lg:w-auto"></div>
+
+                      {/* 第六组：显示选项 */}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Show:</span>
+                        
+                        {/* Bank */}
+                        <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
                           <input
                             type="checkbox"
                             checked={invoiceData.showBank}
                             onChange={e => setInvoiceData(prev => ({ ...prev, showBank: e.target.checked }))}
-                            className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20 dark:border-gray-600"
+                            className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
                           />
-                          <span className="text-sm text-gray-600 dark:text-gray-400">Bank</span>
+                          <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Bank</span>
                         </label>
-                        <label className="flex items-center gap-2">
+                        
+                        {/* HS Code */}
+                        <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
                           <input
                             type="checkbox"
                             checked={invoiceData.showHsCode}
                             onChange={e => setInvoiceData(prev => ({ ...prev, showHsCode: e.target.checked }))}
-                            className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20 dark:border-gray-600"
+                            className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
                           />
-                          <span className="text-sm text-gray-600 dark:text-gray-400">HS Code</span>
+                          <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">HS Code</span>
                         </label>
-                        <label className="flex items-center gap-2">
+                        
+                        {/* Description */}
+                        <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
                           <input
                             type="checkbox"
                             checked={invoiceData.showDescription}
                             onChange={e => setInvoiceData(prev => ({ ...prev, showDescription: e.target.checked }))}
-                            className="rounded border-gray-300 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20 dark:border-gray-600"
+                            className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
                           />
-                          <span className="text-sm text-gray-600 dark:text-gray-400">Description</span>
+                          <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Description</span>
                         </label>
                       </div>
                     </div>
