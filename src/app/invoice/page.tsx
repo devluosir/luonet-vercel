@@ -1086,7 +1086,16 @@ Beneficiary: Luo & Company Co., Limited`,
                             type="checkbox"
                             checked={invoiceData.showBank}
                             onChange={e => setInvoiceData(prev => ({ ...prev, showBank: e.target.checked }))}
-                            className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+                            className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                              checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                              focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                              relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                              before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                              checked:before:scale-100 before:transition-transform before:duration-200"
+                            style={{
+                              WebkitAppearance: 'none',
+                              MozAppearance: 'none'
+                            }}
                           />
                           <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Bank</span>
                         </label>
@@ -1097,7 +1106,16 @@ Beneficiary: Luo & Company Co., Limited`,
                             type="checkbox"
                             checked={invoiceData.showHsCode}
                             onChange={e => setInvoiceData(prev => ({ ...prev, showHsCode: e.target.checked }))}
-                            className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+                            className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                              checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                              focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                              relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                              before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                              checked:before:scale-100 before:transition-transform before:duration-200"
+                            style={{
+                              WebkitAppearance: 'none',
+                              MozAppearance: 'none'
+                            }}
                           />
                           <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">HS Code</span>
                         </label>
@@ -1108,7 +1126,16 @@ Beneficiary: Luo & Company Co., Limited`,
                             type="checkbox"
                             checked={invoiceData.showDescription}
                             onChange={e => setInvoiceData(prev => ({ ...prev, showDescription: e.target.checked }))}
-                            className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+                            className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                              checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                              focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                              relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                              before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                              checked:before:scale-100 before:transition-transform before:duration-200"
+                            style={{
+                              WebkitAppearance: 'none',
+                              MozAppearance: 'none'
+                            }}
                           />
                           <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Description</span>
                         </label>
@@ -1277,7 +1304,17 @@ Beneficiary: Luo & Company Co., Limited`,
                               showPaymentTerms: e.target.checked
                             }));
                           }}
-                          className="rounded border-gray-300 dark:border-gray-600 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
+                          className="flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                            checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                            focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                            relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                            before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                            checked:before:scale-100 before:transition-transform before:duration-200
+                            w-4 h-4"
+                          style={{
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'none'
+                          }}
                         />
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm text-gray-600 dark:text-gray-400">Full paid not later than</span>
@@ -1319,7 +1356,17 @@ Beneficiary: Luo & Company Co., Limited`,
                           type="checkbox"
                           checked={invoiceData.showInvoiceReminder}
                           onChange={e => setInvoiceData(prev => ({ ...prev, showInvoiceReminder: e.target.checked }))}
-                          className="rounded border-gray-300 dark:border-gray-600 text-[#007AFF] dark:text-[#0A84FF] focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20"
+                          className="flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                            checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                            focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                            relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                            before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                            checked:before:scale-100 before:transition-transform before:duration-200
+                            w-4 h-4"
+                          style={{
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'none'
+                          }}
                         />
                         <div className="text-sm text-gray-600 dark:text-gray-400">
                           Please state our invoice no. <span className="text-red-500 dark:text-red-400">&quot;{invoiceData.invoiceNo}&quot;</span> on your payment documents.

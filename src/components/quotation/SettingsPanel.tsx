@@ -117,7 +117,16 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
               type="checkbox"
               checked={data.showDescription}
               onChange={(e) => onChange({ ...data, showDescription: e.target.checked })}
-              className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+              className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                checked:before:scale-100 before:transition-transform before:duration-200"
+              style={{
+                WebkitAppearance: 'none',
+                MozAppearance: 'none'
+              }}
             />
             <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Desc</span>
           </label>
@@ -128,7 +137,16 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
               type="checkbox"
               checked={data.showRemarks}
               onChange={(e) => onChange({ ...data, showRemarks: e.target.checked })}
-              className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+              className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                checked:before:scale-100 before:transition-transform before:duration-200"
+              style={{
+                WebkitAppearance: 'none',
+                MozAppearance: 'none'
+              }}
             />
             <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Remarks</span>
           </label>
@@ -142,7 +160,16 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
                 type="checkbox"
                 checked={data.showBank}
                 onChange={(e) => onChange({ ...data, showBank: e.target.checked })}
-                className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+                className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                  checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                  focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                  relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                  before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                  checked:before:scale-100 before:transition-transform before:duration-200"
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none'
+                }}
               />
               <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Bank</span>
             </label>
@@ -155,7 +182,16 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
                 type="checkbox"
                 checked={data.showStamp}
                 onChange={(e) => onChange({ ...data, showStamp: e.target.checked })}
-                className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+                className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                  checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                  focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                  relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                  before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                  checked:before:scale-100 before:transition-transform before:duration-200"
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none'
+                }}
               />
               <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">HK Stamp</span>
             </label>
