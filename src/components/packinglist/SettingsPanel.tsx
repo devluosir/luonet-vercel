@@ -137,7 +137,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 type="checkbox"
                 checked={showHsCode}
                 onChange={(e) => onToggleHsCode(e.target.checked)}
-                className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+                className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                  checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                  focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                  relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                  before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                  checked:before:scale-100 before:transition-transform before:duration-200"
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none'
+                }}
               />
               <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">HS</span>
             </label>
@@ -148,7 +157,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 type="checkbox"
                 checked={showWeightAndPackage}
                 onChange={(e) => onToggleWeightAndPackage(e.target.checked)}
-                className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+                className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                  checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                  focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                  relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                  before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                  checked:before:scale-100 before:transition-transform before:duration-200"
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none'
+                }}
               />
               <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Weight</span>
             </label>
@@ -160,7 +178,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   type="checkbox"
                   checked={showDimensions}
                   onChange={(e) => onToggleDimensions(e.target.checked)}
-                  className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+                  className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                    checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                    focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                    relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                    before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                    checked:before:scale-100 before:transition-transform before:duration-200"
+                  style={{
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none'
+                  }}
                 />
                 <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Size</span>
               </label>
@@ -197,7 +224,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   type="checkbox"
                   checked={showPrice}
                   onChange={(e) => onTogglePrice(e.target.checked)}
-                  className="w-4 h-4 sm:w-3 sm:h-3 text-[#007AFF] bg-white border-gray-300 rounded focus:ring-[#007AFF] focus:ring-1 flex-shrink-0"
+                  className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                    checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                    focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                    relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                    before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                    checked:before:scale-100 before:transition-transform before:duration-200"
+                  style={{
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none'
+                  }}
                 />
                 <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Price</span>
               </label>
