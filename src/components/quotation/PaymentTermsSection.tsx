@@ -40,7 +40,16 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
                   showPaymentTerms: e.target.checked
                 });
               }}
-              className="rounded border-gray-300"
+              className="w-4 h-4 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
+                checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
+                focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
+                relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
+                before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
+                checked:before:scale-100 before:transition-transform before:duration-200"
+              style={{
+                WebkitAppearance: 'none',
+                MozAppearance: 'none'
+              }}
             />
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-gray-600 dark:text-gray-400">Full paid not later than</span>
@@ -59,14 +68,10 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
                   text-[14px]
                   transition-all duration-300 ease-out
                   shadow-sm hover:shadow-md
-                  ios-optimized-input`}
+                  ios-optimized-input
+                  w-[140px] sm:w-[160px] md:w-[170px] flex-shrink-0`}
                 style={{ 
                   colorScheme: 'light dark',
-                  width: '150px',
-                  minWidth: '150px',
-                  maxWidth: '150px',
-                  flexShrink: 0,
-                  flexGrow: 0,
                   ...iosCaretStyle
                 } as React.CSSProperties}
                 pattern="\d{4}-\d{2}-\d{2}"
