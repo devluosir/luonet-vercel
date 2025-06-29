@@ -91,6 +91,20 @@ interface ExtendedJsPDF extends jsPDF {
   getImageProperties: (image: string) => ImageProperties;
 }
 
+// 获取表头图片
+function getHeaderImageBase64(headerType: string): string {
+  switch (headerType) {
+    case 'bilingual':
+      // 使用双语表头图片
+      return embeddedResources.headerImage;
+    case 'english':
+      // 使用英文表头图片
+      return embeddedResources.headerEnglish;
+    default:
+      return embeddedResources.headerImage;
+  }
+}
+
 // 函数重载签名
 export async function generateInvoicePDF(data: PDFGeneratorData, preview: true): Promise<string>;
 export async function generateInvoicePDF(data: PDFGeneratorData, preview?: false): Promise<void>;
@@ -122,7 +136,8 @@ export async function generateInvoicePDF(data: PDFGeneratorData, preview: boolea
     // 添加表头
     if (data.templateConfig.headerType !== 'none') {
       try {
-        const headerImage = `data:image/png;base64,${embeddedResources.headerImage}`;
+        const headerImageBase64 = getHeaderImageBase64(data.templateConfig.headerType);
+        const headerImage = `data:image/png;base64,${headerImageBase64}`;
         const imgProperties = doc.getImageProperties(headerImage);
         const imgWidth = pageWidth - 30;  // 左右各留15mm
         const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
