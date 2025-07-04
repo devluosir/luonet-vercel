@@ -249,9 +249,9 @@ export default function PackingPage() {
     showHsCode: false,
     showDimensions: false,
     showWeightAndPackage: true,
-    showPrice: false,
+    showPrice: true,
     dimensionUnit: 'cm',
-    documentType: 'packing',
+    documentType: 'both',
     templateConfig: {
       headerType: 'bilingual'
     },
