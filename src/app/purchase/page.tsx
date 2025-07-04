@@ -138,12 +138,8 @@ export default function PurchaseOrderPage() {
       URL.revokeObjectURL(url);
       
       // 自动保存到历史记录
-      try {
-        savePurchaseHistory(data, editId);
-        setSaveMessage('PDF已生成并保存');
-      } catch {
-        setSaveMessage('PDF生成成功，但保存失败');
-      }
+      await handleSave();
+      setSaveMessage('PDF已生成并保存');
       setTimeout(() => setSaveMessage(''), 2000);
       // 进度条完成
       if (progressInterval) clearInterval(progressInterval);
