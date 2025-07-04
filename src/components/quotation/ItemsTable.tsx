@@ -60,15 +60,6 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
     // 设置光标颜色
     element.style.caretColor = isDarkMode ? '#0A84FF' : '#007AFF';
     (element.style as any).webkitCaretColor = isDarkMode ? '#0A84FF' : '#007AFF';
-    
-    // 延迟滚动到可视区域，避免键盘遮挡
-    setTimeout(() => {
-      element.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center',
-        inline: 'nearest'
-      });
-    }, 300);
   };
 
   // 处理单位的单复数
