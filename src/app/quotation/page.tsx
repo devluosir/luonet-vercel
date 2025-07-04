@@ -20,7 +20,6 @@ import { parseExcelData, convertExcelToLineItems } from '@/utils/excelPasteHandl
 import { PaymentTermsSection } from '@/components/quotation/PaymentTermsSection';
 import { saveQuotationHistory } from '@/utils/quotationHistory';
 import dynamic from 'next/dynamic';
-import { initIOSOptimization } from '@/utils/iosInputOptimization';
 
 // 标题样式
 const titleClassName = `text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]`;
@@ -140,9 +139,6 @@ export default function QuotationPage() {
       delete customWindow.__EDIT_MODE__;
       delete customWindow.__EDIT_ID__;
       delete customWindow.__QUOTATION_TYPE__;
-      
-      // 初始化iOS输入优化
-      initIOSOptimization();
     }
   }, [activeTab]);
 
