@@ -834,11 +834,11 @@ Beneficiary: Luo & Company Co., Limited`,
                       }`}
                     />
                     <Link
-                      href="/history"
-                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0"
+                      href="/history?tab=invoice"
+                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
                       title="历史记录"
                     >
-                      <History className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                      <History className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                     </Link>
                     <button
                       type="button"
@@ -874,7 +874,7 @@ Beneficiary: Luo & Company Co., Limited`,
                   {/* 小屏时只显示设置按钮 */}
                   <div className="sm:hidden flex items-center gap-2">
                     <Link
-                      href="/history"
+                      href="/history?tab=invoice"
                       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0"
                       title="历史记录"
                     >

@@ -233,6 +233,13 @@ export default function PurchaseOrderPage() {
                 {isEditMode ? '编辑采购订单' : 'Purchase Order'}
               </h1>
               <div className="flex items-center gap-2">
+                <Link
+                  href="/history?tab=purchase"
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                  title="历史记录"
+                >
+                  <History className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                </Link>
                 <button
                   type="button"
                   onClick={handleSave}
@@ -256,13 +263,6 @@ export default function PurchaseOrderPage() {
                     </div>
                   )}
                 </button>
-                <Link
-                  href="/history"
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
-                  title="历史记录"
-                >
-                  <History className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
-                </Link>
                 <button
                   type="button"
                   onClick={() => setShowSettings(!showSettings)}

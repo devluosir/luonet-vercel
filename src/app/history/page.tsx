@@ -148,7 +148,13 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
 export default function HistoryManagementPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<HistoryType>('quotation');
+  const [activeTab, setActiveTab] = useState<HistoryType>(() => {
+    const tabParam = searchParams?.get('tab');
+    if (tabParam && ['quotation', 'confirmation', 'invoice', 'purchase', 'packing'].includes(tabParam)) {
+      return tabParam as HistoryType;
+    }
+    return 'quotation';
+  });
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [filters, setFilters] = useState<Filters>({
