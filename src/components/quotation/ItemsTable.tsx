@@ -123,6 +123,19 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
     onChange({ ...data, otherFees: newOtherFees });
   };
 
+  // 处理其他费用双击事件
+  const handleOtherFeeDoubleClick = (index: number, field: 'description' | 'remarks') => {
+    const newOtherFees = [...(data.otherFees || [])];
+    newOtherFees[index] = {
+      ...newOtherFees[index],
+      highlight: {
+        ...newOtherFees[index].highlight,
+        [field]: !newOtherFees[index].highlight?.[field]
+      }
+    };
+    onChange({ ...data, otherFees: newOtherFees });
+  };
+
   // 处理其他费用软删除
   const handleOtherFeeSoftDelete = (index: number) => {
     const newOtherFees = (data.otherFees || []).filter((_, i) => i !== index);
@@ -401,16 +414,20 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         e.target.style.height = '28px';
                         e.target.style.height = `${e.target.scrollHeight}px`;
                       }}
+                      onDoubleClick={() => handleOtherFeeDoubleClick(index, 'description')}
                       onFocus={handleIOSInputFocus}
-                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                      className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
-                        ios-optimized-input resize-y overflow-hidden whitespace-pre-wrap"
+                        hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                        transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
+                        ios-optimized-input
+                        ${fee.highlight?.description ? highlightClass : ''}`}
                       style={{ 
                         height: '28px',
                         ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                       }}
-                      placeholder="Enter other fee description..."
                     />
                   </div>
 
@@ -459,16 +476,20 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             e.target.style.height = '28px';
                             e.target.style.height = `${e.target.scrollHeight}px`;
                           }}
+                          onDoubleClick={() => handleOtherFeeDoubleClick(index, 'remarks')}
                           onFocus={handleIOSInputFocus}
-                          className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                          className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
-                            ios-optimized-input resize-y overflow-hidden whitespace-pre-wrap"
+                            hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                            transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
+                            ios-optimized-input
+                            ${fee.highlight?.remarks ? highlightClass : ''}`}
                           style={{ 
                             height: '28px',
                             ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                           }}
-                          placeholder="Enter remarks..."
                         />
                       </div>
                     )}
@@ -507,9 +528,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         data.showRemarks ? 'w-1/5' : 'w-1/3'
                       }`}>Description</th>
                     )}
-                    <th className="w-16 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
-                    <th className="w-16 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
-                    <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
+                    <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
+                    <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
+                    <th className="w-32 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
                     <th className="w-28 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
                     {data.showRemarks && (
                       <th className={`w-1/5 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
@@ -593,7 +614,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           />
                         </td>
                       )}
-                      <td className="w-16 px-2 py-2">
+                      <td className="w-24 px-2 py-2">
                         <input
                           type="text"
                           inputMode="numeric"
@@ -605,7 +626,6 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                               handleItemChange(index, 'quantity', value === '' ? 0 : parseInt(value));
                             }
                           }}
-                          onDoubleClick={() => handleDoubleClick(index, 'quantity')}
                           onFocus={(e) => {
                             setEditingQtyIndex(index);
                             setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
@@ -616,6 +636,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                             setEditingQtyIndex(null);
                             setEditingQtyAmount('');
                           }}
+                          onDoubleClick={() => handleDoubleClick(index, 'quantity')}
                           className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
@@ -630,7 +651,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           }}
                         />
                       </td>
-                      <td className="w-16 px-2 py-2">
+                      <td className="w-24 px-2 py-2">
                         <select
                           value={item.unit}
                           onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
@@ -658,7 +679,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           })}
                         </select>
                       </td>
-                      <td className="w-24 px-2 py-2">
+                      <td className="w-32 px-2 py-2">
                         <input
                           type="text"
                           inputMode="decimal"
@@ -775,14 +796,16 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                               e.target.style.height = '28px';
                               e.target.style.height = `${e.target.scrollHeight}px`;
                             }}
-                            placeholder="Other Fee"
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                            onDoubleClick={() => handleOtherFeeDoubleClick(index, 'description')}
+                            onFocus={handleIOSInputFocus}
+                            className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                               focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                               hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                               text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                               placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                               transition-all duration-200 whitespace-pre-wrap resize-y overflow-hidden
-                              ios-optimized-input"
+                              ios-optimized-input
+                              ${fee.highlight?.description ? highlightClass : ''}`}
                             style={{ 
                               height: '28px',
                               ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
@@ -835,13 +858,16 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                                 e.target.style.height = '28px';
                                 e.target.style.height = `${e.target.scrollHeight}px`;
                               }}
-                              className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                              onDoubleClick={() => handleOtherFeeDoubleClick(index, 'remarks')}
+                              onFocus={handleIOSInputFocus}
+                              className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                                 focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                                 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                                 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                                 placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                                 transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
-                                ios-optimized-input"
+                                ios-optimized-input
+                                ${fee.highlight?.remarks ? highlightClass : ''}`}
                               style={{ 
                                 height: '28px',
                                 ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
