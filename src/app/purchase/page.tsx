@@ -56,6 +56,7 @@ export default function PurchaseOrderPage() {
   const projectSpecificationRef = useRef<HTMLTextAreaElement>(null);
   const deliveryInfoRef = useRef<HTMLTextAreaElement>(null);
   const orderNumbersRef = useRef<HTMLTextAreaElement>(null);
+  const paymentTermsRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (session?.user?.name) {
@@ -89,6 +90,14 @@ export default function PurchaseOrderPage() {
       textarea.style.height = `${textarea.scrollHeight}px`;
     }
   }, [data.orderNumbers]);
+
+  useEffect(() => {
+    const textarea = paymentTermsRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [data.paymentTerms]);
 
   // 检查是否为编辑模式
   useEffect(() => {
@@ -397,10 +406,12 @@ export default function PurchaseOrderPage() {
 
               {/* 2. 付款条件 */}
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <label className={subheadingClass}>2. 付款条件</label>
-                  <input
-                    className={`${inputClass} flex-1`}
+                <label className={subheadingClass}>2. 付款条件</label>
+                <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl">
+                  <textarea
+                    ref={paymentTermsRef}
+                    className={`${inputClass} resize-none overflow-hidden`}
+                    rows={1}
                     value={data.paymentTerms}
                     onChange={e => setData({ ...data, paymentTerms: e.target.value })}
                     placeholder="交货后30天"
