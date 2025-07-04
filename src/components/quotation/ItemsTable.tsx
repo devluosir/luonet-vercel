@@ -124,7 +124,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
   };
 
   // 处理其他费用双击事件
-  const handleOtherFeeDoubleClick = (index: number, field: 'description' | 'remarks') => {
+  const handleOtherFeeDoubleClick = (index: number, field: 'description' | 'amount' | 'remarks') => {
     const newOtherFees = [...(data.otherFees || [])];
     newOtherFees[index] = {
       ...newOtherFees[index],
@@ -456,10 +456,15 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                           setEditingOtherFeeIndex(null);
                           setEditingOtherFeeAmount('');
                         }}
-                        className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                        onDoubleClick={() => handleOtherFeeDoubleClick(index, 'amount')}
+                        className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                           focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
-                          ios-optimized-input"
+                          hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                          placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                          transition-all duration-200 text-center whitespace-pre-wrap
+                          ios-optimized-input
+                          ${fee.highlight?.amount ? highlightClass : ''}`}
                         style={{
                           ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                         }}
@@ -835,17 +840,19 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                               setEditingOtherFeeIndex(null);
                               setEditingOtherFeeAmount('');
                             }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                            onDoubleClick={() => handleOtherFeeDoubleClick(index, 'amount')}
+                            className={`w-full px-3 py-1.5 bg-transparent border border-transparent
                               focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                               hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
+                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                               placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                              ios-optimized-input"
+                              transition-all duration-200 text-center whitespace-pre-wrap
+                              ios-optimized-input
+                              ${fee.highlight?.amount ? highlightClass : ''}`}
                             style={{
                               ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                             }}
+                            placeholder="0.00"
                           />
                         </td>
                         {data.showRemarks && (
