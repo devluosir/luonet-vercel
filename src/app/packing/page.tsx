@@ -500,171 +500,6 @@ export default function PackingPage() {
     packageQty: acc.packageQty + item.packageQty
   }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
 
-  // 处理粘贴数据的函数
-  const handleGlobalPaste = useCallback((data: string | PackingItem[]) => {
-    try {
-      if (typeof data === 'string') {
-        const parsedData = parseExcelData(data);
-        const newItems = convertExcelToPackingItems(parsedData);
-        if (newItems.length > 0) {
-          setPackingData(prev => ({
-            ...prev,
-            items: newItems
-          }));
-        }
-      } else {
-        setPackingData(prev => ({
-          ...prev,
-          items: data
-        }));
-      }
-    } catch (error) {
-      console.error('Failed to parse pasted data:', error);
-    }
-  }, []);
-
-  // 处理剪贴板按钮点击
-  const handleClipboardButtonClick = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) {
-        handleGlobalPaste(text);
-      }
-    } catch (error) {
-      console.error('Failed to access clipboard:', error);
-      showPasteDialog();
-    }
-  };
-
-  // 添加全局粘贴事件监听器
-  useEffect(() => {
-    const handlePaste = async (event: ClipboardEvent) => {
-      const target = event.target as HTMLElement;
-      
-      // 如果目标元素不存在，直接返回
-      if (!target) return;
-
-      // 检查是否在表格内的任何输入元素中
-      const isTableInput = target.matches('input, textarea') && 
-        (target.closest('td') !== null || target.closest('table') !== null);
-      
-      // 如果是表格内的输入元素，直接返回
-      if (isTableInput) {
-        return;
-      }
-
-      // 检查是否在其他输入元素中
-      const isOtherInput = target.matches('input, textarea') || 
-        target.getAttribute('contenteditable') === 'true' ||
-        target.closest('[contenteditable="true"]') !== null;
-
-      // 如果是其他输入元素，直接返回
-      if (isOtherInput) {
-        return;
-      }
-
-      // 只有在非输入元素区域的粘贴才执行全局粘贴
-      event.preventDefault();
-      try {
-        let text = event.clipboardData?.getData('text') || '';
-        if (!text) {
-          text = await navigator.clipboard.readText();
-        }
-        if (text) {
-          handleGlobalPaste(text);
-        }
-      } catch (err) {
-        console.error('Failed to handle paste:', err);
-      }
-    };
-
-    document.addEventListener('paste', handlePaste);
-    return () => {
-      document.removeEventListener('paste', handlePaste);
-    };
-  }, [handleGlobalPaste]);
-
-  // 显示粘贴对话框
-  const showPasteDialog = () => {
-    const input = document.createElement('textarea');
-    input.style.position = 'fixed';
-    input.style.top = '50%';
-    input.style.left = '50%';
-    input.style.transform = 'translate(-50%, -50%)';
-    input.style.zIndex = '9999';
-    input.style.width = '80%';
-    input.style.height = '200px';
-    input.style.padding = '12px';
-    input.style.border = '2px solid #007AFF';
-    input.style.borderRadius = '8px';
-    input.style.backgroundColor = 'white';
-    input.style.color = 'black';
-    input.placeholder = '请将数据粘贴到这里...';
-    
-    const overlay = document.createElement('div');
-    overlay.style.position = 'fixed';
-    overlay.style.top = '0';
-    overlay.style.left = '0';
-    overlay.style.right = '0';
-    overlay.style.bottom = '0';
-    overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
-    overlay.style.zIndex = '9998';
-    
-    const confirmBtn = document.createElement('button');
-    confirmBtn.textContent = '确认';
-    confirmBtn.style.position = 'fixed';
-    confirmBtn.style.bottom = '20%';
-    confirmBtn.style.left = '50%';
-    confirmBtn.style.transform = 'translateX(-50%)';
-    confirmBtn.style.zIndex = '9999';
-    confirmBtn.style.padding = '8px 24px';
-    confirmBtn.style.backgroundColor = '#007AFF';
-    confirmBtn.style.color = 'white';
-    confirmBtn.style.border = 'none';
-    confirmBtn.style.borderRadius = '6px';
-    confirmBtn.style.cursor = 'pointer';
-    
-    const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = '取消';
-    cancelBtn.style.position = 'fixed';
-    cancelBtn.style.bottom = '20%';
-    cancelBtn.style.left = '50%';
-    cancelBtn.style.transform = 'translateX(-80px)';
-    cancelBtn.style.zIndex = '9999';
-    cancelBtn.style.padding = '8px 24px';
-    cancelBtn.style.backgroundColor = '#666';
-    cancelBtn.style.color = 'white';
-    cancelBtn.style.border = 'none';
-    cancelBtn.style.borderRadius = '6px';
-    cancelBtn.style.cursor = 'pointer';
-    cancelBtn.style.marginRight = '10px';
-    
-    const cleanup = () => {
-      document.body.removeChild(input);
-      document.body.removeChild(overlay);
-      document.body.removeChild(confirmBtn);
-      document.body.removeChild(cancelBtn);
-    };
-    
-    confirmBtn.onclick = () => {
-      const text = input.value;
-      if (text) {
-        handleGlobalPaste(text);
-      }
-      cleanup();
-    };
-    
-    cancelBtn.onclick = cleanup;
-    overlay.onclick = cleanup;
-    
-    document.body.appendChild(overlay);
-    document.body.appendChild(input);
-    document.body.appendChild(confirmBtn);
-    document.body.appendChild(cancelBtn);
-    
-    input.focus();
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
       <main className="flex-1">
@@ -691,14 +526,6 @@ export default function PackingPage() {
                       'Proforma Invoice & Packing List'
                     }
                   </h1>
-                  <button
-                    type="button"
-                    onClick={handleClipboardButtonClick}
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
-                    title="Paste from clipboard"
-                  >
-                    <Clipboard className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
-                  </button>
                 </div>
                 <div className="flex items-center gap-2">
                   <Link
@@ -1042,7 +869,7 @@ export default function PackingPage() {
       </main>
       <Footer />
       
-      {/* PDF预览弹窗 - 使用统一的组件 */}
+      {/* PDF预览弹窗 */}
       <PDFPreviewModal
         isOpen={showPreview}
         onClose={() => {
