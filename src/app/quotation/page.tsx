@@ -91,7 +91,11 @@ export default function QuotationPage() {
     customUnits: [],
     showPaymentTerms: false,
     showInvoiceReminder: false,
-    additionalPaymentTerms: ''
+    additionalPaymentTerms: '',
+    templateConfig: {
+      headerType: 'bilingual',
+      stampType: 'none'
+    }
   });
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
@@ -562,8 +566,7 @@ export default function QuotationPage() {
               </div>
 
               {/* 设置面板 */}
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out
-                ${showSettings ? 'opacity-100 px-4 sm:px-6 py-6 h-auto' : 'opacity-0 px-0 py-0 h-0'}`}>
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showSettings ? 'opacity-100 px-4 sm:px-6 py-2 h-auto mb-8' : 'opacity-0 px-0 py-0 h-0'}`}>
                 <SettingsPanel 
                   data={data}
                   onChange={setData}

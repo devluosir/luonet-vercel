@@ -55,6 +55,10 @@ export interface QuotationData {
   showPaymentTerms?: boolean;
   showInvoiceReminder?: boolean;
   additionalPaymentTerms?: string;
+  templateConfig?: {
+    headerType: 'none' | 'bilingual' | 'english';
+    stampType: 'none' | 'shanghai' | 'hongkong';
+  };
 }
 
 export interface CustomWindow extends Window {

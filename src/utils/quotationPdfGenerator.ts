@@ -55,25 +55,41 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
   try {
     // 添加表头
     try {
-      const headerImage = `data:image/png;base64,${embeddedResources.headerImage}`;
-      const imgProperties = doc.getImageProperties(headerImage);
-      const imgWidth = pageWidth - 30;  // 左右各留15mm
-      const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
-      doc.addImage(
-        headerImage,
-        'PNG',
-        15,  // 左边距15mm
-        15,  // 上边距15mm
-        imgWidth,
-        imgHeight
-      );
-      doc.setFontSize(14);
-      doc.setFont('NotoSansSC', 'bold');
-      const title = 'QUOTATION';
-      const titleWidth = doc.getTextWidth(title);
-      const titleY = margin + imgHeight + 5;  // 标题Y坐标
-      doc.text(title, (pageWidth - titleWidth) / 2, titleY);  // 标题位置
-      startY = titleY + 10;  // 主体内容从标题下方开始
+      const headerType = data.templateConfig?.headerType || 'none';
+      if (headerType !== 'none') {
+        const headerImage = `data:image/png;base64,${
+          headerType === 'bilingual' 
+            ? embeddedResources.headerImage 
+            : embeddedResources.headerEnglish
+        }`;
+        const imgProperties = doc.getImageProperties(headerImage);
+        const imgWidth = pageWidth - 30;  // 左右各留15mm
+        const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
+        doc.addImage(
+          headerImage,
+          'PNG',
+          15,  // 左边距15mm
+          15,  // 上边距15mm
+          imgWidth,
+          imgHeight
+        );
+        doc.setFontSize(14);
+        doc.setFont('NotoSansSC', 'bold');
+        const title = 'QUOTATION';
+        const titleWidth = doc.getTextWidth(title);
+        const titleY = margin + imgHeight + 5;  // 标题Y坐标
+        doc.text(title, (pageWidth - titleWidth) / 2, titleY);  // 标题位置
+        startY = titleY + 10;  // 主体内容从标题下方开始
+      } else {
+        // 无表头时使用默认布局
+        doc.setFontSize(14);
+        doc.setFont('NotoSansSC', 'bold');
+        const title = 'QUOTATION';
+        const titleWidth = doc.getTextWidth(title);
+        const titleY = margin + 5;  // 标题Y坐标
+        doc.text(title, (pageWidth - titleWidth) / 2, titleY);  // 标题位置
+        startY = titleY + 10;  // 主体内容从标题下方开始
+      }
     } catch (error) {
       console.error('Error processing header:', error);
       // 使用默认布局
