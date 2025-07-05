@@ -770,95 +770,91 @@ export default function PackingPage() {
 
               {/* 基本信息区域 */}
               <div className="px-4 sm:px-6 py-4 sm:py-6">
-                <div className="space-y-6">
-                  {/* Consignee和订单信息并排布局 */}
-                  <div className="bg-gray-50 dark:bg-[#1C1C1E] rounded-xl p-4 sm:p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* 左侧：Consignee + Order No. */}
-                      <div className="space-y-4">
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">Consignee</h3>
-                            <div className="h-px flex-1 bg-gradient-to-r from-gray-200 dark:from-gray-600 to-transparent"></div>
-                          </div>
-                          <textarea
-                            value={packingData.consignee.name}
-                            onChange={(e) => setPackingData(prev => ({ 
-                              ...prev, 
-                              consignee: { ...prev.consignee, name: e.target.value }
-                            }))}
-                            className={`${inputClassName} min-h-[120px] resize-none`}
-                            style={iosCaretStyle}
-                            placeholder="Enter consignee information including company name, address, contact details..."
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                            Order No.
-                          </label>
-                          <input
-                            type="text"
-                            value={packingData.orderNo}
-                            onChange={(e) => setPackingData(prev => ({ ...prev, orderNo: e.target.value }))}
-                            className={inputClassName}
-                            style={iosCaretStyle}
-                            placeholder="Enter order number"
-                          />
-                        </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* 收货人信息组 */}
+                  <div className="bg-gray-50 dark:bg-[#1C1C1E] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
+                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Consignee</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <textarea
+                          value={packingData.consignee.name}
+                          onChange={(e) => setPackingData(prev => ({ 
+                            ...prev, 
+                            consignee: { ...prev.consignee, name: e.target.value }
+                          }))}
+                          className={`${inputClassName} min-h-[120px] resize-none`}
+                          style={iosCaretStyle}
+                          placeholder="Enter consignee information including company name, address, contact details..."
+                        />
                       </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
+                          Customer Order No.
+                        </label>
+                        <input
+                          type="text"
+                          value={packingData.orderNo}
+                          onChange={(e) => setPackingData(prev => ({ ...prev, orderNo: e.target.value }))}
+                          className={inputClassName}
+                          style={iosCaretStyle}
+                          placeholder="Enter order number"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                      {/* 右侧：Invoice No. + Date + Shipping Marks */}
-                      <div className="space-y-4">
-                        <div className="space-y-2">
+                  {/* 单据信息组 */}
+                  <div className="bg-gray-50 dark:bg-[#1C1C1E] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
+                          Invoice No.
+                        </label>
+                        <input
+                          type="text"
+                          value={packingData.invoiceNo}
+                          onChange={(e) => setPackingData(prev => ({ ...prev, invoiceNo: e.target.value }))}
+                          className={inputClassName}
+                          style={iosCaretStyle}
+                          placeholder="Invoice No. *"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
+                          Date
+                        </label>
+                        <input
+                          type="date"
+                          value={packingData.date}
+                          onChange={(e) => setPackingData(prev => ({ ...prev, date: e.target.value }))}
+                          className={inputClassName}
+                          style={iosCaretStyle}
+                        />
+                      </div>
+                      
+                      {/* Shipping Marks */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
                           <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                            Invoice No.
+                            Shipping Marks
                           </label>
-                          <input
-                            type="text"
-                            value={packingData.invoiceNo}
-                            onChange={(e) => setPackingData(prev => ({ ...prev, invoiceNo: e.target.value }))}
-                            className={inputClassName}
-                            style={iosCaretStyle}
-                            placeholder="Invoice No. *"
-                          />
+                          {packingData.markingNo && (
+                            <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
+                              Configured
+                            </span>
+                          )}
                         </div>
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                            Date
-                          </label>
-                          <input
-                            type="date"
-                            value={packingData.date}
-                            onChange={(e) => setPackingData(prev => ({ ...prev, date: e.target.value }))}
-                            className={inputClassName}
-                            style={iosCaretStyle}
-                          />
-                        </div>
-                        
-                        {/* Shipping Marks */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
-                              Shipping Marks
-                            </label>
-                            {packingData.markingNo && (
-                              <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
-                                Configured
-                              </span>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setShowShippingMarksModal(true)}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-[#3A3A3C] hover:bg-gray-200 dark:hover:bg-[#48484A] hover:text-gray-700 dark:hover:text-gray-300 rounded-lg transition-all duration-200"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            {packingData.markingNo ? 'Edit Marks' : 'Add Marks'}
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowShippingMarksModal(true)}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-[#3A3A3C] hover:bg-gray-200 dark:hover:bg-[#48484A] hover:text-gray-700 dark:hover:text-gray-300 rounded-lg transition-all duration-200"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          {packingData.markingNo ? 'Edit Marks' : 'Add Marks'}
+                        </button>
                       </div>
                     </div>
                   </div>
