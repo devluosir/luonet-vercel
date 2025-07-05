@@ -232,24 +232,6 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           }] : [])
         ])
       ] as unknown as RowInput[],
-      theme: 'plain',
-      showHead: 'everyPage',
-      styles: {
-        fontSize: 8,
-        cellPadding: 2,
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1,
-        textColor: [0, 0, 0],
-        font: 'NotoSansSC',
-        valign: 'middle'
-      },
-      headStyles: {
-        fontSize: 8,
-        fontStyle: 'bold',
-        halign: 'center',
-        font: 'NotoSansSC',
-        valign: 'middle'
-      },
       columnStyles: {
         '0': { halign: 'center', cellWidth: 10 },  // No.
         '1': { 
@@ -288,7 +270,25 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         } : {})  // Remarks
       },
       margin: { left: 15, right: 15, bottom: 20 },
-      tableWidth: 'auto',  // 使用auto让表格自动计算宽度
+      tableWidth: 'auto',
+      theme: 'plain',
+      showHead: 'everyPage',
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.1,
+        textColor: [0, 0, 0],
+        font: 'NotoSansSC',
+        valign: 'middle'
+      },
+      headStyles: {
+        fontSize: 8,
+        fontStyle: 'bold',
+        halign: 'center',
+        font: 'NotoSansSC',
+        valign: 'middle'
+      },
       didParseCell: (data) => {
         const pageHeight = data.doc.internal.pageSize.height;
         const bottomMargin = 25;
