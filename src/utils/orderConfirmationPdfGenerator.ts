@@ -283,7 +283,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         ...(data.showRemarks ? { 
           [data.showDescription ? '7' : '6']: { 
             halign: 'center', 
-            cellWidth: 55  // 备注列固定宽度
+            cellWidth: 40  // 备注列固定宽度
           } 
         } : {})  // Remarks
       },
