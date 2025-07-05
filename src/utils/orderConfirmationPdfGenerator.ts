@@ -163,8 +163,8 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     doc.setFontSize(8);
     doc.text('We hereby confirm having sold to you the following goods on terms and condition as specified below:', leftMargin, currentY);
 
-    // 确保表格与确认文本有8mm的固定间距
-    currentY += 3;  // 固定8mm的间距
+    // 确保表格与确认文本有3mm的固定间距
+    currentY += 3;
 
     // 使用 autoTable
     doc.autoTable({
@@ -237,13 +237,13 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         '1': { 
           halign: 'center', 
           cellWidth: data.showDescription 
-            ? (data.showRemarks ? 25 : 40)   // 显示描述列时，不显示备注列时适当增加宽度
-            : (data.showRemarks ? 45 : 80)   // 不显示描述列时，占用更多空间但不过宽
+            ? (data.showRemarks ? 30 : 40)   // 显示描述列时，不显示备注列时适当增加宽度
+            : (data.showRemarks ? 60 : 80)   // 不显示描述列时，占用更多空间但不过宽
         },  // Part Name
         ...(data.showDescription ? { 
           '2': { 
             halign: 'center', 
-            cellWidth: data.showRemarks ? 20 : 40  // 显示描述列但不显示备注列时，描述列更宽
+            cellWidth: data.showRemarks ? 30 : 40  // 显示描述列但不显示备注列时，描述列更宽
           } 
         } : {}),  // Description
         [data.showDescription ? '3' : '2']: { 
