@@ -212,18 +212,18 @@ export default function InvoiceHistoryTab({
             <span className="ml-1 flex items-center">{renderSortIcon('totalAmount')}</span>
           </button>
           <button
-            onClick={() => onSort('createdAt')}
-            className="hidden lg:flex w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-purple-600 dark:hover:text-purple-400 transition-colors items-center group whitespace-nowrap"
-          >
-            创建时间
-            <span className="ml-1 flex items-center">{renderSortIcon('createdAt')}</span>
-          </button>
-          <button
             onClick={() => onSort('updatedAt')}
-            className="hidden xl:flex w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-purple-600 dark:hover:text-purple-400 transition-colors items-center group whitespace-nowrap"
+            className="hidden lg:flex w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-purple-600 dark:hover:text-purple-400 transition-colors items-center group whitespace-nowrap"
           >
             修改时间
             <span className="ml-1 flex items-center">{renderSortIcon('updatedAt')}</span>
+          </button>
+          <button
+            onClick={() => onSort('createdAt')}
+            className="hidden xl:flex w-40 flex-shrink-0 font-semibold text-gray-900 dark:text-white text-left hover:text-purple-600 dark:hover:text-purple-400 transition-colors items-center group whitespace-nowrap"
+          >
+            创建时间
+            <span className="ml-1 flex items-center">{renderSortIcon('createdAt')}</span>
           </button>
           <div className="w-10 sm:w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
             操作

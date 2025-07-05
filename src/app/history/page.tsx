@@ -589,7 +589,7 @@ export default function HistoryManagementPage() {
       showWeightAndPackage: true,
       showPrice: false,
       dimensionUnit: 'cm',
-      documentType: 'packing' as const,
+      documentType: 'both' as const,
       templateConfig: {
         headerType: 'bilingual' as const
       },
