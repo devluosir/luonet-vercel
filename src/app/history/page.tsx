@@ -584,10 +584,10 @@ export default function HistoryManagementPage() {
         shipsSpares: true,
         customsPurpose: true,
       },
-      showHsCode: false,
-      showDimensions: false,
+      showHsCode: true,
+      showDimensions: true,
       showWeightAndPackage: true,
-      showPrice: false,
+      showPrice: true,
       dimensionUnit: 'cm',
       documentType: 'both' as const,
       templateConfig: {
