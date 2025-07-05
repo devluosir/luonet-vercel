@@ -222,20 +222,24 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     doc.setFont('NotoSansSC', 'normal');
     doc.setTextColor(0, 0, 0);
     doc.text('供你们参考；', contentMargin + doc.getTextWidth('客户确认订单时对于项目的规格描述'), currentY);
-    currentY += 5;
+
+    // 只有当有规格描述内容时才添加额外的行间距
+    if (data.projectSpecification) {
+      currentY += 5;
+    }
 
     // 项目规格描述（多行文本框）
     const specText = data.projectSpecification || '';
     const wrappedSpecText = doc.splitTextToSize(specText, contentMaxWidth);
     if (wrappedSpecText.length > 0) {
-      currentY = checkAndAddPage(currentY, wrappedSpecText.length * 4); // Reduce line height
+      currentY = checkAndAddPage(currentY, wrappedSpecText.length * 4);
+      doc.setTextColor(0, 0, 255); // 设置蓝色
       wrappedSpecText.forEach((line: string) => {
         doc.text(line, contentMargin, currentY);
         currentY += 4; 
       });
-      currentY += 5; // Reduce extra space after the text block
-    } else {
-      // No extra space when there's no content
+      doc.setTextColor(0, 0, 0); // 恢复黑色
+      currentY += 5;
     }
 
     // 2. 付款条件
