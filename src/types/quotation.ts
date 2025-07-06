@@ -57,7 +57,7 @@ export interface QuotationData {
   additionalPaymentTerms?: string;
   templateConfig?: {
     headerType: 'none' | 'bilingual' | 'english';
-    stampType: 'none' | 'shanghai' | 'hongkong';
+    stampType?: 'none' | 'shanghai' | 'hongkong';
   };
 }
 
