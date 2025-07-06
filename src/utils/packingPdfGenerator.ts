@@ -2,6 +2,16 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { embeddedResources } from '@/lib/embedded-resources';
 
+// 格式化货币
+function formatCurrency(value: number): string {
+  return value.toFixed(2);
+}
+
+// 格式化数字
+function formatNumber(value: number): string {
+  return value.toFixed(2);
+}
+
 // 扩展 jsPDF 类型
 interface ExtendedJsPDF extends jsPDF {
   autoTable: (options: any) => void;
@@ -47,6 +57,11 @@ interface PackingData {
   templateConfig: {
     headerType: 'none' | 'bilingual' | 'english';
   };
+}
+
+interface TableRow {
+  index: number;
+  cells: any[];
 }
 
 // 函数重载签名
@@ -98,13 +113,13 @@ export async function generatePackingListPDF(data: PackingData, preview: boolean
             undefined,
             'FAST'  // 使用快速压缩
           );
-          doc.setFontSize(16);
+          doc.setFontSize(14);
           doc.setFont('NotoSansSC', 'bold');
           const title = getPackingListTitle(data);
           const titleWidth = doc.getTextWidth(title);
           const titleY = margin + imgHeight + 5;  // 标题Y坐标
           doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-          currentY = titleY + 20;
+          currentY = titleY + 10;
         } else {
           // 如果没有找到对应的表头图片，使用无表头的处理方式
           currentY = handleNoHeader(doc, data, margin, pageWidth);
@@ -130,8 +145,6 @@ export async function generatePackingListPDF(data: PackingData, preview: boolean
 
     // 备注
     currentY = renderRemarks(doc, data, currentY, pageWidth, margin);
-
-
 
     // 添加页码
     addPageNumbers(doc, pageWidth, pageHeight, margin);
@@ -177,64 +190,64 @@ function getPackingListTitle(data: PackingData): string {
 function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, pageWidth: number, margin: number): number {
   let currentY = startY;
   const rightMargin = pageWidth - margin;
+  const contentIndent = 5; // 收货人信息的缩进值
+  const orderNoIndent = 15; // Order No. 内容的缩进值，设置更大的缩进
   
   // 添加 SHIP'S SPARES IN TRANSIT（如果选中）- 放在Consignee上方
   if (data.remarkOptions.shipsSpares) {
-    doc.setFontSize(10);
+    doc.setFontSize(8);
     doc.setFont('NotoSansSC', 'bold');
     const text = '"SHIP\'S SPARES IN TRANSIT"';
-    doc.text(text, margin, currentY - 8);
-    // currentY 保持不变，让 Consignee 与右侧同高
+    doc.text(text, margin, currentY);
+    currentY += 5;
   }
 
-  doc.setFontSize(10);
+  doc.setFontSize(8);
   doc.setFont('NotoSansSC', 'normal');
 
-  // 左侧：收货人信息（增加宽度）
+  // 左侧：收货人信息
   doc.setFont('NotoSansSC', 'bold');
   doc.text('Consignee:', margin, currentY);
   doc.setFont('NotoSansSC', 'normal');
   
   let leftY = currentY;
   if (data.consignee.name.trim()) {
-    // 增加收件人信息的宽度从100增加到130
     const consigneeLines = doc.splitTextToSize(data.consignee.name.trim(), 130);
     consigneeLines.forEach((line: string, index: number) => {
-      doc.text(String(line), margin, leftY + 5 + (index * 4));
+      doc.text(String(line), margin + contentIndent, leftY + 4 + (index * 3.5));
     });
-    leftY += 5 + (consigneeLines.length * 4) + 5;
+    leftY += 4 + (consigneeLines.length * 3.5) + 2;
   } else {
-    leftY += 10;
+    leftY += 5;
   }
 
-  // 左侧：Order No.（在Consignee下方，支持自动换行）
+  // 左侧：Order No.
   if (data.orderNo) {
     doc.setFont('NotoSansSC', 'bold');
     doc.text('Order No.:', margin, leftY);
-    doc.setFont('NotoSansSC', 'bold'); // Order No.的值使用粗体
+    doc.setFont('NotoSansSC', 'normal');
     
-    // Order No.支持自动换行，最大宽度130
     const orderNoLines = doc.splitTextToSize(data.orderNo, 130);
     orderNoLines.forEach((line: string, index: number) => {
-      doc.text(String(line), margin + 25, leftY + (index * 4));
+      doc.text(String(line), margin + orderNoIndent, leftY + (index * 3.5)); // 使用更大的缩进值
     });
-    leftY += (orderNoLines.length * 4) + 5;
+    leftY += (orderNoLines.length * 3.5) + 2;
   }
 
-  // 右侧：Invoice No. + Date（调整位置更靠中间）
-  let rightY = startY;
-  const rightStartX = pageWidth * 0.65; // 从页面65%位置开始，而不是太靠右
-  const colonX = rightStartX + 30; // 冒号位置
+  // 右侧：Invoice No. + Date
+  let rightY = data.remarkOptions.shipsSpares ? startY + 6 : startY; // 调整右侧起始位置
+  const rightStartX = pageWidth * 0.65;
+  const colonX = rightStartX + 30;
 
   if (data.invoiceNo) {
     doc.setFont('NotoSansSC', 'bold');
     doc.text('Invoice No.', colonX - 2, rightY, { align: 'right' });
     doc.text(':', colonX, rightY);
     doc.setFont('NotoSansSC', 'bold');
-    doc.setTextColor(0, 122, 255); // 设置为蓝色 (RGB: 0, 122, 255)
+    doc.setTextColor(255, 0, 0); // 设置为红色，与发票一致
     doc.text(data.invoiceNo, colonX + 3, rightY);
     doc.setTextColor(0, 0, 0); // 重置为黑色
-    rightY += 5;
+    rightY += 4;
   }
 
   doc.setFont('NotoSansSC', 'bold');
@@ -243,7 +256,7 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
   doc.setFont('NotoSansSC', 'normal');
   doc.text(data.date, colonX + 3, rightY);
 
-  return Math.max(leftY, rightY);
+  return Math.max(leftY, rightY); // 减少底部总间距到1mm
 }
 
 // 渲染运输标记
@@ -264,261 +277,137 @@ function renderShippingMarks(doc: ExtendedJsPDF, data: PackingData, startY: numb
   return currentY + (markingLines.length * 4) + 15;
 }
 
-// 渲染商品表格
-async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY: number): Promise<number> {
-  // 默认单位列表（需要单复数变化的单位）
-  const defaultUnits = ['pc', 'set', 'length'];
-  
-  // 处理单位的单复数
-  const getUnitDisplay = (baseUnit: string, quantity: number) => {
-    if (defaultUnits.includes(baseUnit)) {
-      return quantity > 1 ? `${baseUnit}s` : baseUnit;
-    }
-    return baseUnit; // 自定义单位不变化单复数
-  };
+// 定义表格单元格类型
+interface TableCell {
+  colSpan?: number;
+  rowSpan?: number;
+  styles?: any;
+  text?: string[];
+  raw?: any;
+}
 
-  // 构建表头 - 优化换行显示
-  const tableHeaders = [
+interface TableData {
+  cell: TableCell;
+  row: TableRow;
+  column: { index: number };
+  section: string;
+  pageCount?: number;
+  cursor?: { y: number };
+}
+
+// 获取表格头部
+function getTableHeaders(data: PackingData): string[] {
+  return [
     'No.',
     'Description',
     ...(data.showHsCode ? ['HS Code'] : []),
     'Qty',
     'Unit',
     ...(data.showPrice ? ['U/Price', 'Amount'] : []),
-    ...(data.showWeightAndPackage ? ['N.W.\n(kg)', 'G.W.\n(kg)', 'Pkgs'] : []),
-    ...(data.showDimensions ? [`Dimensions\n(${data.dimensionUnit})`] : [])
+    ...(data.showWeightAndPackage ? ['N.W.(kg)', 'G.W.(kg)', 'Pkgs'] : []),
+    ...(data.showDimensions ? [`Dimensions(${data.dimensionUnit})`] : [])
   ];
-
-  // 计算列数以优化布局
-  const totalColumns = tableHeaders.length;
-  const isCompact = totalColumns > 7; // 当列数超过7列时使用紧凑布局
-
-  // 构建表格数据
-  const tableBody = data.items.map((item, index) => {
-    const quantity = item.quantity || 0;
-    const originalUnit = item.unit || 'pc';
-    // 去掉原单位可能的复数后缀，然后根据数量重新处理
-    const baseUnit = originalUnit.replace(/s$/, '');
-    const correctedUnit = getUnitDisplay(baseUnit, quantity);
-
-    return [
-      index + 1,
-      item.description,
-      ...(data.showHsCode ? [item.hsCode] : []),
-      quantity || '',
-      correctedUnit,
-      ...(data.showPrice ? [
-        item.unitPrice.toFixed(2),
-        `${getCurrencySymbol(data.currency)}${item.totalPrice.toFixed(2)}`
-      ] : []),
-      ...(data.showWeightAndPackage ? [
-        item.netWeight.toFixed(2),
-        item.grossWeight.toFixed(2),
-        item.packageQty || ''
-      ] : []),
-      ...(data.showDimensions ? [item.dimensions] : [])
-    ];
-  });
-
-  // 添加总计行
-  if (data.showPrice || data.showWeightAndPackage) {
-    const totals = data.items.reduce((acc, item) => ({
-      totalPrice: acc.totalPrice + item.totalPrice,
-      netWeight: acc.netWeight + item.netWeight,
-      grossWeight: acc.grossWeight + item.grossWeight,
-      packageQty: acc.packageQty + item.packageQty
-    }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
-
-    const totalRow = [
-      '', // No.列为空
-      '', // Description列为空（将被手动绘制的Total:覆盖）
-      ...(data.showHsCode ? [''] : []), // HS Code列为空
-      '', // Qty列为空
-      '', // Unit列为空
-      ...(data.showPrice ? [
-        '', // U/Price列为空（将被合并）
-        `${getCurrencySymbol(data.currency)}${totals.totalPrice.toFixed(2)}` // Amount列显示总价
-      ] : []),
-      ...(data.showWeightAndPackage ? [
-        totals.netWeight.toFixed(2),
-        totals.grossWeight.toFixed(2),
-        totals.packageQty.toString()
-      ] : []),
-      ...(data.showDimensions ? [''] : [])
-    ];
-
-    tableBody.push(totalRow);
-  }
-
-  // 计算描述列的动态宽度
-  let descriptionWidth: number | 'auto' = 'auto';
-  if (isCompact) {
-    // 为各个固定列预留空间 - 优化列宽分配
-    let reservedWidth = 10; // No.列 - 稍微增加
-    if (data.showHsCode) reservedWidth += 22; // HS Code列 - 增加宽度以防止长数字换行
-    reservedWidth += 12 + 12; // Qty + Unit列 - 稍微增加
-    if (data.showPrice) reservedWidth += 16 + 20; // U/Price + Amount列 - 调整比例
-    if (data.showWeightAndPackage) reservedWidth += 15 + 15 + 12; // N.W. + G.W. + Pkgs列 - 稍微增加
-    if (data.showDimensions) reservedWidth += 22; // Dimensions列 - 稍微减少
-    
-    // 页面可用宽度约为170mm（A4宽度210mm - 左右边距各15mm - 表格内边距）
-    const availableWidth = 170;
-    descriptionWidth = Math.max(30, availableWidth - reservedWidth); // 描述列最小宽度调整为30
-  }
-  
-  // 使用 autoTable 绘制表格
-  let tableResult: any;
-  doc.autoTable({
-    startY: startY,
-    head: [tableHeaders],
-    body: tableBody,
-    styles: {
-      fontSize: isCompact ? 7 : 8,
-      cellPadding: isCompact ? 1.5 : 2,
-      font: 'NotoSansSC',
-      lineWidth: 0.1,
-      lineColor: [200, 200, 200],
-      halign: 'center',
-      valign: 'middle'
-    },
-    headStyles: {
-      fillColor: [240, 240, 240],
-      textColor: [0, 0, 0],
-      fontStyle: 'bold',
-      fontSize: isCompact ? 7 : 8,
-      cellPadding: isCompact ? 2 : 3,
-      minCellHeight: isCompact ? 12 : 10,
-      valign: 'middle',
-      halign: 'center'
-    },
-    alternateRowStyles: {
-      fillColor: [250, 250, 250]
-    },
-    didParseCell: function(cellData: any) {
-      // 检查是否为Total行 - 通过检查Description列是否包含"Total:"
-      const isLastRow = cellData.section === 'body' && 
-                       cellData.row.index === cellData.table.body.length - 1;
-      
-      if (isLastRow) {
-        // 设置Total行的样式
-        cellData.cell.styles.fontStyle = 'bold';
-        cellData.cell.styles.fillColor = [240, 240, 240]; // 稍微突出的背景色
-      }
-      
-      // 设置第一列表头"No."不换行
-      if (cellData.section === 'head' && cellData.column.index === 0) {
-        cellData.cell.styles.overflow = 'hidden';
-        cellData.cell.styles.cellWidth = 'wrap';
-      }
-      
-      // 设置HS Code列不换行（如果显示HS Code且是第3列）
-      if (data.showHsCode && cellData.column.index === 2) {
-        cellData.cell.styles.overflow = 'hidden';
-        cellData.cell.styles.cellWidth = 'wrap';
-      }
-    },
-    didDrawPage: function(data: any) {
-      // 保存表格数据用于后续处理
-      tableResult = data;
-    },
-
-
-    columnStyles: {
-      0: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 10 : 12, overflow: 'hidden' }, // No. - 稍微增加
-      1: { 
-        halign: 'left', // Description左对齐，便于阅读
-        valign: 'middle',
-        cellWidth: descriptionWidth
-      }, // Description
-              ...(data.showHsCode ? {
-          [2]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 22 : 25, overflow: 'hidden' } // HS Code - 增加宽度，防止换行
-        } : {}),
-        [2 + (data.showHsCode ? 1 : 0)]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 12 : 14 }, // Qty - 稍微增加
-        [3 + (data.showHsCode ? 1 : 0)]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 12 : 14 }, // Unit - 稍微增加
-              ...(data.showPrice ? {
-          [getColumnIndex(data, 'unitPrice')]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 16 : 18 }, // U/Price - 调整
-          [getColumnIndex(data, 'amount')]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 20 : 22 } // Amount - 稍微增加
-        } : {}),
-              ...(data.showWeightAndPackage ? {
-          [getColumnIndex(data, 'netWeight')]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 15 : 17 }, // N.W. - 稍微增加
-          [getColumnIndex(data, 'grossWeight')]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 15 : 17 }, // G.W. - 稍微增加
-          [getColumnIndex(data, 'packageQty')]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 12 : 14 } // Pkgs - 稍微增加
-        } : {}),
-              ...(data.showDimensions ? {
-          [tableHeaders.length - 1]: { halign: 'center', valign: 'middle', cellWidth: isCompact ? 22 : 25 } // Dimensions - 稍微减少
-        } : {})
-    },
-    margin: { left: 15, right: 15 },
-    tableWidth: 'auto',
-    theme: 'grid'
-  });
-
-  // 如果有总计行，手动绘制合并的单元格
-  if (data.showPrice || data.showWeightAndPackage) {
-    const finalY = (doc as any).lastAutoTable.finalY;
-    const table = (doc as any).lastAutoTable;
-    
-    if (table && table.body && table.body.length > 0) {
-      // 获取最后一行（总计行）的信息
-      const lastRowIndex = table.body.length - 1;
-      const lastRow = table.body[lastRowIndex];
-      
-      if (lastRow && lastRow.cells) {
-                 // 计算需要合并的列数（No. + Description + 可能的HS Code + Qty + Unit + 可能的U/Price）
-         let mergeEndCol = 2; // No. + Description
-         if (data.showHsCode) mergeEndCol += 1; // HS Code
-         mergeEndCol += 2; // Qty + Unit
-         if (data.showPrice) mergeEndCol += 1; // U/Price（但不包括Amount列，Amount列要显示总价）
-        
-        // 获取合并区域的位置和尺寸
-        const firstCell = lastRow.cells[0];
-        const lastMergeCell = lastRow.cells[mergeEndCol - 1];
-        
-        if (firstCell && lastMergeCell) {
-          const mergeX = firstCell.x;
-          const mergeY = firstCell.y;
-          const mergeWidth = (lastMergeCell.x + lastMergeCell.width) - firstCell.x;
-          const mergeHeight = firstCell.height;
-          
-          // 绘制合并的背景
-          doc.setFillColor(240, 240, 240);
-          doc.rect(mergeX, mergeY, mergeWidth, mergeHeight, 'F');
-          
-          // 绘制边框
-          doc.setDrawColor(200, 200, 200);
-          doc.setLineWidth(0.1);
-          doc.rect(mergeX, mergeY, mergeWidth, mergeHeight, 'S');
-          
-          // 绘制居中的Total文本
-          doc.setTextColor(0, 0, 0);
-          doc.setFontSize(isCompact ? 7 : 8);
-          doc.setFont('NotoSansSC', 'bold');
-          const textX = mergeX + mergeWidth / 2;
-          const textY = mergeY + mergeHeight / 2 + 1;
-          doc.text('Total:', textX, textY, { align: 'center' });
-        }
-      }
-    }
-  }
-
-  return (doc as any).lastAutoTable.finalY + 15;
 }
 
-// 获取列索引
-function getColumnIndex(data: PackingData, columnType: string): number {
-  let index = 2; // No. + Description
+// 获取表格主体
+function getTableBody(data: PackingData): TableRow[] {
+  return data.items.map((item, index) => {
+    const quantity = item.quantity || 0;
+    const baseUnit = item.unit.replace(/s$/, '');
+    const unit = defaultUnits.includes(baseUnit as typeof defaultUnits[number]) ? getUnitDisplay(baseUnit, quantity) : item.unit;
+
+    return {
+      index,
+      cells: [
+        index + 1,
+        item.description,
+        ...(data.showHsCode ? [item.hsCode] : []),
+        quantity || '',
+        unit,
+        ...(data.showPrice ? [
+          { content: item.unitPrice.toFixed(2), styles: { halign: 'right' } },
+          { content: `${getCurrencySymbol(data.currency)}${item.totalPrice.toFixed(2)}`, styles: { halign: 'right' } }
+        ] : []),
+        ...(data.showWeightAndPackage ? [
+          { content: item.netWeight.toFixed(2), styles: { halign: 'right' } },
+          { content: item.grossWeight.toFixed(2), styles: { halign: 'right' } },
+          { content: item.packageQty || '', styles: { halign: 'center' } }
+        ] : []),
+        ...(data.showDimensions ? [item.dimensions] : [])
+      ]
+    };
+  });
+}
+
+// 获取表格页脚
+function getTableFooter(data: PackingData): any[] {
+  const footer: any[] = [];
   
-  if (data.showHsCode) index++;
-  index += 2; // Qty + Unit
-  
-  if (columnType === 'unitPrice' && data.showPrice) return index;
-  if (data.showPrice) index += 2; // Unit Price + Amount
-  
-  if (columnType === 'netWeight' && data.showWeightAndPackage) return index;
-  if (columnType === 'grossWeight' && data.showWeightAndPackage) return index + 1;
-  if (columnType === 'packageQty' && data.showWeightAndPackage) return index + 2;
-  
-  return index;
+  // 计算总计
+  const totals = data.items.reduce((acc, item) => ({
+    totalPrice: acc.totalPrice + item.totalPrice,
+    netWeight: acc.netWeight + item.netWeight,
+    grossWeight: acc.grossWeight + item.grossWeight,
+    packageQty: acc.packageQty + item.packageQty
+  }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
+
+  // 创建总计行
+  const totalRow: any[] = [];
+
+  // 计算要合并的列数（从 No. 到 U/Price）
+  let colSpanCount = 2; // 基础列数：No., Description
+  if (data.showHsCode) colSpanCount++;
+  colSpanCount += 3; // Qty, Unit, U/Price
+
+  // 合并从 No. 到 U/Price 的列显示 Total
+  totalRow.push({
+    content: 'Total:',
+    colSpan: colSpanCount,
+    styles: { halign: 'left', fontStyle: 'bold' }
+  });
+
+  // Amount 列
+  if (data.showPrice) {
+    totalRow.push({ 
+      content: `${getCurrencySymbol(data.currency)}${formatCurrency(totals.totalPrice)}`,
+      styles: { halign: 'right', fontStyle: 'bold' }
+    });
+  }
+
+  // Weight 和 Package 相关列
+  if (data.showWeightAndPackage) {
+    totalRow.push({ 
+      content: formatNumber(totals.netWeight),
+      styles: { halign: 'right', fontStyle: 'bold' }
+    });
+    totalRow.push({ 
+      content: formatNumber(totals.grossWeight),
+      styles: { halign: 'right', fontStyle: 'bold' }
+    });
+    totalRow.push({ 
+      content: totals.packageQty,
+      styles: { halign: 'center', fontStyle: 'bold' }
+    });
+  }
+
+  // Dimensions 列
+  if (data.showDimensions) {
+    totalRow.push({ content: '', styles: { fontStyle: 'bold' } });
+  }
+
+  footer.push(totalRow);
+  return footer;
+}
+
+// 默认单位列表（需要单复数变化的单位）
+const defaultUnits = ['pc', 'set', 'length'] as const;
+
+// 处理单位的单复数
+function getUnitDisplay(baseUnit: string, quantity: number): string {
+  if (defaultUnits.includes(baseUnit as typeof defaultUnits[number])) {
+    return quantity > 1 ? `${baseUnit}s` : baseUnit;
+  }
+  return baseUnit;
 }
 
 // 获取货币符号
@@ -537,45 +426,26 @@ function renderRemarks(doc: ExtendedJsPDF, data: PackingData, startY: number, pa
   
   // 检查是否有备注内容
   const hasCustomRemarks = data.remarks.trim();
-  const hasCustomsPurpose = data.remarkOptions.customsPurpose;
   
   // 如果没有任何备注内容，直接返回
-  if (!hasCustomRemarks && !hasCustomsPurpose) {
+  if (!hasCustomRemarks) {
     return currentY;
   }
   
   doc.setFontSize(10);
   doc.setFont('NotoSansSC', 'normal');
   
-  // 如果仅有"FOR CUSTOMS PURPOSE ONLY"选项而没有自定义备注
-  if (!hasCustomRemarks && hasCustomsPurpose) {
-    doc.text('FOR CUSTOMS PURPOSE ONLY', margin, currentY);
-    return currentY + 5;
-  }
-  
-  // 如果有自定义备注，显示Notes标题和编号
+  // 显示Notes标题和编号
   doc.setFont('NotoSansSC', 'bold');
   doc.text('Notes:', margin, currentY);
   currentY += 5;
   
   doc.setFont('NotoSansSC', 'normal');
   
-  // 收集所有需要显示的备注项
-  const noteItems: string[] = [];
-  
   // 添加自定义备注（按行分割）
   if (hasCustomRemarks) {
     const customRemarkLines = data.remarks.split('\n').filter(line => line.trim());
-    noteItems.push(...customRemarkLines);
-  }
-  
-  // 如果选中了 "FOR CUSTOMS PURPOSE ONLY"，添加到列表中
-  if (hasCustomsPurpose) {
-    noteItems.push('FOR CUSTOMS PURPOSE ONLY');
-  }
-  
-  // 自动编号显示所有备注项
-  noteItems.forEach((item, index) => {
+    customRemarkLines.forEach((item, index) => {
     const numberedText = `${index + 1}. ${item.trim()}`;
     const itemLines = doc.splitTextToSize(numberedText, pageWidth - (margin * 2));
     itemLines.forEach((line: string, lineIndex: number) => {
@@ -583,6 +453,7 @@ function renderRemarks(doc: ExtendedJsPDF, data: PackingData, startY: number, pa
     });
     currentY += itemLines.length * 4 + 2; // 每个项目间增加2mm间距
   });
+  }
   
   return currentY + 3;
 }
@@ -604,27 +475,25 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
 
 // 处理表头错误的情况
 function handleHeaderError(doc: ExtendedJsPDF, data: PackingData, margin: number, pageWidth: number): number {
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont('NotoSansSC', 'bold');
   const title = getPackingListTitle(data);
   const titleWidth = doc.getTextWidth(title);
   const titleY = margin + 5;
   doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-  return titleY + 20;
+  return titleY + 10;
 }
 
 // 处理无表头的情况
 function handleNoHeader(doc: ExtendedJsPDF, data: PackingData, margin: number, pageWidth: number): number {
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.setFont('NotoSansSC', 'bold');
   const title = getPackingListTitle(data);
   const titleWidth = doc.getTextWidth(title);
   const titleY = margin + 5;
   doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-  return titleY + 20;
+  return titleY + 10;
 }
-
-
 
 // 保存 PDF
 function savePackingListPDF(doc: ExtendedJsPDF, data: PackingData): void {
@@ -632,4 +501,292 @@ function savePackingListPDF(doc: ExtendedJsPDF, data: PackingData): void {
   const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
   const filename = `${getPackingListTitle(data)}-${data.orderNo || data.invoiceNo || 'DRAFT'}-${formattedDate}.pdf`;
   doc.save(filename);
+}
+
+// 渲染商品表格
+async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY: number): Promise<number> {
+  // 计算页面宽度和边距
+  const pageWidth = doc.internal.pageSize.width;
+  const margin = 15; // 左右边距各15mm
+  const tableWidth = pageWidth - (margin * 2); // 表格实际可用宽度
+
+  // 设置列宽度和对齐方式
+  const columnStyles: Record<string, { halign: string; cellWidth: number }> = {};
+  
+  // 计算实际显示的列数
+  let visibleColumns = 2; // No. + Description
+  if (data.showHsCode) visibleColumns++;
+  visibleColumns += 2; // Qty + Unit
+  if (data.showPrice) visibleColumns += 2;
+  if (data.showWeightAndPackage) visibleColumns += 3;
+  if (data.showDimensions) visibleColumns++;
+
+  // 定义各列的相对宽度权重
+  const baseWidths = {
+    no: 3,
+    description: data.showHsCode ? 12 : 15,
+    hsCode: 6,
+    qty: 4,
+    unit: 4,
+    unitPrice: 5,
+    amount: 6,
+    netWeight: 5,
+    grossWeight: 5,
+    pkgs: 4,
+    dimensions: 6
+  };
+
+  // 计算总权重
+  let totalWeight = baseWidths.no + baseWidths.description;
+  if (data.showHsCode) totalWeight += baseWidths.hsCode;
+  totalWeight += baseWidths.qty + baseWidths.unit;
+  if (data.showPrice) totalWeight += baseWidths.unitPrice + baseWidths.amount;
+  if (data.showWeightAndPackage) totalWeight += baseWidths.netWeight + baseWidths.grossWeight + baseWidths.pkgs;
+  if (data.showDimensions) totalWeight += baseWidths.dimensions;
+
+  // 计算单位权重对应的宽度
+  const unitWidth = tableWidth / totalWeight;
+
+  // 设置每列的宽度和对齐方式
+  columnStyles[0] = { 
+    halign: 'center', 
+    cellWidth: baseWidths.no * unitWidth 
+  };
+  columnStyles[1] = { 
+    halign: 'left', 
+    cellWidth: baseWidths.description * unitWidth 
+  };
+
+  let currentColumnIndex = 2;
+
+  if (data.showHsCode) {
+    columnStyles[currentColumnIndex] = { 
+      halign: 'center', 
+      cellWidth: baseWidths.hsCode * unitWidth 
+    };
+    currentColumnIndex++;
+  }
+
+  // Quantity 和 Unit 列
+  columnStyles[currentColumnIndex] = { 
+    halign: 'center', 
+    cellWidth: baseWidths.qty * unitWidth 
+  };
+  currentColumnIndex++;
+  columnStyles[currentColumnIndex] = { 
+    halign: 'center', 
+    cellWidth: baseWidths.unit * unitWidth 
+  };
+  currentColumnIndex++;
+
+  // Price 相关列
+  if (data.showPrice) {
+    columnStyles[currentColumnIndex] = { 
+      halign: 'center', 
+      cellWidth: baseWidths.unitPrice * unitWidth 
+    };
+    currentColumnIndex++;
+    columnStyles[currentColumnIndex] = { 
+      halign: 'center', 
+      cellWidth: baseWidths.amount * unitWidth 
+    };
+    currentColumnIndex++;
+  }
+
+  // Weight 和 Package 相关列
+  if (data.showWeightAndPackage) {
+    columnStyles[currentColumnIndex] = { 
+      halign: 'center', 
+      cellWidth: baseWidths.netWeight * unitWidth 
+    };
+    currentColumnIndex++;
+    columnStyles[currentColumnIndex] = { 
+      halign: 'center', 
+      cellWidth: baseWidths.grossWeight * unitWidth 
+    };
+    currentColumnIndex++;
+    columnStyles[currentColumnIndex] = { 
+      halign: 'center', 
+      cellWidth: baseWidths.pkgs * unitWidth 
+    };
+    currentColumnIndex++;
+  }
+
+  // Dimensions 列
+  if (data.showDimensions) {
+    columnStyles[currentColumnIndex] = { 
+      halign: 'center', 
+      cellWidth: baseWidths.dimensions * unitWidth 
+    };
+  }
+
+  // 表格基础样式
+  const tableStyles = {
+    fontSize: 8,
+    cellPadding: { top: 2, bottom: 2, left: 1, right: 1 },
+    lineColor: [0, 0, 0],
+    lineWidth: 0.1,
+    font: 'NotoSansSC',
+    valign: 'middle',
+    minCellHeight: 8
+  };
+
+  // 表头样式
+  const headStyles = {
+    fillColor: false,
+    textColor: [0, 0, 0],
+    fontSize: 8,
+    fontStyle: 'bold',
+    halign: 'center',
+    font: 'NotoSansSC',
+    valign: 'middle',
+    cellPadding: { top: 2, bottom: 2, left: 1, right: 1 },
+    minCellHeight: 12 // 增加表头高度以适应换行
+  };
+
+  // 准备表头
+  const headers = [['No.', 'Description']];
+  if (data.showHsCode) headers[0].push('HS Code');
+  headers[0].push('Qty', 'Unit');
+  if (data.showPrice) headers[0].push('U/Price', 'Amount');
+  if (data.showWeightAndPackage) {
+    headers[0].push(
+      'N.W.\n(kg)',
+      'G.W.\n(kg)',
+      'Pkgs'
+    );
+  }
+  if (data.showDimensions) {
+    headers[0].push(`Dimensions\n(${data.dimensionUnit})`);
+  }
+
+  // 准备数据行
+  const body = data.items.map(item => {
+    const row = [
+      item.serialNo,
+      item.description
+    ];
+    
+    if (data.showHsCode) row.push(item.hsCode);
+    
+    row.push(
+      item.quantity.toString(),
+      item.unit
+    );
+    
+    if (data.showPrice) {
+      row.push(
+        item.unitPrice.toFixed(2),
+        item.totalPrice.toFixed(2)
+      );
+    }
+    
+    if (data.showWeightAndPackage) {
+      row.push(
+        item.netWeight.toFixed(2),
+        item.grossWeight.toFixed(2),
+        item.packageQty.toString()
+      );
+    }
+    
+    if (data.showDimensions) row.push(item.dimensions);
+    
+    return row;
+  });
+
+  // 计算总计行
+  const totals = data.items.reduce((acc, item) => ({
+    totalPrice: acc.totalPrice + item.totalPrice,
+    netWeight: acc.netWeight + item.netWeight,
+    grossWeight: acc.grossWeight + item.grossWeight,
+    packageQty: acc.packageQty + item.packageQty
+  }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
+
+  // 添加总计行
+  const totalRow = ['Total:'];
+
+  // 计算需要合并的列数（从No.到Unit列，如果显示U/Price则包含）
+  const mergeColCount = 2 + (data.showHsCode ? 1 : 0) + 2 + (data.showPrice ? 1 : 0); // No., Description, [HS Code], Qty, Unit, [U/Price]
+  const emptySpaces = new Array(mergeColCount - 1).fill('');
+  totalRow.push(...emptySpaces);
+
+  if (data.showPrice) {
+    // 只添加Amount列的值，U/Price已经包含在合并单元格中
+    totalRow.push(totals.totalPrice.toFixed(2));
+  }
+
+  if (data.showWeightAndPackage) {
+    totalRow.push(
+      totals.netWeight.toFixed(2),
+      totals.grossWeight.toFixed(2),
+      totals.packageQty.toString()
+    );
+  }
+
+  if (data.showDimensions) totalRow.push('');
+
+  body.push(totalRow);
+
+  // 设置总计行样式
+  const totalRowIndex = body.length - 1;
+  const totalStyles: Record<string, { font: string; fontStyle: string }> = {};
+  for (let i = 0; i < headers[0].length; i++) {
+    totalStyles[`${totalRowIndex}-${i}`] = {
+      font: 'NotoSansSC-bold',
+      fontStyle: 'bold'
+    };
+  }
+
+  // 合并总计行的单元格
+  const totalCellSpans = [{
+    row: totalRowIndex,
+    col: 0,
+    colSpan: mergeColCount,
+    rowSpan: 1,
+    styles: { 
+      halign: 'center', // 将 Total 文本居中显示
+      font: 'NotoSansSC-bold',
+      fontStyle: 'bold'
+    }
+  }];
+
+  // 渲染表格
+  const finalY = (doc.autoTable({
+    head: headers,
+    body: body,
+    startY: startY + 2,
+    margin: { left: margin, right: margin },
+    theme: 'plain',
+    styles: tableStyles,
+    headStyles: headStyles,
+    columnStyles: columnStyles,
+    cellStyles: totalStyles,
+    didParseCell: function(data: TableData) {
+      if (data.row.index === totalRowIndex) {
+        const span = totalCellSpans.find(span => 
+          span.row === data.row.index && 
+          span.col === data.column.index
+        );
+        if (span) {
+          data.cell.colSpan = span.colSpan;
+          data.cell.styles = { ...data.cell.styles, ...span.styles };
+        }
+        // 为数值列设置居中对齐（除了合并的单元格）
+        if (data.column.index >= mergeColCount) {
+          data.cell.styles.halign = 'center';
+        }
+      }
+    },
+    didDrawPage: function(data: TableData) {
+      if (data.pageCount === (doc as any).getNumberOfPages()) {
+        const text = 'FOR CUSTOMS PURPOSE ONLY';
+        const fontSize = 8;
+        doc.setFont('NotoSansSC-bold');
+        doc.setFontSize(fontSize);
+        doc.text(text, margin, data.cursor?.y ? data.cursor.y + 8 : startY + 8);
+      }
+    }
+  }) as unknown) as number;
+
+  return finalY;
 } 
