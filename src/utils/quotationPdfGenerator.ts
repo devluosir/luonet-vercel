@@ -1,8 +1,9 @@
 import jsPDF, { ImageProperties } from 'jspdf';
 import 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
-import { UserOptions, RowInput } from 'jspdf-autotable';
+import { UserOptions } from 'jspdf-autotable';
 import { embeddedResources } from '@/lib/embedded-resources';
+import { generateTableConfig } from './pdfTableGenerator';
 
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
@@ -187,172 +188,8 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     doc.setFont('NotoSansSC', 'normal');
     doc.text('Thanks for your inquiry, and our best offer is as follows:', leftMargin, currentY);
     
-    // 使用 autoTable
-    doc.autoTable({
-      startY: currentY + 3,  // 在感谢语下方留出空间
-      head: [['No.', 'Part Name', ...(data.showDescription ? ['Description'] : []), 'Q\'TY', 'Unit', 'U/Price', 'Amount', ...(data.showRemarks ? ['Remarks'] : [])]],
-      body: [
-        // 常规商品行 - 当数量为 0 时，数量和单位都显示空字符串
-        ...data.items.map((item, index) => [
-          {
-            content: (index + 1).toString(),
-            styles: { halign: 'center' as const }
-          },
-          {
-            content: item.partName,
-            styles: item.highlight?.partName ? { textColor: [255, 0, 0] } : {}
-          },
-          ...(data.showDescription ? [{
-            content: item.description || '',
-            styles: item.highlight?.description ? { textColor: [255, 0, 0] } : {}
-          }] : []),
-          {
-            content: item.quantity.toString(),
-            styles: item.highlight?.quantity ? { textColor: [255, 0, 0] } : {}
-          },
-          {
-            content: getUnitDisplay(item.unit || '', item.quantity || 0),
-            styles: item.highlight?.unit ? { textColor: [255, 0, 0] } : {}
-          },
-          {
-            content: item.unitPrice.toFixed(2),
-            styles: item.highlight?.unitPrice ? { textColor: [255, 0, 0] } : {}
-          },
-          {
-            content: item.amount.toFixed(2),
-            styles: item.highlight?.amount ? { textColor: [255, 0, 0] } : {}
-          },
-          ...(data.showRemarks ? [{
-            content: item.remarks || '',
-            styles: item.highlight?.remarks ? { textColor: [255, 0, 0] } : {}
-          }] : [])
-        ]),
-        // Other Fees 行
-        ...(data.otherFees || []).map(fee => [
-          {
-            content: fee.description,
-            colSpan: data.showDescription ? 6 : 5,
-            styles: { 
-              halign: 'center' as const,
-              ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {})
-            }
-          },
-          {
-            content: fee.amount.toFixed(2),
-            styles: {
-              halign: 'center' as const,
-              ...(fee.highlight?.amount ? { textColor: [255, 0, 0] } : {})
-            }
-          },
-          ...(data.showRemarks ? [{
-            content: fee.remarks || '',
-            styles: {
-              halign: 'center' as const,
-              ...(fee.highlight?.remarks ? { textColor: [255, 0, 0] } : {})
-            }
-          }] : [])
-        ])
-      ] as unknown as RowInput[],
-      theme: 'plain',
-      showHead: 'everyPage',
-      styles: {
-        fontSize: 8,
-        cellPadding: 2,
-        lineColor: [0, 0, 0],
-        lineWidth: 0.1,
-        textColor: [0, 0, 0],
-        font: 'NotoSansSC',
-        valign: 'middle'
-      },
-      headStyles: {
-        fontSize: 8,
-        fontStyle: 'bold',
-        halign: 'center',
-        font: 'NotoSansSC',
-        valign: 'middle'
-      },
-      columnStyles: {
-        '0': { halign: 'center', cellWidth: 10 },  // No.
-        '1': { 
-          halign: 'center', 
-          cellWidth: data.showDescription 
-            ? (data.showRemarks ? 30 : 40)   // 显示描述列时，不显示备注列时适当增加宽度
-            : (data.showRemarks ? 60 : 80)   // 不显示描述列时，占用更多空间但不过宽
-        },  // Part Name
-        ...(data.showDescription ? { 
-          '2': { 
-            halign: 'center', 
-            cellWidth: data.showRemarks ? 30 : 40  // 显示描述列但不显示备注列时，描述列更宽
-          } 
-        } : {}),  // Description
-        [data.showDescription ? '3' : '2']: { 
-          halign: 'center', 
-          cellWidth: data.showRemarks ? 15 : 20  // 不显示备注列时，数量列适当增加宽度
-        },  // Q'TY
-        [data.showDescription ? '4' : '3']: { 
-          halign: 'center', 
-          cellWidth: data.showRemarks ? 15 : 20  // 不显示备注列时，单位列适当增加宽度
-        },  // Unit
-        [data.showDescription ? '5' : '4']: { 
-          halign: 'center', 
-          cellWidth: data.showRemarks ? 20 : 25  // 不显示备注列时，单价列适当增加宽度
-        },  // U/Price
-        [data.showDescription ? '6' : '5']: { 
-          halign: 'center', 
-          cellWidth: data.showRemarks ? 20 : 25  // 不显示备注列时，金额列适当增加宽度
-        },  // Amount
-        ...(data.showRemarks ? { 
-          [data.showDescription ? '7' : '6']: { 
-            halign: 'center', 
-            cellWidth: 40  // 备注列固定宽度
-          } 
-        } : {})  // Remarks
-      },
-      margin: { left: 15, right: 15, bottom: 20 },
-      tableWidth: 'auto',  // 使用auto让表格自动计算宽度
-      didParseCell: (data) => {
-        const pageHeight = data.doc.internal.pageSize.height;
-        const bottomMargin = 25;
-        
-        if (data.row.index > 0 && 
-            data.cursor && 
-            (data.cell.y + data.cell.height) > (pageHeight - bottomMargin)) {
-          data.cursor.y = 0;
-        }
-      },
-      didDrawPage: (data) => {
-        // 清除页面底部区域并添加页码的通用函数
-        const addPageNumber = () => {
-          const pageHeight = doc.internal.pageSize.height;
-          // 清除页面底部区域
-          doc.setFillColor(255, 255, 255);
-          doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
-          
-          // 添加页码
-          const totalPages = doc.getNumberOfPages();
-          const str = `Page ${data.pageNumber} of ${totalPages}`;
-          doc.setFontSize(8);
-          doc.setFont('NotoSansSC', 'normal');
-          doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
-        };
-
-        // 在每页绘制时添加页码
-        addPageNumber();
-      },
-      didDrawCell: (data) => {
-        // 确保绘制所有单元格的边框
-        const cell = data.cell;
-        const doc = data.doc;
-        
-        // 绘制单元格的所有边框
-        doc.setDrawColor(0, 0, 0);
-        doc.setLineWidth(0.1);
-        doc.line(cell.x, cell.y, cell.x + cell.width, cell.y); // 上边框
-        doc.line(cell.x, cell.y + cell.height, cell.x + cell.width, cell.y + cell.height); // 下边框
-        doc.line(cell.x, cell.y, cell.x, cell.y + cell.height); // 左边框
-        doc.line(cell.x + cell.width, cell.y, cell.x + cell.width, cell.y + cell.height); // 右边框
-      }
-    });
+    // 使用共享的表格配置
+    doc.autoTable(generateTableConfig(data, doc, currentY + 3, margin, pageWidth));
 
     // 获取表格结束的Y坐标
     const finalY = doc.lastAutoTable.finalY || currentY;
