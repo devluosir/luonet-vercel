@@ -218,7 +218,7 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
     });
     leftY += 4 + (consigneeLines.length * 4) + 5; // 最后加5px作为项目间距
   } else {
-    leftY += 5; // 项目间距5px
+    leftY += 15; // 项目间距5px
   }
 
   // 左侧：Order No.
@@ -763,7 +763,7 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
   const finalY = (doc.autoTable({
     head: headers,
     body: body,
-    startY: startY - 3, // 设置负值使表格向上移动
+    startY: startY, // 设置负值使表格向上移动
     margin: { left: margin, right: margin },
     theme: 'plain',
     styles: tableStyles,
@@ -792,7 +792,7 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
         const fontSize = 8;
         doc.setFont('NotoSansSC-bold');
         doc.setFontSize(fontSize);
-        doc.text(text, margin, data.cursor?.y ? data.cursor.y + 6 : startY + 6);
+        doc.text(text, margin +5, data.cursor?.y ? data.cursor.y + 6 : startY + 6);
       }
     }
   }) as unknown) as number;
