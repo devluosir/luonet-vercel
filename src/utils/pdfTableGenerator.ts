@@ -35,14 +35,14 @@ const calculateColumnWidths = (
   
   // 定义基础权重配置 - 调整以确保某些列不会换行
   const baseWeights = {
-    no: 4,           // 序号列 - 减小权重确保不换行
+    no: 5,           // 序号列 - 增加权重确保"No."不换行
     partName: 22,    // 品名列 - 可以占用较大空间
-    description: 25, // 描述列 - 可以占用较大空间
-    qty: 5,         // 数量列 - 减小权重确保不换行
+    description: 24, // 描述列 - 可以占用较大空间
+    qty: 6,         // 数量列 - 增加权重确保"Q'TY"不换行
     unit: 7,        // 单位列 - 调整确保不换行
-    price: 10,      // 单价列
-    amount: 9,      // 金额列 - 调整确保不换行
-    remarks: 18     // 备注列
+    price: 9,      // 单价列
+    amount: 11,      // 金额列 - 调整确保不换行
+    remarks: 16     // 备注列
   };
 
   // 根据显示的列动态调整权重
@@ -51,7 +51,7 @@ const calculateColumnWidths = (
 
   // 如果不显示描述列，增加其他列的权重
   if (!showDescription) {
-    weights.partName = 35;  // 显著增加品名列的权重
+    weights.partName = 32;  // 显著增加品名列的权重
     weights.price = 12;     // 略微增加价格列的权重
     totalWeight += weights.no + weights.partName + weights.qty + weights.unit + weights.price + weights.amount;
   } else {
@@ -70,7 +70,7 @@ const calculateColumnWidths = (
     '0': { 
       halign: 'center' as const, 
       cellWidth: weights.no * unitWidth,
-      minCellWidth: 10, // 确保序号列最小宽度
+      minCellWidth: 8, // 增加最小宽度确保"No."不换行
       cellPadding: { left: 1, right: 1, top: 2, bottom: 2 }
     },
     '1': { 
@@ -88,19 +88,19 @@ const calculateColumnWidths = (
     [showDescription ? '3' : '2']: { 
       halign: 'center' as const, 
       cellWidth: weights.qty * unitWidth,
-      minCellWidth: 12, // 确保数量列最小宽度
+      minCellWidth: 12, // 增加最小宽度确保"Q'TY"不换行
       cellPadding: { left: 1, right: 1, top: 2, bottom: 2 }
     },
     [showDescription ? '4' : '3']: { 
       halign: 'center' as const, 
       cellWidth: weights.unit * unitWidth,
-      minCellWidth: 14, // 确保单位列最小宽度
+      minCellWidth: 12, // 确保单位列最小宽度
       cellPadding: { left: 1, right: 1, top: 2, bottom: 2 }
     },
     [showDescription ? '5' : '4']: { 
       halign: 'center' as const, 
       cellWidth: weights.price * unitWidth,
-      minCellWidth: 16, // 确保价格列最小宽度
+      minCellWidth: 12, // 确保价格列最小宽度
       cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
     },
     [showDescription ? '6' : '5']: { 
@@ -225,7 +225,8 @@ export const generateTableConfig = (
       textColor: [0, 0, 0],
       font: 'NotoSansSC',
       valign: 'middle',
-      minCellHeight: 6 // 确保单元格有足够的高度
+      minCellHeight: 6,
+      overflow: 'linebreak' as const // 确保内容会自动换行
     },
     headStyles: {
       fontSize: 8,
@@ -234,7 +235,8 @@ export const generateTableConfig = (
       font: 'NotoSansSC',
       valign: 'middle',
       minCellHeight: 8,
-      cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
+      cellPadding: { left: 2, right: 2, top: 2, bottom: 2 },
+      overflow: 'visible' as const // 防止标题文字被截断
     },
     didParseCell: (data) => {
       const pageHeight = data.doc.internal.pageSize.height;
