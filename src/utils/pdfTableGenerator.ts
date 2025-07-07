@@ -30,29 +30,29 @@ const calculateColumnWidths = (
   pageWidth: number,
   margin: number
 ): { [key: string]: Partial<Styles> } => {
-  // 计算表格可用总宽度（减去左右边距）
-  const availableWidth = pageWidth - margin * 2;
+  // 计算表格可用总宽度（减去左右边距，但增加两边各5px的扩展）
+  const availableWidth = pageWidth - (margin * 2) + 10;
   
-  // 定义基础权重配置
+  // 定义基础权重配置 - 调整以确保某些列不会换行
   const baseWeights = {
-    no: 5,           // 序号列
-    partName: 15,    // 品名列
-    description: 25, // 描述列
-    qty: 6,         // 数量列
-    unit: 8,        // 单位列 - 增加宽度以防止换行
-    price: 10,      // 单价列 - 增加宽度以容纳价格
-    amount: 12,     // 金额列 - 增加宽度以防止换行
-    remarks: 19     // 备注列 - 略微调整以平衡总宽度
+    no: 4,           // 序号列 - 减小权重确保不换行
+    partName: 22,    // 品名列 - 可以占用较大空间
+    description: 25, // 描述列 - 可以占用较大空间
+    qty: 5,         // 数量列 - 减小权重确保不换行
+    unit: 7,        // 单位列 - 调整确保不换行
+    price: 10,      // 单价列
+    amount: 9,      // 金额列 - 调整确保不换行
+    remarks: 18     // 备注列
   };
 
   // 根据显示的列动态调整权重
   let weights = { ...baseWeights };
   let totalWeight = 0;
 
-  // 计算实际使用的总权重
+  // 如果不显示描述列，增加其他列的权重
   if (!showDescription) {
-    // 如果不显示描述列，增加品名列的权重
-    weights.partName = 30;
+    weights.partName = 35;  // 显著增加品名列的权重
+    weights.price = 12;     // 略微增加价格列的权重
     totalWeight += weights.no + weights.partName + weights.qty + weights.unit + weights.price + weights.amount;
   } else {
     totalWeight += weights.no + weights.partName + weights.description + weights.qty + weights.unit + weights.price + weights.amount;
@@ -70,30 +70,51 @@ const calculateColumnWidths = (
     '0': { 
       halign: 'center' as const, 
       cellWidth: weights.no * unitWidth,
-      minCellWidth: 12 // 确保最小宽度足够显示 "No." 标题
+      minCellWidth: 10, // 确保序号列最小宽度
+      cellPadding: { left: 1, right: 1, top: 2, bottom: 2 }
     },
-    '1': { halign: 'center' as const, cellWidth: weights.partName * unitWidth },
+    '1': { 
+      halign: 'center' as const, 
+      cellWidth: weights.partName * unitWidth,
+      cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
+    },
     ...(showDescription ? {
-      '2': { halign: 'center' as const, cellWidth: weights.description * unitWidth }
+      '2': { 
+        halign: 'center' as const, 
+        cellWidth: weights.description * unitWidth,
+        cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
+      }
     } : {}),
-    [showDescription ? '3' : '2']: { halign: 'center' as const, cellWidth: weights.qty * unitWidth },
+    [showDescription ? '3' : '2']: { 
+      halign: 'center' as const, 
+      cellWidth: weights.qty * unitWidth,
+      minCellWidth: 12, // 确保数量列最小宽度
+      cellPadding: { left: 1, right: 1, top: 2, bottom: 2 }
+    },
     [showDescription ? '4' : '3']: { 
       halign: 'center' as const, 
       cellWidth: weights.unit * unitWidth,
-      minCellWidth: 15 // 确保单位列有足够宽度显示 "meters"
+      minCellWidth: 14, // 确保单位列最小宽度
+      cellPadding: { left: 1, right: 1, top: 2, bottom: 2 }
     },
     [showDescription ? '5' : '4']: { 
       halign: 'center' as const, 
       cellWidth: weights.price * unitWidth,
-      minCellWidth: 16 // 确保价格列有足够宽度
+      minCellWidth: 16, // 确保价格列最小宽度
+      cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
     },
     [showDescription ? '6' : '5']: { 
       halign: 'center' as const, 
       cellWidth: weights.amount * unitWidth,
-      minCellWidth: 20 // 确保金额列有足够宽度显示大数字
+      minCellWidth: 18, // 确保金额列最小宽度
+      cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
     },
     ...(showRemarks ? {
-      [showDescription ? '7' : '6']: { halign: 'center' as const, cellWidth: weights.remarks * unitWidth }
+      [showDescription ? '7' : '6']: { 
+        halign: 'center' as const, 
+        cellWidth: weights.remarks * unitWidth,
+        cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
+      }
     } : {})
   };
 };
@@ -192,8 +213,8 @@ export const generateTableConfig = (
       ])
     ] as unknown as RowInput[],
     columnStyles,
-    margin: { left: margin, right: margin, bottom: 20 },
-    tableWidth: pageWidth - (margin * 2), // 确保表格宽度填满可用空间
+    margin: { left: margin - 5, right: margin - 5, bottom: 20 }, // 向两边扩展5px
+    tableWidth: pageWidth - (margin * 2) + 10, // 增加10px的总宽度
     theme: 'plain',
     showHead: 'everyPage',
     styles: {
@@ -212,7 +233,8 @@ export const generateTableConfig = (
       halign: 'center',
       font: 'NotoSansSC',
       valign: 'middle',
-      minCellHeight: 8 // 确保表头单元格有足够的高度
+      minCellHeight: 8,
+      cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
     },
     didParseCell: (data) => {
       const pageHeight = data.doc.internal.pageSize.height;
