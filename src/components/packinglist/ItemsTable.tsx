@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { OtherFeesTable } from './OtherFeesTable';
 
 // 表格输入框基础样式
 const baseInputClassName = `w-full px-2 py-1.5 rounded-lg
@@ -46,8 +47,15 @@ interface PackingItem {
   unit: string;
 }
 
+interface OtherFee {
+  id: number;
+  description: string;
+  amount: number;
+}
+
 interface PackingData {
   items: PackingItem[];
+  otherFees?: OtherFee[];
   showHsCode: boolean;
   showDimensions: boolean;
   showWeightAndPackage: boolean;
@@ -62,6 +70,13 @@ interface ItemsTableProps {
   onItemChange: (index: number, field: keyof PackingItem, value: string | number) => void;
   onAddLine: () => void;
   onDeleteLine: (index: number) => void;
+  onOtherFeeChange?: (index: number, field: keyof OtherFee, value: string | number) => void;
+  onOtherFeeDoubleClick?: (index: number, field: 'description' | 'amount') => void;
+  onDeleteOtherFee?: (index: number) => void;
+  editingFeeIndex?: number | null;
+  editingFeeAmount?: string;
+  setEditingFeeIndex?: (index: number | null) => void;
+  setEditingFeeAmount?: (amount: string) => void;
   totals: {
     totalPrice: number;
     netWeight: number;
@@ -75,6 +90,13 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   onItemChange,
   onAddLine,
   onDeleteLine,
+  onOtherFeeChange,
+  onOtherFeeDoubleClick,
+  onDeleteOtherFee,
+  editingFeeIndex,
+  editingFeeAmount,
+  setEditingFeeIndex,
+  setEditingFeeAmount,
   totals
 }) => {
   // 可用单位列表
@@ -544,418 +566,398 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       </div>
 
       {/* 桌面端表格视图 - 中屏及以上显示 */}
-      <div className="hidden lg:block">
-        {/* 表格容器 - 自适应宽度 */}
-        <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
-        <div className="inline-block min-w-full align-middle">
-          <div className="border border-[#E5E5EA] dark:border-[#2C2C2E]
-            bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl overflow-hidden rounded-2xl">
-              <table className="w-full table-fixed">
-              <thead>
-                <tr className="bg-[#F5F5F7] dark:bg-[#3A3A3C] border-b border-[#E5E5EA] dark:border-[#48484A]">
-                  <th className="w-12 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">No.</th>
-                    <th className={`px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] ${
-                      // 动态计算 Description 列宽
-                      data.showHsCode && data.showPrice && data.showWeightAndPackage && data.showDimensions 
-                        ? 'w-1/6' // 最复杂情况
-                        : data.showPrice && data.showWeightAndPackage
-                        ? 'w-1/4' // 中等复杂
-                        : 'w-1/3' // 简单情况
-                    }`}>Description</th>
-                                     {data.showHsCode && (
-                      <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">HS Code</th>
-                   )}
-                    <th className="w-16 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
-                    <th className="w-16 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
-                  {data.showPrice && (
-                    <>
-                        <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
-                        <th className="w-28 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
-                    </>
-                  )}
-                  {data.showWeightAndPackage && (
-                    <>
-                        <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">N.W.(kg)</th>
-                        <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">G.W.(kg)</th>
-                        <th className="w-16 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Pkgs</th>
-                    </>
-                  )}
-                  {data.showDimensions && (
-                      <th className="w-32 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Dimensions ({data.dimensionUnit})</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="bg-white/90 dark:bg-[#1C1C1E]/90">
-                {data.items.map((item, index) => (
-                  <tr key={item.id} className="border-t border-[#E5E5EA] dark:border-[#2C2C2E]">
-                    <td className="w-12 px-2 py-2 text-center text-sm bg-white/90 dark:bg-[#1C1C1E]/90">
-                      <span 
-                        className="flex items-center justify-center w-5 h-5 rounded-full 
-                          text-xs text-gray-400
-                          hover:bg-red-100 hover:text-red-600 
-                          cursor-pointer transition-colors"
-                        onClick={() => handleSoftDelete(index)}
-                        title="Click to delete"
-                      >
-                        {index + 1}
-                      </span>
-                    </td>
-                      <td className={`px-2 py-2 bg-white/90 dark:bg-[#1C1C1E]/90 ${
-                        // 动态计算 Description 列宽，与表头保持一致
-                        data.showHsCode && data.showPrice && data.showWeightAndPackage && data.showDimensions 
-                          ? 'w-1/6' // 最复杂情况
-                          : data.showPrice && data.showWeightAndPackage
-                          ? 'w-1/4' // 中等复杂
-                          : 'w-1/3' // 简单情况
-                      }`}>
-                      <textarea
-                        value={item.description}
-                        onChange={(e) => {
-                          onItemChange(index, 'description', e.target.value);
-                          e.target.style.height = '28px';
-                          e.target.style.height = `${e.target.scrollHeight}px`;
-                        }}
-                        className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                          focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                          hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                          placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
-                          ios-optimized-input"
-                        style={{ height: '28px' }}
-                        placeholder="Enter product description..."
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.stopPropagation();
-                          }
-                        }}
-                      />
-                    </td>
-                                         {data.showHsCode && (
-                        <td className="w-24 px-2 py-2">
-                         <input
-                           type="text"
-                           value={item.hsCode}
-                           onChange={(e) => onItemChange(index, 'hsCode', e.target.value)}
-                           className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                             transition-all duration-200 text-center
-                             ios-optimized-input"
-                           placeholder="HS Code"
-                         />
-                       </td>
-                     )}
-                      <td className="w-16 px-2 py-2">
+      <div className="hidden lg:block overflow-x-auto rounded-2xl border border-gray-200/30 dark:border-white/10
+                    bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl shadow-lg">
+        <div className="min-w-[600px]">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10
+                            bg-[#007AFF]/5 dark:bg-[#0A84FF]/5">
+                <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[40px]">No.</th>
+                {data.showHsCode && (
+                  <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[120px]">
+                    HS Code
+                  </th>
+                )}
+                <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[150px] md:w-[210px]">Description</th>
+                <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[100px]">Q'TY</th>
+                <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[100px]">Unit</th>
+                {data.showPrice && (
+                  <>
+                    <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[130px]">U/Price</th>
+                    <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[150px]">Amount</th>
+                  </>
+                )}
+                {data.showWeightAndPackage && (
+                  <>
+                    <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[100px]">N.W.</th>
+                    <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[100px]">G.W.</th>
+                    <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[100px]">Package</th>
+                  </>
+                )}
+                {data.showDimensions && (
+                  <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[120px]">
+                    Dimensions<br/>({data.dimensionUnit})
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {/* 商品行 */}
+              {data.items.map((item, index) => (
+                <tr key={item.id} className="border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10">
+                  <td className="py-2 px-4 text-center text-sm bg-white/90 dark:bg-[#1C1C1E]/90">
+                    <span 
+                      className="flex items-center justify-center w-5 h-5 rounded-full 
+                        text-xs text-gray-400
+                        hover:bg-red-100 hover:text-red-600 
+                        cursor-pointer transition-colors"
+                      onClick={() => handleSoftDelete(index)}
+                      title="Click to delete"
+                    >
+                      {index + 1}
+                    </span>
+                  </td>
+                  {data.showHsCode && (
+                    <td className="py-2 px-4 text-center text-sm">
                       <input
                         type="text"
-                        inputMode="numeric"
-                        value={editingQtyIndex === index ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (/^\d*$/.test(value)) {
-                            setEditingQtyAmount(value);
-                            handleQuantityChange(index, value === '' ? 0 : parseInt(value));
-                          }
-                        }}
-                        onFocus={(e) => {
-                          setEditingQtyIndex(index);
-                          setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
-                          e.target.select();
-                          handleIOSInputFocus(e);
-                        }}
-                        onBlur={() => {
-                          setEditingQtyIndex(null);
-                          setEditingQtyAmount('');
-                        }}
+                        value={item.hsCode}
+                        onChange={(e) => onItemChange(index, 'hsCode', e.target.value)}
                         className="w-full px-3 py-1.5 bg-transparent border border-transparent
                           focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                           text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                           placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                           transition-all duration-200 text-center
-                          [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                           ios-optimized-input"
-                        placeholder="0"
-                        style={{
-                          ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                        }}
+                        placeholder="HS Code"
                       />
                     </td>
-                      <td className="w-16 px-2 py-2">
-                      <select
-                        value={item.unit}
-                        onChange={(e) => handleUnitChange(index, e.target.value)}
-                        className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                          focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                          hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                          placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          transition-all duration-200 text-center cursor-pointer
-                          appearance-none ios-optimized-input"
-                      >
-                        {availableUnits.map(unit => {
-                          const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
-                            ? getUnitDisplay(unit, item.quantity) 
-                            : unit;
-                          return (
-                            <option key={unit} value={displayUnit}>
-                              {displayUnit}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </td>
-                    {data.showPrice && (
-                      <>
-                          <td className="w-24 px-2 py-2">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={editingUnitPriceIndex === index ? editingUnitPriceAmount : item.unitPrice.toFixed(2)}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*\.?\d*$/.test(value)) {
-                                setEditingUnitPriceAmount(value);
-                                onItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
-                              }
-                            }}
-                            onFocus={(e) => {
-                              setEditingUnitPriceIndex(index);
-                              setEditingUnitPriceAmount(item.unitPrice === 0 ? '' : item.unitPrice.toString());
-                              e.target.select();
-                              handleIOSInputFocus(e);
-                            }}
-                            onBlur={() => {
-                              setEditingUnitPriceIndex(null);
-                              setEditingUnitPriceAmount('');
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                              ios-optimized-input"
-                            placeholder="0.00"
-                            style={{
-                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                            }}
-                          />
-                        </td>
-                          <td className="w-28 px-2 py-2">
-                          <input
-                            type="text"
-                            value={`${data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}${item.totalPrice.toFixed(2)}`}
-                            readOnly
-                            className="w-full px-3 py-1.5 bg-transparent
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              transition-all duration-200 text-center cursor-default"
-                          />
-                        </td>
-                      </>
-                    )}
-                    {data.showWeightAndPackage && (
-                      <>
-                          <td className="w-24 px-2 py-2">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={editingNetWeightIndex === index ? editingNetWeightAmount : (item.netWeight > 0 ? item.netWeight.toFixed(2) : '')}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*\.?\d*$/.test(value)) {
-                                setEditingNetWeightAmount(value);
-                                onItemChange(index, 'netWeight', value === '' ? 0 : parseFloat(value));
-                              }
-                            }}
-                            onFocus={(e) => {
-                              setEditingNetWeightIndex(index);
-                              setEditingNetWeightAmount(item.netWeight === 0 ? '' : item.netWeight.toString());
-                              e.target.select();
-                              handleIOSInputFocus(e);
-                            }}
-                                                  onBlur={(e) => {
-                        setEditingNetWeightIndex(null);
-                        setEditingNetWeightAmount('');
-                        const value = parseFloat(e.target.value) || 0;
-                        if (value > 0) {
-                          onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
+                  )}
+                  <td className="py-2 px-4 text-center text-[12px]">
+                    <textarea
+                      value={item.description}
+                      onChange={(e) => {
+                        onItemChange(index, 'description', e.target.value);
+                        e.target.style.height = '28px';
+                        e.target.style.height = `${e.target.scrollHeight}px`;
+                      }}
+                      className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                        hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                        transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
+                        ios-optimized-input"
+                      style={{ height: '28px' }}
+                      placeholder="Enter product description..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.stopPropagation();
                         }
                       }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                              ios-optimized-input"
-                            placeholder="0.00"
-                            style={{
-                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                            }}
-                          />
-                        </td>
-                          <td className="w-24 px-2 py-2">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={editingGrossWeightIndex === index ? editingGrossWeightAmount : (item.grossWeight > 0 ? item.grossWeight.toFixed(2) : '')}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*\.?\d*$/.test(value)) {
-                                setEditingGrossWeightAmount(value);
-                                onItemChange(index, 'grossWeight', value === '' ? 0 : parseFloat(value));
-                              }
-                            }}
-                            onFocus={(e) => {
-                              setEditingGrossWeightIndex(index);
-                              setEditingGrossWeightAmount(item.grossWeight === 0 ? '' : item.grossWeight.toString());
-                              e.target.select();
-                              handleIOSInputFocus(e);
-                            }}
-                                                  onBlur={(e) => {
-                        setEditingGrossWeightIndex(null);
-                        setEditingGrossWeightAmount('');
-                        const value = parseFloat(e.target.value) || 0;
-                        if (value > 0) {
-                          onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
+                    />
+                  </td>
+                  <td className="py-2 px-4 text-center text-[12px]">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={editingQtyIndex === index ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (/^\d*$/.test(value)) {
+                          setEditingQtyAmount(value);
+                          handleQuantityChange(index, value === '' ? 0 : parseInt(value));
                         }
                       }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                              ios-optimized-input"
-                            placeholder="0.00"
-                            style={{
-                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                            }}
-                          />
-                        </td>
-                          <td className="w-16 px-2 py-2">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={editingPackageQtyIndex === index ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*$/.test(value)) {
-                                setEditingPackageQtyAmount(value);
-                                onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
-                              }
-                            }}
-                            onFocus={(e) => {
-                              setEditingPackageQtyIndex(index);
-                              setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
-                              e.target.select();
-                              handleIOSInputFocus(e);
-                            }}
-                            onBlur={() => {
-                              setEditingPackageQtyIndex(null);
-                              setEditingPackageQtyAmount('');
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center
-                              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                              ios-optimized-input"
-                            placeholder="0"
-                            style={{
-                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                            }}
-                          />
-                        </td>
-                      </>
-                    )}
-                    {data.showDimensions && (
-                        <td className="w-32 px-2 py-2">
+                      onFocus={(e) => {
+                        setEditingQtyIndex(index);
+                        setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
+                        e.target.select();
+                        handleIOSInputFocus(e);
+                      }}
+                      onBlur={() => {
+                        setEditingQtyIndex(null);
+                        setEditingQtyAmount('');
+                      }}
+                      className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                        hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                        transition-all duration-200 text-center
+                        [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                        ios-optimized-input"
+                      placeholder="0"
+                      style={{
+                        ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                      }}
+                    />
+                  </td>
+                  <td className="py-2 px-4 text-center text-[12px]">
+                    <select
+                      value={item.unit}
+                      onChange={(e) => handleUnitChange(index, e.target.value)}
+                      className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                        hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                        transition-all duration-200 text-center cursor-pointer
+                        appearance-none ios-optimized-input"
+                    >
+                      {availableUnits.map(unit => {
+                        const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
+                          ? getUnitDisplay(unit, item.quantity) 
+                          : unit;
+                        return (
+                          <option key={unit} value={displayUnit}>
+                            {displayUnit}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </td>
+                  {data.showPrice && (
+                    <>
+                      <td className="py-2 px-4 text-center text-[12px]">
                         <input
                           type="text"
-                          value={item.dimensions}
-                          onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
+                          inputMode="decimal"
+                          value={editingUnitPriceIndex === index ? editingUnitPriceAmount : item.unitPrice.toFixed(2)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*\.?\d*$/.test(value)) {
+                              setEditingUnitPriceAmount(value);
+                              onItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
+                            }
+                          }}
+                          onFocus={(e) => {
+                            setEditingUnitPriceIndex(index);
+                            setEditingUnitPriceAmount(item.unitPrice === 0 ? '' : item.unitPrice.toString());
+                            e.target.select();
+                            handleIOSInputFocus(e);
+                          }}
+                          onBlur={() => {
+                            setEditingUnitPriceIndex(null);
+                            setEditingUnitPriceAmount('');
+                          }}
                           className="w-full px-3 py-1.5 bg-transparent border border-transparent
                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                             hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                             placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
                             transition-all duration-200 text-center
+                            [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
                             ios-optimized-input"
-                          placeholder="L×W×H"
+                          placeholder="0.00"
+                          style={{
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                          }}
                         />
                       </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-                     </div>
-           
-            {/* 桌面端添加按钮和总计信息 */}
-           <div className="mt-4 bg-[#F5F5F7] dark:bg-[#3A3A3C] rounded-2xl p-4 border border-[#E5E5EA] dark:border-[#48484A]">
-             <div className="flex flex-wrap gap-6 justify-between items-center">
-               {/* 添加行按钮 */}
-               <button
-                 type="button"
-                 onClick={onAddLine}
-                 className="px-4 py-2 bg-[#007AFF] dark:bg-[#0A84FF] text-white rounded-lg
-                   hover:bg-[#0063CC] dark:hover:bg-[#0070E0] transition-colors
-                   text-sm font-medium"
-               >
-                 + Add Line
-               </button>
-               
-               {/* 总计信息 */}
-               {(data.showPrice || data.showWeightAndPackage) ? (
-                 <div className="flex flex-wrap gap-6">
-                {data.showPrice && (
-                  <div className="text-right">
-                    <div className="text-sm text-[#86868B] dark:text-[#86868B]">Total Amount</div>
-                    <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                      {data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}
-                      {totals.totalPrice.toFixed(2)}
-                    </div>
-                  </div>
-                )}
-                {data.showWeightAndPackage && (
-                  <>
+                      <td className="py-2 px-4 text-center text-[12px]">
+                        <input
+                          type="text"
+                          value={`${data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}${item.totalPrice.toFixed(2)}`}
+                          readOnly
+                          className="w-full px-3 py-1.5 bg-transparent
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            transition-all duration-200 text-center cursor-default"
+                        />
+                      </td>
+                    </>
+                  )}
+                  {data.showWeightAndPackage && (
+                    <>
+                      <td className="py-2 px-4 text-center text-[12px]">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={editingNetWeightIndex === index ? editingNetWeightAmount : (item.netWeight > 0 ? item.netWeight.toFixed(2) : '')}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*\.?\d*$/.test(value)) {
+                              setEditingNetWeightAmount(value);
+                              onItemChange(index, 'netWeight', value === '' ? 0 : parseFloat(value));
+                            }
+                          }}
+                          onFocus={(e) => {
+                            setEditingNetWeightIndex(index);
+                            setEditingNetWeightAmount(item.netWeight === 0 ? '' : item.netWeight.toString());
+                            e.target.select();
+                            handleIOSInputFocus(e);
+                          }}
+                                                  onBlur={(e) => {
+                            setEditingNetWeightIndex(null);
+                            setEditingNetWeightAmount('');
+                            const value = parseFloat(e.target.value) || 0;
+                            if (value > 0) {
+                              onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
+                            }
+                          }}
+                          className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                            transition-all duration-200 text-center
+                            [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                            ios-optimized-input"
+                          placeholder="0.00"
+                          style={{
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                          }}
+                        />
+                      </td>
+                      <td className="py-2 px-4 text-center text-[12px]">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={editingGrossWeightIndex === index ? editingGrossWeightAmount : (item.grossWeight > 0 ? item.grossWeight.toFixed(2) : '')}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*\.?\d*$/.test(value)) {
+                              setEditingGrossWeightAmount(value);
+                              onItemChange(index, 'grossWeight', value === '' ? 0 : parseFloat(value));
+                            }
+                          }}
+                          onFocus={(e) => {
+                            setEditingGrossWeightIndex(index);
+                            setEditingGrossWeightAmount(item.grossWeight === 0 ? '' : item.grossWeight.toString());
+                            e.target.select();
+                            handleIOSInputFocus(e);
+                          }}
+                                                  onBlur={(e) => {
+                            setEditingGrossWeightIndex(null);
+                            setEditingGrossWeightAmount('');
+                            const value = parseFloat(e.target.value) || 0;
+                            if (value > 0) {
+                              onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
+                            }
+                          }}
+                          className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                            transition-all duration-200 text-center
+                            [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                            ios-optimized-input"
+                          placeholder="0.00"
+                          style={{
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                          }}
+                        />
+                      </td>
+                      <td className="py-2 px-4 text-center text-[12px]">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={editingPackageQtyIndex === index ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*$/.test(value)) {
+                              setEditingPackageQtyAmount(value);
+                              onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
+                            }
+                          }}
+                          onFocus={(e) => {
+                            setEditingPackageQtyIndex(index);
+                            setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
+                            e.target.select();
+                            handleIOSInputFocus(e);
+                          }}
+                          onBlur={() => {
+                            setEditingPackageQtyIndex(null);
+                            setEditingPackageQtyAmount('');
+                          }}
+                          className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                            transition-all duration-200 text-center
+                            [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                            ios-optimized-input"
+                          placeholder="0"
+                          style={{
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                          }}
+                        />
+                      </td>
+                    </>
+                  )}
+                  {data.showDimensions && (
+                    <td className="py-2 px-4 text-center text-[12px]">
+                      <input
+                        type="text"
+                        value={item.dimensions}
+                        onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
+                        className="w-full px-3 py-1.5 bg-transparent border border-transparent
+                          focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                          hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                          placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                          transition-all duration-200 text-center
+                          ios-optimized-input"
+                        placeholder="L×W×H"
+                      />
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Other Fees 表格 */}
+          {data.showPrice && data.otherFees && data.otherFees.length > 0 && (
+            <>
+              <OtherFeesTable
+                otherFees={data.otherFees}
+                currency={data.currency}
+                editingFeeIndex={editingFeeIndex || null}
+                editingFeeAmount={editingFeeAmount || ''}
+                onDeleteFee={onDeleteOtherFee || (() => {})}
+                onFeeChange={onOtherFeeChange || (() => {})}
+                onFeeDoubleClick={onOtherFeeDoubleClick || (() => {})}
+                setEditingFeeIndex={setEditingFeeIndex || (() => {})}
+                setEditingFeeAmount={setEditingFeeAmount || (() => {})}
+              />
+
+              {/* 总计行 */}
+              <div className="flex justify-end items-center py-4 px-6 border-t border-[#007AFF]/10 dark:border-[#0A84FF]/10">
+                <div className="flex items-center gap-4">
+                  {data.showWeightAndPackage && (
+                    <>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total N.W.</div>
+                        <div className="font-medium">{totals.netWeight.toFixed(2)} KGS</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total G.W.</div>
+                        <div className="font-medium">{totals.grossWeight.toFixed(2)} KGS</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Package</div>
+                        <div className="font-medium">{totals.packageQty} CTNS</div>
+                      </div>
+                    </>
+                  )}
+                  {data.showPrice && (
                     <div className="text-right">
-                      <div className="text-sm text-[#86868B] dark:text-[#86868B]">Net Weight</div>
-                      <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                        {totals.netWeight.toFixed(2)} kg
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Amount</div>
+                      <div className="text-xl font-semibold">
+                        {data.currency === 'USD' ? '$' : '¥'}
+                        {totals.totalPrice.toFixed(2)}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm text-[#86868B] dark:text-[#86868B]">Gross Weight</div>
-                      <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                        {totals.grossWeight.toFixed(2)} kg
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-[#86868B] dark:text-[#86868B]">Total Packages</div>
-                      <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                        {totals.packageQty}
-                      </div>
-                    </div>
-                                     </>
-                 )}
-                 </div>
-               ) : (
-                 <div></div>
-               )}
+                  )}
+                </div>
               </div>
-             </div>
-           </div>
+            </>
+          )}
         </div>
       </div>
     </div>

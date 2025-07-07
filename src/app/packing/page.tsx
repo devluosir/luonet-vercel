@@ -61,6 +61,16 @@ interface PackingItem {
   unit: string;
 }
 
+interface OtherFee {
+  id: number;
+  description: string;
+  amount: number;
+  highlight?: {
+    description?: boolean;
+    amount?: boolean;
+  };
+}
+
 interface PackingData {
   orderNo: string;
   invoiceNo: string;
@@ -75,6 +85,7 @@ interface PackingData {
   markingNo: string;
   
   items: PackingItem[];
+  otherFees?: OtherFee[];
   currency: string;
   remarks: string;
   remarkOptions: {
@@ -213,6 +224,10 @@ export default function PackingPage() {
   const [showShippingMarksModal, setShowShippingMarksModal] = useState(false);
   const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
   const [previewItem, setPreviewItem] = useState<any>(null);
+  const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
+  const [editingUnitPrice, setEditingUnitPrice] = useState<string>('');
+  const [editingFeeIndex, setEditingFeeIndex] = useState<number | null>(null);
+  const [editingFeeAmount, setEditingFeeAmount] = useState<string>('');
 
   const [packingData, setPackingData] = useState<PackingData>(_initialData || {
     orderNo: '',
@@ -240,6 +255,7 @@ export default function PackingPage() {
       unit: 'pc'
     }],
     
+    otherFees: [],
     currency: 'USD',
     remarks: '',
     remarkOptions: {
@@ -492,6 +508,60 @@ export default function PackingPage() {
     }
   }, [packingData, editId, pathname]);
 
+  // 处理 other fee 双击事件
+  const handleOtherFeeDoubleClick = (index: number, field: 'description' | 'amount') => {
+    const newFees = [...(packingData.otherFees || [])];
+    newFees[index] = {
+      ...newFees[index],
+      highlight: {
+        ...newFees[index].highlight,
+        [field]: !newFees[index].highlight?.[field]
+      }
+    };
+    setPackingData(prev => ({
+      ...prev,
+      otherFees: newFees
+    }));
+  };
+
+  // 添加 other fee
+  const handleAddOtherFee = () => {
+    setPackingData(prev => ({
+      ...prev,
+      otherFees: [
+        ...(prev.otherFees || []),
+        {
+          id: Date.now(),
+          description: '',
+          amount: 0
+        }
+      ]
+    }));
+  };
+
+  // 删除 other fee
+  const handleDeleteOtherFee = (index: number) => {
+    setPackingData(prev => ({
+      ...prev,
+      otherFees: prev.otherFees?.filter((_, i) => i !== index)
+    }));
+  };
+
+  // 更新 other fee
+  const handleOtherFeeChange = (index: number, field: keyof OtherFee, value: string | number) => {
+    setPackingData(prev => {
+      const newFees = [...(prev.otherFees || [])];
+      newFees[index] = {
+        ...newFees[index],
+        [field]: value
+      };
+      return {
+        ...prev,
+        otherFees: newFees
+      };
+    });
+  };
+
   // 计算总计
   const totals = packingData.items.reduce((acc, item) => ({
     totalPrice: acc.totalPrice + item.totalPrice,
@@ -499,6 +569,13 @@ export default function PackingPage() {
     grossWeight: acc.grossWeight + item.grossWeight,
     packageQty: acc.packageQty + item.packageQty
   }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
+
+  // 计算总金额（包括其他费用）
+  const getTotalAmount = () => {
+    const itemsTotal = totals.totalPrice;
+    const otherFeesTotal = packingData.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
+    return itemsTotal + otherFeesTotal;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
@@ -585,7 +662,12 @@ export default function PackingPage() {
                 onToggleHsCode={(show) => setPackingData(prev => ({ ...prev, showHsCode: show }))}
                 onToggleDimensions={(show) => setPackingData(prev => ({ ...prev, showDimensions: show }))}
                 onToggleWeightAndPackage={(show) => setPackingData(prev => ({ ...prev, showWeightAndPackage: show }))}
-                onTogglePrice={(show) => setPackingData(prev => ({ ...prev, showPrice: show }))}
+                onTogglePrice={(show) => setPackingData(prev => ({ 
+                  ...prev, 
+                  showPrice: show,
+                  // 如果关闭价格显示，清除所有 other fees
+                  otherFees: show ? prev.otherFees : []
+                }))}
                 onDimensionUnitChange={(unit) => setPackingData(prev => ({ ...prev, dimensionUnit: unit }))}
                 onCurrencyChange={(currency) => setPackingData(prev => ({ ...prev, currency }))}
                 onHeaderTypeChange={(headerType) => setPackingData(prev => ({ 
@@ -693,6 +775,7 @@ export default function PackingPage() {
                 <ItemsTable
                   data={{
                     items: packingData.items,
+                    otherFees: packingData.otherFees,
                     showHsCode: packingData.showHsCode,
                     showDimensions: packingData.showDimensions,
                     showWeightAndPackage: packingData.showWeightAndPackage,
@@ -704,8 +787,52 @@ export default function PackingPage() {
                   onItemChange={updateLineItem}
                   onAddLine={handleAddLine}
                   onDeleteLine={handleDeleteLine}
+                  onOtherFeeChange={handleOtherFeeChange}
+                  onOtherFeeDoubleClick={handleOtherFeeDoubleClick}
+                  onDeleteOtherFee={handleDeleteOtherFee}
+                  editingFeeIndex={editingFeeIndex}
+                  editingFeeAmount={editingFeeAmount}
+                  setEditingFeeIndex={setEditingFeeIndex}
+                  setEditingFeeAmount={setEditingFeeAmount}
                   totals={totals}
                 />
+              </div>
+
+              {/* 添加行按钮 */}
+              <div className="px-4 sm:px-6 py-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <button
+                    type="button"
+                    onClick={handleAddLine}
+                    className="px-2 sm:px-3 h-7 rounded-lg whitespace-nowrap
+                      bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
+                      hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
+                      text-[#007AFF] dark:text-[#0A84FF]
+                      text-[13px] font-medium
+                      flex items-center gap-1
+                      transition-all duration-200"
+                  >
+                    <span className="text-lg leading-none translate-y-[-1px]">+</span>
+                    <span>Add Line</span>
+                  </button>
+
+                  {packingData.showPrice && (
+                    <button
+                      type="button"
+                      onClick={handleAddOtherFee}
+                      className="px-2 sm:px-3 h-7 rounded-lg whitespace-nowrap
+                        bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
+                        hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
+                        text-[#007AFF] dark:text-[#0A84FF]
+                        text-[13px] font-medium
+                        flex items-center gap-1
+                        transition-all duration-200"
+                    >
+                      <span className="text-lg leading-none translate-y-[-1px]">+</span>
+                      <span>Add Other Fee</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* 备注区域 */}
