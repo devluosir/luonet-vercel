@@ -169,7 +169,11 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     if (data.inquiryNo) {
       const wrappedOrderNo = doc.splitTextToSize(data.inquiryNo.trim(), maxWidth);
       wrappedOrderNo.forEach((line: string, index: number) => {
+        // 设置订单号为蓝色
+        doc.setTextColor(0, 0, 255);
         doc.text(line, orderNoX, currentY + (index * 3.5));
+        // 恢复黑色
+        doc.setTextColor(0, 0, 0);
       });
       currentY += (wrappedOrderNo.length - 1) * 3.5;
     }

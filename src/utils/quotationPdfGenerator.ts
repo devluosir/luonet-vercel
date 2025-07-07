@@ -179,7 +179,11 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     const inquiryNoText = data.inquiryNo ? data.inquiryNo.trim() : '';
     const wrappedInquiryNo = doc.splitTextToSize(inquiryNoText, maxWidth);
     wrappedInquiryNo.forEach((line: string, index: number) => {
+      // 设置询价编号为蓝色
+      doc.setTextColor(0, 0, 255);
       doc.text(line, inquiryNoX, currentY + (index * 3.5));
+      // 恢复黑色
+      doc.setTextColor(0, 0, 0);
     });
     currentY += (wrappedInquiryNo.length * 3.5);
 
