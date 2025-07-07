@@ -212,6 +212,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     }
   };
 
+  // 计算 Other Fee 总额
+  const otherFeesTotal = data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
+  const totalAmount = totals.totalPrice + otherFeesTotal;
+
   return (
     <div className="space-y-0">
       {/* 移动端和平板卡片视图 - 调整断点为 xl (1280px) */}
@@ -524,41 +528,105 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
           + Add Item
         </button>
 
+        {/* Other Fees 表格 - 移动端视图 */}
+        {data.showPrice && data.otherFees && data.otherFees.length > 0 && (
+          <div className="lg:hidden mt-4">
+            <div className="bg-[#F5F5F7] dark:bg-[#3A3A3C] rounded-2xl p-4 border border-[#E5E5EA] dark:border-[#48484A]">
+              <h3 className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-3">Other Fees</h3>
+              <div className="space-y-3">
+                {data.otherFees.map((fee, index) => (
+                  <div key={fee.id} className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => onDeleteOtherFee?.(index)}
+                      className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center
+                        text-[#86868B] hover:bg-red-500/10 hover:text-red-500 
+                        cursor-pointer transition-all duration-200"
+                    >
+                      ×
+                    </button>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={fee.description}
+                        onChange={(e) => onOtherFeeChange?.(index, 'description', e.target.value)}
+                        onDoubleClick={() => onOtherFeeDoubleClick?.(index, 'description')}
+                        placeholder="Other Fee"
+                        className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                          focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                          placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                          ios-optimized-input"
+                      />
+                    </div>
+                    <div className="w-[120px] flex-shrink-0">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={editingFeeIndex === index ? editingFeeAmount : fee.amount.toFixed(2)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^-?\d*\.?\d{0,2}$/.test(value) || value === '' || value === '-') {
+                            setEditingFeeAmount?.(value);
+                            const amount = value === '' || value === '-' ? 0 : parseFloat(value) || 0;
+                            onOtherFeeChange?.(index, 'amount', amount);
+                          }
+                        }}
+                        onDoubleClick={() => onOtherFeeDoubleClick?.(index, 'amount')}
+                        onFocus={(e) => {
+                          setEditingFeeIndex?.(index);
+                          setEditingFeeAmount?.(fee.amount === 0 ? '' : fee.amount.toString());
+                          e.target.select();
+                        }}
+                        onBlur={() => {
+                          setEditingFeeIndex?.(null);
+                          setEditingFeeAmount?.('');
+                        }}
+                        placeholder="0.00"
+                        className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                          focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
+                          placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                          [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                          ios-optimized-input"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 移动端总计信息 */}
         {(data.showPrice || data.showWeightAndPackage) && (
-          <div className="bg-[#F5F5F7] dark:bg-[#3A3A3C] rounded-2xl p-4 border border-[#E5E5EA] dark:border-[#48484A]">
+          <div className="lg:hidden bg-[#F5F5F7] dark:bg-[#3A3A3C] rounded-2xl p-4 border border-[#E5E5EA] dark:border-[#48484A]">
             <h3 className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-3">Totals</h3>
             <div className="grid grid-cols-2 gap-4">
-              {data.showPrice && (
-                <div className="text-center">
-                  <div className="text-xs text-[#86868B] dark:text-[#86868B]">Total Amount</div>
-                  <div className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                    {data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}
-                    {totals.totalPrice.toFixed(2)}
-                  </div>
-                </div>
-              )}
               {data.showWeightAndPackage && (
                 <>
                   <div className="text-center">
-                    <div className="text-xs text-[#86868B] dark:text-[#86868B]">Net Weight</div>
-                    <div className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                      {totals.netWeight.toFixed(2)} kg
-                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total N.W.</div>
+                    <div className="font-medium">{totals.netWeight.toFixed(2)} KGS</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-xs text-[#86868B] dark:text-[#86868B]">Gross Weight</div>
-                    <div className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                      {totals.grossWeight.toFixed(2)} kg
-                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total G.W.</div>
+                    <div className="font-medium">{totals.grossWeight.toFixed(2)} KGS</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-xs text-[#86868B] dark:text-[#86868B]">Total Packages</div>
-                    <div className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
-                      {totals.packageQty}
-                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Package</div>
+                    <div className="font-medium">{totals.packageQty} CTNS</div>
                   </div>
                 </>
+              )}
+              {data.showPrice && (
+                <div className="text-right">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Amount</div>
+                  <div className="text-xl font-semibold">
+                    {data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}
+                    {totalAmount.toFixed(2)}
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -913,50 +981,53 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
           {/* Other Fees 表格 */}
           {data.showPrice && data.otherFees && data.otherFees.length > 0 && (
-            <>
-              <OtherFeesTable
-                otherFees={data.otherFees}
-                currency={data.currency}
-                editingFeeIndex={editingFeeIndex || null}
-                editingFeeAmount={editingFeeAmount || ''}
-                onDeleteFee={onDeleteOtherFee || (() => {})}
-                onFeeChange={onOtherFeeChange || (() => {})}
-                onFeeDoubleClick={onOtherFeeDoubleClick || (() => {})}
-                setEditingFeeIndex={setEditingFeeIndex || (() => {})}
-                setEditingFeeAmount={setEditingFeeAmount || (() => {})}
-              />
+            <OtherFeesTable
+              otherFees={data.otherFees}
+              currency={data.currency}
+              editingFeeIndex={editingFeeIndex || null}
+              editingFeeAmount={editingFeeAmount || ''}
+              onDeleteFee={onDeleteOtherFee || (() => {})}
+              onFeeChange={onOtherFeeChange || (() => {})}
+              onFeeDoubleClick={onOtherFeeDoubleClick || (() => {})}
+              setEditingFeeIndex={setEditingFeeIndex || (() => {})}
+              setEditingFeeAmount={setEditingFeeAmount || (() => {})}
+              showWeightAndPackage={data.showWeightAndPackage}
+              showHsCode={data.showHsCode}
+              showDimensions={data.showDimensions}
+            />
+          )}
 
-              {/* 总计行 */}
-              <div className="flex justify-end items-center py-4 px-6 border-t border-[#007AFF]/10 dark:border-[#0A84FF]/10">
-                <div className="flex items-center gap-4">
-                  {data.showWeightAndPackage && (
-                    <>
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total N.W.</div>
-                        <div className="font-medium">{totals.netWeight.toFixed(2)} KGS</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total G.W.</div>
-                        <div className="font-medium">{totals.grossWeight.toFixed(2)} KGS</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Package</div>
-                        <div className="font-medium">{totals.packageQty} CTNS</div>
-                      </div>
-                    </>
-                  )}
-                  {data.showPrice && (
+          {/* 总计行 - 无论是否显示价格，只要有重量或包装数量就显示 */}
+          {(data.showWeightAndPackage || (data.showPrice && data.otherFees && data.otherFees.length > 0)) && (
+            <div className="flex justify-end items-center py-4 px-6 border-t border-[#007AFF]/10 dark:border-[#0A84FF]/10">
+              <div className="flex items-center gap-4">
+                {data.showWeightAndPackage && (
+                  <>
                     <div className="text-right">
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Amount</div>
-                      <div className="text-xl font-semibold">
-                        {data.currency === 'USD' ? '$' : '¥'}
-                        {totals.totalPrice.toFixed(2)}
-                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total N.W.</div>
+                      <div className="font-medium">{totals.netWeight.toFixed(2)} KGS</div>
                     </div>
-                  )}
-                </div>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total G.W.</div>
+                      <div className="font-medium">{totals.grossWeight.toFixed(2)} KGS</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Package</div>
+                      <div className="font-medium">{totals.packageQty} CTNS</div>
+                    </div>
+                  </>
+                )}
+                {data.showPrice && (
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Amount</div>
+                    <div className="text-xl font-semibold">
+                      {data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}
+                      {totalAmount.toFixed(2)}
+                    </div>
+                  </div>
+                )}
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

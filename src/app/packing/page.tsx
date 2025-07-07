@@ -447,13 +447,17 @@ export default function PackingPage() {
   const handlePreview = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 计算总价
+      // 计算总计
       const calculatedTotals = packingData.items.reduce((acc, item) => ({
         totalPrice: acc.totalPrice + item.totalPrice,
         netWeight: acc.netWeight + item.netWeight,
         grossWeight: acc.grossWeight + item.grossWeight,
         packageQty: acc.packageQty + item.packageQty
       }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
+
+      // 计算总金额（包括其他费用）
+      const otherFeesTotal = packingData.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
+      const previewTotalAmount = calculatedTotals.totalPrice + otherFeesTotal;
 
       // 准备预览数据，包装成历史记录格式
       const previewData = {
@@ -463,7 +467,7 @@ export default function PackingPage() {
         consigneeName: packingData.consignee.name || 'Unknown',
         invoiceNo: packingData.invoiceNo || 'N/A',
         orderNo: packingData.orderNo || 'N/A',
-        totalAmount: calculatedTotals.totalPrice,
+        totalAmount: previewTotalAmount,
         currency: packingData.currency,
         documentType: packingData.documentType,
         data: packingData
@@ -571,11 +575,8 @@ export default function PackingPage() {
   }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
 
   // 计算总金额（包括其他费用）
-  const getTotalAmount = () => {
-    const itemsTotal = totals.totalPrice;
-    const otherFeesTotal = packingData.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
-    return itemsTotal + otherFeesTotal;
-  };
+  const otherFeesTotal = packingData.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
+  const totalAmount = totals.totalPrice + otherFeesTotal;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
