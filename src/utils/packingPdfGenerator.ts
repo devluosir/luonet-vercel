@@ -786,13 +786,16 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
         }
       }
     },
-    didDrawPage: function(data: TableData) {
-      if (data.pageCount === (doc as any).getNumberOfPages()) {
-        const text = 'FOR CUSTOMS PURPOSE ONLY';
-        const fontSize = 8;
-        doc.setFont('NotoSansSC-bold');
-        doc.setFontSize(fontSize);
-        doc.text(text, margin +5, data.cursor?.y ? data.cursor.y + 6 : startY + 6);
+    didDrawPage: function(tableData: TableData) {
+      if (tableData.pageCount === (doc as any).getNumberOfPages()) {
+        // 只有当 customsPurpose 为 true 时才显示
+        if (data.remarkOptions.customsPurpose) {
+          const text = 'FOR CUSTOMS PURPOSE ONLY';
+          const fontSize = 8;
+          doc.setFont('NotoSansSC-bold');
+          doc.setFontSize(fontSize);
+          doc.text(text, margin +5, tableData.cursor?.y ? tableData.cursor.y + 6 : startY + 6);
+        }
       }
     }
   }) as unknown) as number;
