@@ -799,8 +799,8 @@ export default function PackingPage() {
                 />
               </div>
 
-              {/* 添加行按钮 */}
-              <div className="px-4 sm:px-6 py-4">
+              {/* 添加行按钮 - 大屏显示 */}
+              <div className="hidden sm:block px-4 sm:px-6 py-4">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <button
                     type="button"
@@ -833,6 +833,45 @@ export default function PackingPage() {
                       <span>Add Other Fee</span>
                     </button>
                   )}
+                </div>
+              </div>
+
+              {/* 添加行按钮 - 小屏显示 */}
+              <div className="block sm:hidden px-4 py-3">
+                <div className="bg-[#F5F5F7]/50 dark:bg-[#2C2C2E]/50 rounded-xl p-2.5">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAddLine}
+                      className="px-2 h-8 rounded-lg whitespace-nowrap
+                        bg-white/80 dark:bg-[#1C1C1E]/80
+                        hover:bg-white dark:hover:bg-[#1C1C1E]
+                        text-[#007AFF] dark:text-[#0A84FF]
+                        text-[13px] font-medium
+                        flex items-center justify-center gap-1
+                        transition-all duration-200"
+                    >
+                      <span className="text-lg leading-none translate-y-[-1px]">+</span>
+                      <span>Add Line</span>
+                    </button>
+
+                    {packingData.showPrice && (
+                      <button
+                        type="button"
+                        onClick={handleAddOtherFee}
+                        className="px-2 h-8 rounded-lg whitespace-nowrap
+                          bg-white/80 dark:bg-[#1C1C1E]/80
+                          hover:bg-white dark:hover:bg-[#1C1C1E]
+                          text-[#007AFF] dark:text-[#0A84FF]
+                          text-[13px] font-medium
+                          flex items-center justify-center gap-1
+                          transition-all duration-200"
+                      >
+                        <span className="text-lg leading-none translate-y-[-1px]">+</span>
+                        <span>Add Other Fee</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 

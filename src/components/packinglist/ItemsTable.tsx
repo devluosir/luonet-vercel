@@ -610,35 +610,37 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               )}
 
         {/* 移动端总计信息 */}
-        {(data.showPrice || data.showWeightAndPackage) && (
-          <div className="lg:hidden bg-[#F5F5F7] dark:bg-[#3A3A3C] rounded-2xl p-4 border border-[#E5E5EA] dark:border-[#48484A]">
-            <h3 className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-3">Totals</h3>
-            <div className="grid grid-cols-2 gap-4">
-              {data.showWeightAndPackage && (
-                <>
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total N.W.</div>
-                    <div className="font-medium">{totals.netWeight.toFixed(2)} KGS</div>
+        {(data.showWeightAndPackage || (data.showPrice && data.otherFees && data.otherFees.length > 0)) && (
+          <div className="flex justify-end items-center py-3 sm:py-4 px-3 sm:px-6 border-t border-[#007AFF]/10 dark:border-[#0A84FF]/10">
+            <div className="w-full sm:w-auto">
+              {/* 移动端网格布局 */}
+              <div className="grid grid-cols-2 gap-x-2 gap-y-2 sm:flex sm:items-center sm:gap-4 md:gap-6 bg-[#F5F5F7]/50 dark:bg-[#2C2C2E]/50 p-2.5 rounded-xl sm:bg-transparent sm:dark:bg-transparent sm:p-0">
+                {data.showWeightAndPackage && (
+                  <>
+                    <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
+                      <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total N.W.</div>
+                      <div className="text-sm sm:text-base font-medium">{totals.netWeight.toFixed(2)} KGS</div>
+                    </div>
+                    <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
+                      <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total G.W.</div>
+                      <div className="text-sm sm:text-base font-medium">{totals.grossWeight.toFixed(2)} KGS</div>
+                    </div>
+                    <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
+                      <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total Package</div>
+                      <div className="text-sm sm:text-base font-medium">{totals.packageQty} CTNS</div>
+                    </div>
+                  </>
+                )}
+                {data.showPrice && (
+                  <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
+                    <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total Amount</div>
+                    <div className="text-sm sm:text-base font-semibold">
+                      {data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}
+                      {totalAmount.toFixed(2)}
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total G.W.</div>
-                    <div className="font-medium">{totals.grossWeight.toFixed(2)} KGS</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Package</div>
-                    <div className="font-medium">{totals.packageQty} CTNS</div>
-                  </div>
-                </>
-              )}
-              {data.showPrice && (
-                <div className="text-right">
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Amount</div>
-                  <div className="text-xl font-semibold">
-                    {data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}
-                    {totalAmount.toFixed(2)}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1013,35 +1015,38 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
           {/* 总计行 - 无论是否显示价格，只要有重量或包装数量就显示 */}
           {(data.showWeightAndPackage || (data.showPrice && data.otherFees && data.otherFees.length > 0)) && (
-            <div className="flex justify-end items-center py-4 px-6 border-t border-[#007AFF]/10 dark:border-[#0A84FF]/10">
-              <div className="flex items-center gap-4">
-                {data.showWeightAndPackage && (
-                  <>
-                    <div className="text-right">
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total N.W.</div>
-                      <div className="font-medium">{totals.netWeight.toFixed(2)} KGS</div>
+            <div className="flex justify-end items-center py-3 sm:py-4 px-3 sm:px-6 border-t border-[#007AFF]/10 dark:border-[#0A84FF]/10">
+              <div className="w-full sm:w-auto">
+                {/* 移动端网格布局 */}
+                <div className="grid grid-cols-2 gap-x-2 gap-y-2 sm:flex sm:items-center sm:gap-4 md:gap-6 bg-[#F5F5F7]/50 dark:bg-[#2C2C2E]/50 p-2.5 rounded-xl sm:bg-transparent sm:dark:bg-transparent sm:p-0">
+                  {data.showWeightAndPackage && (
+                    <>
+                      <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
+                        <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total N.W.</div>
+                        <div className="text-sm sm:text-base font-medium">{totals.netWeight.toFixed(2)} KGS</div>
+                      </div>
+                      <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
+                        <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total G.W.</div>
+                        <div className="text-sm sm:text-base font-medium">{totals.grossWeight.toFixed(2)} KGS</div>
+                      </div>
+                      <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
+                        <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total Package</div>
+                        <div className="text-sm sm:text-base font-medium">{totals.packageQty} CTNS</div>
+                      </div>
+                    </>
+                  )}
+                  {data.showPrice && (
+                    <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
+                      <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total Amount</div>
+                      <div className="text-sm sm:text-base font-semibold">
+                        {data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}
+                        {totalAmount.toFixed(2)}
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total G.W.</div>
-                      <div className="font-medium">{totals.grossWeight.toFixed(2)} KGS</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Package</div>
-                      <div className="font-medium">{totals.packageQty} CTNS</div>
-                    </div>
-                                     </>
-                 )}
-                {data.showPrice && (
-                  <div className="text-right">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Amount</div>
-                    <div className="text-xl font-semibold">
-                      {data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥'}
-                      {totalAmount.toFixed(2)}
-                 </div>
-                  </div>
-               )}
+                  )}
+                </div>
               </div>
-             </div>
+            </div>
           )}
         </div>
       </div>
