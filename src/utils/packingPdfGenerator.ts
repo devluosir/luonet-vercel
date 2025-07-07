@@ -222,32 +222,32 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
   }
 
   // 左侧：Order No.
-  if (data.orderNo) {
-    doc.setFont('NotoSansSC', 'bold');
-    doc.text('Order No.:', margin, leftY);
-    
-    const orderNoLines = doc.splitTextToSize(data.orderNo, 130);
-    orderNoLines.forEach((line: string, index: number) => {
-      doc.text(String(line), margin + orderNoIndent, leftY + (index * 4)); // 内容行间距4px
-    });
-    leftY += (orderNoLines.length * 4) + 5; // 最后加5px作为项目间距
-  }
+  doc.setFont('NotoSansSC', 'bold');
+  doc.text('Order No.:', margin, leftY);
+  doc.setFont('NotoSansSC', 'bold');
+  doc.setTextColor(0, 0, 255); // 设置为蓝色
+  const orderNoText = data.orderNo || '';
+  const orderNoLines = doc.splitTextToSize(orderNoText, 130);
+  orderNoLines.forEach((line: string, index: number) => {
+    doc.text(String(line), margin + orderNoIndent, leftY + (index * 4)); // 内容行间距4px
+  });
+  doc.setTextColor(0, 0, 0); // 重置为黑色
+  leftY += (orderNoLines.length * 4) + 5; // 最后加5px作为项目间距
 
   // 右侧：Invoice No. + Date
   let rightY = data.remarkOptions.shipsSpares ? startY + 5 : startY; // 调整右侧起始位置，使用5px间距
   const rightStartX = pageWidth * 0.65;
   const colonX = rightStartX + 30;
 
-  if (data.invoiceNo) {
-    doc.setFont('NotoSansSC', 'bold');
-    doc.text('Invoice No.', colonX - 2, rightY, { align: 'right' });
-    doc.text(':', colonX, rightY);
-    doc.setFont('NotoSansSC', 'bold');
-    doc.setTextColor(255, 0, 0); // 设置为红色，与发票一致
-    doc.text(data.invoiceNo, colonX + 3, rightY);
-    doc.setTextColor(0, 0, 0); // 重置为黑色
-    rightY += 5; // 项目间距5px
-  }
+  // Invoice No. - 始终显示
+  doc.setFont('NotoSansSC', 'bold');
+  doc.text('Invoice No.', colonX - 2, rightY, { align: 'right' });
+  doc.text(':', colonX, rightY);
+  doc.setFont('NotoSansSC', 'bold');
+  doc.setTextColor(255, 0, 0); // 设置为红色，与发票一致
+  doc.text(data.invoiceNo || '', colonX + 3, rightY);
+  doc.setTextColor(0, 0, 0); // 重置为黑色
+  rightY += 5; // 项目间距5px
 
   doc.setFont('NotoSansSC', 'bold');
   doc.text('Date', colonX - 2, rightY, { align: 'right' });
