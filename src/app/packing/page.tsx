@@ -11,7 +11,6 @@ import { ItemsTable } from '@/components/packinglist/ItemsTable';
 import { SettingsPanel } from '@/components/packinglist/SettingsPanel';
 import { ShippingMarksModal } from '@/components/packinglist/ShippingMarksModal';
 import { savePackingHistory, getPackingHistoryById } from '@/utils/packingHistory';
-import { parseExcelData } from '@/utils/excelPasteHandler';
 import dynamic from 'next/dynamic';
 
 // 动态导入PDFPreviewModal
@@ -434,7 +433,7 @@ export default function PackingPage() {
 
       // 生成PDF
       await generatePackingListPDF(packingData);
-      alert('Packing list generated successfully!');
+      // 移除成功提示
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate packing list. Please try again.');
