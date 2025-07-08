@@ -236,37 +236,25 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     let netWeight = 0;
     let grossWeight = 0;
     let packageQty = 0;
-
-    // 用于跟踪已经计算过的组
     const processedGroups = new Set<string>();
-
     data.items.forEach((item, index) => {
-      // 计算总价格（所有行都要计算）
       totalPrice += item.totalPrice;
-
-      // 检查当前项目是否在组内
-      const isInGroup = item.groupId && data.isInGroupMode;
+      const isInGroup = !!item.groupId;
       const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
       const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
-
       if (isInGroup) {
-        // 组内项目
         if (isFirstInGroup) {
-          // 只计算组内第一行的重量和包装数量
           netWeight += item.netWeight;
           grossWeight += item.grossWeight;
           packageQty += item.packageQty;
           processedGroups.add(item.groupId!);
         }
-        // 组内其他行不计算重量和包装数量
       } else {
-        // 普通行，正常计算
         netWeight += item.netWeight;
         grossWeight += item.grossWeight;
         packageQty += item.packageQty;
       }
     });
-
     return {
       totalPrice,
       netWeight,
@@ -355,7 +343,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       <div className="block lg:hidden space-y-4">
         {data.items.map((item, index) => {
           // 检查当前项目是否在组内
-          const isInGroup = item.groupId && data.isInGroupMode;
+          const isInGroup = !!item.groupId;
           const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
           const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
           
@@ -989,7 +977,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 // 记录已处理的组ID，避免重复渲染rowSpan
                 const renderedGroupIds = new Set<string>();
                 return data.items.map((item, index) => {
-                  const isInGroup = !!item.groupId && data.isInGroupMode;
+                  const isInGroup = !!item.groupId;
                   const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
                   const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
                   const groupRowSpan = isInGroup ? groupItems.length : 1;
@@ -999,130 +987,130 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   return (
                     <tr key={item.id} className={`border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10 ${groupBg}`}>
                       <td className="py-2 px-4 text-center text-sm">
-                        <span 
+                      <span 
                           className="flex items-center justify-center w-5 h-5 rounded-full text-xs text-gray-400 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors"
-                          onClick={() => handleSoftDelete(index)}
-                          title="Click to delete"
-                        >
-                          {index + 1}
-                        </span>
-                      </td>
-                      {data.showHsCode && (
-                        <td className="py-2 px-4 text-center text-sm">
+                        onClick={() => handleSoftDelete(index)}
+                        title="Click to delete"
+                      >
+                        {index + 1}
+                      </span>
+                    </td>
+                  {data.showHsCode && (
+                    <td className="py-2 px-4 text-center text-sm">
+                      <input
+                        type="text"
+                        value={item.hsCode}
+                        onChange={(e) => onItemChange(index, 'hsCode', e.target.value)}
+                            className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
+                        placeholder="HS Code"
+                      />
+                    </td>
+                  )}
+                  <td className="py-2 px-4 text-center text-[12px]">
+                      <textarea
+                        value={item.description}
+                        onChange={(e) => {
+                          onItemChange(index, 'description', e.target.value);
+                          e.target.style.height = '28px';
+                          e.target.style.height = `${e.target.scrollHeight}px`;
+                        }}
+                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden ios-optimized-input"
+                        style={{ height: '28px' }}
+                        placeholder="Enter product description..."
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.stopPropagation();
+                          }
+                        }}
+                      />
+                    </td>
+                  <td className="py-2 px-4 text-center text-[12px]">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={editingQtyIndex === index ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^\d*$/.test(value)) {
+                            setEditingQtyAmount(value);
+                            handleQuantityChange(index, value === '' ? 0 : parseInt(value));
+                          }
+                        }}
+                        onFocus={(e) => {
+                          setEditingQtyIndex(index);
+                          setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
+                          e.target.select();
+                          handleIOSInputFocus(e);
+                        }}
+                        onBlur={() => {
+                          setEditingQtyIndex(null);
+                          setEditingQtyAmount('');
+                        }}
+                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input"
+                        placeholder="0"
+                          style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
+                      />
+                    </td>
+                  <td className="py-2 px-4 text-center text-[12px]">
+                      <select
+                        value={item.unit}
+                        onChange={(e) => handleUnitChange(index, e.target.value)}
+                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center cursor-pointer appearance-none ios-optimized-input"
+                      >
+                        {availableUnits.map(unit => {
+                          const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
+                            ? getUnitDisplay(unit, item.quantity) 
+                            : unit;
+                          return (
+                            <option key={unit} value={displayUnit}>
+                              {displayUnit}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </td>
+                    {data.showPrice && (
+                      <>
+                      <td className="py-2 px-4 text-center text-[12px]">
                           <input
                             type="text"
-                            value={item.hsCode}
-                            onChange={(e) => onItemChange(index, 'hsCode', e.target.value)}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
-                            placeholder="HS Code"
+                            inputMode="decimal"
+                            value={editingUnitPriceIndex === index ? editingUnitPriceAmount : item.unitPrice.toFixed(2)}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (/^\d*\.?\d*$/.test(value)) {
+                                setEditingUnitPriceAmount(value);
+                                onItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
+                              }
+                            }}
+                            onFocus={(e) => {
+                              setEditingUnitPriceIndex(index);
+                              setEditingUnitPriceAmount(item.unitPrice === 0 ? '' : item.unitPrice.toString());
+                              e.target.select();
+                              handleIOSInputFocus(e);
+                            }}
+                            onBlur={() => {
+                              setEditingUnitPriceIndex(null);
+                              setEditingUnitPriceAmount('');
+                            }}
+                              className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
+                            placeholder="0.00"
+                              style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
                           />
                         </td>
-                      )}
                       <td className="py-2 px-4 text-center text-[12px]">
-                        <textarea
-                          value={item.description}
-                          onChange={(e) => {
-                            onItemChange(index, 'description', e.target.value);
-                            e.target.style.height = '28px';
-                            e.target.style.height = `${e.target.scrollHeight}px`;
-                          }}
-                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden ios-optimized-input"
-                          style={{ height: '28px' }}
-                          placeholder="Enter product description..."
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.stopPropagation();
-                            }
-                          }}
-                        />
-                      </td>
-                      <td className="py-2 px-4 text-center text-[12px]">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={editingQtyIndex === index ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (/^\d*$/.test(value)) {
-                              setEditingQtyAmount(value);
-                              handleQuantityChange(index, value === '' ? 0 : parseInt(value));
-                            }
-                          }}
-                          onFocus={(e) => {
-                            setEditingQtyIndex(index);
-                            setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
-                            e.target.select();
-                            handleIOSInputFocus(e);
-                          }}
-                          onBlur={() => {
-                            setEditingQtyIndex(null);
-                            setEditingQtyAmount('');
-                          }}
-                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input"
-                          placeholder="0"
-                          style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
-                        />
-                      </td>
-                      <td className="py-2 px-4 text-center text-[12px]">
-                        <select
-                          value={item.unit}
-                          onChange={(e) => handleUnitChange(index, e.target.value)}
-                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center cursor-pointer appearance-none ios-optimized-input"
-                        >
-                          {availableUnits.map(unit => {
-                            const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
-                              ? getUnitDisplay(unit, item.quantity) 
-                              : unit;
-                            return (
-                              <option key={unit} value={displayUnit}>
-                                {displayUnit}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </td>
-                      {data.showPrice && (
-                        <>
-                          <td className="py-2 px-4 text-center text-[12px]">
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              value={editingUnitPriceIndex === index ? editingUnitPriceAmount : item.unitPrice.toFixed(2)}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (/^\d*\.?\d*$/.test(value)) {
-                                  setEditingUnitPriceAmount(value);
-                                  onItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
-                                }
-                              }}
-                              onFocus={(e) => {
-                                setEditingUnitPriceIndex(index);
-                                setEditingUnitPriceAmount(item.unitPrice === 0 ? '' : item.unitPrice.toString());
-                                e.target.select();
-                                handleIOSInputFocus(e);
-                              }}
-                              onBlur={() => {
-                                setEditingUnitPriceIndex(null);
-                                setEditingUnitPriceAmount('');
-                              }}
-                              className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
-                              placeholder="0.00"
-                              style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
-                            />
-                          </td>
-                          <td className="py-2 px-4 text-center text-[12px]">
-                            <input
-                              type="text"
-                              value={item.totalPrice.toFixed(2)}
-                              readOnly
-                              className={`${baseInputClassName} text-center`}
-                              style={iosCaretStyle}
-                            />
-                          </td>
-                        </>
-                      )}
+                          <input
+                            type="text"
+                            value={item.totalPrice.toFixed(2)}
+                            readOnly
+                            className={`${baseInputClassName} text-center`}
+                            style={iosCaretStyle}
+                          />
+                        </td>
+                      </>
+                    )}
                       {/* 合并单元格：只在组内第一行渲染，rowSpan=组内行数 */}
-                      {data.showWeightAndPackage && (
+                    {data.showWeightAndPackage && (
                         isInGroup && isFirstInGroup ? (
                           <>
                             <td rowSpan={groupRowSpan} className="py-2 px-4 text-center align-middle" style={{verticalAlign:'middle'}}>
@@ -1197,101 +1185,101 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           </>
                         ) : isInGroup ? null : (
                           // 普通行
-                          <>
-                            <td className="py-2 px-4 text-center text-[12px]">
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={editingNetWeightIndex === index ? editingNetWeightAmount : (item.netWeight > 0 ? item.netWeight.toFixed(2) : '')}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  if (/^\d*\.?\d*$/.test(value)) {
-                                    setEditingNetWeightAmount(value);
-                                    onItemChange(index, 'netWeight', value === '' ? 0 : parseFloat(value));
-                                  }
-                                }}
-                                onFocus={(e) => {
-                                  setEditingNetWeightIndex(index);
-                                  setEditingNetWeightAmount(item.netWeight === 0 ? '' : item.netWeight.toString());
-                                  e.target.select();
-                                  handleIOSInputFocus(e);
-                                }}
-                                onBlur={(e) => {
-                                  setEditingNetWeightIndex(null);
-                                  setEditingNetWeightAmount('');
-                                  const value = parseFloat(e.target.value) || 0;
-                                  if (value > 0) {
-                                    onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
-                                  }
-                                }}
+                      <>
+                      <td className="py-2 px-4 text-center text-[12px]">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={editingNetWeightIndex === index ? editingNetWeightAmount : (item.netWeight > 0 ? item.netWeight.toFixed(2) : '')}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (/^\d*\.?\d*$/.test(value)) {
+                                setEditingNetWeightAmount(value);
+                                onItemChange(index, 'netWeight', value === '' ? 0 : parseFloat(value));
+                              }
+                            }}
+                            onFocus={(e) => {
+                              setEditingNetWeightIndex(index);
+                              setEditingNetWeightAmount(item.netWeight === 0 ? '' : item.netWeight.toString());
+                              e.target.select();
+                              handleIOSInputFocus(e);
+                            }}
+                                                  onBlur={(e) => {
+                        setEditingNetWeightIndex(null);
+                        setEditingNetWeightAmount('');
+                        const value = parseFloat(e.target.value) || 0;
+                        if (value > 0) {
+                          onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
+                        }
+                      }}
                                 className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
-                                placeholder="0.00"
+                            placeholder="0.00"
                                 style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
-                              />
-                            </td>
-                            <td className="py-2 px-4 text-center text-[12px]">
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={editingGrossWeightIndex === index ? editingGrossWeightAmount : (item.grossWeight > 0 ? item.grossWeight.toFixed(2) : '')}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  if (/^\d*\.?\d*$/.test(value)) {
-                                    setEditingGrossWeightAmount(value);
-                                    onItemChange(index, 'grossWeight', value === '' ? 0 : parseFloat(value));
-                                  }
-                                }}
-                                onFocus={(e) => {
-                                  setEditingGrossWeightIndex(index);
-                                  setEditingGrossWeightAmount(item.grossWeight === 0 ? '' : item.grossWeight.toString());
-                                  e.target.select();
-                                  handleIOSInputFocus(e);
-                                }}
-                                onBlur={(e) => {
-                                  setEditingGrossWeightIndex(null);
-                                  setEditingGrossWeightAmount('');
-                                  const value = parseFloat(e.target.value) || 0;
-                                  if (value > 0) {
-                                    onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
-                                  }
-                                }}
+                          />
+                        </td>
+                      <td className="py-2 px-4 text-center text-[12px]">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={editingGrossWeightIndex === index ? editingGrossWeightAmount : (item.grossWeight > 0 ? item.grossWeight.toFixed(2) : '')}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (/^\d*\.?\d*$/.test(value)) {
+                                setEditingGrossWeightAmount(value);
+                                onItemChange(index, 'grossWeight', value === '' ? 0 : parseFloat(value));
+                              }
+                            }}
+                            onFocus={(e) => {
+                              setEditingGrossWeightIndex(index);
+                              setEditingGrossWeightAmount(item.grossWeight === 0 ? '' : item.grossWeight.toString());
+                              e.target.select();
+                              handleIOSInputFocus(e);
+                            }}
+                                                  onBlur={(e) => {
+                        setEditingGrossWeightIndex(null);
+                        setEditingGrossWeightAmount('');
+                        const value = parseFloat(e.target.value) || 0;
+                        if (value > 0) {
+                          onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
+                        }
+                      }}
                                 className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
-                                placeholder="0.00"
+                            placeholder="0.00"
                                 style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
-                              />
-                            </td>
-                            <td className="py-2 px-4 text-center text-[12px]">
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                value={editingPackageQtyIndex === index ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  if (/^\d*$/.test(value)) {
-                                    setEditingPackageQtyAmount(value);
-                                    onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
-                                  }
-                                }}
-                                onFocus={(e) => {
-                                  setEditingPackageQtyIndex(index);
-                                  setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
-                                  e.target.select();
-                                  handleIOSInputFocus(e);
-                                }}
-                                onBlur={() => {
-                                  setEditingPackageQtyIndex(null);
-                                  setEditingPackageQtyAmount('');
-                                }}
+                          />
+                        </td>
+                      <td className="py-2 px-4 text-center text-[12px]">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={editingPackageQtyIndex === index ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (/^\d*$/.test(value)) {
+                                setEditingPackageQtyAmount(value);
+                                onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
+                              }
+                            }}
+                            onFocus={(e) => {
+                              setEditingPackageQtyIndex(index);
+                              setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
+                              e.target.select();
+                              handleIOSInputFocus(e);
+                            }}
+                            onBlur={() => {
+                              setEditingPackageQtyIndex(null);
+                              setEditingPackageQtyAmount('');
+                            }}
                                 className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center font-medium ios-optimized-input"
-                                placeholder="0"
+                            placeholder="0"
                                 style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
-                              />
-                            </td>
-                          </>
+                          />
+                        </td>
+                      </>
                         )
-                      )}
+                    )}
                       {/* 尺寸列合并单元格 */}
-                      {data.showDimensions && (
+                    {data.showDimensions && (
                         isInGroup && isFirstInGroup ? (
                           <td rowSpan={groupRowSpan} className="py-2 px-4 text-center align-middle" style={{verticalAlign:'middle'}}>
                             <div className="flex flex-col justify-center items-center h-full">
@@ -1313,23 +1301,23 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             </div>
                           </td>
                         ) : isInGroup ? null : (
-                          <td className="py-2 px-4 text-center text-[12px]">
-                            <input
-                              type="text"
-                              value={item.dimensions}
-                              onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
+                    <td className="py-2 px-4 text-center text-[12px]">
+                        <input
+                          type="text"
+                          value={item.dimensions}
+                          onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
                               className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
                               placeholder={`Dimensions (${data.dimensionUnit})`}
-                            />
-                          </td>
+                        />
+                      </td>
                         )
-                      )}
-                    </tr>
+                    )}
+                  </tr>
                   );
                 });
               })()}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
 
           {/* Other Fees 表格 */}
           {data.showPrice && data.otherFees && data.otherFees.length > 0 && (

@@ -453,20 +453,44 @@ export default function PackingPage() {
   const handleGenerate = useCallback(async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setIsGenerating(true);
-    
     try {
       // 获取编辑 ID（从 URL 或 state）
       const existingId = editId || (pathname?.startsWith('/packing/edit/') ? pathname.split('/').pop() : undefined);
-      
       // 保存记录
       const saveResult = await savePackingHistory(packingData, existingId);
       if (saveResult && !editId) {
         setEditId(saveResult.id);
       }
-
-      // 生成PDF
-      await generatePackingListPDF(packingData);
-      // 移除成功提示
+      // 生成PDF，直接用页面端的分组统计逻辑
+      const calculateTotals = () => {
+        let totalPrice = 0;
+        let netWeight = 0;
+        let grossWeight = 0;
+        let packageQty = 0;
+        const processedGroups = new Set<string>();
+        packingData.items.forEach((item) => {
+          totalPrice += item.totalPrice;
+          const isInGroup = !!item.groupId;
+          const groupItems = isInGroup ? packingData.items.filter(i => i.groupId === item.groupId) : [];
+          const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
+          if (isInGroup) {
+            if (isFirstInGroup) {
+              netWeight += item.netWeight;
+              grossWeight += item.grossWeight;
+              packageQty += item.packageQty;
+              processedGroups.add(item.groupId!);
+            }
+          } else {
+            netWeight += item.netWeight;
+            grossWeight += item.grossWeight;
+            packageQty += item.packageQty;
+          }
+        });
+        return { totalPrice, netWeight, grossWeight, packageQty };
+      };
+      const totals = calculateTotals();
+      console.log('导出PDF时的totals:', totals);
+      await generatePackingListPDF(packingData, false, totals);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate packing list. Please try again.');

@@ -31,6 +31,7 @@ interface PackingItem {
   packageQty: number;
   dimensions: string;
   unit: string;
+  groupId?: string;
 }
 
 interface PackingData {
@@ -66,10 +67,14 @@ interface TableRow {
 
 // 函数重载签名
 export async function generatePackingListPDF(data: PackingData, preview: true): Promise<string>;
-export async function generatePackingListPDF(data: PackingData, preview?: false): Promise<void>;
+export async function generatePackingListPDF(data: PackingData, preview?: false, totals?: { netWeight: number; grossWeight: number; packageQty: number; totalPrice: number }): Promise<void>;
 
-// 生成箱单PDF - 实现
-export async function generatePackingListPDF(data: PackingData, preview: boolean = false): Promise<string | void> {
+// 新增：导出PDF时可传入页面统计行 totals
+export async function generatePackingListPDF(
+  data: PackingData,
+  preview: boolean = false,
+  totals?: { netWeight: number; grossWeight: number; packageQty: number; totalPrice: number }
+): Promise<string | void> {
   // 创建 PDF 文档
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -141,7 +146,7 @@ export async function generatePackingListPDF(data: PackingData, preview: boolean
     // }
 
     // 商品表格 - 紧跟在基本信息后
-    currentY = await renderPackingTable(doc, data, currentY);
+    currentY = await renderPackingTable(doc, data, currentY, totals);
 
     // 备注
     currentY = renderRemarks(doc, data, currentY, pageWidth, margin);
@@ -352,58 +357,46 @@ function getTableBody(data: PackingData): TableRow[] {
 function getTableFooter(data: PackingData): any[] {
   const footer: any[] = [];
   
-  // 计算总计
-  const totals = data.items.reduce((acc, item) => ({
-    totalPrice: acc.totalPrice + item.totalPrice,
-    netWeight: acc.netWeight + item.netWeight,
-    grossWeight: acc.grossWeight + item.grossWeight,
-    packageQty: acc.packageQty + item.packageQty
-  }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
-
-  // 创建总计行
-  const totalRow: any[] = [];
-
-  // 计算要合并的列数（从 No. 到 U/Price）
-  let colSpanCount = 2; // 基础列数：No., Description
-  if (data.showHsCode) colSpanCount++;
-  colSpanCount += 3; // Qty, Unit, U/Price
-
-  // 合并从 No. 到 U/Price 的列显示 Total
-  totalRow.push({
-    content: 'Total:',
-    colSpan: colSpanCount,
-    styles: { halign: 'left', fontStyle: 'bold' }
+  // 计算总计行（与页面一致：组内只统计合并单元格）
+  let totalPrice = 0;
+  let netWeight = 0;
+  let grossWeight = 0;
+  let packageQty = 0;
+  const processedGroups = new Set<string>();
+  data.items.forEach((item, idx) => {
+    totalPrice += item.totalPrice;
+    const isInGroup = !!item.groupId;
+    const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
+    const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
+    if (isInGroup) {
+      if (isFirstInGroup) {
+        netWeight += item.netWeight;
+        grossWeight += item.grossWeight;
+        packageQty += item.packageQty;
+        processedGroups.add(item.groupId!);
+      }
+    } else {
+      netWeight += item.netWeight;
+      grossWeight += item.grossWeight;
+      packageQty += item.packageQty;
+    }
   });
-
-  // Amount 列
+  // 添加总计行
+  const totalRow = ['Total:'];
+  const mergeColCount = 2 + (data.showHsCode ? 1 : 0) + 2 + (data.showPrice ? 1 : 0);
+  const emptySpaces = new Array(mergeColCount - 1).fill('');
+  totalRow.push(...emptySpaces);
   if (data.showPrice) {
-    totalRow.push({ 
-      content: `${getCurrencySymbol(data.currency)}${formatCurrency(totals.totalPrice)}`,
-      styles: { halign: 'right', fontStyle: 'bold' }
-    });
+    totalRow.push(totalPrice.toFixed(2));
   }
-
-  // Weight 和 Package 相关列
   if (data.showWeightAndPackage) {
-    totalRow.push({ 
-      content: formatNumber(totals.netWeight),
-      styles: { halign: 'right', fontStyle: 'bold' }
-    });
-    totalRow.push({ 
-      content: formatNumber(totals.grossWeight),
-      styles: { halign: 'right', fontStyle: 'bold' }
-    });
-    totalRow.push({ 
-      content: totals.packageQty,
-      styles: { halign: 'center', fontStyle: 'bold' }
-    });
+    totalRow.push(
+      netWeight.toFixed(2),
+      grossWeight.toFixed(2),
+      packageQty.toString()
+    );
   }
-
-  // Dimensions 列
-  if (data.showDimensions) {
-    totalRow.push({ content: '', styles: { fontStyle: 'bold' } });
-  }
-
+  if (data.showDimensions) totalRow.push('');
   footer.push(totalRow);
   return footer;
 }
@@ -513,7 +506,12 @@ function savePackingListPDF(doc: ExtendedJsPDF, data: PackingData): void {
 }
 
 // 渲染商品表格
-async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY: number): Promise<number> {
+async function renderPackingTable(
+  doc: ExtendedJsPDF,
+  data: PackingData,
+  startY: number,
+  totals?: { netWeight: number; grossWeight: number; packageQty: number; totalPrice: number }
+): Promise<number> {
   // 计算页面宽度和边距
   const pageWidth = doc.internal.pageSize.width;
   const margin = 15; // 左右边距各15mm
@@ -669,81 +667,181 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
     headers[0].push(`Dimensions\n(${data.dimensionUnit})`);
   }
 
-  // 准备数据行
-  const body = data.items.map(item => {
-    const row = [
-      item.serialNo,
-      item.description
-    ];
-    
-    if (data.showHsCode) row.push(item.hsCode);
-    
-    row.push(
-      item.quantity.toString(),
-      item.unit
-    );
-    
-    if (data.showPrice) {
-      row.push(
-        item.unitPrice.toFixed(2),
-        item.totalPrice.toFixed(2)
-      );
+  // 准备数据行（支持分组合并单元格）
+  const body: any[] = [];
+  const groupMap: Record<string, PackingItem[]> = {};
+  data.items.forEach(item => {
+    if (item.groupId) {
+      if (!groupMap[item.groupId]) groupMap[item.groupId] = [];
+      groupMap[item.groupId].push(item);
     }
-    
-    if (data.showWeightAndPackage) {
+  });
+  const handledGroupIds = new Set<string>();
+  data.items.forEach((item, idx) => {
+    const isInGroup = !!item.groupId;
+    if (isInGroup) {
+      if (handledGroupIds.has(item.groupId!)) return; // 只处理组内第一行
+      const groupItems = groupMap[item.groupId!];
+      handledGroupIds.add(item.groupId!);
+      // 组内第一行
+      const row: any[] = [
+        groupItems[0].serialNo,
+        groupItems[0].description
+      ];
+      if (data.showHsCode) row.push(groupItems[0].hsCode);
       row.push(
-        item.netWeight.toFixed(2),
-        item.grossWeight.toFixed(2),
-        item.packageQty.toString()
+        groupItems[0].quantity.toString(),
+        groupItems[0].unit
       );
+      if (data.showPrice) {
+        row.push(
+          groupItems[0].unitPrice.toFixed(2),
+          groupItems[0].totalPrice.toFixed(2)
+        );
+      }
+      if (data.showWeightAndPackage) {
+        // 合并单元格，rowSpan=groupItems.length
+        row.push(
+          { content: groupItems[0].netWeight.toFixed(2), rowSpan: groupItems.length, styles: { valign: 'middle', halign: 'center' } },
+          { content: groupItems[0].grossWeight.toFixed(2), rowSpan: groupItems.length, styles: { valign: 'middle', halign: 'center' } },
+          { content: groupItems[0].packageQty.toString(), rowSpan: groupItems.length, styles: { valign: 'middle', halign: 'center' } }
+        );
+      }
+      if (data.showDimensions) {
+        row.push({ content: groupItems[0].dimensions, rowSpan: groupItems.length, styles: { valign: 'middle', halign: 'center' } });
+      }
+      body.push(row);
+      // 组内其他行
+      for (let i = 1; i < groupItems.length; i++) {
+        const sub = groupItems[i];
+        const subRow: any[] = [
+          sub.serialNo,
+          sub.description
+        ];
+        if (data.showHsCode) subRow.push(sub.hsCode);
+        subRow.push(
+          sub.quantity.toString(),
+          sub.unit
+        );
+        if (data.showPrice) {
+          subRow.push(
+            sub.unitPrice.toFixed(2),
+            sub.totalPrice.toFixed(2)
+          );
+        }
+        // 组内其他行不渲染合并列
+        body.push(subRow);
+      }
+    } else {
+      // 普通行
+      const row: any[] = [
+        item.serialNo,
+        item.description
+      ];
+      if (data.showHsCode) row.push(item.hsCode);
+      row.push(
+        item.quantity.toString(),
+        item.unit
+      );
+      if (data.showPrice) {
+        row.push(
+          item.unitPrice.toFixed(2),
+          item.totalPrice.toFixed(2)
+        );
+      }
+      if (data.showWeightAndPackage) {
+        row.push(
+          item.netWeight.toFixed(2),
+          item.grossWeight.toFixed(2),
+          item.packageQty.toString()
+        );
+      }
+      if (data.showDimensions) row.push(item.dimensions);
+      body.push(row);
     }
-    
-    if (data.showDimensions) row.push(item.dimensions);
-    
-    return row;
   });
 
-  // 计算总计行
-  const totals = data.items.reduce((acc, item) => ({
-    totalPrice: acc.totalPrice + item.totalPrice,
-    netWeight: acc.netWeight + item.netWeight,
-    grossWeight: acc.grossWeight + item.grossWeight,
-    packageQty: acc.packageQty + item.packageQty
-  }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
+  // 计算需要合并的列数（No. + Description + HS Code + Qty + Unit + U/Price）
+  let mergeColCount = 2; // No. + Description
+  if (data.showHsCode) mergeColCount += 1;
+  mergeColCount += 2; // Qty + Unit
+  if (data.showPrice) mergeColCount += 1; // U/Price
 
-  // 添加总计行
-  const totalRow = ['Total:'];
+  // 统计总计（分组只统计组内第一行）
+  let netWeight = 0, grossWeight = 0, packageQty = 0, totalPrice = 0;
+  const processedGroups = new Set<string>();
+  data.items.forEach((item) => {
+    totalPrice += item.totalPrice;
+    if (item.groupId) {
+      if (!processedGroups.has(item.groupId)) {
+        netWeight += item.netWeight;
+        grossWeight += item.grossWeight;
+        packageQty += item.packageQty;
+        processedGroups.add(item.groupId);
+      }
+    } else {
+      netWeight += item.netWeight;
+      grossWeight += item.grossWeight;
+      packageQty += item.packageQty;
+    }
+  });
 
-  // 计算需要合并的列数（从No.到Unit列，如果显示U/Price则包含）
-  const mergeColCount = 2 + (data.showHsCode ? 1 : 0) + 2 + (data.showPrice ? 1 : 0); // No., Description, [HS Code], Qty, Unit, [U/Price]
-  const emptySpaces = new Array(mergeColCount - 1).fill('');
-  totalRow.push(...emptySpaces);
-
-  if (data.showPrice) {
-    // 只添加Amount列的值，U/Price已经包含在合并单元格中
-    totalRow.push(totals.totalPrice.toFixed(2));
+  // 添加总计行前调试输出
+  console.log('PDF端自动统计:', { totalPrice, netWeight, grossWeight, packageQty });
+  // 2. 构造总计行，精确对齐表头
+  const totalRow = [];
+  for (let i = 0; i < headers[0].length;) {
+    if (i === 0) {
+      totalRow.push({ content: 'Total:', colSpan: mergeColCount, styles: { halign: 'center', fontStyle: 'bold', font: 'NotoSansSC-bold' } });
+      i += mergeColCount;
+    } else if (headers[0][i].includes('Amount')) {
+      totalRow.push({ content: data.showPrice ? totalPrice.toFixed(2) : '' });
+      i++;
+    } else if (headers[0][i].includes('N.W.')) {
+      totalRow.push({ content: data.showWeightAndPackage ? netWeight.toFixed(2) : '' });
+      i++;
+    } else if (headers[0][i].includes('G.W.')) {
+      totalRow.push({ content: data.showWeightAndPackage ? grossWeight.toFixed(2) : '' });
+      i++;
+    } else if (headers[0][i].includes('Pkgs')) {
+      totalRow.push({ content: data.showWeightAndPackage ? packageQty.toString() : '' });
+      i++;
+    } else {
+      totalRow.push({ content: '' });
+      i++;
+    }
   }
-
-  if (data.showWeightAndPackage) {
-    totalRow.push(
-      totals.netWeight.toFixed(2),
-      totals.grossWeight.toFixed(2),
-      totals.packageQty.toString()
-    );
-  }
-
-  if (data.showDimensions) totalRow.push('');
-
   body.push(totalRow);
 
   // 设置总计行样式
   const totalRowIndex = body.length - 1;
-  const totalStyles: Record<string, { font: string; fontStyle: string }> = {};
+  const totalStyles: Record<string, { font: string; fontStyle: string; halign?: string }> = {};
+  
+  // 为所有列设置粗体样式
   for (let i = 0; i < headers[0].length; i++) {
     totalStyles[`${totalRowIndex}-${i}`] = {
       font: 'NotoSansSC-bold',
       fontStyle: 'bold'
     };
+  }
+  
+  // 为数值列设置居中对齐
+  if (data.showPrice) {
+    const amountColIndex = mergeColCount; // Amount 列在合并列之后
+    totalStyles[`${totalRowIndex}-${amountColIndex}`] = {
+      ...totalStyles[`${totalRowIndex}-${amountColIndex}`],
+      halign: 'center'
+    };
+  }
+  
+  if (data.showWeightAndPackage) {
+    const weightStartIndex = mergeColCount + (data.showPrice ? 1 : 0); // 重量列开始位置
+    for (let i = 0; i < 3; i++) { // 净重、毛重、包装数三列
+      totalStyles[`${totalRowIndex}-${weightStartIndex + i}`] = {
+        ...totalStyles[`${totalRowIndex}-${weightStartIndex + i}`],
+        halign: 'center'
+      };
+    }
   }
 
   // 合并总计行的单元格
@@ -782,6 +880,12 @@ async function renderPackingTable(doc: ExtendedJsPDF, data: PackingData, startY:
         }
         // 为数值列设置居中对齐（除了合并的单元格）
         if (data.column.index >= mergeColCount) {
+          data.cell.styles.halign = 'center';
+        }
+        
+        // 确保总计行的数值正确显示
+        if (data.row.index === totalRowIndex && data.column.index >= mergeColCount) {
+          // 数值列应该居中对齐
           data.cell.styles.halign = 'center';
         }
       }
