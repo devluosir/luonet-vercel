@@ -939,37 +939,37 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               <tr className="border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10
                             bg-[#007AFF]/5 dark:bg-[#0A84FF]/5">
                 <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[40px]">No.</th>
-                                     {data.showHsCode && (
+                {data.showHsCode && (
                   <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[120px]">
                     HS Code
                   </th>
-                   )}
-                <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[150px] md:w-[210px]">Description</th>
-                <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[100px]">Qty</th>
-                <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[100px]">Unit</th>
-                  {data.showPrice && (
-                    <>
-                    <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[130px]">U/Price</th>
-                    <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[150px]">Amount</th>
-                    </>
-                  )}
-                  {data.showWeightAndPackage && (
-                    <>
-                    <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[100px]">
-                      N.W.<br/>(kg)
-                    </th>
-                    <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[100px]">
-                      G.W.<br/>(kg)
-                    </th>
-                    <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[100px]">Pkgs</th>
-                    </>
-                  )}
-                  {data.showDimensions && (
-                  <th className="py-2 px-4 text-center text-[12px] font-bold text-gray-700 dark:text-gray-300 w-[120px]">
-                    Dimensions<br/>({data.dimensionUnit})
+                )}
+                <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[150px] md:w-[210px]">Description</th>
+                <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[100px]">Qty</th>
+                <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[100px]">Unit</th>
+                {data.showPrice && (
+                  <>
+                  <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[130px]">U/Price</th>
+                  <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[150px]">Amount</th>
+                  </>
+                )}
+                {data.showWeightAndPackage && (
+                  <>
+                  <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[100px]">
+                    N.W.<br/> (kg)
                   </th>
-                  )}
-                </tr>
+                  <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[100px]">
+                    G.W.<br/> (kg)
+                  </th>
+                  <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[100px]">Pkgs</th>
+                  </>
+                )}
+                {data.showDimensions && (
+                <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[120px]">
+                  Dimensions<br/>({data.dimensionUnit})
+                </th>
+                )}
+              </tr>
               </thead>
             <tbody>
               {/* 商品行（支持分组合并单元格和分组底色） */}
@@ -1001,30 +1001,29 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         type="text"
                         value={item.hsCode}
                         onChange={(e) => onItemChange(index, 'hsCode', e.target.value)}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
+                            className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
                         placeholder="HS Code"
                       />
                     </td>
                   )}
                   <td className="py-2 px-4 text-center text-[12px]">
-                      <textarea
-                        value={item.description}
-                        onChange={(e) => {
-                          onItemChange(index, 'description', e.target.value);
-                          e.target.style.height = '28px';
-                          e.target.style.height = `${e.target.scrollHeight}px`;
-                        }}
-                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden ios-optimized-input"
-                        style={{ height: '28px' }}
-                        placeholder="Enter product description..."
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.stopPropagation();
-                          }
-                        }}
-                      />
-                    </td>
-                  <td className="py-2 px-4 text-center text-[12px]">
+                    <textarea
+                      value={item.description}
+                      onChange={(e) => {
+                        onItemChange(index, 'description', e.target.value);
+                        e.target.style.height = '28px';
+                        e.target.style.height = `${e.target.scrollHeight}px`;
+                      }}
+                      className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden ios-optimized-input"
+                      style={{ height: '28px' }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.stopPropagation();
+                        }
+                      }}
+                    />
+                  </td>
+                  <td className="py-2 px-4 text-center text-sm">
                       <input
                         type="text"
                         inputMode="numeric"
@@ -1046,16 +1045,16 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           setEditingQtyIndex(null);
                           setEditingQtyAmount('');
                         }}
-                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input"
+                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input"
                         placeholder="0"
                           style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
                       />
                     </td>
-                  <td className="py-2 px-4 text-center text-[12px]">
+                  <td className="py-2 px-4 text-center text-sm">
                       <select
                         value={item.unit}
                         onChange={(e) => handleUnitChange(index, e.target.value)}
-                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center cursor-pointer appearance-none ios-optimized-input"
+                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center cursor-pointer appearance-none ios-optimized-input"
                       >
                         {availableUnits.map(unit => {
                           const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
@@ -1071,7 +1070,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     </td>
                     {data.showPrice && (
                       <>
-                      <td className="py-2 px-4 text-center text-[12px]">
+                      <td className="py-2 px-4 text-center text-sm">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -1093,12 +1092,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               setEditingUnitPriceIndex(null);
                               setEditingUnitPriceAmount('');
                             }}
-                              className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
+                              className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
                             placeholder="0.00"
                               style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
                           />
                         </td>
-                      <td className="py-2 px-4 text-center text-[12px]">
+                      <td className="py-2 px-4 text-center text-sm">
                           <input
                             type="text"
                             value={item.totalPrice.toFixed(2)}
@@ -1186,7 +1185,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         ) : isInGroup ? null : (
                           // 普通行
                       <>
-                      <td className="py-2 px-4 text-center text-[12px]">
+                      <td className="py-2 px-4 text-center text-sm">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -1212,12 +1211,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
                         }
                       }}
-                                className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
+                                className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
                             placeholder="0.00"
                                 style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
                           />
                         </td>
-                      <td className="py-2 px-4 text-center text-[12px]">
+                      <td className="py-2 px-4 text-center text-sm">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -1243,12 +1242,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
                         }
                       }}
-                                className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
+                                className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
                             placeholder="0.00"
                                 style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
                           />
                         </td>
-                      <td className="py-2 px-4 text-center text-[12px]">
+                      <td className="py-2 px-4 text-center text-sm">
                           <input
                             type="text"
                             inputMode="numeric"
@@ -1270,7 +1269,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               setEditingPackageQtyIndex(null);
                               setEditingPackageQtyAmount('');
                             }}
-                                className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center font-medium ios-optimized-input"
+                                className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center font-medium ios-optimized-input"
                             placeholder="0"
                                 style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
                           />
@@ -1301,12 +1300,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             </div>
                           </td>
                         ) : isInGroup ? null : (
-                    <td className="py-2 px-4 text-center text-[12px]">
+                    <td className="py-2 px-4 text-center text-sm">
                         <input
                           type="text"
                           value={item.dimensions}
                           onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
-                              className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
+                              className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
                               placeholder={`Dimensions (${data.dimensionUnit})`}
                         />
                       </td>

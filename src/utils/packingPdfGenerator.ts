@@ -334,7 +334,7 @@ function getTableBody(data: PackingData): TableRow[] {
       index,
       cells: [
         index + 1,
-        item.description,
+        { content: item.description, styles: { halign: 'center' } },
         ...(data.showHsCode ? [item.hsCode] : []),
         quantity || '',
         unit,
@@ -560,7 +560,7 @@ async function renderPackingTable(
     cellWidth: baseWidths.no * unitWidth 
   };
   columnStyles[1] = { 
-    halign: 'left', 
+    halign: 'center', 
     cellWidth: baseWidths.description * unitWidth 
   };
 
