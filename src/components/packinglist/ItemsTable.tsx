@@ -229,7 +229,54 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
   // 计算 Other Fee 总额
   const otherFeesTotal = data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
-  const totalAmount = totals.totalPrice + otherFeesTotal;
+  
+  // 修改总计计算逻辑，对于组内的项目，只计算合并后的那一行的数值
+  const calculateTotals = () => {
+    let totalPrice = 0;
+    let netWeight = 0;
+    let grossWeight = 0;
+    let packageQty = 0;
+
+    // 用于跟踪已经计算过的组
+    const processedGroups = new Set<string>();
+
+    data.items.forEach((item, index) => {
+      // 计算总价格（所有行都要计算）
+      totalPrice += item.totalPrice;
+
+      // 检查当前项目是否在组内
+      const isInGroup = item.groupId && data.isInGroupMode;
+      const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
+      const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
+
+      if (isInGroup) {
+        // 组内项目
+        if (isFirstInGroup) {
+          // 只计算组内第一行的重量和包装数量
+          netWeight += item.netWeight;
+          grossWeight += item.grossWeight;
+          packageQty += item.packageQty;
+          processedGroups.add(item.groupId!);
+        }
+        // 组内其他行不计算重量和包装数量
+      } else {
+        // 普通行，正常计算
+        netWeight += item.netWeight;
+        grossWeight += item.grossWeight;
+        packageQty += item.packageQty;
+      }
+    });
+
+    return {
+      totalPrice,
+      netWeight,
+      grossWeight,
+      packageQty
+    };
+  };
+
+  const calculatedTotals = calculateTotals();
+  const totalAmount = calculatedTotals.totalPrice + otherFeesTotal;
 
   // 处理分组数据渲染
   const renderGroupedItems = () => {
@@ -868,15 +915,15 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   <>
                     <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
                       <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total N.W.</div>
-                      <div className="text-sm sm:text-base font-medium">{totals.netWeight.toFixed(2)} KGS</div>
+                      <div className="text-sm sm:text-base font-medium">{calculatedTotals.netWeight.toFixed(2)} KGS</div>
                     </div>
                     <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
                       <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total G.W.</div>
-                      <div className="text-sm sm:text-base font-medium">{totals.grossWeight.toFixed(2)} KGS</div>
+                      <div className="text-sm sm:text-base font-medium">{calculatedTotals.grossWeight.toFixed(2)} KGS</div>
                     </div>
                     <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
                       <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total Package</div>
-                      <div className="text-sm sm:text-base font-medium">{totals.packageQty} CTNS</div>
+                      <div className="text-sm sm:text-base font-medium">{calculatedTotals.packageQty} CTNS</div>
                     </div>
                   </>
                 )}
@@ -1436,15 +1483,15 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     <>
                       <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
                         <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total N.W.</div>
-                        <div className="text-sm sm:text-base font-medium">{totals.netWeight.toFixed(2)} KGS</div>
+                        <div className="text-sm sm:text-base font-medium">{calculatedTotals.netWeight.toFixed(2)} KGS</div>
                       </div>
                       <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
                         <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total G.W.</div>
-                        <div className="text-sm sm:text-base font-medium">{totals.grossWeight.toFixed(2)} KGS</div>
+                        <div className="text-sm sm:text-base font-medium">{calculatedTotals.grossWeight.toFixed(2)} KGS</div>
                       </div>
                       <div className="text-center sm:text-right bg-white/80 dark:bg-[#1C1C1E]/80 rounded-lg p-2 sm:p-0 sm:bg-transparent sm:dark:bg-transparent">
                         <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">Total Package</div>
-                        <div className="text-sm sm:text-base font-medium">{totals.packageQty} CTNS</div>
+                        <div className="text-sm sm:text-base font-medium">{calculatedTotals.packageQty} CTNS</div>
                       </div>
                     </>
                   )}
