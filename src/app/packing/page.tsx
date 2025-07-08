@@ -58,6 +58,7 @@ interface PackingItem {
   packageQty: number;
   dimensions: string;
   unit: string;
+  groupId?: string;
 }
 
 interface OtherFee {
@@ -101,6 +102,8 @@ interface PackingData {
     headerType: 'none' | 'bilingual' | 'english';
   };
   customUnits?: string[];
+  isInGroupMode: boolean;
+  currentGroupId?: string;
 }
 
 interface CustomWindow extends Window {
@@ -270,7 +273,9 @@ export default function PackingPage() {
     templateConfig: {
       headerType: 'bilingual'
     },
-    customUnits: []
+    customUnits: [],
+    isInGroupMode: false,
+    currentGroupId: undefined
   });
 
   // 清除注入的数据
@@ -362,9 +367,8 @@ export default function PackingPage() {
 
   // 添加新行
   const handleAddLine = () => {
-    setPackingData(prev => ({
-      ...prev,
-      items: [...prev.items, {
+    setPackingData(prev => {
+      const newItem: PackingItem = {
         id: prev.items.length + 1,
         serialNo: (prev.items.length + 1).toString(),
         description: '',
@@ -377,8 +381,18 @@ export default function PackingPage() {
         packageQty: 0,
         dimensions: '',
         unit: 'pc'
-      }]
-    }));
+      };
+
+      // 如果在分组模式中，为新行分配组ID
+      if (prev.isInGroupMode && prev.currentGroupId) {
+        newItem.groupId = prev.currentGroupId;
+      }
+
+      return {
+        ...prev,
+        items: [...prev.items, newItem]
+      };
+    });
   };
 
   // 删除行
@@ -389,6 +403,25 @@ export default function PackingPage() {
         items: prev.items.filter((_, i) => i !== index)
       }));
     }
+  };
+
+  // 进入分组模式
+  const handleEnterGroupMode = () => {
+    const groupId = `group_${Date.now()}`;
+    setPackingData(prev => ({
+      ...prev,
+      isInGroupMode: true,
+      currentGroupId: groupId
+    }));
+  };
+
+  // 退出分组模式
+  const handleExitGroupMode = () => {
+    setPackingData(prev => ({
+      ...prev,
+      isInGroupMode: false,
+      currentGroupId: undefined
+    }));
   };
 
   // 设置面板回调函数
@@ -782,7 +815,9 @@ export default function PackingPage() {
                     showPrice: packingData.showPrice,
                     dimensionUnit: packingData.dimensionUnit,
                     currency: packingData.currency,
-                    customUnits: packingData.customUnits
+                    customUnits: packingData.customUnits,
+                    isInGroupMode: packingData.isInGroupMode,
+                    currentGroupId: packingData.currentGroupId
                   }}
                   onItemChange={updateLineItem}
                   onAddLine={handleAddLine}
@@ -795,12 +830,29 @@ export default function PackingPage() {
                   setEditingFeeIndex={setEditingFeeIndex}
                   setEditingFeeAmount={setEditingFeeAmount}
                   totals={totals}
+                  onEnterGroupMode={handleEnterGroupMode}
+                  onExitGroupMode={handleExitGroupMode}
                 />
               </div>
 
               {/* 添加行按钮 - 大屏显示 */}
               <div className="hidden sm:block px-4 sm:px-6 py-4">
                 <div className="flex items-center gap-2 sm:gap-3">
+                  {/* 分组按钮 */}
+                  <button
+                    type="button"
+                    onClick={packingData.isInGroupMode ? handleExitGroupMode : handleEnterGroupMode}
+                    className={`px-2 sm:px-3 h-7 rounded-lg whitespace-nowrap text-[13px] font-medium
+                      flex items-center gap-1 transition-all duration-200 ${
+                        packingData.isInGroupMode 
+                          ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
+                          : 'bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08] hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12] text-[#007AFF] dark:text-[#0A84FF]'
+                      }`}
+                  >
+                    <span className="text-lg leading-none translate-y-[-1px]">+</span>
+                    <span>{packingData.isInGroupMode ? 'Exit Group' : 'Add Group'}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={handleAddLine}
@@ -838,7 +890,22 @@ export default function PackingPage() {
               {/* 添加行按钮 - 小屏显示 */}
               <div className="block sm:hidden px-4 py-3">
                 <div className="bg-[#F5F5F7]/50 dark:bg-[#2C2C2E]/50 rounded-xl p-2.5">
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* 分组按钮 */}
+                    <button
+                      type="button"
+                      onClick={packingData.isInGroupMode ? handleExitGroupMode : handleEnterGroupMode}
+                      className={`px-2 h-8 rounded-lg whitespace-nowrap text-[13px] font-medium
+                        flex items-center justify-center gap-1 transition-all duration-200 ${
+                          packingData.isInGroupMode 
+                            ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
+                            : 'bg-white/80 dark:bg-[#1C1C1E]/80 hover:bg-white dark:hover:bg-[#1C1C1E] text-[#007AFF] dark:text-[#0A84FF]'
+                        }`}
+                    >
+                      <span className="text-lg leading-none translate-y-[-1px]">+</span>
+                      <span>{packingData.isInGroupMode ? 'Exit' : 'Group'}</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={handleAddLine}
