@@ -306,159 +306,242 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     <div className="space-y-0">
       {/* 移动端和平板卡片视图 - 调整断点为 xl (1280px) */}
       <div className="block lg:hidden space-y-4">
-        {renderGroupedItems().map((group, groupIndex) => (
-          group.items.map((item, itemIndex) => {
-            const actualIndex = data.items.findIndex(i => i.id === item.id);
-            const isFirstInGroup = itemIndex === 0;
-            const isLastInGroup = itemIndex === group.items.length - 1;
-            
-            return (
-              <div key={item.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  {group.isGroup && isFirstInGroup ? (
-                    // 分组模式下，只在第一行显示行号
-                    <span className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Item #{actualIndex + 1}</span>
-                  ) : !group.isGroup ? (
-                    // 非分组模式下，显示行号
-                    <span className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Item #{actualIndex + 1}</span>
-                  ) : (
-                    // 分组模式下，非第一行显示空
-                    <span className="text-sm font-medium text-[#86868B] dark:text-[#86868B]">-</span>
-                  )}
-                  {data.items.length > 1 && (!group.isGroup || isFirstInGroup) && (
-                    <button
-                      onClick={() => handleSoftDelete(actualIndex)}
-                      className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors text-xs"
-                    >
-                      ×
-                    </button>
-                  )}
+        {data.items.map((item, index) => {
+          // 检查当前项目是否在组内
+          const isInGroup = item.groupId && data.isInGroupMode;
+          const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
+          const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
+          
+          return (
+            <div key={item.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Item #{index + 1}</span>
+                {data.items.length > 1 && (
+                  <button
+                    onClick={() => handleSoftDelete(index)}
+                    className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors text-xs"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* 描述 */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
+                  <textarea
+                    value={item.description}
+                    onChange={(e) => {
+                      onItemChange(index, 'description', e.target.value);
+                      e.target.style.height = '28px';
+                      e.target.style.height = `${e.target.scrollHeight}px`;
+                    }}
+                    className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                      focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                      text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                      placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                      transition-all duration-200 resize-none overflow-hidden min-h-[60px]
+                      ios-optimized-input"
+                    placeholder="Enter product description..."
+                  />
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* 描述 */}
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
-                    <textarea
-                      value={item.description}
-                      onChange={(e) => {
-                        onItemChange(actualIndex, 'description', e.target.value);
-                        e.target.style.height = '28px';
-                        e.target.style.height = `${e.target.scrollHeight}px`;
-                      }}
+                {/* HS Code */}
+                {data.showHsCode && (
+                  <div>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">HS Code</label>
+                    <input
+                      type="text"
+                      value={item.hsCode}
+                      onChange={(e) => onItemChange(index, 'hsCode', e.target.value)}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                         text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                         placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                        transition-all duration-200 resize-none overflow-hidden min-h-[60px]
                         ios-optimized-input"
-                      placeholder="Enter product description..."
+                      placeholder="HS Code"
                     />
                   </div>
-                  
-                  {/* HS Code */}
-                  {data.showHsCode && (
+                )}
+                
+                {/* 数量 */}
+                <div>
+                  <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={editingQtyIndex === index ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (/^\d*$/.test(value)) {
+                        setEditingQtyAmount(value);
+                        handleQuantityChange(index, value === '' ? 0 : parseInt(value));
+                      }
+                    }}
+                    onFocus={(e) => {
+                      setEditingQtyIndex(index);
+                      setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
+                      e.target.select();
+                      handleIOSInputFocus(e);
+                    }}
+                    onBlur={() => {
+                      setEditingQtyIndex(null);
+                      setEditingQtyAmount('');
+                    }}
+                    className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                      focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                      text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
+                      [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                      ios-optimized-input"
+                    placeholder="0"
+                    style={{
+                      ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                    }}
+                  />
+                </div>
+                
+                {/* 单位 */}
+                <div>
+                  <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
+                  <select
+                    value={item.unit}
+                    onChange={(e) => handleUnitChange(index, e.target.value)}
+                    className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                      focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                      text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center cursor-pointer appearance-none
+                      ios-optimized-input"
+                  >
+                    {availableUnits.map(unit => {
+                      const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
+                        ? getUnitDisplay(unit, item.quantity) 
+                        : unit;
+                      return (
+                        <option key={unit} value={displayUnit}>
+                          {displayUnit}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* 价格相关字段 */}
+                {data.showPrice && (
+                  <>
                     <div>
-                      <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">HS Code</label>
+                      <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit Price</label>
                       <input
                         type="text"
-                        value={item.hsCode}
-                        onChange={(e) => onItemChange(actualIndex, 'hsCode', e.target.value)}
+                        inputMode="decimal"
+                        value={editingUnitPriceIndex === index ? editingUnitPriceAmount : item.unitPrice.toFixed(2)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^\d*\.?\d*$/.test(value)) {
+                            setEditingUnitPriceAmount(value);
+                            onItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
+                          }
+                        }}
+                        onFocus={(e) => {
+                          setEditingUnitPriceIndex(index);
+                          setEditingUnitPriceAmount(item.unitPrice === 0 ? '' : item.unitPrice.toString());
+                          e.target.select();
+                          handleIOSInputFocus(e);
+                        }}
+                        onBlur={() => {
+                          setEditingUnitPriceIndex(null);
+                          setEditingUnitPriceAmount('');
+                        }}
                         className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                           focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                          placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                           ios-optimized-input"
-                        placeholder="HS Code"
+                        placeholder="0.00"
+                        style={{
+                          ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                        }}
                       />
                     </div>
-                  )}
-                  
-                  {/* 数量 */}
-                  <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={editingQtyIndex === actualIndex ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (/^\d*$/.test(value)) {
-                          setEditingQtyAmount(value);
-                          handleQuantityChange(actualIndex, value === '' ? 0 : parseInt(value));
-                        }
-                      }}
-                      onFocus={(e) => {
-                        setEditingQtyIndex(actualIndex);
-                        setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
-                        e.target.select();
-                        handleIOSInputFocus(e);
-                      }}
-                      onBlur={() => {
-                        setEditingQtyIndex(null);
-                        setEditingQtyAmount('');
-                      }}
-                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
-                        [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                        ios-optimized-input"
-                      placeholder="0"
-                      style={{
-                        ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                      }}
-                    />
-                  </div>
-                  
-                  {/* 单位 */}
-                  <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
-                    <select
-                      value={item.unit}
-                      onChange={(e) => handleUnitChange(actualIndex, e.target.value)}
-                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center cursor-pointer appearance-none
-                        ios-optimized-input"
-                    >
-                      {availableUnits.map(unit => {
-                        const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
-                          ? getUnitDisplay(unit, item.quantity) 
-                          : unit;
-                        return (
-                          <option key={unit} value={displayUnit}>
-                            {displayUnit}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Total Amount</label>
+                      <input
+                        type="text"
+                        value={item.totalPrice.toFixed(2)}
+                        readOnly
+                        className={`${baseInputClassName} text-center`}
+                        style={iosCaretStyle}
+                      />
+                    </div>
+                  </>
+                )}
 
-                  {/* 价格相关字段 */}
-                  {data.showPrice && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit Price</label>
+                {/* 重量和包装字段 */}
+                {data.showWeightAndPackage && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Net Weight (kg)</label>
+                      {isInGroup && isFirstInGroup ? (
+                        // 组内第一行显示合并的重量，可编辑
                         <input
                           type="text"
                           inputMode="decimal"
-                          value={editingUnitPriceIndex === actualIndex ? editingUnitPriceAmount : item.unitPrice.toFixed(2)}
+                          value={item.netWeight > 0 ? item.netWeight.toFixed(2) : ''}
                           onChange={(e) => {
                             const value = e.target.value;
                             if (/^\d*\.?\d*$/.test(value)) {
-                              setEditingUnitPriceAmount(value);
-                              onItemChange(actualIndex, 'unitPrice', value === '' ? 0 : parseFloat(value));
+                              const newWeight = value === '' ? 0 : parseFloat(value);
+                              // 更新组内所有项目的净重
+                              groupItems.forEach((groupItem) => {
+                                const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
+                                if (itemIndex !== -1) {
+                                  onItemChange(itemIndex, 'netWeight', newWeight);
+                                }
+                              });
                             }
                           }}
                           onFocus={(e) => {
-                            setEditingUnitPriceIndex(actualIndex);
-                            setEditingUnitPriceAmount(item.unitPrice === 0 ? '' : item.unitPrice.toString());
                             e.target.select();
                             handleIOSInputFocus(e);
                           }}
-                          onBlur={() => {
-                            setEditingUnitPriceIndex(null);
-                            setEditingUnitPriceAmount('');
+                          className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center font-medium
+                            ios-optimized-input"
+                          placeholder="0.00"
+                          style={{
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                          }}
+                        />
+                      ) : isInGroup ? (
+                        // 组内其他行显示合并的重量，只读
+                        <div className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg text-[13px] text-[#86868B] dark:text-[#86868B] text-center">
+                          {item.netWeight > 0 ? item.netWeight.toFixed(2) : ''}
+                        </div>
+                      ) : (
+                        // 普通行显示可编辑的输入框
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={editingNetWeightIndex === index ? editingNetWeightAmount : (item.netWeight > 0 ? item.netWeight.toFixed(2) : '')}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*\.?\d*$/.test(value)) {
+                              setEditingNetWeightAmount(value);
+                              onItemChange(index, 'netWeight', value === '' ? 0 : parseFloat(value));
+                            }
+                          }}
+                          onFocus={(e) => {
+                            setEditingNetWeightIndex(index);
+                            setEditingNetWeightAmount(item.netWeight === 0 ? '' : item.netWeight.toString());
+                            e.target.select();
+                            handleIOSInputFocus(e);
+                          }}
+                          onBlur={(e) => {
+                            setEditingNetWeightIndex(null);
+                            setEditingNetWeightAmount('');
+                            const value = parseFloat(e.target.value) || 0;
+                            if (value > 0) {
+                              onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
+                            }
                           }}
                           className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
@@ -469,317 +552,214 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                           }}
                         />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Total Amount</label>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Gross Weight (kg)</label>
+                      {isInGroup && isFirstInGroup ? (
+                        // 组内第一行显示合并的重量，可编辑
                         <input
                           type="text"
-                          value={item.totalPrice.toFixed(2)}
-                          readOnly
-                          className={`${baseInputClassName} text-center`}
-                          style={iosCaretStyle}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {/* 重量和包装字段 */}
-                  {data.showWeightAndPackage && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Net Weight (kg)</label>
-                        {group.isGroup && isFirstInGroup ? (
-                          // 分组模式下，只在第一行显示合并的重量，可编辑
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={group.groupTotals.netWeight > 0 ? group.groupTotals.netWeight.toFixed(2) : ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*\.?\d*$/.test(value)) {
-                                const newWeight = value === '' ? 0 : parseFloat(value);
-                                // 更新组内所有项目的净重
-                                group.items.forEach((groupItem) => {
-                                  const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
-                                  if (itemIndex !== -1) {
-                                    onItemChange(itemIndex, 'netWeight', newWeight);
-                                  }
-                                });
-                              }
-                            }}
-                            onFocus={(e) => {
-                              e.target.select();
-                              handleIOSInputFocus(e);
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center font-medium
-                              ios-optimized-input"
-                            placeholder="0.00"
-                            style={{
-                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                            }}
-                          />
-                        ) : !group.isGroup ? (
-                          // 非分组模式下，显示可编辑的输入框
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={editingNetWeightIndex === actualIndex ? editingNetWeightAmount : (item.netWeight > 0 ? item.netWeight.toFixed(2) : '')}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*\.?\d*$/.test(value)) {
-                                setEditingNetWeightAmount(value);
-                                onItemChange(actualIndex, 'netWeight', value === '' ? 0 : parseFloat(value));
-                              }
-                            }}
-                            onFocus={(e) => {
-                              setEditingNetWeightIndex(actualIndex);
-                              setEditingNetWeightAmount(item.netWeight === 0 ? '' : item.netWeight.toString());
-                              e.target.select();
-                              handleIOSInputFocus(e);
-                            }}
-                            onBlur={(e) => {
-                              setEditingNetWeightIndex(null);
-                              setEditingNetWeightAmount('');
-                              const value = parseFloat(e.target.value) || 0;
-                              if (value > 0) {
-                                onItemChange(actualIndex, 'netWeight', parseFloat(value.toFixed(2)));
-                              }
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center
-                              ios-optimized-input"
-                            placeholder="0.00"
-                            style={{
-                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                            }}
-                          />
-                        ) : (
-                          // 分组模式下，非第一行显示空
-                          <div></div>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Gross Weight (kg)</label>
-                        {group.isGroup && isFirstInGroup ? (
-                          // 分组模式下，只在第一行显示合并的重量，可编辑
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={group.groupTotals.grossWeight > 0 ? group.groupTotals.grossWeight.toFixed(2) : ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*\.?\d*$/.test(value)) {
-                                const newWeight = value === '' ? 0 : parseFloat(value);
-                                // 更新组内所有项目的毛重
-                                group.items.forEach((groupItem) => {
-                                  const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
-                                  if (itemIndex !== -1) {
-                                    onItemChange(itemIndex, 'grossWeight', newWeight);
-                                  }
-                                });
-                              }
-                            }}
-                            onFocus={(e) => {
-                              e.target.select();
-                              handleIOSInputFocus(e);
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center font-medium
-                              ios-optimized-input"
-                            placeholder="0.00"
-                            style={{
-                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                            }}
-                          />
-                        ) : !group.isGroup ? (
-                          // 非分组模式下，显示可编辑的输入框
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={editingGrossWeightIndex === actualIndex ? editingGrossWeightAmount : (item.grossWeight > 0 ? item.grossWeight.toFixed(2) : '')}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*\.?\d*$/.test(value)) {
-                                setEditingGrossWeightAmount(value);
-                                onItemChange(actualIndex, 'grossWeight', value === '' ? 0 : parseFloat(value));
-                              }
-                            }}
-                            onFocus={(e) => {
-                              setEditingGrossWeightIndex(actualIndex);
-                              setEditingGrossWeightAmount(item.grossWeight === 0 ? '' : item.grossWeight.toString());
-                              e.target.select();
-                              handleIOSInputFocus(e);
-                            }}
-                            onBlur={(e) => {
-                              setEditingGrossWeightIndex(null);
-                              setEditingGrossWeightAmount('');
-                              const value = parseFloat(e.target.value) || 0;
-                              if (value > 0) {
-                                onItemChange(actualIndex, 'grossWeight', parseFloat(value.toFixed(2)));
-                              }
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center
-                              ios-optimized-input"
-                            placeholder="0.00"
-                            style={{
-                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                            }}
-                          />
-                        ) : (
-                          // 分组模式下，非第一行显示空
-                          <div></div>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Packages</label>
-                        {group.isGroup && isFirstInGroup ? (
-                          // 分组模式下，只在第一行显示合并的包装数量，可编辑
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={group.groupTotals.packageQty > 0 ? group.groupTotals.packageQty.toString() : ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*$/.test(value)) {
-                                const newPackageQty = value === '' ? 0 : parseInt(value);
-                                // 更新组内所有项目的包装数量
-                                group.items.forEach((groupItem) => {
-                                  const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
-                                  if (itemIndex !== -1) {
-                                    onItemChange(itemIndex, 'packageQty', newPackageQty);
-                                  }
-                                });
-                              }
-                            }}
-                            onFocus={(e) => {
-                              e.target.select();
-                              handleIOSInputFocus(e);
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center font-medium
-                              ios-optimized-input"
-                            placeholder="0"
-                            style={{
-                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                            }}
-                          />
-                        ) : !group.isGroup ? (
-                          // 非分组模式下，显示可编辑的输入框
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={editingPackageQtyIndex === actualIndex ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*$/.test(value)) {
-                                setEditingPackageQtyAmount(value);
-                                onItemChange(actualIndex, 'packageQty', value === '' ? 0 : parseInt(value));
-                              }
-                            }}
-                            onFocus={(e) => {
-                              setEditingPackageQtyIndex(actualIndex);
-                              setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
-                              e.target.select();
-                              handleIOSInputFocus(e);
-                            }}
-                            onBlur={() => {
-                              setEditingPackageQtyIndex(null);
-                              setEditingPackageQtyAmount('');
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent
-                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                              transition-all duration-200 text-center
-                              ios-optimized-input"
-                            placeholder="0"
-                            style={{
-                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                            }}
-                          />
-                        ) : (
-                          // 分组模式下，非第一行显示空
-                          <div></div>
-                        )}
-                      </div>
-                    </>
-                  )}
-
-                  {/* 尺寸字段 */}
-                  {data.showDimensions && (
-                    <div className={data.showWeightAndPackage ? "" : "sm:col-span-2"}>
-                      <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">
-                        Dimensions ({data.dimensionUnit})
-                      </label>
-                      {group.isGroup && isFirstInGroup ? (
-                        // 分组模式下，只在第一行显示合并的尺寸，可编辑
-                        <input
-                          type="text"
-                          value={group.groupTotals.dimensions || ''}
+                          inputMode="decimal"
+                          value={item.grossWeight > 0 ? item.grossWeight.toFixed(2) : ''}
                           onChange={(e) => {
-                            const newDimensions = e.target.value;
-                            // 更新组内所有项目的尺寸
-                            group.items.forEach((groupItem) => {
-                              const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
-                              if (itemIndex !== -1) {
-                                onItemChange(itemIndex, 'dimensions', newDimensions);
-                              }
-                            });
+                            const value = e.target.value;
+                            if (/^\d*\.?\d*$/.test(value)) {
+                              const newWeight = value === '' ? 0 : parseFloat(value);
+                              // 更新组内所有项目的毛重
+                              groupItems.forEach((groupItem) => {
+                                const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
+                                if (itemIndex !== -1) {
+                                  onItemChange(itemIndex, 'grossWeight', newWeight);
+                                }
+                              });
+                            }
+                          }}
+                          onFocus={(e) => {
+                            e.target.select();
+                            handleIOSInputFocus(e);
                           }}
                           className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center font-medium
                             ios-optimized-input"
-                          placeholder={`Dimensions (${data.dimensionUnit})`}
+                          placeholder="0.00"
+                          style={{
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                          }}
                         />
-                      ) : !group.isGroup ? (
-                        // 非分组模式下，显示可编辑的输入框
+                      ) : isInGroup ? (
+                        // 组内其他行显示合并的重量，只读
+                        <div className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg text-[13px] text-[#86868B] dark:text-[#86868B] text-center">
+                          {item.grossWeight > 0 ? item.grossWeight.toFixed(2) : ''}
+                        </div>
+                      ) : (
+                        // 普通行显示可编辑的输入框
                         <input
                           type="text"
-                          value={item.dimensions}
-                          onChange={(e) => onItemChange(actualIndex, 'dimensions', e.target.value)}
+                          inputMode="decimal"
+                          value={editingGrossWeightIndex === index ? editingGrossWeightAmount : (item.grossWeight > 0 ? item.grossWeight.toFixed(2) : '')}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*\.?\d*$/.test(value)) {
+                              setEditingGrossWeightAmount(value);
+                              onItemChange(index, 'grossWeight', value === '' ? 0 : parseFloat(value));
+                            }
+                          }}
+                          onFocus={(e) => {
+                            setEditingGrossWeightIndex(index);
+                            setEditingGrossWeightAmount(item.grossWeight === 0 ? '' : item.grossWeight.toString());
+                            e.target.select();
+                            handleIOSInputFocus(e);
+                          }}
+                          onBlur={(e) => {
+                            setEditingGrossWeightIndex(null);
+                            setEditingGrossWeightAmount('');
+                            const value = parseFloat(e.target.value) || 0;
+                            if (value > 0) {
+                              onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
+                            }
+                          }}
                           className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                             text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
                             ios-optimized-input"
-                          placeholder={`Dimensions (${data.dimensionUnit})`}
+                          placeholder="0.00"
+                          style={{
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                          }}
                         />
-                      ) : (
-                        // 分组模式下，非第一行显示空
-                        <div className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg text-[13px] text-[#86868B] dark:text-[#86868B] text-center">
-                          -
-                        </div>
                       )}
                     </div>
-                  )}
-                </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Packages</label>
+                      {isInGroup && isFirstInGroup ? (
+                        // 组内第一行显示合并的包装数量，可编辑
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={item.packageQty > 0 ? item.packageQty.toString() : ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*$/.test(value)) {
+                              const newPackageQty = value === '' ? 0 : parseInt(value);
+                              // 更新组内所有项目的包装数量
+                              groupItems.forEach((groupItem) => {
+                                const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
+                                if (itemIndex !== -1) {
+                                  onItemChange(itemIndex, 'packageQty', newPackageQty);
+                                }
+                              });
+                            }
+                          }}
+                          onFocus={(e) => {
+                            e.target.select();
+                            handleIOSInputFocus(e);
+                          }}
+                          className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center font-medium
+                            ios-optimized-input"
+                          placeholder="0"
+                          style={{
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                          }}
+                        />
+                      ) : isInGroup ? (
+                        // 组内其他行显示合并的包装数量，只读
+                        <div className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg text-[13px] text-[#86868B] dark:text-[#86868B] text-center">
+                          {item.packageQty > 0 ? item.packageQty.toString() : ''}
+                        </div>
+                      ) : (
+                        // 普通行显示可编辑的输入框
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={editingPackageQtyIndex === index ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*$/.test(value)) {
+                              setEditingPackageQtyAmount(value);
+                              onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
+                            }
+                          }}
+                          onFocus={(e) => {
+                            setEditingPackageQtyIndex(index);
+                            setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
+                            e.target.select();
+                            handleIOSInputFocus(e);
+                          }}
+                          onBlur={() => {
+                            setEditingPackageQtyIndex(null);
+                            setEditingPackageQtyAmount('');
+                          }}
+                          className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                            transition-all duration-200 text-center
+                            ios-optimized-input"
+                          placeholder="0"
+                          style={{
+                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                          }}
+                        />
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* 尺寸字段 */}
+                {data.showDimensions && (
+                  <div className={data.showWeightAndPackage ? "" : "sm:col-span-2"}>
+                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">
+                      Dimensions ({data.dimensionUnit})
+                    </label>
+                    {isInGroup && isFirstInGroup ? (
+                      // 组内第一行显示合并的尺寸，可编辑
+                      <input
+                        type="text"
+                        value={item.dimensions}
+                        onChange={(e) => {
+                          const newDimensions = e.target.value;
+                          // 更新组内所有项目的尺寸
+                          groupItems.forEach((groupItem) => {
+                            const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
+                            if (itemIndex !== -1) {
+                              onItemChange(itemIndex, 'dimensions', newDimensions);
+                            }
+                          });
+                        }}
+                        className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                          focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center font-medium
+                          ios-optimized-input"
+                        placeholder={`Dimensions (${data.dimensionUnit})`}
+                      />
+                    ) : isInGroup ? (
+                      // 组内其他行显示合并的尺寸，只读
+                      <div className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg text-[13px] text-[#86868B] dark:text-[#86868B] text-center">
+                        {item.dimensions}
+                      </div>
+                    ) : (
+                      // 普通行显示可编辑的输入框
+                      <input
+                        type="text"
+                        value={item.dimensions}
+                        onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
+                        className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                          focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
+                          ios-optimized-input"
+                        placeholder={`Dimensions (${data.dimensionUnit})`}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
-            );
-          })
-        ))}
+            </div>
+          );
+        })}
         
         {/* 移动端按钮区域 */}
         <div className="space-y-3">
@@ -958,50 +938,32 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               </thead>
             <tbody>
               {/* 商品行 */}
-              {renderGroupedItems().map((group, groupIndex) => (
-                group.items.map((item, itemIndex) => {
-                  const actualIndex = data.items.findIndex(i => i.id === item.id);
-                  const isFirstInGroup = itemIndex === 0;
-                  const isLastInGroup = itemIndex === group.items.length - 1;
-                  
-                  return (
+              {data.items.map((item, index) => {
+                // 检查当前项目是否在组内
+                const isInGroup = item.groupId && data.isInGroupMode;
+                const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
+                const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
+                
+                return (
                 <tr key={item.id} className="border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10">
                   <td className="py-2 px-4 text-center text-sm bg-white/90 dark:bg-[#1C1C1E]/90">
-                    {group.isGroup && isFirstInGroup ? (
-                      // 分组模式下，只在第一行显示行号
-                      <span 
-                        className="flex items-center justify-center w-5 h-5 rounded-full 
-                          text-xs text-gray-400
-                          hover:bg-red-100 hover:text-red-600 
-                          cursor-pointer transition-colors"
-                        onClick={() => handleSoftDelete(actualIndex)}
-                        title="Click to delete"
-                      >
-                        {actualIndex + 1}
-                      </span>
-                    ) : !group.isGroup ? (
-                      // 非分组模式下，显示行号
-                      <span 
-                        className="flex items-center justify-center w-5 h-5 rounded-full 
-                          text-xs text-gray-400
-                          hover:bg-red-100 hover:text-red-600 
-                          cursor-pointer transition-colors"
-                        onClick={() => handleSoftDelete(actualIndex)}
-                        title="Click to delete"
-                      >
-                        {actualIndex + 1}
-                      </span>
-                    ) : (
-                      // 分组模式下，非第一行显示空
-                      <div></div>
-                    )}
+                    <span 
+                      className="flex items-center justify-center w-5 h-5 rounded-full 
+                        text-xs text-gray-400
+                        hover:bg-red-100 hover:text-red-600 
+                        cursor-pointer transition-colors"
+                      onClick={() => handleSoftDelete(index)}
+                      title="Click to delete"
+                    >
+                      {index + 1}
+                    </span>
                   </td>
                   {data.showHsCode && (
                     <td className="py-2 px-4 text-center text-sm">
                       <input
                         type="text"
                         value={item.hsCode}
-                        onChange={(e) => onItemChange(actualIndex, 'hsCode', e.target.value)}
+                        onChange={(e) => onItemChange(index, 'hsCode', e.target.value)}
                         className="w-full px-3 py-1.5 bg-transparent border border-transparent
                           focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                           hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
@@ -1017,7 +979,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     <textarea
                       value={item.description}
                       onChange={(e) => {
-                        onItemChange(actualIndex, 'description', e.target.value);
+                        onItemChange(index, 'description', e.target.value);
                         e.target.style.height = '28px';
                         e.target.style.height = `${e.target.scrollHeight}px`;
                       }}
@@ -1041,16 +1003,16 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     <input
                       type="text"
                       inputMode="numeric"
-                      value={editingQtyIndex === actualIndex ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
+                      value={editingQtyIndex === index ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
                       onChange={(e) => {
                         const value = e.target.value;
                         if (/^\d*$/.test(value)) {
                           setEditingQtyAmount(value);
-                          handleQuantityChange(actualIndex, value === '' ? 0 : parseInt(value));
+                          handleQuantityChange(index, value === '' ? 0 : parseInt(value));
                         }
                       }}
                       onFocus={(e) => {
-                        setEditingQtyIndex(actualIndex);
+                        setEditingQtyIndex(index);
                         setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
                         e.target.select();
                         handleIOSInputFocus(e);
@@ -1076,7 +1038,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   <td className="py-2 px-4 text-center text-[12px]">
                     <select
                       value={item.unit}
-                      onChange={(e) => handleUnitChange(actualIndex, e.target.value)}
+                      onChange={(e) => handleUnitChange(index, e.target.value)}
                       className="w-full px-3 py-1.5 bg-transparent border border-transparent
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                         hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
@@ -1103,16 +1065,16 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         <input
                           type="text"
                           inputMode="decimal"
-                          value={editingUnitPriceIndex === actualIndex ? editingUnitPriceAmount : item.unitPrice.toFixed(2)}
+                          value={editingUnitPriceIndex === index ? editingUnitPriceAmount : item.unitPrice.toFixed(2)}
                           onChange={(e) => {
                             const value = e.target.value;
                             if (/^\d*\.?\d*$/.test(value)) {
                               setEditingUnitPriceAmount(value);
-                              onItemChange(actualIndex, 'unitPrice', value === '' ? 0 : parseFloat(value));
+                              onItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
                             }
                           }}
                           onFocus={(e) => {
-                            setEditingUnitPriceIndex(actualIndex);
+                            setEditingUnitPriceIndex(index);
                             setEditingUnitPriceAmount(item.unitPrice === 0 ? '' : item.unitPrice.toString());
                             e.target.select();
                             handleIOSInputFocus(e);
@@ -1148,18 +1110,18 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     {data.showWeightAndPackage && (
                       <>
                       <td className="py-2 px-4 text-center text-[12px]">
-                        {group.isGroup && isFirstInGroup ? (
-                          // 分组模式下，只在第一行显示合并的重量，可编辑
+                        {isInGroup && isFirstInGroup ? (
+                          // 组内第一行显示合并的重量，可编辑
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={group.groupTotals.netWeight > 0 ? group.groupTotals.netWeight.toFixed(2) : ''}
+                            value={item.netWeight > 0 ? item.netWeight.toFixed(2) : ''}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*\.?\d*$/.test(value)) {
                                 const newWeight = value === '' ? 0 : parseFloat(value);
                                 // 更新组内所有项目的净重
-                                group.items.forEach((groupItem) => {
+                                groupItems.forEach((groupItem) => {
                                   const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
                                   if (itemIndex !== -1) {
                                     onItemChange(itemIndex, 'netWeight', newWeight);
@@ -1183,21 +1145,26 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                             }}
                           />
-                        ) : !group.isGroup ? (
-                          // 非分组模式下，显示可编辑的输入框
+                        ) : isInGroup ? (
+                          // 组内其他行显示合并的重量，只读
+                          <div className="text-[13px] text-[#86868B] dark:text-[#86868B]">
+                            {item.netWeight > 0 ? item.netWeight.toFixed(2) : ''}
+                          </div>
+                        ) : (
+                          // 普通行显示可编辑的输入框
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={editingNetWeightIndex === actualIndex ? editingNetWeightAmount : (item.netWeight > 0 ? item.netWeight.toFixed(2) : '')}
+                            value={editingNetWeightIndex === index ? editingNetWeightAmount : (item.netWeight > 0 ? item.netWeight.toFixed(2) : '')}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*\.?\d*$/.test(value)) {
                                 setEditingNetWeightAmount(value);
-                                onItemChange(actualIndex, 'netWeight', value === '' ? 0 : parseFloat(value));
+                                onItemChange(index, 'netWeight', value === '' ? 0 : parseFloat(value));
                               }
                             }}
                             onFocus={(e) => {
-                              setEditingNetWeightIndex(actualIndex);
+                              setEditingNetWeightIndex(index);
                               setEditingNetWeightAmount(item.netWeight === 0 ? '' : item.netWeight.toString());
                               e.target.select();
                               handleIOSInputFocus(e);
@@ -1207,7 +1174,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               setEditingNetWeightAmount('');
                               const value = parseFloat(e.target.value) || 0;
                               if (value > 0) {
-                                onItemChange(actualIndex, 'netWeight', parseFloat(value.toFixed(2)));
+                                onItemChange(index, 'netWeight', parseFloat(value.toFixed(2)));
                               }
                             }}
                             className="w-full px-3 py-1.5 bg-transparent border border-transparent
@@ -1222,24 +1189,21 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                             }}
                           />
-                        ) : (
-                          // 分组模式下，非第一行显示空
-                          <div></div>
                         )}
                       </td>
                       <td className="py-2 px-4 text-center text-[12px]">
-                        {group.isGroup && isFirstInGroup ? (
-                          // 分组模式下，只在第一行显示合并的重量，可编辑
+                        {isInGroup && isFirstInGroup ? (
+                          // 组内第一行显示合并的重量，可编辑
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={group.groupTotals.grossWeight > 0 ? group.groupTotals.grossWeight.toFixed(2) : ''}
+                            value={item.grossWeight > 0 ? item.grossWeight.toFixed(2) : ''}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*\.?\d*$/.test(value)) {
                                 const newWeight = value === '' ? 0 : parseFloat(value);
                                 // 更新组内所有项目的毛重
-                                group.items.forEach((groupItem) => {
+                                groupItems.forEach((groupItem) => {
                                   const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
                                   if (itemIndex !== -1) {
                                     onItemChange(itemIndex, 'grossWeight', newWeight);
@@ -1263,21 +1227,26 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                             }}
                           />
-                        ) : !group.isGroup ? (
-                          // 非分组模式下，显示可编辑的输入框
+                        ) : isInGroup ? (
+                          // 组内其他行显示合并的重量，只读
+                          <div className="text-[13px] text-[#86868B] dark:text-[#86868B]">
+                            {item.grossWeight > 0 ? item.grossWeight.toFixed(2) : ''}
+                          </div>
+                        ) : (
+                          // 普通行显示可编辑的输入框
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={editingGrossWeightIndex === actualIndex ? editingGrossWeightAmount : (item.grossWeight > 0 ? item.grossWeight.toFixed(2) : '')}
+                            value={editingGrossWeightIndex === index ? editingGrossWeightAmount : (item.grossWeight > 0 ? item.grossWeight.toFixed(2) : '')}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*\.?\d*$/.test(value)) {
                                 setEditingGrossWeightAmount(value);
-                                onItemChange(actualIndex, 'grossWeight', value === '' ? 0 : parseFloat(value));
+                                onItemChange(index, 'grossWeight', value === '' ? 0 : parseFloat(value));
                               }
                             }}
                             onFocus={(e) => {
-                              setEditingGrossWeightIndex(actualIndex);
+                              setEditingGrossWeightIndex(index);
                               setEditingGrossWeightAmount(item.grossWeight === 0 ? '' : item.grossWeight.toString());
                               e.target.select();
                               handleIOSInputFocus(e);
@@ -1287,7 +1256,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               setEditingGrossWeightAmount('');
                               const value = parseFloat(e.target.value) || 0;
                               if (value > 0) {
-                                onItemChange(actualIndex, 'grossWeight', parseFloat(value.toFixed(2)));
+                                onItemChange(index, 'grossWeight', parseFloat(value.toFixed(2)));
                               }
                             }}
                             className="w-full px-3 py-1.5 bg-transparent border border-transparent
@@ -1302,24 +1271,21 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                             }}
                           />
-                        ) : (
-                          // 分组模式下，非第一行显示空
-                          <div></div>
                         )}
                       </td>
                       <td className="py-2 px-4 text-center text-[12px]">
-                        {group.isGroup && isFirstInGroup ? (
-                          // 分组模式下，只在第一行显示合并的包装数量，可编辑
+                        {isInGroup && isFirstInGroup ? (
+                          // 组内第一行显示合并的包装数量，可编辑
                           <input
                             type="text"
                             inputMode="numeric"
-                            value={group.groupTotals.packageQty > 0 ? group.groupTotals.packageQty.toString() : ''}
+                            value={item.packageQty > 0 ? item.packageQty.toString() : ''}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*$/.test(value)) {
                                 const newPackageQty = value === '' ? 0 : parseInt(value);
                                 // 更新组内所有项目的包装数量
-                                group.items.forEach((groupItem) => {
+                                groupItems.forEach((groupItem) => {
                                   const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
                                   if (itemIndex !== -1) {
                                     onItemChange(itemIndex, 'packageQty', newPackageQty);
@@ -1343,21 +1309,26 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                             }}
                           />
-                        ) : !group.isGroup ? (
-                          // 非分组模式下，显示可编辑的输入框
+                        ) : isInGroup ? (
+                          // 组内其他行显示合并的包装数量，只读
+                          <div className="text-[13px] text-[#86868B] dark:text-[#86868B]">
+                            {item.packageQty > 0 ? item.packageQty.toString() : ''}
+                          </div>
+                        ) : (
+                          // 普通行显示可编辑的输入框
                           <input
                             type="text"
                             inputMode="numeric"
-                            value={editingPackageQtyIndex === actualIndex ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
+                            value={editingPackageQtyIndex === index ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
                             onChange={(e) => {
                               const value = e.target.value;
                               if (/^\d*$/.test(value)) {
                                 setEditingPackageQtyAmount(value);
-                                onItemChange(actualIndex, 'packageQty', value === '' ? 0 : parseInt(value));
+                                onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
                               }
                             }}
                             onFocus={(e) => {
-                              setEditingPackageQtyIndex(actualIndex);
+                              setEditingPackageQtyIndex(index);
                               setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
                               e.target.select();
                               handleIOSInputFocus(e);
@@ -1378,24 +1349,21 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
                             }}
                           />
-                        ) : (
-                          // 分组模式下，非第一行显示空
-                          <div></div>
                         )}
                       </td>
                       </>
                     )}
                     {data.showDimensions && (
                       <td className="py-2 px-4 text-center text-[12px]">
-                        {group.isGroup && isFirstInGroup ? (
-                          // 分组模式下，只在第一行显示合并的尺寸，可编辑
+                        {isInGroup && isFirstInGroup ? (
+                          // 组内第一行显示合并的尺寸，可编辑
                           <input
                             type="text"
-                            value={group.groupTotals.dimensions || ''}
+                            value={item.dimensions}
                             onChange={(e) => {
                               const newDimensions = e.target.value;
                               // 更新组内所有项目的尺寸
-                              group.items.forEach((groupItem) => {
+                              groupItems.forEach((groupItem) => {
                                 const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
                                 if (itemIndex !== -1) {
                                   onItemChange(itemIndex, 'dimensions', newDimensions);
@@ -1411,12 +1379,17 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               ios-optimized-input"
                             placeholder={`Dimensions (${data.dimensionUnit})`}
                           />
-                        ) : !group.isGroup ? (
-                          // 非分组模式下，显示可编辑的输入框
+                        ) : isInGroup ? (
+                          // 组内其他行显示合并的尺寸，只读
+                          <div className="text-[13px] text-[#86868B] dark:text-[#86868B]">
+                            {item.dimensions}
+                          </div>
+                        ) : (
+                          // 普通行显示可编辑的输入框
                           <input
                             type="text"
                             value={item.dimensions}
-                            onChange={(e) => onItemChange(actualIndex, 'dimensions', e.target.value)}
+                            onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
                             className="w-full px-3 py-1.5 bg-transparent border border-transparent
                               focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                               hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
@@ -1426,16 +1399,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                               ios-optimized-input"
                             placeholder={`Dimensions (${data.dimensionUnit})`}
                           />
-                        ) : (
-                          // 分组模式下，非第一行显示空
-                          <div></div>
                         )}
                       </td>
                     )}
                   </tr>
                 );
-              })
-            ))}
+              })}
               </tbody>
             </table>
 
