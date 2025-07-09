@@ -43,7 +43,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Luo & Company" />
         <meta httpEquiv="Content-Language" content="zh-CN" />
-        <meta name="google" content="notranslate" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </head>
       <body className={noto_sans_sc.className} suppressHydrationWarning>
