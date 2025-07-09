@@ -677,6 +677,7 @@ async function renderPackingTable(
     }
   });
   const handledGroupIds = new Set<string>();
+  let rowIndex = 0;
   data.items.forEach((item, idx) => {
     const isInGroup = !!item.groupId;
     if (isInGroup) {
@@ -685,7 +686,7 @@ async function renderPackingTable(
       handledGroupIds.add(item.groupId!);
       // 组内第一行
       const row: any[] = [
-        groupItems[0].serialNo,
+        rowIndex + 1, // 用当前序号
         groupItems[0].description
       ];
       if (data.showHsCode) row.push(groupItems[0].hsCode);
@@ -711,11 +712,12 @@ async function renderPackingTable(
         row.push({ content: groupItems[0].dimensions, rowSpan: groupItems.length, styles: { valign: 'middle', halign: 'center' } });
       }
       body.push(row);
+      rowIndex++;
       // 组内其他行
       for (let i = 1; i < groupItems.length; i++) {
         const sub = groupItems[i];
         const subRow: any[] = [
-          sub.serialNo,
+          rowIndex + 1, // 用当前序号
           sub.description
         ];
         if (data.showHsCode) subRow.push(sub.hsCode);
@@ -731,11 +733,12 @@ async function renderPackingTable(
         }
         // 组内其他行不渲染合并列
         body.push(subRow);
+        rowIndex++;
       }
     } else {
       // 普通行
       const row: any[] = [
-        item.serialNo,
+        rowIndex + 1, // 用当前序号
         item.description
       ];
       if (data.showHsCode) row.push(item.hsCode);
@@ -758,6 +761,7 @@ async function renderPackingTable(
       }
       if (data.showDimensions) row.push(item.dimensions);
       body.push(row);
+      rowIndex++;
     }
   });
 
