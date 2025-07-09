@@ -122,7 +122,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     },
     { 
       id: 'invoice', 
-      name: '发票助手', 
+      name: '发票结算', 
       icon: Receipt,
       color: 'text-purple-600 dark:text-purple-400',
       bgColor: 'bg-purple-100 dark:bg-purple-900/20'
