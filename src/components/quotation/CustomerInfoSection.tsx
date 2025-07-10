@@ -134,35 +134,14 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
   };
 
   return (
-    <div className="space-y-4">
-      {/* 第一行：报价单号和报价人 */}
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <input
-            type="text"
-            value={data.quotationNo}
-            onChange={e => onChange({ ...data, quotationNo: e.target.value })}
-            placeholder={type === 'quotation' ? "Quotation No. *" : "Quotation No."}
-            className={`${inputClassName} ${type === 'quotation' ? '[&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 font-medium text-[#007AFF] dark:text-[#0A84FF]' : ''}`}
-            style={iosCaretStyle}
-            required={type === 'quotation'}
-          />
-        </div>
-        <div className="w-[160px] sm:w-[160px] md:w-[170px]">
-          <input
-            type="date"
-            value={data.date}
-            onChange={e => onChange({ ...data, date: e.target.value })}
-            className={inputClassName}
-            style={iosCaretStyle}
-            required
-          />
-        </div>
-      </div>
-
-      {/* 第二行：客户信息 */}
-      <div className="flex gap-4">
-        <div className="flex-1">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* 左列：用户信息和询价单号 */}
+      <div className="bg-gray-50 dark:bg-[#1C1C1E] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+          {type === 'quotation' ? 'Customer Information' : 'Customer Information'}
+        </h3>
+        <div className="space-y-4">
+          {/* 客户信息 */}
           <div className="relative">
             <textarea
               value={data.to}
@@ -278,40 +257,108 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
               </div>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* 第三行：询价单号和合同号 */}
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <label className={labelClassName}>
-            Inquiry No.
-          </label>
-          <input
-            type="text"
-            value={data.inquiryNo}
-            onChange={e => onChange({ ...data, inquiryNo: e.target.value })}
-            placeholder="Inquiry No."
-            className={inputClassName}
-            style={iosCaretStyle}
-          />
-        </div>
-        {type === 'confirmation' && (
-          <div className="flex-1">
-            <label className="flex items-center gap-2 text-sm font-medium mb-1.5">
-              <span className="text-[#1D1D1F] dark:text-[#F5F5F7]">Contract No.</span>
+          {/* 询价单号 */}
+          <div>
+            <label className={labelClassName}>
+              Inquiry No.
             </label>
             <input
               type="text"
-              value={data.contractNo}
-              onChange={e => onChange({ ...data, contractNo: e.target.value })}
-              placeholder="Contract No."
-              className={`${inputClassName} [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 font-medium text-[#007AFF] dark:text-[#0A84FF]`}
+              value={data.inquiryNo}
+              onChange={e => onChange({ ...data, inquiryNo: e.target.value })}
+              placeholder="Inquiry No."
+              className={inputClassName}
               style={iosCaretStyle}
-              required
             />
           </div>
-        )}
+        </div>
+      </div>
+
+      {/* 右列：根据类型显示不同内容 */}
+      <div className="bg-gray-50 dark:bg-[#1C1C1E] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
+    
+        <div className="space-y-4">
+          {type === 'quotation' ? (
+            <>
+              {/* 报价单号 */}
+              <div>
+                <label className={labelClassName}>
+                  Quotation No.
+                </label>
+                <input
+                  type="text"
+                  value={data.quotationNo}
+                  onChange={e => onChange({ ...data, quotationNo: e.target.value })}
+                  placeholder="Quotation No. *"
+                  className={`${inputClassName} [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 font-medium text-[#007AFF] dark:text-[#0A84FF]`}
+                  style={iosCaretStyle}
+                  required
+                />
+              </div>
+              {/* 日期 */}
+              <div>
+                <label className={labelClassName}>
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={data.date}
+                  onChange={e => onChange({ ...data, date: e.target.value })}
+                  className={inputClassName}
+                  style={iosCaretStyle}
+                  required
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* 合同号 */}
+              <div>
+                <label className={labelClassName}>
+                  Contract No.
+                </label>
+                <input
+                  type="text"
+                  value={data.contractNo}
+                  onChange={e => onChange({ ...data, contractNo: e.target.value })}
+                  placeholder="Contract No."
+                  className={`${inputClassName} [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 font-medium text-[#007AFF] dark:text-[#0A84FF]`}
+                  style={iosCaretStyle}
+                  required
+                />
+              </div>
+              {/* 日期 */}
+              <div>
+                <label className={labelClassName}>
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={data.date}
+                  onChange={e => onChange({ ...data, date: e.target.value })}
+                  className={inputClassName}
+                  style={iosCaretStyle}
+                  required
+                />
+              </div>
+              {/* 报价单号 */}
+              <div>
+                <label className={labelClassName}>
+                  Quotation No.
+                </label>
+                <input
+                  type="text"
+                  value={data.quotationNo}
+                  onChange={e => onChange({ ...data, quotationNo: e.target.value })}
+                  placeholder="Quotation No."
+                  className={inputClassName}
+                  style={iosCaretStyle}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
