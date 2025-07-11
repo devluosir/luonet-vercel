@@ -561,13 +561,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         const value = e.target.value;
                         if (/^\d*\.?\d*$/.test(value)) {
                           setEditingNetWeightAmount(value);
-                          const newWeight = value === '' ? 0 : parseFloat(value);
-                          groupItems.forEach((groupItem) => {
-                            const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
-                            if (itemIndex !== -1) {
-                              onItemChange(itemIndex, 'netWeight', newWeight);
-                            }
-                          });
+                          onItemChange(index, 'netWeight', value === '' ? 0 : parseFloat(value));
                         }
                       }}
                       onFocus={(e) => {
@@ -576,19 +570,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         e.target.select();
                         handleIOSInputFocus(e);
                       }}
-                                                  onBlur={(e) => {
-                              setEditingNetWeightIndex(null);
-                              setEditingNetWeightAmount('');
-                              const value = parseFloat(e.target.value) || 0;
-                              if (value > 0) {
-                                groupItems.forEach((groupItem) => {
-                                  const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
-                                  if (itemIndex !== -1) {
-                                    onItemChange(itemIndex, 'netWeight', parseFloat(value.toFixed(2)));
-                                  }
-                                });
-                              }
-                            }}
+                      onBlur={() => {
+                        setEditingNetWeightIndex(null);
+                        setEditingNetWeightAmount('');
+                      }}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                         text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
@@ -649,13 +634,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         const value = e.target.value;
                         if (/^\d*\.?\d*$/.test(value)) {
                           setEditingGrossWeightAmount(value);
-                          const newWeight = value === '' ? 0 : parseFloat(value);
-                          groupItems.forEach((groupItem) => {
-                            const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
-                            if (itemIndex !== -1) {
-                              onItemChange(itemIndex, 'grossWeight', newWeight);
-                            }
-                          });
+                          onItemChange(index, 'grossWeight', value === '' ? 0 : parseFloat(value));
                         }
                       }}
                       onFocus={(e) => {
@@ -664,19 +643,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         e.target.select();
                         handleIOSInputFocus(e);
                       }}
-                                                  onBlur={(e) => {
-                              setEditingGrossWeightIndex(null);
-                              setEditingGrossWeightAmount('');
-                              const value = parseFloat(e.target.value) || 0;
-                              if (value > 0) {
-                                groupItems.forEach((groupItem) => {
-                                  const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
-                                  if (itemIndex !== -1) {
-                                    onItemChange(itemIndex, 'grossWeight', parseFloat(value.toFixed(2)));
-                                  }
-                                });
-                              }
-                            }}
+                      onBlur={() => {
+                        setEditingGrossWeightIndex(null);
+                        setEditingGrossWeightAmount('');
+                      }}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                         text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
@@ -737,13 +707,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         const value = e.target.value;
                         if (/^\d*$/.test(value)) {
                           setEditingPackageQtyAmount(value);
-                          const newPackageQty = value === '' ? 0 : parseInt(value);
-                          groupItems.forEach((groupItem) => {
-                            const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
-                            if (itemIndex !== -1) {
-                              onItemChange(itemIndex, 'packageQty', newPackageQty);
-                            }
-                          });
+                          onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
                         }
                       }}
                       onFocus={(e) => {
