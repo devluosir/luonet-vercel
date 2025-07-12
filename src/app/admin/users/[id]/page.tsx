@@ -103,7 +103,7 @@ const MODULES = [
     bgColor: 'bg-purple-100 dark:bg-purple-900/20'
   },
   { 
-    id: 'feature4', 
+    id: 'customer', 
     name: '客户管理', 
     description: '客户信息管理系统',
     icon: Users,

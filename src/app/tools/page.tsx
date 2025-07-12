@@ -117,10 +117,10 @@ const MODULES = [
     hoverColor: 'hover:text-purple-500 dark:hover:text-purple-300'
   },
   { 
-    id: 'feature4', 
+    id: 'customer', 
     name: '客户管理', 
     description: '客户信息管理系统', 
-    path: '/tools/feature4',
+    path: '/customer',
     icon: Users,
     color: 'from-violet-500 to-purple-500',
     bgColor: 'from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20',
