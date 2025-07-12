@@ -217,9 +217,9 @@ export const getDeviceInfo = () => {
 
 // PDF预览选项
 export interface PDFPreviewOptions {
-  fallbackToDownload?: boolean;
-  showDownloadButton?: boolean;
-  showOpenInNewTab?: boolean;
+  _fallbackToDownload?: boolean;
+  _showDownloadButton?: boolean;
+  _showOpenInNewTab?: boolean;
   autoDetectDevice?: boolean;
   forceAndroidFallback?: boolean;
 }

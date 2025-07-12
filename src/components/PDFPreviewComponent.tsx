@@ -38,8 +38,8 @@ export default function PDFPreviewComponent({
   const previewInfo = handlePDFPreview(pdfUrl, {
     autoDetectDevice: true,
     forceAndroidFallback: true, // 强制安卓设备使用fallback
-    showDownloadButton,
-    showOpenInNewTab
+    _showDownloadButton: showDownloadButton,
+    _showOpenInNewTab: showOpenInNewTab
   });
 
   // 组件挂载时检查是否应该直接显示fallback
