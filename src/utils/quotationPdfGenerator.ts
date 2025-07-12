@@ -26,7 +26,7 @@ const currencySymbols: { [key: string]: string } = {
 const defaultUnits = ['pc', 'set', 'length'];
 
 // 处理单位的单复数
-const getUnitDisplay = (baseUnit: string, quantity: number) => {
+const _getUnitDisplay = (baseUnit: string, quantity: number) => {
   const singularUnit = baseUnit.replace(/s$/, '');
   if (defaultUnits.includes(singularUnit)) {
     return quantity > 1 ? `${singularUnit}s` : singularUnit;

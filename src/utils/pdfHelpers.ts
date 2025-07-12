@@ -230,9 +230,9 @@ export const handlePDFPreview = (
   options: PDFPreviewOptions = {}
 ) => {
   const {
-    fallbackToDownload = true,
-    showDownloadButton = true,
-    showOpenInNewTab = true,
+    _fallbackToDownload = true,
+    _showDownloadButton = true,
+    _showOpenInNewTab = true,
     autoDetectDevice = true,
     forceAndroidFallback = true
   } = options;

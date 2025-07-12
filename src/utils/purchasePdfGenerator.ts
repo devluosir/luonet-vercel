@@ -1,4 +1,5 @@
 import jsPDF, { GState, ImageProperties } from 'jspdf';
+import { UserOptions } from 'jspdf-autotable';
 import { PurchaseOrderData } from '@/types/purchase';
 import { getBankInfo } from '@/utils/bankInfo';
 import { embeddedResources } from '@/lib/embedded-resources';
@@ -8,11 +9,11 @@ interface ExtendedJsPDF extends jsPDF {
   lastAutoTable: {
     finalY: number;
   };
-  autoTable: (options: any) => void;
+  autoTable: (options: UserOptions) => void;
   getNumberOfPages: () => number;
   saveGraphicsState: () => jsPDF;
   restoreGraphicsState: () => jsPDF;
-  setGState: (gState: any) => jsPDF;
+  setGState: (gState: GState) => jsPDF;
   GState: (parameters: GState) => GState;
   getImageProperties: (image: string) => ImageProperties;
 }
@@ -124,7 +125,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     const rightValuesX = pageWidth - margin - 30;
 
     // 绘制右侧基本信息
-    rightInfoItems.forEach((item: any, index) => {
+    rightInfoItems.forEach((item: { label: string; value: string }, index) => {
       const y = startY + (index * 5); // 统一行间距
       
       // 绘制标签 (黑色, 加粗)

@@ -1,9 +1,10 @@
 import jsPDF from 'jspdf';
+import { UserOptions } from 'jspdf-autotable';
 import { embeddedResources } from '@/lib/embedded-resources';
 
 // 扩展 jsPDF 类型
 interface ExtendedJsPDF extends jsPDF {
-  autoTable?: (options: any) => void;
+  autoTable?: (options: UserOptions) => void;
 }
 
 // 生成运输标记PDF

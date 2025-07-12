@@ -1,6 +1,6 @@
 import { UserOptions, RowInput, Styles } from 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
-import jsPDF, { ImageProperties } from 'jspdf';
+import jsPDF from 'jspdf';
 
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
