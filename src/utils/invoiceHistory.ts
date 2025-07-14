@@ -92,7 +92,7 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
       return false;
     }
     
-    // 处理从报价单导入的数据
+    // 处理导入的数据
     const processedData = data.map(item => {
       // 基本验证：确保item是对象且有id
       if (!item || typeof item !== 'object' || !item.id) {
@@ -105,6 +105,19 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
         ...item,
         updatedAt: item.updatedAt || item.createdAt
       };
+      
+      // 检查是否是发票数据（通过检查特有字段判断）
+      const isInvoiceData = item.data && (
+        item.data.invoiceNo !== undefined || 
+        item.data.customerPO !== undefined ||
+        (item.data.items && item.data.items.length > 0 && item.data.items[0].partname !== undefined)
+      );
+      
+      // 如果是发票数据，直接返回，不进行转换
+      if (isInvoiceData) {
+        console.log('检测到发票数据，直接导入:', item.id);
+        return itemWithUpdatedAt;
+      }
       
       // 如果是报价单数据，进行转换
       if (item.data && item.data.items) {
