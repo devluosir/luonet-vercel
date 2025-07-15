@@ -2,16 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-interface SavedCustomer {
+interface SavedConsignee {
   name: string;
-  to: string;
-  customerPO: string;
+  orderNo: string;
 }
 
-interface CustomerSectionProps {
-  to: string;
-  customerPO: string;
-  onChange: (data: { to: string; customerPO: string }) => void;
+interface ConsigneeSectionProps {
+  consigneeName: string;
+  orderNo: string;
+  onChange: (data: { consigneeName: string; orderNo: string }) => void;
 }
 
 const inputClassName = `w-full px-4 py-2.5 rounded-2xl
@@ -25,21 +24,21 @@ const inputClassName = `w-full px-4 py-2.5 rounded-2xl
   shadow-sm hover:shadow-md
   ios-optimized-input`;
 
-export function CustomerSection({ to, customerPO, onChange }: CustomerSectionProps) {
-  const [savedCustomers, setSavedCustomers] = useState<SavedCustomer[]>([]);
-  const [showSavedCustomers, setShowSavedCustomers] = useState(false);
+export function ConsigneeSection({ consigneeName, orderNo, onChange }: ConsigneeSectionProps) {
+  const [savedConsignees, setSavedConsignees] = useState<SavedConsignee[]>([]);
+  const [showSavedConsignees, setShowSavedConsignees] = useState(false);
   const [showImportExport, setShowImportExport] = useState(false);
 
   // 添加 ref 用于检测点击外部区域
   const importExportRef = useRef<HTMLDivElement>(null);
-  const savedCustomersRef = useRef<HTMLDivElement>(null);
+  const savedConsigneesRef = useRef<HTMLDivElement>(null);
   const buttonsRef = useRef<HTMLDivElement>(null);
 
-  // 加载保存的客户信息
+  // 加载保存的收货人信息
   useEffect(() => {
-    const saved = localStorage.getItem('savedInvoiceCustomers');
+    const saved = localStorage.getItem('savedPackingConsignees');
     if (saved) {
-      setSavedCustomers(JSON.parse(saved));
+      setSavedConsignees(JSON.parse(saved));
     }
   }, []);
 
@@ -57,75 +56,74 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
         setShowImportExport(false);
       }
       
-      // 检查是否点击了保存的客户列表弹窗外部
-      if (showSavedCustomers && 
-          savedCustomersRef.current && 
-          !savedCustomersRef.current.contains(target) &&
+      // 检查是否点击了保存的收货人列表弹窗外部
+      if (showSavedConsignees && 
+          savedConsigneesRef.current && 
+          !savedConsigneesRef.current.contains(target) &&
           buttonsRef.current &&
           !buttonsRef.current.contains(target)) {
-        setShowSavedCustomers(false);
+        setShowSavedConsignees(false);
       }
     };
 
     // 只在弹窗显示时添加事件监听器
-    if (showImportExport || showSavedCustomers) {
+    if (showImportExport || showSavedConsignees) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showImportExport, showSavedCustomers]);
+  }, [showImportExport, showSavedConsignees]);
 
-  // 保存客户信息
+  // 保存收货人信息
   const handleSave = () => {
-    if (!to.trim()) return;
+    if (!consigneeName.trim()) return;
 
-    const customerName = to.split('\n')[0].trim(); // 使用第一行作为客户名称
-    const newCustomer: SavedCustomer = {
-      name: customerName,
-      to,
-      customerPO
+    const consigneeNameFirstLine = consigneeName.split('\n')[0].trim(); // 使用第一行作为收货人名称
+    const newConsignee: SavedConsignee = {
+      name: consigneeNameFirstLine,
+      orderNo
     };
 
-    const newSavedCustomers = [...savedCustomers];
-    const existingIndex = newSavedCustomers.findIndex(c => c.name === customerName);
+    const newSavedConsignees = [...savedConsignees];
+    const existingIndex = newSavedConsignees.findIndex(c => c.name === consigneeNameFirstLine);
     
     if (existingIndex >= 0) {
-      newSavedCustomers[existingIndex] = newCustomer;
+      newSavedConsignees[existingIndex] = newConsignee;
     } else {
-      newSavedCustomers.push(newCustomer);
+      newSavedConsignees.push(newConsignee);
     }
 
-    setSavedCustomers(newSavedCustomers);
-    localStorage.setItem('savedInvoiceCustomers', JSON.stringify(newSavedCustomers));
-    setShowSavedCustomers(false);
+    setSavedConsignees(newSavedConsignees);
+    localStorage.setItem('savedPackingConsignees', JSON.stringify(newSavedConsignees));
+    setShowSavedConsignees(false);
   };
 
-  // 删除保存的客户信息
-  const handleDelete = (customerName: string) => {
-    const newSavedCustomers = savedCustomers.filter(c => c.name !== customerName);
-    setSavedCustomers(newSavedCustomers);
-    localStorage.setItem('savedInvoiceCustomers', JSON.stringify(newSavedCustomers));
+  // 删除保存的收货人信息
+  const handleDelete = (consigneeName: string) => {
+    const newSavedConsignees = savedConsignees.filter(c => c.name !== consigneeName);
+    setSavedConsignees(newSavedConsignees);
+    localStorage.setItem('savedPackingConsignees', JSON.stringify(newSavedConsignees));
   };
 
-  // 加载客户信息
-  const handleLoad = (customer: SavedCustomer) => {
+  // 加载收货人信息
+  const handleLoad = (consignee: SavedConsignee) => {
     onChange({
-      to: customer.to,
-      customerPO: customer.customerPO
+      consigneeName: consignee.name,
+      orderNo: consignee.orderNo
     });
-    setShowSavedCustomers(false);
+    setShowSavedConsignees(false);
   };
 
-  // 导出客户数据
+  // 导出收货人数据
   const handleExport = () => {
-    const dataStr = JSON.stringify(savedCustomers, null, 2);
+    const dataStr = JSON.stringify(savedConsignees, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'invoice_customers.json';
+    link.download = 'packing_consignees.json';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -133,7 +131,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
     setShowImportExport(false);
   };
 
-  // 导入客户数据
+  // 导入收货人数据
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -144,17 +142,17 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
         const importedData = JSON.parse(e.target?.result as string);
         if (Array.isArray(importedData)) {
           // 合并现有数据和导入的数据
-          const mergedData = [...savedCustomers];
-          importedData.forEach(customer => {
-            const existingIndex = mergedData.findIndex(c => c.name === customer.name);
+          const mergedData = [...savedConsignees];
+          importedData.forEach(consignee => {
+            const existingIndex = mergedData.findIndex(c => c.name === consignee.name);
             if (existingIndex >= 0) {
-              mergedData[existingIndex] = customer;
+              mergedData[existingIndex] = consignee;
             } else {
-              mergedData.push(customer);
+              mergedData.push(consignee);
             }
           });
-          setSavedCustomers(mergedData);
-          localStorage.setItem('savedInvoiceCustomers', JSON.stringify(mergedData));
+          setSavedConsignees(mergedData);
+          localStorage.setItem('savedPackingConsignees', JSON.stringify(mergedData));
         }
       } catch (error) {
         console.error('Error importing data:', error);
@@ -167,15 +165,16 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-      <div>
+    <div className="bg-gray-50 dark:bg-[#1C1C1E] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
+      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Consignee</h3>
+      <div className="space-y-4">
+        {/* 收货人信息 */}
         <div className="relative">
           <textarea
-            value={to}
-            onChange={e => onChange({ ...{ to, customerPO }, to: e.target.value })}
-            placeholder="Enter customer name and address"
-            rows={3}
-            className={inputClassName}
+            value={consigneeName}
+            onChange={e => onChange({ ...{ consigneeName, orderNo }, consigneeName: e.target.value })}
+            className={`${inputClassName} min-h-[120px] resize-none`}
+            placeholder="Enter consignee information including company name, address, contact details..."
           />
           <div className="absolute right-2 bottom-2 flex gap-2" ref={buttonsRef}>
             <button
@@ -191,7 +190,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
             </button>
             <button
               type="button"
-              onClick={() => setShowSavedCustomers(true)}
+              onClick={() => setShowSavedConsignees(true)}
               className="px-3 py-1 rounded-lg text-xs font-medium
                 bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
                 hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
@@ -230,7 +229,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
                     hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded-lg
                     text-gray-700 dark:text-gray-300"
                 >
-                  Export Customers
+                  Export Consignees
                 </button>
                 <label className="block">
                   <span className="w-full px-3 py-2 text-left text-sm
@@ -238,7 +237,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
                     text-gray-700 dark:text-gray-300
                     cursor-pointer block"
                   >
-                    Import Customers
+                    Import Consignees
                   </span>
                   <input
                     type="file"
@@ -251,31 +250,31 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
             </div>
           )}
 
-          {/* 保存的客户列表弹窗 */}
-          {showSavedCustomers && savedCustomers.length > 0 && (
+          {/* 保存的收货人列表弹窗 */}
+          {showSavedConsignees && savedConsignees.length > 0 && (
             <div 
-              ref={savedCustomersRef}
+              ref={savedConsigneesRef}
               className="absolute z-10 right-0 top-full mt-1 w-full max-w-md
                 bg-white dark:bg-[#2C2C2E] rounded-xl shadow-lg
                 border border-gray-200/50 dark:border-gray-700/50
                 p-2"
             >
               <div className="max-h-[200px] overflow-y-auto">
-                {savedCustomers.map((customer, index) => (
+                {savedConsignees.map((consignee, index) => (
                   <div
                     key={index}
                     className="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded-lg"
                   >
                     <button
                       type="button"
-                      onClick={() => handleLoad(customer)}
+                      onClick={() => handleLoad(consignee)}
                       className="flex-1 text-left px-2 py-1 text-sm text-gray-700 dark:text-gray-300"
                     >
-                      {customer.name}
+                      {consignee.name}
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDelete(customer.name)}
+                      onClick={() => handleDelete(consignee.name)}
                       className="px-2 py-1 text-xs text-red-500 hover:text-red-600
                         hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                     >
@@ -287,18 +286,20 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
             </div>
           )}
         </div>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-          Customer P/O No.
-        </label>
-        <input
-          type="text"
-          value={customerPO}
-          onChange={e => onChange({ ...{ to, customerPO }, customerPO: e.target.value })}
-          placeholder="Enter customer P/O number"
-          className={inputClassName}
-        />
+        
+        {/* 订单号 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
+            Customer Order No.
+          </label>
+          <input
+            type="text"
+            value={orderNo}
+            onChange={e => onChange({ ...{ consigneeName, orderNo }, orderNo: e.target.value })}
+            className={inputClassName}
+            placeholder="Enter order number"
+          />
+        </div>
       </div>
     </div>
   );

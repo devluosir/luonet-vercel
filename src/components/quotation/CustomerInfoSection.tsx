@@ -1,5 +1,5 @@
 import type { QuotationData } from '@/types/quotation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface CustomerInfoSectionProps {
   data: QuotationData;
@@ -36,6 +36,11 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
   const [savedCustomers, setSavedCustomers] = useState<SavedCustomer[]>([]);
   const [showSavedCustomers, setShowSavedCustomers] = useState(false);
   const [showImportExport, setShowImportExport] = useState(false);
+  
+  // 添加 ref 用于检测点击外部区域
+  const importExportRef = useRef<HTMLDivElement>(null);
+  const savedCustomersRef = useRef<HTMLDivElement>(null);
+  const buttonsRef = useRef<HTMLDivElement>(null);
 
   // 加载保存的客户信息
   useEffect(() => {
@@ -44,6 +49,40 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
       setSavedCustomers(JSON.parse(saved));
     }
   }, []);
+
+  // 添加点击外部区域关闭弹窗的功能
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      
+      // 检查是否点击了导入/导出弹窗外部
+      if (showImportExport && 
+          importExportRef.current && 
+          !importExportRef.current.contains(target) &&
+          buttonsRef.current &&
+          !buttonsRef.current.contains(target)) {
+        setShowImportExport(false);
+      }
+      
+      // 检查是否点击了保存的客户列表弹窗外部
+      if (showSavedCustomers && 
+          savedCustomersRef.current && 
+          !savedCustomersRef.current.contains(target) &&
+          buttonsRef.current &&
+          !buttonsRef.current.contains(target)) {
+        setShowSavedCustomers(false);
+      }
+    };
+
+    // 只在弹窗显示时添加事件监听器
+    if (showImportExport || showSavedCustomers) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showImportExport, showSavedCustomers]);
 
   // 保存客户信息
   const handleSave = () => {
@@ -151,7 +190,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
               className={`${inputClassName} min-h-[100px]`}
               style={iosCaretStyle}
             />
-            <div className="absolute right-2 bottom-2 flex gap-2">
+            <div className="absolute right-2 bottom-2 flex gap-2" ref={buttonsRef}>
               <button
                 type="button"
                 onClick={() => setShowImportExport(true)}
@@ -189,10 +228,12 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
 
             {/* 导入/导出弹窗 */}
             {showImportExport && (
-              <div className="absolute z-10 right-0 top-full mt-1 w-[200px]
-                bg-white dark:bg-[#2C2C2E] rounded-xl shadow-lg
-                border border-gray-200/50 dark:border-gray-700/50
-                p-2"
+              <div 
+                ref={importExportRef}
+                className="absolute z-10 right-0 top-full mt-1 w-[200px]
+                  bg-white dark:bg-[#2C2C2E] rounded-xl shadow-lg
+                  border border-gray-200/50 dark:border-gray-700/50
+                  p-2"
               >
                 <div className="space-y-2">
                   <button
@@ -225,10 +266,12 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
 
             {/* 保存的客户列表弹窗 */}
             {showSavedCustomers && savedCustomers.length > 0 && (
-              <div className="absolute z-10 right-0 top-full mt-1 w-full max-w-md
-                bg-white dark:bg-[#2C2C2E] rounded-xl shadow-lg
-                border border-gray-200/50 dark:border-gray-700/50
-                p-2"
+              <div 
+                ref={savedCustomersRef}
+                className="absolute z-10 right-0 top-full mt-1 w-full max-w-md
+                  bg-white dark:bg-[#2C2C2E] rounded-xl shadow-lg
+                  border border-gray-200/50 dark:border-gray-700/50
+                  p-2"
               >
                 <div className="max-h-[200px] overflow-y-auto">
                   {savedCustomers.map((customer, index) => (

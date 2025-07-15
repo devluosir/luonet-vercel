@@ -10,6 +10,7 @@ import { generatePackingListPDF } from '@/utils/packingPdfGenerator';
 import { ItemsTable } from '@/components/packinglist/ItemsTable';
 import { SettingsPanel } from '@/components/packinglist/SettingsPanel';
 import { ShippingMarksModal } from '@/components/packinglist/ShippingMarksModal';
+import { ConsigneeSection } from '@/components/packinglist/ConsigneeSection';
 import { savePackingHistory, getPackingHistoryById } from '@/utils/packingHistory';
 import dynamic from 'next/dynamic';
 
@@ -738,37 +739,15 @@ export default function PackingPage() {
               <div className="px-4 sm:px-6 py-4 sm:py-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* 收货人信息组 */}
-                  <div className="bg-gray-50 dark:bg-[#1C1C1E] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Consignee</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <textarea
-                          value={packingData.consignee.name}
-                          onChange={(e) => setPackingData(prev => ({ 
-                            ...prev, 
-                            consignee: { ...prev.consignee, name: e.target.value }
-                          }))}
-                          className={`${inputClassName} min-h-[120px] resize-none`}
-                          style={iosCaretStyle}
-                          placeholder="Enter consignee information including company name, address, contact details..."
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
-                          Customer Order No.
-                        </label>
-                        <input
-                          type="text"
-                          value={packingData.orderNo}
-                          onChange={(e) => setPackingData(prev => ({ ...prev, orderNo: e.target.value }))}
-                          className={inputClassName}
-                          style={iosCaretStyle}
-                          placeholder="Enter order number"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <ConsigneeSection
+                    consigneeName={packingData.consignee.name}
+                    orderNo={packingData.orderNo}
+                    onChange={({ consigneeName, orderNo }) => setPackingData(prev => ({
+                      ...prev,
+                      consignee: { ...prev.consignee, name: consigneeName },
+                      orderNo
+                    }))}
+                  />
 
                   {/* 单据信息组 */}
                   <div className="bg-gray-50 dark:bg-[#1C1C1E] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
