@@ -827,72 +827,90 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
         {/* Other Fees 表格 - 移动端视图 */}
         {data.showPrice && data.otherFees && data.otherFees.length > 0 && (
           <div className="lg:hidden mt-4">
-          <div className="bg-[#F5F5F7] dark:bg-[#3A3A3C] rounded-2xl p-4 border border-[#E5E5EA] dark:border-[#48484A]">
+            <div className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
               <h3 className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-3">Other Fees</h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {data.otherFees.map((fee, index) => (
-                  <div key={fee.id} className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => onDeleteOtherFee?.(index)}
-                      className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center
-                        text-[#86868B] hover:bg-red-500/10 hover:text-red-500 
-                        cursor-pointer transition-all duration-200"
-                    >
-                      ×
-                    </button>
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={fee.description}
-                        onChange={(e) => onOtherFeeChange?.(index, 'description', e.target.value)}
-                        onDoubleClick={() => onOtherFeeDoubleClick?.(index, 'description')}
-                        placeholder="Other Fee"
-                        className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                          focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                          placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          ios-optimized-input"
-                      />
+                  <div key={fee.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
+                    {/* 卡片头部 */}
+                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5EA] dark:border-[#2C2C2E]">
+                      <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        Other Fee #{index + 1}
+                      </div>
+                      <button
+                        onClick={() => onDeleteOtherFee?.(index)}
+                        className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                        title="删除此项"
+                      >
+                        ×
+                      </button>
                     </div>
-                    <div className="w-[120px] flex-shrink-0">
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={editingFeeIndex === index ? editingFeeAmount : fee.amount.toFixed(2)}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (/^-?\d*\.?\d{0,2}$/.test(value) || value === '' || value === '-') {
-                            setEditingFeeAmount?.(value);
-                            const amount = value === '' || value === '-' ? 0 : parseFloat(value) || 0;
-                            onOtherFeeChange?.(index, 'amount', amount);
-                          }
-                        }}
-                        onDoubleClick={() => onOtherFeeDoubleClick?.(index, 'amount')}
-                        onFocus={(e) => {
-                          setEditingFeeIndex?.(index);
-                          setEditingFeeAmount?.(fee.amount === 0 ? '' : fee.amount.toString());
-                          e.target.select();
-                        }}
-                        onBlur={() => {
-                          setEditingFeeIndex?.(null);
-                          setEditingFeeAmount?.('');
-                        }}
-                        placeholder="0.00"
-                        className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                          focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
-                          placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                          [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                          ios-optimized-input"
-                      />
+
+                    {/* 卡片内容 */}
+                    <div className="grid grid-cols-1 gap-4">
+                      {/* Description */}
+                      <div>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
+                        <textarea
+                          value={fee.description}
+                          onChange={(e) => {
+                            onOtherFeeChange?.(index, 'description', e.target.value);
+                            e.target.style.height = '28px';
+                            e.target.style.height = `${e.target.scrollHeight}px`;
+                          }}
+                          onDoubleClick={() => onOtherFeeDoubleClick?.(index, 'description')}
+                          placeholder="Enter other fee description..."
+                          className={`w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
+                            ios-optimized-input resize-y overflow-hidden whitespace-pre-wrap ${fee.highlight?.description ? 'text-red-500 dark:text-red-400 font-medium' : ''}`}
+                          style={{ height: '28px' }}
+                        />
+                      </div>
+
+                      {/* Amount */}
+                      <div>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Amount</label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={editingFeeIndex === index ? editingFeeAmount : fee.amount.toFixed(2)}
+                          onChange={(e) => {
+                            const inputValue = e.target.value;
+                            if (/^-?\d*\.?\d{0,2}$/.test(inputValue) || inputValue === '') {
+                              setEditingFeeAmount?.(inputValue);
+                              const value = parseFloat(inputValue);
+                              if (!isNaN(value)) {
+                                onOtherFeeChange?.(index, 'amount', value);
+                              }
+                            }
+                          }}
+                          onDoubleClick={() => onOtherFeeDoubleClick?.(index, 'amount')}
+                          onFocus={(e) => {
+                            setEditingFeeIndex?.(index);
+                            setEditingFeeAmount?.(fee.amount === 0 ? '' : fee.amount.toString());
+                            e.target.select();
+                          }}
+                          onBlur={() => {
+                            setEditingFeeIndex?.(null);
+                            setEditingFeeAmount?.('');
+                          }}
+                          placeholder="0.00"
+                          className={`w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                            [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                            ios-optimized-input ${fee.highlight?.amount ? 'text-red-500 dark:text-red-400 font-medium' : ''}`}
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
-                  </div>
-                </div>
-              )}
+            </div>
+          </div>
+        )}
 
         {/* 移动端总计信息 */}
         {(data.showWeightAndPackage || (data.showPrice && data.otherFees && data.otherFees.length > 0)) && (

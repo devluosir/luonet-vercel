@@ -25,17 +25,25 @@ interface OtherFeesTableProps {
   showDimensions?: boolean;
 }
 
-// 统一输入框样式与主表格
-const tableInputClassName = `w-full px-3 py-1.5 bg-transparent border border-transparent
-  focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-  hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-  text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-  placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-  transition-all duration-200 text-center
-  [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+// 参考发票页面的输入框样式
+const tableInputClassName = `w-full px-3 py-2 rounded-xl
+  bg-transparent backdrop-blur-sm
+  border border-transparent
+  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20
+  text-[14px] leading-relaxed text-gray-800 dark:text-gray-100
+  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
+  transition-all duration-300 ease-out
+  hover:bg-[#007AFF]/5 dark:hover:bg-[#0A84FF]/5
+  text-center whitespace-pre-wrap
   ios-optimized-input`;
 
-const highlightClass = 'bg-yellow-100/50 dark:bg-yellow-900/30';
+const numberInputClassName = `${tableInputClassName}
+  [appearance:textfield] 
+  [&::-webkit-outer-spin-button]:appearance-none 
+  [&::-webkit-inner-spin-button]:appearance-none
+  text-center`;
+
+const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
 
 export function OtherFeesTable({
   otherFees,
@@ -78,19 +86,21 @@ export function OtherFeesTable({
   };
 
   return (
-    <div className="border-t border-[#E5E5EA] dark:border-[#2C2C2E]">
+    <div className="border-t border-[#007AFF]/10 dark:border-[#0A84FF]/10">
       <table className="w-full">
         <tbody>
           {otherFees.map((fee, index) => (
             <tr key={fee.id}
-              className="border-t border-[#E5E5EA] dark:border-[#2C2C2E] hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50"
+              className={`border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 ${
+                index % 2 === 0 ? 'bg-[#007AFF]/[0.02] dark:bg-[#0A84FF]/[0.02]' : ''
+              }`}
             >
               {/* 序号/删除按钮列 */}
-              <td className="w-[40px] px-4 py-2 text-center text-[12px] text-[#86868B] dark:text-gray-500">
+              <td className="w-[40px] px-4 py-2 text-center">
                 <span
-                  className="flex items-center justify-center w-5 h-5 rounded-full 
+                  className="flex items-center justify-center w-6 h-6 rounded-full mx-auto
                     text-xs text-[#86868B] hover:bg-red-500/10 hover:text-red-500 
-                    cursor-pointer transition-all duration-200 mx-auto"
+                    cursor-pointer transition-all duration-200"
                   onClick={() => onDeleteFee(index)}
                   title="Click to delete"
                 >
@@ -99,14 +109,19 @@ export function OtherFeesTable({
               </td>
 
               {/* Description 列 */}
-              <td className="px-4 py-2" style={{ width: getDescriptionWidth() }}>
-                <input
-                  type="text"
+              <td className="px-4 py-1.5" style={{ width: getDescriptionWidth() }}>
+                <textarea
                   value={fee.description}
-                  onChange={(e) => onFeeChange(index, 'description', e.target.value)}
+                  onChange={(e) => {
+                    onFeeChange(index, 'description', e.target.value);
+                    // 自动调整高度
+                    e.target.style.height = '28px';
+                    e.target.style.height = `${e.target.scrollHeight}px`;
+                  }}
                   onDoubleClick={() => onFeeDoubleClick(index, 'description')}
                   placeholder="Other Fee"
-                  className={`${tableInputClassName} text-left ${fee.highlight?.description ? highlightClass : ''}`}
+                  className={`${tableInputClassName} text-center whitespace-pre-wrap resize-y overflow-hidden ${fee.highlight?.description ? highlightClass : ''}`}
+                  style={{ height: '28px' }}
                 />
               </td>
 
@@ -122,7 +137,7 @@ export function OtherFeesTable({
               )}
 
               {/* Amount 列 */}
-              <td className="w-[150px] px-4 py-2">
+              <td className="w-[160px] px-4 py-1.5">
                 <input
                   type="text"
                   inputMode="decimal"
@@ -146,7 +161,7 @@ export function OtherFeesTable({
                     setEditingFeeAmount('');
                   }}
                   placeholder="0.00"
-                  className={`${tableInputClassName} ${fee.highlight?.amount ? highlightClass : ''}`}
+                  className={`${numberInputClassName} ${fee.highlight?.amount ? highlightClass : ''}`}
                 />
               </td>
 
