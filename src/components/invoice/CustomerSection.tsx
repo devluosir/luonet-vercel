@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 
 interface SavedCustomer {
   name: string;
@@ -28,18 +29,29 @@ const inputClassName = `w-full px-4 py-2.5 rounded-2xl
 export function CustomerSection({ to, customerPO, onChange }: CustomerSectionProps) {
   const [savedCustomers, setSavedCustomers] = useState<SavedCustomer[]>([]);
   const [showSavedCustomers, setShowSavedCustomers] = useState(false);
-  const [showImportExport, setShowImportExport] = useState(false);
 
   // 添加 ref 用于检测点击外部区域
-  const importExportRef = useRef<HTMLDivElement>(null);
   const savedCustomersRef = useRef<HTMLDivElement>(null);
   const buttonsRef = useRef<HTMLDivElement>(null);
 
   // 加载保存的客户信息
   useEffect(() => {
-    const saved = localStorage.getItem('savedInvoiceCustomers');
-    if (saved) {
-      setSavedCustomers(JSON.parse(saved));
+    // 从客户管理页面加载数据
+    const customerRecords = localStorage.getItem('customerRecords');
+    if (customerRecords) {
+      const records = JSON.parse(customerRecords);
+      const formattedCustomers = records.map((record: any) => ({
+        name: record.name,
+        to: record.content,
+        customerPO: ''
+      }));
+      setSavedCustomers(formattedCustomers);
+    } else {
+      // 兼容旧的保存格式
+      const saved = localStorage.getItem('savedInvoiceCustomers');
+      if (saved) {
+        setSavedCustomers(JSON.parse(saved));
+      }
     }
   }, []);
 
@@ -47,15 +59,6 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      
-      // 检查是否点击了导入/导出弹窗外部
-      if (showImportExport && 
-          importExportRef.current && 
-          !importExportRef.current.contains(target) &&
-          buttonsRef.current &&
-          !buttonsRef.current.contains(target)) {
-        setShowImportExport(false);
-      }
       
       // 检查是否点击了保存的客户列表弹窗外部
       if (showSavedCustomers && 
@@ -68,45 +71,78 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
     };
 
     // 只在弹窗显示时添加事件监听器
-    if (showImportExport || showSavedCustomers) {
+    if (showSavedCustomers) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showImportExport, showSavedCustomers]);
+  }, [showSavedCustomers]);
 
   // 保存客户信息
   const handleSave = () => {
     if (!to.trim()) return;
 
     const customerName = to.split('\n')[0].trim(); // 使用第一行作为客户名称
-    const newCustomer: SavedCustomer = {
+    
+    // 从客户管理页面获取现有数据
+    const customerRecords = localStorage.getItem('customerRecords');
+    let records = customerRecords ? JSON.parse(customerRecords) : [];
+    
+    // 查找现有记录
+    const existingIndex = records.findIndex((record: any) => record.name === customerName);
+    
+    const newRecord = {
+      id: existingIndex >= 0 ? records[existingIndex].id : Date.now().toString(),
       name: customerName,
-      to,
-      customerPO
+      content: to,
+      createdAt: existingIndex >= 0 ? records[existingIndex].createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      usageRecords: existingIndex >= 0 ? records[existingIndex].usageRecords : []
     };
-
-    const newSavedCustomers = [...savedCustomers];
-    const existingIndex = newSavedCustomers.findIndex(c => c.name === customerName);
     
     if (existingIndex >= 0) {
-      newSavedCustomers[existingIndex] = newCustomer;
+      records[existingIndex] = newRecord;
     } else {
-      newSavedCustomers.push(newCustomer);
+      records.push(newRecord);
     }
-
-    setSavedCustomers(newSavedCustomers);
-    localStorage.setItem('savedInvoiceCustomers', JSON.stringify(newSavedCustomers));
+    
+    // 保存到客户管理页面
+    localStorage.setItem('customerRecords', JSON.stringify(records));
+    
+    // 更新本地状态
+    const formattedCustomers = records.map((record: any) => ({
+      name: record.name,
+      to: record.content,
+      customerPO: ''
+    }));
+    setSavedCustomers(formattedCustomers);
+    
     setShowSavedCustomers(false);
   };
 
   // 删除保存的客户信息
   const handleDelete = (customerName: string) => {
-    const newSavedCustomers = savedCustomers.filter(c => c.name !== customerName);
-    setSavedCustomers(newSavedCustomers);
-    localStorage.setItem('savedInvoiceCustomers', JSON.stringify(newSavedCustomers));
+    // 从客户管理页面获取现有数据
+    const customerRecords = localStorage.getItem('customerRecords');
+    if (!customerRecords) return;
+    
+    let records = JSON.parse(customerRecords);
+    
+    // 删除指定记录
+    records = records.filter((record: any) => record.name !== customerName);
+    
+    // 保存到客户管理页面
+    localStorage.setItem('customerRecords', JSON.stringify(records));
+    
+    // 更新本地状态
+    const formattedCustomers = records.map((record: any) => ({
+      name: record.name,
+      to: record.content,
+      customerPO: ''
+    }));
+    setSavedCustomers(formattedCustomers);
   };
 
   // 加载客户信息
@@ -115,56 +151,14 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
       to: customer.to,
       customerPO: customer.customerPO
     });
+    
+    // 记录使用情况（这里需要从父组件传入invoiceNo）
+    // recordCustomerUsage(customer.name, 'invoice', invoiceNo);
+    
     setShowSavedCustomers(false);
   };
 
-  // 导出客户数据
-  const handleExport = () => {
-    const dataStr = JSON.stringify(savedCustomers, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'invoice_customers.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    setShowImportExport(false);
-  };
 
-  // 导入客户数据
-  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const importedData = JSON.parse(e.target?.result as string);
-        if (Array.isArray(importedData)) {
-          // 合并现有数据和导入的数据
-          const mergedData = [...savedCustomers];
-          importedData.forEach(customer => {
-            const existingIndex = mergedData.findIndex(c => c.name === customer.name);
-            if (existingIndex >= 0) {
-              mergedData[existingIndex] = customer;
-            } else {
-              mergedData.push(customer);
-            }
-          });
-          setSavedCustomers(mergedData);
-          localStorage.setItem('savedInvoiceCustomers', JSON.stringify(mergedData));
-        }
-      } catch (error) {
-        console.error('Error importing data:', error);
-        alert('Invalid file format');
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = ''; // Reset input
-    setShowImportExport(false);
-  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -178,17 +172,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
             className={inputClassName}
           />
           <div className="absolute right-2 bottom-2 flex gap-2" ref={buttonsRef}>
-            <button
-              type="button"
-              onClick={() => setShowImportExport(true)}
-              className="px-3 py-1 rounded-lg text-xs font-medium
-                bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
-                hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
-                text-[#007AFF] dark:text-[#0A84FF]
-                transition-all duration-200"
-            >
-              Import/Export
-            </button>
+
             <button
               type="button"
               onClick={() => setShowSavedCustomers(true)}
@@ -213,43 +197,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
             </button>
           </div>
 
-          {/* 导入/导出弹窗 */}
-          {showImportExport && (
-            <div 
-              ref={importExportRef}
-              className="absolute z-10 right-0 top-full mt-1 w-[200px]
-                bg-white dark:bg-[#2C2C2E] rounded-xl shadow-lg
-                border border-gray-200/50 dark:border-gray-700/50
-                p-2"
-            >
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={handleExport}
-                  className="w-full px-3 py-2 text-left text-sm
-                    hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded-lg
-                    text-gray-700 dark:text-gray-300"
-                >
-                  Export Customers
-                </button>
-                <label className="block">
-                  <span className="w-full px-3 py-2 text-left text-sm
-                    hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded-lg
-                    text-gray-700 dark:text-gray-300
-                    cursor-pointer block"
-                  >
-                    Import Customers
-                  </span>
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleImport}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            </div>
-          )}
+
 
           {/* 保存的客户列表弹窗 */}
           {showSavedCustomers && savedCustomers.length > 0 && (

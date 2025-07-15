@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Settings, Download, ArrowLeft, Eye, Clipboard, History, Save } from 'lucide-react';
 import { generateQuotationPDF } from '@/utils/quotationPdfGenerator';
+import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { generateOrderConfirmationPDF } from '@/utils/orderConfirmationPdfGenerator';
 import { TabButton } from '@/components/quotation/TabButton';
 import { getDefaultNotes } from '@/utils/getDefaultNotes';
@@ -215,6 +216,12 @@ export default function QuotationPage() {
         });
       }, 100);
 
+      // 记录客户信息使用情况
+      if (data.to && data.quotationNo) {
+        const customerName = data.to.split('\n')[0].trim();
+        recordCustomerUsage(customerName, 'quotation', data.quotationNo);
+      }
+      
       // 生成 PDF
       if (activeTab === 'quotation') {
         await generateQuotationPDF(data);

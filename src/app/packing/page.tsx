@@ -7,6 +7,7 @@ import { ArrowLeft, Download, Settings, Clipboard, History, Save, Eye } from 'lu
 import { format } from 'date-fns';
 import { Footer } from '@/components/Footer';
 import { generatePackingListPDF } from '@/utils/packingPdfGenerator';
+import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { ItemsTable } from '@/components/packinglist/ItemsTable';
 import { SettingsPanel } from '@/components/packinglist/SettingsPanel';
 import { ShippingMarksModal } from '@/components/packinglist/ShippingMarksModal';
@@ -491,6 +492,13 @@ export default function PackingPage() {
       };
       const totals = calculateTotals();
       console.log('导出PDF时的totals:', totals);
+      
+      // 记录客户信息使用情况
+      if (packingData.consignee.name && packingData.invoiceNo) {
+        const customerName = packingData.consignee.name.split('\n')[0].trim();
+        recordCustomerUsage(customerName, 'packing', packingData.invoiceNo);
+      }
+      
       await generatePackingListPDF(packingData, false, totals);
     } catch (error) {
       console.error('Error generating PDF:', error);

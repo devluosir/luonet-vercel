@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Download, Settings, Clipboard, History, Save } from 'lucide-react';
 import { generateInvoicePDF } from '@/utils/pdfGenerator';
+import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { InvoiceTemplateConfig, InvoiceData, LineItem } from '@/types/invoice';
 import { format, addMonths } from 'date-fns';
 import { Footer } from '@/components/Footer';
@@ -236,6 +237,12 @@ Beneficiary: Luo & Company Co., Limited`,
         });
         saveInvoiceHistory(updatedHistory);
         
+        // 记录客户信息使用情况
+        if (invoiceData.to && invoiceData.invoiceNo) {
+          const customerName = invoiceData.to.split('\n')[0].trim();
+          recordCustomerUsage(customerName, 'invoice', invoiceData.invoiceNo);
+        }
+        
         // 生成 PDF
         await generateInvoicePDF(invoiceData);
         
@@ -258,6 +265,12 @@ Beneficiary: Luo & Company Co., Limited`,
         const saved = addInvoiceHistory(newInvoice);
         if (!saved) {
           throw new Error('Failed to save invoice history');
+        }
+        
+        // 记录客户信息使用情况
+        if (invoiceData.to && invoiceData.invoiceNo) {
+          const customerName = invoiceData.to.split('\n')[0].trim();
+          recordCustomerUsage(customerName, 'invoice', invoiceData.invoiceNo);
         }
         
         // 生成 PDF
