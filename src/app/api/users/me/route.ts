@@ -16,6 +16,7 @@ const getUserInfo = cache(async (userId: string) => {
       email: true,
       status: true,
       isAdmin: true,
+      updatedAt: true, // 添加updatedAt字段用于ETag
       permissions: {
         select: {
           id: true,
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(user, {
       headers: {
         'Cache-Control': 'private, max-age=300',  // 客户端缓存5分钟
-        'ETag': `"${user.id}-${user.updatedAt || Date.now()}"`, // 添加ETag支持
+        'ETag': `"${user.id}-${user.updatedAt?.getTime() || Date.now()}"`, // 添加ETag支持
       },
     });
   } catch (error) {

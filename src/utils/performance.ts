@@ -59,7 +59,18 @@ class PerformanceMonitor {
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const startTime = performance.now();
-      const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+      let url = '';
+      
+      // 正确处理不同类型的fetch参数
+      if (typeof args[0] === 'string') {
+        url = args[0];
+      } else if (args[0] instanceof Request) {
+        url = args[0].url;
+      } else if (args[0] instanceof URL) {
+        url = args[0].toString();
+      } else {
+        url = 'unknown';
+      }
       
       try {
         const response = await originalFetch(...args);
@@ -98,13 +109,13 @@ class PerformanceOptimizer {
     const originalSetInterval = window.setInterval;
     const timers = new Set<number>();
     
-    window.setTimeout = ((fn, delay, ...args) => {
+    window.setTimeout = ((fn: (...args: any[]) => void, delay: number, ...args: any[]) => {
       const id = originalSetTimeout(fn, delay, ...args);
       timers.add(id);
       return id;
     }) as typeof window.setTimeout;
     
-    window.setInterval = ((fn, delay, ...args) => {
+    window.setInterval = ((fn: (...args: any[]) => void, delay: number, ...args: any[]) => {
       const id = originalSetInterval(fn, delay, ...args);
       timers.add(id);
       return id;
