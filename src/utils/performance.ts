@@ -1,164 +1,146 @@
 // 性能监控工具
-export class PerformanceMonitor {
-  private static instance: PerformanceMonitor;
-  private metrics: Map<string, number> = new Map();
+class PerformanceMonitor {
+  private timers: Map<string, number> = new Map();
+  private metrics: Map<string, any> = new Map();
 
-  static getInstance(): PerformanceMonitor {
-    if (!PerformanceMonitor.instance) {
-      PerformanceMonitor.instance = new PerformanceMonitor();
-    }
-    return PerformanceMonitor.instance;
+  startTimer(name: string) {
+    this.timers.set(name, performance.now());
   }
 
-  // 开始计时
-  startTimer(name: string): void {
-    this.metrics.set(`${name}_start`, performance.now());
-  }
-
-  // 结束计时并记录
   endTimer(name: string): number {
-    const startTime = this.metrics.get(`${name}_start`);
+    const startTime = this.timers.get(name);
     if (!startTime) {
       console.warn(`Timer ${name} was not started`);
       return 0;
     }
-
-    const endTime = performance.now();
-    const duration = endTime - startTime;
     
-    this.metrics.set(`${name}_duration`, duration);
-    this.metrics.delete(`${name}_start`);
-
-    // 在开发环境下输出性能数据
+    const duration = performance.now() - startTime;
+    this.timers.delete(name);
+    this.metrics.set(name, duration);
+    
     if (process.env.NODE_ENV === 'development') {
       console.log(`⏱️ ${name}: ${duration.toFixed(2)}ms`);
     }
-
+    
     return duration;
   }
 
-  // 获取页面加载性能指标
-  getPageLoadMetrics(): Record<string, number> {
-    if (typeof window === 'undefined') return {};
-
+  getPageLoadMetrics() {
     const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
     if (!navigation) return {};
-
+    
     return {
       dns: navigation.domainLookupEnd - navigation.domainLookupStart,
       tcp: navigation.connectEnd - navigation.connectStart,
       ttfb: navigation.responseStart - navigation.requestStart,
-      domContentLoaded: navigation.domContentLoadedEventEnd - navigation.fetchStart,
-      loadComplete: navigation.loadEventEnd - navigation.fetchStart,
+      download: navigation.responseEnd - navigation.responseStart,
+      domContentLoaded: navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
+      load: navigation.loadEventEnd - navigation.loadEventStart,
+      total: navigation.loadEventEnd - navigation.fetchStart,
     };
   }
 
-  // 监控资源加载
-  monitorResourceLoading(): void {
-    if (typeof window === 'undefined') return;
-
+  monitorResourceLoading() {
     const observer = new PerformanceObserver((list) => {
-      list.getEntries().forEach((entry) => {
+      for (const entry of list.getEntries()) {
         if (entry.entryType === 'resource') {
-          const resourceEntry = entry as PerformanceResourceTiming;
-          if (resourceEntry.duration > 1000) { // 超过1秒的资源
-            console.warn(`🐌 慢资源加载: ${resourceEntry.name} (${resourceEntry.duration.toFixed(2)}ms)`);
+          const resource = entry as PerformanceResourceTiming;
+          if (resource.duration > 1000) { // 超过1秒的资源
+            console.warn(`🐌 慢资源加载: ${resource.name} (${resource.duration.toFixed(2)}ms)`);
           }
-        }
-      });
-    });
-
-    observer.observe({ entryTypes: ['resource'] });
-  }
-
-  // 预加载关键资源
-  preloadCriticalResources(): void {
-    if (typeof window === 'undefined') return;
-
-    const criticalResources = [
-      '/logo/logo.png',
-      '/fonts/NotoSansSC-Regular.ttf',
-      '/fonts/NotoSansSC-Bold.ttf'
-    ];
-
-    criticalResources.forEach(resource => {
-      const link = document.createElement('link');
-      link.rel = 'preload';
-      link.as = resource.endsWith('.ttf') ? 'font' : 'image';
-      link.href = resource;
-      link.crossOrigin = 'anonymous';
-      document.head.appendChild(link);
-    });
-  }
-
-  // 优化图片加载
-  optimizeImageLoading(): void {
-    if (typeof window === 'undefined') return;
-
-    // 使用 Intersection Observer 实现图片懒加载
-    const imageObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target as HTMLImageElement;
-          if (img.dataset.src) {
-            img.src = img.dataset.src;
-            img.removeAttribute('data-src');
-            imageObserver.unobserve(img);
-          }
-        }
-      });
-    });
-
-    // 观察所有带有 data-src 属性的图片
-    document.querySelectorAll('img[data-src]').forEach(img => {
-      imageObserver.observe(img);
-    });
-  }
-}
-
-// 导出单例实例
-export const performanceMonitor = PerformanceMonitor.getInstance();
-
-// 性能优化工具函数
-export const optimizePerformance = {
-  // 延迟加载非关键资源
-  deferNonCriticalResources: () => {
-    if (typeof window === 'undefined') return;
-
-    // 延迟加载非关键CSS
-    const nonCriticalCSS = document.querySelectorAll('link[rel="stylesheet"][data-non-critical]');
-    nonCriticalCSS.forEach(link => {
-      link.setAttribute('media', 'print');
-      link.setAttribute('onload', "this.media='all'");
-    });
-  },
-
-  // 优化字体加载
-  optimizeFontLoading: () => {
-    if (typeof window === 'undefined') return;
-
-    // 使用 Font Loading API
-    if ('fonts' in document) {
-      document.fonts.ready.then(() => {
-        document.documentElement.classList.add('fonts-loaded');
-      });
-    }
-  },
-
-  // 清理未使用的资源
-  cleanupUnusedResources: () => {
-    if (typeof window === 'undefined') return;
-
-    // 清理过期的 localStorage 数据
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.includes('temp_') || key.includes('cache_')) {
-        const timestamp = localStorage.getItem(`${key}_timestamp`);
-        if (timestamp && Date.now() - parseInt(timestamp) > 24 * 60 * 60 * 1000) {
-          localStorage.removeItem(key);
-          localStorage.removeItem(`${key}_timestamp`);
         }
       }
     });
+    
+    observer.observe({ entryTypes: ['resource'] });
   }
-}; 
+
+  monitorApiCalls() {
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const startTime = performance.now();
+      const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+      
+      try {
+        const response = await originalFetch(...args);
+        const duration = performance.now() - startTime;
+        
+        if (duration > 2000) { // 超过2秒的API调用
+          console.warn(`🐌 慢API调用: ${url} (${duration.toFixed(2)}ms)`);
+        }
+        
+        return response;
+      } catch (error) {
+        const duration = performance.now() - startTime;
+        console.error(`❌ API调用失败: ${url} (${duration.toFixed(2)}ms)`, error);
+        throw error;
+      }
+    };
+  }
+}
+
+// 性能优化工具
+class PerformanceOptimizer {
+  optimizeFontLoading() {
+    // 预加载关键字体
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'font';
+    link.type = 'font/woff2';
+    link.href = '/fonts/NotoSansSC-Regular.ttf';
+    link.crossOrigin = 'anonymous';
+    document.head.appendChild(link);
+  }
+
+  cleanupUnusedResources() {
+    // 清理未使用的定时器
+    const originalSetTimeout = window.setTimeout;
+    const originalSetInterval = window.setInterval;
+    const timers = new Set<number>();
+    
+    window.setTimeout = ((fn, delay, ...args) => {
+      const id = originalSetTimeout(fn, delay, ...args);
+      timers.add(id);
+      return id;
+    }) as typeof window.setTimeout;
+    
+    window.setInterval = ((fn, delay, ...args) => {
+      const id = originalSetInterval(fn, delay, ...args);
+      timers.add(id);
+      return id;
+    }) as typeof window.setInterval;
+    
+    // 页面卸载时清理
+    window.addEventListener('beforeunload', () => {
+      timers.forEach(id => {
+        clearTimeout(id);
+        clearInterval(id);
+      });
+    });
+  }
+
+  optimizeImages() {
+    // 懒加载图片
+    if ('IntersectionObserver' in window) {
+      const imageObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target as HTMLImageElement;
+            if (img.dataset.src) {
+              img.src = img.dataset.src;
+              img.removeAttribute('data-src');
+              imageObserver.unobserve(img);
+            }
+          }
+        });
+      });
+      
+      document.querySelectorAll('img[data-src]').forEach(img => {
+        imageObserver.observe(img);
+      });
+    }
+  }
+}
+
+export const performanceMonitor = new PerformanceMonitor();
+export const optimizePerformance = new PerformanceOptimizer(); 

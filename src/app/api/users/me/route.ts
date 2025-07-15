@@ -6,7 +6,7 @@ import { cache } from 'react';
 
 export const dynamic = 'force-dynamic';
 
-// 缓存获取用户信息的函数
+// 缓存获取用户信息的函数 - 增加缓存时间
 const getUserInfo = cache(async (userId: string) => {
   return await prisma.user.findUnique({
     where: { id: userId },
@@ -16,7 +16,13 @@ const getUserInfo = cache(async (userId: string) => {
       email: true,
       status: true,
       isAdmin: true,
-      permissions: true,
+      permissions: {
+        select: {
+          id: true,
+          moduleId: true,
+          canAccess: true,
+        }
+      },
     },
   });
 });
@@ -34,9 +40,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 });
     }
 
+    // 检查用户状态
+    if (!user.status) {
+      return NextResponse.json({ error: '账号已被禁用' }, { status: 403 });
+    }
+
     return NextResponse.json(user, {
       headers: {
-        'Cache-Control': 'private, max-age=60',  // 客户端缓存1分钟
+        'Cache-Control': 'private, max-age=300',  // 客户端缓存5分钟
+        'ETag': `"${user.id}-${user.updatedAt || Date.now()}"`, // 添加ETag支持
       },
     });
   } catch (error) {

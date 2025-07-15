@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ProfileModal } from '@/components/profile/ProfileModal';
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Footer } from '@/components/Footer';
+import { performanceMonitor, optimizePerformance } from '@/utils/performance';
 
 interface Permission {
   id: string;
@@ -211,10 +212,53 @@ const DynamicHeader = dynamic(() => import('@/components/Header').then(mod => mo
   )
 });
 
-// 预加载Header组件
-if (typeof window !== 'undefined') {
-  import('@/components/Header');
-}
+// 缓存键常量
+const CACHE_KEY = 'userInfo';
+const CACHE_DURATION = 5 * 60 * 1000; // 5分钟
+
+// 缓存工具函数
+const cacheUtils = {
+  get: (key: string) => {
+    try {
+      const cached = sessionStorage.getItem(key);
+      if (!cached) return null;
+      
+      const { data, timestamp } = JSON.parse(cached);
+      const now = Date.now();
+      
+      // 检查缓存是否过期
+      if (now - timestamp > CACHE_DURATION) {
+        sessionStorage.removeItem(key);
+        return null;
+      }
+      
+      return data;
+    } catch (e) {
+      sessionStorage.removeItem(key);
+      return null;
+    }
+  },
+  
+  set: (key: string, data: any) => {
+    try {
+      const cacheData = {
+        data,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem(key, JSON.stringify(cacheData));
+    } catch (e) {
+      console.warn('缓存写入失败:', e);
+    }
+  },
+  
+  clear: (key: string) => {
+    try {
+      sessionStorage.removeItem(key);
+    } catch (e) {
+      console.warn('缓存清除失败:', e);
+    }
+  }
+};
 
 export default function ToolsPage() {
   const { data: session, status } = useSession();
@@ -223,23 +267,109 @@ export default function ToolsPage() {
   const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
+  // 性能监控
   useEffect(() => {
-    setMounted(true);
-    
-    // 预加载常用页面
     if (typeof window !== 'undefined') {
-      router.prefetch('/quotation');
-      router.prefetch('/invoice');
-      router.prefetch('/purchase');
-      router.prefetch('/history');
+      performanceMonitor.startTimer('tools_page_load');
+      performanceMonitor.monitorResourceLoading();
+      performanceMonitor.monitorApiCalls();
+      
+      // 性能优化
+      optimizePerformance.optimizeFontLoading();
+      optimizePerformance.cleanupUnusedResources();
+    }
+  }, []);
+
+  // 优化预加载逻辑 - 使用useCallback避免重复创建
+  const prefetchPages = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      // 只预加载最常用的页面，避免资源竞争
+      const priorityPages = ['/quotation', '/invoice'];
+      priorityPages.forEach(page => {
+        router.prefetch(page);
+      });
+      
+      // 延迟预加载其他页面
+      setTimeout(() => {
+        const secondaryPages = ['/purchase', '/history'];
+        secondaryPages.forEach(page => {
+          router.prefetch(page);
+        });
+      }, 1000);
     }
   }, [router]);
 
+  useEffect(() => {
+    setMounted(true);
+    prefetchPages();
+  }, [prefetchPages]);
+
   const handleLogout = async () => {
+    cacheUtils.clear(CACHE_KEY);
     localStorage.removeItem('username');
     await signOut({ redirect: true, callbackUrl: '/' });
   };
+
+  // 优化用户信息获取逻辑
+  const fetchUser = useCallback(async () => {
+    try {
+      setLoading(true);
+      setFetchError(null);
+      
+      performanceMonitor.startTimer('user_fetch');
+      
+      // 尝试从缓存获取用户信息
+      const cachedUser = cacheUtils.get(CACHE_KEY);
+      if (cachedUser) {
+        setUser(cachedUser);
+        setLoading(false);
+        performanceMonitor.endTimer('user_fetch');
+        return;
+      }
+      
+      // 添加重试机制
+      let retryCount = 0;
+      const maxRetries = 2;
+      
+      while (retryCount <= maxRetries) {
+        try {
+          const response = await fetch('/api/users/me', {
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          setUser(data);
+          
+          // 缓存用户信息
+          cacheUtils.set(CACHE_KEY, data);
+          break;
+        } catch (error) {
+          retryCount++;
+          if (retryCount > maxRetries) {
+            throw error;
+          }
+          // 等待一段时间后重试
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+      
+      performanceMonitor.endTimer('user_fetch');
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      setFetchError(error instanceof Error ? error.message : '获取用户信息失败');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!mounted || status === 'loading') return;
@@ -249,41 +379,29 @@ export default function ToolsPage() {
       return;
     }
 
-    const fetchUser = async () => {
-      try {
-        setLoading(true);
-        
-        // 尝试从缓存获取用户信息
-        const cachedUser = sessionStorage.getItem('userInfo');
-        if (cachedUser) {
-          try {
-            const parsedUser = JSON.parse(cachedUser);
-            setUser(parsedUser);
-            setLoading(false);
-            return;
-          } catch (e) {
-            // 缓存解析失败，继续从API获取
-          }
-        }
-        
-        const response = await fetch('/api/users/me');
-        if (!response.ok) {
-          throw new Error('获取用户信息失败');
-        }
-        const data = await response.json();
-        setUser(data);
-        
-        // 缓存用户信息
-        sessionStorage.setItem('userInfo', JSON.stringify(data));
-      } catch (error) {
-        console.error('Error fetching user:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUser();
-  }, [mounted, session, status, router]);
+  }, [mounted, session, status, router, fetchUser]);
+
+  // 使用useMemo优化模块过滤计算
+  const availableModules = useMemo(() => {
+    if (!user?.permissions) return [];
+    
+    return MODULES.filter(module => {
+      const permission = user.permissions.find(p => p.moduleId === module.id);
+      return permission?.canAccess;
+    });
+  }, [user?.permissions]);
+
+  // 页面加载完成后的性能记录
+  useEffect(() => {
+    if (mounted && !loading && user) {
+      performanceMonitor.endTimer('tools_page_load');
+      const metrics = performanceMonitor.getPageLoadMetrics();
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📊 Tools页面加载性能:', metrics);
+      }
+    }
+  }, [mounted, loading, user]);
 
   // 避免闪烁，在客户端渲染前返回空内容
   if (!mounted) {
@@ -293,12 +411,15 @@ export default function ToolsPage() {
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">加载中...</div>
-        {process.env.NODE_ENV === 'development' && (
-          <div className="text-sm text-gray-500 mt-2">
-            正在获取用户权限信息...
-          </div>
-        )}
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-lg">加载中...</div>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="text-sm text-gray-500 mt-2">
+              正在获取用户权限信息...
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -307,11 +428,23 @@ export default function ToolsPage() {
     return null;
   }
 
-  // 根据用户权限过滤可用模块
-  const availableModules = MODULES.filter(module => {
-    const permission = user?.permissions?.find(p => p.moduleId === module.id);
-    return permission?.canAccess;
-  });
+  // 显示错误状态
+  if (fetchError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 mb-4">加载失败</div>
+          <div className="text-sm text-gray-500 mb-4">{fetchError}</div>
+          <button 
+            onClick={fetchUser}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            重试
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-black">
