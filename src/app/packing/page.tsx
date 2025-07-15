@@ -488,6 +488,13 @@ export default function PackingPage() {
             packageQty += item.packageQty;
           }
         });
+        
+        // 添加 other fees 到总计
+        if (packingData.showPrice && packingData.otherFees) {
+          const feesTotal = packingData.otherFees.reduce((sum, fee) => sum + fee.amount, 0);
+          totalPrice += feesTotal;
+        }
+        
         return { totalPrice, netWeight, grossWeight, packageQty };
       };
       const totals = calculateTotals();

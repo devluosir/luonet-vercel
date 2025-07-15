@@ -43,6 +43,7 @@ interface PackingData {
   };
   markingNo: string;
   items: PackingItem[];
+  otherFees?: OtherFee[];
   currency: string;
   remarks: string;
   remarkOptions: {
@@ -57,6 +58,16 @@ interface PackingData {
   documentType: 'proforma' | 'packing' | 'both';
   templateConfig: {
     headerType: 'none' | 'bilingual' | 'english';
+  };
+}
+
+interface OtherFee {
+  id: number;
+  description: string;
+  amount: number;
+  highlight?: {
+    description?: boolean;
+    amount?: boolean;
   };
 }
 
@@ -771,6 +782,30 @@ async function renderPackingTable(
   mergeColCount += 2; // Qty + Unit
   if (data.showPrice) mergeColCount += 1; // U/Price
 
+  // 添加 other fees 行
+  if (data.showPrice && data.otherFees && data.otherFees.length > 0) {
+    data.otherFees.forEach(fee => {
+      const feeRow: any[] = [
+        {
+          content: fee.description,
+          colSpan: mergeColCount,
+          styles: { 
+            halign: 'center',
+            ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {})
+          }
+        },
+        {
+          content: fee.amount.toFixed(2),
+          styles: { 
+            halign: 'center',
+            ...(fee.highlight?.amount ? { textColor: [255, 0, 0] } : {})
+          }
+        }
+      ];
+      body.push(feeRow);
+    });
+  }
+
   // 统计总计（分组只统计组内第一行）
   let netWeight = 0, grossWeight = 0, packageQty = 0, totalPrice = 0;
   const processedGroups = new Set<string>();
@@ -789,6 +824,12 @@ async function renderPackingTable(
       packageQty += item.packageQty;
     }
   });
+
+  // 添加 other fees 到总计
+  if (data.showPrice && data.otherFees) {
+    const feesTotal = data.otherFees.reduce((sum, fee) => sum + fee.amount, 0);
+    totalPrice += feesTotal;
+  }
 
   // 添加总计行前调试输出
   console.log('PDF端自动统计:', { totalPrice, netWeight, grossWeight, packageQty });
