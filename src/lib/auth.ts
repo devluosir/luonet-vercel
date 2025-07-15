@@ -46,6 +46,12 @@ export const authConfig: NextAuthOptions = {
           return null;
         }
 
+        // 更新最后登录时间
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() }
+        });
+
         return {
           id: user.id,
           username: user.username,

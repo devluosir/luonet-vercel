@@ -71,6 +71,12 @@ export const config = {
           throw new Error("账号已被禁用")
         }
 
+        // 更新最后登录时间
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() }
+        });
+
         return {
           id: user.id,
           email: user.email || "",
