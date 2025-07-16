@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Download, Settings, Clipboard, History, Save, Eye } from 'lucide-react';
+import { ArrowLeft, Download, Settings, Clipboard, History, Save, Eye, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { Footer } from '@/components/Footer';
 import { generatePackingListPDF } from '@/utils/packingPdfGenerator';
@@ -650,6 +650,72 @@ export default function PackingPage() {
   const otherFeesTotal = packingData.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
   const totalAmount = totals.totalPrice + otherFeesTotal;
 
+  // 导出Excel功能
+  const handleExportExcel = () => {
+    try {
+      // 格式化数值函数
+      const formatNumber = (value: number): string => {
+        if (value === 0) return '0';
+        if (!value || isNaN(value)) return '';
+        // 保留2位小数，避免浮点数精度问题
+        return Number(value.toFixed(2)).toString();
+      };
+      
+      // 准备Excel数据
+      const excelData = [];
+      
+      // 添加标题行
+      const headers = ['No.', 'Description', 'HS Code', 'Quantity', 'Unit', 'Unit Price', 'Total Price', 'Net Weight', 'Gross Weight', 'Package Qty', 'Dimensions'];
+      excelData.push(headers);
+      
+      // 添加商品数据
+      packingData.items.forEach((item, index) => {
+        const row = [
+          item.serialNo,
+          item.description,
+          item.hsCode,
+          item.quantity,
+          item.unit,
+          formatNumber(item.unitPrice),
+          formatNumber(item.totalPrice),
+          formatNumber(item.netWeight),
+          formatNumber(item.grossWeight),
+          item.packageQty,
+          item.dimensions
+        ];
+        excelData.push(row);
+      });
+      
+      // 添加其他费用（如果显示价格）
+      if (packingData.showPrice && packingData.otherFees && packingData.otherFees.length > 0) {
+        excelData.push([]); // 空行
+        excelData.push(['Other Fees']); // 标题
+        packingData.otherFees.forEach(fee => {
+          excelData.push([fee.description, '', '', '', '', '', formatNumber(fee.amount)]);
+        });
+      }
+      
+      // 转换为CSV格式
+      const csvContent = excelData.map(row => 
+        row.map(cell => `"${cell || ''}"`).join(',')
+      ).join('\n');
+      
+      // 创建并下载文件
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `packing_list_${packingData.invoiceNo || 'export'}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      alert('Failed to export Excel file. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
       <main className="flex-1">
@@ -685,6 +751,14 @@ export default function PackingPage() {
                   >
                     <History className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                   </Link>
+                  <button
+                    type="button"
+                    onClick={handleExportExcel}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                    title="导出为Excel"
+                  >
+                    <FileSpreadsheet className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                  </button>
                   <button
                     type="button"
                     onClick={handleSave}
