@@ -143,10 +143,30 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
 
   // 加载收货人信息
   const handleLoad = (consignee: SavedConsignee) => {
-    onChange({
-      consigneeName: consignee.name,
-      orderNo: consignee.orderNo
-    });
+    // 从客户管理页面获取完整的收货人信息
+    const customerRecords = localStorage.getItem('customerRecords');
+    if (customerRecords) {
+      const records = JSON.parse(customerRecords);
+      const record = records.find((r: any) => r.name === consignee.name);
+      if (record) {
+        onChange({
+          consigneeName: record.content, // 使用完整的收货人信息
+          orderNo: consignee.orderNo
+        });
+      } else {
+        // 如果找不到完整信息，使用名称
+        onChange({
+          consigneeName: consignee.name,
+          orderNo: consignee.orderNo
+        });
+      }
+    } else {
+      // 兼容旧格式
+      onChange({
+        consigneeName: consignee.name,
+        orderNo: consignee.orderNo
+      });
+    }
     
     // 记录使用情况（这里需要从父组件传入invoiceNo）
     // recordCustomerUsage(consignee.name, 'packing', invoiceNo);
