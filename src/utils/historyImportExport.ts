@@ -178,9 +178,9 @@ const saveCustomerInfo = (customerInfo: { name: string; content: string }, docum
 
     if (existingUsageIndex === -1) {
       newRecord.usageRecords.push(usageRecord);
-      console.log(`✅ 添加新使用记录成功`);
+      console.log(`✅ 添加新使用记录成功: ${documentType}:${documentNo}`);
     } else {
-      console.log(`⚠️ 使用记录已存在，跳过添加`);
+      console.log(`⚠️ 使用记录已存在，跳过添加: ${documentType}:${documentNo}`);
     }
 
     if (existingIndex >= 0) {
@@ -215,18 +215,68 @@ function normalizeCustomerName(name: string): string {
 function findBestCustomerMatch(customerName: string, records: any[]): number {
   const normalizedSearchName = normalizeCustomerName(customerName);
   
-  // 只进行精确匹配，避免错误的匹配
-  const exactMatch = records.findIndex(record => 
-    normalizeCustomerName(record.name) === normalizedSearchName
-  );
+  console.log(`🔍 查找客户匹配:`, {
+    originalName: customerName,
+    normalizedName: normalizedSearchName,
+    totalRecords: records.length
+  });
   
-  return exactMatch;
+  // 首先尝试精确匹配
+  const exactMatch = records.findIndex(record => {
+    const normalizedRecordName = normalizeCustomerName(record.name);
+    const isMatch = normalizedRecordName === normalizedSearchName;
+    if (isMatch) {
+      console.log(`✅ 精确匹配成功:`, {
+        recordName: record.name,
+        normalizedRecordName,
+        recordId: record.id
+      });
+    }
+    return isMatch;
+  });
+  
+  if (exactMatch !== -1) {
+    return exactMatch;
+  }
+  
+  // 如果精确匹配失败，尝试模糊匹配（包含关系）
+  const fuzzyMatch = records.findIndex(record => {
+    const normalizedRecordName = normalizeCustomerName(record.name);
+    const searchInRecord = normalizedRecordName.includes(normalizedSearchName);
+    const recordInSearch = normalizedSearchName.includes(normalizedRecordName);
+    
+    if (searchInRecord || recordInSearch) {
+      console.log(`🔍 模糊匹配成功:`, {
+        recordName: record.name,
+        normalizedRecordName,
+        searchInRecord,
+        recordInSearch,
+        recordId: record.id
+      });
+    }
+    
+    return searchInRecord || recordInSearch;
+  });
+  
+  if (fuzzyMatch !== -1) {
+    return fuzzyMatch;
+  }
+  
+  console.log(`❌ 未找到匹配的客户:`, {
+    searchName: customerName,
+    normalizedSearchName
+  });
+  
+  return -1;
 }
 
 // 处理单据数据并提取客户信息
 const processDocumentData = (data: any[], documentType: string): { processedData: any[], customerCount: number } => {
   const processedData = [...data];
   let customerCount = 0;
+  
+  // 用于去重的Set，避免同一个单据被重复处理
+  const processedDocuments = new Set<string>();
 
   console.log(`🔍 处理 ${documentType} 类型数据，共 ${data.length} 条记录`);
 
@@ -251,6 +301,17 @@ const processDocumentData = (data: any[], documentType: string): { processedData
       if (!documentNo) {
         documentNo = item.id || '';
       }
+      
+      // 创建唯一标识符，用于去重
+      const documentKey = `${documentType}:${documentNo}`;
+      
+      // 检查是否已经处理过这个单据
+      if (processedDocuments.has(documentKey)) {
+        console.log(`⚠️ 跳过重复单据: ${documentKey}`);
+        continue;
+      }
+      
+      processedDocuments.add(documentKey);
       
       console.log(`📝 提取客户信息:`, {
         customerName: customerInfo.name,
@@ -282,7 +343,7 @@ const processDocumentData = (data: any[], documentType: string): { processedData
     }
   }
 
-  console.log(`📊 ${documentType} 处理完成，成功保存 ${customerCount} 条客户记录`);
+  console.log(`📊 ${documentType} 处理完成，成功保存 ${customerCount} 条客户记录，去重后处理 ${processedDocuments.size} 个单据`);
   return { processedData, customerCount };
 };
 
