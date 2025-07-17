@@ -14,6 +14,37 @@ interface ConsigneeSectionProps {
   onChange: (data: { consigneeName: string; orderNo: string }) => void;
 }
 
+/**
+ * 标准化客户名称，用于匹配
+ * @param name 客户名称
+ * @returns 标准化后的客户名称
+ */
+function normalizeCustomerName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ') // 将多个空格替换为单个空格
+    .replace(/[^\w\s]/g, '') // 移除特殊字符，只保留字母、数字和空格
+    .trim();
+}
+
+/**
+ * 查找最匹配的客户记录
+ * @param customerName 客户名称
+ * @param records 客户记录数组
+ * @returns 匹配的客户记录索引，如果未找到返回-1
+ */
+function findBestCustomerMatch(customerName: string, records: any[]): number {
+  const normalizedSearchName = normalizeCustomerName(customerName);
+  
+  // 只进行精确匹配，避免错误的匹配
+  const exactMatch = records.findIndex(record => 
+    normalizeCustomerName(record.name) === normalizedSearchName
+  );
+  
+  return exactMatch;
+}
+
 const inputClassName = `w-full px-4 py-2.5 rounded-2xl
   bg-white/95 dark:bg-[#1c1c1e]/95
   border border-[#007AFF]/10 dark:border-[#0A84FF]/10
@@ -88,8 +119,8 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
     const customerRecords = localStorage.getItem('customerRecords');
     let records = customerRecords ? JSON.parse(customerRecords) : [];
     
-    // 查找现有记录
-    const existingIndex = records.findIndex((record: any) => record.name === consigneeNameFirstLine);
+    // 查找现有记录，使用智能匹配
+    const existingIndex = findBestCustomerMatch(consigneeNameFirstLine, records);
     
     const newRecord = {
       id: existingIndex >= 0 ? records[existingIndex].id : Date.now().toString(),
@@ -127,8 +158,11 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
     
     let records = JSON.parse(customerRecords);
     
-    // 删除指定记录
-    records = records.filter((record: any) => record.name !== consigneeName);
+    // 删除指定记录，使用智能匹配
+    const recordIndex = findBestCustomerMatch(consigneeName, records);
+    if (recordIndex !== -1) {
+      records.splice(recordIndex, 1);
+    }
     
     // 保存到客户管理页面
     localStorage.setItem('customerRecords', JSON.stringify(records));
@@ -147,8 +181,9 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
     const customerRecords = localStorage.getItem('customerRecords');
     if (customerRecords) {
       const records = JSON.parse(customerRecords);
-      const record = records.find((r: any) => r.name === consignee.name);
-      if (record) {
+      const recordIndex = findBestCustomerMatch(consignee.name, records);
+      if (recordIndex !== -1) {
+        const record = records[recordIndex];
         onChange({
           consigneeName: record.content, // 使用完整的收货人信息
           orderNo: consignee.orderNo

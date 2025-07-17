@@ -219,7 +219,16 @@ export default function QuotationPage() {
       // 记录客户信息使用情况
       if (data.to && data.quotationNo) {
         const customerName = data.to.split('\n')[0].trim();
-        recordCustomerUsage(customerName, 'quotation', data.quotationNo);
+        // 根据当前标签页决定文档类型
+        const documentType = activeTab === 'quotation' ? 'quotation' : 'confirmation';
+        console.log('报价单/订单确认记录客户使用情况:', {
+          customerName,
+          documentType,
+          documentNo: data.quotationNo,
+          activeTab,
+          fullCustomerInfo: data.to
+        });
+        recordCustomerUsage(customerName, documentType, data.quotationNo);
       }
       
       // 生成 PDF

@@ -503,6 +503,12 @@ export default function PackingPage() {
       // 记录客户信息使用情况
       if (packingData.consignee.name && packingData.invoiceNo) {
         const customerName = packingData.consignee.name.split('\n')[0].trim();
+        console.log('装箱单记录客户使用情况:', {
+          customerName,
+          documentType: 'packing',
+          documentNo: packingData.invoiceNo,
+          fullConsigneeName: packingData.consignee.name
+        });
         recordCustomerUsage(customerName, 'packing', packingData.invoiceNo);
       }
       

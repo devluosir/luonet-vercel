@@ -39,6 +39,7 @@ export interface ImportResult {
   details?: string[];
   otherTabs?: string[];
   error?: string;
+  customerImported?: number; // 新增：导入的客户数量
 }
 
 export interface ExportResult {
@@ -46,6 +47,244 @@ export interface ExportResult {
   fileName: string;
   exportStats: string;
 }
+
+// 提取客户信息的辅助函数
+const extractCustomerInfo = (data: any): { name: string; content: string } | null => {
+  try {
+    console.log(`🔍 开始提取客户信息:`, {
+      hasTo: !!data.to,
+      hasData: !!data.data,
+      hasDataTo: !!(data.data && data.data.to),
+      hasDataConsignee: !!(data.data && data.data.consignee),
+      hasConsigneeName: !!data.consigneeName,
+      dataKeys: data.data ? Object.keys(data.data) : [],
+      itemKeys: Object.keys(data)
+    });
+
+    // 从不同单据类型中提取客户信息
+    let customerName = '';
+    let customerContent = '';
+
+    // 报价单和销售确认 - 直接使用to字段
+    if (data.to) {
+      customerContent = data.to;
+      customerName = data.to.split('\n')[0]?.trim() || '';
+      console.log(`📝 从报价单/销售确认提取:`, { customerName, hasContent: !!customerContent });
+    }
+    // 发票 - 从data.to字段提取
+    else if (data.data?.to) {
+      customerContent = data.data.to;
+      customerName = data.data.to.split('\n')[0]?.trim() || '';
+      console.log(`📝 从发票提取:`, { customerName, hasContent: !!customerContent });
+    }
+    // 装箱单 - 从data.consignee字段提取
+    else if (data.data?.consignee) {
+      // 检查consignee是字符串还是对象
+      if (typeof data.data.consignee === 'string') {
+        customerContent = data.data.consignee;
+        customerName = data.data.consignee.split('\n')[0]?.trim() || '';
+        console.log(`📝 从装箱单提取:`, { customerName, hasContent: !!customerContent });
+      } else if (typeof data.data.consignee === 'object' && data.data.consignee !== null) {
+        // 如果是对象，尝试提取name字段或转换为字符串
+        customerContent = data.data.consignee.name || JSON.stringify(data.data.consignee);
+        customerName = data.data.consignee.name || '';
+        console.log(`📝 从装箱单对象提取:`, { customerName, hasContent: !!customerContent });
+      }
+    }
+    // 装箱单 - 从consigneeName字段提取（备用）
+    else if (data.consigneeName) {
+      customerContent = data.consigneeName;
+      customerName = data.consigneeName.split('\n')[0]?.trim() || '';
+      console.log(`📝 从装箱单consigneeName提取:`, { customerName, hasContent: !!customerContent });
+    }
+    // 装箱单 - 从data.consigneeName字段提取（备用）
+    else if (data.data?.consigneeName) {
+      customerContent = data.data.consigneeName;
+      customerName = data.data.consigneeName.split('\n')[0]?.trim() || '';
+      console.log(`📝 从装箱单data.consigneeName提取:`, { customerName, hasContent: !!customerContent });
+    }
+    // 装箱单 - 从data.consignee.name字段提取（备用）
+    else if (data.data?.consignee?.name) {
+      customerContent = data.data.consignee.name;
+      customerName = data.data.consignee.name.split('\n')[0]?.trim() || '';
+      console.log(`📝 从装箱单data.consignee.name提取:`, { customerName, hasContent: !!customerContent });
+    }
+
+    if (customerName && customerContent) {
+      console.log(`✅ 成功提取客户信息:`, { customerName, contentLength: customerContent.length });
+      return { name: customerName, content: customerContent };
+    }
+
+    console.log(`❌ 无法提取客户信息，所有字段都为空`);
+    return null;
+  } catch (error) {
+    console.error('❌ 提取客户信息失败:', error);
+    return null;
+  }
+};
+
+// 保存客户信息到客户管理系统
+const saveCustomerInfo = (customerInfo: { name: string; content: string }, documentType: string, documentNo: string): boolean => {
+  try {
+    console.log(`💾 开始保存客户信息:`, {
+      customerName: customerInfo.name,
+      documentType,
+      documentNo
+    });
+
+    // 获取现有的客户记录
+    const customerRecords = localStorage.getItem('customerRecords');
+    let records = customerRecords ? JSON.parse(customerRecords) : [];
+    
+    console.log(`📋 当前客户记录数量: ${records.length}`);
+    console.log(`📋 现有客户名称:`, records.map((r: any) => r.name));
+    
+    // 使用智能匹配查找是否已存在相同名称的客户
+    const existingIndex = findBestCustomerMatch(customerInfo.name, records);
+    
+    console.log(`🔍 客户匹配结果:`, {
+      searchName: customerInfo.name,
+      existingIndex,
+      foundRecord: existingIndex >= 0 ? records[existingIndex]?.name : 'none'
+    });
+    
+    const newRecord = {
+      id: existingIndex >= 0 ? records[existingIndex].id : Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      name: customerInfo.name,
+      content: customerInfo.content,
+      createdAt: existingIndex >= 0 ? records[existingIndex].createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      usageRecords: existingIndex >= 0 ? records[existingIndex].usageRecords : []
+    };
+
+    // 添加使用记录
+    const usageRecord = {
+      documentType: documentType as 'invoice' | 'packing' | 'quotation' | 'confirmation',
+      documentNo: documentNo,
+      usedAt: new Date().toISOString()
+    };
+
+    console.log(`📝 添加使用记录:`, {
+      documentType: usageRecord.documentType,
+      documentNo: usageRecord.documentNo,
+      existingRecordsCount: newRecord.usageRecords.length
+    });
+
+    // 检查是否已存在相同的使用记录
+    const existingUsageIndex = newRecord.usageRecords.findIndex((record: any) => 
+      record.documentType === usageRecord.documentType && 
+      record.documentNo === usageRecord.documentNo
+    );
+
+    if (existingUsageIndex === -1) {
+      newRecord.usageRecords.push(usageRecord);
+      console.log(`✅ 添加新使用记录成功`);
+    } else {
+      console.log(`⚠️ 使用记录已存在，跳过添加`);
+    }
+
+    if (existingIndex >= 0) {
+      records[existingIndex] = newRecord;
+      console.log(`🔄 更新现有客户记录: ${customerInfo.name}`);
+    } else {
+      records.push(newRecord);
+      console.log(`➕ 添加新客户记录: ${customerInfo.name}`);
+    }
+    
+    // 保存到localStorage
+    localStorage.setItem('customerRecords', JSON.stringify(records));
+    
+    console.log(`💾 客户信息保存成功: ${customerInfo.name}`);
+    return true;
+  } catch (error) {
+    console.error('❌ 保存客户信息失败:', error);
+    return false;
+  }
+};
+
+// 添加客户名称匹配函数
+function normalizeCustomerName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ') // 将多个空格替换为单个空格
+    .replace(/[^\w\s]/g, '') // 移除特殊字符，只保留字母、数字和空格
+    .trim();
+}
+
+function findBestCustomerMatch(customerName: string, records: any[]): number {
+  const normalizedSearchName = normalizeCustomerName(customerName);
+  
+  // 只进行精确匹配，避免错误的匹配
+  const exactMatch = records.findIndex(record => 
+    normalizeCustomerName(record.name) === normalizedSearchName
+  );
+  
+  return exactMatch;
+}
+
+// 处理单据数据并提取客户信息
+const processDocumentData = (data: any[], documentType: string): { processedData: any[], customerCount: number } => {
+  const processedData = [...data];
+  let customerCount = 0;
+
+  console.log(`🔍 处理 ${documentType} 类型数据，共 ${data.length} 条记录`);
+
+  for (const item of processedData) {
+    const customerInfo = extractCustomerInfo(item);
+    if (customerInfo) {
+      // 根据文档类型选择合适的号码字段
+      let documentNo = '';
+      if (documentType === 'quotation') {
+        documentNo = item.quotationNo || item.data?.quotationNo || '';
+      } else if (documentType === 'confirmation') {
+        documentNo = item.contractNo || item.data?.contractNo || item.quotationNo || item.data?.quotationNo || '';
+      } else if (documentType === 'invoice') {
+        documentNo = item.invoiceNo || item.data?.invoiceNo || '';
+      } else if (documentType === 'purchase') {
+        documentNo = item.orderNo || item.data?.orderNo || '';
+      } else if (documentType === 'packing') {
+        documentNo = item.invoiceNo || item.data?.invoiceNo || '';
+      }
+      
+      // 如果仍然没有找到号码，才使用ID作为备用
+      if (!documentNo) {
+        documentNo = item.id || '';
+      }
+      
+      console.log(`📝 提取客户信息:`, {
+        customerName: customerInfo.name,
+        documentType,
+        documentNo,
+        itemType: item.type || 'unknown',
+        hasQuotationNo: !!item.quotationNo,
+        hasDataQuotationNo: !!item.data?.quotationNo,
+        hasContractNo: !!item.contractNo,
+        hasDataContractNo: !!item.data?.contractNo,
+        hasInvoiceNo: !!item.invoiceNo,
+        hasDataInvoiceNo: !!item.data?.invoiceNo
+      });
+      const success = saveCustomerInfo(customerInfo, documentType, documentNo);
+      if (success) {
+        customerCount++;
+        console.log(`✅ 成功保存客户使用记录: ${customerInfo.name} - ${documentType}:${documentNo}`);
+      } else {
+        console.log(`❌ 保存客户使用记录失败: ${customerInfo.name} - ${documentType}:${documentNo}`);
+      }
+    } else {
+      console.log(`⚠️ 无法提取客户信息:`, {
+        itemKeys: Object.keys(item),
+        hasTo: !!item.to,
+        hasData: !!item.data,
+        hasDataTo: !!(item.data && item.data.to),
+        hasDataConsignee: !!(item.data && item.data.consignee)
+      });
+    }
+  }
+
+  console.log(`📊 ${documentType} 处理完成，成功保存 ${customerCount} 条客户记录`);
+  return { processedData, customerCount };
+};
 
 // 智能导入函数
 export const smartImport = (content: string, activeTab: HistoryType): ImportResult => {
@@ -90,7 +329,8 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         const results: ImportResult = {
           success: true,
           details: [],
-          otherTabs: []
+          otherTabs: [],
+          customerImported: 0
         };
 
         // 按类型分组数据
@@ -103,41 +343,98 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         for (const item of records) {
           if (!item || typeof item !== 'object') continue;
 
+          console.log(`🔍 分析数据项:`, {
+            hasQuotationNo: 'quotationNo' in item,
+            hasType: 'type' in item,
+            hasInvoiceNo: 'invoiceNo' in item,
+            hasConsigneeName: 'consigneeName' in item,
+            hasOrderNo: 'orderNo' in item,
+            hasSupplierName: 'supplierName' in item,
+            hasData: 'data' in item,
+            itemType: item.type,
+            dataKeys: item.data ? Object.keys(item.data) : [],
+            // 添加更详细的字段信息
+            quotationNo: item.quotationNo,
+            invoiceNo: item.invoiceNo,
+            orderNo: item.orderNo,
+            consigneeName: item.consigneeName,
+            supplierName: item.supplierName,
+            dataType: item.data?.type,
+            dataQuotationNo: item.data?.quotationNo,
+            dataInvoiceNo: item.data?.invoiceNo,
+            dataOrderNo: item.data?.orderNo,
+            dataConsignee: item.data?.consignee,
+            dataSupplierName: item.data?.supplierName,
+            dataCustomerPO: item.data?.customerPO
+          });
+
           // 识别数据类型
           if ('quotationNo' in item && 'type' in item) {
             // 报价单或确认书数据
             if (item.type === 'quotation') {
               quotationData.push(item);
+              console.log(`✅ 识别为报价单: ${item.quotationNo}`);
             } else if (item.type === 'confirmation') {
               confirmationData.push(item);
+              console.log(`✅ 识别为订单确认: ${item.quotationNo}`);
             }
           } else if ('invoiceNo' in item && !('quotationNo' in item) && !('consigneeName' in item)) {
             // 发票数据
             invoiceData.push(item);
+            console.log(`✅ 识别为发票: ${item.invoiceNo}`);
           } else if ('orderNo' in item && 'supplierName' in item) {
             // 采购单数据
             purchaseData.push(item);
+            console.log(`✅ 识别为采购单: ${item.orderNo}`);
           } else if ('consigneeName' in item || ('invoiceNo' in item && 'documentType' in item)) {
             // 装箱单数据
             packingData.push(item);
+            console.log(`✅ 识别为装箱单: ${item.invoiceNo || item.consigneeName}`);
           } else if ('data' in item && item.data) {
             // 通过data字段判断类型
             if (item.data.quotationNo && item.data.customerPO === undefined) {
               // 报价单数据
-              quotationData.push({
-                ...item,
-                type: item.data.type || 'quotation'
-              });
+              const type = item.data.type || 'quotation';
+              if (type === 'quotation') {
+                quotationData.push({
+                  ...item,
+                  type: 'quotation'
+                });
+                console.log(`✅ 通过data识别为报价单: ${item.data.quotationNo}`);
+              } else if (type === 'confirmation') {
+                confirmationData.push({
+                  ...item,
+                  type: 'confirmation'
+                });
+                console.log(`✅ 通过data识别为订单确认: ${item.data.quotationNo}`);
+              }
             } else if (item.data.invoiceNo && item.data.consignee) {
               // 装箱单数据
               packingData.push(item);
+              console.log(`✅ 通过data识别为装箱单: ${item.data.invoiceNo}`);
             } else if (item.data.invoiceNo || item.data.customerPO !== undefined) {
               // 发票数据
               invoiceData.push(item);
+              console.log(`✅ 通过data识别为发票: ${item.data.invoiceNo}`);
             } else if (item.data.orderNo && item.data.supplierName) {
               // 采购单数据
               purchaseData.push(item);
+              console.log(`✅ 通过data识别为采购单: ${item.data.orderNo}`);
+            } else {
+              console.log(`⚠️ 无法识别的数据类型:`, {
+                hasQuotationNo: !!item.data.quotationNo,
+                hasInvoiceNo: !!item.data.invoiceNo,
+                hasOrderNo: !!item.data.orderNo,
+                hasConsignee: !!item.data.consignee,
+                hasCustomerPO: item.data.customerPO !== undefined,
+                hasSupplierName: !!item.data.supplierName
+              });
             }
+          } else {
+            console.log(`⚠️ 无法识别的数据项:`, {
+              keys: Object.keys(item),
+              hasData: 'data' in item
+            });
           }
         }
 
@@ -151,14 +448,17 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
 
         // 执行导入
         let totalImported = 0;
+        let totalCustomersImported = 0;
 
         if (quotationData.length > 0) {
-          const quotationJson = JSON.stringify(quotationData);
+          const { processedData, customerCount } = processDocumentData(quotationData, 'quotation');
+          const quotationJson = JSON.stringify(processedData);
           const importSuccess = importQuotationHistory(quotationJson);
           console.log('报价单导入结果:', importSuccess);
           if (importSuccess) {
             results.details!.push(`报价单：${quotationData.length} 条`);
             totalImported += quotationData.length;
+            totalCustomersImported += customerCount;
             if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
               results.otherTabs!.push('报价单');
             }
@@ -168,12 +468,14 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         }
 
         if (confirmationData.length > 0) {
-          const confirmationJson = JSON.stringify(confirmationData);
+          const { processedData, customerCount } = processDocumentData(confirmationData, 'confirmation');
+          const confirmationJson = JSON.stringify(processedData);
           const importSuccess = importQuotationHistory(confirmationJson);
           console.log('销售确认导入结果:', importSuccess);
           if (importSuccess) {
             results.details!.push(`销售确认：${confirmationData.length} 条`);
             totalImported += confirmationData.length;
+            totalCustomersImported += customerCount;
             if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
               results.otherTabs!.push('销售确认');
             }
@@ -183,12 +485,14 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         }
 
         if (invoiceData.length > 0) {
-          const invoiceJson = JSON.stringify(invoiceData);
+          const { processedData, customerCount } = processDocumentData(invoiceData, 'invoice');
+          const invoiceJson = JSON.stringify(processedData);
           const importSuccess = importInvoiceHistory(invoiceJson);
           console.log('发票导入结果:', importSuccess);
           if (importSuccess) {
             results.details!.push(`发票：${invoiceData.length} 条`);
             totalImported += invoiceData.length;
+            totalCustomersImported += customerCount;
             if (activeTab !== 'invoice') {
               results.otherTabs!.push('发票');
             }
@@ -213,12 +517,14 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         }
 
         if (packingData.length > 0) {
-          const packingJson = JSON.stringify(packingData);
+          const { processedData, customerCount } = processDocumentData(packingData, 'packing');
+          const packingJson = JSON.stringify(processedData);
           const importSuccess = importPackingHistory(packingJson);
           console.log('装箱单导入结果:', importSuccess);
           if (importSuccess) {
             results.details!.push(`装箱单：${packingData.length} 条`);
             totalImported += packingData.length;
+            totalCustomersImported += customerCount;
             if (activeTab !== 'packing') {
               results.otherTabs!.push('装箱单');
             }
@@ -227,12 +533,16 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           }
         }
 
-        console.log('筛选数据导入完成，总计:', totalImported);
+        console.log('筛选数据导入完成，总计:', totalImported, '客户:', totalCustomersImported);
         if (totalImported === 0) {
           return { success: false, error: '筛选数据中未找到有效的历史记录数据' };
         }
 
         results.details!.unshift(`总计导入：${totalImported} 条记录`);
+        if (totalCustomersImported > 0) {
+          results.details!.push(`客户信息：${totalCustomersImported} 条`);
+        }
+        results.customerImported = totalCustomersImported;
         return results;
       }
       
@@ -241,20 +551,24 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
       const results: ImportResult = {
         success: true,
         details: [],
-        otherTabs: []
+        otherTabs: [],
+        customerImported: 0
       };
 
       let totalImported = 0;
+      let totalCustomersImported = 0;
 
       // 处理报价单数据
       if (allData.quotation && Array.isArray(allData.quotation) && allData.quotation.length > 0) {
         console.log('处理报价单数据，数量:', allData.quotation.length);
-        const quotationJson = JSON.stringify(allData.quotation);
+        const { processedData, customerCount } = processDocumentData(allData.quotation, 'quotation');
+        const quotationJson = JSON.stringify(processedData);
         const importSuccess = importQuotationHistory(quotationJson);
         console.log('报价单导入结果:', importSuccess);
         if (importSuccess) {
           results.details!.push(`报价单：${allData.quotation.length} 条`);
           totalImported += allData.quotation.length;
+          totalCustomersImported += customerCount;
           if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
             results.otherTabs!.push('报价单');
           }
@@ -266,12 +580,14 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
       // 处理销售确认数据
       if (allData.confirmation && Array.isArray(allData.confirmation) && allData.confirmation.length > 0) {
         console.log('处理销售确认数据，数量:', allData.confirmation.length);
-        const confirmationJson = JSON.stringify(allData.confirmation);
+        const { processedData, customerCount } = processDocumentData(allData.confirmation, 'confirmation');
+        const confirmationJson = JSON.stringify(processedData);
         const importSuccess = importQuotationHistory(confirmationJson);
         console.log('销售确认导入结果:', importSuccess);
         if (importSuccess) {
           results.details!.push(`销售确认：${allData.confirmation.length} 条`);
           totalImported += allData.confirmation.length;
+          totalCustomersImported += customerCount;
           if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
             results.otherTabs!.push('销售确认');
           }
@@ -283,12 +599,14 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
       // 处理发票数据
       if (allData.invoice && Array.isArray(allData.invoice) && allData.invoice.length > 0) {
         console.log('处理发票数据，数量:', allData.invoice.length);
-        const invoiceJson = JSON.stringify(allData.invoice);
+        const { processedData, customerCount } = processDocumentData(allData.invoice, 'invoice');
+        const invoiceJson = JSON.stringify(processedData);
         const importSuccess = importInvoiceHistory(invoiceJson);
         console.log('发票导入结果:', importSuccess);
         if (importSuccess) {
           results.details!.push(`发票：${allData.invoice.length} 条`);
           totalImported += allData.invoice.length;
+          totalCustomersImported += customerCount;
           if (activeTab !== 'invoice') {
             results.otherTabs!.push('发票');
           }
@@ -317,12 +635,14 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
       // 处理装箱单数据
       if (allData.packing && Array.isArray(allData.packing) && allData.packing.length > 0) {
         console.log('处理装箱单数据，数量:', allData.packing.length);
-        const packingJson = JSON.stringify(allData.packing);
+        const { processedData, customerCount } = processDocumentData(allData.packing, 'packing');
+        const packingJson = JSON.stringify(processedData);
         const importSuccess = importPackingHistory(packingJson);
         console.log('装箱单导入结果:', importSuccess);
         if (importSuccess) {
           results.details!.push(`装箱单：${allData.packing.length} 条`);
           totalImported += allData.packing.length;
+          totalCustomersImported += customerCount;
           if (activeTab !== 'packing') {
             results.otherTabs!.push('装箱单');
           }
@@ -331,12 +651,16 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         }
       }
 
-      console.log('综合数据导入完成，总计:', totalImported);
+      console.log('综合数据导入完成，总计:', totalImported, '客户:', totalCustomersImported);
       if (totalImported === 0) {
         return { success: false, error: '综合数据中未找到有效的历史记录数据' };
       }
 
       results.details!.unshift(`总计导入：${totalImported} 条记录`);
+      if (totalCustomersImported > 0) {
+        results.details!.push(`客户信息：${totalCustomersImported} 条`);
+      }
+      results.customerImported = totalCustomersImported;
       return results;
     }
 
@@ -349,7 +673,8 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
     const results: ImportResult = {
       success: true,
       details: [],
-      otherTabs: []
+      otherTabs: [],
+      customerImported: 0
     };
 
     // 按类型分组数据
@@ -410,14 +735,17 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
 
     // 执行导入
     let totalImported = 0;
+    let totalCustomersImported = 0;
 
     if (quotationData.length > 0) {
-      const quotationJson = JSON.stringify(quotationData);
+      const { processedData, customerCount } = processDocumentData(quotationData, 'quotation');
+      const quotationJson = JSON.stringify(processedData);
       const importSuccess = importQuotationHistory(quotationJson);
       console.log('报价单导入结果:', importSuccess);
       if (importSuccess) {
         results.details!.push(`报价单：${quotationData.length} 条`);
         totalImported += quotationData.length;
+        totalCustomersImported += customerCount;
         if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
           results.otherTabs!.push('报价单');
         }
@@ -427,12 +755,14 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
     }
 
     if (confirmationData.length > 0) {
-      const confirmationJson = JSON.stringify(confirmationData);
+      const { processedData, customerCount } = processDocumentData(confirmationData, 'confirmation');
+      const confirmationJson = JSON.stringify(processedData);
       const importSuccess = importQuotationHistory(confirmationJson);
       console.log('销售确认导入结果:', importSuccess);
       if (importSuccess) {
         results.details!.push(`销售确认：${confirmationData.length} 条`);
         totalImported += confirmationData.length;
+        totalCustomersImported += customerCount;
         if (activeTab !== 'quotation' && activeTab !== 'confirmation') {
           results.otherTabs!.push('销售确认');
         }
@@ -442,12 +772,14 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
     }
 
     if (invoiceData.length > 0) {
-      const invoiceJson = JSON.stringify(invoiceData);
+      const { processedData, customerCount } = processDocumentData(invoiceData, 'invoice');
+      const invoiceJson = JSON.stringify(processedData);
       const importSuccess = importInvoiceHistory(invoiceJson);
       console.log('发票导入结果:', importSuccess);
       if (importSuccess) {
         results.details!.push(`发票：${invoiceData.length} 条`);
         totalImported += invoiceData.length;
+        totalCustomersImported += customerCount;
         if (activeTab !== 'invoice') {
           results.otherTabs!.push('发票');
         }
@@ -472,12 +804,14 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
     }
 
     if (packingData.length > 0) {
-      const packingJson = JSON.stringify(packingData);
+      const { processedData, customerCount } = processDocumentData(packingData, 'packing');
+      const packingJson = JSON.stringify(processedData);
       const importSuccess = importPackingHistory(packingJson);
       console.log('装箱单导入结果:', importSuccess);
       if (importSuccess) {
         results.details!.push(`装箱单：${packingData.length} 条`);
         totalImported += packingData.length;
+        totalCustomersImported += customerCount;
         if (activeTab !== 'packing') {
           results.otherTabs!.push('装箱单');
         }
@@ -486,12 +820,16 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
       }
     }
 
-    console.log('数组格式导入完成，总计:', totalImported);
+    console.log('数组格式导入完成，总计:', totalImported, '客户:', totalCustomersImported);
     if (totalImported === 0) {
       return { success: false, error: '未能识别任何有效的历史记录数据' };
     }
 
     results.details!.unshift(`总计导入：${totalImported} 条记录`);
+    if (totalCustomersImported > 0) {
+      results.details!.push(`客户信息：${totalCustomersImported} 条`);
+    }
+    results.customerImported = totalCustomersImported;
     return results;
 
   } catch (error) {
