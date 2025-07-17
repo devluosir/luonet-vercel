@@ -46,6 +46,8 @@ export default function CustomerPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [mergeData, setMergeData] = useState({ name: '', content: '' });
   
   // 添加 ref 用于检测点击外部区域
   const buttonsRef = useRef<HTMLDivElement>(null);
@@ -127,6 +129,60 @@ export default function CustomerPage() {
     saveCustomers(updatedCustomers);
     setSelectedCustomers(new Set());
     setIsSelectMode(false);
+  };
+
+  // 批量合并选中的客户
+  const handleBatchMerge = () => {
+    if (selectedCustomers.size < 2) {
+      alert('请至少选择2个客户进行合并');
+      return;
+    }
+
+    const selectedCustomerList = customers.filter(c => selectedCustomers.has(c.id));
+    const names = selectedCustomerList.map(c => c.name).join('、');
+    const contents = selectedCustomerList.map(c => c.content).join('\n\n---\n\n');
+    
+    setMergeData({
+      name: names,
+      content: contents
+    });
+    setShowMergeModal(true);
+  };
+
+  // 确认合并
+  const handleConfirmMerge = () => {
+    if (!mergeData.name.trim() || !mergeData.content.trim()) {
+      alert('请填写合并后的客户名称和信息');
+      return;
+    }
+
+    const selectedCustomerList = customers.filter(c => selectedCustomers.has(c.id));
+    
+    // 合并所有使用记录
+    const allUsageRecords: UsageRecord[] = [];
+    selectedCustomerList.forEach(customer => {
+      allUsageRecords.push(...customer.usageRecords);
+    });
+
+    // 创建新的合并客户
+    const mergedCustomer: CustomerRecord = {
+      id: Date.now().toString(),
+      name: mergeData.name.trim(),
+      content: mergeData.content.trim(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      usageRecords: allUsageRecords
+    };
+
+    // 移除选中的客户，添加合并后的客户
+    const updatedCustomers = customers.filter(c => !selectedCustomers.has(c.id));
+    updatedCustomers.push(mergedCustomer);
+    saveCustomers(updatedCustomers);
+    
+    setSelectedCustomers(new Set());
+    setIsSelectMode(false);
+    setShowMergeModal(false);
+    setMergeData({ name: '', content: '' });
   };
 
   // 添加新客户
@@ -383,13 +439,6 @@ export default function CustomerPage() {
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleClearCustomerRecords(customer.id)}
-                    className="p-2 text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                    title="清理使用记录"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                  <button
                     onClick={() => handleDeleteCustomer(customer.id)}
                     className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
                     title="删除"
@@ -459,75 +508,6 @@ export default function CustomerPage() {
                 {customer.content}
               </p>
             </div>
-            
-            {customer.usageRecords.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                  <span>使用记录</span>
-                  <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded-full text-xs font-medium">
-                    {customer.usageRecords.length}
-                  </span>
-                </h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {customer.usageRecords.slice(0, 4).map((record, index) => {
-                    // 根据文档类型设置对应的颜色
-                    let badgeClasses = '';
-                    switch (record.documentType) {
-                      case 'quotation':
-                        badgeClasses = 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200';
-                        break;
-                      case 'confirmation':
-                        badgeClasses = 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200';
-                        break;
-                      case 'invoice':
-                        badgeClasses = 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200';
-                        break;
-                      case 'purchase':
-                        badgeClasses = 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200';
-                        break;
-                      case 'packing':
-                        badgeClasses = 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-200';
-                        break;
-                      default:
-                        badgeClasses = 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-200';
-                    }
-                    
-                    return (
-                      <a
-                        key={index}
-                        href={getRecordUrl(record.documentType, record.documentNo)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200 cursor-pointer`}
-                        title={`${record.documentType === 'invoice' ? '发票' : 
-                               record.documentType === 'packing' ? '箱单' : 
-                               record.documentType === 'quotation' ? '报价' : 
-                               record.documentType === 'confirmation' ? '订单确认' : 
-                               record.documentType === 'purchase' ? '采购' : '未知'}: ${record.documentNo}`}
-                        onClick={(e) => {
-                          const url = getRecordUrl(record.documentType, record.documentNo);
-                          if (url === '#') {
-                            e.preventDefault();
-                            alert(`未找到对应的${record.documentType === 'invoice' ? '发票' : 
-                                   record.documentType === 'packing' ? '装箱单' : 
-                                   record.documentType === 'quotation' ? '报价单' : 
-                                   record.documentType === 'confirmation' ? '订单确认' : 
-                                   record.documentType === 'purchase' ? '采购单' : '单据'}记录`);
-                          }
-                        }}
-                      >
-                        {record.documentNo}
-                      </a>
-                    );
-                  })}
-                  {customer.usageRecords.length > 4 && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                      +{customer.usageRecords.length - 4}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       ))}
@@ -729,6 +709,21 @@ export default function CustomerPage() {
                     删除选中 ({selectedCustomers.size})
                   </button>
                   <button
+                    onClick={handleBatchMerge}
+                    disabled={selectedCustomers.size < 2}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-all duration-200 hover:shadow-lg shadow-md"
+                  >
+                    <Users className="w-4 h-4" />
+                    合并选中 ({selectedCustomers.size})
+                  </button>
+                  <button
+                    onClick={handleClearAllRecords}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600 transition-all duration-200 hover:shadow-md"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    清理所有记录
+                  </button>
+                  <button
                     onClick={exitSelectMode}
                     className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-md"
                   >
@@ -750,13 +745,6 @@ export default function CustomerPage() {
                   >
                     <Plus className="w-4 h-4" />
                     添加客户
-                  </button>
-                  <button
-                    onClick={handleClearAllRecords}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-300 dark:hover:border-red-600 transition-all duration-200 hover:shadow-md"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    清理所有记录
                   </button>
                 </>
               )}
@@ -895,6 +883,65 @@ export default function CustomerPage() {
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200"
               >
                 {editingCustomer ? '保存' : '添加'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 合并客户弹窗 */}
+      {showMergeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              合并客户资料
+            </h2>
+            <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                将合并 {selectedCustomers.size} 个客户的资料和使用记录。请编辑合并后的客户信息：
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  合并后的客户名称
+                </label>
+                <input
+                  type="text"
+                  value={mergeData.name}
+                  onChange={(e) => setMergeData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="输入合并后的客户名称"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  合并后的客户信息
+                </label>
+                <textarea
+                  value={mergeData.content}
+                  onChange={(e) => setMergeData(prev => ({ ...prev, content: e.target.value }))}
+                  rows={8}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="输入合并后的客户详细信息"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowMergeModal(false);
+                  setMergeData({ name: '', content: '' });
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmMerge}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors duration-200"
+              >
+                确认合并
               </button>
             </div>
           </div>
