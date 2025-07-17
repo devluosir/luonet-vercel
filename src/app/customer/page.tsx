@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Users, Plus, Search, Filter, Trash2, Edit, Eye, List, Grid, Table, CheckSquare, Square } from 'lucide-react';
+import { ArrowLeft, Users, Plus, Search, Filter, Trash2, Edit, Eye, List, Grid, Table, CheckSquare, Square, X } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 
 // 添加CSS样式
@@ -242,7 +242,10 @@ export default function CustomerPage() {
   // 过滤客户
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.content.toLowerCase().includes(searchTerm.toLowerCase())
+    customer.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.usageRecords.some(record => 
+      record.documentNo.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   // 清理客户的使用记录
@@ -330,6 +333,22 @@ export default function CustomerPage() {
     }
   };
 
+  // 高亮搜索文本的函数
+  const highlightText = (text: string, searchTerm: string) => {
+    if (!searchTerm.trim()) return text;
+    
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, index) => 
+      regex.test(part) ? (
+        <span key={index} className="bg-yellow-200 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 font-semibold">
+          {part}
+        </span>
+      ) : part
+    );
+  };
+
   // 渲染列表视图
   const renderListView = () => (
     <div className="space-y-4">
@@ -396,33 +415,33 @@ export default function CustomerPage() {
                               badgeClasses = 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-200';
                           }
                           
-                                                      return (
-                              <a
-                                key={index}
-                                href={getRecordUrl(record.documentType, record.documentNo)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200 cursor-pointer`}
-                                title={`${record.documentType === 'invoice' ? '发票' : 
-                                       record.documentType === 'packing' ? '箱单' : 
-                                       record.documentType === 'quotation' ? '报价' : 
-                                       record.documentType === 'confirmation' ? '订单确认' : 
-                                       record.documentType === 'purchase' ? '采购' : '未知'}: ${record.documentNo}`}
-                                onClick={(e) => {
-                                  const url = getRecordUrl(record.documentType, record.documentNo);
-                                  if (url === '#') {
-                                    e.preventDefault();
-                                    alert(`未找到对应的${record.documentType === 'invoice' ? '发票' : 
-                                           record.documentType === 'packing' ? '装箱单' : 
-                                           record.documentType === 'quotation' ? '报价单' : 
-                                           record.documentType === 'confirmation' ? '订单确认' : 
-                                           record.documentType === 'purchase' ? '采购单' : '单据'}记录`);
-                                  }
-                                }}
-                              >
-                                {record.documentNo}
-                              </a>
-                            );
+                          return (
+                            <a
+                              key={index}
+                              href={getRecordUrl(record.documentType, record.documentNo)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200 cursor-pointer`}
+                              title={`${record.documentType === 'invoice' ? '发票' : 
+                                     record.documentType === 'packing' ? '箱单' : 
+                                     record.documentType === 'quotation' ? '报价' : 
+                                     record.documentType === 'confirmation' ? '订单确认' : 
+                                     record.documentType === 'purchase' ? '采购' : '未知'}: ${record.documentNo}`}
+                              onClick={(e) => {
+                                const url = getRecordUrl(record.documentType, record.documentNo);
+                                if (url === '#') {
+                                  e.preventDefault();
+                                  alert(`未找到对应的${record.documentType === 'invoice' ? '发票' : 
+                                         record.documentType === 'packing' ? '装箱单' : 
+                                         record.documentType === 'quotation' ? '报价单' : 
+                                         record.documentType === 'confirmation' ? '订单确认' : 
+                                         record.documentType === 'purchase' ? '采购单' : '单据'}记录`);
+                                }
+                              }}
+                            >
+                              {highlightText(record.documentNo, searchTerm)}
+                            </a>
+                          );
                         })}
                       </div>
                     </div>
@@ -621,7 +640,7 @@ export default function CustomerPage() {
                           }
                         }}
                       >
-                        {record.documentNo}
+                        {highlightText(record.documentNo, searchTerm)}
                       </a>
                     );
                   })}
@@ -761,9 +780,18 @@ export default function CustomerPage() {
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="搜索客户名称或内容..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="搜索客户名称、内容或编号..."
+                    className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+                      title="清除搜索"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
