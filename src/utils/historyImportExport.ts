@@ -86,8 +86,9 @@ const extractCustomerInfo = (data: any): { name: string; content: string } | nul
         console.log(`📝 从装箱单提取:`, { customerName, hasContent: !!customerContent });
       } else if (typeof data.data.consignee === 'object' && data.data.consignee !== null) {
         // 如果是对象，尝试提取name字段或转换为字符串
-        customerContent = data.data.consignee.name || JSON.stringify(data.data.consignee);
-        customerName = data.data.consignee.name || '';
+        const consigneeName = data.data.consignee.name || '';
+        customerContent = consigneeName;
+        customerName = consigneeName.split('\n')[0]?.trim() || '';
         console.log(`📝 从装箱单对象提取:`, { customerName, hasContent: !!customerContent });
       }
     }
@@ -105,8 +106,9 @@ const extractCustomerInfo = (data: any): { name: string; content: string } | nul
     }
     // 装箱单 - 从data.consignee.name字段提取（备用）
     else if (data.data?.consignee?.name) {
-      customerContent = data.data.consignee.name;
-      customerName = data.data.consignee.name.split('\n')[0]?.trim() || '';
+      const consigneeName = data.data.consignee.name;
+      customerContent = consigneeName;
+      customerName = consigneeName.split('\n')[0]?.trim() || '';
       console.log(`📝 从装箱单data.consignee.name提取:`, { customerName, hasContent: !!customerContent });
     }
 
