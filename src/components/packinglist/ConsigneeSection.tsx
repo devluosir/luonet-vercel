@@ -186,20 +186,20 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
         const record = records[recordIndex];
         onChange({
           consigneeName: record.content, // 使用完整的收货人信息
-          orderNo: consignee.orderNo
+          orderNo: orderNo // 保持现有的 orderNo 值不变
         });
       } else {
         // 如果找不到完整信息，使用名称
         onChange({
           consigneeName: consignee.name,
-          orderNo: consignee.orderNo
+          orderNo: orderNo // 保持现有的 orderNo 值不变
         });
       }
     } else {
       // 兼容旧格式
       onChange({
         consigneeName: consignee.name,
-        orderNo: consignee.orderNo
+        orderNo: orderNo // 保持现有的 orderNo 值不变
       });
     }
     

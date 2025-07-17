@@ -208,6 +208,72 @@ export default function CustomerPage() {
     saveCustomers(updatedCustomers);
   };
 
+  // 根据单据编号查找单据ID
+  const findDocumentId = (type: UsageRecord['documentType'], documentNo: string): string | null => {
+    try {
+      switch (type) {
+        case 'quotation':
+        case 'confirmation': {
+          const history = JSON.parse(localStorage.getItem('quotation_history') || '[]');
+          const item = history.find((item: any) => 
+            item.type === type && 
+            (item.quotationNo === documentNo || item.data?.quotationNo === documentNo)
+          );
+          return item?.id || null;
+        }
+        case 'invoice': {
+          const history = JSON.parse(localStorage.getItem('invoice_history') || '[]');
+          const item = history.find((item: any) => 
+            item.invoiceNo === documentNo || item.data?.invoiceNo === documentNo
+          );
+          return item?.id || null;
+        }
+        case 'packing': {
+          const history = JSON.parse(localStorage.getItem('packing_history') || '[]');
+          const item = history.find((item: any) => 
+            item.invoiceNo === documentNo || item.data?.invoiceNo === documentNo
+          );
+          return item?.id || null;
+        }
+        case 'purchase': {
+          const history = JSON.parse(localStorage.getItem('purchase_history') || '[]');
+          const item = history.find((item: any) => 
+            item.orderNo === documentNo || item.data?.orderNo === documentNo
+          );
+          return item?.id || null;
+        }
+        default:
+          return null;
+      }
+    } catch (error) {
+      console.error('Error finding document ID:', error);
+      return null;
+    }
+  };
+
+  // 使用记录跳转路径生成函数
+  const getRecordUrl = (type: UsageRecord['documentType'], documentNo: string) => {
+    const documentId = findDocumentId(type, documentNo);
+    if (!documentId) {
+      return '#';
+    }
+
+    switch (type) {
+      case 'quotation':
+        return `/quotation/edit/${documentId}`;
+      case 'confirmation':
+        return `/quotation/edit/${documentId}?tab=confirmation`;
+      case 'invoice':
+        return `/invoice/edit/${documentId}`;
+      case 'packing':
+        return `/packing/edit/${documentId}`;
+      case 'purchase':
+        return `/purchase/edit/${documentId}`;
+      default:
+        return '#';
+    }
+  };
+
   // 渲染列表视图
   const renderListView = () => (
     <div className="space-y-4">
@@ -274,19 +340,33 @@ export default function CustomerPage() {
                               badgeClasses = 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-200';
                           }
                           
-                          return (
-                            <span
-                              key={index}
-                              className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200`}
-                              title={`${record.documentType === 'invoice' ? '发票' : 
-                                     record.documentType === 'packing' ? '箱单' : 
-                                     record.documentType === 'quotation' ? '报价' : 
-                                     record.documentType === 'confirmation' ? '订单确认' : 
-                                     record.documentType === 'purchase' ? '采购' : '未知'}: ${record.documentNo}`}
-                            >
-                              {record.documentNo}
-                            </span>
-                          );
+                                                      return (
+                              <a
+                                key={index}
+                                href={getRecordUrl(record.documentType, record.documentNo)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200 cursor-pointer`}
+                                title={`${record.documentType === 'invoice' ? '发票' : 
+                                       record.documentType === 'packing' ? '箱单' : 
+                                       record.documentType === 'quotation' ? '报价' : 
+                                       record.documentType === 'confirmation' ? '订单确认' : 
+                                       record.documentType === 'purchase' ? '采购' : '未知'}: ${record.documentNo}`}
+                                onClick={(e) => {
+                                  const url = getRecordUrl(record.documentType, record.documentNo);
+                                  if (url === '#') {
+                                    e.preventDefault();
+                                    alert(`未找到对应的${record.documentType === 'invoice' ? '发票' : 
+                                           record.documentType === 'packing' ? '装箱单' : 
+                                           record.documentType === 'quotation' ? '报价单' : 
+                                           record.documentType === 'confirmation' ? '订单确认' : 
+                                           record.documentType === 'purchase' ? '采购单' : '单据'}记录`);
+                                  }
+                                }}
+                              >
+                                {record.documentNo}
+                              </a>
+                            );
                         })}
                       </div>
                     </div>
@@ -413,17 +493,31 @@ export default function CustomerPage() {
                     }
                     
                     return (
-                      <span
+                      <a
                         key={index}
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200`}
+                        href={getRecordUrl(record.documentType, record.documentNo)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200 cursor-pointer`}
                         title={`${record.documentType === 'invoice' ? '发票' : 
                                record.documentType === 'packing' ? '箱单' : 
                                record.documentType === 'quotation' ? '报价' : 
                                record.documentType === 'confirmation' ? '订单确认' : 
                                record.documentType === 'purchase' ? '采购' : '未知'}: ${record.documentNo}`}
+                        onClick={(e) => {
+                          const url = getRecordUrl(record.documentType, record.documentNo);
+                          if (url === '#') {
+                            e.preventDefault();
+                            alert(`未找到对应的${record.documentType === 'invoice' ? '发票' : 
+                                   record.documentType === 'packing' ? '装箱单' : 
+                                   record.documentType === 'quotation' ? '报价单' : 
+                                   record.documentType === 'confirmation' ? '订单确认' : 
+                                   record.documentType === 'purchase' ? '采购单' : '单据'}记录`);
+                          }
+                        }}
                       >
                         {record.documentNo}
-                      </span>
+                      </a>
                     );
                   })}
                   {customer.usageRecords.length > 4 && (
@@ -524,17 +618,31 @@ export default function CustomerPage() {
                     }
                     
                     return (
-                      <span
+                      <a
                         key={index}
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200`}
+                        href={getRecordUrl(record.documentType, record.documentNo)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200 cursor-pointer`}
                         title={`${record.documentType === 'invoice' ? '发票' : 
                                record.documentType === 'packing' ? '箱单' : 
                                record.documentType === 'quotation' ? '报价' : 
                                record.documentType === 'confirmation' ? '订单确认' : 
                                record.documentType === 'purchase' ? '采购' : '未知'}: ${record.documentNo}`}
+                        onClick={(e) => {
+                          const url = getRecordUrl(record.documentType, record.documentNo);
+                          if (url === '#') {
+                            e.preventDefault();
+                            alert(`未找到对应的${record.documentType === 'invoice' ? '发票' : 
+                                   record.documentType === 'packing' ? '装箱单' : 
+                                   record.documentType === 'quotation' ? '报价单' : 
+                                   record.documentType === 'confirmation' ? '订单确认' : 
+                                   record.documentType === 'purchase' ? '采购单' : '单据'}记录`);
+                          }
+                        }}
                       >
                         {record.documentNo}
-                      </span>
+                      </a>
                     );
                   })}
                 </div>

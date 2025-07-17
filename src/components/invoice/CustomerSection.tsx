@@ -183,7 +183,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
   const handleLoad = (customer: SavedCustomer) => {
     onChange({
       to: customer.to,
-      customerPO: customer.customerPO
+      customerPO: customerPO // 保持现有的 customerPO 值不变
     });
     
     // 记录使用情况（这里需要从父组件传入invoiceNo）
