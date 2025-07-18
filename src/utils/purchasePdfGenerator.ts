@@ -3,6 +3,7 @@ import { UserOptions } from 'jspdf-autotable';
 import { PurchaseOrderData } from '@/types/purchase';
 import { getBankInfo } from '@/utils/bankInfo';
 import { embeddedResources } from '@/lib/embedded-resources';
+import { getOptimizedStampImage } from './pdfHelpers';
 
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
@@ -354,13 +355,9 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     // 1. 添加印章（如果启用），先绘制
     if (data.stampType !== 'none') {
       try {
-        let stampImageBase64 = '';
-        if (data.stampType === 'shanghai') {
-          stampImageBase64 = embeddedResources.shanghaiStamp;
-        } else if (data.stampType === 'hongkong') {
-          stampImageBase64 = embeddedResources.hongkongStamp;
-        }
-
+        // 使用优化的印章图片
+        const stampImageBase64 = await getOptimizedStampImage(data.stampType);
+        
         if (stampImageBase64) {
           const stampImage = `data:image/png;base64,${stampImageBase64}`;
           const stampWidth = data.stampType === 'shanghai' ? 40 : 73;

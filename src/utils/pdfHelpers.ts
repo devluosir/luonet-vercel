@@ -51,10 +51,6 @@ export const getStampImage = (stampType: string) => {
       return '/images/stamp-shanghai.png';
     case 'hongkong':
       return '/images/stamp-hongkong.png';
-    case 'english':
-      return '/images/stamp-english.png';
-    case 'chinese':
-      return '/images/stamp-chinese.png';
     default:
       return null;
   }
@@ -326,5 +322,113 @@ export const createPDFDownloadLink = (pdfBlob: Blob, filename: string) => {
 export const cleanupPDFUrl = (url: string | null) => {
   if (url && url.startsWith('blob:')) {
     URL.revokeObjectURL(url);
+  }
+}; 
+
+// 图片压缩和优化工具
+export const compressImage = async (base64Image: string, maxWidth: number = 200, quality: number = 0.8): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+
+      // 计算新的尺寸，保持宽高比
+      const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+      const newWidth = img.width * ratio;
+      const newHeight = img.height * ratio;
+
+      canvas.width = newWidth;
+      canvas.height = newHeight;
+
+      // 绘制并压缩图片
+      ctx.drawImage(img, 0, 0, newWidth, newHeight);
+      
+      // 转换为base64，使用指定的质量
+      const compressedBase64 = canvas.toDataURL('image/png', quality);
+      resolve(compressedBase64);
+    };
+    
+    img.onerror = () => reject(new Error('Failed to load image'));
+    img.src = base64Image;
+  });
+};
+
+// 简化的图片优化方案 - 通过调整尺寸和质量来减少文件大小
+export const getOptimizedStampImageSimple = async (stampType: string): Promise<string> => {
+  const { embeddedResources } = await import('@/lib/embedded-resources');
+  
+  let base64Image = '';
+  if (stampType === 'shanghai') {
+    base64Image = embeddedResources.shanghaiStamp;
+  } else if (stampType === 'hongkong') {
+    base64Image = embeddedResources.hongkongStamp;
+  } else {
+    throw new Error(`Unknown stamp type: ${stampType}`);
+  }
+
+  // 在浏览器环境中，尝试使用Canvas进行简单压缩
+  if (typeof window !== 'undefined') {
+    try {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            resolve(base64Image); // 如果Canvas不可用，返回原始图片
+            return;
+          }
+
+          // 计算新的尺寸 - 保持宽高比，但增加最大尺寸以获得更好质量
+          const maxSize = 300; // 增加到300px，保持更好的清晰度
+          const ratio = Math.min(maxSize / img.width, maxSize / img.height);
+          const newWidth = Math.round(img.width * ratio);
+          const newHeight = Math.round(img.height * ratio);
+
+          canvas.width = newWidth;
+          canvas.height = newHeight;
+
+          // 绘制并压缩图片
+          ctx.drawImage(img, 0, 0, newWidth, newHeight);
+          
+          // 转换为base64，使用较高的质量
+          const compressedBase64 = canvas.toDataURL('image/png', 0.8); // 提高到0.8的质量
+          resolve(compressedBase64.replace('data:image/png;base64,', ''));
+        };
+        
+        img.onerror = () => resolve(base64Image); // 如果加载失败，返回原始图片
+        img.src = `data:image/png;base64,${base64Image}`;
+      });
+    } catch (error) {
+      console.warn('Image compression failed, using original:', error);
+      return base64Image;
+    }
+  }
+  
+  // 在服务器环境中，返回原始图片
+  return base64Image;
+};
+
+// 获取优化后的印章图片 - 使用简化版本
+export const getOptimizedStampImage = async (stampType: string): Promise<string> => {
+  try {
+    return await getOptimizedStampImageSimple(stampType);
+  } catch (error) {
+    console.error('Failed to optimize stamp image:', error);
+    // 返回原始图片作为后备
+    const { embeddedResources } = await import('@/lib/embedded-resources');
+    if (stampType === 'shanghai') {
+      return embeddedResources.shanghaiStamp;
+    } else if (stampType === 'hongkong') {
+      return embeddedResources.hongkongStamp;
+    }
+    return '';
   }
 }; 

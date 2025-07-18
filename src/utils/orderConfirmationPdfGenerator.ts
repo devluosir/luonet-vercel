@@ -4,6 +4,7 @@ import { QuotationData } from '@/types/quotation';
 import { UserOptions } from 'jspdf-autotable';
 import { embeddedResources } from '@/lib/embedded-resources';
 import { generateTableConfig } from './pdfTableGenerator';
+import { getOptimizedStampImage } from './pdfHelpers';
 
 // 扩展jsPDF类型
 type ExtendedJsPDF = jsPDF & {
@@ -279,7 +280,9 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     // 如果印章会单独出现在下一页，则先放置印章
     if (data.showStamp && stampWillBeAlone) {
       try {
-        const stampImage = `data:image/png;base64,${embeddedResources.hongkongStamp}`;
+        // 使用优化的印章图片
+        const stampImageBase64 = await getOptimizedStampImage('hongkong');
+        const stampImage = `data:image/png;base64,${stampImageBase64}`;
         const imgProperties = doc.getImageProperties(stampImage);
         if (!imgProperties) {
           throw new Error('Failed to load stamp image');
@@ -546,7 +549,9 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     // 添加签名区域 - 仅在印章没有被提前放置时添加
     if (data.showStamp && !stampWillBeAlone) {
       try {
-        const stampImage = `data:image/png;base64,${embeddedResources.hongkongStamp}`;
+        // 使用优化的印章图片
+        const stampImageBase64 = await getOptimizedStampImage('hongkong');
+        const stampImage = `data:image/png;base64,${stampImageBase64}`;
         const imgProperties = doc.getImageProperties(stampImage);
         if (!imgProperties) {
           throw new Error('Failed to load stamp image');

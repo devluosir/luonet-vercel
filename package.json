@@ -7,7 +7,8 @@
     "build": "node scripts/embed-resources.js && prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "compress-stamps": "node scripts/compress-stamps.js"
   },
   "dependencies": {
     "@auth/core": "^0.34.2",

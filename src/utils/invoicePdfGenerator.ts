@@ -3,6 +3,7 @@ import 'jspdf-autotable';
 import { PDFGeneratorData } from '@/types/pdf';
 import { getInvoiceTitle } from '@/utils/pdfHelpers';
 import { embeddedResources } from '@/lib/embedded-resources';
+import { getOptimizedStampImage } from './pdfHelpers';
 
 interface AutoTableOptions {
   startY: number;
@@ -535,13 +536,9 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
 async function renderStamp(doc: ExtendedJsPDF, data: PDFGeneratorData, startY: number, margin: number): Promise<void> {
   if (data.templateConfig.stampType !== 'none') {
     try {
-      let stampImageBase64 = '';
-      if (data.templateConfig.stampType === 'shanghai') {
-        stampImageBase64 = embeddedResources.shanghaiStamp;
-      } else if (data.templateConfig.stampType === 'hongkong') {
-        stampImageBase64 = embeddedResources.hongkongStamp;
-      }
-
+      // 使用优化的印章图片
+      const stampImageBase64 = await getOptimizedStampImage(data.templateConfig.stampType);
+      
       if (stampImageBase64) {
         const stampImage = `data:image/png;base64,${stampImageBase64}`;
         if (data.templateConfig.stampType === 'shanghai') {
