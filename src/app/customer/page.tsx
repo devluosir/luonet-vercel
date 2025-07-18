@@ -261,11 +261,7 @@ export default function CustomerPage() {
     saveCustomers(updatedCustomers);
   };
 
-  // 清理所有客户的使用记录
-  const handleClearAllRecords = () => {
-    const updatedCustomers = customers.map(c => ({ ...c, usageRecords: [] }));
-    saveCustomers(updatedCustomers);
-  };
+
 
   // 根据单据编号查找单据ID
   const findDocumentId = (type: UsageRecord['documentType'], documentNo: string): string | null => {
@@ -739,14 +735,7 @@ export default function CustomerPage() {
                     <span className="sm:hidden">合并</span>
                     <span className="hidden sm:inline">({selectedCustomers.size})</span>
                   </button>
-                  <button
-                    onClick={handleClearAllRecords}
-                    className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600 transition-all duration-200 hover:shadow-md"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">清理所有记录</span>
-                    <span className="sm:hidden">清理记录</span>
-                  </button>
+
                   <button
                     onClick={exitSelectMode}
                     className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-md"
