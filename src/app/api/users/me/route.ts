@@ -6,7 +6,7 @@ import { databaseMonitor } from '@/utils/database';
 
 // 内存缓存
 const userCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
+const CACHE_DURATION = 10 * 60 * 1000; // 增加到10分钟缓存
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,13 +24,13 @@ export async function GET(request: NextRequest) {
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
       return NextResponse.json(cached.data, {
         headers: {
-          'Cache-Control': 'public, max-age=300', // 5分钟浏览器缓存
+          'Cache-Control': 'public, max-age=600', // 10分钟浏览器缓存
           'ETag': `"${cached.timestamp}"`
         }
       });
     }
 
-    // 使用数据库监控优化查询
+    // 优化查询：使用更高效的查询结构
     const user = await databaseMonitor.monitorQuery(
       'get_user_with_permissions',
       () => prisma.user.findUnique({
@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
           status: true,
           isAdmin: true,
           permissions: {
+            where: { canAccess: true }, // 只获取有权限的模块
             select: {
               id: true,
               moduleId: true,
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(userData, {
       headers: {
-        'Cache-Control': 'public, max-age=300',
+        'Cache-Control': 'public, max-age=600',
         'ETag': `"${Date.now()}"`
       }
     });
