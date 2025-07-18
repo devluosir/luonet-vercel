@@ -354,9 +354,9 @@ export default function CustomerPage() {
     <div className="space-y-4">
       {filteredCustomers.map((customer) => (
         <div key={customer.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200">
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="flex items-start justify-between">
-              <div className="flex-1 flex items-start gap-4">
+              <div className="flex-1 flex items-start gap-3 sm:gap-4">
                 {isSelectMode && (
                   <button
                     onClick={() => toggleSelectCustomer(customer.id)}
@@ -369,16 +369,16 @@ export default function CustomerPage() {
                     )}
                   </button>
                 )}
-                <div className="flex-1">
-                  <div className="flex items-center gap-4 mb-3">
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-3">
+                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">
                       {customer.name}
                     </h3>
-                    <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
+                    <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full self-start sm:self-auto">
                       {new Date(customer.updatedAt).toLocaleDateString()}
                     </span>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 sm:p-4 mb-4">
                     <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">
                       {customer.content}
                     </pre>
@@ -421,7 +421,7 @@ export default function CustomerPage() {
                               href={getRecordUrl(record.documentType, record.documentNo)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200 cursor-pointer`}
+                              className={`inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200 cursor-pointer`}
                               title={`${record.documentType === 'invoice' ? '发票' : 
                                      record.documentType === 'packing' ? '箱单' : 
                                      record.documentType === 'quotation' ? '报价' : 
@@ -449,17 +449,17 @@ export default function CustomerPage() {
                 </div>
               </div>
               {!isSelectMode && (
-                <div className="flex items-center gap-1 ml-4">
+                <div className="flex items-center gap-1 ml-2 sm:ml-4">
                   <button
                     onClick={() => handleEditCustomer(customer)}
-                    className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     title="编辑"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteCustomer(customer.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                    className="p-1.5 sm:p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
                     title="删除"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -475,12 +475,12 @@ export default function CustomerPage() {
 
   // 渲染卡片视图
   const renderCardView = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
       {filteredCustomers.map((customer) => (
         <div key={customer.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 group">
-          <div className="p-5">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1 flex items-start gap-3">
+          <div className="p-4 sm:p-5">
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
+              <div className="flex-1 flex items-start gap-2 sm:gap-3">
                 {isSelectMode && (
                   <button
                     onClick={() => toggleSelectCustomer(customer.id)}
@@ -493,8 +493,8 @@ export default function CustomerPage() {
                     )}
                   </button>
                 )}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 truncate">
                     {customer.name}
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full inline-block">
@@ -506,14 +506,14 @@ export default function CustomerPage() {
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   <button
                     onClick={() => handleEditCustomer(customer)}
-                    className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                    className="p-1 sm:p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     title="编辑"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteCustomer(customer.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                    className="p-1 sm:p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
                     title="删除"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -540,7 +540,7 @@ export default function CustomerPage() {
         <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700">
           <tr>
             {isSelectMode && (
-              <th className="w-12 px-4 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+              <th className="w-12 px-2 sm:px-4 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                 <button
                   onClick={toggleSelectAll}
                   className="p-1 rounded-lg transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600"
@@ -553,17 +553,17 @@ export default function CustomerPage() {
                 </button>
               </th>
             )}
-            <th className="w-48 px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+            <th className="w-32 sm:w-48 px-3 sm:px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
               客户名称
             </th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+            <th className="px-3 sm:px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
               使用记录
             </th>
-            <th className="w-32 px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+            <th className="hidden md:table-cell w-32 px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
               更新时间
             </th>
             {!isSelectMode && (
-              <th className="w-24 px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+              <th className="w-20 sm:w-24 px-2 sm:px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                 操作
               </th>
             )}
@@ -573,7 +573,7 @@ export default function CustomerPage() {
           {filteredCustomers.map((customer) => (
             <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200">
               {isSelectMode && (
-                <td className="w-12 px-4 py-4 whitespace-nowrap">
+                <td className="w-12 px-2 sm:px-4 py-4 whitespace-nowrap">
                   <button
                     onClick={() => toggleSelectCustomer(customer.id)}
                     className="p-1 rounded-lg transition-colors duration-200 hover:bg-gray-200 dark:hover:bg-gray-600"
@@ -586,13 +586,13 @@ export default function CustomerPage() {
                   </button>
                 </td>
               )}
-              <td className="w-48 px-6 py-4">
+              <td className="w-32 sm:w-48 px-3 sm:px-6 py-4">
                 <div className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-full" title={customer.name}>
                   {customer.name}
                 </div>
               </td>
-              <td className="px-6 py-4">
-                <div className="flex flex-wrap gap-1.5">
+              <td className="px-3 sm:px-6 py-4">
+                <div className="flex flex-wrap gap-1 sm:gap-1.5">
                   {customer.usageRecords.map((record, index) => {
                     // 根据文档类型设置对应的颜色
                     let badgeClasses = '';
@@ -622,7 +622,7 @@ export default function CustomerPage() {
                         href={getRecordUrl(record.documentType, record.documentNo)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200 cursor-pointer`}
+                        className={`inline-flex items-center px-1.5 sm:px-2 py-1 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200 cursor-pointer`}
                         title={`${record.documentType === 'invoice' ? '发票' : 
                                record.documentType === 'packing' ? '箱单' : 
                                record.documentType === 'quotation' ? '报价' : 
@@ -646,22 +646,22 @@ export default function CustomerPage() {
                   })}
                 </div>
               </td>
-              <td className="w-32 px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+              <td className="hidden md:table-cell w-32 px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {new Date(customer.updatedAt).toLocaleDateString()}
               </td>
               {!isSelectMode && (
-                <td className="w-24 px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex items-center gap-2">
+                <td className="w-20 sm:w-24 px-2 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <div className="flex items-center gap-1 sm:gap-2">
                     <button
                       onClick={() => handleEditCustomer(customer)}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      className="p-1 sm:p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
                       title="编辑"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDeleteCustomer(customer.id)}
-                      className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                      className="p-1 sm:p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
                       title="删除"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -700,7 +700,7 @@ export default function CustomerPage() {
       
       <div className="flex-1">
         {/* 主要内容区域 */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
           <button
             onClick={() => router.push('/tools')}
@@ -711,9 +711,9 @@ export default function CustomerPage() {
           </button>
 
           {/* 标题和操作按钮 */}
-          <div className="flex items-center justify-between mt-6 mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">客户管理</h1>
-            <div className="flex items-center gap-2" ref={buttonsRef}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6 mb-6">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">客户管理</h1>
+            <div className="flex flex-wrap items-center gap-2" ref={buttonsRef}>
               {isSelectMode ? (
                 <>
                   <span className="text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
@@ -722,29 +722,34 @@ export default function CustomerPage() {
                   <button
                     onClick={handleBatchDelete}
                     disabled={selectedCustomers.size === 0}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-all duration-200 hover:shadow-lg shadow-md"
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-all duration-200 hover:shadow-lg shadow-md"
                   >
                     <Trash2 className="w-4 h-4" />
-                    删除选中 ({selectedCustomers.size})
+                    <span className="hidden sm:inline">删除选中</span>
+                    <span className="sm:hidden">删除</span>
+                    <span className="hidden sm:inline">({selectedCustomers.size})</span>
                   </button>
                   <button
                     onClick={handleBatchMerge}
                     disabled={selectedCustomers.size < 2}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-all duration-200 hover:shadow-lg shadow-md"
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-all duration-200 hover:shadow-lg shadow-md"
                   >
                     <Users className="w-4 h-4" />
-                    合并选中 ({selectedCustomers.size})
+                    <span className="hidden sm:inline">合并选中</span>
+                    <span className="sm:hidden">合并</span>
+                    <span className="hidden sm:inline">({selectedCustomers.size})</span>
                   </button>
                   <button
                     onClick={handleClearAllRecords}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600 transition-all duration-200 hover:shadow-md"
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600 transition-all duration-200 hover:shadow-md"
                   >
                     <Trash2 className="w-4 h-4" />
-                    清理所有记录
+                    <span className="hidden sm:inline">清理所有记录</span>
+                    <span className="sm:hidden">清理记录</span>
                   </button>
                   <button
                     onClick={exitSelectMode}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-md"
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-md"
                   >
                     取消
                   </button>
@@ -753,17 +758,19 @@ export default function CustomerPage() {
                 <>
                   <button
                     onClick={enterSelectMode}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-md"
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-md"
                   >
                     <CheckSquare className="w-4 h-4" />
-                    批量操作
+                    <span className="hidden sm:inline">批量操作</span>
+                    <span className="sm:hidden">批量</span>
                   </button>
                   <button
                     onClick={() => setShowAddModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-200 hover:shadow-lg shadow-md"
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-200 hover:shadow-lg shadow-md"
                   >
                     <Plus className="w-4 h-4" />
-                    添加客户
+                    <span className="hidden sm:inline">添加客户</span>
+                    <span className="sm:hidden">添加</span>
                   </button>
                 </>
               )}
@@ -771,8 +778,8 @@ export default function CustomerPage() {
           </div>
 
           {/* 搜索和视图切换区域 */}
-          <div className="bg-white dark:bg-[#1c1c1e] rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-4 mb-6">
-            <div className="flex flex-col sm:flex-row gap-4">
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 p-3 sm:p-4 mb-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -794,12 +801,12 @@ export default function CustomerPage() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center sm:justify-start gap-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">视图:</span>
                 <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-md transition-colors duration-200 ${
+                    className={`p-1.5 sm:p-2 rounded-md transition-colors duration-200 ${
                       viewMode === 'list'
                         ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
@@ -810,7 +817,7 @@ export default function CustomerPage() {
                   </button>
                   <button
                     onClick={() => setViewMode('card')}
-                    className={`p-2 rounded-md transition-colors duration-200 ${
+                    className={`p-1.5 sm:p-2 rounded-md transition-colors duration-200 ${
                       viewMode === 'card'
                         ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
@@ -821,7 +828,7 @@ export default function CustomerPage() {
                   </button>
                   <button
                     onClick={() => setViewMode('table')}
-                    className={`p-2 rounded-md transition-colors duration-200 ${
+                    className={`p-1.5 sm:p-2 rounded-md transition-colors duration-200 ${
                       viewMode === 'table'
                         ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
@@ -838,21 +845,21 @@ export default function CustomerPage() {
           {/* 客户列表区域 */}
           <div className="bg-white dark:bg-[#1c1c1e] rounded-lg shadow-sm border border-gray-200 dark:border-gray-800">
             {filteredCustomers.length === 0 ? (
-              <div className="p-6">
-                <div className="flex items-center justify-center py-12">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-center justify-center py-8 sm:py-12">
                   <div className="text-center">
-                    <Users className="h-16 w-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    <Users className="h-12 sm:h-16 w-12 sm:w-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                    <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">
                       {searchTerm ? '没有找到匹配的客户' : '暂无客户记录'}
                     </h3>
-                    <p className="text-gray-500 dark:text-gray-400 mb-4">
+                    <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-4">
                       {searchTerm ? '请尝试其他搜索关键词' : '点击"添加客户"开始创建客户记录'}
                     </p>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className={viewMode === 'table' ? '' : 'p-6'}>
+              <div className={viewMode === 'table' ? '' : 'p-4 sm:p-6'}>
                 {viewMode === 'list' && renderListView()}
                 {viewMode === 'card' && renderCardView()}
                 {viewMode === 'table' && renderTableView()}

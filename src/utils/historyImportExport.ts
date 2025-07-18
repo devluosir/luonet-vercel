@@ -459,10 +459,10 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
               // 报价单数据
               const type = item.data.type || 'quotation';
               if (type === 'quotation') {
-                quotationData.push({
-                  ...item,
+              quotationData.push({
+                ...item,
                   type: 'quotation'
-                });
+              });
                 console.log(`✅ 通过data识别为报价单: ${item.data.quotationNo}`);
               } else if (type === 'confirmation') {
                 confirmationData.push({
