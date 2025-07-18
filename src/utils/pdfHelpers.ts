@@ -386,8 +386,20 @@ export const getOptimizedStampImageSimple = async (stampType: string): Promise<s
             return;
           }
 
-          // 计算新的尺寸 - 保持宽高比，但增加最大尺寸以获得更好质量
-          const maxSize = 300; // 增加到300px，保持更好的清晰度
+          // 根据印章类型使用不同的压缩参数
+          let maxSize, quality;
+          
+          if (stampType === 'shanghai') {
+            // 上海印章：使用更精细的压缩参数
+            maxSize = 280; // 稍微减小尺寸
+            quality = 0.75; // 稍微降低质量
+          } else {
+            // 香港印章：保持当前参数
+            maxSize = 300;
+            quality = 0.8;
+          }
+
+          // 计算新的尺寸 - 保持宽高比
           const ratio = Math.min(maxSize / img.width, maxSize / img.height);
           const newWidth = Math.round(img.width * ratio);
           const newHeight = Math.round(img.height * ratio);
@@ -398,8 +410,8 @@ export const getOptimizedStampImageSimple = async (stampType: string): Promise<s
           // 绘制并压缩图片
           ctx.drawImage(img, 0, 0, newWidth, newHeight);
           
-          // 转换为base64，使用较高的质量
-          const compressedBase64 = canvas.toDataURL('image/png', 0.8); // 提高到0.8的质量
+          // 转换为base64，使用指定的质量
+          const compressedBase64 = canvas.toDataURL('image/png', quality);
           resolve(compressedBase64.replace('data:image/png;base64,', ''));
         };
         
