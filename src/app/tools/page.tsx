@@ -214,7 +214,7 @@ const DynamicHeader = dynamic(() => import('@/components/Header').then(mod => mo
 
 // 缓存键常量
 const CACHE_KEY = 'userInfo';
-const CACHE_DURATION = 5 * 60 * 1000; // 5分钟
+const CACHE_DURATION = 10 * 60 * 1000; // 增加到10分钟
 
 // 缓存工具函数
 const cacheUtils = {
@@ -297,7 +297,7 @@ export default function ToolsPage() {
         secondaryPages.forEach(page => {
           router.prefetch(page);
         });
-      }, 1000);
+      }, 2000); // 增加延迟时间
     }
   }, [router]);
 
@@ -331,7 +331,7 @@ export default function ToolsPage() {
       
       // 添加重试机制
       let retryCount = 0;
-      const maxRetries = 2;
+      const maxRetries = 1; // 减少重试次数
       
       while (retryCount <= maxRetries) {
         try {
