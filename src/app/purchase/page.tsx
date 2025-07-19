@@ -133,7 +133,7 @@ export default function PurchaseOrderPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `采购订单_${data.orderNo || 'new'}.pdf`;
+      a.download = `PO_${data.orderNo || 'new'}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
       
