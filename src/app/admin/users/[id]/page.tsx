@@ -80,6 +80,13 @@ const MODULES = [
     bgColor: 'bg-orange-100 dark:bg-orange-900/20'
   },
   { 
+    id: 'feature4', 
+    name: '客户管理',
+    icon: Users,
+    color: 'text-violet-600 dark:text-violet-400',
+    bgColor: 'bg-violet-100 dark:bg-violet-900/20'
+  },
+  { 
     id: 'ai-email', 
     name: 'AI邮件助手',
     icon: Mail,
@@ -92,13 +99,6 @@ const MODULES = [
     icon: Calendar,
     color: 'text-purple-600 dark:text-purple-400',
     bgColor: 'bg-purple-100 dark:bg-purple-900/20'
-  },
-  { 
-    id: 'feature4', 
-    name: '客户管理',
-    icon: Users,
-    color: 'text-violet-600 dark:text-violet-400',
-    bgColor: 'bg-violet-100 dark:bg-violet-900/20'
   },
   { 
     id: 'feature5', 
