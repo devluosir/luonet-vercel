@@ -52,6 +52,21 @@ import {
 } from '@/utils/packingHistory';
 
 // 类型定义
+interface Permission {
+  id: string;
+  moduleId: string;
+  canAccess: boolean;
+}
+
+interface User {
+  id: string;
+  username: string;
+  email: string | null;
+  status: boolean;
+  isAdmin: boolean;
+  permissions: Permission[];
+}
+
 interface QuotationHistory {
   id: string;
   createdAt: string;
@@ -148,6 +163,8 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
 export default function HistoryManagementPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [user, setUser] = useState<User | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<HistoryType>(() => {
     const tabParam = searchParams?.get('tab');
     if (tabParam && ['quotation', 'confirmation', 'invoice', 'purchase', 'packing'].includes(tabParam)) {
@@ -178,8 +195,27 @@ export default function HistoryManagementPage() {
   const [previewType, setPreviewType] = useState<'quotation'|'confirmation'|'invoice'|'purchase'|'packing'>('quotation');
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // 获取用户信息和权限
+  const fetchUser = useCallback(async () => {
+    try {
+      setUserLoading(true);
+      const response = await fetch('/api/users/me');
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        console.error('Failed to fetch user data');
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    } finally {
+      setUserLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     setMounted(true);
+    fetchUser();
     
     // 组件卸载时的清理函数
     return () => {
@@ -190,7 +226,64 @@ export default function HistoryManagementPage() {
       setShowImportModal(false);
       setShowPreview(null);
     };
-  }, []);
+  }, [fetchUser]);
+
+  // 根据用户权限获取可用的tab
+  const getAvailableTabs = useCallback(() => {
+    if (!user?.permissions) return [];
+    
+    const tabPermissions = {
+      quotation: 'quotation',
+      confirmation: 'quotation', // 确认书也使用quotation权限
+      invoice: 'invoice',
+      purchase: 'purchase',
+      packing: 'packing'
+    };
+    
+    const availableTabs: { id: HistoryType; name: string; shortName: string; icon: any }[] = [];
+    
+    // 检查每个tab的权限
+    Object.entries(tabPermissions).forEach(([tabId, moduleId]) => {
+      const permission = user.permissions.find(p => p.moduleId === moduleId);
+      if (permission?.canAccess) {
+        switch (tabId) {
+          case 'quotation':
+            availableTabs.push({ id: 'quotation', name: '报价单', shortName: '报价', icon: FileText });
+            break;
+          case 'confirmation':
+            availableTabs.push({ id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText });
+            break;
+          case 'invoice':
+            availableTabs.push({ id: 'invoice', name: '发票', shortName: '发票', icon: Receipt });
+            break;
+          case 'purchase':
+            availableTabs.push({ id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart });
+            break;
+          case 'packing':
+            availableTabs.push({ id: 'packing', name: '装箱单', shortName: '装箱', icon: Package });
+            break;
+        }
+      }
+    });
+    
+    return availableTabs;
+  }, [user?.permissions]);
+
+  // 检查当前activeTab是否有权限
+  const isActiveTabAvailable = useCallback(() => {
+    const availableTabs = getAvailableTabs();
+    return availableTabs.some(tab => tab.id === activeTab);
+  }, [activeTab, getAvailableTabs]);
+
+  // 如果当前activeTab没有权限，自动切换到第一个有权限的tab
+  useEffect(() => {
+    if (!userLoading && user) {
+      const availableTabs = getAvailableTabs();
+      if (availableTabs.length > 0 && !isActiveTabAvailable()) {
+        setActiveTab(availableTabs[0].id);
+      }
+    }
+  }, [user, userLoading, getAvailableTabs, isActiveTabAvailable]);
 
   // 处理返回按钮点击
   const handleBack = () => {
@@ -307,6 +400,13 @@ export default function HistoryManagementPage() {
   // 加载历史记录
   const loadHistory = useCallback(() => {
     try {
+      // 检查用户是否有权限访问当前activeTab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === activeTab)) {
+        setHistory([]);
+        return;
+      }
+      
       let results: HistoryItem[] = [];
       
       switch (activeTab) {
@@ -339,7 +439,7 @@ export default function HistoryManagementPage() {
     } catch (error) {
       console.error('Error loading history:', error);
     }
-  }, [activeTab, getFilteredHistory, getSortedHistory]);
+  }, [activeTab, getFilteredHistory, getSortedHistory, getAvailableTabs]);
 
   useEffect(() => {
     if (mounted) {
@@ -358,6 +458,13 @@ export default function HistoryManagementPage() {
   // 处理删除
   const handleDelete = async (id: string) => {
     try {
+      // 检查用户是否有权限访问当前activeTab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === activeTab)) {
+        console.error('No permission to delete this type of document');
+        return;
+      }
+      
       setIsDeleting(true);
       let success = false;
       
@@ -401,6 +508,13 @@ export default function HistoryManagementPage() {
   // 批量删除
   const handleBatchDelete = async () => {
     try {
+      // 检查用户是否有权限访问当前activeTab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === activeTab)) {
+        console.error('No permission to delete this type of document');
+        return;
+      }
+      
       setIsDeleting(true);
       let successCount = 0;
       const idsToDelete = Array.from(selectedIds);
@@ -449,6 +563,13 @@ export default function HistoryManagementPage() {
   // 处理编辑
   const handleEdit = (id: string) => {
     try {
+      // 检查用户是否有权限访问当前activeTab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === activeTab)) {
+        console.error('No permission to edit this type of document');
+        return;
+      }
+      
       let item;
       
       switch (activeTab) {
@@ -486,6 +607,13 @@ export default function HistoryManagementPage() {
   // 处理复制
   const handleCopy = (id: string) => {
     try {
+      // 检查用户是否有权限访问当前activeTab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === activeTab)) {
+        console.error('No permission to copy this type of document');
+        return;
+      }
+      
       switch (activeTab) {
         case 'quotation':
         case 'confirmation':
@@ -509,6 +637,13 @@ export default function HistoryManagementPage() {
   // 处理转换（从订单确认转到装箱单）
   const handleConvert = (id: string) => {
     try {
+      // 检查用户是否有权限访问装箱单功能
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === 'packing')) {
+        console.error('No permission to convert to packing document');
+        return;
+      }
+      
       if (activeTab === 'confirmation') {
         // 查找订单确认记录
         const confirmationItem = getQuotationHistory().find(item => item.id === id && item.type === 'confirmation');
@@ -663,6 +798,13 @@ export default function HistoryManagementPage() {
   // 处理预览
   const handlePreview = (id: string) => {
     try {
+      // 检查用户是否有权限访问当前activeTab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === activeTab)) {
+        console.error('No permission to preview this type of document');
+        return;
+      }
+      
       let item;
       
       switch (activeTab) {
@@ -694,6 +836,12 @@ export default function HistoryManagementPage() {
   // 获取选项卡数量
   const getTabCount = useCallback((tabType: HistoryType) => {
     try {
+      // 检查用户是否有权限访问此tab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === tabType)) {
+        return 0;
+      }
+      
       let results: HistoryItem[] = [];
       
       switch (tabType) {
@@ -789,10 +937,16 @@ export default function HistoryManagementPage() {
       console.error('Error getting tab count:', error);
       return 0;
     }
-  }, [filters]);
+  }, [filters, getAvailableTabs]);
 
   // 获取搜索结果的徽章样式
   const getSearchResultBadge = useCallback((tabType: HistoryType) => {
+    // 检查用户是否有权限访问此tab
+    const availableTabs = getAvailableTabs();
+    if (!availableTabs.some(tab => tab.id === tabType)) {
+      return 'text-gray-400 border-gray-300 bg-gray-50 dark:bg-gray-800/30';
+    }
+    
     // 检查是否有任何过滤条件被应用
     const hasFilters = filters.search || 
                       filters.type !== 'all' || 
@@ -819,7 +973,7 @@ export default function HistoryManagementPage() {
       // 有过滤时，返回红色徽章
       return 'text-red-700 border-red-400 bg-red-50 dark:bg-red-900/30';
     }
-  }, [filters]);
+  }, [filters, getAvailableTabs]);
 
   // 主色调映射
   const tabColorMap = {
@@ -867,8 +1021,45 @@ export default function HistoryManagementPage() {
   };
 
   // 避免闪烁，在客户端渲染前或activeTab未设置时返回空内容
-  if (!mounted) {
-    return null;
+  if (!mounted || userLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-lg">加载中...</div>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="text-sm text-gray-500 mt-2">
+              正在获取用户权限信息...
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 如果没有可用权限，显示提示信息
+  if (!userLoading && user && getAvailableTabs().length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-black">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-gray-500 dark:text-gray-400 text-lg mb-4">
+              暂无可用权限
+            </div>
+            <div className="text-sm text-gray-400 dark:text-gray-500 mb-6">
+              您没有访问任何单据管理功能的权限，请联系管理员分配权限
+            </div>
+            <button
+              onClick={handleBack}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              返回工具页面
+            </button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
   }
 
   return (
@@ -998,13 +1189,7 @@ export default function HistoryManagementPage() {
           <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
             {/* 小屏时使用可滚动的flex，大屏时使用正常间距，所有屏幕都居中 */}
             <div className="flex justify-center space-x-2 sm:space-x-4 lg:space-x-8 overflow-x-auto scrollbar-hide">
-              {[
-                { id: 'quotation', name: '报价单', shortName: '报价', icon: FileText },
-                { id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText },
-                { id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart },
-                { id: 'packing', name: '装箱单', shortName: '装箱', icon: Package },
-                { id: 'invoice', name: '发票', shortName: '发票', icon: Receipt }
-              ].map((tab) => {
+              {getAvailableTabs().map((tab) => {
                 const Icon = tab.icon;
                 const count = getTabCount(tab.id as HistoryType);
                 const isActive = activeTab === tab.id;

@@ -8,13 +8,15 @@ interface ImportModalProps {
   onClose: () => void;
   activeTab: HistoryType;
   onImportSuccess?: () => void;
+  availableTabs?: { id: HistoryType; name: string; shortName: string; icon: any }[];
 }
 
 export default function ImportModal({
   isOpen,
   onClose,
   activeTab,
-  onImportSuccess
+  onImportSuccess,
+  availableTabs
 }: ImportModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
