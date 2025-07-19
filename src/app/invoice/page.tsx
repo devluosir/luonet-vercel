@@ -245,9 +245,6 @@ Beneficiary: Luo & Company Co., Limited`,
         
         // 生成 PDF
         await generateInvoicePDF(invoiceData);
-        
-        // 跳转到历史记录页面
-        router.push('/history');
       } else {
         // 生成新发票并保存到历史记录
         const newInvoice = {
@@ -275,9 +272,6 @@ Beneficiary: Luo & Company Co., Limited`,
         
         // 生成 PDF
         await generateInvoicePDF(invoiceData);
-        
-        // 跳转到历史记录页面
-        router.push('/history');
       }
     } catch (error) {
       console.error('Error handling submit:', error);

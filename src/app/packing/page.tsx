@@ -214,10 +214,6 @@ export default function PackingPage() {
   const router = useRouter();
   const pathname = usePathname();
   
-  // 从 window 全局变量获取初始数据
-  const _initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__PACKING_DATA__) : null;
-  const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
-  
   const [showSettings, setShowSettings] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -226,14 +222,14 @@ export default function PackingPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showShippingMarksModal, setShowShippingMarksModal] = useState(false);
-  const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
+  const [editId, setEditId] = useState<string | undefined>(undefined);
   const [previewItem, setPreviewItem] = useState<any>(null);
   const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
   const [editingUnitPrice, setEditingUnitPrice] = useState<string>('');
   const [editingFeeIndex, setEditingFeeIndex] = useState<number | null>(null);
   const [editingFeeAmount, setEditingFeeAmount] = useState<string>('');
 
-  const [packingData, setPackingData] = useState<PackingData>(_initialData || {
+  const [packingData, setPackingData] = useState<PackingData>({
     orderNo: '',
     invoiceNo: '',
     date: format(new Date(), 'yyyy-MM-dd'),
@@ -280,21 +276,23 @@ export default function PackingPage() {
     currentGroupId: undefined
   });
 
-  // 清除注入的数据
+  // 检查并加载注入的数据
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // 获取并保存编辑模式状态
       const customWindow = window as unknown as CustomWindow;
-      const editId = customWindow.__EDIT_ID__;
+      const injectedData = customWindow.__PACKING_DATA__;
+      const injectedEditId = customWindow.__EDIT_ID__;
+      const editMode = customWindow.__EDIT_MODE__;
       
-      if (editId !== undefined) {
-        setEditId(editId);
+      if (injectedData) {
+        setPackingData(injectedData);
+        setEditId(injectedEditId);
+        
+        // 清除注入的数据
+        delete customWindow.__PACKING_DATA__;
+        delete customWindow.__EDIT_MODE__;
+        delete customWindow.__EDIT_ID__;
       }
-
-      // 清除注入的数据
-      delete customWindow.__PACKING_DATA__;
-      delete customWindow.__EDIT_MODE__;
-      delete customWindow.__EDIT_ID__;
     }
   }, []);
 
