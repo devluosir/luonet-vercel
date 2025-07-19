@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { databaseMonitor } from '@/utils/database';
 
 // 内存缓存
-const userCache = new Map<string, { data: any; timestamp: number }>();
+export const userCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 10 * 60 * 1000; // 增加到10分钟缓存
 
 export async function GET(request: NextRequest) {

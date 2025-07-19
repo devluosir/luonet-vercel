@@ -313,16 +313,22 @@ export default function ToolsPage() {
   };
 
   // 优化用户信息获取逻辑
-  const fetchUser = useCallback(async () => {
+  const fetchUser = useCallback(async (forceRefresh = false) => {
     try {
       setLoading(true);
       setFetchError(null);
       
       performanceMonitor.startTimer('user_fetch');
       
+      // 如果强制刷新，清除缓存
+      if (forceRefresh) {
+        cacheUtils.clear(CACHE_KEY);
+        console.log('强制刷新用户权限信息');
+      }
+      
       // 尝试从缓存获取用户信息
       const cachedUser = cacheUtils.get(CACHE_KEY);
-      if (cachedUser) {
+      if (cachedUser && !forceRefresh) {
         setUser(cachedUser);
         setLoading(false);
         performanceMonitor.endTimer('user_fetch');
@@ -435,12 +441,20 @@ export default function ToolsPage() {
         <div className="text-center">
           <div className="text-red-600 mb-4">加载失败</div>
           <div className="text-sm text-gray-500 mb-4">{fetchError}</div>
-          <button 
-            onClick={fetchUser}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            重试
-          </button>
+          <div className="flex space-x-2 justify-center">
+            <button 
+              onClick={() => fetchUser(false)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              重试
+            </button>
+            <button 
+              onClick={() => fetchUser(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              强制刷新
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -472,12 +486,34 @@ export default function ToolsPage() {
         <div className="flex flex-col items-center justify-center w-full py-4 sm:py-6 md:py-8 lg:py-12 px-4 sm:px-6 lg:px-8 xl:px-10">
           {availableModules.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-gray-500 dark:text-gray-400 text-lg">
+              <div className="text-gray-500 dark:text-gray-400 text-lg mb-4">
                 暂无可用工具，请联系管理员分配权限
               </div>
+              <button
+                onClick={() => fetchUser(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                刷新权限
+              </button>
             </div>
           ) : (
             <div className="w-full max-w-7xl mx-auto px-2 sm:px-4">
+              {/* 添加刷新按钮 */}
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => fetchUser(true)}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 
+                           bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700
+                           hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                  title="刷新权限信息"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  刷新权限
+                </button>
+              </div>
+              
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
                 {availableModules.map((module) => {
                   const Icon = module.icon || Settings;

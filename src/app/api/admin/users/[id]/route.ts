@@ -3,6 +3,7 @@ import { getToken } from 'next-auth/jwt';
 import type { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { userCache } from '../../users/me/route';
 
 export async function GET(
   req: NextRequest,
@@ -126,6 +127,13 @@ export async function PUT(
         permissions: true,
       },
     });
+
+    // 清除用户缓存
+    const cacheKey = `user_${id}`;
+    if (userCache.has(cacheKey)) {
+      userCache.delete(cacheKey);
+      console.log(`已清除用户 ${id} 的缓存`);
+    }
 
     return NextResponse.json(user);
   } catch (error) {

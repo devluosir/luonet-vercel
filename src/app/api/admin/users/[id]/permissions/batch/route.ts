@@ -7,6 +7,9 @@ interface PermissionUpdate {
   canAccess: boolean;
 }
 
+// 导入用户缓存以便清除
+import { userCache } from '../route';
+
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -60,6 +63,13 @@ export async function PUT(
         });
       }
     });
+
+    // 清除用户缓存
+    const cacheKey = `user_${userId}`;
+    if (userCache.has(cacheKey)) {
+      userCache.delete(cacheKey);
+      console.log(`已清除用户 ${userId} 的缓存`);
+    }
 
     // 获取更新后的用户信息
     const user = await prisma.user.findUnique({
