@@ -242,8 +242,12 @@ export default function HistoryManagementPage() {
     
     const availableTabs: { id: HistoryType; name: string; shortName: string; icon: any }[] = [];
     
-    // 检查每个tab的权限
-    Object.entries(tabPermissions).forEach(([tabId, moduleId]) => {
+    // 定义tab的顺序：报价单、合同确认、装箱单、发票、采购单
+    const tabOrder = ['quotation', 'confirmation', 'packing', 'invoice', 'purchase'];
+    
+    // 按照指定顺序检查每个tab的权限
+    tabOrder.forEach(tabId => {
+      const moduleId = tabPermissions[tabId as keyof typeof tabPermissions];
       const permission = user.permissions.find(p => p.moduleId === moduleId);
       if (permission?.canAccess) {
         switch (tabId) {
@@ -253,14 +257,14 @@ export default function HistoryManagementPage() {
           case 'confirmation':
             availableTabs.push({ id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText });
             break;
+          case 'packing':
+            availableTabs.push({ id: 'packing', name: '装箱单', shortName: '装箱', icon: Package });
+            break;
           case 'invoice':
             availableTabs.push({ id: 'invoice', name: '发票', shortName: '发票', icon: Receipt });
             break;
           case 'purchase':
             availableTabs.push({ id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart });
-            break;
-          case 'packing':
-            availableTabs.push({ id: 'packing', name: '装箱单', shortName: '装箱', icon: Package });
             break;
         }
       }
@@ -954,18 +958,18 @@ export default function HistoryManagementPage() {
                       filters.amountRange !== 'all';
     
     if (!hasFilters) {
-      // 没有过滤时，返回默认的tab颜色徽章
+      // 没有过滤时，返回默认的tab颜色徽章 - 按照新的顺序：报价单、合同确认、装箱单、发票、采购单
       switch (tabType) {
         case 'quotation':
           return 'text-blue-700 border-blue-400 bg-blue-50 dark:bg-blue-900/30';
         case 'confirmation':
           return 'text-green-700 border-green-400 bg-green-50 dark:bg-green-900/30';
+        case 'packing':
+          return 'text-teal-700 border-teal-400 bg-teal-50 dark:bg-teal-900/30';
         case 'invoice':
           return 'text-purple-700 border-purple-400 bg-purple-50 dark:bg-purple-900/30';
         case 'purchase':
           return 'text-orange-700 border-orange-400 bg-orange-50 dark:bg-orange-900/30';
-        case 'packing':
-          return 'text-teal-700 border-teal-400 bg-teal-50 dark:bg-teal-900/30';
         default:
           return 'text-blue-700 border-blue-400 bg-blue-50 dark:bg-blue-900/30';
       }
@@ -975,13 +979,13 @@ export default function HistoryManagementPage() {
     }
   }, [filters, getAvailableTabs]);
 
-  // 主色调映射
+  // 主色调映射 - 按照新的tab顺序：报价单、合同确认、装箱单、发票、采购单
   const tabColorMap = {
-    quotation: 'blue',
-    confirmation: 'green',
-    invoice: 'purple',
-    purchase: 'orange',
-    packing: 'teal'
+    quotation: 'blue',      // 报价单 - 蓝色
+    confirmation: 'green',   // 合同确认 - 绿色
+    packing: 'teal',        // 装箱单 - 青色
+    invoice: 'purple',      // 发票 - 紫色
+    purchase: 'orange'      // 采购单 - 橙色
   };
   const activeColor = tabColorMap[activeTab] || 'blue';
 
@@ -1195,7 +1199,7 @@ export default function HistoryManagementPage() {
                 const isActive = activeTab === tab.id;
                 const badgeStyle = getSearchResultBadge(tab.id as HistoryType);
                 
-                // 根据tab类型设置对应的颜色
+                // 根据tab类型设置对应的颜色 - 按照新的顺序：报价单、合同确认、装箱单、发票、采购单
                 let activeClasses = '';
                 if (isActive) {
                   switch (tab.id) {
@@ -1205,14 +1209,14 @@ export default function HistoryManagementPage() {
                     case 'confirmation':
                       activeClasses = 'border-green-500 text-green-600 dark:text-green-400';
                       break;
+                    case 'packing':
+                      activeClasses = 'border-teal-500 text-teal-600 dark:text-teal-400';
+                      break;
                     case 'invoice':
                       activeClasses = 'border-purple-500 text-purple-600 dark:text-purple-400';
                       break;
                     case 'purchase':
                       activeClasses = 'border-orange-500 text-orange-600 dark:text-orange-400';
-                      break;
-                    case 'packing':
-                      activeClasses = 'border-teal-500 text-teal-600 dark:text-teal-400';
                       break;
                     default:
                       activeClasses = 'border-blue-500 text-blue-600 dark:text-blue-400';
@@ -1245,7 +1249,7 @@ export default function HistoryManagementPage() {
         {/* Content */}
         <div className="flex-1 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
-            {/* Tab Content */}
+            {/* Tab Content - 按照新的顺序：报价单、合同确认、装箱单、发票、采购单 */}
             <div className="bg-white dark:bg-[#1c1c1e] rounded-lg">
               {activeTab === 'quotation' && (
                 <QuotationHistoryTab 
@@ -1280,6 +1284,22 @@ export default function HistoryManagementPage() {
                   refreshKey={refreshKey}
                 />
               )}
+              {activeTab === 'packing' && (
+                <PackingHistoryTab 
+                  filters={filters} 
+                  sortConfig={sortConfig}
+                  onSort={handleSort}
+                  onEdit={handleEdit}
+                  onCopy={handleCopy}
+                  onDelete={(id) => setShowDeleteConfirm(id)}
+                  onPreview={handlePreview}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelect}
+                  onSelectAll={handleSelectAll}
+                  mainColor={activeColor}
+                  refreshKey={refreshKey}
+                />
+              )}
               {activeTab === 'invoice' && (
                 <InvoiceHistoryTab 
                   filters={filters} 
@@ -1298,22 +1318,6 @@ export default function HistoryManagementPage() {
               )}
               {activeTab === 'purchase' && (
                 <PurchaseHistoryTab 
-                  filters={filters} 
-                  sortConfig={sortConfig}
-                  onSort={handleSort}
-                  onEdit={handleEdit}
-                  onCopy={handleCopy}
-                  onDelete={(id) => setShowDeleteConfirm(id)}
-                  onPreview={handlePreview}
-                  selectedIds={selectedIds}
-                  onSelect={handleSelect}
-                  onSelectAll={handleSelectAll}
-                  mainColor={activeColor}
-                  refreshKey={refreshKey}
-                />
-              )}
-              {activeTab === 'packing' && (
-                <PackingHistoryTab 
                   filters={filters} 
                   sortConfig={sortConfig}
                   onSort={handleSort}
