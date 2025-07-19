@@ -80,7 +80,7 @@ const MODULES = [
     bgColor: 'bg-orange-100 dark:bg-orange-900/20'
   },
   { 
-    id: 'feature4', 
+    id: 'customer', 
     name: '客户管理',
     icon: Users,
     color: 'text-violet-600 dark:text-violet-400',
