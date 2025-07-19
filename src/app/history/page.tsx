@@ -948,7 +948,7 @@ export default function HistoryManagementPage() {
     // 检查用户是否有权限访问此tab
     const availableTabs = getAvailableTabs();
     if (!availableTabs.some(tab => tab.id === tabType)) {
-      return 'text-gray-400 border-gray-300 bg-gray-50 dark:bg-gray-800/30';
+      return 'text-gray-400 border-gray-300 bg-gray-50 dark:text-gray-500 dark:border-gray-600 dark:bg-gray-800/50';
     }
     
     // 检查是否有任何过滤条件被应用
@@ -961,21 +961,21 @@ export default function HistoryManagementPage() {
       // 没有过滤时，返回默认的tab颜色徽章 - 按照新的顺序：报价单、合同确认、装箱单、发票、采购单
       switch (tabType) {
         case 'quotation':
-          return 'text-blue-700 border-blue-400 bg-blue-50 dark:bg-blue-900/30';
+          return 'text-blue-700 border-blue-400 bg-blue-50 dark:text-blue-300 dark:border-blue-500 dark:bg-blue-900/50';
         case 'confirmation':
-          return 'text-green-700 border-green-400 bg-green-50 dark:bg-green-900/30';
+          return 'text-green-700 border-green-400 bg-green-50 dark:text-green-300 dark:border-green-500 dark:bg-green-900/50';
         case 'packing':
-          return 'text-teal-700 border-teal-400 bg-teal-50 dark:bg-teal-900/30';
+          return 'text-teal-700 border-teal-400 bg-teal-50 dark:text-teal-300 dark:border-teal-500 dark:bg-teal-900/50';
         case 'invoice':
-          return 'text-purple-700 border-purple-400 bg-purple-50 dark:bg-purple-900/30';
+          return 'text-purple-700 border-purple-400 bg-purple-50 dark:text-purple-300 dark:border-purple-500 dark:bg-purple-900/50';
         case 'purchase':
-          return 'text-orange-700 border-orange-400 bg-orange-50 dark:bg-orange-900/30';
+          return 'text-orange-700 border-orange-400 bg-orange-50 dark:text-orange-300 dark:border-orange-500 dark:bg-orange-900/50';
         default:
-          return 'text-blue-700 border-blue-400 bg-blue-50 dark:bg-blue-900/30';
+          return 'text-blue-700 border-blue-400 bg-blue-50 dark:text-blue-300 dark:border-blue-500 dark:bg-blue-900/50';
       }
     } else {
       // 有过滤时，返回红色徽章
-      return 'text-red-700 border-red-400 bg-red-50 dark:bg-red-900/30';
+      return 'text-red-700 border-red-400 bg-red-50 dark:text-red-300 dark:border-red-500 dark:bg-red-900/50';
     }
   }, [filters, getAvailableTabs]);
 
@@ -1027,12 +1027,12 @@ export default function HistoryManagementPage() {
   // 避免闪烁，在客户端渲染前或activeTab未设置时返回空内容
   if (!mounted || userLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-black">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-lg">加载中...</div>
+          <div className="w-8 h-8 border-4 border-blue-200 dark:border-blue-800 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-lg text-gray-900 dark:text-white">加载中...</div>
           {process.env.NODE_ENV === 'development' && (
-            <div className="text-sm text-gray-500 mt-2">
+            <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
               正在获取用户权限信息...
             </div>
           )}
@@ -1055,7 +1055,7 @@ export default function HistoryManagementPage() {
             </div>
             <button
               onClick={handleBack}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
             >
               返回工具页面
             </button>
@@ -1078,25 +1078,25 @@ export default function HistoryManagementPage() {
                   onClick={handleBack}
                   className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
                 >
-                  <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
                 </button>
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white">单据管理中心</h1>
               </div>
               <div className="flex items-center space-x-2">
                 {/* 搜索框 */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                   <input
                     type="text"
                     placeholder="搜索..."
                     value={filters.search}
                     onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent w-48 sm:w-64"
+                    className="pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent w-48 sm:w-64 placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   {filters.search && (
                     <button
                       type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
                       tabIndex={-1}
                       aria-label="清空搜索"
@@ -1111,7 +1111,7 @@ export default function HistoryManagementPage() {
                   onClick={() => setShowFilters(!showFilters)}
                   className={`p-2 rounded-lg border transition-all duration-200 ${
                     showFilters 
-                      ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400'
+                      ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300'
                       : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                   title="高级过滤"
@@ -1122,7 +1122,7 @@ export default function HistoryManagementPage() {
                 {/* 导入按钮（蓝色，Upload） */}
                 <button
                   onClick={handleImport}
-                  className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
+                  className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-blue-600 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all duration-200"
                   title="导入"
                 >
                   <Upload className="w-5 h-5" />
@@ -1130,7 +1130,7 @@ export default function HistoryManagementPage() {
                 {/* 导出按钮（绿色，Download） */}
                 <button
                   onClick={handleExport}
-                  className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-200"
+                  className="p-2 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-green-600 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/30 transition-all duration-200"
                   title="导出"
                 >
                   <Download className="w-5 h-5" />
@@ -1138,7 +1138,7 @@ export default function HistoryManagementPage() {
                 {selectedIds.size > 0 && (
                   <button
                     onClick={() => setShowDeleteConfirm('batch')}
-                    className="px-3 py-2 flex items-center bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                    className="px-3 py-2 flex items-center bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
                     title="批量删除"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1181,7 +1181,7 @@ export default function HistoryManagementPage() {
                 {/* 重置按钮 */}
                 <button
                   onClick={() => setFilters({ ...filters, dateRange: 'all', amountRange: 'all' })}
-                  className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm"
+                  className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm"
                 >重置</button>
               </div>
             </div>
@@ -1204,22 +1204,22 @@ export default function HistoryManagementPage() {
                 if (isActive) {
                   switch (tab.id) {
                     case 'quotation':
-                      activeClasses = 'border-blue-500 text-blue-600 dark:text-blue-400';
+                      activeClasses = 'border-blue-500 text-blue-600 dark:text-blue-300';
                       break;
                     case 'confirmation':
-                      activeClasses = 'border-green-500 text-green-600 dark:text-green-400';
+                      activeClasses = 'border-green-500 text-green-600 dark:text-green-300';
                       break;
                     case 'packing':
-                      activeClasses = 'border-teal-500 text-teal-600 dark:text-teal-400';
+                      activeClasses = 'border-teal-500 text-teal-600 dark:text-teal-300';
                       break;
                     case 'invoice':
-                      activeClasses = 'border-purple-500 text-purple-600 dark:text-purple-400';
+                      activeClasses = 'border-purple-500 text-purple-600 dark:text-purple-300';
                       break;
                     case 'purchase':
-                      activeClasses = 'border-orange-500 text-orange-600 dark:text-orange-400';
+                      activeClasses = 'border-orange-500 text-orange-600 dark:text-orange-300';
                       break;
                     default:
-                      activeClasses = 'border-blue-500 text-blue-600 dark:text-blue-400';
+                      activeClasses = 'border-blue-500 text-blue-600 dark:text-blue-300';
                   }
                 }
                 
@@ -1232,7 +1232,7 @@ export default function HistoryManagementPage() {
                   >
                     <span className="relative inline-block">
                       <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      <span className={`absolute -top-0.5 sm:-top-1 -right-1.5 sm:-right-2 min-w-[16px] sm:min-w-[18px] h-3.5 sm:h-4 px-1 sm:px-1 ${badgeStyle} text-[10px] sm:text-xs rounded-full flex items-center justify-center font-bold border border-white dark:border-gray-800 shadow-sm`}> 
+                      <span className={`absolute -top-0.5 sm:-top-1 -right-1.5 sm:-right-2 min-w-[16px] sm:min-w-[18px] h-3.5 sm:h-4 px-1 sm:px-1 ${badgeStyle} text-[10px] sm:text-xs rounded-full flex items-center justify-center font-bold border border-white dark:border-gray-900 shadow-sm`}> 
                         {count}
                       </span>
                     </span>
@@ -1352,7 +1352,7 @@ export default function HistoryManagementPage() {
             <button
               onClick={() => setShowDeleteConfirm(null)}
               disabled={isDeleting}
-              className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="关闭对话框"
             >
               <X className="w-4 h-4" />
@@ -1360,8 +1360,8 @@ export default function HistoryManagementPage() {
 
             {/* 头部 */}
             <div className="flex items-center p-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-300" />
               </div>
               <div className="ml-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -1378,9 +1378,9 @@ export default function HistoryManagementPage() {
               <div className="mb-6">
                 {showDeleteConfirm === 'batch' ? (
                   <div className="space-y-3">
-                    <div className="flex items-center p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                      <div className="flex-shrink-0 w-8 h-8 bg-orange-100 dark:bg-orange-900/40 rounded-full flex items-center justify-center">
-                        <span className="text-orange-600 dark:text-orange-400 text-sm font-bold">
+                    <div className="flex items-center p-3 bg-orange-50 dark:bg-orange-900/30 rounded-lg border border-orange-200 dark:border-orange-700">
+                      <div className="flex-shrink-0 w-8 h-8 bg-orange-100 dark:bg-orange-900/50 rounded-full flex items-center justify-center">
+                        <span className="text-orange-600 dark:text-orange-300 text-sm font-bold">
                           {selectedIds.size}
                         </span>
                       </div>
@@ -1388,7 +1388,7 @@ export default function HistoryManagementPage() {
                         <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
                           即将删除 {selectedIds.size} 条记录
                         </p>
-                        <p className="text-xs text-orange-600 dark:text-orange-400">
+                        <p className="text-xs text-orange-600 dark:text-orange-300">
                           此操作将永久删除选中的记录
                         </p>
                       </div>
@@ -1401,15 +1401,15 @@ export default function HistoryManagementPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="flex items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                      <div className="flex-shrink-0 w-8 h-8 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center">
-                        <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
+                    <div className="flex items-center p-3 bg-red-50 dark:bg-red-900/30 rounded-lg border border-red-200 dark:border-red-700">
+                      <div className="flex-shrink-0 w-8 h-8 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center">
+                        <Trash2 className="w-4 h-4 text-red-600 dark:text-red-300" />
                       </div>
                       <div className="ml-3">
                         <p className="text-sm font-medium text-red-800 dark:text-red-200">
                           即将删除此条记录
                         </p>
-                        <p className="text-xs text-red-600 dark:text-red-400">
+                        <p className="text-xs text-red-600 dark:text-red-300">
                           此操作将永久删除该记录
                         </p>
                       </div>
@@ -1435,7 +1435,7 @@ export default function HistoryManagementPage() {
                 <button
                   onClick={handleDeleteConfirm}
                   disabled={isDeleting}
-                  className="px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:bg-red-700 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  className="px-4 py-2.5 text-sm font-medium text-white bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 focus:bg-red-700 dark:focus:bg-red-600 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
                 >
                   {isDeleting && (
                     <RefreshCw className="w-4 h-4 animate-spin" />
@@ -1459,13 +1459,13 @@ export default function HistoryManagementPage() {
                         setSelectedIds(new Set(['test1', 'test2', 'test3']));
                         setShowDeleteConfirm('batch');
                       }}
-                      className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                      className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/70"
                     >
                       测试批量删除
                     </button>
                     <button
                       onClick={() => setShowDeleteConfirm('test-single')}
-                      className="px-3 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded border border-green-200 dark:border-green-800 hover:bg-green-200 dark:hover:bg-green-900/50"
+                      className="px-3 py-1 text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded border border-green-200 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/70"
                     >
                       测试单条删除
                     </button>
