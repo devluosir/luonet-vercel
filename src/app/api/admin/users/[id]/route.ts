@@ -3,7 +3,7 @@ import { getToken } from 'next-auth/jwt';
 import type { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { userCache } from '../../users/me/route';
+import { userCache } from '../../../users/me/route';
 
 export async function GET(
   req: NextRequest,

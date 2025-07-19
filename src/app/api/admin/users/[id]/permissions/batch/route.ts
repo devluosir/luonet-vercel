@@ -8,7 +8,7 @@ interface PermissionUpdate {
 }
 
 // 导入用户缓存以便清除
-import { userCache } from '../route';
+import { userCache } from '../../../../../users/me/route';
 
 export async function PUT(
   req: NextRequest,
