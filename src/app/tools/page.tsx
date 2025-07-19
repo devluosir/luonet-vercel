@@ -469,7 +469,7 @@ export default function ToolsPage() {
           </>
         )}
 
-        <div className="flex flex-col items-center justify-center w-full py-8 sm:py-10 md:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 xl:px-10">
+        <div className="flex flex-col items-center justify-center w-full py-4 sm:py-6 md:py-8 lg:py-12 px-4 sm:px-6 lg:px-8 xl:px-10">
           {availableModules.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-gray-500 dark:text-gray-400 text-lg">
@@ -478,7 +478,7 @@ export default function ToolsPage() {
             </div>
           ) : (
             <div className="w-full max-w-7xl mx-auto px-2 sm:px-4">
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
                 {availableModules.map((module) => {
                   const Icon = module.icon || Settings;
                   return (
@@ -489,7 +489,7 @@ export default function ToolsPage() {
                            hover:-translate-y-2 cursor-pointer
                            border border-gray-200/50 dark:border-gray-800/50
                            hover:border-gray-300/70 dark:hover:border-gray-700/70
-                           min-h-[140px] sm:min-h-[160px] md:min-h-[180px] lg:min-h-[200px]
+                           min-h-[120px] sm:min-h-[140px] md:min-h-[160px] lg:min-h-[180px]
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                            dark:focus:ring-offset-gray-900"
                       onClick={() => router.push(module.path)}
@@ -513,30 +513,30 @@ export default function ToolsPage() {
                     className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300 ease-in-out bg-gradient-to-br ${module.color}`}
                   ></div>
                       
-                                        <div className="p-3 sm:p-4 md:p-5 lg:p-6 h-full flex flex-col">
+                                        <div className="p-2.5 sm:p-3 md:p-4 lg:p-5 h-full flex flex-col">
                     {/* 图标和标题 */}
-                    <div className="flex items-start space-x-3 sm:space-x-3 md:space-x-4 mb-3 sm:mb-4">
-                      <div className={`p-2.5 sm:p-3 md:p-3.5 lg:p-4 rounded-xl bg-gradient-to-br ${module.color} flex-shrink-0 shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
-                        <Icon className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
+                    <div className="flex items-start space-x-2.5 sm:space-x-3 md:space-x-4 mb-2 sm:mb-3">
+                      <div className={`p-2 sm:p-2.5 md:p-3 lg:p-3.5 rounded-xl bg-gradient-to-br ${module.color} flex-shrink-0 shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
+                        <Icon className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-gray-900 dark:text-white leading-tight line-clamp-1">
+                        <h3 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-900 dark:text-white leading-tight line-clamp-1">
                           {module.name}
                         </h3>
                       </div>
                     </div>
                     
                     {/* 描述 */}
-                    <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300 mb-3 sm:mb-4 flex-grow line-clamp-2 leading-relaxed">
+                    <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300 mb-2 sm:mb-3 flex-grow line-clamp-2 leading-relaxed">
                       {module.description}
                     </p>
                     
                     {/* 操作按钮 */}
-                    <div className={`flex items-center justify-between mt-auto pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800`}>
+                    <div className={`flex items-center justify-between mt-auto pt-1.5 sm:pt-2 border-t border-gray-100 dark:border-gray-800`}>
                       <div className={`flex items-center text-xs sm:text-sm md:text-base font-semibold ${module.textColor} ${module.hoverColor} transition-colors duration-300`}>
                         <span>开始使用</span>
                       </div>
-                      <svg className={`h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 ${module.textColor} transform group-hover:translate-x-1 transition-transform duration-300`} 
+                      <svg className={`h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 ${module.textColor} transform group-hover:translate-x-1 transition-transform duration-300`} 
                           viewBox="0 0 20 20" fill="currentColor">
                        <path fillRule="evenodd" 
                              d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" 
