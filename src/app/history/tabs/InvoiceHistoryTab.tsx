@@ -82,8 +82,6 @@ export default function InvoiceHistoryTab({
     setLoading(true);
     try {
       let results = getInvoiceHistory();
-      // 只保留真正的发票数据
-      results = results.filter(item => !!item.invoiceNo);
       // 搜索过滤
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
