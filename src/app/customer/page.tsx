@@ -552,14 +552,6 @@ export default function CustomerPage() {
             <th className="px-3 sm:px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
               使用记录
             </th>
-            <th className="hidden md:table-cell w-32 px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-              更新时间
-            </th>
-            {!isSelectMode && (
-              <th className="w-20 sm:w-24 px-2 sm:px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                操作
-              </th>
-            )}
           </tr>
         </thead>
         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -639,29 +631,6 @@ export default function CustomerPage() {
                   })}
                 </div>
               </td>
-              <td className="hidden md:table-cell w-32 px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                {new Date(customer.updatedAt).toLocaleDateString()}
-              </td>
-              {!isSelectMode && (
-                <td className="w-20 sm:w-24 px-2 sm:px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <button
-                      onClick={() => handleEditCustomer(customer)}
-                      className="p-1 sm:p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                      title="编辑"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteCustomer(customer.id)}
-                      className="p-1 sm:p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
-                      title="删除"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </td>
-              )}
             </tr>
           ))}
         </tbody>
