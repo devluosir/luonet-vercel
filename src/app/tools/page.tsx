@@ -268,6 +268,8 @@ export default function ToolsPage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   // 性能监控
   useEffect(() => {
@@ -315,7 +317,11 @@ export default function ToolsPage() {
   // 优化用户信息获取逻辑
   const fetchUser = useCallback(async (forceRefresh = false) => {
     try {
-      setLoading(true);
+      if (forceRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       setFetchError(null);
       
       performanceMonitor.startTimer('user_fetch');
@@ -341,7 +347,7 @@ export default function ToolsPage() {
       
       while (retryCount <= maxRetries) {
         try {
-          const response = await fetch('/api/users/me', {
+          const response = await fetch(`/api/users/me${forceRefresh ? '?force=true' : ''}`, {
             headers: {
               'Cache-Control': 'no-cache',
               'Pragma': 'no-cache'
@@ -357,6 +363,12 @@ export default function ToolsPage() {
           
           // 缓存用户信息
           cacheUtils.set(CACHE_KEY, data);
+          
+          // 如果是强制刷新，显示成功消息
+          if (forceRefresh) {
+            setShowSuccessMessage(true);
+            setTimeout(() => setShowSuccessMessage(false), 3000);
+          }
           break;
         } catch (error) {
           retryCount++;
@@ -374,6 +386,7 @@ export default function ToolsPage() {
       setFetchError(error instanceof Error ? error.message : '获取用户信息失败');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -491,26 +504,48 @@ export default function ToolsPage() {
               </div>
               <button
                 onClick={() => fetchUser(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={refreshing}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  refreshing
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
               >
-                刷新权限
+                {refreshing ? '刷新中...' : '刷新权限'}
               </button>
             </div>
           ) : (
             <div className="w-full max-w-7xl mx-auto px-2 sm:px-4">
+              {/* 成功消息 */}
+              {showSuccessMessage && (
+                <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-green-600 dark:text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-green-800 dark:text-green-200 text-sm font-medium">
+                      权限信息已成功刷新
+                    </span>
+                  </div>
+                </div>
+              )}
+              
               {/* 添加刷新按钮 */}
               <div className="flex justify-end mb-4">
                 <button
                   onClick={() => fetchUser(true)}
-                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 
-                           bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700
-                           hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                  disabled={refreshing}
+                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg border transition-colors duration-200 ${
+                    refreshing
+                      ? 'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-not-allowed'
+                      : 'text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
                   title="刷新权限信息"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  刷新权限
+                  {refreshing ? '刷新中...' : '刷新权限'}
                 </button>
               </div>
               

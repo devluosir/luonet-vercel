@@ -19,13 +19,24 @@ export async function GET(request: NextRequest) {
     const userId = session.user.id;
     const cacheKey = `user_${userId}`;
     
+    // 检查是否有强制刷新参数
+    const url = new URL(request.url);
+    const forceRefresh = url.searchParams.get('force') === 'true';
+    
+    // 如果强制刷新，清除缓存
+    if (forceRefresh) {
+      userCache.delete(cacheKey);
+      console.log(`强制刷新用户 ${userId} 的缓存`);
+    }
+    
     // 检查缓存
     const cached = userCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION && !forceRefresh) {
       return NextResponse.json(cached.data, {
         headers: {
-          'Cache-Control': 'public, max-age=600', // 10分钟浏览器缓存
-          'ETag': `"${cached.timestamp}"`
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
     }
@@ -81,8 +92,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(userData, {
       headers: {
-        'Cache-Control': 'public, max-age=600',
-        'ETag': `"${Date.now()}"`
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       }
     });
 

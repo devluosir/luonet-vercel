@@ -1,47 +1,46 @@
 import { NextResponse } from 'next/server';
-import { databaseMonitor, connectionPoolMonitor } from '@/utils/database';
+import { getServerSession } from 'next-auth';
+import { authConfig } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { userCache } from '../users/me/route';
 
 export async function GET() {
   try {
-    // 获取数据库连接状态
-    const poolStatus = await connectionPoolMonitor.getPoolStatus();
+    const session = await getServerSession(authConfig);
     
-    // 获取查询统计信息
-    const queryStats = databaseMonitor.getQueryStats();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: '未授权' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const cacheKey = `user_${userId}`;
     
-    // 执行连接测试
-    const connectionTest = await databaseMonitor.checkConnection();
-    
-    return NextResponse.json({
-      timestamp: new Date().toISOString(),
-      database: {
-        connection: {
-          status: poolStatus.connected ? 'healthy' : 'unhealthy',
-          responseTime: connectionTest ? '< 1000ms' : 'timeout',
-          lastCheck: poolStatus.timestamp
-        },
-        pool: {
-          status: poolStatus.connected ? 'active' : 'inactive',
-          maxConnections: 10,
-          minConnections: 2
-        },
-        queries: {
-          total: Object.keys(queryStats).length,
-          slowQueries: Object.values(queryStats).reduce((sum: number, stat: any) => sum + stat.slowQueries, 0),
-          stats: queryStats
-        }
-      },
-      performance: {
-        slowQueryThreshold: '1000ms',
-        connectionTimeout: '30s',
-        maxRetries: 2
+    // 获取数据库中的用户权限
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        permissions: true
       }
     });
-  } catch (error) {
-    console.error('数据库监控API错误:', error);
+
+    // 获取缓存中的用户信息
+    const cached = userCache.get(cacheKey);
+    
     return NextResponse.json({
-      error: '获取数据库状态失败',
-      timestamp: new Date().toISOString()
-    }, { status: 500 });
+      userId,
+      cacheKey,
+      hasCache: !!cached,
+      cacheTimestamp: cached?.timestamp,
+      cacheAge: cached ? Date.now() - cached.timestamp : null,
+      databasePermissions: user?.permissions || [],
+      cachedPermissions: cached?.data?.permissions || [],
+      cacheData: cached?.data || null
+    });
+  } catch (error) {
+    console.error('调试API错误:', error);
+    return NextResponse.json(
+      { error: '调试API错误' },
+      { status: 500 }
+    );
   }
 } 
