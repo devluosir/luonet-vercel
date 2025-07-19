@@ -476,7 +476,7 @@ export default function UserDetailPage() {
               </div>
               <div className="text-lg font-medium text-red-600 dark:text-red-400 mb-2">确认删除</div>
               <div className="text-gray-600 dark:text-gray-400 mb-4">
-                您确定要删除用户 "{user?.username}" 吗？此操作不可逆。
+                您确定要删除用户 &quot;{user?.username}&quot; 吗？此操作不可逆。
               </div>
               <div className="flex justify-center space-x-4">
                 <button

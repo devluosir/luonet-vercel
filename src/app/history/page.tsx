@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { 
   FileText, 
   Receipt, 
@@ -13,24 +12,10 @@ import {
   Download, 
   Upload, 
   Trash2, 
-  Edit, 
-  Copy, 
-  Eye,
-  Calendar,
-  DollarSign,
-  User,
-  Building,
-  ChevronUp,
-  ChevronDown,
-  MoreHorizontal,
   RefreshCw,
-  Archive,
-  Star,
   ArrowLeft,
   X
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
 import { Footer } from '@/components/Footer';
 
 // 导入历史记录工具函数
@@ -989,6 +974,16 @@ export default function HistoryManagementPage() {
   };
   const activeColor = tabColorMap[activeTab] || 'blue';
 
+  // 处理删除确认
+  const handleDeleteConfirm = async () => {
+    if (showDeleteConfirm === 'batch') {
+      await handleBatchDelete();
+    } else if (showDeleteConfirm) {
+      await handleDelete(showDeleteConfirm);
+    }
+    setShowDeleteConfirm(null);
+  };
+
   // 处理键盘事件
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -1013,16 +1008,6 @@ export default function HistoryManagementPage() {
       document.body.style.overflow = 'unset';
     };
   }, [showDeleteConfirm, isDeleting]);
-
-  // 处理删除确认
-  const handleDeleteConfirm = async () => {
-    if (showDeleteConfirm === 'batch') {
-      await handleBatchDelete();
-    } else if (showDeleteConfirm) {
-      await handleDelete(showDeleteConfirm);
-    }
-    setShowDeleteConfirm(null);
-  };
 
   // 避免闪烁，在客户端渲染前或activeTab未设置时返回空内容
   if (!mounted || userLoading) {

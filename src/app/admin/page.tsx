@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { CreateUserModal } from '@/components/admin/CreateUserModal';
-import { UserPlus, Users, Shield, ShieldCheck, Clock, Mail, User, Edit } from 'lucide-react';
+import { UserPlus, Users, Clock, Mail, User, Edit } from 'lucide-react';
 import { Footer } from '@/components/Footer'; 
 
 interface User {
