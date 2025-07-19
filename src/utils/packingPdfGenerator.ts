@@ -512,7 +512,7 @@ function handleNoHeader(doc: ExtendedJsPDF, data: PackingData, margin: number, p
 function savePackingListPDF(doc: ExtendedJsPDF, data: PackingData): void {
   const currentDate = new Date();
   const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
-  const filename = `${getPackingListTitle(data)}-${data.orderNo || data.invoiceNo || 'DRAFT'}-${formattedDate}.pdf`;
+  const filename = `${getPackingListTitle(data)}-${data.invoiceNo || data.orderNo || 'DRAFT'}-${formattedDate}.pdf`;
   doc.save(filename);
 }
 
