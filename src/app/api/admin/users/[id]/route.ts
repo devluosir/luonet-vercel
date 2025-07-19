@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import type { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 export async function GET(
   req: NextRequest,
@@ -64,8 +65,8 @@ export async function PUT(
       return NextResponse.json({ error: '无效的用户ID' }, { status: 400 });
     }
 
-    const { isAdmin, status } = await req.json();
-    const updateData: { isAdmin?: boolean; status?: boolean } = {};
+    const { isAdmin, status, email, password } = await req.json();
+    const updateData: { isAdmin?: boolean; status?: boolean; email?: string; password?: string } = {};
 
     // 检查是否更新管理员权限
     if (typeof isAdmin === 'boolean') {
@@ -106,6 +107,16 @@ export async function PUT(
         }
       }
       updateData.status = status;
+    }
+
+    // 检查是否更新邮箱
+    if (typeof email === 'string') {
+      updateData.email = email;
+    }
+
+    // 检查是否更新密码
+    if (typeof password === 'string') {
+      updateData.password = await bcrypt.hash(password, 10); // 使用 bcrypt 进行密码哈希
     }
 
     const user = await prisma.user.update({

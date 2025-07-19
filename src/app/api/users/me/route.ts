@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
           status: true,
           isAdmin: true,
           permissions: {
-            where: { canAccess: true }, // 只获取有权限的模块
             select: {
               id: true,
               moduleId: true,
