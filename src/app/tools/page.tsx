@@ -62,17 +62,6 @@ const MODULES = [
     textColor: 'text-blue-600 dark:text-blue-400',
     hoverColor: 'hover:text-blue-500 dark:hover:text-blue-300'
   },
-  { 
-    id: 'purchase', 
-    name: '采购订单', 
-    description: '生成给供应商的采购订单', 
-    path: '/purchase',
-    icon: ShoppingCart,
-    color: 'from-orange-500 to-orange-600',
-    bgColor: 'from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20',
-    textColor: 'text-orange-600 dark:text-orange-400',
-    hoverColor: 'hover:text-orange-500 dark:hover:text-orange-300'
-  },
   {
     id: 'packing',
     name: '箱单发票',
@@ -96,6 +85,28 @@ const MODULES = [
     hoverColor: 'hover:text-purple-500 dark:hover:text-purple-300'
   },
   { 
+    id: 'purchase', 
+    name: '采购订单', 
+    description: '生成给供应商的采购订单', 
+    path: '/purchase',
+    icon: ShoppingCart,
+    color: 'from-orange-500 to-orange-600',
+    bgColor: 'from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20',
+    textColor: 'text-orange-600 dark:text-orange-400',
+    hoverColor: 'hover:text-orange-500 dark:hover:text-orange-300'
+  },
+  { 
+    id: 'customer', 
+    name: '客户管理', 
+    description: '客户信息管理系统', 
+    path: '/customer',
+    icon: Users,
+    color: 'from-violet-500 to-violet-600',
+    bgColor: 'from-violet-50 to-violet-100 dark:from-violet-900/20 dark:to-violet-800/20',
+    textColor: 'text-violet-600 dark:text-violet-400',
+    hoverColor: 'hover:text-violet-500 dark:hover:text-violet-300'
+  },
+  { 
     id: 'ai-email', 
     name: 'AI邮件助手', 
     description: '智能生成商务邮件', 
@@ -116,17 +127,6 @@ const MODULES = [
     bgColor: 'from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20',
     textColor: 'text-pink-600 dark:text-pink-400',
     hoverColor: 'hover:text-pink-500 dark:hover:text-pink-300'
-  },
-  { 
-    id: 'customer', 
-    name: '客户管理', 
-    description: '客户信息管理系统', 
-    path: '/customer',
-    icon: Users,
-    color: 'from-violet-500 to-violet-600',
-    bgColor: 'from-violet-50 to-violet-100 dark:from-violet-900/20 dark:to-violet-800/20',
-    textColor: 'text-violet-600 dark:text-violet-400',
-    hoverColor: 'hover:text-violet-500 dark:hover:text-violet-300'
   },
   { 
     id: 'feature5', 

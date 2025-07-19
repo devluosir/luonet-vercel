@@ -63,14 +63,6 @@ const MODULES = [
     bgColor: 'bg-blue-100 dark:bg-blue-900/20'
   },
   { 
-    id: 'purchase', 
-    name: '采购订单', 
-    description: '生成给供应商的采购订单',
-    icon: ShoppingCart,
-    color: 'text-orange-600 dark:text-orange-400',
-    bgColor: 'bg-orange-100 dark:bg-orange-900/20'
-  },
-  { 
     id: 'packing', 
     name: '箱单发票', 
     description: '生成和管理箱单发票',
@@ -87,6 +79,22 @@ const MODULES = [
     bgColor: 'bg-purple-100 dark:bg-purple-900/20'
   },
   { 
+    id: 'purchase', 
+    name: '采购订单', 
+    description: '生成给供应商的采购订单',
+    icon: ShoppingCart,
+    color: 'text-orange-600 dark:text-orange-400',
+    bgColor: 'bg-orange-100 dark:bg-orange-900/20'
+  },
+  { 
+    id: 'customer', 
+    name: '客户管理', 
+    description: '客户信息管理系统',
+    icon: Users,
+    color: 'text-violet-600 dark:text-violet-400',
+    bgColor: 'bg-violet-100 dark:bg-violet-900/20'
+  },
+  { 
     id: 'ai-email', 
     name: 'AI邮件助手', 
     description: '智能生成商务邮件',
@@ -101,14 +109,6 @@ const MODULES = [
     icon: Calendar,
     color: 'text-purple-600 dark:text-purple-400',
     bgColor: 'bg-purple-100 dark:bg-purple-900/20'
-  },
-  { 
-    id: 'customer', 
-    name: '客户管理', 
-    description: '客户信息管理系统',
-    icon: Users,
-    color: 'text-violet-600 dark:text-violet-400',
-    bgColor: 'bg-violet-100 dark:bg-violet-900/20'
   },
   { 
     id: 'feature5', 
