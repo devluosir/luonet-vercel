@@ -485,6 +485,8 @@ export default function ToolsPage() {
               }}
               onLogout={handleLogout}
               onProfile={() => setShowProfileModal(true)}
+              onRefreshPermissions={() => fetchUser(true)}
+              isRefreshing={refreshing}
               title="App工具"
             />
 
@@ -529,25 +531,6 @@ export default function ToolsPage() {
                   </div>
                 </div>
               )}
-              
-              {/* 添加刷新按钮 */}
-              <div className="flex justify-end mb-4">
-                <button
-                  onClick={() => fetchUser(true)}
-                  disabled={refreshing}
-                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg border transition-colors duration-200 ${
-                    refreshing
-                      ? 'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-not-allowed'
-                      : 'text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                  title="刷新权限信息"
-                >
-                  <svg className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  {refreshing ? '刷新中...' : '刷新权限'}
-                </button>
-              </div>
               
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
                 {availableModules.map((module) => {

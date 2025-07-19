@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ChevronDown, LogOut, Settings, User } from 'lucide-react';
+import { ChevronDown, LogOut, Settings, User, RefreshCw } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { Avatar } from './Avatar';
 
@@ -14,10 +14,19 @@ interface HeaderProps {
   };
   onLogout: () => void;
   onProfile: () => void;
+  onRefreshPermissions?: () => void;
+  isRefreshing?: boolean;
   title?: string;
 }
 
-export function Header({ user, onLogout, onProfile, title = 'LC App' }: HeaderProps) {
+export function Header({ 
+  user, 
+  onLogout, 
+  onProfile, 
+  onRefreshPermissions,
+  isRefreshing = false,
+  title = 'LC App' 
+}: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -36,6 +45,13 @@ export function Header({ user, onLogout, onProfile, title = 'LC App' }: HeaderPr
   const handleLogout = async () => {
     await signOut();
     onLogout();
+  };
+
+  const handleRefreshPermissions = () => {
+    if (onRefreshPermissions) {
+      onRefreshPermissions();
+      setShowDropdown(false);
+    }
   };
 
   return (
@@ -80,6 +96,20 @@ export function Header({ user, onLogout, onProfile, title = 'LC App' }: HeaderPr
                     <User className="h-4 w-4 mr-2" />
                     个人信息
                   </button>
+                  {onRefreshPermissions && (
+                    <button
+                      onClick={handleRefreshPermissions}
+                      disabled={isRefreshing}
+                      className={`flex items-center px-4 py-2 text-sm w-full transition-colors duration-200 ${
+                        isRefreshing
+                          ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50'
+                      }`}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      {isRefreshing ? '刷新中...' : '刷新权限'}
+                    </button>
+                  )}
                   {user.isAdmin && (
                     <button
                       onClick={() => {
