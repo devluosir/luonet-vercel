@@ -43,13 +43,13 @@ const MODULES = [
   { 
     id: 'history', 
     name: '单据管理中心', 
-    description: '统一管理报价单、发票、采购订单历史', 
+    description: '管理单据历史记录', 
     path: '/history',
     icon: Archive,
-    color: 'from-slate-500 to-gray-600',
-    bgColor: 'from-gray-50 to-gray-100 dark:from-gray-800/20 dark:to-gray-700/20',
-    textColor: 'text-gray-600 dark:text-gray-400',
-    hoverColor: 'hover:text-gray-500 dark:hover:text-gray-300'
+    color: 'from-gray-600 to-slate-700',
+    bgColor: 'from-gray-50 to-slate-100 dark:from-gray-800/20 dark:to-slate-700/20',
+    textColor: 'text-gray-700 dark:text-gray-300',
+    hoverColor: 'hover:text-gray-600 dark:hover:text-gray-200'
   },
   { 
     id: 'quotation', 
@@ -68,8 +68,8 @@ const MODULES = [
     description: '生成给供应商的采购订单', 
     path: '/purchase',
     icon: ShoppingCart,
-    color: 'from-orange-500 to-red-500',
-    bgColor: 'from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20',
+    color: 'from-orange-500 to-orange-600',
+    bgColor: 'from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20',
     textColor: 'text-orange-600 dark:text-orange-400',
     hoverColor: 'hover:text-orange-500 dark:hover:text-orange-300'
   },
@@ -79,8 +79,8 @@ const MODULES = [
     description: '生成和管理箱单发票',
     path: '/packing',
     icon: Archive,
-    color: 'from-teal-500 to-cyan-500',
-    bgColor: 'from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20',
+    color: 'from-teal-500 to-teal-600',
+    bgColor: 'from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20',
     textColor: 'text-teal-600 dark:text-teal-400',
     hoverColor: 'hover:text-teal-500 dark:hover:text-teal-300'
   },
@@ -90,8 +90,8 @@ const MODULES = [
     description: '生成和管理发票', 
     path: '/invoice',
     icon: Receipt,
-    color: 'from-purple-500 to-indigo-500',
-    bgColor: 'from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20',
+    color: 'from-purple-500 to-purple-600',
+    bgColor: 'from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20',
     textColor: 'text-purple-600 dark:text-purple-400',
     hoverColor: 'hover:text-purple-500 dark:hover:text-purple-300'
   },
@@ -101,10 +101,10 @@ const MODULES = [
     description: '智能生成商务邮件', 
     path: '/mail',
     icon: Mail,
-    color: 'from-blue-500 to-indigo-500',
-    bgColor: 'from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20',
-    textColor: 'text-blue-600 dark:text-blue-400',
-    hoverColor: 'hover:text-blue-500 dark:hover:text-blue-300'
+    color: 'from-indigo-500 to-indigo-600',
+    bgColor: 'from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20',
+    textColor: 'text-indigo-600 dark:text-indigo-400',
+    hoverColor: 'hover:text-indigo-500 dark:hover:text-indigo-300'
   },
   { 
     id: 'date-tools', 
@@ -112,10 +112,10 @@ const MODULES = [
     description: '计算日期和天数', 
     path: '/date-tools',
     icon: Calendar,
-    color: 'from-purple-500 to-pink-500',
-    bgColor: 'from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20',
-    textColor: 'text-purple-600 dark:text-purple-400',
-    hoverColor: 'hover:text-purple-500 dark:hover:text-purple-300'
+    color: 'from-pink-500 to-pink-600',
+    bgColor: 'from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20',
+    textColor: 'text-pink-600 dark:text-pink-400',
+    hoverColor: 'hover:text-pink-500 dark:hover:text-pink-300'
   },
   { 
     id: 'customer', 
@@ -123,8 +123,8 @@ const MODULES = [
     description: '客户信息管理系统', 
     path: '/customer',
     icon: Users,
-    color: 'from-violet-500 to-purple-500',
-    bgColor: 'from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20',
+    color: 'from-violet-500 to-violet-600',
+    bgColor: 'from-violet-50 to-violet-100 dark:from-violet-900/20 dark:to-violet-800/20',
     textColor: 'text-violet-600 dark:text-violet-400',
     hoverColor: 'hover:text-violet-500 dark:hover:text-violet-300'
   },
@@ -134,8 +134,8 @@ const MODULES = [
     description: '产品库存跟踪', 
     path: '/tools/feature5',
     icon: Database,
-    color: 'from-amber-500 to-orange-500',
-    bgColor: 'from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20',
+    color: 'from-amber-500 to-amber-600',
+    bgColor: 'from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20',
     textColor: 'text-amber-600 dark:text-amber-400',
     hoverColor: 'hover:text-amber-500 dark:hover:text-amber-300'
   },
@@ -145,8 +145,8 @@ const MODULES = [
     description: '业务数据分析和报表', 
     path: '/tools/feature3',
     icon: BarChart3,
-    color: 'from-cyan-500 to-blue-500',
-    bgColor: 'from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20',
+    color: 'from-cyan-500 to-cyan-600',
+    bgColor: 'from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20',
     textColor: 'text-cyan-600 dark:text-cyan-400',
     hoverColor: 'hover:text-cyan-500 dark:hover:text-cyan-300'
   },
@@ -156,8 +156,8 @@ const MODULES = [
     description: '销售趋势分析', 
     path: '/tools/feature8',
     icon: TrendingUp,
-    color: 'from-emerald-500 to-teal-500',
-    bgColor: 'from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20',
+    color: 'from-emerald-500 to-emerald-600',
+    bgColor: 'from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20',
     textColor: 'text-emerald-600 dark:text-emerald-400',
     hoverColor: 'hover:text-emerald-500 dark:hover:text-emerald-300'
   },
@@ -167,8 +167,8 @@ const MODULES = [
     description: '项目时间跟踪', 
     path: '/tools/feature7',
     icon: Clock,
-    color: 'from-indigo-500 to-blue-500',
-    bgColor: 'from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20',
+    color: 'from-indigo-500 to-indigo-600',
+    bgColor: 'from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20',
     textColor: 'text-indigo-600 dark:text-indigo-400',
     hoverColor: 'hover:text-indigo-500 dark:hover:text-indigo-300'
   },
@@ -178,8 +178,8 @@ const MODULES = [
     description: '工作流程自动化', 
     path: '/tools/feature6',
     icon: Zap,
-    color: 'from-red-500 to-pink-500',
-    bgColor: 'from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20',
+    color: 'from-red-500 to-red-600',
+    bgColor: 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20',
     textColor: 'text-red-600 dark:text-red-400',
     hoverColor: 'hover:text-red-500 dark:hover:text-red-300'
   },
@@ -189,8 +189,8 @@ const MODULES = [
     description: '应用配置管理', 
     path: '/tools/feature9',
     icon: Settings,
-    color: 'from-gray-500 to-slate-500',
-    bgColor: 'from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20',
+    color: 'from-gray-500 to-gray-600',
+    bgColor: 'from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20',
     textColor: 'text-gray-600 dark:text-gray-400',
     hoverColor: 'hover:text-gray-500 dark:hover:text-gray-300'
   },
@@ -448,102 +448,109 @@ export default function ToolsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-black">
-    <div className="flex-1">
-      {user && (
-        <>
-          <DynamicHeader 
-            user={{
-              name: user.username,
-              isAdmin: user.isAdmin
-            }}
-            onLogout={handleLogout}
-            onProfile={() => setShowProfileModal(true)}
-            title="App工具"
-          />
+      <div className="flex-1">
+        {user && (
+          <>
+            <DynamicHeader 
+              user={{
+                name: user.username,
+                isAdmin: user.isAdmin
+              }}
+              onLogout={handleLogout}
+              onProfile={() => setShowProfileModal(true)}
+              title="App工具"
+            />
 
-          <ProfileModal
-            isOpen={showProfileModal}
-            onClose={() => setShowProfileModal(false)}
-            user={user}
-          />
-        </>
-      )}
+            <ProfileModal
+              isOpen={showProfileModal}
+              onClose={() => setShowProfileModal(false)}
+              user={user}
+            />
+          </>
+        )}
 
-      <div className="flex flex-col items-center justify-center w-full py-6 px-4">
-        {availableModules.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-500 dark:text-gray-400 text-lg">
-              暂无可用工具，请联系管理员分配权限
+        <div className="flex flex-col items-center justify-center w-full py-8 sm:py-10 md:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 xl:px-10">
+          {availableModules.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-500 dark:text-gray-400 text-lg">
+                暂无可用工具，请联系管理员分配权限
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="w-full max-w-6xl grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 lg:gap-4">
-            {availableModules.map((module) => {
-              const Icon = module.icon || Settings;
-              return (
-                <div
-                  key={module.id}
-                  className="group relative bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-lg 
-                           rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                           hover:-translate-y-1 cursor-pointer
+          ) : (
+            <div className="w-full max-w-7xl mx-auto px-2 sm:px-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5 md:gap-6 lg:gap-8">
+                {availableModules.map((module) => {
+                  const Icon = module.icon || Settings;
+                  return (
+                    <div
+                      key={module.id}
+                                        className="group relative bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-lg 
+                           rounded-xl overflow-hidden transition-all duration-300 ease-in-out
+                           hover:-translate-y-2 cursor-pointer
                            border border-gray-200/50 dark:border-gray-800/50
                            hover:border-gray-300/70 dark:hover:border-gray-700/70
-                           min-h-[110px] sm:min-h-[130px] lg:min-h-[150px]
+                           min-h-[140px] sm:min-h-[160px] md:min-h-[180px] lg:min-h-[200px]
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                            dark:focus:ring-offset-gray-900"
-                  onClick={() => router.push(module.path)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      router.push(module.path);
-                    }
-                  }}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`打开${module.name}`}
-                >
-                  {/* 背景渐变层 */}
+                      onClick={() => router.push(module.path)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          router.push(module.path);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`打开${module.name}`}
+                    >
+                                        {/* 背景渐变层 */}
                   <div 
-                    className={`absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 dark:group-hover:opacity-10 transition-opacity duration-300 ease-in-out ${module.bgColor}`}
+                    className={`absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity duration-300 ease-in-out ${module.bgColor}`}
                   ></div>
                   
-                  <div className="p-2.5 sm:p-3 lg:p-4 h-full flex flex-col">
+                  {/* 悬停时的光晕效果 */}
+                  <div 
+                    className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300 ease-in-out bg-gradient-to-br ${module.color}`}
+                  ></div>
+                      
+                                        <div className="p-3 sm:p-4 md:p-5 lg:p-6 h-full flex flex-col">
                     {/* 图标和标题 */}
-                    <div className="flex items-start space-x-2 sm:space-x-2.5 mb-2">
-                      <div className={`p-1.5 sm:p-2 lg:p-2.5 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-sm`}>
-                        <Icon className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
+                    <div className="flex items-start space-x-3 sm:space-x-3 md:space-x-4 mb-3 sm:mb-4">
+                      <div className={`p-2.5 sm:p-3 md:p-3.5 lg:p-4 rounded-xl bg-gradient-to-br ${module.color} flex-shrink-0 shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
+                        <Icon className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-xs sm:text-sm lg:text-base font-semibold text-gray-900 dark:text-white leading-tight line-clamp-2">
-                        {module.name}
-                      </h3>
+                        <h3 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-gray-900 dark:text-white leading-tight line-clamp-1">
+                          {module.name}
+                        </h3>
                       </div>
                     </div>
                     
                     {/* 描述 */}
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 sm:mb-3 flex-grow line-clamp-2 leading-relaxed">
+                    <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300 mb-3 sm:mb-4 flex-grow line-clamp-2 leading-relaxed">
                       {module.description}
                     </p>
                     
                     {/* 操作按钮 */}
-                    <div className={`flex items-center justify-between mt-auto pt-1.5 border-t border-gray-100 dark:border-gray-800`}>
-                                             <div className={`flex items-center text-xs font-medium ${module.textColor} ${module.hoverColor} transition-colors duration-300`}>
-                         <span>开始使用</span>
-                       </div>
-                       <svg className={`h-3 w-3 sm:h-4 sm:w-4 ${module.textColor} transform group-hover:translate-x-1 transition-transform duration-300`} 
-                           viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" 
-                              d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" 
-                              clipRule="evenodd" />
-                      </svg>
+                    <div className={`flex items-center justify-between mt-auto pt-2 sm:pt-3 border-t border-gray-100 dark:border-gray-800`}>
+                      <div className={`flex items-center text-xs sm:text-sm md:text-base font-semibold ${module.textColor} ${module.hoverColor} transition-colors duration-300`}>
+                        <span>开始使用</span>
+                      </div>
+                      <svg className={`h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 ${module.textColor} transform group-hover:translate-x-1 transition-transform duration-300`} 
+                          viewBox="0 0 20 20" fill="currentColor">
+                       <path fillRule="evenodd" 
+                             d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" 
+                             clipRule="evenodd" />
+                     </svg>
+                   </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       <Footer />
     </div>
