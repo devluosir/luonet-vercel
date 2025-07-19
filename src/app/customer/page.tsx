@@ -351,117 +351,114 @@ export default function CustomerPage() {
       {filteredCustomers.map((customer) => (
         <div key={customer.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-200">
           <div className="p-4 sm:p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex-1 flex items-start gap-3 sm:gap-4">
-                {isSelectMode && (
-                  <button
-                    onClick={() => toggleSelectCustomer(customer.id)}
-                    className="mt-1 p-1 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    {selectedCustomers.has(customer.id) ? (
-                      <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    ) : (
-                      <Square className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-                    )}
-                  </button>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-3">
+            <div className="flex items-start gap-3 sm:gap-4">
+              {isSelectMode && (
+                <button
+                  onClick={() => toggleSelectCustomer(customer.id)}
+                  className="mt-1 p-1 rounded-lg transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex-shrink-0"
+                >
+                  {selectedCustomers.has(customer.id) ? (
+                    <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  ) : (
+                    <Square className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                  )}
+                </button>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2 sm:gap-4 mb-3">
+                  <div className="flex-1 min-w-0">
                     <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">
                       {customer.name}
                     </h3>
-                    <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full self-start sm:self-auto">
-                      {new Date(customer.updatedAt).toLocaleDateString()}
-                    </span>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 sm:p-4 mb-4">
-                    <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">
-                      {customer.content}
-                    </pre>
-                  </div>
-                  {customer.usageRecords.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                        <span>使用记录</span>
-                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full text-xs font-medium">
-                          {customer.usageRecords.length}
-                        </span>
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {customer.usageRecords.map((record, index) => {
-                          // 根据文档类型设置对应的颜色
-                          let badgeClasses = '';
-                          switch (record.documentType) {
-                            case 'quotation':
-                              badgeClasses = 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200';
-                              break;
-                            case 'confirmation':
-                              badgeClasses = 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200';
-                              break;
-                            case 'invoice':
-                              badgeClasses = 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200';
-                              break;
-                            case 'purchase':
-                              badgeClasses = 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200';
-                              break;
-                            case 'packing':
-                              badgeClasses = 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-200';
-                              break;
-                            default:
-                              badgeClasses = 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-200';
-                          }
-                          
-                          return (
-                            <a
-                              key={index}
-                              href={getRecordUrl(record.documentType, record.documentNo)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200 cursor-pointer`}
-                              title={`${record.documentType === 'invoice' ? '发票' : 
-                                     record.documentType === 'packing' ? '箱单' : 
-                                     record.documentType === 'quotation' ? '报价' : 
-                                     record.documentType === 'confirmation' ? '订单确认' : 
-                                     record.documentType === 'purchase' ? '采购' : '未知'}: ${record.documentNo}`}
-                              onClick={(e) => {
-                                const url = getRecordUrl(record.documentType, record.documentNo);
-                                if (url === '#') {
-                                  e.preventDefault();
-                                  alert(`未找到对应的${record.documentType === 'invoice' ? '发票' : 
-                                         record.documentType === 'packing' ? '装箱单' : 
-                                         record.documentType === 'quotation' ? '报价单' : 
-                                         record.documentType === 'confirmation' ? '订单确认' : 
-                                         record.documentType === 'purchase' ? '采购单' : '单据'}记录`);
-                                }
-                              }}
-                            >
-                              {highlightText(record.documentNo, searchTerm)}
-                            </a>
-                          );
-                        })}
-                      </div>
+                  {!isSelectMode && (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => handleEditCustomer(customer)}
+                        className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        title="编辑"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCustomer(customer.id)}
+                        className="p-1.5 sm:p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                        title="删除"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   )}
                 </div>
-              </div>
-              {!isSelectMode && (
-                <div className="flex items-center gap-1 ml-2 sm:ml-4">
-                  <button
-                    onClick={() => handleEditCustomer(customer)}
-                    className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                    title="编辑"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCustomer(customer.id)}
-                    className="p-1.5 sm:p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
-                    title="删除"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 sm:p-4 mb-4">
+                  <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">
+                    {customer.content}
+                  </pre>
                 </div>
-              )}
+                {customer.usageRecords.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                      <span>使用记录</span>
+                      <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full text-xs font-medium">
+                        {customer.usageRecords.length}
+                      </span>
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {customer.usageRecords.map((record, index) => {
+                        // 根据文档类型设置对应的颜色
+                        let badgeClasses = '';
+                        switch (record.documentType) {
+                          case 'quotation':
+                            badgeClasses = 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200';
+                            break;
+                          case 'confirmation':
+                            badgeClasses = 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200';
+                            break;
+                          case 'invoice':
+                            badgeClasses = 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200';
+                            break;
+                          case 'purchase':
+                            badgeClasses = 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200';
+                            break;
+                          case 'packing':
+                            badgeClasses = 'bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-200';
+                            break;
+                          default:
+                            badgeClasses = 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-200';
+                        }
+                        
+                        return (
+                          <a
+                            key={index}
+                            href={getRecordUrl(record.documentType, record.documentNo)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium ${badgeClasses} hover:scale-105 transition-transform duration-200 cursor-pointer`}
+                            title={`${record.documentType === 'invoice' ? '发票' : 
+                                   record.documentType === 'packing' ? '箱单' : 
+                                   record.documentType === 'quotation' ? '报价' : 
+                                   record.documentType === 'confirmation' ? '订单确认' : 
+                                   record.documentType === 'purchase' ? '采购' : '未知'}: ${record.documentNo}`}
+                            onClick={(e) => {
+                              const url = getRecordUrl(record.documentType, record.documentNo);
+                              if (url === '#') {
+                                e.preventDefault();
+                                alert(`未找到对应的${record.documentType === 'invoice' ? '发票' : 
+                                       record.documentType === 'packing' ? '装箱单' : 
+                                       record.documentType === 'quotation' ? '报价单' : 
+                                       record.documentType === 'confirmation' ? '订单确认' : 
+                                       record.documentType === 'purchase' ? '采购单' : '单据'}记录`);
+                              }
+                            }}
+                          >
+                            {highlightText(record.documentNo, searchTerm)}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
