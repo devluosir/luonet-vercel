@@ -72,7 +72,7 @@ const MODULES = [
   },
   { 
     id: 'invoice', 
-    name: '发票结算', 
+    name: '财务发票', 
     description: '生成和管理发票',
     icon: Receipt,
     color: 'text-purple-600 dark:text-purple-400',

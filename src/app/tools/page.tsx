@@ -75,7 +75,7 @@ const MODULES = [
   },
   { 
     id: 'invoice', 
-    name: '发票结算', 
+    name: '财务发票', 
     description: '生成和管理发票', 
     path: '/invoice',
     icon: Receipt,
