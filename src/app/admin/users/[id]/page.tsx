@@ -525,21 +525,22 @@ export default function UserDetailPage() {
                   <div className="flex items-center space-x-2 settings-container">
                     {/* 展开的设置选项 */}
                     {showSettings && (
-                      <div className="flex items-center space-x-3 animate-in slide-in-from-right-2 duration-200">
+                      <div className="flex items-center space-x-2 sm:space-x-3 animate-in slide-in-from-right-2 duration-200">
                         {/* 删除用户按钮 */}
                         <button
                           onClick={handleDeleteClick}
                           disabled={isDeleting}
-                          className="flex items-center px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center px-2 sm:px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="删除用户"
                         >
-                          <Trash2 className="w-3 h-3 mr-1" />
-                          删除用户
+                          <Trash2 className="w-3 h-3 sm:mr-1" />
+                          <span className="hidden sm:inline">删除用户</span>
                         </button>
                         
                         {/* 管理员权限开关 */}
-                        <div className="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800/50">
-                          <span className="text-xs font-medium text-blue-600 dark:text-blue-400">管理员权限</span>
+                        <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800/50">
+                          <span className="text-xs font-medium text-blue-600 dark:text-blue-400 hidden sm:inline">管理员权限</span>
+                          <span className="text-xs font-medium text-blue-600 dark:text-blue-400 sm:hidden">管理员</span>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input
                               type="checkbox"
@@ -547,12 +548,12 @@ export default function UserDetailPage() {
                               onChange={() => user && handleToggleAdmin(user.id, user.isAdmin)}
                               className="sr-only peer"
                             />
-                            <div className={`w-8 h-4 rounded-full peer transition-all duration-200 ${
+                            <div className={`w-7 h-3.5 sm:w-8 sm:h-4 rounded-full peer transition-all duration-200 ${
                               user?.isAdmin 
                                 ? 'bg-gradient-to-r from-blue-500 to-purple-600' 
                                 : 'bg-gray-200 dark:bg-gray-700'
                             } peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300/50 dark:peer-focus:ring-blue-800/50`}>
-                              <div className={`absolute top-0.5 left-0.5 bg-white rounded-full h-3 w-3 transition-transform duration-200 ${
+                              <div className={`absolute top-0.5 left-0.5 bg-white rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 transition-transform duration-200 ${
                                 user?.isAdmin ? 'translate-x-4' : 'translate-x-0'
                               } shadow-sm`}></div>
                             </div>
@@ -560,8 +561,9 @@ export default function UserDetailPage() {
                         </div>
                         
                         {/* 账户状态开关 */}
-                        <div className="flex items-center space-x-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800/50">
-                          <span className="text-xs font-medium text-green-600 dark:text-green-400">账户状态</span>
+                        <div className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1.5 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800/50">
+                          <span className="text-xs font-medium text-green-600 dark:text-green-400 hidden sm:inline">账户状态</span>
+                          <span className="text-xs font-medium text-green-600 dark:text-green-400 sm:hidden">状态</span>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input
                               type="checkbox"
@@ -569,12 +571,12 @@ export default function UserDetailPage() {
                               onChange={() => user && handleToggleStatus(user.id, user.status)}
                               className="sr-only peer"
                             />
-                            <div className={`w-8 h-4 rounded-full peer transition-all duration-200 ${
+                            <div className={`w-7 h-3.5 sm:w-8 sm:h-4 rounded-full peer transition-all duration-200 ${
                               user?.status 
                                 ? 'bg-green-500' 
                                 : 'bg-gray-200 dark:bg-gray-700'
                             } peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300/50 dark:peer-focus:ring-green-800/50`}>
-                              <div className={`absolute top-0.5 left-0.5 bg-white rounded-full h-3 w-3 transition-transform duration-200 ${
+                              <div className={`absolute top-0.5 left-0.5 bg-white rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 transition-transform duration-200 ${
                                 user?.status ? 'translate-x-4' : 'translate-x-0'
                               } shadow-sm`}></div>
                             </div>
@@ -722,19 +724,35 @@ export default function UserDetailPage() {
               <div className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                        <Settings className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-                        功能权限管理
-                      </h2>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      已启用 {enabledModulesCount} / {MODULES.length} 个功能模块
-                      </p>
+                    <div className="flex items-center justify-between sm:justify-start">
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                          <Settings className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+                          功能权限管理
+                        </h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 hidden sm:block">
+                        已启用 {enabledModulesCount} / {MODULES.length} 个功能模块
+                        </p>
+                      </div>
+                      {/* 小屏时保存按钮显示在标题右侧 */}
+                      <button
+                        onClick={handleSavePermissions}
+                        disabled={!hasChanges || saving}
+                        className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 sm:hidden ${
+                          hasChanges && !saving
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <Save className="w-3 h-3 mr-1" />
+                        {saving ? '保存中' : '保存'}
+                      </button>
                     </div>
+                    {/* 大屏时保存按钮显示在右侧 */}
                     <button
                       onClick={handleSavePermissions}
                       disabled={!hasChanges || saving}
-                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      className={`hidden sm:flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         hasChanges && !saving
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
