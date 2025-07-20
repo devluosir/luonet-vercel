@@ -81,7 +81,7 @@ const QUICK_CREATE_MODULES = [
     name: '箱单发票', 
     description: '创建装箱单和发票', 
     path: '/packing',
-    icon: Archive,
+    icon: Package,
     color: 'from-teal-500 to-teal-600',
     bgColor: 'from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20',
     textColor: 'text-teal-600 dark:text-teal-400',

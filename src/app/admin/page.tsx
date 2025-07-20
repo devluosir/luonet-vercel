@@ -92,59 +92,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
-    try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: !currentStatus }),
-      });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '更新用户状态失败');
-      }
-
-      // 只更新本地状态，不重新获取所有数据
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.id === userId 
-            ? { ...user, status: !currentStatus }
-            : user
-        )
-      );
-    } catch (error) {
-      console.error('Error updating user status:', error);
-      alert(error instanceof Error ? error.message : '更新用户状态失败');
-    }
-  };
-
-  const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
-    try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isAdmin: !currentIsAdmin }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '更新管理员权限失败');
-      }
-
-      // 只更新本地状态，不重新获取所有数据
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.id === userId 
-            ? { ...user, isAdmin: !currentIsAdmin }
-            : user
-        )
-      );
-    } catch (error) {
-      console.error('Error updating admin status:', error);
-      alert(error instanceof Error ? error.message : '更新管理员权限失败');
-    }
-  };
 
   // 避免闪烁的加载状态
   if (!mounted || status === 'loading' || loading) {
@@ -230,12 +178,6 @@ export default function AdminPage() {
                     <th className="hidden lg:table-cell px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       邮箱
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      状态
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      权限
-                    </th>
                     <th className="hidden md:table-cell px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       最后登录
                     </th>
@@ -273,30 +215,6 @@ export default function AdminPage() {
                       </td>
                       <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {user.email || '未设置'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleToggleStatus(user.id, user.status)}
-                          className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
-                            user.status 
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-900/50' 
-                              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-900/50'
-                          }`}
-                        >
-                          {user.status ? '启用' : '禁用'}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleToggleAdmin(user.id, user.isAdmin)}
-                          className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
-                            user.isAdmin 
-                              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700' 
-                              : 'bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                          }`}
-                        >
-                          {user.isAdmin ? '管理员' : '普通用户'}
-                        </button>
                       </td>
                       <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {user.lastLoginAt ? (

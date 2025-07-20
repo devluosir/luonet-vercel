@@ -17,7 +17,8 @@ import {
   Zap,
   Clock,
   TrendingUp,
-  Archive
+  Archive,
+  Package
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Footer } from '@/components/Footer';
@@ -68,7 +69,7 @@ const MODULES = [
     name: '箱单发票',
     description: '生成和管理箱单发票',
     path: '/packing',
-    icon: Archive,
+    icon: Package,
     color: 'from-teal-500 to-teal-600',
     bgColor: 'from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20',
     textColor: 'text-teal-600 dark:text-teal-400',
