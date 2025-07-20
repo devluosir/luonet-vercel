@@ -22,6 +22,7 @@ import {
 import dynamic from 'next/dynamic';
 import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance } from '@/utils/performance';
+import { usePermissionStore } from '@/lib/permissions';
 
 interface Permission {
   id: string;
@@ -212,64 +213,26 @@ const DynamicHeader = dynamic(() => import('@/components/Header').then(mod => mo
   )
 });
 
-// 缓存键常量
-const CACHE_KEY = 'userInfo';
-const CACHE_DURATION = 10 * 60 * 1000; // 增加到10分钟
-
-// 缓存工具函数
-const cacheUtils = {
-  get: (key: string) => {
-    try {
-      const cached = sessionStorage.getItem(key);
-      if (!cached) return null;
-      
-      const { data, timestamp } = JSON.parse(cached);
-      const now = Date.now();
-      
-      // 检查缓存是否过期
-      if (now - timestamp > CACHE_DURATION) {
-        sessionStorage.removeItem(key);
-        return null;
-      }
-      
-      return data;
-    } catch (e) {
-      sessionStorage.removeItem(key);
-      return null;
-    }
-  },
-  
-  set: (key: string, data: any) => {
-    try {
-      const cacheData = {
-        data,
-        timestamp: Date.now()
-      };
-      sessionStorage.setItem(key, JSON.stringify(cacheData));
-    } catch (e) {
-      console.warn('缓存写入失败:', e);
-    }
-  },
-  
-  clear: (key: string) => {
-    try {
-      sessionStorage.removeItem(key);
-    } catch (e) {
-      console.warn('缓存清除失败:', e);
-    }
-  }
-};
+// 权限管理已移至 @/lib/permissions
 
 export default function ToolsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  
+  // 使用权限store
+  const { 
+    user, 
+    isLoading: loading, 
+    error: fetchError, 
+    fetchUser, 
+    hasPermission 
+  } = usePermissionStore();
+  
+  // 使用loading作为refreshing状态
+  const refreshing = loading;
 
   // 性能监控
   useEffect(() => {
@@ -309,86 +272,22 @@ export default function ToolsPage() {
   }, [prefetchPages]);
 
   const handleLogout = async () => {
-    cacheUtils.clear(CACHE_KEY);
+    // 清除权限store
+    usePermissionStore.getState().clearUser();
     localStorage.removeItem('username');
     await signOut({ redirect: true, callbackUrl: '/' });
   };
 
-  // 优化用户信息获取逻辑
-  const fetchUser = useCallback(async (forceRefresh = false) => {
+  // 使用权限store的fetchUser
+  const handleRefreshPermissions = useCallback(async () => {
     try {
-      if (forceRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      setFetchError(null);
-      
-      performanceMonitor.startTimer('user_fetch');
-      
-      // 如果强制刷新，清除缓存
-      if (forceRefresh) {
-        cacheUtils.clear(CACHE_KEY);
-        console.log('强制刷新用户权限信息');
-      }
-      
-      // 尝试从缓存获取用户信息
-      const cachedUser = cacheUtils.get(CACHE_KEY);
-      if (cachedUser && !forceRefresh) {
-        setUser(cachedUser);
-        setLoading(false);
-        performanceMonitor.endTimer('user_fetch');
-        return;
-      }
-      
-      // 添加重试机制
-      let retryCount = 0;
-      const maxRetries = 1; // 减少重试次数
-      
-      while (retryCount <= maxRetries) {
-        try {
-          const response = await fetch(`/api/users/me${forceRefresh ? '?force=true' : ''}`, {
-            headers: {
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache'
-            }
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          
-          const data = await response.json();
-          setUser(data);
-          
-          // 缓存用户信息
-          cacheUtils.set(CACHE_KEY, data);
-          
-          // 如果是强制刷新，显示成功消息
-          if (forceRefresh) {
-            setShowSuccessMessage(true);
-            setTimeout(() => setShowSuccessMessage(false), 3000);
-          }
-          break;
-        } catch (error) {
-          retryCount++;
-          if (retryCount > maxRetries) {
-            throw error;
-          }
-          // 等待一段时间后重试
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-        }
-      }
-      
-      performanceMonitor.endTimer('user_fetch');
+      await fetchUser(true);
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
     } catch (error) {
-      console.error('Error fetching user:', error);
-      setFetchError(error instanceof Error ? error.message : '获取用户信息失败');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      console.error('刷新权限失败:', error);
     }
-  }, []);
+  }, [fetchUser]);
 
   useEffect(() => {
     if (!mounted || status === 'loading') return;
@@ -398,18 +297,14 @@ export default function ToolsPage() {
       return;
     }
 
+    // 使用权限store获取用户信息
     fetchUser();
   }, [mounted, session, status, router, fetchUser]);
 
-  // 使用useMemo优化模块过滤计算
+  // 使用权限store的权限检查函数
   const availableModules = useMemo(() => {
-    if (!user?.permissions) return [];
-    
-    return MODULES.filter(module => {
-      const permission = user.permissions.find(p => p.moduleId === module.id);
-      return permission?.canAccess;
-    });
-  }, [user?.permissions]);
+    return MODULES.filter(module => hasPermission(module.id));
+  }, [hasPermission]);
 
   // 页面加载完成后的性能记录
   useEffect(() => {
@@ -462,7 +357,7 @@ export default function ToolsPage() {
               重试
             </button>
             <button 
-              onClick={() => fetchUser(true)}
+              onClick={handleRefreshPermissions}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               强制刷新
@@ -485,9 +380,9 @@ export default function ToolsPage() {
               }}
               onLogout={handleLogout}
               onProfile={() => setShowProfileModal(true)}
-              onRefreshPermissions={() => fetchUser(true)}
+              onRefreshPermissions={handleRefreshPermissions}
               isRefreshing={refreshing}
-              title="App工具"
+              title="工具"
             />
 
             <ProfileModal
@@ -505,7 +400,7 @@ export default function ToolsPage() {
                 暂无可用工具，请联系管理员分配权限
               </div>
               <button
-                onClick={() => fetchUser(true)}
+                onClick={handleRefreshPermissions}
                 disabled={refreshing}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   refreshing

@@ -26,11 +26,14 @@ import {
   Bell,
   Search,
   Filter,
-  Package
+  Package,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance } from '@/utils/performance';
+import { usePermissionStore } from '@/lib/permissions';
 
 interface Permission {
   id: string;
@@ -51,7 +54,7 @@ interface User {
 const QUICK_CREATE_MODULES = [
   { 
     id: 'quotation', 
-    name: '新建报价单', 
+    name: '报价单', 
     description: '创建报价单', 
     path: '/quotation',
     icon: FileText,
@@ -63,7 +66,7 @@ const QUICK_CREATE_MODULES = [
   },
   { 
     id: 'confirmation', 
-    name: '新建销售确认', 
+    name: '销售确认', 
     description: '创建销售确认单', 
     path: '/quotation',
     icon: FileText,
@@ -75,7 +78,7 @@ const QUICK_CREATE_MODULES = [
   },
   { 
     id: 'packing', 
-    name: '新建箱单', 
+    name: '箱单', 
     description: '创建装箱单和发票', 
     path: '/packing',
     icon: Archive,
@@ -87,7 +90,7 @@ const QUICK_CREATE_MODULES = [
   },
   { 
     id: 'invoice', 
-    name: '新建发票', 
+    name: '发票', 
     description: '创建财务发票', 
     path: '/invoice',
     icon: Receipt,
@@ -99,7 +102,7 @@ const QUICK_CREATE_MODULES = [
   },
   { 
     id: 'purchase', 
-    name: '新建采购单', 
+    name: '采购单', 
     description: '创建采购订单', 
     path: '/purchase',
     icon: ShoppingCart,
@@ -141,7 +144,7 @@ const TOOL_MODULES = [
 const TOOLS_MODULES = [
   { 
     id: 'history', 
-    name: '单据管理中心', 
+    name: '单据管理', 
     description: '管理单据历史记录', 
     path: '/history',
     icon: Archive,
@@ -245,65 +248,32 @@ const DynamicHeader = dynamic(() => import('@/components/Header').then(mod => mo
   )
 });
 
-// 缓存键常量
-const CACHE_KEY = 'userInfo';
-const CACHE_DURATION = 10 * 60 * 1000; // 10分钟
-
-// 缓存工具函数
-const cacheUtils = {
-  get: (key: string) => {
-    try {
-      const cached = sessionStorage.getItem(key);
-      if (!cached) return null;
-      
-      const { data, timestamp } = JSON.parse(cached);
-      const now = Date.now();
-      
-      if (now - timestamp > CACHE_DURATION) {
-        sessionStorage.removeItem(key);
-        return null;
-      }
-      
-      return data;
-    } catch (e) {
-      sessionStorage.removeItem(key);
-      return null;
-    }
-  },
-  
-  set: (key: string, data: any) => {
-    try {
-      const cacheData = {
-        data,
-        timestamp: Date.now()
-      };
-      sessionStorage.setItem(key, JSON.stringify(cacheData));
-    } catch (e) {
-      console.warn('缓存写入失败:', e);
-    }
-  },
-  
-  clear: (key: string) => {
-    try {
-      sessionStorage.removeItem(key);
-    } catch (e) {
-      console.warn('缓存清除失败:', e);
-    }
-  }
-};
+// 权限管理已移至 @/lib/permissions
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [showDocumentsRefreshMessage, setShowDocumentsRefreshMessage] = useState(false);
   const [refreshingDocuments, setRefreshingDocuments] = useState(false);
   const [recentDocuments, setRecentDocuments] = useState<any[]>([]);
+  const [timeFilter, setTimeFilter] = useState<'today' | '3days' | 'week' | 'month'>('today');
+  
+  // 使用权限store
+  const { 
+    user, 
+    isLoading: loading, 
+    error: fetchError, 
+    fetchUser, 
+    hasPermission, 
+    hasAnyPermission, 
+    isAdmin
+  } = usePermissionStore();
+  
+  // 使用loading作为refreshing状态
+  const refreshing = loading;
 
   // 性能监控
   useEffect(() => {
@@ -317,8 +287,8 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // 加载今天创建或修改的文档函数
-  const loadTodayDocuments = useCallback(async (showLoading = false) => {
+  // 加载指定时间范围内的文档函数
+  const loadDocuments = useCallback(async (showLoading = false, filter: 'today' | '3days' | 'week' | 'month' = 'today') => {
     try {
       if (showLoading) {
         setRefreshingDocuments(true);
@@ -336,30 +306,50 @@ export default function DashboardPage() {
         ...packingHistory.map((doc: any) => ({ ...doc, type: 'packing' }))
       ];
 
-      // 获取今天的日期
-      const today = new Date();
-      const todayString = today.toISOString().split('T')[0];
+      // 获取当前日期
+      const now = new Date();
+      const startDate = new Date();
 
-      // 筛选今天创建或修改的文档
-      const todayDocuments = allDocuments.filter((doc: any) => {
-        const docDate = new Date(doc.updatedAt || doc.createdAt);
-        const docDateString = docDate.toISOString().split('T')[0];
-        return docDateString === todayString;
+      // 根据筛选条件设置开始日期
+      switch (filter) {
+        case 'today':
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case '3days':
+          startDate.setDate(startDate.getDate() - 3);
+          break;
+        case 'week':
+          startDate.setDate(startDate.getDate() - 7);
+          break;
+        case 'month':
+          startDate.setMonth(startDate.getMonth() - 1);
+          break;
+      }
+
+      // 筛选指定时间范围内的文档
+      const filteredDocuments = allDocuments.filter((doc: any) => {
+        // 优先使用date字段，如果没有则使用updatedAt或createdAt
+        const docDate = new Date(doc.date || doc.updatedAt || doc.createdAt);
+        return docDate >= startDate && docDate <= now;
       });
 
-      // 按更新时间排序
-      const sorted = todayDocuments
-        .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+      // 按日期排序（最新的在前）
+      const sorted = filteredDocuments
+        .sort((a, b) => {
+          const dateA = new Date(a.date || a.updatedAt || a.createdAt);
+          const dateB = new Date(b.date || b.updatedAt || b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        });
 
       setRecentDocuments(sorted);
       
       // 如果是手动刷新，显示成功消息
       if (showLoading) {
-        setShowSuccessMessage(true);
-        setTimeout(() => setShowSuccessMessage(false), 2000);
+        setShowDocumentsRefreshMessage(true);
+        setTimeout(() => setShowDocumentsRefreshMessage(false), 2000);
       }
     } catch (error) {
-      console.error('加载今天文档失败:', error);
+      console.error('加载文档失败:', error);
     } finally {
       if (showLoading) {
         setRefreshingDocuments(false);
@@ -367,25 +357,30 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // 加载今天创建或修改的文档
+  // 加载指定时间范围内的文档
   useEffect(() => {
     if (mounted) {
-      loadTodayDocuments(false);
+      loadDocuments(false, timeFilter);
     }
-  }, [mounted, loadTodayDocuments]);
+  }, [mounted, loadDocuments, timeFilter]);
 
   // 手动刷新处理函数
   const handleRefreshDocuments = useCallback(() => {
-    loadTodayDocuments(true);
-  }, [loadTodayDocuments]);
+    loadDocuments(true, timeFilter);
+  }, [loadDocuments, timeFilter]);
 
-  // 监听localStorage变化，实时更新今天创建或修改的单据
+  // 切换展开/折叠状态（已移除，因为默认全部展开）
+  const toggleSection = useCallback((section: string) => {
+    // 已移除展开/折叠功能，默认全部展开
+  }, []);
+
+  // 监听localStorage变化，实时更新单据记录
   useEffect(() => {
     if (!mounted) return;
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key && (e.key.includes('_history') || e.key.includes('History'))) {
-        loadTodayDocuments(false);
+        loadDocuments(false, timeFilter);
       }
     };
 
@@ -395,7 +390,7 @@ export default function DashboardPage() {
     // 创建自定义事件监听器（同标签页内）
     const handleCustomStorageChange = (e: CustomEvent) => {
       if (e.detail && (e.detail.key.includes('_history') || e.detail.key.includes('History'))) {
-        loadTodayDocuments(false);
+        loadDocuments(false, timeFilter);
       }
     };
 
@@ -405,7 +400,7 @@ export default function DashboardPage() {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener);
     };
-  }, [mounted, loadTodayDocuments]);
+  }, [mounted, loadDocuments, timeFilter]);
 
   // 优化预加载逻辑
   const prefetchPages = useCallback(() => {
@@ -423,80 +418,22 @@ export default function DashboardPage() {
   }, [prefetchPages]);
 
   const handleLogout = async () => {
-    cacheUtils.clear(CACHE_KEY);
+    // 清除权限store
+    usePermissionStore.getState().clearUser();
     localStorage.removeItem('username');
     await signOut({ redirect: true, callbackUrl: '/' });
   };
 
-  // 优化用户信息获取逻辑
-  const fetchUser = useCallback(async (forceRefresh = false) => {
+  // 使用权限store的fetchUser
+  const handleRefreshPermissions = useCallback(async () => {
     try {
-      if (forceRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-      setFetchError(null);
-      
-      performanceMonitor.startTimer('user_fetch');
-      
-      if (forceRefresh) {
-        cacheUtils.clear(CACHE_KEY);
-        console.log('强制刷新用户权限信息');
-      }
-      
-      const cachedUser = cacheUtils.get(CACHE_KEY);
-      if (cachedUser && !forceRefresh) {
-        setUser(cachedUser);
-        setLoading(false);
-        performanceMonitor.endTimer('user_fetch');
-        return;
-      }
-      
-      let retryCount = 0;
-      const maxRetries = 1;
-      
-      while (retryCount <= maxRetries) {
-        try {
-          const response = await fetch(`/api/users/me${forceRefresh ? '?force=true' : ''}`, {
-            headers: {
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache'
-            }
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          
-          const data = await response.json();
-          setUser(data);
-          
-          cacheUtils.set(CACHE_KEY, data);
-          
-          if (forceRefresh) {
-            setShowSuccessMessage(true);
-            setTimeout(() => setShowSuccessMessage(false), 3000);
-          }
-          break;
-        } catch (error) {
-          retryCount++;
-          if (retryCount > maxRetries) {
-            throw error;
-          }
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-        }
-      }
-      
-      performanceMonitor.endTimer('user_fetch');
+      await fetchUser(true);
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
     } catch (error) {
-      console.error('Error fetching user:', error);
-      setFetchError(error instanceof Error ? error.message : '获取用户信息失败');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      console.error('刷新权限失败:', error);
     }
-  }, []);
+  }, [fetchUser]);
 
   useEffect(() => {
     if (!mounted || status === 'loading') return;
@@ -506,42 +443,28 @@ export default function DashboardPage() {
       return;
     }
 
+    // 使用权限store获取用户信息
     fetchUser();
   }, [mounted, session, status, router, fetchUser]);
 
-  // 使用useMemo优化模块过滤计算
+  // 使用权限store的权限检查函数
   const availableQuickCreateModules = useMemo(() => {
-    if (!user?.permissions) return [];
-    
     return QUICK_CREATE_MODULES.filter(module => {
       // 销售确认使用与报价单相同的权限
       if (module.id === 'confirmation') {
-        const quotationPermission = user.permissions.find(p => p.moduleId === 'quotation');
-        return quotationPermission?.canAccess;
+        return hasPermission('quotation');
       }
-      
-      const permission = user.permissions.find(p => p.moduleId === module.id);
-      return permission?.canAccess;
+      return hasPermission(module.id);
     });
-  }, [user?.permissions]);
+  }, [hasPermission]);
 
   const availableToolModules = useMemo(() => {
-    if (!user?.permissions) return [];
-    
-    return TOOL_MODULES.filter(module => {
-      const permission = user.permissions.find(p => p.moduleId === module.id);
-      return permission?.canAccess;
-    });
-  }, [user?.permissions]);
+    return TOOL_MODULES.filter(module => hasPermission(module.id));
+  }, [hasPermission]);
 
   const availableToolsModules = useMemo(() => {
-    if (!user?.permissions) return [];
-    
-    return TOOLS_MODULES.filter(module => {
-      const permission = user.permissions.find(p => p.moduleId === module.id);
-      return permission?.canAccess;
-    });
-  }, [user?.permissions]);
+    return TOOLS_MODULES.filter(module => hasPermission(module.id));
+  }, [hasPermission]);
 
   // 页面加载完成后的性能记录
   useEffect(() => {
@@ -594,7 +517,7 @@ export default function DashboardPage() {
               重试
             </button>
             <button 
-              onClick={() => fetchUser(true)}
+              onClick={handleRefreshPermissions}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               强制刷新
@@ -639,9 +562,9 @@ export default function DashboardPage() {
               }}
               onLogout={handleLogout}
               onProfile={() => setShowProfileModal(true)}
-              onRefreshPermissions={() => fetchUser(true)}
+              onRefreshPermissions={handleRefreshPermissions}
               isRefreshing={refreshing}
-              title="LC App Dashboard"
+              title="Dashboard"
               showWelcome={true}
             />
 
@@ -653,7 +576,7 @@ export default function DashboardPage() {
           </>
         )}
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* 成功消息 */}
           {showSuccessMessage && (
             <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
@@ -670,43 +593,27 @@ export default function DashboardPage() {
 
           {/* 1. 快速创建单据 */}
           {availableQuickCreateModules.length > 0 && (
-            <div className="mb-10">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                    快速创建单据
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    选择要创建的单据类型
-                  </p>
-                </div>
+            <div className="mb-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  新建单据
+                </h2>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-                {availableQuickCreateModules.map((module) => {
-                  const Icon = module.icon;
-                  return (
-                    <div
-                      key={module.id}
-                      className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-xl 
-                        rounded-2xl overflow-hidden transition-all duration-300 ease-in-out
-                        hover:-translate-y-2 cursor-pointer
-                        border border-gray-200/50 dark:border-gray-800/50
-                        hover:border-gray-300/70 dark:hover:border-gray-700/70
-                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                        dark:focus:ring-offset-gray-900
-                        min-h-[180px]"
-                      onClick={() => {
-                        if (module.id === 'confirmation') {
-                          // 为销售确认设置全局变量
-                          if (typeof window !== 'undefined') {
-                            (window as any).__QUOTATION_TYPE__ = 'confirmation';
-                          }
-                        }
-                        router.push(module.path);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
+                              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-3">
+                  {availableQuickCreateModules.map((module) => {
+                    const Icon = module.icon;
+                    return (
+                      <button
+                        key={module.id}
+                        className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
+                          rounded-xl overflow-hidden transition-all duration-300 ease-in-out
+                          hover:-translate-y-1 cursor-pointer
+                          border border-gray-200/50 dark:border-gray-800/50
+                          hover:border-gray-300/70 dark:hover:border-gray-700/70
+                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                          dark:focus:ring-offset-gray-900
+                          p-4 h-20 flex items-center space-x-3"
+                        onClick={() => {
                           if (module.id === 'confirmation') {
                             // 为销售确认设置全局变量
                             if (typeof window !== 'undefined') {
@@ -714,254 +621,169 @@ export default function DashboardPage() {
                             }
                           }
                           router.push(module.path);
-                        }
-                      }}
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`创建${module.name}`}
-                    >
-                      {/* 背景渐变层 */}
-                      <div 
-                        className={`absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity duration-300 ease-in-out ${module.bgColor}`}
-                      ></div>
-                      
-                      {/* 悬停时的光晕效果 */}
-                      <div 
-                        className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300 ease-in-out bg-gradient-to-br ${module.color}`}
-                      ></div>
-                          
-                      <div className="p-4 h-full flex flex-col">
-                        {/* 图标和标题 */}
-                        <div className="flex items-start space-x-3 mb-3">
-                          <div className={`p-2.5 rounded-xl bg-gradient-to-br ${module.color} flex-shrink-0 shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
-                            <Icon className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-tight line-clamp-1">
-                              {module.name}
-                            </h3>
-                          </div>
+                        }}
+                      >
+                        <div className={`p-2 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
+                          <Icon className="w-4 h-4 text-white" />
                         </div>
-                        
-                        {/* 描述 */}
-                        <p className="text-xs text-gray-600 dark:text-gray-300 mb-3 flex-grow line-clamp-2 leading-relaxed">
-                          {module.description}
-                        </p>
-                        
-                        {/* 操作提示 */}
-                        <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100 dark:border-gray-800">
-                          <div className={`flex items-center text-sm font-semibold ${module.textColor} ${module.hoverColor} transition-colors duration-300`}>
-                            <span>快速创建</span>
-                          </div>
-                          <svg className={`h-4 w-4 ${module.textColor} transform group-hover:translate-x-1 transition-transform duration-300`} 
-                              viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" 
-                                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" 
-                                  clipRule="evenodd" />
-                          </svg>
+                        <div className="flex-1 min-w-0 text-left">
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1">
+                            {module.name}
+                          </h3>
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      </button>
+                    );
+                  })}
+                </div>
             </div>
           )}
 
           {/* 2. 管理中心 */}
           {availableToolsModules.length > 0 && (
-            <div className="mb-10">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                    管理中心
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    单据管理和客户管理
-                  </p>
-                </div>
+            <div className="mb-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  管理中心 & 实用工具
+                </h2>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-3">
                 {availableToolsModules.slice(0, 4).map((module) => {
                   const Icon = module.icon;
                   return (
-                    <div
+                    <button
                       key={module.id}
-                      className="group relative bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-lg 
+                      className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
                         rounded-xl overflow-hidden transition-all duration-300 ease-in-out
                         hover:-translate-y-1 cursor-pointer
                         border border-gray-200/50 dark:border-gray-800/50
                         hover:border-gray-300/70 dark:hover:border-gray-700/70
-                        min-h-[160px]"
+                        p-4 h-20 flex items-center space-x-3"
                       onClick={() => router.push(module.path)}
                     >
-                      <div className={`absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity duration-300 ease-in-out ${module.bgColor}`}></div>
-                      <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300 ease-in-out bg-gradient-to-br ${module.color}`}></div>
-                      
-                      <div className="p-5 h-full flex flex-col">
-                        {/* 图标和标题 */}
-                        <div className="flex items-start space-x-4 mb-4">
-                          <div className={`p-3 rounded-2xl bg-gradient-to-br ${module.color} flex-shrink-0 shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
-                            <Icon className="w-6 h-6 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-base font-bold text-gray-900 dark:text-white leading-tight line-clamp-1">
-                              {module.name}
-                            </h3>
-                          </div>
-                        </div>
-                        
-                        {/* 描述 */}
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 flex-grow line-clamp-2 leading-relaxed">
-                          {module.description}
-                        </p>
-                        
-                        {/* 操作按钮 */}
-                        <div className={`flex items-center justify-between mt-auto pt-3 border-t border-gray-100 dark:border-gray-800`}>
-                          <div className={`flex items-center text-sm font-semibold ${module.textColor} ${module.hoverColor} transition-colors duration-300`}>
-                            <span>进入管理</span>
-                          </div>
-                          <svg className={`h-4 w-4 ${module.textColor} transform group-hover:translate-x-1 transition-transform duration-300`} 
-                              viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" 
-                                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" 
-                                  clipRule="evenodd" />
-                          </svg>
-                        </div>
+                      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
+                        <Icon className="w-4 h-4 text-white" />
                       </div>
-                    </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1">
+                          {module.name}
+                        </h3>
+                      </div>
+                    </button>
                   );
                 })}
+                {/* 实用工具卡片 */}
+                {availableToolModules.map((module) => {
+                  const Icon = module.icon;
+                  return (
+                    <button
+                      key={module.id}
+                      className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
+                        rounded-xl overflow-hidden transition-all duration-300 ease-in-out
+                        hover:-translate-y-1 cursor-pointer
+                        border border-gray-200/50 dark:border-gray-800/50
+                        hover:border-gray-300/70 dark:hover:border-gray-700/70
+                        p-4 h-20 flex items-center space-x-3"
+                      onClick={() => router.push(module.path)}
+                    >
+                      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
+                        <Icon className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1">
+                          {module.name}
+                        </h3>
+                      </div>
+                    </button>
+                  );
+                })}
+                
                 {availableToolsModules.length > 4 && (
-                  <div
-                    className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-xl 
-                      rounded-2xl overflow-hidden transition-all duration-300 ease-in-out
-                      hover:-translate-y-2 cursor-pointer
+                  <button
+                    className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
+                      rounded-xl overflow-hidden transition-all duration-300 ease-in-out
+                      hover:-translate-y-1 cursor-pointer
                       border border-gray-200/50 dark:border-gray-800/50
                       hover:border-gray-300/70 dark:hover:border-gray-700/70
-                      min-h-[180px]"
+                      p-4 h-20 flex items-center space-x-3"
                     onClick={() => router.push('/tools')}
                   >
-                    <div className="p-5 h-full flex flex-col">
-                      <div className="flex items-start space-x-4 mb-4">
-                        <div className="p-3 rounded-2xl bg-gradient-to-br from-gray-500 to-gray-600 flex-shrink-0 shadow-lg group-hover:shadow-xl transition-shadow duration-300">
-                          <Settings className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-base font-bold text-gray-900 dark:text-white leading-tight line-clamp-1">
-                            更多功能
-                          </h3>
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 flex-grow line-clamp-2 leading-relaxed">
-                        查看所有可用功能模块
-                      </p>
-                      
-                      <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100 dark:border-gray-800">
-                        <div className="flex items-center text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors duration-300">
-                          <span>查看全部</span>
-                        </div>
-                        <svg className="h-4 w-4 text-gray-600 dark:text-gray-400 transform group-hover:translate-x-1 transition-transform duration-300" 
-                            viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" 
-                                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" 
-                                clipRule="evenodd" />
-                        </svg>
-                      </div>
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300">
+                      <Settings className="w-4 h-4 text-white" />
                     </div>
-                  </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1">
+                        更多功能
+                      </h3>
+                    </div>
+                  </button>
                 )}
               </div>
             </div>
           )}
 
-          {/* 3. 实用工具 */}
-          {availableToolModules.length > 0 && (
-            <div className="mb-10">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-                    实用工具
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    AI助手和实用工具
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {availableToolModules.map((module) => {
-                  const Icon = module.icon;
-                  return (
-                    <div
-                      key={module.id}
-                      className="group relative bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-lg 
-                        rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                        hover:-translate-y-1 cursor-pointer
-                        border border-gray-200/50 dark:border-gray-800/50
-                        hover:border-gray-300/70 dark:hover:border-gray-700/70
-                        min-h-[160px]"
-                      onClick={() => router.push(module.path)}
-                    >
-                      <div className={`absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity duration-300 ease-in-out ${module.bgColor}`}></div>
-                      <div className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300 ease-in-out bg-gradient-to-br ${module.color}`}></div>
-                      
-                      <div className="p-4 h-full flex flex-col">
-                        <div className="flex items-start space-x-3 mb-3">
-                          <div className={`p-2.5 rounded-xl bg-gradient-to-br ${module.color} flex-shrink-0 shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
-                            <Icon className="w-5 h-5 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-bold text-gray-900 dark:text-white leading-tight line-clamp-1">
-                              {module.name}
-                            </h3>
-                          </div>
-                        </div>
-                        
-                        <p className="text-xs text-gray-600 dark:text-gray-300 mb-3 flex-grow line-clamp-2 leading-relaxed">
-                          {module.description}
-                        </p>
-                        
-                        <div className={`flex items-center justify-between mt-auto pt-3 border-t border-gray-100 dark:border-gray-800`}>
-                          <div className={`flex items-center text-sm font-semibold ${module.textColor} ${module.hoverColor} transition-colors duration-300`}>
-                            <span>开始使用</span>
-                          </div>
-                          <svg className={`h-4 w-4 ${module.textColor} transform group-hover:translate-x-1 transition-transform duration-300`} 
-                              viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" 
-                                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" 
-                                  clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+
 
           {/* 4. 今天创建或修改的单据 */}
           <div className="mb-8">
-            {/* 刷新成功消息 */}
-            {showSuccessMessage && (
-              <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 text-green-600 dark:text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-green-800 dark:text-green-200 text-sm font-medium">
-                    单据列表已成功刷新
-                  </span>
-                </div>
-              </div>
-            )}
-            
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                今天创建或修改的单据
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                最近记录
               </h2>
               <div className="flex items-center space-x-3">
+                {/* 时间筛选器 */}
+                <div className="flex items-center space-x-1 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-1">
+                  <button
+                    onClick={() => setTimeFilter('today')}
+                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                      timeFilter === 'today'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    当天
+                  </button>
+                  <button
+                    onClick={() => setTimeFilter('3days')}
+                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                      timeFilter === '3days'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    三天
+                  </button>
+                  <button
+                    onClick={() => setTimeFilter('week')}
+                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                      timeFilter === 'week'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    一周
+                  </button>
+                  <button
+                    onClick={() => setTimeFilter('month')}
+                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                      timeFilter === 'month'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    一月
+                  </button>
+                </div>
+                {/* 刷新成功消息 */}
+                {showDocumentsRefreshMessage && (
+                  <div className="flex items-center px-3 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <svg className="w-4 h-4 text-green-600 dark:text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-green-800 dark:text-green-200 text-xs font-medium">
+                      已刷新
+                    </span>
+                  </div>
+                )}
                 <button
                   onClick={handleRefreshDocuments}
                   disabled={refreshingDocuments}
@@ -986,83 +808,82 @@ export default function DashboardPage() {
               </div>
             </div>
             {recentDocuments.length > 0 ? (
-              <div className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-800/50">
-                <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                  {recentDocuments.map((doc, index) => {
-                    // 根据文档类型设置图标和颜色
-                    let Icon = FileText;
-                    let bgColor = 'bg-blue-100 dark:bg-blue-900/30';
-                    let textColor = 'text-blue-600 dark:text-blue-400';
-                    
-                    switch (doc.type) {
-                      case 'quotation':
-                        Icon = FileText;
-                        bgColor = 'bg-blue-100 dark:bg-blue-900/30';
-                        textColor = 'text-blue-600 dark:text-blue-400';
-                        break;
-                      case 'confirmation':
-                        Icon = FileText;
-                        bgColor = 'bg-green-100 dark:bg-green-900/30';
-                        textColor = 'text-green-600 dark:text-green-400';
-                        break;
-                      case 'packing':
-                        Icon = Package;
-                        bgColor = 'bg-teal-100 dark:bg-teal-900/30';
-                        textColor = 'text-teal-600 dark:text-teal-400';
-                        break;
-                      case 'invoice':
-                        Icon = Receipt;
-                        bgColor = 'bg-purple-100 dark:bg-purple-900/30';
-                        textColor = 'text-purple-600 dark:text-purple-400';
-                        break;
-                      case 'purchase':
-                        Icon = ShoppingCart;
-                        bgColor = 'bg-orange-100 dark:bg-orange-900/30';
-                        textColor = 'text-orange-600 dark:text-orange-400';
-                        break;
-                      default:
-                        Icon = FileText;
-                        bgColor = 'bg-gray-100 dark:bg-gray-900/30';
-                        textColor = 'text-gray-600 dark:text-gray-400';
-                    }
-                    
-                    return (
-                      <div
-                        key={doc.id}
-                        className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
-                        onClick={() => {
-                          // 根据文档类型跳转到编辑页面
-                          const editPath = `/${doc.type}/edit/${doc.id}`;
-                          router.push(editPath);
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className={`w-8 h-8 rounded-lg ${bgColor} flex items-center justify-center`}>
-                              <Icon className={`w-4 h-4 ${textColor}`} />
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                {getDocumentTypeName(doc.type)} - {getDocumentNumber(doc)}
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {doc.customerName || '未命名客户'}
-                              </div>
-                            </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {recentDocuments.map((doc, index) => {
+                  // 根据文档类型设置图标和颜色
+                  let Icon = FileText;
+                  let bgColor = 'bg-blue-100 dark:bg-blue-900/30';
+                  let textColor = 'text-blue-600 dark:text-blue-400';
+                  
+                  switch (doc.type) {
+                    case 'quotation':
+                      Icon = FileText;
+                      bgColor = 'bg-blue-100 dark:bg-blue-900/30';
+                      textColor = 'text-blue-600 dark:text-blue-400';
+                      break;
+                    case 'confirmation':
+                      Icon = FileText;
+                      bgColor = 'bg-green-100 dark:bg-green-900/30';
+                      textColor = 'text-green-600 dark:text-green-400';
+                      break;
+                    case 'packing':
+                      Icon = Package;
+                      bgColor = 'bg-teal-100 dark:bg-teal-900/30';
+                      textColor = 'text-teal-600 dark:text-teal-400';
+                      break;
+                    case 'invoice':
+                      Icon = Receipt;
+                      bgColor = 'bg-purple-100 dark:bg-purple-900/30';
+                      textColor = 'text-purple-600 dark:text-purple-400';
+                      break;
+                    case 'purchase':
+                      Icon = ShoppingCart;
+                      bgColor = 'bg-orange-100 dark:bg-orange-900/30';
+                      textColor = 'text-orange-600 dark:text-orange-400';
+                      break;
+                    default:
+                      Icon = FileText;
+                      bgColor = 'bg-gray-100 dark:bg-gray-900/30';
+                      textColor = 'text-gray-600 dark:text-gray-400';
+                  }
+                  
+                  return (
+                    <div
+                      key={doc.id}
+                      className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 p-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+                      onClick={() => {
+                        // 根据文档类型跳转到编辑页面
+                        const editPath = `/${doc.type}/edit/${doc.id}`;
+                        router.push(editPath);
+                      }}
+                    >
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className={`w-8 h-8 rounded-lg ${bgColor} flex items-center justify-center flex-shrink-0`}>
+                          <Icon className={`w-4 h-4 ${textColor}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {getDocumentTypeName(doc.type)} - {getDocumentNumber(doc)}
                           </div>
-                          <div className="text-xs text-gray-400 dark:text-gray-500">
-                            {new Date(doc.updatedAt || doc.createdAt).toLocaleDateString('zh-CN')}
+                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {doc.customerName || '未命名客户'}
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 text-right">
+                        {new Date(doc.date || doc.updatedAt || doc.createdAt).toLocaleDateString('zh-CN')}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
-              <div className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-800/50 p-8 text-center">
+              <div className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 p-8 text-center">
                 <div className="text-gray-500 dark:text-gray-400 text-lg mb-2">
-                  今天还没有创建或修改的单据
+                  {timeFilter === 'today' && '今天还没有创建或修改的单据'}
+                  {timeFilter === '3days' && '最近三天还没有创建或修改的单据'}
+                  {timeFilter === 'week' && '最近一周还没有创建或修改的单据'}
+                  {timeFilter === 'month' && '最近一个月还没有创建或修改的单据'}
                 </div>
                 <div className="text-sm text-gray-400 dark:text-gray-500">
                   开始创建你的第一个单据吧！
@@ -1078,7 +899,7 @@ export default function DashboardPage() {
                 暂无可用功能，请联系管理员分配权限
               </div>
               <button
-                onClick={() => fetchUser(true)}
+                onClick={handleRefreshPermissions}
                 disabled={refreshing}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   refreshing

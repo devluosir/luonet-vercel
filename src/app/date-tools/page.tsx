@@ -199,7 +199,7 @@ export default function DateTools() {
           {/* 返回按钮优化 */}
           <div className="flex items-center mb-8 sm:mb-12">
             <Link 
-              href="/tools" 
+              href="/dashboard" 
               className="group inline-flex items-center px-4 py-2 rounded-full 
                         bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg 
                         border border-gray-200/50 dark:border-gray-700/50 

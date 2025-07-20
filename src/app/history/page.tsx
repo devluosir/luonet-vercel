@@ -17,6 +17,7 @@ import {
   X
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
+import { usePermissionStore } from '@/lib/permissions';
 
 // 导入历史记录工具函数
 import { 
@@ -148,8 +149,9 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
 export default function HistoryManagementPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [user, setUser] = useState<User | null>(null);
-  const [userLoading, setUserLoading] = useState(true);
+  
+  // 使用权限store
+  const { user, isLoading: userLoading, hasPermission } = usePermissionStore();
   const [activeTab, setActiveTab] = useState<HistoryType>(() => {
     const tabParam = searchParams?.get('tab');
     if (tabParam && ['quotation', 'confirmation', 'invoice', 'purchase', 'packing'].includes(tabParam)) {
@@ -180,27 +182,10 @@ export default function HistoryManagementPage() {
   const [previewType, setPreviewType] = useState<'quotation'|'confirmation'|'invoice'|'purchase'|'packing'>('quotation');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // 获取用户信息和权限
-  const fetchUser = useCallback(async () => {
-    try {
-      setUserLoading(true);
-      const response = await fetch('/api/users/me');
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-      } else {
-        console.error('Failed to fetch user data');
-      }
-    } catch (error) {
-      console.error('Error fetching user:', error);
-    } finally {
-      setUserLoading(false);
-    }
-  }, []);
+  // 用户信息获取已移至权限store
 
   useEffect(() => {
     setMounted(true);
-    fetchUser();
     
     // 组件卸载时的清理函数
     return () => {
@@ -211,12 +196,10 @@ export default function HistoryManagementPage() {
       setShowImportModal(false);
       setShowPreview(null);
     };
-  }, [fetchUser]);
+  }, []);
 
   // 根据用户权限获取可用的tab
   const getAvailableTabs = useCallback(() => {
-    if (!user?.permissions) return [];
-    
     const tabPermissions = {
       quotation: 'quotation',
       confirmation: 'quotation', // 确认书也使用quotation权限
@@ -233,8 +216,7 @@ export default function HistoryManagementPage() {
     // 按照指定顺序检查每个tab的权限
     tabOrder.forEach(tabId => {
       const moduleId = tabPermissions[tabId as keyof typeof tabPermissions];
-      const permission = user.permissions.find(p => p.moduleId === moduleId);
-      if (permission?.canAccess) {
+      if (hasPermission(moduleId)) {
         switch (tabId) {
           case 'quotation':
             availableTabs.push({ id: 'quotation', name: '报价单', shortName: '报价', icon: FileText });
@@ -256,7 +238,7 @@ export default function HistoryManagementPage() {
     });
     
     return availableTabs;
-  }, [user?.permissions]);
+  }, [hasPermission]);
 
   // 检查当前activeTab是否有权限
   const isActiveTabAvailable = useCallback(() => {
@@ -284,12 +266,12 @@ export default function HistoryManagementPage() {
     setShowImportModal(false);
     setShowPreview(null);
     
-    // 预加载tools页面
-    router.prefetch('/tools');
+    // 预加载dashboard页面
+    router.prefetch('/dashboard');
     
     // 延迟跳转，给清理操作一些时间
     setTimeout(() => {
-      router.push('/tools');
+      router.push('/dashboard');
     }, 100);
   };
 
@@ -1042,7 +1024,7 @@ export default function HistoryManagementPage() {
               onClick={handleBack}
               className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
             >
-              返回工具页面
+              返回首页
             </button>
           </div>
         </div>

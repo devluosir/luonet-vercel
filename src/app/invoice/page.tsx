@@ -802,7 +802,7 @@ Beneficiary: Luo & Company Co., Limited`,
             {/* 返回按钮 */}
             <div className="flex items-center justify-between mb-6">
               <Link 
-                href={pathname?.includes('/edit/') || pathname?.includes('/copy/') ? '/history' : '/tools'} 
+                href={pathname?.includes('/edit/') || pathname?.includes('/copy/') ? '/history' : '/dashboard'} 
                 className="inline-flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />

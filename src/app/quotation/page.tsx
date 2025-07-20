@@ -499,7 +499,7 @@ export default function QuotationPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
           <Link 
-            href={pathname?.includes('/edit/') || pathname?.includes('/copy/') ? '/history' : '/tools'} 
+            href={pathname?.includes('/edit/') || pathname?.includes('/copy/') ? '/history' : '/dashboard'} 
             className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

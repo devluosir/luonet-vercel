@@ -72,20 +72,20 @@ export function Header({
           />
           <div className="flex flex-col">
             <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h1>
-            {showWelcome && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                欢迎回来，{user.name}！今天是 {new Date().toLocaleDateString('zh-CN', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric',
-                  weekday: 'long'
-                })}
-              </p>
-            )}
           </div>
         </div>
 
         <div className="flex items-center space-x-4">
+          {showWelcome && (
+            <p className="text-sm text-gray-600 dark:text-gray-400 mr-4">
+              {user.name}，今天是 {new Date().toLocaleDateString('zh-CN', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                weekday: 'long'
+              })}
+            </p>
+          )}
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}

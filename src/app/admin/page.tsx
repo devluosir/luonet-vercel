@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { CreateUserModal } from '@/components/admin/CreateUserModal';
 import { UserPlus, Users, Clock, Mail, User, Edit } from 'lucide-react';
-import { Footer } from '@/components/Footer'; 
+import { Footer } from '@/components/Footer';
+import { usePermissionStore } from '@/lib/permissions';
 
 interface User {
   id: string;
@@ -25,19 +26,45 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  
+  // 使用权限store
+  const { user: permissionUser, isAdmin, fetchUser } = usePermissionStore();
 
+  // 初始化
   useEffect(() => {
-    if (status === 'loading') return;
+    setMounted(true);
+  }, []);
 
-    if (!session?.user?.isAdmin) {
-      router.push('/tools');
-      return;
-    }
+  // 权限检查和数据加载
+  useEffect(() => {
+    if (!mounted || status === 'loading') return;
 
-    fetchUsers();
-  }, [session, status, router]);
+    const checkPermissionsAndLoad = async () => {
+      try {
+        // 确保权限数据已加载
+        if (!permissionUser) {
+          await fetchUser();
+        }
 
-  const fetchUsers = async () => {
+        // 检查管理员权限
+        if (!isAdmin()) {
+          router.push('/dashboard');
+          return;
+        }
+
+        // 加载用户列表
+        await fetchUsers();
+      } catch (error) {
+        console.error('权限检查失败:', error);
+        router.push('/dashboard');
+      }
+    };
+
+    checkPermissionsAndLoad();
+  }, [mounted, status, session, permissionUser, isAdmin, fetchUser, router]);
+
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -47,7 +74,6 @@ export default function AdminPage() {
         throw new Error(data.error || '获取用户列表失败');
       }
       const data = await response.json();
-      console.log('Fetched users:', data);
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -55,7 +81,7 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -83,7 +109,14 @@ export default function AdminPage() {
         throw new Error(data.error || '更新用户状态失败');
       }
 
-      await fetchUsers();
+      // 只更新本地状态，不重新获取所有数据
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId 
+            ? { ...user, status: !currentStatus }
+            : user
+        )
+      );
     } catch (error) {
       console.error('Error updating user status:', error);
       alert(error instanceof Error ? error.message : '更新用户状态失败');
@@ -103,14 +136,22 @@ export default function AdminPage() {
         throw new Error(data.error || '更新管理员权限失败');
       }
 
-      await fetchUsers();
+      // 只更新本地状态，不重新获取所有数据
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId 
+            ? { ...user, isAdmin: !currentIsAdmin }
+            : user
+        )
+      );
     } catch (error) {
       console.error('Error updating admin status:', error);
       alert(error instanceof Error ? error.message : '更新管理员权限失败');
     }
   };
 
-  if (status === 'loading' || loading) {
+  // 避免闪烁的加载状态
+  if (!mounted || status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
         <div className="text-center">
@@ -119,6 +160,11 @@ export default function AdminPage() {
         </div>
       </div>
     );
+  }
+
+  // 权限不足时直接返回null，避免闪烁
+  if (!isAdmin()) {
+    return null;
   }
 
   if (error) {
@@ -143,15 +189,11 @@ export default function AdminPage() {
     );
   }
 
-  if (!session?.user?.isAdmin) {
-    return null;
-  }
-
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
       <div className="flex-1">
         <AdminHeader 
-          username={session.user.name || 'Admin'}
+          username={session?.user?.name || 'Admin'}
           onLogout={handleLogout}
         />
 

@@ -161,9 +161,15 @@ export default function UserDetailPage() {
   const [passwordValue, setPasswordValue] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // 计算已启用的模块数量
   const enabledModulesCount = Array.from(pendingPermissions.values()).filter(Boolean).length;
+
+  // 初始化
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 点击外部区域关闭设置菜单
   useEffect(() => {
@@ -181,9 +187,9 @@ export default function UserDetailPage() {
   }, [showSettings]);
 
   useEffect(() => {
+    if (!mounted || !params?.id) return;
+
     const fetchUser = async () => {
-      if (!params?.id) return;
-      
       try {
         setLoading(true);
         const response = await fetch(`/api/admin/users/${params.id}`);
@@ -199,6 +205,7 @@ export default function UserDetailPage() {
           initialPermissions.set(permission.moduleId, permission.canAccess);
         });
         setPendingPermissions(initialPermissions);
+        setEmailValue(data.email || '');
       } catch (error) {
         console.error('Error fetching user:', error);
         setError(error instanceof Error ? error.message : '获取用户信息失败');
@@ -208,7 +215,7 @@ export default function UserDetailPage() {
     };
 
     fetchUser();
-  }, [params?.id]);
+  }, [mounted, params?.id]);
 
   const handleTogglePermission = (moduleId: string, currentAccess: boolean) => {
     const newPermissions = new Map(pendingPermissions);
@@ -429,7 +436,7 @@ export default function UserDetailPage() {
     }
   };
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
         <div className="text-center">
@@ -460,6 +467,7 @@ export default function UserDetailPage() {
     );
   }
 
+  // 权限不足时直接返回null，避免闪烁
   if (!session?.user?.isAdmin) {
     return null;
   }

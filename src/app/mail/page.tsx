@@ -104,7 +104,7 @@ export default function MailPage() {
       <div className="w-full max-w-6xl mx-auto px-6 py-10 flex-grow">
         <div className="flex items-center mb-8">
           <button
-            onClick={() => router.push('/tools')}
+            onClick={() => router.push('/dashboard')}
             className="flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
           >
             <svg
