@@ -513,36 +513,35 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
       <div className="flex-1">
-        {user && (
-          <>
-            <DynamicHeader 
-              user={{
-                name: user.username,
-                isAdmin: user.isAdmin
-              }}
-              onLogout={handleLogout}
-              onProfile={() => setShowProfileModal(true)}
-              onRefreshPermissions={async () => {
-                try {
-                  const { fetchUser } = usePermissionStore.getState();
-                  await fetchUser(true);
-                  setShowSuccessMessage(true);
-                  setTimeout(() => setShowSuccessMessage(false), 3000);
-                } catch (error) {
-                  console.error('刷新权限失败:', error);
-                }
-              }}
-              isRefreshing={refreshing}
-              title="Dashboard"
-              showWelcome={true}
-            />
+        <DynamicHeader 
+          user={{
+            name: session?.user?.name || user?.username || '用户',
+            isAdmin: user?.isAdmin || false
+          }}
+          onLogout={handleLogout}
+          onProfile={() => setShowProfileModal(true)}
+          onRefreshPermissions={async () => {
+            try {
+              await fetchUser(true);
+              setShowSuccessMessage(true);
+              setTimeout(() => setShowSuccessMessage(false), 3000);
+              // 强制重新渲染组件
+              window.location.reload();
+            } catch (error) {
+              console.error('刷新权限失败:', error);
+            }
+          }}
+          isRefreshing={refreshing}
+          title="Dashboard"
+          showWelcome={true}
+        />
 
-            <ProfileModal
-              isOpen={showProfileModal}
-              onClose={() => setShowProfileModal(false)}
-              user={user}
-            />
-          </>
+        {user && (
+          <ProfileModal
+            isOpen={showProfileModal}
+            onClose={() => setShowProfileModal(false)}
+            user={user}
+          />
         )}
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -866,6 +865,8 @@ export default function DashboardPage() {
                     await fetchUser(true);
                     setShowSuccessMessage(true);
                     setTimeout(() => setShowSuccessMessage(false), 3000);
+                    // 强制重新渲染组件
+                    window.location.reload();
                   } catch (error) {
                     console.error('刷新权限失败:', error);
                   }
