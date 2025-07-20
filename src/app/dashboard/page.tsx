@@ -824,7 +824,18 @@ export default function DashboardPage() {
                             {getDocumentTypeName(doc.type)} - {getDocumentNumber(doc)}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                            {doc.customerName || '未命名客户'}
+                            {(() => {
+                              let name = '';
+                              if (doc.type === 'purchase') {
+                                name = doc.supplierName || '未命名供应商';
+                              } else if (doc.type === 'packing') {
+                                name = doc.consigneeName || '未命名收货人';
+                              } else {
+                                name = doc.customerName || '未命名客户';
+                              }
+                              // 只取第一行
+                              return name.split('\n')[0]?.trim() || name;
+                            })()}
                           </div>
                         </div>
                       </div>
