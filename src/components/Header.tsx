@@ -78,12 +78,7 @@ export function Header({
         <div className="flex items-center space-x-4">
           {showWelcome && (
             <p className="text-sm text-gray-600 dark:text-gray-400 mr-4">
-              {user.name}，今天是 {new Date().toLocaleDateString('zh-CN', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                weekday: 'long'
-              })}
+              {new Date().toISOString().split('T')[0]}
             </p>
           )}
           <div className="relative" ref={dropdownRef}>

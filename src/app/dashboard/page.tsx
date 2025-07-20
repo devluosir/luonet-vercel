@@ -549,62 +549,47 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* 1. 快速创建单据 */}
-          {availableQuickCreateModules.length > 0 && (
+          {/* 功能按钮区域 */}
+          {(availableQuickCreateModules.length > 0 || availableToolsModules.length > 0 || availableToolModules.length > 0) && (
             <div className="mb-8">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  新建单据
-                </h2>
-              </div>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-3">
-                  {availableQuickCreateModules.map((module) => {
-                    const Icon = module.icon;
-                    return (
-                      <button
-                        key={module.id}
-                        className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
-                          rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                          hover:-translate-y-1 cursor-pointer
-                          border border-gray-200/50 dark:border-gray-800/50
-                          hover:border-gray-300/70 dark:hover:border-gray-700/70
-                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                          dark:focus:ring-offset-gray-900
-                          p-4 h-20 flex items-center space-x-3"
-                        onClick={() => {
-                          if (module.id === 'confirmation') {
-                            // 为销售确认设置全局变量
-                            if (typeof window !== 'undefined') {
-                              (window as any).__QUOTATION_TYPE__ = 'confirmation';
-                            }
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {/* 新建单据按钮 */}
+                {availableQuickCreateModules.map((module) => {
+                  const Icon = module.icon;
+                  return (
+                    <button
+                      key={module.id}
+                      className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
+                        rounded-xl overflow-hidden transition-all duration-300 ease-in-out
+                        hover:-translate-y-1 cursor-pointer
+                        border border-gray-200/50 dark:border-gray-800/50
+                        hover:border-gray-300/70 dark:hover:border-gray-700/70
+                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                        dark:focus:ring-offset-gray-900
+                        p-4 h-20 flex items-center space-x-3"
+                      onClick={() => {
+                        if (module.id === 'confirmation') {
+                          // 为销售确认设置全局变量
+                          if (typeof window !== 'undefined') {
+                            (window as any).__QUOTATION_TYPE__ = 'confirmation';
                           }
-                          router.push(module.path);
-                        }}
-                      >
-                        <div className={`p-2 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
-                          <Icon className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0 text-left">
-                          <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1">
-                            {module.name}
-                          </h3>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-            </div>
-          )}
-
-          {/* 2. 管理中心 */}
-          {availableToolsModules.length > 0 && (
-            <div className="mb-8">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  管理中心 & 实用工具
-                </h2>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-3">
+                        }
+                        router.push(module.path);
+                      }}
+                    >
+                      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
+                        <Icon className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1">
+                          {module.name}
+                        </h3>
+                      </div>
+                    </button>
+                  );
+                })}
+                
+                {/* 管理中心按钮 */}
                 {availableToolsModules.slice(0, 4).map((module) => {
                   const Icon = module.icon;
                   return (
@@ -629,7 +614,8 @@ export default function DashboardPage() {
                     </button>
                   );
                 })}
-                {/* 实用工具卡片 */}
+                
+                {/* 实用工具按钮 */}
                 {availableToolModules.map((module) => {
                   const Icon = module.icon;
                   return (
@@ -655,6 +641,7 @@ export default function DashboardPage() {
                   );
                 })}
                 
+                {/* 更多功能按钮 */}
                 {availableToolsModules.length > 4 && (
                   <button
                     className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
@@ -683,10 +670,7 @@ export default function DashboardPage() {
 
           {/* 4. 今天创建或修改的单据 */}
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                最近记录
-              </h2>
+            <div className="flex items-center justify-end mb-4">
               <div className="flex items-center space-x-3">
                 {/* 时间筛选器 */}
                 <div className="flex items-center space-x-1 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-1">
@@ -839,9 +823,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="text-xs text-gray-400 dark:text-gray-500 text-right">
-                        {new Date(doc.date || doc.updatedAt || doc.createdAt).toLocaleDateString('zh-CN')}
-                      </div>
+
                     </div>
                   );
                 })}
