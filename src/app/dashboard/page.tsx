@@ -491,12 +491,12 @@ export default function DashboardPage() {
 
   const getDocumentTypeName = (type: string) => {
     switch (type) {
-      case 'quotation': return '报价单';
-      case 'confirmation': return '销售确认';
-      case 'invoice': return '发票';
-      case 'purchase': return '采购单';
-      case 'packing': return '箱单';
-      default: return '单据';
+      case 'quotation': return 'QTN';
+      case 'confirmation': return 'SC';
+      case 'invoice': return 'INV';
+      case 'purchase': return 'PO';
+      case 'packing': return 'PL';
+      default: return 'DOC';
     }
   };
 
