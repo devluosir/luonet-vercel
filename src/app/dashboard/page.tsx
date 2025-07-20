@@ -262,10 +262,10 @@ export default function DashboardPage() {
   const [timeFilter, setTimeFilter] = useState<'today' | '3days' | 'week' | 'month'>('today');
   
   // 使用权限store
-  const { user, hasPermission } = usePermissionStore();
+  const { user, hasPermission, fetchUser, isLoading } = usePermissionStore();
   
   // 使用loading作为refreshing状态
-  const refreshing = false; // 移除loading状态，改为直接使用hasPermission
+  const refreshing = isLoading;
 
   // 性能监控
   useEffect(() => {
@@ -520,7 +520,16 @@ export default function DashboardPage() {
               }}
               onLogout={handleLogout}
               onProfile={() => setShowProfileModal(true)}
-              onRefreshPermissions={() => {}} // 移除刷新权限按钮，因为权限已预加载
+              onRefreshPermissions={async () => {
+                try {
+                  const { fetchUser } = usePermissionStore.getState();
+                  await fetchUser(true);
+                  setShowSuccessMessage(true);
+                  setTimeout(() => setShowSuccessMessage(false), 3000);
+                } catch (error) {
+                  console.error('刷新权限失败:', error);
+                }
+              }}
               isRefreshing={refreshing}
               title="Dashboard"
               showWelcome={true}
