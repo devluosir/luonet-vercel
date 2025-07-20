@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
 export async function GET(
@@ -7,11 +6,6 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth();
-    if (!session || !session.user.isAdmin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const userId = params.id;
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -37,11 +31,6 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth();
-    if (!session || !session.user.isAdmin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const userId = params.id;
     const data = await request.json();
 
@@ -71,11 +60,6 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth();
-    if (!session || !session.user.isAdmin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const userId = params.id;
     await prisma.user.delete({
       where: { id: userId }

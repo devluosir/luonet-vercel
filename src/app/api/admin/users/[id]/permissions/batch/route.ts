@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
 export async function POST(
@@ -7,30 +6,15 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await auth();
-    if (!session || !session.user.isAdmin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const userId = params.id;
     const { permissions } = await request.json();
 
-    // 验证权限数组
+    // 验证权限数组格式
     if (!Array.isArray(permissions)) {
       return NextResponse.json(
         { error: 'Invalid permissions format' },
         { status: 400 }
       );
-    }
-
-    // 获取用户
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { permissions: true }
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // 更新权限
