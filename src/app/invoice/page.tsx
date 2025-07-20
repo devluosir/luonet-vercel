@@ -14,6 +14,8 @@ import ItemsTable from '@/components/invoice/ItemsTable';
 import { addInvoiceHistory, getInvoiceHistory, saveInvoiceHistory } from '@/utils/invoiceHistory';
 import { v4 as uuidv4 } from 'uuid';
 import dynamic from 'next/dynamic';
+import { usePermissionStore, validatePermissions, MODULE_PERMISSIONS } from '@/lib/permissions';
+import { useSession } from 'next-auth/react';
 
 // 动态导入PDFPreviewModal
 const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
@@ -67,15 +69,38 @@ interface ErrorWithMessage {
 export default function InvoicePage() {
   const router = useRouter();
   const pathname = usePathname();
-  
-  // 从 window 全局变量获取初始数据
-  const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__INVOICE_DATA__) : null;
-  const initialEditMode = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_MODE__) : false;
-  const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
-  
-  const [isEditMode, setIsEditMode] = useState(initialEditMode || false);
-  const [editId, setEditId] = useState(initialEditId || null);
-  const [invoiceData, setInvoiceData] = useState<InvoiceData>(initialData || {
+  const { data: session } = useSession();
+
+  // 1. 状态定义
+  // 基础状态
+  const [mounted, setMounted] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+
+  // 保存相关状态
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // UI 状态
+  const [showSettings, setShowSettings] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewItem, setPreviewItem] = useState<any>(null);
+
+  // 编辑状态
+  const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
+  const [editingUnitPrice, setEditingUnitPrice] = useState<string>('');
+  const [editingQuantityIndex, setEditingQuantityIndex] = useState<number | null>(null);
+  const [editingQuantity, setEditingQuantity] = useState<string>('');
+  const [editingFeeAmount, setEditingFeeAmount] = useState<string>('');
+  const [editingFeeIndex, setEditingFeeIndex] = useState<number | null>(null);
+  const [focusedCell, setFocusedCell] = useState<{
+    row: number;
+    column: string;
+  } | null>(null);
+
+  // 数据状态
+  const [invoiceData, setInvoiceData] = useState<InvoiceData>({
     invoiceNo: '',
     date: format(new Date(), 'yyyy-MM-dd'),
     to: '',
@@ -117,87 +142,81 @@ Beneficiary: Luo & Company Co., Limited`,
     otherFees: []
   });
 
-  // 添加保存相关的状态
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  // 2. 工具函数定义
+  const calculateAmount = useCallback((quantity: number, unitPrice: number) => {
+    return Number((quantity * unitPrice).toFixed(2));
+  }, []);
 
-  // 清除注入的数据
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // 获取并保存编辑模式状态
-      const customWindow = window as unknown as CustomWindow;
-      const editMode = customWindow.__EDIT_MODE__;
-      const editId = customWindow.__EDIT_ID__;
+  const getTotalAmount = useCallback(() => {
+    const itemsTotal = invoiceData.items.reduce((sum, item) => sum + item.amount, 0);
+    const feesTotal = (invoiceData.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
+    return itemsTotal + feesTotal;
+  }, [invoiceData.items, invoiceData.otherFees]);
+
+  const calculatePaymentDate = useCallback((date: string) => {
+    const baseDate = new Date(date);
+    const nextMonth = new Date(baseDate.setMonth(baseDate.getMonth() + 1));
+    const year = nextMonth.getFullYear();
+    const month = String(nextMonth.getMonth() + 1).padStart(2, '0');
+    const day = String(nextMonth.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const numberToWords = useCallback((num: number) => {
+    const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];
+    const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+    const teens = ['TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
+    
+    const convertLessThanThousand = (n: number): string => {
+      if (n === 0) return '';
+      if (n < 10) return ones[n];
+      if (n < 20) return teens[n - 10];
+      if (n < 100) {
+        return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? '-' + ones[n % 10] : '');
+      }
+      const hundred = ones[Math.floor(n / 100)] + ' HUNDRED';
+      const remainder = n % 100;
+      if (remainder === 0) return hundred;
+      return hundred + ' AND ' + convertLessThanThousand(remainder);
+    };
+
+    const convert = (n: number): string => {
+      if (n === 0) return 'ZERO';
       
-      if (editMode !== undefined) {
-        setIsEditMode(editMode);
-      }
-      if (editId !== undefined) {
-        setEditId(editId);
-      }
+      const billion = Math.floor(n / 1000000000);
+      const million = Math.floor((n % 1000000000) / 1000000);
+      const thousand = Math.floor((n % 1000000) / 1000);
+      const remainder = n % 1000;
+      
+      let result = '';
+      
+      if (billion) result += convertLessThanThousand(billion) + ' BILLION ';
+      if (million) result += convertLessThanThousand(million) + ' MILLION ';
+      if (thousand) result += convertLessThanThousand(thousand) + ' THOUSAND ';
+      if (remainder) result += convertLessThanThousand(remainder);
+      
+      return result.trim();
+    };
 
-      // 清除注入的数据
-      delete customWindow.__INVOICE_DATA__;
-      delete customWindow.__EDIT_MODE__;
-      delete customWindow.__EDIT_ID__;
+    const dollars = Math.floor(num);
+    const cents = Math.round((num - dollars) * 100);
+    
+    if (cents > 0) {
+      return {
+        dollars: convert(dollars),
+        cents: `${convert(cents)} CENT${cents === 1 ? '' : 'S'}`,
+        hasDecimals: true
+      };
+    } else {
+      return {
+        dollars: convert(dollars),
+        cents: '',
+        hasDecimals: false
+      };
     }
   }, []);
 
-  const [showSettings, setShowSettings] = useState(false);
-  const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
-  const [editingUnitPrice, setEditingUnitPrice] = useState<string>('');
-  const [editingQuantityIndex, setEditingQuantityIndex] = useState<number | null>(null);
-  const [editingQuantity, setEditingQuantity] = useState<string>('');
-  const [_templateConfig, _setTemplateConfig] = useState<InvoiceTemplateConfig>({
-    headerType: 'bilingual',
-    invoiceType: 'invoice',
-    stampType: 'none'
-  });
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewItem, setPreviewItem] = useState<any>(null);
-  const [editingFeeAmount, setEditingFeeAmount] = useState<string>('');
-  const [editingFeeIndex, setEditingFeeIndex] = useState<number | null>(null);
-  const [focusedCell, setFocusedCell] = useState<{
-    row: number;
-    column: string;
-  } | null>(null);
-
-  // 重命名未使用的变量，添加下划线前缀
-  const [_customUnits, _setCustomUnits] = useState<string[]>([]);
-  const [_newUnit, _setNewUnit] = useState('');
-
-
-  // 将 handleError 包装在 useCallback 中，并添加具体的错误类型
-  const _handleError = useCallback((error: ErrorWithMessage | Error | unknown): string => {
-    if (error instanceof Error) {
-      console.error('Error:', error.message);
-      return error.message;
-    }
-    if (typeof error === 'object' && error !== null && 'message' in error) {
-      const customError = error as ErrorWithMessage;
-      console.error('Custom error:', customError.message);
-      return customError.message;
-    }
-    console.error('Unknown error:', error);
-    return '发生未知错误';
-  }, []);
-
-  // 使用 useCallback 包装 getUnitDisplay 函数
-  const getUnitDisplay = useCallback((baseUnit: string, quantity: number) => {
-    if (defaultUnits.includes(baseUnit)) {
-      return quantity > 1 ? `${baseUnit}s` : baseUnit;
-    }
-    return baseUnit;
-  }, []);
-
-  // 修复 useEffect 的依赖警告
-  useEffect(() => {
-    // 原有的 effect 代码
-    // ...
-  }, [/* 其他依赖 */, invoiceData]);
-
-  const handleAddLine = () => {
+  const handleAddLine = useCallback(() => {
     setInvoiceData(prev => ({
       ...prev,
       items: [...prev.items, {
@@ -212,9 +231,101 @@ Beneficiary: Luo & Company Co., Limited`,
         highlight: {}
       }]
     }));
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, rowIndex: number, column: string) => {
+    const columns = [
+      ...(invoiceData.showHsCode ? ['hsCode'] : []),
+      'partname',
+      ...(invoiceData.showDescription ? ['description'] : []),
+      'quantity',
+      'unit',
+      'unitPrice'
+    ];
+
+    const currentColumnIndex = columns.indexOf(column);
+    const totalRows = invoiceData.items.length;
+    const isTextarea = e.target instanceof HTMLTextAreaElement;
+
+    switch (e.key) {
+      case 'ArrowRight':
+        if (currentColumnIndex < columns.length - 1) {
+          const nextColumn = columns[currentColumnIndex + 1];
+          setFocusedCell({ row: rowIndex, column: nextColumn });
+          e.preventDefault();
+        }
+        break;
+      case 'ArrowLeft':
+        if (currentColumnIndex > 0) {
+          const prevColumn = columns[currentColumnIndex - 1];
+          setFocusedCell({ row: rowIndex, column: prevColumn });
+          e.preventDefault();
+        }
+        break;
+      case 'ArrowUp':
+        if (rowIndex > 0) {
+          setFocusedCell({ row: rowIndex - 1, column });
+          e.preventDefault();
+        }
+        break;
+      case 'ArrowDown':
+        if (rowIndex < totalRows - 1) {
+          setFocusedCell({ row: rowIndex + 1, column });
+          e.preventDefault();
+        }
+        break;
+      case 'Enter':
+        if (isTextarea && !e.shiftKey) {
+          return;
+        }
+        if (rowIndex < totalRows - 1) {
+          setFocusedCell({ row: rowIndex + 1, column });
+          e.preventDefault();
+        }
+        break;
+      case 'Tab':
+        if (!e.shiftKey && currentColumnIndex === columns.length - 1 && rowIndex < totalRows - 1) {
+          setFocusedCell({ row: rowIndex + 1, column: columns[0] });
+          e.preventDefault();
+        } else if (e.shiftKey && currentColumnIndex === 0 && rowIndex > 0) {
+          setFocusedCell({ row: rowIndex - 1, column: columns[columns.length - 1] });
+          e.preventDefault();
+        }
+        break;
+    }
+  }, [invoiceData.showHsCode, invoiceData.showDescription, invoiceData.items.length]);
+
+  const handleDoubleClick = useCallback((index: number, field: keyof Exclude<LineItem['highlight'], undefined>) => {
+    const newItems = [...invoiceData.items];
+    newItems[index] = {
+      ...newItems[index],
+      highlight: {
+        ...newItems[index].highlight,
+        [field]: !newItems[index].highlight?.[field]
+      }
+    };
+    setInvoiceData(prev => ({
+      ...prev,
+      items: newItems
+    }));
+  }, [invoiceData.items]);
+
+  const handleOtherFeeDoubleClick = useCallback((index: number, field: 'description' | 'amount') => {
+    const newFees = [...(invoiceData.otherFees || [])];
+    newFees[index] = {
+      ...newFees[index],
+      highlight: {
+        ...newFees[index].highlight,
+        [field]: !newFees[index].highlight?.[field]
+      }
+    };
+    setInvoiceData(prev => ({
+      ...prev,
+      otherFees: newFees
+    }));
+  }, [invoiceData.otherFees]);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
@@ -277,13 +388,9 @@ Beneficiary: Luo & Company Co., Limited`,
       console.error('Error handling submit:', error);
       alert('处理发票时出错');
     }
-  };
+  }, [isEditMode, editId, invoiceData, getTotalAmount]);
 
-  const calculateAmount = (quantity: number, unitPrice: number) => {
-    return Number((quantity * unitPrice).toFixed(2));
-  };
-
-  const updateLineItem = (index: number, field: keyof LineItem, value: string | number) => {
+  const updateLineItem = useCallback((index: number, field: keyof LineItem, value: string | number) => {
     setInvoiceData(prev => {
       const newItems = [...prev.items];
       const item = { ...newItems[index] };
@@ -308,110 +415,98 @@ Beneficiary: Luo & Company Co., Limited`,
       newItems[index] = item;
       return { ...prev, items: newItems };
     });
-  };
+  }, [calculateAmount]);
 
-  const getTotalAmount = useCallback(() => {
-    const itemsTotal = invoiceData.items.reduce((sum, item) => sum + item.amount, 0);
-    const feesTotal = (invoiceData.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
-    return itemsTotal + feesTotal;
-  }, [invoiceData.items, invoiceData.otherFees]);
-
-  // 计算付款日期（设置日期后一个月）
-  const calculatePaymentDate = useCallback((date: string) => {
-    const baseDate = new Date(date);
-    const nextMonth = new Date(baseDate.setMonth(baseDate.getMonth() + 1));
-    // 确保使用 yyyy-MM-dd 格式
-    const year = nextMonth.getFullYear();
-    const month = String(nextMonth.getMonth() + 1).padStart(2, '0');
-    const day = String(nextMonth.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }, []);
-
-  // 监听日期变化
-  useEffect(() => {
-    const newPaymentDate = calculatePaymentDate(invoiceData.date);
-    setInvoiceData(prev => ({
-      ...prev,
-      paymentDate: newPaymentDate
-    }));
-  }, [invoiceData.date, calculatePaymentDate]);
-
-  // 初始化时设置付款日期
-  useEffect(() => {
-    const initialPaymentDate = calculatePaymentDate(invoiceData.date);
-    setInvoiceData(prev => ({
-      ...prev,
-      paymentDate: initialPaymentDate
-    }));
-  }, [invoiceData.date, calculatePaymentDate]);
-
-  // 数字转英文大写金额
-  const numberToWords = useCallback((num: number) => {
-    const ones = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];
-    const tens = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
-    const teens = ['TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
-    
-    const convertLessThanThousand = (n: number): string => {
-      if (n === 0) return '';
-      if (n < 10) return ones[n];
-      if (n < 20) return teens[n - 10];
-      if (n < 100) {
-        return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? '-' + ones[n % 10] : '');
-      }
-      const hundred = ones[Math.floor(n / 100)] + ' HUNDRED';
-      const remainder = n % 100;
-      if (remainder === 0) return hundred;
-      return hundred + ' AND ' + convertLessThanThousand(remainder);
-    };
-
-    const convert = (n: number): string => {
-      if (n === 0) return 'ZERO';
-      
-      const billion = Math.floor(n / 1000000000);
-      const million = Math.floor((n % 1000000000) / 1000000);
-      const thousand = Math.floor((n % 1000000) / 1000);
-      const remainder = n % 1000;
-      
-      let result = '';
-      
-      if (billion) result += convertLessThanThousand(billion) + ' BILLION ';
-      if (million) result += convertLessThanThousand(million) + ' MILLION ';
-      if (thousand) result += convertLessThanThousand(thousand) + ' THOUSAND ';
-      if (remainder) result += convertLessThanThousand(remainder);
-      
-      return result.trim();
-    };
-
-    const dollars = Math.floor(num);
-    const cents = Math.round((num - dollars) * 100);
-    
-    if (cents > 0) {
-      return {
-        dollars: convert(dollars),
-        cents: `${convert(cents)} CENT${cents === 1 ? '' : 'S'}`,
-        hasDecimals: true
-      };
-    } else {
-      return {
-        dollars: convert(dollars),
-        cents: '',
-        hasDecimals: false
-      };
+  // 使用 useCallback 包装 getUnitDisplay 函数
+  const getUnitDisplay = useCallback((baseUnit: string, quantity: number) => {
+    if (defaultUnits.includes(baseUnit)) {
+      return quantity > 1 ? `${baseUnit}s` : baseUnit;
     }
+    return baseUnit;
   }, []);
 
-  // 监听总金额变化，更新大写金额
-  useEffect(() => {
-    const total = getTotalAmount();
-    const words = numberToWords(total);
-    setInvoiceData(prev => ({
-      ...prev,
-      amountInWords: words
-    }));
-  }, [invoiceData.items, getTotalAmount, numberToWords]);
+  // 处理保存功能
+  const handleSave = useCallback(async () => {
+    if (!invoiceData.to.trim()) {
+      setSaveMessage('请填写客户名称');
+      setSaveSuccess(false);
+      setTimeout(() => setSaveMessage(''), 2000);
+      return;
+    }
 
-  // 添加处理粘贴按钮点击的函数
-  const handlePasteButtonClick = async () => {
+    if (invoiceData.items.length === 0 || (invoiceData.items.length === 1 && !invoiceData.items[0].partname)) {
+      setSaveMessage('请添加至少一个商品');
+      setSaveSuccess(false);
+      setTimeout(() => setSaveMessage(''), 2000);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const history = getInvoiceHistory();
+      const totalAmount = getTotalAmount();
+      
+      if (isEditMode && editId) {
+        // 更新现有发票
+        const updatedHistory = history.map(item => {
+          if (item.id === editId) {
+            return {
+              ...item,
+              customerName: invoiceData.to,
+              invoiceNo: invoiceData.invoiceNo,
+              totalAmount: totalAmount,
+              currency: invoiceData.currency,
+              data: invoiceData,
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return item;
+        });
+        
+        const saved = saveInvoiceHistory(updatedHistory);
+        if (saved) {
+          setSaveSuccess(true);
+          setSaveMessage('保存成功');
+        } else {
+          setSaveSuccess(false);
+          setSaveMessage('保存失败');
+        }
+      } else {
+        // 创建新发票记录
+        const newInvoice = {
+          id: uuidv4(),
+          customerName: invoiceData.to,
+          invoiceNo: invoiceData.invoiceNo,
+          totalAmount: totalAmount,
+          currency: invoiceData.currency,
+          data: invoiceData,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        const saved = addInvoiceHistory(newInvoice);
+        if (saved) {
+          setSaveSuccess(true);
+          setSaveMessage('保存成功');
+          setEditId(newInvoice.id);
+          setIsEditMode(true);
+        } else {
+          setSaveSuccess(false);
+          setSaveMessage('保存失败');
+        }
+      }
+    } catch (error) {
+      console.error('Error saving invoice:', error);
+      setSaveSuccess(false);
+      setSaveMessage('保存失败');
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveMessage(''), 2000);
+    }
+  }, [invoiceData, isEditMode, editId, getTotalAmount]);
+
+  // 处理粘贴功能
+  const handlePasteButtonClick = useCallback(async () => {
     try {
       const text = await navigator.clipboard.readText();
       if (text) {
@@ -580,74 +675,69 @@ Beneficiary: Luo & Company Co., Limited`,
       
       input.focus();
     }
-  };
+  }, [getUnitDisplay]);
 
-  // 处理键盘导航
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, rowIndex: number, column: string) => {
-    const columns = [
-      ...(invoiceData.showHsCode ? ['hsCode'] : []),
-      'partname',
-      ...(invoiceData.showDescription ? ['description'] : []),
-      'quantity',
-      'unit',
-      'unitPrice'
-    ];
+  // 修复 useEffect 的依赖警告
+  useEffect(() => {
+    // 原有的 effect 代码
+    // ...
+  }, [/* 其他依赖 */, invoiceData]);
 
-    const currentColumnIndex = columns.indexOf(column);
-    const totalRows = invoiceData.items.length;
-    const isTextarea = e.target instanceof HTMLTextAreaElement;
+  // 3. Effect Hooks
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-    switch (e.key) {
-      case 'ArrowRight':
-        if (currentColumnIndex < columns.length - 1) {
-          const nextColumn = columns[currentColumnIndex + 1];
-          setFocusedCell({ row: rowIndex, column: nextColumn });
-          e.preventDefault();
-        }
-        break;
-      case 'ArrowLeft':
-        if (currentColumnIndex > 0) {
-          const prevColumn = columns[currentColumnIndex - 1];
-          setFocusedCell({ row: rowIndex, column: prevColumn });
-          e.preventDefault();
-        }
-        break;
-      case 'ArrowUp':
-        if (rowIndex > 0) {
-          setFocusedCell({ row: rowIndex - 1, column });
-          e.preventDefault();
-        }
-        break;
-      case 'ArrowDown':
-        if (rowIndex < totalRows - 1) {
-          setFocusedCell({ row: rowIndex + 1, column });
-          e.preventDefault();
-        }
-        break;
-      case 'Enter':
-        // 如果是多行文本框且没有按住 Shift 键，允许换行
-        if (isTextarea && !e.shiftKey) {
-          return; // 不阻止默认行为，允许换行
-        }
-        // 对于其他输入框，或按住 Shift 键的情况，导航到下一行
-        if (rowIndex < totalRows - 1) {
-          setFocusedCell({ row: rowIndex + 1, column });
-          e.preventDefault();
-        }
-        break;
-      case 'Tab':
-        if (!e.shiftKey && currentColumnIndex === columns.length - 1 && rowIndex < totalRows - 1) {
-          setFocusedCell({ row: rowIndex + 1, column: columns[0] });
-          e.preventDefault();
-        } else if (e.shiftKey && currentColumnIndex === 0 && rowIndex > 0) {
-          setFocusedCell({ row: rowIndex - 1, column: columns[columns.length - 1] });
-          e.preventDefault();
-        }
-        break;
-    }
-  };
+  useEffect(() => {
+    const init = async () => {
+      if (!mounted) return;
+      
+      await validatePermissions.preloadPermissions();
+      
+      const hasAccess = validatePermissions.validateBusiness(MODULE_PERMISSIONS.invoice);
+      if (!hasAccess) {
+        router.push('/dashboard');
+        return;
+      }
 
-  // 使用 useEffect 自动聚焦到指定单元格
+      if (typeof window !== 'undefined') {
+        const customWindow = window as unknown as CustomWindow;
+        if (customWindow.__INVOICE_DATA__) {
+          setInvoiceData(customWindow.__INVOICE_DATA__);
+        }
+        if (customWindow.__EDIT_MODE__ !== undefined) {
+          setIsEditMode(customWindow.__EDIT_MODE__);
+        }
+        if (customWindow.__EDIT_ID__ !== undefined) {
+          setEditId(customWindow.__EDIT_ID__);
+        }
+
+        delete customWindow.__INVOICE_DATA__;
+        delete customWindow.__EDIT_MODE__;
+        delete customWindow.__EDIT_ID__;
+      }
+    };
+    
+    init();
+  }, [mounted, router]);
+
+  useEffect(() => {
+    const newPaymentDate = calculatePaymentDate(invoiceData.date);
+    setInvoiceData(prev => ({
+      ...prev,
+      paymentDate: newPaymentDate
+    }));
+  }, [invoiceData.date, calculatePaymentDate]);
+
+  useEffect(() => {
+    const total = getTotalAmount();
+    const words = numberToWords(total);
+    setInvoiceData(prev => ({
+      ...prev,
+      amountInWords: words
+    }));
+  }, [invoiceData.items, getTotalAmount, numberToWords]);
+
   useEffect(() => {
     if (focusedCell) {
       const element = document.querySelector(`[data-row="${focusedCell.row}"][data-column="${focusedCell.column}"]`) as HTMLElement;
@@ -657,142 +747,10 @@ Beneficiary: Luo & Company Co., Limited`,
     }
   }, [focusedCell]);
 
-  useEffect(() => {
-    // 初始化数据
-    if (!invoiceData) {
-      setInvoiceData({
-        date: format(new Date(), 'yyyy-MM-dd'),
-        paymentDate: format(addMonths(new Date(), 1), 'yyyy-MM-dd'),
-        invoiceNo: '',
-        to: '',
-        customerPO: '',
-        items: [],
-        bankInfo: '',
-        showPaymentTerms: true,
-        additionalPaymentTerms: '',
-        amountInWords: { dollars: '', cents: '', hasDecimals: false },
-        showHsCode: false,
-        showDescription: true,
-        showBank: false,
-        showInvoiceReminder: true,
-        currency: 'USD',
-        templateConfig: { headerType: 'none', invoiceType: 'invoice', stampType: 'none' },
-        otherFees: []
-      });
-    }
-  }, [invoiceData]);
-
-  // 添加处理双击事件的函数
-  const handleDoubleClick = (index: number, field: keyof Exclude<LineItem['highlight'], undefined>) => {
-    const newItems = [...invoiceData.items];
-    newItems[index] = {
-      ...newItems[index],
-      highlight: {
-        ...newItems[index].highlight,
-        [field]: !newItems[index].highlight?.[field]
-      }
-    };
-    setInvoiceData(prev => ({
-      ...prev,
-      items: newItems
-    }));
-  };
-
-  // 添加处理 other fee 双击事件的函数
-  const handleOtherFeeDoubleClick = (index: number, field: 'description' | 'amount') => {
-    const newFees = [...(invoiceData.otherFees || [])];
-    newFees[index] = {
-      ...newFees[index],
-      highlight: {
-        ...newFees[index].highlight,
-        [field]: !newFees[index].highlight?.[field]
-      }
-    };
-    setInvoiceData(prev => ({
-      ...prev,
-      otherFees: newFees
-    }));
-  };
-
-  // 处理保存功能
-  const handleSave = useCallback(async () => {
-    if (!invoiceData.to.trim()) {
-      setSaveMessage('请填写客户名称');
-      setSaveSuccess(false);
-      setTimeout(() => setSaveMessage(''), 2000);
-      return;
-    }
-
-    if (invoiceData.items.length === 0 || (invoiceData.items.length === 1 && !invoiceData.items[0].partname)) {
-      setSaveMessage('请添加至少一个商品');
-      setSaveSuccess(false);
-      setTimeout(() => setSaveMessage(''), 2000);
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const history = getInvoiceHistory();
-      const totalAmount = getTotalAmount();
-      
-      if (isEditMode && editId) {
-        // 更新现有发票
-        const updatedHistory = history.map(item => {
-          if (item.id === editId) {
-            return {
-              ...item,
-              customerName: invoiceData.to,
-              invoiceNo: invoiceData.invoiceNo,
-              totalAmount: totalAmount,
-              currency: invoiceData.currency,
-              data: invoiceData,
-              updatedAt: new Date().toISOString()
-            };
-          }
-          return item;
-        });
-        
-        const saved = saveInvoiceHistory(updatedHistory);
-        if (saved) {
-          setSaveSuccess(true);
-          setSaveMessage('保存成功');
-        } else {
-          setSaveSuccess(false);
-          setSaveMessage('保存失败');
-        }
-      } else {
-        // 创建新发票记录
-        const newInvoice = {
-          id: uuidv4(),
-          customerName: invoiceData.to,
-          invoiceNo: invoiceData.invoiceNo,
-          totalAmount: totalAmount,
-          currency: invoiceData.currency,
-          data: invoiceData,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-
-        const saved = addInvoiceHistory(newInvoice);
-        if (saved) {
-          setSaveSuccess(true);
-          setSaveMessage('保存成功');
-          setEditId(newInvoice.id);
-          setIsEditMode(true);
-        } else {
-          setSaveSuccess(false);
-          setSaveMessage('保存失败');
-        }
-      }
-    } catch (error) {
-      console.error('Error saving invoice:', error);
-      setSaveSuccess(false);
-      setSaveMessage('保存失败');
-    } finally {
-      setIsSaving(false);
-      setTimeout(() => setSaveMessage(''), 2000);
-    }
-  }, [invoiceData, isEditMode, editId, getTotalAmount]);
+  // 避免闪烁
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-[#000000] dark:text-gray-100">
@@ -813,7 +771,7 @@ Beneficiary: Luo & Company Co., Limited`,
             {/* 主卡片容器 */}
             <div className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-3xl shadow-lg dark:shadow-2xl shadow-black/5 dark:shadow-black/20 border border-black/5 dark:border-white/10 p-4 md:p-8 mt-8">
               <form onSubmit={handleSubmit}>
-                {/* 标题和设置按钮 */}
+                {/* 标题和工具栏 */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
                     <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -828,7 +786,7 @@ Beneficiary: Luo & Company Co., Limited`,
                       <Clipboard className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </button>
                   </div>
-                  <div className="hidden sm:flex items-center gap-3">
+                  <div className="flex items-center gap-3">
                     <input
                       type="text"
                       value={invoiceData.invoiceNo}
@@ -840,46 +798,6 @@ Beneficiary: Luo & Company Co., Limited`,
                           : ''
                       }`}
                     />
-                    <Link
-                      href="/history?tab=invoice"
-                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
-                      title="历史记录"
-                    >
-                      <History className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={isSaving}
-                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0 relative"
-                      title={isEditMode ? '保存修改' : '保存新记录'}
-                    >
-                      {isSaving ? (
-                        <svg className="animate-spin h-5 w-5 text-gray-600 dark:text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                      ) : (
-                        <Save className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                      )}
-                      {saveMessage && (
-                        <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 text-xs text-white rounded-lg whitespace-nowrap ${
-                          saveSuccess ? 'bg-green-500' : 'bg-red-500'
-                        }`}>
-                          {saveMessage}
-                        </div>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowSettings(!showSettings)}
-                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50"
-                    >
-                      <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                    </button>
-                  </div>
-                  {/* 小屏时只显示设置按钮 */}
-                  <div className="sm:hidden flex items-center gap-2">
                     <Link
                       href="/history?tab=invoice"
                       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0"
@@ -913,20 +831,33 @@ Beneficiary: Luo & Company Co., Limited`,
                     <button
                       type="button"
                       onClick={() => setShowSettings(!showSettings)}
-                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50"
                     >
-                      <Settings className="w-5 h-5" />
+                      <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </button>
                   </div>
+                </div>
+
+                {/* 移动端发票号输入框 */}
+                <div className="relative mb-8">
+                  <input
+                    type="text"
+                    value={invoiceData.invoiceNo}
+                    onChange={e => setInvoiceData(prev => ({ ...prev, invoiceNo: e.target.value }))}
+                    placeholder="Invoice No."
+                    className={`${inputClassName} block sm:hidden w-full mb-6 [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 ${
+                      !invoiceData.invoiceNo 
+                        ? 'border-[#007AFF]/50 dark:border-[#0A84FF]/50' 
+                        : ''
+                    }`}
+                  />
                 </div>
 
                 {/* 设置面板 */}
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showSettings ? 'opacity-100 px-4 sm:px-6 py-2 h-auto mb-8' : 'opacity-0 px-0 py-0 h-0'}`}>
                   <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50 rounded-lg p-3 shadow-sm">
-                    
                     {/* 响应式布局容器 */}
                     <div className="flex flex-wrap items-center gap-3 text-xs">
-                      
                       {/* 第一组：日期 */}
                       <div className="flex items-center gap-1.5">
                         <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Date:</span>
@@ -1150,47 +1081,17 @@ Beneficiary: Luo & Company Co., Limited`,
                     </div>
                   </div>
                 </div>
-                <div className="relative mb-8">
-                  <input
-                    type="text"
-                    value={invoiceData.invoiceNo}
-                    onChange={e => setInvoiceData(prev => ({ ...prev, invoiceNo: e.target.value }))}
-                    placeholder="Invoice No."
-                    className={`${inputClassName} block sm:hidden w-full mb-6 [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 ${
-                      !invoiceData.invoiceNo 
-                        ? 'border-[#007AFF]/50 dark:border-[#0A84FF]/50' 
-                        : ''
-                    }`}
-                  />
-                </div>
+
                 {/* 客户信息区域 */}
                 <CustomerSection
                   to={invoiceData.to}
                   customerPO={invoiceData.customerPO}
                   onChange={({ to, customerPO }) => {
-                    setInvoiceData(prev => {
-                      // 检查是否是Nordic Chemtanker，并且之前没有添加过这个费用
-                      const isNordicChemtanker = to.includes('Ernst Jacob');
-                      const hasNordicFee = prev.otherFees?.some(fee => 
-                        fee.description === 'Additional fee' && fee.amount === 27.5
-                      );
-
-                      // 如果是Nordic Chemtanker且没有添加过费用，则添加
-                      const newOtherFees = isNordicChemtanker && !hasNordicFee
-                        ? [...(prev.otherFees || []), {
-                            id: Date.now(),
-                            description: 'Additional fee',
-                            amount: 27.5
-                          }]
-                        : prev.otherFees;
-
-                      return {
-                        ...prev,
-                        to,
-                        customerPO,
-                        otherFees: newOtherFees
-                      };
-                    });
+                    setInvoiceData(prev => ({
+                      ...prev,
+                      to,
+                      customerPO
+                    }));
                   }}
                 />
 
@@ -1202,7 +1103,7 @@ Beneficiary: Luo & Company Co., Limited`,
                   handleKeyDown={handleKeyDown}
                   handleDoubleClick={handleDoubleClick}
                   handleOtherFeeDoubleClick={handleOtherFeeDoubleClick}
-                  customUnits={_customUnits}
+                  customUnits={[]} // 使用空数组替代 _customUnits
                 />
 
                 {/* 添加行按钮和总金额 */}
@@ -1443,7 +1344,7 @@ Beneficiary: Luo & Company Co., Limited`,
         </div>
       </div>
 
-      {/* PDF预览弹窗 - 使用统一的组件 */}
+      {/* PDF预览弹窗 */}
       <PDFPreviewModal
         isOpen={showPreview}
         onClose={() => {

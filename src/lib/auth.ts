@@ -34,74 +34,68 @@ export const authConfig: NextAuthOptions = {
           return null;
         }
 
-        const cacheKey = `auth_${credentials.username}`;
-        const cached = userAuthCache.get(cacheKey);
-        
-        // 检查缓存
-        if (cached && Date.now() - cached.timestamp < AUTH_CACHE_DURATION) {
-          const user = cached.user;
-          // 验证密码
+        try {
+          // 完整的用户验证
+          const user = await prisma.user.findUnique({
+            where: {
+              username: credentials.username
+            },
+            select: {
+              id: true,
+              username: true,
+              password: true,
+              email: true,
+              isAdmin: true,
+              status: true,
+              permissions: true // 确保加载权限
+            }
+          });
+
+          if (!user || !user.status) {
+            return null;
+          }
+
           const isValid = await compare(credentials.password, user.password);
-          if (isValid) {
-            return {
+
+          if (!isValid) {
+            return null;
+          }
+
+          // 清除之前的权限缓存
+          const cacheKey = `auth_${credentials.username}`;
+          userAuthCache.delete(cacheKey);
+
+          // 缓存新的用户信息（包含权限）
+          userAuthCache.set(cacheKey, {
+            user: {
               id: user.id,
               username: user.username,
               email: user.email,
-              isAdmin: user.isAdmin
-            };
-          }
-        }
+              isAdmin: user.isAdmin,
+              status: user.status,
+              permissions: user.permissions
+            },
+            timestamp: Date.now()
+          });
 
-        // 数据库查询
-        const user = await prisma.user.findUnique({
-          where: {
-            username: credentials.username
-          },
-          select: {
-            id: true,
-            username: true,
-            password: true,
-            email: true,
-            isAdmin: true,
-            status: true
-          }
-        });
+          // 异步更新最后登录时间
+          prisma.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() }
+          }).catch(console.error);
 
-        if (!user || !user.status) {
-          return null;
-        }
-
-        const isValid = await compare(credentials.password, user.password);
-
-        if (!isValid) {
-          return null;
-        }
-
-        // 缓存用户信息（不包含密码）
-        userAuthCache.set(cacheKey, {
-          user: {
+          // 返回完整的用户信息（包含权限）
+          return {
             id: user.id,
             username: user.username,
-            password: user.password, // 仅用于密码验证
             email: user.email,
             isAdmin: user.isAdmin,
-            status: user.status
-          },
-          timestamp: Date.now()
-        });
-
-        // 异步更新最后登录时间（不阻塞认证）
-        prisma.user.update({
-          where: { id: user.id },
-          data: { lastLoginAt: new Date() }
-        }).catch(console.error);
-
-        return {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          isAdmin: user.isAdmin
-        };
+            permissions: user.permissions
+          };
+        } catch (error) {
+          console.error('Login error:', error);
+          return null;
+        }
       }
     })
   ],
@@ -118,6 +112,7 @@ export const authConfig: NextAuthOptions = {
         token.id = user.id;
         token.username = user.username;
         token.isAdmin = user.isAdmin;
+        token.permissions = user.permissions; // 将权限信息添加到token
       }
       return token;
     },
@@ -126,6 +121,7 @@ export const authConfig: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.username = token.username as string;
         session.user.isAdmin = token.isAdmin as boolean;
+        (session.user as any).permissions = token.permissions; // 将权限信息添加到session
       }
       return session;
     }

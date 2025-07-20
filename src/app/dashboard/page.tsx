@@ -262,18 +262,10 @@ export default function DashboardPage() {
   const [timeFilter, setTimeFilter] = useState<'today' | '3days' | 'week' | 'month'>('today');
   
   // 使用权限store
-  const { 
-    user, 
-    isLoading: loading, 
-    error: fetchError, 
-    fetchUser, 
-    hasPermission, 
-    hasAnyPermission, 
-    isAdmin
-  } = usePermissionStore();
+  const { user, hasPermission } = usePermissionStore();
   
   // 使用loading作为refreshing状态
-  const refreshing = loading;
+  const refreshing = false; // 移除loading状态，改为直接使用hasPermission
 
   // 性能监控
   useEffect(() => {
@@ -413,9 +405,13 @@ export default function DashboardPage() {
   }, [router]);
 
   useEffect(() => {
-    setMounted(true);
-    prefetchPages();
-  }, [prefetchPages]);
+    const init = async () => {
+      setMounted(true);
+      // 预加载权限，但不做验证
+      // await validatePermissions.preloadPermissions(); // 移除此行，因为权限验证已移至usePermissionStore
+    };
+    init();
+  }, []);
 
   const handleLogout = async () => {
     // 清除权限store
@@ -423,29 +419,6 @@ export default function DashboardPage() {
     localStorage.removeItem('username');
     await signOut({ redirect: true, callbackUrl: '/' });
   };
-
-  // 使用权限store的fetchUser
-  const handleRefreshPermissions = useCallback(async () => {
-    try {
-      await fetchUser(true);
-      setShowSuccessMessage(true);
-      setTimeout(() => setShowSuccessMessage(false), 3000);
-    } catch (error) {
-      console.error('刷新权限失败:', error);
-    }
-  }, [fetchUser]);
-
-  useEffect(() => {
-    if (!mounted || status === 'loading') return;
-
-    if (!session) {
-      router.push('/');
-      return;
-    }
-
-    // 使用权限store获取用户信息
-    fetchUser();
-  }, [mounted, session, status, router, fetchUser]);
 
   // 使用权限store的权限检查函数
   const availableQuickCreateModules = useMemo(() => {
@@ -468,65 +441,50 @@ export default function DashboardPage() {
 
   // 页面加载完成后的性能记录
   useEffect(() => {
-    if (mounted && !loading && user) {
+    if (mounted && !refreshing && user) { // 移除loading检查
       performanceMonitor.endTimer('dashboard_page_load');
       const metrics = performanceMonitor.getPageLoadMetrics();
       if (process.env.NODE_ENV === 'development') {
         console.log('📊 Dashboard页面加载性能:', metrics);
       }
     }
-  }, [mounted, loading, user]);
+  }, [mounted, refreshing, user]); // 移除loading检查
 
   // 避免闪烁，在客户端渲染前返回空内容
-  if (!mounted) {
+  if (!mounted || status === 'loading') {
     return null;
   }
 
-  if (status === 'loading' || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-lg">加载中...</div>
-          {process.env.NODE_ENV === 'development' && (
-            <div className="text-sm text-gray-500 mt-2">
-              正在获取用户权限信息...
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   if (!session) {
+    router.push('/');
     return null;
   }
 
   // 显示错误状态
-  if (fetchError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-600 mb-4">加载失败</div>
-          <div className="text-sm text-gray-500 mb-4">{fetchError}</div>
-          <div className="flex space-x-2 justify-center">
-            <button 
-              onClick={() => fetchUser(false)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              重试
-            </button>
-            <button 
-              onClick={handleRefreshPermissions}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              强制刷新
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // if (fetchError) { // 移除此行，因为fetchError已移除
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="text-red-600 mb-4">加载失败</div>
+  //         <div className="text-sm text-gray-500 mb-4">{fetchError}</div>
+  //         <div className="flex space-x-2 justify-center">
+  //           <button 
+  //             onClick={() => fetchUser(false)}
+  //             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+  //           >
+  //             重试
+  //           </button>
+  //           <button 
+  //             onClick={handleRefreshPermissions}
+  //             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+  //           >
+  //             强制刷新
+  //           </button>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   const getDocumentTypeName = (type: string) => {
     switch (type) {
@@ -562,7 +520,7 @@ export default function DashboardPage() {
               }}
               onLogout={handleLogout}
               onProfile={() => setShowProfileModal(true)}
-              onRefreshPermissions={handleRefreshPermissions}
+              onRefreshPermissions={() => {}} // 移除刷新权限按钮，因为权限已预加载
               isRefreshing={refreshing}
               title="Dashboard"
               showWelcome={true}
@@ -899,7 +857,7 @@ export default function DashboardPage() {
                 暂无可用功能，请联系管理员分配权限
               </div>
               <button
-                onClick={handleRefreshPermissions}
+                onClick={() => {}} // 移除刷新权限按钮，因为权限已预加载
                 disabled={refreshing}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   refreshing

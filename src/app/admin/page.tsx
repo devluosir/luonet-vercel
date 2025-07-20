@@ -7,7 +7,7 @@ import { AdminHeader } from '@/components/admin/AdminHeader';
 import { CreateUserModal } from '@/components/admin/CreateUserModal';
 import { UserPlus, Users, Clock, Mail, User, Edit } from 'lucide-react';
 import { Footer } from '@/components/Footer';
-import { usePermissionStore } from '@/lib/permissions';
+import { usePermissionStore, validatePermissions } from '@/lib/permissions';
 
 interface User {
   id: string;
@@ -29,7 +29,7 @@ export default function AdminPage() {
   const [mounted, setMounted] = useState(false);
   
   // 使用权限store
-  const { user: permissionUser, isAdmin, fetchUser } = usePermissionStore();
+  const { user: permissionUser, isAdmin } = usePermissionStore();
 
   // 初始化
   useEffect(() => {
@@ -42,13 +42,9 @@ export default function AdminPage() {
 
     const checkPermissionsAndLoad = async () => {
       try {
-        // 确保权限数据已加载
-        if (!permissionUser) {
-          await fetchUser();
-        }
-
-        // 检查管理员权限
-        if (!isAdmin()) {
+        // 使用完整权限验证
+        const hasAdminPermission = await validatePermissions.validateAdmin();
+        if (!hasAdminPermission) {
           router.push('/dashboard');
           return;
         }
@@ -62,7 +58,7 @@ export default function AdminPage() {
     };
 
     checkPermissionsAndLoad();
-  }, [mounted, status, session, permissionUser, isAdmin, fetchUser, router]);
+  }, [mounted, status, router]);
 
   const fetchUsers = useCallback(async () => {
     try {

@@ -10,13 +10,15 @@ interface PermissionGuardProps {
   requiredPermissions?: string[];
   fallback?: React.ReactNode;
   redirectTo?: string;
+  fastCheck?: boolean; // 新增快速验证模式参数
 }
 
 export function PermissionGuard({ 
   children, 
   requiredPermissions = [], 
   fallback = null,
-  redirectTo = '/dashboard'
+  redirectTo = '/dashboard',
+  fastCheck = true // 默认使用快速验证
 }: PermissionGuardProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -30,14 +32,19 @@ export function PermissionGuard({
       return;
     }
 
+    // 快速验证模式：直接使用store中的权限数据
+    if (fastCheck && user) {
+      return;
+    }
+
     // 如果没有用户信息，获取用户信息
     if (!user) {
       fetchUser();
       return;
     }
 
-    // 检查权限
-    if (requiredPermissions.length > 0) {
+    // 完整验证模式：检查权限
+    if (!fastCheck && requiredPermissions.length > 0) {
       const hasRequiredPermissions = requiredPermissions.every(permission => 
         hasPermission(permission)
       );
@@ -49,7 +56,21 @@ export function PermissionGuard({
         return;
       }
     }
-  }, [session, status, user, isLoading, requiredPermissions, hasPermission, fetchUser, router, redirectTo]);
+  }, [session, status, user, isLoading, requiredPermissions, hasPermission, fetchUser, router, redirectTo, fastCheck]);
+
+  // 快速验证模式：直接检查权限
+  if (fastCheck && user) {
+    if (requiredPermissions.length > 0) {
+      const hasRequiredPermissions = requiredPermissions.every(permission => 
+        hasPermission(permission)
+      );
+
+      if (!hasRequiredPermissions) {
+        return fallback;
+      }
+    }
+    return <>{children}</>;
+  }
 
   // 加载状态
   if (status === 'loading' || isLoading) {
@@ -68,8 +89,8 @@ export function PermissionGuard({
     return null;
   }
 
-  // 权限不足
-  if (requiredPermissions.length > 0 && user) {
+  // 权限不足（完整验证模式）
+  if (!fastCheck && requiredPermissions.length > 0 && user) {
     const hasRequiredPermissions = requiredPermissions.every(permission => 
       hasPermission(permission)
     );

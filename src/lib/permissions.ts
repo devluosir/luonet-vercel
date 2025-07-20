@@ -39,7 +39,18 @@ interface PermissionStore {
   fetchUser: (forceRefresh?: boolean) => Promise<void>;
 }
 
-const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24小时缓存，权限变化不频繁
+// 修改缓存时间为7天
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7天缓存
+
+// 添加权限备份功能
+const backupPermissions = (user: User | null) => {
+  if (user) {
+    localStorage.setItem('permissions_backup', JSON.stringify({
+      user,
+      timestamp: Date.now()
+    }));
+  }
+};
 
 export const usePermissionStore = create<PermissionStore>()(
   persist(
@@ -48,9 +59,12 @@ export const usePermissionStore = create<PermissionStore>()(
       isLoading: false,
       lastFetched: null,
       error: null,
-      permissionChanged: false, // 初始化权限变化标志
+      permissionChanged: false,
 
-      setUser: (user) => set({ user, lastFetched: Date.now(), error: null }),
+      setUser: (user) => {
+        set({ user, lastFetched: Date.now(), error: null });
+        backupPermissions(user); // 备份权限
+      },
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
       clearUser: () => set({ user: null, lastFetched: null, error: null }),
@@ -80,21 +94,31 @@ export const usePermissionStore = create<PermissionStore>()(
       },
 
       fetchUser: async (forceRefresh = false) => {
-        const { lastFetched, user } = get();
+        const { lastFetched, user, permissionChanged } = get();
         
-        // 智能刷新策略：
-        // 1. 强制刷新：管理员修改权限后
-        // 2. 首次加载：用户刚登录
-        // 3. 长时间未刷新：超过24小时
-        // 4. 用户主动刷新：点击刷新按钮
-        
+        // 智能刷新策略
         const shouldRefresh = forceRefresh || 
           !user || 
           !lastFetched || 
+          permissionChanged ||
           (Date.now() - lastFetched > CACHE_DURATION);
         
+        // 如果不需要刷新，尝试从备份恢复
         if (!shouldRefresh) {
-          return; // 使用缓存数据
+          try {
+            const backup = localStorage.getItem('permissions_backup');
+            if (backup) {
+              const { user: backupUser, timestamp } = JSON.parse(backup);
+              // 检查备份是否在有效期内
+              if (Date.now() - timestamp < CACHE_DURATION) {
+                set({ user: backupUser, lastFetched: timestamp });
+                return;
+              }
+            }
+          } catch (error) {
+            console.error('Error loading permissions backup:', error);
+          }
+          return; // 使用当前缓存数据
         }
 
         set({ isLoading: true, error: null });
@@ -113,7 +137,7 @@ export const usePermissionStore = create<PermissionStore>()(
 
           const userData = await response.json();
           
-          // 检测权限变化（只在非主动刷新的情况下）
+          // 检测权限变化
           const currentUser = get().user;
           const permissionsChanged = currentUser && !forceRefresh && (
             currentUser.permissions.length !== userData.permissions.length ||
@@ -127,10 +151,16 @@ export const usePermissionStore = create<PermissionStore>()(
             permissionChanged: permissionsChanged || false
           });
           
-          // 只在非主动刷新的情况下显示权限变化通知
+          // 备份新的权限数据
+          backupPermissions(userData);
+          
+          // 权限变化通知
           if (permissionsChanged && typeof window !== 'undefined') {
-            console.log('🔔 检测到权限变化，请刷新页面以获取最新权限');
-            // 可以在这里添加用户通知
+            // 显示通知
+            const event = new CustomEvent('permissionChanged', {
+              detail: { message: '检测到权限变化，请刷新页面以获取最新权限' }
+            });
+            window.dispatchEvent(event);
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
@@ -162,6 +192,47 @@ export const checkAnyPermission = (moduleIds: string[]): boolean => {
 
 export const isUserAdmin = (): boolean => {
   return usePermissionStore.getState().isAdmin();
+};
+
+// 权限验证工具函数
+export const validatePermissions = {
+  // 完整权限验证 - 用于管理员页面
+  async validateAdmin(): Promise<boolean> {
+    const { user, fetchUser } = usePermissionStore.getState();
+    
+    if (!user) {
+      await fetchUser();
+      return usePermissionStore.getState().isAdmin();
+    }
+    
+    return user.isAdmin;
+  },
+
+  // 快速权限验证 - 用于业务页面
+  validateBusiness(moduleId: string): boolean {
+    const { user, hasPermission } = usePermissionStore.getState();
+    return user ? hasPermission(moduleId) : false;
+  },
+
+  // 权限缓存预加载
+  async preloadPermissions(): Promise<void> {
+    const { user, fetchUser } = usePermissionStore.getState();
+    if (!user) {
+      try {
+        const backup = localStorage.getItem('permissions_backup');
+        if (backup) {
+          const { user: backupUser, timestamp } = JSON.parse(backup);
+          if (Date.now() - timestamp < CACHE_DURATION) {
+            usePermissionStore.getState().setUser(backupUser);
+            return;
+          }
+        }
+        await fetchUser();
+      } catch (error) {
+        console.error('Error preloading permissions:', error);
+      }
+    }
+  }
 };
 
 // 模块权限映射
