@@ -3,6 +3,7 @@ import { PrismaAdapter } from "@prisma/client/runtime/library";
 import CredentialsProvider from "next-auth/providers/credentials";
 import prisma from "./prisma";
 import { compare } from "bcryptjs";
+import NextAuth from "next-auth";
 
 // 缓存时间（毫秒）
 const AUTH_CACHE_DURATION = 5 * 60 * 1000; // 5分钟
@@ -79,4 +80,10 @@ export const authOptions: NextAuthOptions = {
     error: "/login",
   },
   secret: process.env.NEXTAUTH_SECRET,
-}; 
+};
+
+// 导出 auth 相关函数
+export const { auth, signIn, signOut } = NextAuth(authOptions);
+
+// 为了向后兼容，也导出 authConfig
+export const authConfig = authOptions; 

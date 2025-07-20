@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 export async function GET(
   request: Request,
@@ -8,33 +8,25 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    if (!session?.user?.isAdmin) {
-      return NextResponse.json(
-        { error: '需要管理员权限' },
-        { status: 403 }
-      );
+    if (!session || !session.user.isAdmin) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const userId = params.id;
     const user = await prisma.user.findUnique({
-      where: { id },
-      include: {
-        permissions: true
-      }
+      where: { id: userId },
+      include: { permissions: true }
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: '用户不存在' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json(user.permissions);
+    return NextResponse.json({ permissions: user.permissions });
   } catch (error) {
-    console.error('获取权限列表失败:', error);
+    console.error('Error fetching user permissions:', error);
     return NextResponse.json(
-      { error: '获取权限列表失败' },
+      { error: 'Failed to fetch user permissions' },
       { status: 500 }
     );
   }
