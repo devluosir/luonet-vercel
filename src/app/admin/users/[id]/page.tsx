@@ -498,7 +498,7 @@ export default function UserDetailPage() {
       )}
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 页面头部 */}
+        {/* 页面头部 - 只保留返回按钮 */}
         <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-4">
               <button
@@ -510,15 +510,6 @@ export default function UserDetailPage() {
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 返回
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-                  <User className="w-6 h-6 mr-3 text-blue-600 dark:text-blue-400" />
-                  编辑用户
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  管理用户信息和功能权限
-                </p>
-              </div>
             </div>
         </div>
 
@@ -527,227 +518,203 @@ export default function UserDetailPage() {
             {/* 用户基本信息 */}
               <div className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">用户信息</h2>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-                  <tbody className="bg-white dark:bg-[#1c1c1e] divide-y divide-gray-200 dark:divide-gray-800">
-                    <tr className="hover:bg-gray-50 dark:hover:bg-[#2c2c2e] transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg relative ${
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">用户信息</h2>
+                  
+                  {/* 设置按钮和展开功能 */}
+                  <div className="flex items-center space-x-2 settings-container">
+                    {/* 展开的设置选项 */}
+                    {showSettings && (
+                      <div className="flex items-center space-x-3 animate-in slide-in-from-right-2 duration-200">
+                        {/* 删除用户按钮 */}
+                        <button
+                          onClick={handleDeleteClick}
+                          disabled={isDeleting}
+                          className="flex items-center px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="删除用户"
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          删除用户
+                        </button>
+                        
+                        {/* 管理员权限开关 */}
+                        <div className="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800/50">
+                          <span className="text-xs font-medium text-blue-600 dark:text-blue-400">管理员权限</span>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={user?.isAdmin || false}
+                              onChange={() => user && handleToggleAdmin(user.id, user.isAdmin)}
+                              className="sr-only peer"
+                            />
+                            <div className={`w-8 h-4 rounded-full peer transition-all duration-200 ${
                               user?.isAdmin 
-                                ? 'bg-gradient-to-br from-blue-500 to-purple-600' 
-                                : 'bg-gradient-to-br from-gray-500 to-gray-600'
-                            }`}>
-                              {user?.username.charAt(0).toUpperCase()}
-                              <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 ${
-                                user?.status ? 'bg-green-500' : 'bg-red-500'
-                              }`}></div>
+                                ? 'bg-gradient-to-r from-blue-500 to-purple-600' 
+                                : 'bg-gray-200 dark:bg-gray-700'
+                            } peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300/50 dark:peer-focus:ring-blue-800/50`}>
+                              <div className={`absolute top-0.5 left-0.5 bg-white rounded-full h-3 w-3 transition-transform duration-200 ${
+                                user?.isAdmin ? 'translate-x-4' : 'translate-x-0'
+                              } shadow-sm`}></div>
                             </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">{user?.username}</div>
-                            </div>
-                          </div>
-                          
-                          {/* 设置按钮和展开功能 */}
-                          <div className="flex items-center space-x-2 settings-container">
-                            {/* 展开的设置选项 */}
-                            {showSettings && (
-                              <div className="flex items-center space-x-2 animate-in slide-in-from-right-2 duration-200">
-                                {/* 删除按钮 */}
-                                <button
-                                  onClick={handleDeleteClick}
-                                  disabled={isDeleting}
-                                  className="p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  title="删除用户"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                                
-                                {/* 管理员开关 */}
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">管理员</span>
-                                  <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={user?.isAdmin || false}
-                                      onChange={() => user && handleToggleAdmin(user.id, user.isAdmin)}
-                                      className="sr-only peer"
-                                    />
-                                    <div className={`w-9 h-5 rounded-full peer transition-all duration-200 ${
-                                      user?.isAdmin 
-                                        ? 'bg-gradient-to-r from-blue-500 to-purple-600' 
-                                        : 'bg-gray-200 dark:bg-gray-700'
-                                    } peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300/50 dark:peer-focus:ring-blue-800/50`}>
-                                      <div className={`absolute top-0.5 left-0.5 bg-white rounded-full h-4 w-4 transition-transform duration-200 ${
-                                        user?.isAdmin ? 'translate-x-4' : 'translate-x-0'
-                                      } shadow-sm`}></div>
-                                    </div>
-                                  </label>
-                                </div>
-                                
-                                {/* 启用状态开关 */}
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">启用</span>
-                                  <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={user?.status || false}
-                                      onChange={() => user && handleToggleStatus(user.id, user.status)}
-                                      className="sr-only peer"
-                                    />
-                                    <div className={`w-9 h-5 rounded-full peer transition-all duration-200 ${
-                                      user?.status 
-                                        ? 'bg-green-500' 
-                                        : 'bg-gray-200 dark:bg-gray-700'
-                                    } peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300/50 dark:peer-focus:ring-green-800/50`}>
-                                      <div className={`absolute top-0.5 left-0.5 bg-white rounded-full h-4 w-4 transition-transform duration-200 ${
-                                        user?.status ? 'translate-x-4' : 'translate-x-0'
-                                      } shadow-sm`}></div>
-                                    </div>
-                                  </label>
-                                </div>
-                              </div>
-                            )}
-                            
-                            {/* 设置按钮 */}
-                            <button
-                              onClick={() => setShowSettings(!showSettings)}
-                              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                            >
-                              <Settings className="w-5 h-5" />
-                            </button>
-                          </div>
+                          </label>
                         </div>
-                      </td>
-                    </tr>
-                    
-                    <tr className="hover:bg-gray-50 dark:hover:bg-[#2c2c2e] transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-8">
-                            {/* 邮箱地址 */}
-                            <div className="flex items-center">
-                    <Mail className="w-5 h-5 text-gray-400 mr-3" />
-                              <div>
-                                <div className="text-sm font-medium text-gray-900 dark:text-white">邮箱地址</div>
-                                {editingEmail ? (
-                                  <div className="flex items-center space-x-2 mt-1">
-                                    <input
-                                      type="email"
-                                      value={emailValue}
-                                      onChange={(e) => setEmailValue(e.target.value)}
-                                      className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      placeholder="输入邮箱地址"
-                                    />
-                                    <button
-                                      onClick={handleSaveEmail}
-                                      className="px-2 py-1 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800/50 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                                    >
-                                      保存
-                                    </button>
-                                    <button
-                                      onClick={handleCancelEmail}
-                                      className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-50 dark:bg-gray-900/20 rounded border border-gray-200 dark:border-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-900/30 transition-colors"
-                                    >
-                                      取消
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {user.email || '未设置'}
-                                  </div>
-                                )}
-                              </div>
-                              {!editingEmail && (
-                                <button 
-                                  onClick={handleEditEmail}
-                                  className="ml-3 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                                >
-                                  编辑
-                                </button>
-                              )}
+                        
+                        {/* 账户状态开关 */}
+                        <div className="flex items-center space-x-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800/50">
+                          <span className="text-xs font-medium text-green-600 dark:text-green-400">账户状态</span>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={user?.status || false}
+                              onChange={() => user && handleToggleStatus(user.id, user.status)}
+                              className="sr-only peer"
+                            />
+                            <div className={`w-8 h-4 rounded-full peer transition-all duration-200 ${
+                              user?.status 
+                                ? 'bg-green-500' 
+                                : 'bg-gray-200 dark:bg-gray-700'
+                            } peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300/50 dark:peer-focus:ring-green-800/50`}>
+                              <div className={`absolute top-0.5 left-0.5 bg-white rounded-full h-3 w-3 transition-transform duration-200 ${
+                                user?.status ? 'translate-x-4' : 'translate-x-0'
+                              } shadow-sm`}></div>
                             </div>
-
-                            {/* 密码修改 */}
-                            <div className="flex items-center">
-                              <Shield className="w-5 h-5 text-gray-400 mr-3" />
-                              <div>
-                                <div className="text-sm font-medium text-gray-900 dark:text-white">密码</div>
-                                {editingPassword ? (
-                                  <div className="flex items-center space-x-2 mt-1">
-                                    <input
-                                      type="password"
-                                      value={passwordValue}
-                                      onChange={(e) => setPasswordValue(e.target.value)}
-                                      className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      placeholder="输入新密码"
-                                    />
-                                    <button
-                                      onClick={handleSavePassword}
-                                      className="px-2 py-1 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800/50 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                                    >
-                                      保存
-                                    </button>
-                                    <button
-                                      onClick={handleCancelPassword}
-                                      className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-50 dark:bg-gray-900/20 rounded border border-gray-200 dark:border-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-900/30 transition-colors"
-                                    >
-                                      取消
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="text-sm text-gray-500 dark:text-gray-400">••••••••</div>
-                                )}
-                              </div>
-                              {!editingPassword && (
-                                <button 
-                                  onClick={handleEditPassword}
-                                  className="ml-3 px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                                >
-                                  重置
-                                </button>
-                              )}
+                          </label>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                      </td>
-                    </tr>
+                    )}
                     
-                    <tr className="hover:bg-gray-50 dark:hover:bg-[#2c2c2e] transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-8">
-                            {/* 最后登录 */}
-                            <div className="flex items-center">
-                    <Clock className="w-5 h-5 text-gray-400 mr-3" />
-                              <div>
-                                <div className="text-sm font-medium text-gray-900 dark:text-white">最后登录</div>
-                                <div className="text-sm text-gray-500 dark:text-gray-400">
-                                  {user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : '从未登录'}
-                      </div>
-                    </div>
-                  </div>
-
-                            {/* 创建时间 */}
-                            <div className="flex items-center">
-                    <Calendar className="w-5 h-5 text-gray-400 mr-3" />
-                              <div>
-                                <div className="text-sm font-medium text-gray-900 dark:text-white">创建时间</div>
-                                <div className="text-sm text-gray-500 dark:text-gray-400">
-                                  {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : ''}
-                      </div>
-                    </div>
-                  </div>
+                    {/* 设置按钮 */}
+                    <button
+                      onClick={() => setShowSettings(!showSettings)}
+                      className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    >
+                      <Settings className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              </div>
+              
+              <div className="p-6">
+                {/* 用户头像和基本信息 */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center">
+                    <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white font-semibold text-xl relative ${
+                      user?.isAdmin 
+                        ? 'bg-gradient-to-br from-blue-500 to-purple-600' 
+                        : 'bg-gradient-to-br from-gray-500 to-gray-600'
+                    }`}>
+                      {user?.username.charAt(0).toUpperCase()}
+                      <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-gray-900 ${
+                        user?.status ? 'bg-green-500' : 'bg-red-500'
+                      }`}></div>
+                    </div>
+                    <div className="ml-4">
+                      <div className="text-xl font-semibold text-gray-900 dark:text-white">{user?.username}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {user?.isAdmin ? '管理员' : '普通用户'} • {user?.status ? '已启用' : '已禁用'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                    <Clock className="w-4 h-4 mr-2" />
+                    <span>最后登录: {user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : '从未登录'}</span>
+                  </div>
+                </div>
+
+                {/* 用户详细信息网格 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* 邮箱地址 */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center">
+                        <Mail className="w-5 h-5 text-gray-400 mr-2" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">邮箱地址</span>
+                      </div>
+                      {!editingEmail && (
+                        <button 
+                          onClick={handleEditEmail}
+                          className="px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                        >
+                          编辑
+                        </button>
+                      )}
+                    </div>
+                    {editingEmail ? (
+                      <div className="space-y-2">
+                        <input
+                          type="email"
+                          value={emailValue}
+                          onChange={(e) => setEmailValue(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="输入邮箱地址"
+                        />
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={handleSaveEmail}
+                            className="px-3 py-1 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800/50 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                          >
+                            保存
+                          </button>
+                          <button
+                            onClick={handleCancelEmail}
+                            className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-50 dark:bg-gray-900/20 rounded border border-gray-200 dark:border-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-900/30 transition-colors"
+                          >
+                            取消
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-600 dark:text-gray-300">
+                        {user.email || '未设置'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 密码修改 */}
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center">
+                        <Shield className="w-5 h-5 text-gray-400 mr-2" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">密码</span>
+                      </div>
+                      {!editingPassword && (
+                        <button 
+                          onClick={handleEditPassword}
+                          className="px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                        >
+                          重置
+                        </button>
+                      )}
+                    </div>
+                    {editingPassword ? (
+                      <div className="space-y-2">
+                        <input
+                          type="password"
+                          value={passwordValue}
+                          onChange={(e) => setPasswordValue(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="输入新密码"
+                        />
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={handleSavePassword}
+                            className="px-3 py-1 text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800/50 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                          >
+                            保存
+                          </button>
+                          <button
+                            onClick={handleCancelPassword}
+                            className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-50 dark:bg-gray-900/20 rounded border border-gray-200 dark:border-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-900/30 transition-colors"
+                          >
+                            取消
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-600 dark:text-gray-300">••••••••</div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
