@@ -96,15 +96,15 @@ export const usePermissionStore = create<PermissionStore>()(
       fetchUser: async (forceRefresh = false) => {
         const { lastFetched, user, permissionChanged } = get();
         
-        // 智能刷新策略
+        // 智能刷新策略 - 重新登录时强制刷新
         const shouldRefresh = forceRefresh || 
           !user || 
           !lastFetched || 
           permissionChanged ||
           (Date.now() - lastFetched > CACHE_DURATION);
         
-        // 如果不需要刷新，尝试从备份恢复
-        if (!shouldRefresh) {
+        // 如果不需要刷新且不是强制刷新，尝试从备份恢复
+        if (!shouldRefresh && !forceRefresh) {
           try {
             const backup = localStorage.getItem('permissions_backup');
             if (backup) {

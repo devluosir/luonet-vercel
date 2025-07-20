@@ -407,18 +407,18 @@ export default function DashboardPage() {
   useEffect(() => {
     const init = async () => {
       setMounted(true);
-      // 获取用户权限
-      if (!user) {
-        await fetchUser();
-      }
+      // 获取用户权限 - 每次登录都重新获取
+      await fetchUser();
     };
     init();
-  }, [user, fetchUser]);
+  }, [fetchUser]);
 
   const handleLogout = async () => {
-    // 清除权限store
+    // 清除权限store和所有相关缓存
     usePermissionStore.getState().clearUser();
     localStorage.removeItem('username');
+    localStorage.removeItem('permissions_backup');
+    localStorage.removeItem('permission-store');
     await signOut({ redirect: true, callbackUrl: '/' });
   };
 
