@@ -407,8 +407,8 @@ export default function DashboardPage() {
   useEffect(() => {
     const init = async () => {
       setMounted(true);
-      // 获取用户权限 - 每次登录都重新获取
-      await fetchUser();
+      // 获取用户权限 - 每次登录都强制重新获取
+      await fetchUser(true);
     };
     init();
   }, [fetchUser]);
@@ -554,6 +554,19 @@ export default function DashboardPage() {
                 <span className="text-green-800 dark:text-green-200 text-sm font-medium">
                   权限信息已成功刷新
                 </span>
+              </div>
+            </div>
+          )}
+
+          {/* 调试信息 */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+              <div className="text-sm text-yellow-800 dark:text-yellow-200">
+                <div>用户: {user?.username || '未加载'}</div>
+                <div>管理员: {user?.isAdmin ? '是' : '否'}</div>
+                <div>权限数量: {user?.permissions?.length || 0}</div>
+                <div>可用模块: {availableQuickCreateModules.length + availableToolsModules.length + availableToolModules.length}</div>
+                <div>权限列表: {user?.permissions?.map(p => `${p.moduleId}:${p.canAccess}`).join(', ') || '无'}</div>
               </div>
             </div>
           )}

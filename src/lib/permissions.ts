@@ -67,7 +67,14 @@ export const usePermissionStore = create<PermissionStore>()(
       },
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
-      clearUser: () => set({ user: null, lastFetched: null, error: null }),
+      clearUser: () => {
+        set({ user: null, lastFetched: null, error: null, permissionChanged: false });
+        // 清除持久化数据
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('permission-store');
+          localStorage.removeItem('permissions_backup');
+        }
+      },
       setPermissionChanged: (changed) => set({ permissionChanged: changed }), // 新增
 
       hasPermission: (moduleId) => {
@@ -119,6 +126,13 @@ export const usePermissionStore = create<PermissionStore>()(
             console.error('Error loading permissions backup:', error);
           }
           return; // 使用当前缓存数据
+        }
+
+        // 强制刷新时清除所有缓存
+        if (forceRefresh) {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('permissions_backup');
+          }
         }
 
         set({ isLoading: true, error: null });
