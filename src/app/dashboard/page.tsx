@@ -804,22 +804,22 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={doc.id}
-                      className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 p-4 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+                      className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 p-3 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer"
                       onClick={() => {
                         // 根据文档类型跳转到编辑页面
                         const editPath = `/${doc.type}/edit/${doc.id}`;
                         router.push(editPath);
                       }}
                     >
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className={`w-8 h-8 rounded-lg ${bgColor} flex items-center justify-center flex-shrink-0`}>
-                          <Icon className={`w-4 h-4 ${textColor}`} />
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-7 h-7 rounded-lg ${bgColor} flex items-center justify-center flex-shrink-0`}>
+                          <Icon className={`w-3.5 h-3.5 ${textColor}`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                             {getDocumentTypeName(doc.type)} - {getDocumentNumber(doc)}
                           </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
                             {(() => {
                               let name = '';
                               if (doc.type === 'purchase') {
@@ -835,7 +835,6 @@ export default function DashboardPage() {
                           </div>
                         </div>
                       </div>
-
                     </div>
                   );
                 })}
