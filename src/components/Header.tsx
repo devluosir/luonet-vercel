@@ -56,6 +56,17 @@ export function Header({
     }
   };
 
+  // 获取当前日期和星期几
+  const getCurrentDate = () => {
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const dayOfWeek = now.getDay(); // 0-6 (周日-周六)
+    const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+    return { date: dateStr, dayOfWeek: dayNames[dayOfWeek] };
+  };
+
+  const { date, dayOfWeek } = getCurrentDate();
+
   return (
     <header className="bg-white dark:bg-[#1c1c1e] shadow-sm dark:shadow-gray-800/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -71,26 +82,27 @@ export function Header({
             blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
           />
           <div className="flex flex-col">
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h1>
+            {/* 小屏时隐藏标题，中屏及以上显示 */}
+            <h1 className="hidden sm:block text-xl font-semibold text-gray-900 dark:text-white">{title}</h1>
           </div>
         </div>
 
         <div className="flex items-center space-x-4">
           {showWelcome && (
             <>
-              {/* 小屏时只显示日期 */}
+              {/* 小屏时只显示日期和简化星期几 */}
               <div className="flex sm:hidden items-center mr-4">
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {new Date().toISOString().split('T')[0]}
+                  {date} {dayOfWeek}
                 </span>
               </div>
-              {/* 中屏和大屏时显示用户名和日期 */}
+              {/* 中屏和大屏时显示用户名、日期和完整星期几 */}
               <div className="hidden sm:flex items-center space-x-2 mr-4">
                 <span className="text-sm text-gray-900 dark:text-white font-medium">
                   {user.name}
                 </span>
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {new Date().toISOString().split('T')[0]}
+                  {date} 星期{dayOfWeek}
                 </span>
               </div>
             </>
