@@ -431,15 +431,15 @@ export default function DashboardPage() {
       }
       return hasPermission(module.id);
     });
-  }, [hasPermission]);
+  }, [hasPermission, user?.permissions]);
 
   const availableToolModules = useMemo(() => {
     return TOOL_MODULES.filter(module => hasPermission(module.id));
-  }, [hasPermission]);
+  }, [hasPermission, user?.permissions]);
 
   const availableToolsModules = useMemo(() => {
     return TOOLS_MODULES.filter(module => hasPermission(module.id));
-  }, [hasPermission]);
+  }, [hasPermission, user?.permissions]);
 
   // 页面加载完成后的性能记录
   useEffect(() => {
@@ -525,8 +525,7 @@ export default function DashboardPage() {
               await fetchUser(true);
               setShowSuccessMessage(true);
               setTimeout(() => setShowSuccessMessage(false), 3000);
-              // 强制重新渲染组件
-              window.location.reload();
+              // 不强制刷新页面，让组件自动重新渲染
             } catch (error) {
               console.error('刷新权限失败:', error);
             }
@@ -865,8 +864,7 @@ export default function DashboardPage() {
                     await fetchUser(true);
                     setShowSuccessMessage(true);
                     setTimeout(() => setShowSuccessMessage(false), 3000);
-                    // 强制重新渲染组件
-                    window.location.reload();
+                    // 不强制刷新页面，让组件自动重新渲染
                   } catch (error) {
                     console.error('刷新权限失败:', error);
                   }
