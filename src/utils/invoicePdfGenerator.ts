@@ -255,7 +255,6 @@ async function renderCustomerInfo(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   doc.setFont('NotoSansSC', 'bold');
   doc.text('To:', leftMargin, currentY);
   const toTextWidth = doc.getTextWidth('To: ');
-  doc.setFont('NotoSansSC', 'normal');
   
   if (data.to.trim()) {
     const toLines = doc.splitTextToSize(data.to.trim(), maxTextWidth);
@@ -274,7 +273,9 @@ async function renderCustomerInfo(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   if (data.customerPO) {
     const orderLines = doc.splitTextToSize(data.customerPO.trim(), maxTextWidth);
     orderLines.forEach((line: string, index: number) => {
+      doc.setTextColor(0, 0, 255); // 设置文字颜色为蓝色
       doc.text(String(line), orderNoX, currentY + (index * 3.5));
+      doc.setTextColor(0, 0, 0); // 恢复文字颜色为黑色
     });
     currentY += orderLines.length * 3.5;
   }

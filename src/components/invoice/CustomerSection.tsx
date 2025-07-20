@@ -195,18 +195,21 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
 
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <div className="space-y-4">
+      {/* 客户信息 */}
       <div>
+        <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+          Customer Information
+        </label>
         <div className="relative">
           <textarea
             value={to}
             onChange={e => onChange({ ...{ to, customerPO }, to: e.target.value })}
             placeholder="Enter customer name and address"
-            rows={3}
+            rows={4}
             className={inputClassName}
           />
           <div className="absolute right-2 bottom-2 flex gap-2" ref={buttonsRef}>
-
             <button
               type="button"
               onClick={() => setShowSavedCustomers(true)}
@@ -230,8 +233,6 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
               Save
             </button>
           </div>
-
-
 
           {/* 保存的客户列表弹窗 */}
           {showSavedCustomers && savedCustomers.length > 0 && (
@@ -270,6 +271,8 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
           )}
         </div>
       </div>
+
+      {/* 客户 PO */}
       <div>
         <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
           Customer P/O No.

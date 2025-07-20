@@ -787,17 +787,6 @@ Beneficiary: Luo & Company Co., Limited`,
                     </button>
                   </div>
                   <div className="flex items-center gap-3">
-                    <input
-                      type="text"
-                      value={invoiceData.invoiceNo}
-                      onChange={e => setInvoiceData(prev => ({ ...prev, invoiceNo: e.target.value }))}
-                      placeholder="Invoice No."
-                      className={`${inputClassName} w-[200px] [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 ${
-                        !invoiceData.invoiceNo 
-                          ? 'border-[#007AFF]/50 dark:border-[#0A84FF]/50' 
-                          : ''
-                      }`}
-                    />
                     <Link
                       href="/history?tab=invoice"
                       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0"
@@ -838,48 +827,12 @@ Beneficiary: Luo & Company Co., Limited`,
                   </div>
                 </div>
 
-                {/* 移动端发票号输入框 */}
-                <div className="relative mb-8">
-                  <input
-                    type="text"
-                    value={invoiceData.invoiceNo}
-                    onChange={e => setInvoiceData(prev => ({ ...prev, invoiceNo: e.target.value }))}
-                    placeholder="Invoice No."
-                    className={`${inputClassName} block sm:hidden w-full mb-6 [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 ${
-                      !invoiceData.invoiceNo 
-                        ? 'border-[#007AFF]/50 dark:border-[#0A84FF]/50' 
-                        : ''
-                    }`}
-                  />
-                </div>
-
                 {/* 设置面板 */}
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showSettings ? 'opacity-100 px-4 sm:px-6 py-2 h-auto mb-8' : 'opacity-0 px-0 py-0 h-0'}`}>
                   <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50 rounded-lg p-3 shadow-sm">
                     {/* 响应式布局容器 */}
                     <div className="flex flex-wrap items-center gap-3 text-xs">
-                      {/* 第一组：日期 */}
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Date:</span>
-                        <input
-                          type="date"
-                          value={invoiceData.date}
-                          onChange={(e) => setInvoiceData(prev => ({ ...prev, date: e.target.value }))}
-                          className="w-32 px-2 py-1 rounded text-[11px]
-                            bg-white/90 dark:bg-[#1c1c1e]/90
-                            border border-gray-200/30 dark:border-[#2c2c2e]/50
-                            focus:outline-none focus:ring-1
-                            focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
-                            text-gray-800 dark:text-gray-200"
-                          style={{ caretColor: '#007AFF' }}
-                          required
-                        />
-                      </div>
-
-                      {/* 分隔线 */}
-                      <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
-
-                      {/* 第二组：币种 */}
+                      {/* 第一组：币种 */}
                       <div className="flex items-center gap-1.5">
                         <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Currency:</span>
                         <div className="flex gap-1">
@@ -906,7 +859,7 @@ Beneficiary: Luo & Company Co., Limited`,
                       {/* 分隔线 */}
                       <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
-                      {/* 第三组：Header */}
+                      {/* 第二组：Header */}
                       <div className="flex items-center gap-1.5">
                         <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Header:</span>
                         <div className="flex gap-1">
@@ -940,10 +893,7 @@ Beneficiary: Luo & Company Co., Limited`,
                       {/* 分隔线 */}
                       <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
-                      {/* 换行控制：小屏换行，中屏不换行 */}
-                      <div className="w-full sm:w-auto"></div>
-
-                      {/* 第四组：Type */}
+                      {/* 第三组：Type */}
                       <div className="flex items-center gap-1.5">
                         <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Type:</span>
                         <div className="flex gap-1">
@@ -977,7 +927,7 @@ Beneficiary: Luo & Company Co., Limited`,
                       {/* 分隔线 */}
                       <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
-                      {/* 第五组：Stamp */}
+                      {/* 第四组：Stamp */}
                       <div className="flex items-center gap-1.5">
                         <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Stamp:</span>
                         <div className="flex gap-1">
@@ -1011,10 +961,7 @@ Beneficiary: Luo & Company Co., Limited`,
                       {/* 分隔线 */}
                       <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
-                      {/* 换行控制：小屏和中屏换行，大屏不换行 */}
-                      <div className="w-full lg:w-auto"></div>
-
-                      {/* 第六组：显示选项 */}
+                      {/* 第五组：显示选项 */}
                       <div className="flex flex-wrap items-center gap-3">
                         <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Show:</span>
                         
@@ -1082,18 +1029,57 @@ Beneficiary: Luo & Company Co., Limited`,
                   </div>
                 </div>
 
-                {/* 客户信息区域 */}
-                <CustomerSection
-                  to={invoiceData.to}
-                  customerPO={invoiceData.customerPO}
-                  onChange={({ to, customerPO }) => {
-                    setInvoiceData(prev => ({
-                      ...prev,
-                      to,
-                      customerPO
-                    }));
-                  }}
-                />
+                {/* 基本信息区域 - 左右两栏布局 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  {/* 左侧：客户信息 */}
+                  <div className="bg-gray-50/50 dark:bg-gray-800/20 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+                    <CustomerSection
+                      to={invoiceData.to}
+                      customerPO={invoiceData.customerPO}
+                      onChange={({ to, customerPO }) => {
+                        setInvoiceData(prev => ({
+                          ...prev,
+                          to,
+                          customerPO
+                        }));
+                      }}
+                    />
+                  </div>
+
+                  {/* 右侧：发票号和日期 */}
+                  <div className="bg-gray-50/50 dark:bg-gray-800/20 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                          Invoice No.
+                        </label>
+                        <input
+                          type="text"
+                          value={invoiceData.invoiceNo}
+                          onChange={e => setInvoiceData(prev => ({ ...prev, invoiceNo: e.target.value }))}
+                          placeholder="Enter invoice number"
+                          className={`${inputClassName} w-full [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 ${
+                            !invoiceData.invoiceNo 
+                              ? 'border-[#007AFF]/50 dark:border-[#0A84FF]/50' 
+                              : ''
+                          }`}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                          Date
+                        </label>
+                        <input
+                          type="date"
+                          value={invoiceData.date}
+                          onChange={(e) => setInvoiceData(prev => ({ ...prev, date: e.target.value }))}
+                          className={`${inputClassName} w-full`}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 {/* 商品表格 */}
                 <ItemsTable
