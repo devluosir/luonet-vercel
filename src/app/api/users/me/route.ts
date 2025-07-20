@@ -23,7 +23,7 @@ export async function GET() {
       username: user.username,
       email: user.email,
       isAdmin: user.isAdmin,
-      permissions: user.permissions.map(p => p.name)
+      permissions: user.permissions.map(p => p.moduleId)
     });
   } catch (error) {
     console.error('Error fetching user:', error);

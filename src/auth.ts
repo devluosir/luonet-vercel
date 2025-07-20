@@ -1,81 +1,47 @@
-import NextAuth from "next-auth"
-import type { DefaultSession, AuthOptions, User } from "next-auth"
-import { prisma } from "@/lib/prisma"
-import CredentialsProvider from "next-auth/providers/credentials"
-import bcrypt from "bcryptjs"
-import { cache } from 'react'
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import prisma from "./lib/prisma";
+import { compare } from "bcryptjs";
+import NextAuth from "next-auth";
 
-declare module "next-auth" {
-  interface Session extends DefaultSession {
-    user: {
-      id: string;
-      username: string;
-      isAdmin: boolean;
-    } & DefaultSession["user"]
-  }
+// 缓存时间（毫秒）
+const AUTH_CACHE_DURATION = 5 * 60 * 1000; // 5分钟
 
-  interface User {
-    username: string;
-    isAdmin: boolean;
-  }
-}
-
-// 缓存用户查询
-const findUser = cache(async (username: string) => {
-  return await prisma.user.findUnique({
-    where: { username },
-    select: {
-      id: true,
-      username: true,
-      password: true,
-      email: true,
-      isAdmin: true,
-      status: true,
-    }
-  });
-});
-
-export const config = {
+export const authOptions: NextAuthOptions = {
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
   providers: [
     CredentialsProvider({
-      name: "credentials",
+      name: "Credentials",
       credentials: {
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials: Record<"username" | "password", string> | undefined): Promise<User | null> {
+      async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) {
-          throw new Error("请输入用户名和密码")
+          throw new Error("Missing username or password");
         }
 
-        const user = await findUser(credentials.username);
+        const user = await prisma.user.findUnique({
+          where: {
+            username: credentials.username
+          },
+          include: {
+            permissions: true
+          }
+        });
 
         if (!user) {
-          throw new Error("用户不存在")
+          throw new Error("User not found");
         }
 
-        if (!user.password) {
-          throw new Error("请先设置密码")
-        }
-
-        const isValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        )
+        const isValid = await compare(credentials.password, user.password);
 
         if (!isValid) {
-          throw new Error("密码错误")
+          throw new Error("Invalid password");
         }
-
-        if (!user.status) {
-          throw new Error("账号已被禁用")
-        }
-
-        // 更新最后登录时间
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { lastLoginAt: new Date() }
-        });
 
         return {
           id: user.id,
@@ -83,47 +49,38 @@ export const config = {
           name: user.username,
           username: user.username,
           isAdmin: user.isAdmin,
-          image: null
-        }
+          image: null,
+          permissions: user.permissions.map(p => p.moduleId)
+        };
       }
     })
   ],
-  session: { 
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
-        token.username = user.username
-        token.isAdmin = user.isAdmin
+        token.username = user.username;
+        token.isAdmin = user.isAdmin;
+        token.permissions = user.permissions;
       }
-      return token
+      return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string
-        session.user.username = token.username as string
-        session.user.isAdmin = token.isAdmin as boolean
+      if (token && session.user) {
+        session.user.id = token.sub || "";
+        session.user.username = token.username;
+        session.user.isAdmin = token.isAdmin;
+        session.user.permissions = token.permissions;
       }
-      return session
+      return session;
     }
   },
   pages: {
-    signIn: "/",
-    signOut: "/",
-    error: "/",
-    newUser: "/"
+    signIn: "/login",
+    error: "/login",
   },
-  debug: process.env.NODE_ENV === 'development',
-} satisfies AuthOptions
+  secret: process.env.NEXTAUTH_SECRET
+};
 
-const auth = NextAuth(config)
+const handler = NextAuth(authOptions);
 
-export const getAuth = async () => {
-  return await auth()
-}
-
-export { auth }
-export const { signIn, signOut } = auth 
+export { handler as auth, handler as GET, handler as POST }; 

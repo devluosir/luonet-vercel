@@ -1,5 +1,4 @@
 import { NextAuthOptions } from "next-auth";
-import { PrismaAdapter } from "@prisma/client/runtime/library";
 import CredentialsProvider from "next-auth/providers/credentials";
 import prisma from "./prisma";
 import { compare } from "bcryptjs";
@@ -9,7 +8,6 @@ import NextAuth from "next-auth";
 const AUTH_CACHE_DURATION = 5 * 60 * 1000; // 5分钟
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -28,7 +26,7 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: {
-            username: credentials.username,
+            username: credentials.username
           },
           include: {
             permissions: true
@@ -47,10 +45,12 @@ export const authOptions: NextAuthOptions = {
 
         return {
           id: user.id,
+          email: user.email || "",
+          name: user.username,
           username: user.username,
-          email: user.email,
           isAdmin: user.isAdmin,
-          permissions: user.permissions.map(p => p.name)
+          image: null,
+          permissions: user.permissions.map(p => p.moduleId)
         };
       }
     })
@@ -58,7 +58,6 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
         token.username = user.username;
         token.isAdmin = user.isAdmin;
         token.permissions = user.permissions;
@@ -66,8 +65,8 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id;
+      if (token && session.user) {
+        session.user.id = token.sub || "";
         session.user.username = token.username;
         session.user.isAdmin = token.isAdmin;
         session.user.permissions = token.permissions;
@@ -79,11 +78,9 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/login",
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET
 };
 
-// 导出 auth 相关函数
-export const { auth, signIn, signOut } = NextAuth(authOptions);
+const handler = NextAuth(authOptions);
 
-// 为了向后兼容，也导出 authConfig
-export const authConfig = authOptions; 
+export { handler as auth, handler as GET, handler as POST }; 
