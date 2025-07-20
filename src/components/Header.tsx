@@ -77,9 +77,23 @@ export function Header({
 
         <div className="flex items-center space-x-4">
           {showWelcome && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 mr-4">
-              {new Date().toISOString().split('T')[0]}
-            </p>
+            <>
+              {/* 小屏时只显示日期 */}
+              <div className="flex sm:hidden items-center mr-4">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {new Date().toISOString().split('T')[0]}
+                </span>
+              </div>
+              {/* 中屏和大屏时显示用户名和日期 */}
+              <div className="hidden sm:flex items-center space-x-2 mr-4">
+                <span className="text-sm text-gray-900 dark:text-white font-medium">
+                  {user.name}
+                </span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {new Date().toISOString().split('T')[0]}
+                </span>
+              </div>
+            </>
           )}
           <div className="relative" ref={dropdownRef}>
             <button

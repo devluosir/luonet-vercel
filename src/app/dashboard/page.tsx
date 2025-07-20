@@ -407,10 +407,8 @@ export default function DashboardPage() {
   useEffect(() => {
     const init = async () => {
       setMounted(true);
-      console.log('🔍 Dashboard 初始化，开始获取权限...');
       // 获取用户权限 - 每次登录都强制重新获取
       await fetchUser(true);
-      console.log('🔍 Dashboard 权限获取完成');
     };
     init();
   }, [fetchUser]);
@@ -426,7 +424,6 @@ export default function DashboardPage() {
 
   // 使用权限store的权限检查函数
   const availableQuickCreateModules = useMemo(() => {
-    console.log('🔍 计算可用新建单据模块，用户权限:', user?.permissions?.map(p => `${p.moduleId}:${p.canAccess}`));
     const modules = QUICK_CREATE_MODULES.filter(module => {
       // 销售确认使用与报价单相同的权限
       if (module.id === 'confirmation') {
@@ -434,7 +431,6 @@ export default function DashboardPage() {
       }
       return hasPermission(module.id);
     });
-    console.log('🔍 可用新建单据模块:', modules.map(m => m.name));
     return modules;
   }, [hasPermission, user?.permissions]);
 
@@ -563,20 +559,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* 调试信息 */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-              <div className="text-sm text-yellow-800 dark:text-yellow-200">
-                <div>用户: {user?.username || '未加载'}</div>
-                <div>管理员: {user?.isAdmin ? '是' : '否'}</div>
-                <div>权限数量: {user?.permissions?.length || 0}</div>
-                <div>可用模块: {availableQuickCreateModules.length + availableToolsModules.length + availableToolModules.length}</div>
-                <div>权限列表: {user?.permissions?.map(p => `${p.moduleId}:${p.canAccess}`).join(', ') || '无'}</div>
-                <div>加载状态: {refreshing ? '加载中' : '已完成'}</div>
-                <div>错误信息: {usePermissionStore.getState().error || '无'}</div>
-              </div>
-            </div>
-          )}
+
 
           {/* 功能按钮区域 */}
           {(availableQuickCreateModules.length > 0 || availableToolsModules.length > 0 || availableToolModules.length > 0) && (
