@@ -97,6 +97,14 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
         };
         history[index] = updatedHistory;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        
+        // 触发自定义事件，通知Dashboard页面更新
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('customStorageChange', {
+            detail: { key: STORAGE_KEY }
+          }));
+        }
+        
         return updatedHistory;
       }
     }
@@ -118,6 +126,14 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
 
     history.unshift(newHistory);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    
+    // 触发自定义事件，通知Dashboard页面更新
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('customStorageChange', {
+        detail: { key: STORAGE_KEY }
+      }));
+    }
+    
     return newHistory;
   } catch (error) {
     console.error('Error saving packing history:', error);

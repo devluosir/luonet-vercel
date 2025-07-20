@@ -17,6 +17,7 @@ interface HeaderProps {
   onRefreshPermissions?: () => void;
   isRefreshing?: boolean;
   title?: string;
+  showWelcome?: boolean;
 }
 
 export function Header({ 
@@ -25,7 +26,8 @@ export function Header({
   onProfile, 
   onRefreshPermissions,
   isRefreshing = false,
-  title = 'LC App' 
+  title = 'LC App',
+  showWelcome = false
 }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -68,7 +70,19 @@ export function Header({
             placeholder="blur"
             blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
           />
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h1>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h1>
+            {showWelcome && (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                欢迎回来，{user.name}！今天是 {new Date().toLocaleDateString('zh-CN', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric',
+                  weekday: 'long'
+                })}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center space-x-4">

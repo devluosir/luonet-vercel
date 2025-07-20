@@ -28,13 +28,21 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
           updatedAt: new Date().toISOString(),
           type,
           customerName: data.to,
-          quotationNo: data.quotationNo,
+          quotationNo: type === 'confirmation' ? data.contractNo : data.quotationNo,
           totalAmount,
           currency: data.currency,
           data
         };
         history[index] = updatedHistory;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        
+        // 触发自定义事件，通知Dashboard页面更新
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('customStorageChange', {
+            detail: { key: STORAGE_KEY }
+          }));
+        }
+        
         return updatedHistory;
       }
     }
@@ -47,7 +55,7 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
       updatedAt: new Date().toISOString(),
       type,
       customerName: data.to,
-      quotationNo: data.quotationNo,
+      quotationNo: type === 'confirmation' ? data.contractNo : data.quotationNo,
       totalAmount,
       currency: data.currency,
       data
@@ -55,6 +63,14 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
 
     history.unshift(newHistory);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    
+    // 触发自定义事件，通知Dashboard页面更新
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('customStorageChange', {
+        detail: { key: STORAGE_KEY }
+      }));
+    }
+    
     return newHistory;
   } catch (error) {
     console.error('Error saving quotation history:', error);
@@ -73,7 +89,8 @@ export const getQuotationHistory = (filters?: QuotationHistoryFilters): Quotatio
         const searchLower = filters.search.toLowerCase();
         history = history.filter((item: QuotationHistory) => 
           item.customerName.toLowerCase().includes(searchLower) ||
-          item.quotationNo.toLowerCase().includes(searchLower)
+          item.quotationNo.toLowerCase().includes(searchLower) ||
+          (item.type === 'confirmation' && item.data?.contractNo && item.data.contractNo.toLowerCase().includes(searchLower))
         );
       }
 

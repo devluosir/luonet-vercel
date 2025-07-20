@@ -19,6 +19,14 @@ export const getInvoiceHistory = (): InvoiceHistory[] => {
 export const saveInvoiceHistory = (history: InvoiceHistory[]): boolean => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    
+    // 触发自定义事件，通知Dashboard页面更新
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('customStorageChange', {
+        detail: { key: STORAGE_KEY }
+      }));
+    }
+    
     return true;
   } catch (error) {
     console.error('Error saving invoice history:', error);

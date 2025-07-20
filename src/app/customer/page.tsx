@@ -272,7 +272,9 @@ export default function CustomerPage() {
           const history = JSON.parse(localStorage.getItem('quotation_history') || '[]');
           const item = history.find((item: any) => 
             item.type === type && 
-            (item.quotationNo === documentNo || item.data?.quotationNo === documentNo)
+            (item.quotationNo === documentNo || 
+             item.data?.quotationNo === documentNo ||
+             (type === 'confirmation' && item.data?.contractNo === documentNo))
           );
           return item?.id || null;
         }

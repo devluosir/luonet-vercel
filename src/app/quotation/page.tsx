@@ -217,18 +217,22 @@ export default function QuotationPage() {
       }, 100);
 
       // 记录客户信息使用情况
-      if (data.to && data.quotationNo) {
+      if (data.to) {
         const customerName = data.to.split('\n')[0].trim();
         // 根据当前标签页决定文档类型
         const documentType = activeTab === 'quotation' ? 'quotation' : 'confirmation';
-        console.log('报价单/订单确认记录客户使用情况:', {
-          customerName,
-          documentType,
-          documentNo: data.quotationNo,
-          activeTab,
-          fullCustomerInfo: data.to
-        });
-        recordCustomerUsage(customerName, documentType, data.quotationNo);
+        const documentNo = activeTab === 'quotation' ? data.quotationNo : data.contractNo;
+        
+        if (documentNo) {
+          console.log('报价单/订单确认记录客户使用情况:', {
+            customerName,
+            documentType,
+            documentNo,
+            activeTab,
+            fullCustomerInfo: data.to
+          });
+          recordCustomerUsage(customerName, documentType, documentNo);
+        }
       }
       
       // 生成 PDF
@@ -277,7 +281,7 @@ export default function QuotationPage() {
         updatedAt: new Date().toISOString(),
         type: activeTab,
         customerName: data.to || 'Unknown',
-        quotationNo: data.quotationNo || 'N/A', 
+        quotationNo: activeTab === 'quotation' ? data.quotationNo : data.contractNo || 'N/A', 
         totalAmount: data.items.reduce((sum, item) => sum + item.amount, 0) + (data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0),
         currency: data.currency,
         data: data

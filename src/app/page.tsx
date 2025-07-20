@@ -26,7 +26,7 @@ export default function LoginPage() {
     performanceMonitor.monitorResourceLoading();
 
     if (session) {
-      router.push('/tools');
+      router.push('/dashboard');
     }
 
     // 页面加载完成后的性能记录
@@ -75,7 +75,7 @@ export default function LoginPage() {
       // 保存用户名到localStorage，首字母大写
       const formattedUsername = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
       localStorage.setItem('username', formattedUsername);
-      router.push('/tools');
+      router.push('/dashboard');
     } catch (error) {
       performanceMonitor.endTimer('login_request');
       console.error('登录错误:', error);
