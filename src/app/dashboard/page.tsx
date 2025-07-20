@@ -407,11 +407,13 @@ export default function DashboardPage() {
   useEffect(() => {
     const init = async () => {
       setMounted(true);
-      // 预加载权限，但不做验证
-      // await validatePermissions.preloadPermissions(); // 移除此行，因为权限验证已移至usePermissionStore
+      // 获取用户权限
+      if (!user) {
+        await fetchUser();
+      }
     };
     init();
-  }, []);
+  }, [user, fetchUser]);
 
   const handleLogout = async () => {
     // 清除权限store
@@ -859,7 +861,15 @@ export default function DashboardPage() {
                 暂无可用功能，请联系管理员分配权限
               </div>
               <button
-                onClick={() => {}} // 移除刷新权限按钮，因为权限已预加载
+                onClick={async () => {
+                  try {
+                    await fetchUser(true);
+                    setShowSuccessMessage(true);
+                    setTimeout(() => setShowSuccessMessage(false), 3000);
+                  } catch (error) {
+                    console.error('刷新权限失败:', error);
+                  }
+                }}
                 disabled={refreshing}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   refreshing
