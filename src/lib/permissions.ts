@@ -79,10 +79,15 @@ export const usePermissionStore = create<PermissionStore>()(
 
       hasPermission: (moduleId) => {
         const { user } = get();
-        if (!user?.permissions) return false;
+        if (!user?.permissions) {
+          console.log('🔍 hasPermission:', moduleId, '用户无权限数据');
+          return false;
+        }
         
         const permission = user.permissions.find(p => p.moduleId === moduleId);
-        return permission?.canAccess || false;
+        const hasAccess = permission?.canAccess || false;
+        console.log('🔍 hasPermission:', moduleId, hasAccess, '用户权限:', user.permissions.map(p => `${p.moduleId}:${p.canAccess}`));
+        return hasAccess;
       },
 
       hasAnyPermission: (moduleIds) => {
@@ -103,12 +108,16 @@ export const usePermissionStore = create<PermissionStore>()(
       fetchUser: async (forceRefresh = false) => {
         const { lastFetched, user, permissionChanged } = get();
         
+        console.log('🔍 fetchUser 调用:', { forceRefresh, user: !!user, lastFetched, permissionChanged });
+        
         // 智能刷新策略 - 重新登录时强制刷新
         const shouldRefresh = forceRefresh || 
           !user || 
           !lastFetched || 
           permissionChanged ||
           (Date.now() - lastFetched > CACHE_DURATION);
+        
+        console.log('🔍 是否需要刷新:', shouldRefresh, { forceRefresh, noUser: !user, noLastFetched: !lastFetched, permissionChanged, cacheExpired: lastFetched ? (Date.now() - lastFetched > CACHE_DURATION) : false });
         
         // 如果不需要刷新且不是强制刷新，尝试从备份恢复
         if (!shouldRefresh && !forceRefresh) {
@@ -118,6 +127,7 @@ export const usePermissionStore = create<PermissionStore>()(
               const { user: backupUser, timestamp } = JSON.parse(backup);
               // 检查备份是否在有效期内
               if (Date.now() - timestamp < CACHE_DURATION) {
+                console.log('🔍 使用备份数据:', backupUser.username, '权限数量:', backupUser.permissions?.length);
                 set({ user: backupUser, lastFetched: timestamp });
                 return;
               }
@@ -125,6 +135,7 @@ export const usePermissionStore = create<PermissionStore>()(
           } catch (error) {
             console.error('Error loading permissions backup:', error);
           }
+          console.log('🔍 使用当前缓存数据');
           return; // 使用当前缓存数据
         }
 
@@ -132,12 +143,14 @@ export const usePermissionStore = create<PermissionStore>()(
         if (forceRefresh) {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('permissions_backup');
+            console.log('🔍 强制刷新，清除备份缓存');
           }
         }
 
         set({ isLoading: true, error: null });
 
         try {
+          console.log('🔍 开始获取用户数据...');
           const response = await fetch(`/api/users/me${forceRefresh ? '?force=true' : ''}`, {
             headers: {
               'Cache-Control': 'no-cache',
@@ -150,6 +163,7 @@ export const usePermissionStore = create<PermissionStore>()(
           }
 
           const userData = await response.json();
+          console.log('🔍 获取到用户数据:', userData.username, '权限数量:', userData.permissions?.length);
           
           // 检测权限变化
           const currentUser = get().user;
@@ -167,6 +181,7 @@ export const usePermissionStore = create<PermissionStore>()(
           
           // 备份新的权限数据
           backupPermissions(userData);
+          console.log('🔍 权限数据已更新和备份');
           
           // 权限变化通知
           if (permissionsChanged && typeof window !== 'undefined') {
@@ -179,7 +194,8 @@ export const usePermissionStore = create<PermissionStore>()(
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
           set({ error: errorMessage });
-          console.error('Error fetching user:', error);
+          console.error('🔍 fetchUser 错误:', error);
+          console.error('🔍 错误详情:', error instanceof Error ? error.stack : error);
         } finally {
           set({ isLoading: false });
         }
