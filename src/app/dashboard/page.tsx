@@ -54,7 +54,7 @@ interface User {
 const QUICK_CREATE_MODULES = [
   { 
     id: 'quotation', 
-    name: '报价单', 
+    name: '新报价单', 
     description: '创建报价单', 
     path: '/quotation',
     icon: FileText,
@@ -78,7 +78,7 @@ const QUICK_CREATE_MODULES = [
   },
   { 
     id: 'packing', 
-    name: '箱单', 
+    name: '箱单发票', 
     description: '创建装箱单和发票', 
     path: '/packing',
     icon: Archive,
@@ -90,7 +90,7 @@ const QUICK_CREATE_MODULES = [
   },
   { 
     id: 'invoice', 
-    name: '发票', 
+    name: '财务发票', 
     description: '创建财务发票', 
     path: '/invoice',
     icon: Receipt,
@@ -102,7 +102,7 @@ const QUICK_CREATE_MODULES = [
   },
   { 
     id: 'purchase', 
-    name: '采购单', 
+    name: '采购订单', 
     description: '创建采购订单', 
     path: '/purchase',
     icon: ShoppingCart,
@@ -694,7 +694,7 @@ export default function DashboardPage() {
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
                     }`}
                   >
-                    当天
+                    1D
                   </button>
                   <button
                     onClick={() => setTimeFilter('3days')}
@@ -704,7 +704,7 @@ export default function DashboardPage() {
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
                     }`}
                   >
-                    三天
+                    3D
                   </button>
                   <button
                     onClick={() => setTimeFilter('week')}
@@ -714,7 +714,7 @@ export default function DashboardPage() {
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
                     }`}
                   >
-                    一周
+                    1W
                   </button>
                   <button
                     onClick={() => setTimeFilter('month')}
@@ -724,7 +724,7 @@ export default function DashboardPage() {
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
                     }`}
                   >
-                    一月
+                    1M
                   </button>
                 </div>
                 {/* 刷新成功消息 */}
