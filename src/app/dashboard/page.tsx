@@ -573,11 +573,11 @@ export default function DashboardPage() {
                       key={module.id}
                       className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
                         rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                        hover:-translate-y-1 cursor-pointer
+                        hover:-translate-y-1 active:translate-y-0 cursor-pointer
                         border border-gray-200/50 dark:border-gray-800/50
                         hover:border-gray-300/70 dark:hover:border-gray-700/70
-                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                        dark:focus:ring-offset-gray-900
+                        focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
+                        dark:focus:ring-offset-gray-900 active:shadow-sm
                         p-4 h-20 flex items-center space-x-3"
                       onClick={() => {
                         if (module.id === 'confirmation') {
@@ -609,9 +609,11 @@ export default function DashboardPage() {
                       key={module.id}
                       className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
                         rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                        hover:-translate-y-1 cursor-pointer
+                        hover:-translate-y-1 active:translate-y-0 cursor-pointer
                         border border-gray-200/50 dark:border-gray-800/50
                         hover:border-gray-300/70 dark:hover:border-gray-700/70
+                        focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
+                        dark:focus:ring-offset-gray-900 active:shadow-sm
                         p-4 h-20 flex items-center space-x-3"
                       onClick={() => router.push(module.path)}
                     >
@@ -635,9 +637,11 @@ export default function DashboardPage() {
                       key={module.id}
                       className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
                         rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                        hover:-translate-y-1 cursor-pointer
+                        hover:-translate-y-1 active:translate-y-0 cursor-pointer
                         border border-gray-200/50 dark:border-gray-800/50
                         hover:border-gray-300/70 dark:hover:border-gray-700/70
+                        focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
+                        dark:focus:ring-offset-gray-900 active:shadow-sm
                         p-4 h-20 flex items-center space-x-3"
                       onClick={() => router.push(module.path)}
                     >
@@ -658,9 +662,11 @@ export default function DashboardPage() {
                   <button
                     className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
                       rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                      hover:-translate-y-1 cursor-pointer
+                      hover:-translate-y-1 active:translate-y-0 cursor-pointer
                       border border-gray-200/50 dark:border-gray-800/50
                       hover:border-gray-300/70 dark:hover:border-gray-700/70
+                      focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
+                      dark:focus:ring-offset-gray-900 active:shadow-sm
                       p-4 h-20 flex items-center space-x-3"
                     onClick={() => router.push('/tools')}
                   >
@@ -688,40 +694,48 @@ export default function DashboardPage() {
                 <div className="flex items-center space-x-1 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-1">
                   <button
                     onClick={() => setTimeFilter('today')}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                    className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                      focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-1
+                      dark:focus:ring-offset-gray-900 active:scale-95 ${
                       timeFilter === 'today'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                     }`}
                   >
                     1D
                   </button>
                   <button
                     onClick={() => setTimeFilter('3days')}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                    className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                      focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-1
+                      dark:focus:ring-offset-gray-900 active:scale-95 ${
                       timeFilter === '3days'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                     }`}
                   >
                     3D
                   </button>
                   <button
                     onClick={() => setTimeFilter('week')}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                    className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                      focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-1
+                      dark:focus:ring-offset-gray-900 active:scale-95 ${
                       timeFilter === 'week'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                     }`}
                   >
                     1W
                   </button>
                   <button
                     onClick={() => setTimeFilter('month')}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                    className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                      focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-1
+                      dark:focus:ring-offset-gray-900 active:scale-95 ${
                       timeFilter === 'month'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                     }`}
                   >
                     1M
@@ -741,10 +755,12 @@ export default function DashboardPage() {
                   <button
                     onClick={handleRefreshDocuments}
                     disabled={refreshingDocuments}
-                    className={`flex items-center space-x-1 text-sm transition-colors ${
+                    className={`flex items-center space-x-1 text-sm transition-all duration-200 ease-in-out
+                      focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-1
+                      dark:focus:ring-offset-gray-900 active:scale-95 rounded-lg px-2 py-1 ${
                       refreshingDocuments 
                         ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' 
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                     }`}
                     title="刷新单据列表"
                   >
@@ -756,7 +772,10 @@ export default function DashboardPage() {
                 )}
                 <button
                   onClick={() => router.push('/history')}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 
+                    transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/50 
+                    focus:ring-offset-1 dark:focus:ring-offset-gray-900 active:scale-95 rounded-lg px-2 py-1
+                    hover:bg-blue-50 dark:hover:bg-blue-900/20"
                 >
                   查看全部
                 </button>
@@ -805,7 +824,10 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={doc.id}
-                      className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 p-3 hover:shadow-lg hover:-translate-y-1 transition-all duration-200 cursor-pointer"
+                      className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 
+                        p-3 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 transition-all duration-200 cursor-pointer
+                        focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 dark:focus:ring-offset-gray-900
+                        active:shadow-sm"
                       onClick={() => {
                         // 根据文档类型跳转到编辑页面
                         const editPath = `/${doc.type}/edit/${doc.id}`;
@@ -873,10 +895,12 @@ export default function DashboardPage() {
                   }
                 }}
                 disabled={refreshing}
-                className={`px-4 py-2 rounded-lg transition-colors ${
+                className={`px-4 py-2 rounded-lg transition-all duration-200 ease-in-out
+                  focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
+                  dark:focus:ring-offset-gray-900 active:scale-95 ${
                   refreshing
                     ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
                 }`}
               >
                 {refreshing ? '刷新中...' : '刷新权限'}
