@@ -824,25 +824,38 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={doc.id}
-                      className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 
+                      className="group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 
                         p-3 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 transition-all duration-200 cursor-pointer
                         focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 dark:focus:ring-offset-gray-900
-                        active:shadow-sm"
+                        active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70"
                       onClick={() => {
                         // 根据文档类型跳转到编辑页面
                         const editPath = `/${doc.type}/edit/${doc.id}`;
                         router.push(editPath);
                       }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          const editPath = `/${doc.type}/edit/${doc.id}`;
+                          router.push(editPath);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`编辑${getDocumentTypeName(doc.type)}单据 ${getDocumentNumber(doc)}`}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className={`w-7 h-7 rounded-lg ${bgColor} flex items-center justify-center flex-shrink-0`}>
+                        <div className={`w-7 h-7 rounded-lg ${bgColor} flex items-center justify-center flex-shrink-0
+                          group-hover:scale-110 transition-transform duration-200`}>
                           <Icon className={`w-3.5 h-3.5 ${textColor}`} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white truncate
+                            group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
                             {getDocumentTypeName(doc.type)} - {getDocumentNumber(doc)}
                           </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5
+                            group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors duration-200">
                             {(() => {
                               let name = '';
                               if (doc.type === 'purchase') {
@@ -856,6 +869,12 @@ export default function DashboardPage() {
                               return name.split('\n')[0]?.trim() || name;
                             })()}
                           </div>
+                        </div>
+                        {/* 添加一个微妙的箭头指示器 */}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
+                          <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
                         </div>
                       </div>
                     </div>
