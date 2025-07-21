@@ -727,32 +727,33 @@ export default function DashboardPage() {
                     1M
                   </button>
                 </div>
-                {/* 刷新成功消息 */}
-                {showDocumentsRefreshMessage && (
-                  <div className="flex items-center px-3 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                    <svg className="w-4 h-4 text-green-600 dark:text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {/* 刷新按钮或成功提示 */}
+                {showDocumentsRefreshMessage ? (
+                  <div className="flex items-center space-x-1 text-sm px-3 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                     <span className="text-green-800 dark:text-green-200 text-xs font-medium">
                       已刷新
                     </span>
                   </div>
+                ) : (
+                  <button
+                    onClick={handleRefreshDocuments}
+                    disabled={refreshingDocuments}
+                    className={`flex items-center space-x-1 text-sm transition-colors ${
+                      refreshingDocuments 
+                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                    title="刷新单据列表"
+                  >
+                    <svg className={`w-4 h-4 ${refreshingDocuments ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>{refreshingDocuments ? '刷新中...' : '刷新'}</span>
+                  </button>
                 )}
-                <button
-                  onClick={handleRefreshDocuments}
-                  disabled={refreshingDocuments}
-                  className={`flex items-center space-x-1 text-sm transition-colors ${
-                    refreshingDocuments 
-                      ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' 
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
-                  title="刷新单据列表"
-                >
-                  <svg className={`w-4 h-4 ${refreshingDocuments ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  <span>{refreshingDocuments ? '刷新中...' : '刷新'}</span>
-                </button>
                 <button
                   onClick={() => router.push('/history')}
                   className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
