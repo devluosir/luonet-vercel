@@ -571,14 +571,15 @@ export default function DashboardPage() {
                   return (
                     <button
                       key={module.id}
-                      className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
+                      className={`group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
                         rounded-xl overflow-hidden transition-all duration-300 ease-in-out
                         hover:-translate-y-1 active:translate-y-0 cursor-pointer
                         border border-gray-200/50 dark:border-gray-800/50
                         hover:border-gray-300/70 dark:hover:border-gray-700/70
                         focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
                         dark:focus:ring-offset-gray-900 active:shadow-sm
-                        p-4 h-20 flex items-center space-x-3"
+                        p-4 h-20 flex items-center space-x-3
+                        hover:bg-gradient-to-br ${module.bgColor}`}
                       onClick={() => {
                         if (module.id === 'confirmation') {
                           // 为销售确认设置全局变量
@@ -593,7 +594,8 @@ export default function DashboardPage() {
                         <Icon className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1 min-w-0 text-left">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1
+                          transition-colors duration-200 group-hover:text-gray-800 dark:group-hover:text-gray-200">
                           {module.name}
                         </h3>
                       </div>
@@ -607,21 +609,23 @@ export default function DashboardPage() {
                   return (
                     <button
                       key={module.id}
-                      className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
+                      className={`group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
                         rounded-xl overflow-hidden transition-all duration-300 ease-in-out
                         hover:-translate-y-1 active:translate-y-0 cursor-pointer
                         border border-gray-200/50 dark:border-gray-800/50
                         hover:border-gray-300/70 dark:hover:border-gray-700/70
                         focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
                         dark:focus:ring-offset-gray-900 active:shadow-sm
-                        p-4 h-20 flex items-center space-x-3"
+                        p-4 h-20 flex items-center space-x-3
+                        hover:bg-gradient-to-br ${module.bgColor}`}
                       onClick={() => router.push(module.path)}
                     >
                       <div className={`p-2 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
                         <Icon className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1 min-w-0 text-left">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1
+                          transition-colors duration-200 group-hover:text-gray-800 dark:group-hover:text-gray-200">
                           {module.name}
                         </h3>
                       </div>
@@ -635,21 +639,23 @@ export default function DashboardPage() {
                   return (
                     <button
                       key={module.id}
-                      className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
+                      className={`group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
                         rounded-xl overflow-hidden transition-all duration-300 ease-in-out
                         hover:-translate-y-1 active:translate-y-0 cursor-pointer
                         border border-gray-200/50 dark:border-gray-800/50
                         hover:border-gray-300/70 dark:hover:border-gray-700/70
                         focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
                         dark:focus:ring-offset-gray-900 active:shadow-sm
-                        p-4 h-20 flex items-center space-x-3"
+                        p-4 h-20 flex items-center space-x-3
+                        hover:bg-gradient-to-br ${module.bgColor}`}
                       onClick={() => router.push(module.path)}
                     >
                       <div className={`p-2 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
                         <Icon className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1 min-w-0 text-left">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1
+                          transition-colors duration-200 group-hover:text-gray-800 dark:group-hover:text-gray-200">
                           {module.name}
                         </h3>
                       </div>
@@ -667,14 +673,16 @@ export default function DashboardPage() {
                       hover:border-gray-300/70 dark:hover:border-gray-700/70
                       focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
                       dark:focus:ring-offset-gray-900 active:shadow-sm
-                      p-4 h-20 flex items-center space-x-3"
+                      p-4 h-20 flex items-center space-x-3
+                      hover:bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20"
                     onClick={() => router.push('/tools')}
                   >
                     <div className="p-2 rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300">
                       <Settings className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1 min-w-0 text-left">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1
+                        group-hover:text-gray-800 dark:group-hover:text-gray-200 transition-colors duration-200">
                         更多功能
                       </h3>
                     </div>
@@ -689,14 +697,13 @@ export default function DashboardPage() {
           {/* 4. 今天创建或修改的单据 */}
           <div className="mb-8">
             <div className="flex items-center justify-end mb-4">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
                 {/* 时间筛选器 */}
                 <div className="flex items-center space-x-1 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-1">
                   <button
                     onClick={() => setTimeFilter('today')}
                     className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-1
-                      dark:focus:ring-offset-gray-900 active:scale-95 ${
+                      active:scale-95 ${
                       timeFilter === 'today'
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
@@ -707,8 +714,7 @@ export default function DashboardPage() {
                   <button
                     onClick={() => setTimeFilter('3days')}
                     className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-1
-                      dark:focus:ring-offset-gray-900 active:scale-95 ${
+                      active:scale-95 ${
                       timeFilter === '3days'
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
@@ -719,8 +725,7 @@ export default function DashboardPage() {
                   <button
                     onClick={() => setTimeFilter('week')}
                     className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-1
-                      dark:focus:ring-offset-gray-900 active:scale-95 ${
+                      active:scale-95 ${
                       timeFilter === 'week'
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
@@ -731,8 +736,7 @@ export default function DashboardPage() {
                   <button
                     onClick={() => setTimeFilter('month')}
                     className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-1
-                      dark:focus:ring-offset-gray-900 active:scale-95 ${
+                      active:scale-95 ${
                       timeFilter === 'month'
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
@@ -748,7 +752,7 @@ export default function DashboardPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                     <span className="text-green-800 dark:text-green-200 text-xs font-medium">
-                      已刷新
+                      刷新
                     </span>
                   </div>
                 ) : (
@@ -756,8 +760,7 @@ export default function DashboardPage() {
                     onClick={handleRefreshDocuments}
                     disabled={refreshingDocuments}
                     className={`flex items-center space-x-1 text-sm transition-all duration-200 ease-in-out
-                      focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-1
-                      dark:focus:ring-offset-gray-900 active:scale-95 rounded-lg px-2 py-1 ${
+                      active:scale-95 rounded-lg px-2 py-1 ${
                       refreshingDocuments 
                         ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' 
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
@@ -773,8 +776,7 @@ export default function DashboardPage() {
                 <button
                   onClick={() => router.push('/history')}
                   className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 
-                    transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500/50 
-                    focus:ring-offset-1 dark:focus:ring-offset-gray-900 active:scale-95 rounded-lg px-2 py-1
+                    transition-all duration-200 ease-in-out active:scale-95 rounded-lg px-2 py-1
                     hover:bg-blue-50 dark:hover:bg-blue-900/20"
                 >
                   查看全部
@@ -824,10 +826,27 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={doc.id}
-                      className="group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 
+                      className={`group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 
                         p-3 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 transition-all duration-200 cursor-pointer
                         focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 dark:focus:ring-offset-gray-900
-                        active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70"
+                        active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70
+                        ${(() => {
+                          // 根据文档类型匹配对应的模块颜色
+                          switch (doc.type) {
+                            case 'quotation':
+                              return 'hover:bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20';
+                            case 'confirmation':
+                              return 'hover:bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20';
+                            case 'packing':
+                              return 'hover:bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20';
+                            case 'invoice':
+                              return 'hover:bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20';
+                            case 'purchase':
+                              return 'hover:bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20';
+                            default:
+                              return 'hover:bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20';
+                          }
+                        })()}`}
                       onClick={() => {
                         // 根据文档类型跳转到编辑页面
                         const editPath = `/${doc.type}/edit/${doc.id}`;
@@ -850,8 +869,24 @@ export default function DashboardPage() {
                           <Icon className={`w-3.5 h-3.5 ${textColor}`} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white truncate
-                            group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
+                          <div className={`text-sm font-medium text-gray-900 dark:text-white truncate
+                            transition-colors duration-200 ${(() => {
+                              // 根据文档类型匹配对应的文字颜色
+                              switch (doc.type) {
+                                case 'quotation':
+                                  return 'group-hover:text-blue-600 dark:group-hover:text-blue-400';
+                                case 'confirmation':
+                                  return 'group-hover:text-green-600 dark:group-hover:text-green-400';
+                                case 'packing':
+                                  return 'group-hover:text-teal-600 dark:group-hover:text-teal-400';
+                                case 'invoice':
+                                  return 'group-hover:text-purple-600 dark:group-hover:text-purple-400';
+                                case 'purchase':
+                                  return 'group-hover:text-orange-600 dark:group-hover:text-orange-400';
+                                default:
+                                  return 'group-hover:text-gray-600 dark:group-hover:text-gray-400';
+                              }
+                            })()}`}>
                             {getDocumentTypeName(doc.type)} - {getDocumentNumber(doc)}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5
