@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { ChevronDown, LogOut, Settings, User, RefreshCw } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { Avatar } from './Avatar';
+import { format } from 'date-fns';
 
 interface HeaderProps {
   user: {
@@ -57,15 +58,34 @@ export function Header({
   };
 
   // 获取当前日期和星期几
-  const getCurrentDate = () => {
+  const [currentDate, setCurrentDate] = useState(() => {
     const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
+    const dateStr = format(now, 'yyyy-MM-dd');
     const dayOfWeek = now.getDay(); // 0-6 (周日-周六)
     const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
     return { date: dateStr, dayOfWeek: dayNames[dayOfWeek] };
-  };
+  });
 
-  const { date, dayOfWeek } = getCurrentDate();
+  // 每分钟更新一次日期
+  useEffect(() => {
+    const updateDate = () => {
+      const now = new Date();
+      const dateStr = format(now, 'yyyy-MM-dd');
+      const dayOfWeek = now.getDay();
+      const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+      setCurrentDate({ date: dateStr, dayOfWeek: dayNames[dayOfWeek] });
+    };
+
+    // 立即更新一次
+    updateDate();
+    
+    // 每分钟更新一次
+    const interval = setInterval(updateDate, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const { date, dayOfWeek } = currentDate;
 
   return (
     <header className="bg-white dark:bg-[#1c1c1e] shadow-sm dark:shadow-gray-800/30">

@@ -20,6 +20,7 @@ import { Footer } from '@/components/Footer';
 import { parseExcelData, convertExcelToLineItems } from '@/utils/excelPasteHandler';
 import { PaymentTermsSection } from '@/components/quotation/PaymentTermsSection';
 import { saveQuotationHistory } from '@/utils/quotationHistory';
+import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
 
 // 标题样式
@@ -60,14 +61,14 @@ export default function QuotationPage() {
     to: '',
     inquiryNo: '',
     quotationNo: '',
-    date: new Date().toISOString().split('T')[0],
+    date: format(new Date(), 'yyyy-MM-dd'),
     from: typeof window !== 'undefined' ? 
       (localStorage.getItem('username') ? 
         localStorage.getItem('username')!.charAt(0).toUpperCase() + localStorage.getItem('username')!.slice(1).toLowerCase() : 
         'Roger') : 
       'Roger',
     currency: 'USD',
-    paymentDate: new Date().toISOString().split('T')[0],
+    paymentDate: format(new Date(), 'yyyy-MM-dd'),
     items: [{
       id: 1,
       partName: '',

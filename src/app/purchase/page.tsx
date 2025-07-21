@@ -12,6 +12,7 @@ import { savePurchaseHistory, getPurchaseHistory } from '@/utils/purchaseHistory
 import { useRouter, usePathname } from 'next/navigation';
 import { Footer } from '@/components/Footer';
 import { v4 as uuidv4 } from 'uuid';
+import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
 
 // 动态导入PDFPreviewModal
@@ -22,8 +23,8 @@ const defaultData: PurchaseOrderData = {
   ourRef: '',
   yourRef: '',
   orderNo: '',
-  date: new Date().toISOString().split('T')[0],
-  supplierQuoteDate: new Date().toISOString().split('T')[0],
+  date: format(new Date(), 'yyyy-MM-dd'),
+  supplierQuoteDate: format(new Date(), 'yyyy-MM-dd'),
   contractAmount: '',
   projectSpecification: '',
   paymentTerms: '交货后30天',
