@@ -1171,22 +1171,22 @@ export default function HistoryManagementPage() {
                 if (isActive) {
                   switch (tab.id) {
                     case 'quotation':
-                      activeClasses = 'border-blue-500 text-blue-600 dark:text-blue-300';
+                      activeClasses = 'border-blue-500 text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30';
                       break;
                     case 'confirmation':
-                      activeClasses = 'border-green-500 text-green-600 dark:text-green-300';
+                      activeClasses = 'border-green-500 text-green-600 dark:text-green-300 bg-green-50 dark:bg-green-900/30';
                       break;
                     case 'packing':
-                      activeClasses = 'border-teal-500 text-teal-600 dark:text-teal-300';
+                      activeClasses = 'border-teal-500 text-teal-600 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30';
                       break;
                     case 'invoice':
-                      activeClasses = 'border-purple-500 text-purple-600 dark:text-purple-300';
+                      activeClasses = 'border-purple-500 text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30';
                       break;
                     case 'purchase':
-                      activeClasses = 'border-orange-500 text-orange-600 dark:text-orange-300';
+                      activeClasses = 'border-orange-500 text-orange-600 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30';
                       break;
                     default:
-                      activeClasses = 'border-blue-500 text-blue-600 dark:text-blue-300';
+                      activeClasses = 'border-blue-500 text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30';
                   }
                 }
                 
@@ -1194,8 +1194,8 @@ export default function HistoryManagementPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as HistoryType)}
-                    className={`flex items-center space-x-1.5 sm:space-x-2 py-2 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors duration-200 whitespace-nowrap flex-shrink-0
-                      ${isActive ? activeClasses : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                    className={`flex items-center space-x-1.5 sm:space-x-2 py-2 px-3 sm:px-4 font-medium text-xs sm:text-sm transition-all duration-200 whitespace-nowrap flex-shrink-0 rounded-t-lg border-2 border-transparent
+                      ${isActive ? activeClasses : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                   >
                     <span className="relative inline-block">
                       <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
