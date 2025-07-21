@@ -693,12 +693,12 @@ export default function DashboardPage() {
           {/* 4. 今天创建或修改的单据 */}
           <div className="mb-8">
             <div className="flex items-center justify-end mb-4">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2">
                 {/* 时间筛选器 */}
-                <div className="flex items-center space-x-1 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-1">
+                <div className="flex items-center space-x-0.5 sm:space-x-1 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1">
                   <button
                     onClick={() => setTimeFilter('today')}
-                    className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                    className={`px-2 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
                       active:scale-95 ${
                       timeFilter === 'today'
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
@@ -709,7 +709,7 @@ export default function DashboardPage() {
                   </button>
                   <button
                     onClick={() => setTimeFilter('3days')}
-                    className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                    className={`px-2 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
                       active:scale-95 ${
                       timeFilter === '3days'
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
@@ -720,7 +720,7 @@ export default function DashboardPage() {
                   </button>
                   <button
                     onClick={() => setTimeFilter('week')}
-                    className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                    className={`px-2 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
                       active:scale-95 ${
                       timeFilter === 'week'
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
@@ -731,7 +731,7 @@ export default function DashboardPage() {
                   </button>
                   <button
                     onClick={() => setTimeFilter('month')}
-                    className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                    className={`px-2 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
                       active:scale-95 ${
                       timeFilter === 'month'
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
@@ -743,8 +743,8 @@ export default function DashboardPage() {
                 </div>
                 {/* 刷新按钮或成功提示 */}
                 {showDocumentsRefreshMessage ? (
-                  <div className="flex items-center space-x-1 text-sm px-3 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                    <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center space-x-1 text-xs sm:text-sm px-2 sm:px-3 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                     <span className="text-green-800 dark:text-green-200 text-xs font-medium">
@@ -755,24 +755,24 @@ export default function DashboardPage() {
                   <button
                     onClick={handleRefreshDocuments}
                     disabled={refreshingDocuments}
-                    className={`flex items-center space-x-1 text-sm transition-all duration-200 ease-in-out
-                      active:scale-95 rounded-lg px-2 py-1 ${
+                    className={`flex items-center space-x-1 text-xs sm:text-sm transition-all duration-200 ease-in-out
+                      active:scale-95 rounded-lg px-1.5 sm:px-2 py-1 ${
                       refreshingDocuments 
                         ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' 
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
                     }`}
                     title="刷新单据列表"
                   >
-                    <svg className={`w-4 h-4 ${refreshingDocuments ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${refreshingDocuments ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    <span>{refreshingDocuments ? '刷新中...' : '刷新'}</span>
+                    <span className="hidden sm:inline">{refreshingDocuments ? '刷新中...' : '刷新'}</span>
                   </button>
                 )}
                 <button
                   onClick={() => router.push('/history')}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 
-                    transition-all duration-200 ease-in-out active:scale-95 rounded-lg px-2 py-1
+                  className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 
+                    transition-all duration-200 ease-in-out active:scale-95 rounded-lg px-1.5 sm:px-2 py-1
                     hover:bg-blue-50 dark:hover:bg-blue-900/20"
                 >
                   查看全部
