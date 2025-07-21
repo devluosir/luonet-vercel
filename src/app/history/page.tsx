@@ -1052,23 +1052,23 @@ export default function HistoryManagementPage() {
               <div className="flex items-center justify-center sm:justify-end space-x-2">
                 {/* 搜索框 */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  <Search className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400 dark:text-gray-500" />
                   <input
                     type="text"
                     placeholder="搜索..."
                     value={filters.search}
                     onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent w-40 sm:w-64 placeholder-gray-500 dark:placeholder-gray-400"
+                    className="pl-8 sm:pl-10 pr-8 sm:pr-10 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent w-32 sm:w-40 lg:w-64 placeholder-gray-500 dark:placeholder-gray-400 text-sm sm:text-base"
                   />
                   {filters.search && (
                     <button
                       type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
                       tabIndex={-1}
                       aria-label="清空搜索"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                   )}
                 </div>
@@ -1159,7 +1159,7 @@ export default function HistoryManagementPage() {
         <div className="bg-white dark:bg-[#1c1c1e] border-b border-gray-200 dark:border-gray-800">
           <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
             {/* 小屏时使用可滚动的flex，大屏时使用正常间距，所有屏幕都居中 */}
-            <div className="flex justify-center space-x-1 sm:space-x-4 lg:space-x-8 overflow-x-auto scrollbar-hide">
+            <div className="flex justify-center space-x-0.5 sm:space-x-4 lg:space-x-8 overflow-x-auto scrollbar-hide">
               {getAvailableTabs().map((tab) => {
                 const Icon = tab.icon;
                 const count = getTabCount(tab.id as HistoryType);
@@ -1194,12 +1194,12 @@ export default function HistoryManagementPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as HistoryType)}
-                    className={`flex items-center space-x-1.5 sm:space-x-2 py-2 px-3 sm:px-4 font-medium text-xs sm:text-sm transition-all duration-200 whitespace-nowrap flex-shrink-0 rounded-t-lg border-2 border-transparent
+                    className={`flex items-center space-x-1 sm:space-x-2 py-1.5 sm:py-2 px-2 sm:px-4 font-medium text-xs sm:text-sm transition-all duration-200 whitespace-nowrap flex-shrink-0 rounded-t-lg border-2 border-transparent
                       ${isActive ? activeClasses : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                   >
                     <span className="relative inline-block">
-                      <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      <span className={`absolute -top-0.5 sm:-top-1 -right-1.5 sm:-right-2 min-w-[16px] sm:min-w-[18px] h-3.5 sm:h-4 px-1 sm:px-1 ${badgeStyle} text-[10px] sm:text-xs rounded-full flex items-center justify-center font-bold border border-white dark:border-gray-900 shadow-sm`}> 
+                      <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className={`absolute -top-0.5 sm:-top-1 -right-1 sm:-right-2 min-w-[14px] sm:min-w-[18px] h-3 sm:h-4 px-0.5 sm:px-1 ${badgeStyle} text-[9px] sm:text-xs rounded-full flex items-center justify-center font-bold border border-white dark:border-gray-900 shadow-sm`}> 
                         {count}
                       </span>
                     </span>
