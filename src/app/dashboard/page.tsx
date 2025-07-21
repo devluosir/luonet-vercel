@@ -913,13 +913,13 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 p-5 text-center">
-                <div className="text-gray-500 dark:text-gray-400 text-lg mb-2">
+                <div className="text-gray-500 dark:text-gray-400 text-sm mb-2">
                   {timeFilter === 'today' && '今天还没有创建或修改的单据'}
                   {timeFilter === '3days' && '最近三天还没有创建或修改的单据'}
                   {timeFilter === 'week' && '最近一周还没有创建或修改的单据'}
                   {timeFilter === 'month' && '最近一个月还没有创建或修改的单据'}
                 </div>
-                <div className="text-sm text-gray-400 dark:text-gray-500">
+                <div className="text-xs text-gray-400 dark:text-gray-500">
                   开始创建第一个单据吧！
                 </div>
               </div>
