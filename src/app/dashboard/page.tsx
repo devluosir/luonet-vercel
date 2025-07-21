@@ -576,8 +576,7 @@ export default function DashboardPage() {
                         hover:-translate-y-1 active:translate-y-0 cursor-pointer
                         border border-gray-200/50 dark:border-gray-800/50
                         hover:border-gray-300/70 dark:hover:border-gray-700/70
-                        focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
-                        dark:focus:ring-offset-gray-900 active:shadow-sm
+                        active:shadow-sm
                         p-4 h-20 flex items-center space-x-3
                         hover:bg-gradient-to-br ${module.bgColor}`}
                       onClick={() => {
@@ -614,8 +613,7 @@ export default function DashboardPage() {
                         hover:-translate-y-1 active:translate-y-0 cursor-pointer
                         border border-gray-200/50 dark:border-gray-800/50
                         hover:border-gray-300/70 dark:hover:border-gray-700/70
-                        focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
-                        dark:focus:ring-offset-gray-900 active:shadow-sm
+                        active:shadow-sm
                         p-4 h-20 flex items-center space-x-3
                         hover:bg-gradient-to-br ${module.bgColor}`}
                       onClick={() => router.push(module.path)}
@@ -644,8 +642,7 @@ export default function DashboardPage() {
                         hover:-translate-y-1 active:translate-y-0 cursor-pointer
                         border border-gray-200/50 dark:border-gray-800/50
                         hover:border-gray-300/70 dark:hover:border-gray-700/70
-                        focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
-                        dark:focus:ring-offset-gray-900 active:shadow-sm
+                        active:shadow-sm
                         p-4 h-20 flex items-center space-x-3
                         hover:bg-gradient-to-br ${module.bgColor}`}
                       onClick={() => router.push(module.path)}
@@ -671,8 +668,7 @@ export default function DashboardPage() {
                       hover:-translate-y-1 active:translate-y-0 cursor-pointer
                       border border-gray-200/50 dark:border-gray-800/50
                       hover:border-gray-300/70 dark:hover:border-gray-700/70
-                      focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
-                      dark:focus:ring-offset-gray-900 active:shadow-sm
+                      active:shadow-sm
                       p-4 h-20 flex items-center space-x-3
                       hover:bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20"
                     onClick={() => router.push('/tools')}
@@ -828,7 +824,6 @@ export default function DashboardPage() {
                       key={doc.id}
                       className={`group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 
                         p-3 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 transition-all duration-200 cursor-pointer
-                        focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 dark:focus:ring-offset-gray-900
                         active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70
                         ${(() => {
                           // 根据文档类型匹配对应的模块颜色
