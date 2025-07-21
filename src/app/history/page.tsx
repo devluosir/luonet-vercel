@@ -1049,7 +1049,7 @@ export default function HistoryManagementPage() {
                 </button>
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white">单据管理中心</h1>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-center sm:justify-end space-x-2">
                 {/* 搜索框 */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
@@ -1058,7 +1058,7 @@ export default function HistoryManagementPage() {
                     placeholder="搜索..."
                     value={filters.search}
                     onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent w-48 sm:w-64 placeholder-gray-500 dark:placeholder-gray-400"
+                    className="pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent w-40 sm:w-64 placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   {filters.search && (
                     <button
@@ -1159,7 +1159,7 @@ export default function HistoryManagementPage() {
         <div className="bg-white dark:bg-[#1c1c1e] border-b border-gray-200 dark:border-gray-800">
           <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
             {/* 小屏时使用可滚动的flex，大屏时使用正常间距，所有屏幕都居中 */}
-            <div className="flex justify-center space-x-2 sm:space-x-4 lg:space-x-8 overflow-x-auto scrollbar-hide">
+            <div className="flex justify-center space-x-1 sm:space-x-4 lg:space-x-8 overflow-x-auto scrollbar-hide">
               {getAvailableTabs().map((tab) => {
                 const Icon = tab.icon;
                 const count = getTabCount(tab.id as HistoryType);
