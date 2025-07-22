@@ -747,23 +747,20 @@ export default function InvoicePage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-[#000000] dark:text-gray-100">
-      <div className="flex-1">
-        <div className="max-w-6xl mx-auto px-6 py-10">
-          <div className="max-w-7xl mx-auto space-y-8">
-            {/* 返回按钮 */}
-            <div className="flex items-center justify-between mb-6">
-              <Link 
-                href={pathname?.includes('/edit/') || pathname?.includes('/copy/') ? '/history' : '/dashboard'} 
-                className="inline-flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Link>
-            </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-[#000000] dark:text-gray-100 flex flex-col">
+      <main className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+          {/* 返回按钮 */}
+          <Link 
+            href={pathname?.includes('/edit/') || pathname?.includes('/copy/') ? '/history' : '/dashboard'} 
+            className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Link>
 
-            {/* 主卡片容器 */}
-            <div className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-3xl shadow-lg dark:shadow-2xl shadow-black/5 dark:shadow-black/20 border border-black/5 dark:border-white/10 p-4 md:p-8 mt-8">
+          {/* 主卡片容器 */}
+          <div className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-3xl shadow-lg dark:shadow-2xl shadow-black/5 dark:shadow-black/20 border border-black/5 dark:border-white/10 p-4 md:p-8 mt-8">
               <form onSubmit={handleSubmit}>
                 {/* 标题和工具栏 */}
                 <div className="flex items-center justify-between mb-6">
@@ -1321,8 +1318,7 @@ export default function InvoicePage() {
               </form>
             </div>
           </div>
-        </div>
-      </div>
+        </main>
 
       {/* PDF预览弹窗 */}
       <PDFPreviewModal

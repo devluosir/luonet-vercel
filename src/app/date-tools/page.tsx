@@ -192,24 +192,17 @@ export default function DateTools() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50/90 via-white/60 to-gray-100/90 
-                    dark:from-gray-900 dark:via-gray-800/80 dark:to-gray-900/90">
-      <main className="flex-1 container mx-auto px-4 py-6 sm:py-8 max-w-6xl">
-        <div className="max-w-full mx-auto">
-          {/* 返回按钮优化 */}
-          <div className="flex items-center mb-6 sm:mb-8 lg:mb-12">
-            <Link 
-              href="/dashboard" 
-              className="group inline-flex items-center px-3 sm:px-4 py-2 rounded-full 
-                        bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg 
-                        border border-gray-200/50 dark:border-gray-700/50 
-                        text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100 
-                        transition-all hover:shadow-lg hover:scale-[1.02]"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1.5 transition-transform group-hover:-translate-x-0.5" />
-              <span className="text-sm font-medium">返回</span>
-            </Link>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50/90 via-white/60 to-gray-100/90 
+                    dark:from-gray-900 dark:via-gray-800/80 dark:to-gray-900/90 flex flex-col">
+      <main className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+          <Link 
+            href="/dashboard" 
+            className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Link>
 
           {/* 网格布局优化 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
