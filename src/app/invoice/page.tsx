@@ -108,32 +108,37 @@ export default function InvoicePage() {
     to: '',
     invoiceNo: '',
     date: format(new Date(), 'yyyy-MM-dd'),
-    from: typeof window !== 'undefined' ? 
-      (localStorage.getItem('username') ? 
-        localStorage.getItem('username')!.charAt(0).toUpperCase() + localStorage.getItem('username')!.slice(1).toLowerCase() : 
-        'Roger') : 
-      'Roger',
-    currency: 'USD',
+    customerPO: '',
     items: [{
-      id: 1,
+      lineNo: 1,
+      hsCode: '',
+      partname: '',
       description: '',
       quantity: 0,
       unit: 'pc',
       unitPrice: 0,
       amount: 0
     }],
-    otherFees: [],
+    bankInfo: '',
+    paymentDate: '',
+    showPaymentTerms: false,
+    additionalPaymentTerms: '',
     amountInWords: {
       dollars: '',
       cents: '',
       hasDecimals: false
     },
+    showHsCode: false,
+    showDescription: true,
     showBank: false,
-    showStamp: false,
+    showInvoiceReminder: false,
+    currency: 'USD',
     templateConfig: {
       headerType: 'bilingual',
+      invoiceType: 'invoice',
       stampType: 'none'
-    }
+    },
+    otherFees: []
   });
 
   // 2. 工具函数定义
