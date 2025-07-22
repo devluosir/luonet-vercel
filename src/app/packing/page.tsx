@@ -251,6 +251,7 @@ export default function PackingPage() {
     showDimensions: true,
     showWeightAndPackage: true,
     showPrice: true,
+    dimensionUnit: 'cm',
     documentType: 'packing',
     templateConfig: {
       headerType: 'bilingual'

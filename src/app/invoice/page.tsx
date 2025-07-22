@@ -219,7 +219,7 @@ export default function InvoicePage() {
     setData(prev => ({
       ...prev,
       items: [...prev.items, {
-        id: prev.items.length + 1,
+        lineNo: prev.items.length + 1,
         hsCode: '',
         partname: '',
         description: '',
@@ -556,7 +556,7 @@ export default function InvoicePage() {
           const baseUnit = unit.trim().replace(/s$/, '') || 'pc';
 
           return {
-            id: index + 1, // Use index + 1 for new items
+            lineNo: index + 1, // Use index + 1 for new items
             hsCode: '',
             partname: partname || '',
             description: description || '',
@@ -657,8 +657,9 @@ export default function InvoicePage() {
 
           setData(prev => ({
             ...prev,
-            items: newItems.filter(item => item.partname || item.description).map(item => ({
+            items: newItems.filter(item => item.partname || item.description).map((item, index) => ({
               ...item,
+              lineNo: index + 1,
               amount: item.quantity * item.unitPrice
             }))
           }));
