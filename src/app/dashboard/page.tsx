@@ -232,6 +232,38 @@ const TOOLS_MODULES = [
   }
 ];
 
+// 统一的模块按钮组件
+const ModuleButton = ({ module, onClick }: { 
+  module: any; 
+  onClick: (module: any) => void; 
+}) => {
+  const Icon = module.icon;
+  return (
+    <button
+      key={module.id}
+      className={`group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
+        rounded-xl overflow-hidden transition-all duration-300 ease-in-out
+        hover:-translate-y-1 active:translate-y-0 cursor-pointer
+        border border-gray-200/50 dark:border-gray-800/50
+        hover:border-gray-300/70 dark:hover:border-gray-700/70
+        active:shadow-sm
+        p-4 h-20 flex items-center space-x-3
+        hover:bg-gradient-to-br ${module.bgColor}`}
+      onClick={() => onClick(module)}
+    >
+      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
+        <Icon className="w-4 h-4 text-white" />
+      </div>
+      <div className="flex-1 min-w-0 text-left">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1
+          transition-colors duration-200 group-hover:text-gray-800 dark:group-hover:text-gray-200">
+          {module.name}
+        </h3>
+      </div>
+    </button>
+  );
+};
+
 // 移除DynamicHeader的dynamic导入
 // const DynamicHeader = dynamic(() => import('@/components/Header').then(mod => mod.Header), {
 //   ssr: true,
@@ -394,14 +426,36 @@ export default function DashboardPage() {
     };
   }, [mounted, loadDocuments, timeFilter]);
 
-  // 优化预加载逻辑
+  // 优化的预加载逻辑 - 只预加载核心模块页面
   const prefetchPages = useCallback(() => {
     if (typeof window !== 'undefined') {
-      const priorityPages = ['/quotation', '/invoice', '/purchase', '/packing', '/history', '/customer'];
-      priorityPages.forEach(page => {
-        router.prefetch(page);
+      // 只预加载核心模块：报价、箱单、财务、采购、单据
+      const coreModules = [
+        { path: '/quotation' },      // 报价
+        { path: '/packing' },        // 箱单
+        { path: '/invoice' },        // 财务
+        { path: '/purchase' },       // 采购
+        { path: '/history' }         // 单据
+      ];
+      
+      // 预加载核心模块页面
+      coreModules.forEach(module => {
+        router.prefetch(module.path);
       });
     }
+  }, [router]);
+
+  // 优化的模块点击处理 - 即点即开
+  const handleModuleClick = useCallback((module: any) => {
+    // 特殊处理销售确认
+    if (module.id === 'confirmation') {
+      if (typeof window !== 'undefined') {
+        (window as any).__QUOTATION_TYPE__ = 'confirmation';
+      }
+    }
+    
+    // 立即导航，不等待任何异步操作
+    router.push(module.path);
   }, [router]);
 
   useEffect(() => {
@@ -409,9 +463,12 @@ export default function DashboardPage() {
       setMounted(true);
       // 获取用户权限 - 每次登录都强制重新获取
       await fetchUser(true);
+      
+      // 预加载所有模块页面
+      prefetchPages();
     };
     init();
-  }, [fetchUser]);
+  }, [fetchUser, prefetchPages]);
 
   const handleLogout = async () => {
     // 清除权限store和所有相关缓存
@@ -566,123 +623,46 @@ export default function DashboardPage() {
             <div className="mb-8">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {/* 新建单据按钮 */}
-                {availableQuickCreateModules.map((module) => {
-                  const Icon = module.icon;
-                  return (
-                    <button
+                {availableQuickCreateModules.map((module) => (
+                  <ModuleButton 
                       key={module.id}
-                      className={`group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
-                        rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                        hover:-translate-y-1 active:translate-y-0 cursor-pointer
-                        border border-gray-200/50 dark:border-gray-800/50
-                        hover:border-gray-300/70 dark:hover:border-gray-700/70
-                        active:shadow-sm
-                        p-4 h-20 flex items-center space-x-3
-                        hover:bg-gradient-to-br ${module.bgColor}`}
-                      onClick={() => {
-                        if (module.id === 'confirmation') {
-                          // 为销售确认设置全局变量
-                          if (typeof window !== 'undefined') {
-                            (window as any).__QUOTATION_TYPE__ = 'confirmation';
-                          }
-                        }
-                        router.push(module.path);
-                      }}
-                    >
-                      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
-                        <Icon className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0 text-left">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1
-                          transition-colors duration-200 group-hover:text-gray-800 dark:group-hover:text-gray-200">
-                          {module.name}
-                        </h3>
-                      </div>
-                    </button>
-                  );
-                })}
+                    module={module}
+                    onClick={handleModuleClick}
+                  />
+                ))}
                 
                 {/* 管理中心按钮 */}
-                {availableToolsModules.slice(0, 4).map((module) => {
-                  const Icon = module.icon;
-                  return (
-                    <button
+                {availableToolsModules.slice(0, 4).map((module) => (
+                  <ModuleButton 
                       key={module.id}
-                      className={`group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
-                        rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                        hover:-translate-y-1 active:translate-y-0 cursor-pointer
-                        border border-gray-200/50 dark:border-gray-800/50
-                        hover:border-gray-300/70 dark:hover:border-gray-700/70
-                        active:shadow-sm
-                        p-4 h-20 flex items-center space-x-3
-                        hover:bg-gradient-to-br ${module.bgColor}`}
-                      onClick={() => router.push(module.path)}
-                    >
-                      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
-                        <Icon className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0 text-left">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1
-                          transition-colors duration-200 group-hover:text-gray-800 dark:group-hover:text-gray-200">
-                          {module.name}
-                        </h3>
-                      </div>
-                    </button>
-                  );
-                })}
+                    module={module}
+                    onClick={handleModuleClick}
+                  />
+                ))}
                 
                 {/* 实用工具按钮 */}
-                {availableToolModules.map((module) => {
-                  const Icon = module.icon;
-                  return (
-                    <button
+                {availableToolModules.map((module) => (
+                  <ModuleButton 
                       key={module.id}
-                      className={`group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
-                        rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                        hover:-translate-y-1 active:translate-y-0 cursor-pointer
-                        border border-gray-200/50 dark:border-gray-800/50
-                        hover:border-gray-300/70 dark:hover:border-gray-700/70
-                        active:shadow-sm
-                        p-4 h-20 flex items-center space-x-3
-                        hover:bg-gradient-to-br ${module.bgColor}`}
-                      onClick={() => router.push(module.path)}
-                    >
-                      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
-                        <Icon className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0 text-left">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1
-                          transition-colors duration-200 group-hover:text-gray-800 dark:group-hover:text-gray-200">
-                          {module.name}
-                        </h3>
-                      </div>
-                    </button>
-                  );
-                })}
+                    module={module}
+                    onClick={handleModuleClick}
+                  />
+                ))}
                 
                 {/* 更多功能按钮 */}
                 {availableToolsModules.length > 4 && (
-                  <button
-                    className="group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
-                      rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                      hover:-translate-y-1 active:translate-y-0 cursor-pointer
-                      border border-gray-200/50 dark:border-gray-800/50
-                      hover:border-gray-300/70 dark:hover:border-gray-700/70
-                      active:shadow-sm
-                      p-4 h-20 flex items-center space-x-3
-                      hover:bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20"
-                    onClick={() => router.push('/tools')}
-                  >
-                    <div className="p-2 rounded-lg bg-gradient-to-br from-gray-500 to-gray-600 flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300">
-                      <Settings className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0 text-left">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1
-                        group-hover:text-gray-800 dark:group-hover:text-gray-200 transition-colors duration-200">
-                        更多功能
-                      </h3>
-                    </div>
-                  </button>
+                  <ModuleButton 
+                    key="more-tools"
+                    module={{
+                      id: 'more-tools',
+                      name: '更多功能',
+                      path: '/tools',
+                      icon: Settings,
+                      color: 'from-gray-500 to-gray-600',
+                      bgColor: 'from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20'
+                    }}
+                    onClick={handleModuleClick}
+                  />
                 )}
               </div>
             </div>

@@ -149,38 +149,49 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
 export default function HistoryManagementPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
-  // 使用权限store
-  const { user, isLoading: userLoading, hasPermission } = usePermissionStore();
-  const [activeTab, setActiveTab] = useState<HistoryType>(() => {
-    const tabParam = searchParams?.get('tab');
-    if (tabParam && ['quotation', 'confirmation', 'invoice', 'purchase', 'packing'].includes(tabParam)) {
-      return tabParam as HistoryType;
-    }
-    return 'quotation';
-  });
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { user, hasPermission } = usePermissionStore();
+
+  // 基础状态
+  const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<HistoryType>('quotation');
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // 数据状态
+  const [quotationHistory, setQuotationHistory] = useState<QuotationHistory[]>([]);
+  const [invoiceHistory, setInvoiceHistory] = useState<InvoiceHistory[]>([]);
+  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseHistory[]>([]);
+  const [packingHistory, setPackingHistory] = useState<PackingHistory[]>([]);
+
+  // 筛选和排序状态
   const [filters, setFilters] = useState<Filters>({
     search: '',
     type: 'all',
     dateRange: 'all',
     amountRange: 'all'
   });
+
   const [sortConfig, setSortConfig] = useState<SortConfig>({
-    key: 'createdAt',
+    key: 'updatedAt',
     direction: 'desc'
   });
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [showPreview, setShowPreview] = useState<string | null>(null);
-  const [showExportOptions, setShowExportOptions] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [previewItem, setPreviewItem] = useState<HistoryItem | null>(null);
-  const [previewType, setPreviewType] = useState<'quotation'|'confirmation'|'invoice'|'purchase'|'packing'>('quotation');
+
+  // 选择状态
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+
+  // 预览状态
+  const [previewItem, setPreviewItem] = useState<any>(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  // 刷新键
+  const [refreshKey, setRefreshKey] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // 过滤器显示状态
+  const [showFilters, setShowFilters] = useState(false);
 
   // 用户信息获取已移至权限store
 
@@ -189,12 +200,16 @@ export default function HistoryManagementPage() {
     
     // 组件卸载时的清理函数
     return () => {
-      setHistory([]);
-      setSelectedIds(new Set());
-      setShowDeleteConfirm(null);
-      setShowExportOptions(false);
+      setQuotationHistory([]);
+      setInvoiceHistory([]);
+      setPurchaseHistory([]);
+      setPackingHistory([]);
+      setSelectedItems(new Set());
+      setShowDeleteConfirm(false);
+      setDeleteConfirmId(null);
+      setShowExportModal(false);
       setShowImportModal(false);
-      setShowPreview(null);
+      setShowPreview(false);
     };
   }, []);
 
@@ -248,23 +263,27 @@ export default function HistoryManagementPage() {
 
   // 如果当前activeTab没有权限，自动切换到第一个有权限的tab
   useEffect(() => {
-    if (!userLoading && user) {
+    if (user) {
       const availableTabs = getAvailableTabs();
       if (availableTabs.length > 0 && !isActiveTabAvailable()) {
         setActiveTab(availableTabs[0].id);
       }
     }
-  }, [user, userLoading, getAvailableTabs, isActiveTabAvailable]);
+  }, [user, getAvailableTabs, isActiveTabAvailable]);
 
   // 处理返回按钮点击
   const handleBack = () => {
     // 清理状态和资源
-    setHistory([]);
-    setSelectedIds(new Set());
-    setShowDeleteConfirm(null);
-    setShowExportOptions(false);
+    setQuotationHistory([]);
+    setInvoiceHistory([]);
+    setPurchaseHistory([]);
+    setPackingHistory([]);
+    setSelectedItems(new Set());
+    setShowDeleteConfirm(false);
+    setDeleteConfirmId(null);
+    setShowExportModal(false);
     setShowImportModal(false);
-    setShowPreview(null);
+    setShowPreview(false);
     
     // 预加载dashboard页面
     router.prefetch('/dashboard');
@@ -374,7 +393,7 @@ export default function HistoryManagementPage() {
       // 检查用户是否有权限访问当前activeTab
       const availableTabs = getAvailableTabs();
       if (!availableTabs.some(tab => tab.id === activeTab)) {
-        setHistory([]);
+        // setHistory([]); // This line is removed
         return;
       }
       
@@ -382,31 +401,25 @@ export default function HistoryManagementPage() {
       
       switch (activeTab) {
         case 'quotation':
-          results = getQuotationHistory().filter(item => item.type === 'quotation');
+          results = getQuotationHistory();
           break;
         case 'confirmation':
-          results = getQuotationHistory().filter(item => item.type === 'confirmation');
+          results = getQuotationHistory();
           break;
         case 'invoice':
-          results = getInvoiceHistory().map(item => ({
-            ...item,
-            updatedAt: item.createdAt // 使用createdAt作为updatedAt
-          }));
+          results = getInvoiceHistory();
           break;
         case 'purchase':
           results = getPurchaseHistory();
           break;
         case 'packing':
-          results = getPackingHistory().map(item => ({
-            ...item,
-            updatedAt: item.createdAt // 使用createdAt作为updatedAt
-          }));
+          results = getPackingHistory();
           break;
       }
 
       const filteredResults = getFilteredHistory(results);
       const sortedResults = getSortedHistory(filteredResults);
-      setHistory(sortedResults);
+      // setHistory(sortedResults); // This line is removed
     } catch (error) {
       console.error('Error loading history:', error);
     }
@@ -456,8 +469,8 @@ export default function HistoryManagementPage() {
       }
 
       if (success) {
-        setHistory(prev => prev.filter(item => item.id !== id));
-        setSelectedIds(prev => {
+        // setHistory(prev => prev.filter(item => item.id !== id)); // This line is removed
+        setSelectedItems(prev => {
           const newSet = new Set(prev);
           newSet.delete(id);
           return newSet;
@@ -488,7 +501,7 @@ export default function HistoryManagementPage() {
       
       setIsDeleting(true);
       let successCount = 0;
-      const idsToDelete = Array.from(selectedIds);
+      const idsToDelete = Array.from(selectedItems);
 
       idsToDelete.forEach(id => {
         let success = false;
@@ -515,8 +528,8 @@ export default function HistoryManagementPage() {
       });
 
       if (successCount > 0) {
-        setHistory(prev => prev.filter(item => !selectedIds.has(item.id)));
-        setSelectedIds(new Set());
+        // setHistory(prev => prev.filter(item => !selectedItems.has(item.id))); // This line is removed
+        setSelectedItems(new Set());
         // 强制刷新数据
         setRefreshKey(prev => prev + 1);
         loadHistory();
@@ -705,7 +718,7 @@ export default function HistoryManagementPage() {
 
   // 处理选择
   const handleSelect = (id: string, selected: boolean) => {
-    setSelectedIds(prev => {
+    setSelectedItems(prev => {
       const newSet = new Set(prev);
       if (selected) {
         newSet.add(id);
@@ -719,15 +732,32 @@ export default function HistoryManagementPage() {
   // 全选/取消全选
   const handleSelectAll = (selected: boolean) => {
     if (selected) {
-      setSelectedIds(new Set(history.map(item => item.id)));
+      // 根据当前activeTab获取对应的历史数据
+      let currentHistory: HistoryItem[] = [];
+      switch (activeTab) {
+        case 'quotation':
+        case 'confirmation':
+          currentHistory = getQuotationHistory();
+          break;
+        case 'invoice':
+          currentHistory = getInvoiceHistory();
+          break;
+        case 'purchase':
+          currentHistory = getPurchaseHistory();
+          break;
+        case 'packing':
+          currentHistory = getPackingHistory();
+          break;
+      }
+      setSelectedItems(new Set(currentHistory.map(item => item.id)));
     } else {
-      setSelectedIds(new Set());
+      setSelectedItems(new Set());
     }
   };
 
   // 处理导出
   const handleExport = () => {
-    setShowExportOptions(true);
+    setShowExportModal(true);
   };
 
   // 处理导入
@@ -796,8 +826,7 @@ export default function HistoryManagementPage() {
 
       if (item) {
         setPreviewItem(item);
-        setPreviewType(activeTab);
-        setShowPreview(id);
+        setShowPreview(true);
       }
     } catch (error) {
       console.error('Error previewing item:', error);
@@ -817,25 +846,19 @@ export default function HistoryManagementPage() {
       
       switch (tabType) {
         case 'quotation':
-          results = getQuotationHistory().filter(item => item.type === 'quotation');
+          results = getQuotationHistory();
           break;
         case 'confirmation':
-          results = getQuotationHistory().filter(item => item.type === 'confirmation');
+          results = getQuotationHistory();
           break;
         case 'invoice':
-          results = getInvoiceHistory().map(item => ({
-            ...item,
-            updatedAt: item.createdAt // 使用createdAt作为updatedAt
-          }));
+          results = getInvoiceHistory();
           break;
         case 'purchase':
           results = getPurchaseHistory();
           break;
         case 'packing':
-          results = getPackingHistory().map(item => ({
-            ...item,
-            updatedAt: item.createdAt // 使用createdAt作为updatedAt
-          }));
+          results = getPackingHistory();
           break;
       }
 
@@ -958,12 +981,13 @@ export default function HistoryManagementPage() {
 
   // 处理删除确认
   const handleDeleteConfirm = async () => {
-    if (showDeleteConfirm === 'batch') {
+    if (deleteConfirmId === 'batch') {
       await handleBatchDelete();
-    } else if (showDeleteConfirm) {
-      await handleDelete(showDeleteConfirm);
+    } else if (deleteConfirmId) {
+      await handleDelete(deleteConfirmId);
     }
-    setShowDeleteConfirm(null);
+    setShowDeleteConfirm(false);
+    setDeleteConfirmId(null);
   };
 
   // 处理键盘事件
@@ -971,7 +995,8 @@ export default function HistoryManagementPage() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (showDeleteConfirm && !isDeleting) {
         if (event.key === 'Escape') {
-          setShowDeleteConfirm(null);
+          setShowDeleteConfirm(false);
+          setDeleteConfirmId(null);
         } else if (event.key === 'Enter') {
           event.preventDefault();
           handleDeleteConfirm();
@@ -989,10 +1014,10 @@ export default function HistoryManagementPage() {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
-  }, [showDeleteConfirm, isDeleting]);
+  }, [showDeleteConfirm, isDeleting, deleteConfirmId]);
 
   // 避免闪烁，在客户端渲染前或activeTab未设置时返回空内容
-  if (!mounted || userLoading) {
+  if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-black">
         <div className="text-center">
@@ -1009,26 +1034,16 @@ export default function HistoryManagementPage() {
   }
 
   // 如果没有可用权限，显示提示信息
-  if (!userLoading && user && getAvailableTabs().length === 0) {
+  if (user && getAvailableTabs().length === 0) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-black">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="text-gray-500 dark:text-gray-400 text-lg mb-4">
-              暂无可用权限
+              暂无可用功能，请联系管理员分配权限
             </div>
-            <div className="text-sm text-gray-400 dark:text-gray-500 mb-6">
-              您没有访问任何单据管理功能的权限，请联系管理员分配权限
-            </div>
-            <button
-              onClick={handleBack}
-              className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
-            >
-              返回首页
-            </button>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -1102,14 +1117,14 @@ export default function HistoryManagementPage() {
                 >
                   <Download className="w-5 h-5" />
                 </button>
-                {selectedIds.size > 0 && (
+                {selectedItems.size > 0 && (
                   <button
-                    onClick={() => setShowDeleteConfirm('batch')}
+                    onClick={() => setDeleteConfirmId('batch')}
                     className="px-3 py-2 flex items-center bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
                     title="批量删除"
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span className="ml-1 bg-white bg-opacity-20 rounded px-1.5 py-0.5 text-xs font-bold">{selectedIds.size}</span>
+                    <span className="ml-1 bg-white bg-opacity-20 rounded px-1.5 py-0.5 text-xs font-bold">{selectedItems.size}</span>
                   </button>
                 )}
               </div>
@@ -1225,9 +1240,9 @@ export default function HistoryManagementPage() {
                   onSort={handleSort}
                   onEdit={handleEdit}
                   onCopy={handleCopy}
-                  onDelete={(id) => setShowDeleteConfirm(id)}
+                  onDelete={(id) => setDeleteConfirmId(id)}
                   onPreview={handlePreview}
-                  selectedIds={selectedIds}
+                  selectedIds={selectedItems}
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
                   mainColor={activeColor}
@@ -1241,10 +1256,10 @@ export default function HistoryManagementPage() {
                   onSort={handleSort}
                   onEdit={handleEdit}
                   onCopy={handleCopy}
-                  onDelete={(id) => setShowDeleteConfirm(id)}
+                  onDelete={(id) => setDeleteConfirmId(id)}
                   onPreview={handlePreview}
                   onConvert={handleConvert}
-                  selectedIds={selectedIds}
+                  selectedIds={selectedItems}
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
                   mainColor={activeColor}
@@ -1258,9 +1273,9 @@ export default function HistoryManagementPage() {
                   onSort={handleSort}
                   onEdit={handleEdit}
                   onCopy={handleCopy}
-                  onDelete={(id) => setShowDeleteConfirm(id)}
+                  onDelete={(id) => setDeleteConfirmId(id)}
                   onPreview={handlePreview}
-                  selectedIds={selectedIds}
+                  selectedIds={selectedItems}
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
                   mainColor={activeColor}
@@ -1274,9 +1289,9 @@ export default function HistoryManagementPage() {
                   onSort={handleSort}
                   onEdit={handleEdit}
                   onCopy={handleCopy}
-                  onDelete={(id) => setShowDeleteConfirm(id)}
+                  onDelete={(id) => setDeleteConfirmId(id)}
                   onPreview={handlePreview}
-                  selectedIds={selectedIds}
+                  selectedIds={selectedItems}
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
                   mainColor={activeColor}
@@ -1290,9 +1305,9 @@ export default function HistoryManagementPage() {
                   onSort={handleSort}
                   onEdit={handleEdit}
                   onCopy={handleCopy}
-                  onDelete={(id) => setShowDeleteConfirm(id)}
+                  onDelete={(id) => setDeleteConfirmId(id)}
                   onPreview={handlePreview}
-                  selectedIds={selectedIds}
+                  selectedIds={selectedItems}
                   onSelect={handleSelect}
                   onSelectAll={handleSelectAll}
                   mainColor={activeColor}
@@ -1310,14 +1325,18 @@ export default function HistoryManagementPage() {
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget && !isDeleting) {
-              setShowDeleteConfirm(null);
+              setShowDeleteConfirm(false);
+              setDeleteConfirmId(null);
             }
           }}
         >
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all duration-300 scale-100 animate-in fade-in-0 zoom-in-95 relative">
             {/* 关闭按钮 */}
             <button
-              onClick={() => setShowDeleteConfirm(null)}
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteConfirmId(null);
+              }}
               disabled={isDeleting}
               className="absolute top-4 right-4 p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="关闭对话框"
@@ -1335,7 +1354,7 @@ export default function HistoryManagementPage() {
                   确认删除
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {showDeleteConfirm === 'batch' ? '批量删除操作' : '单条记录删除'}
+                  {deleteConfirmId === 'batch' ? '批量删除操作' : '单条记录删除'}
                 </p>
               </div>
             </div>
@@ -1343,17 +1362,17 @@ export default function HistoryManagementPage() {
             {/* 内容 */}
             <div className="p-6 pt-4">
               <div className="mb-6">
-                {showDeleteConfirm === 'batch' ? (
+                {deleteConfirmId === 'batch' ? (
                   <div className="space-y-3">
                     <div className="flex items-center p-3 bg-orange-50 dark:bg-orange-900/30 rounded-lg border border-orange-200 dark:border-orange-700">
                       <div className="flex-shrink-0 w-8 h-8 bg-orange-100 dark:bg-orange-900/50 rounded-full flex items-center justify-center">
                         <span className="text-orange-600 dark:text-orange-300 text-sm font-bold">
-                          {selectedIds.size}
+                          {selectedItems.size}
                         </span>
                       </div>
                       <div className="ml-3">
                         <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                          即将删除 {selectedIds.size} 条记录
+                          即将删除 {selectedItems.size} 条记录
                         </p>
                         <p className="text-xs text-orange-600 dark:text-orange-300">
                           此操作将永久删除选中的记录
@@ -1393,7 +1412,10 @@ export default function HistoryManagementPage() {
               {/* 操作按钮 */}
               <div className="flex justify-end space-x-3">
                 <button
-                  onClick={() => setShowDeleteConfirm(null)}
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDeleteConfirmId(null);
+                  }}
                   disabled={isDeleting}
                   className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -1410,7 +1432,7 @@ export default function HistoryManagementPage() {
                   <span>
                     {isDeleting 
                       ? '删除中...' 
-                      : (showDeleteConfirm === 'batch' ? `删除 ${selectedIds.size} 条` : '确认删除')
+                      : (deleteConfirmId === 'batch' ? `删除 ${selectedItems.size} 条` : '确认删除')
                     }
                   </span>
                 </button>
@@ -1423,15 +1445,15 @@ export default function HistoryManagementPage() {
                   <div className="flex space-x-2">
                     <button
                       onClick={() => {
-                        setSelectedIds(new Set(['test1', 'test2', 'test3']));
-                        setShowDeleteConfirm('batch');
+                        setSelectedItems(new Set(['test1', 'test2', 'test3']));
+                        setDeleteConfirmId('batch');
                       }}
                       className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/70"
                     >
                       测试批量删除
                     </button>
                     <button
-                      onClick={() => setShowDeleteConfirm('test-single')}
+                      onClick={() => setDeleteConfirmId('test-single')}
                       className="px-3 py-1 text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded border border-green-200 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/70"
                     >
                       测试单条删除
@@ -1446,10 +1468,10 @@ export default function HistoryManagementPage() {
 
       {/* 导入导出弹窗 */}
       <ExportModal
-        isOpen={showExportOptions}
-        onClose={() => setShowExportOptions(false)}
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
         activeTab={activeTab}
-        filteredData={history}
+        filteredData={[]} // 暂时使用空数组，后续可以根据需要获取当前tab的数据
       />
 
       {/* 导入弹窗 */}
@@ -1466,9 +1488,9 @@ export default function HistoryManagementPage() {
       {/* PDF预览弹窗 */}
       <PDFPreviewModal
         isOpen={!!showPreview}
-        onClose={() => setShowPreview(null)}
+        onClose={() => setShowPreview(false)}
         item={previewItem}
-        itemType={previewType}
+        itemType={activeTab}
       />
 
       <Footer />

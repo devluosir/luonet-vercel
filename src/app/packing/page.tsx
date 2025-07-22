@@ -213,36 +213,22 @@ const convertExcelToPackingItems = (rows: string[][]): PackingItem[] => {
 export default function PackingPage() {
   const router = useRouter();
   const pathname = usePathname();
-  
-  const [showSettings, setShowSettings] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showShippingMarksModal, setShowShippingMarksModal] = useState(false);
-  const [editId, setEditId] = useState<string | undefined>(undefined);
-  const [previewItem, setPreviewItem] = useState<any>(null);
-  const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
-  const [editingUnitPrice, setEditingUnitPrice] = useState<string>('');
-  const [editingFeeIndex, setEditingFeeIndex] = useState<number | null>(null);
-  const [editingFeeAmount, setEditingFeeAmount] = useState<string>('');
 
-  const [packingData, setPackingData] = useState<PackingData>({
+  // 从 window 全局变量获取初始数据
+  const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__PACKING_DATA__) : null;
+  const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
+
+  const [data, setData] = useState<PackingData>(initialData || {
     orderNo: '',
     invoiceNo: '',
     date: format(new Date(), 'yyyy-MM-dd'),
-    
     consignee: {
       name: ''
     },
-    
     markingNo: '',
-    
     items: [{
       id: 1,
-      serialNo: '1',
+      serialNo: '',
       description: '',
       hsCode: '',
       quantity: 0,
@@ -254,27 +240,38 @@ export default function PackingPage() {
       dimensions: '',
       unit: 'pc'
     }],
-    
     otherFees: [],
     currency: 'USD',
     remarks: '',
     remarkOptions: {
-      shipsSpares: true,
-      customsPurpose: true,
+      shipsSpares: false,
+      customsPurpose: false
     },
-    showHsCode: false,
-    showDimensions: false,
+    showHsCode: true,
+    showDimensions: true,
     showWeightAndPackage: true,
     showPrice: true,
-    dimensionUnit: 'cm',
-    documentType: 'both',
+    documentType: 'packing',
     templateConfig: {
       headerType: 'bilingual'
     },
     customUnits: [],
-    isInGroupMode: false,
-    currentGroupId: undefined
+    isInGroupMode: false
   });
+
+  const [showSettings, setShowSettings] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewItem, setPreviewItem] = useState<any>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingProgress, setGeneratingProgress] = useState(0);
+  const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [showShippingMarks, setShowShippingMarks] = useState(false);
+  const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
+  const [editingUnitPrice, setEditingUnitPrice] = useState<string>('');
+  const [editingFeeIndex, setEditingFeeIndex] = useState<number | null>(null);
+  const [editingFeeAmount, setEditingFeeAmount] = useState<string>('');
 
   // 检查并加载注入的数据
   useEffect(() => {
@@ -285,7 +282,7 @@ export default function PackingPage() {
       const editMode = customWindow.__EDIT_MODE__;
       
       if (injectedData) {
-        setPackingData(injectedData);
+        setData(injectedData);
         setEditId(injectedEditId);
         
         // 清除注入的数据
@@ -322,7 +319,7 @@ export default function PackingPage() {
 
   // 更新行项目
   const updateLineItem = (index: number, field: keyof PackingItem, value: string | number) => {
-    setPackingData(prev => {
+    setData(prev => {
       const newItems = [...prev.items];
       const item = { ...newItems[index] };
       
@@ -367,7 +364,7 @@ export default function PackingPage() {
 
   // 添加新行
   const handleAddLine = () => {
-    setPackingData(prev => {
+    setData(prev => {
       const newItem: PackingItem = {
         id: prev.items.length + 1,
         serialNo: (prev.items.length + 1).toString(),
@@ -397,8 +394,8 @@ export default function PackingPage() {
 
   // 删除行
   const handleDeleteLine = (index: number) => {
-    if (packingData.items.length > 1) {
-      setPackingData(prev => ({
+    if (data.items.length > 1) {
+      setData(prev => ({
         ...prev,
         items: prev.items.filter((_, i) => i !== index)
       }));
@@ -408,7 +405,7 @@ export default function PackingPage() {
   // 进入分组模式
   const handleEnterGroupMode = () => {
     const groupId = `group_${Date.now()}`;
-    setPackingData(prev => ({
+    setData(prev => ({
       ...prev,
       isInGroupMode: true,
       currentGroupId: groupId
@@ -417,7 +414,7 @@ export default function PackingPage() {
 
   // 退出分组模式
   const handleExitGroupMode = () => {
-    setPackingData(prev => ({
+    setData(prev => ({
       ...prev,
       isInGroupMode: false,
       currentGroupId: undefined
@@ -426,7 +423,7 @@ export default function PackingPage() {
 
   // 设置面板回调函数
   const handleDocumentTypeChange = (type: 'proforma' | 'packing' | 'both') => {
-    setPackingData(prev => {
+    setData(prev => {
       const updates: Partial<PackingData> = { documentType: type };
       
       // 根据文档类型自动调整显示选项
@@ -457,7 +454,7 @@ export default function PackingPage() {
       // 获取编辑 ID（从 URL 或 state）
       const existingId = editId || (pathname?.startsWith('/packing/edit/') ? pathname.split('/').pop() : undefined);
       // 保存记录
-      const saveResult = await savePackingHistory(packingData, existingId);
+      const saveResult = await savePackingHistory(data, existingId);
       if (saveResult && !editId) {
         setEditId(saveResult.id);
       }
@@ -468,10 +465,10 @@ export default function PackingPage() {
         let grossWeight = 0;
         let packageQty = 0;
         const processedGroups = new Set<string>();
-        packingData.items.forEach((item) => {
+        data.items.forEach((item) => {
           totalPrice += item.totalPrice;
           const isInGroup = !!item.groupId;
-          const groupItems = isInGroup ? packingData.items.filter(i => i.groupId === item.groupId) : [];
+          const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
           const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
           if (isInGroup) {
             if (isFirstInGroup) {
@@ -488,8 +485,8 @@ export default function PackingPage() {
         });
         
         // 添加 other fees 到总计
-        if (packingData.showPrice && packingData.otherFees) {
-          const feesTotal = packingData.otherFees.reduce((sum, fee) => sum + fee.amount, 0);
+        if (data.showPrice && data.otherFees) {
+          const feesTotal = data.otherFees.reduce((sum, fee) => sum + fee.amount, 0);
           totalPrice += feesTotal;
         }
         
@@ -499,32 +496,31 @@ export default function PackingPage() {
       console.log('导出PDF时的totals:', totals);
       
       // 记录客户信息使用情况
-      if (packingData.consignee.name && packingData.invoiceNo) {
-        const customerName = packingData.consignee.name.split('\n')[0].trim();
+      if (data.consignee.name && data.invoiceNo) {
+        const customerName = data.consignee.name.split('\n')[0].trim();
         console.log('装箱单记录客户使用情况:', {
           customerName,
           documentType: 'packing',
-          documentNo: packingData.invoiceNo,
-          fullConsigneeName: packingData.consignee.name
+          documentNo: data.invoiceNo,
+          fullConsigneeName: data.consignee.name
         });
-        recordCustomerUsage(customerName, 'packing', packingData.invoiceNo);
+        recordCustomerUsage(customerName, 'packing', data.invoiceNo);
       }
       
-      await generatePackingListPDF(packingData, false, totals);
+      await generatePackingListPDF(data, false, totals);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate packing list. Please try again.');
     } finally {
       setIsGenerating(false);
     }
-  }, [packingData, editId, pathname]);
+  }, [data, editId, pathname]);
 
   // 预览功能
   const handlePreview = useCallback(async () => {
-    setIsLoading(true);
     try {
       // 计算总计
-      const calculatedTotals = packingData.items.reduce((acc, item) => ({
+      const calculatedTotals = data.items.reduce((acc, item) => ({
         totalPrice: acc.totalPrice + item.totalPrice,
         netWeight: acc.netWeight + item.netWeight,
         grossWeight: acc.grossWeight + item.grossWeight,
@@ -532,7 +528,7 @@ export default function PackingPage() {
       }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
 
       // 计算总金额（包括其他费用）
-      const otherFeesTotal = packingData.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
+      const otherFeesTotal = data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
       const previewTotalAmount = calculatedTotals.totalPrice + otherFeesTotal;
 
       // 准备预览数据，包装成历史记录格式
@@ -540,13 +536,13 @@ export default function PackingPage() {
         id: editId || 'preview',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        consigneeName: packingData.consignee.name || 'Unknown',
-        invoiceNo: packingData.invoiceNo || 'N/A',
-        orderNo: packingData.orderNo || 'N/A',
+        consigneeName: data.consignee.name || 'Unknown',
+        invoiceNo: data.invoiceNo || 'N/A',
+        orderNo: data.orderNo || 'N/A',
         totalAmount: previewTotalAmount,
-        currency: packingData.currency,
-        documentType: packingData.documentType,
-        data: packingData
+        currency: data.currency,
+        documentType: data.documentType,
+        data: data
       };
       
       setPreviewItem(previewData);
@@ -554,10 +550,8 @@ export default function PackingPage() {
     } catch (error) {
       console.error('Preview failed:', error);
       alert('Failed to generate preview. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
-  }, [packingData, editId]);
+  }, [data, editId]);
 
   // 保存
   const handleSave = useCallback(async () => {
@@ -566,31 +560,28 @@ export default function PackingPage() {
       // 使用 URL 中的 ID 或现有的 editId
       const id = pathname?.startsWith('/packing/edit/') ? pathname.split('/').pop() : editId;
       
-      const result = await savePackingHistory(packingData, id);
+      const result = await savePackingHistory(data, id);
       if (result) {
-        setSaveSuccess(true);
         setSaveMessage('Saved successfully');
         // 更新 editId，确保后续的保存操作会更新同一条记录
         if (!editId) {
           setEditId(result.id);
         }
       } else {
-        setSaveSuccess(false);
         setSaveMessage('Save failed');
       }
     } catch (error) {
       console.error('Error saving:', error);
-      setSaveSuccess(false);
       setSaveMessage('Save failed');
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveMessage(''), 2000);
     }
-  }, [packingData, editId, pathname]);
+  }, [data, editId, pathname]);
 
   // 处理 other fee 双击事件
   const handleOtherFeeDoubleClick = (index: number, field: 'description' | 'amount') => {
-    const newFees = [...(packingData.otherFees || [])];
+    const newFees = [...(data.otherFees || [])];
     newFees[index] = {
       ...newFees[index],
       highlight: {
@@ -598,7 +589,7 @@ export default function PackingPage() {
         [field]: !newFees[index].highlight?.[field]
       }
     };
-    setPackingData(prev => ({
+    setData(prev => ({
       ...prev,
       otherFees: newFees
     }));
@@ -606,7 +597,7 @@ export default function PackingPage() {
 
   // 添加 other fee
   const handleAddOtherFee = () => {
-    setPackingData(prev => ({
+    setData(prev => ({
       ...prev,
       otherFees: [
         ...(prev.otherFees || []),
@@ -621,7 +612,7 @@ export default function PackingPage() {
 
   // 删除 other fee
   const handleDeleteOtherFee = (index: number) => {
-    setPackingData(prev => ({
+    setData(prev => ({
       ...prev,
       otherFees: prev.otherFees?.filter((_, i) => i !== index)
     }));
@@ -629,7 +620,7 @@ export default function PackingPage() {
 
   // 更新 other fee
   const handleOtherFeeChange = (index: number, field: keyof OtherFee, value: string | number) => {
-    setPackingData(prev => {
+    setData(prev => {
       const newFees = [...(prev.otherFees || [])];
       newFees[index] = {
         ...newFees[index],
@@ -643,7 +634,7 @@ export default function PackingPage() {
   };
 
   // 计算总计
-  const totals = packingData.items.reduce((acc, item) => ({
+  const totals = data.items.reduce((acc, item) => ({
     totalPrice: acc.totalPrice + item.totalPrice,
     netWeight: acc.netWeight + item.netWeight,
     grossWeight: acc.grossWeight + item.grossWeight,
@@ -651,7 +642,7 @@ export default function PackingPage() {
   }), { totalPrice: 0, netWeight: 0, grossWeight: 0, packageQty: 0 });
 
   // 计算总金额（包括其他费用）
-  const otherFeesTotal = packingData.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
+  const otherFeesTotal = data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
   const totalAmount = totals.totalPrice + otherFeesTotal;
 
   // 导出Excel功能
@@ -673,7 +664,7 @@ export default function PackingPage() {
       excelData.push(headers);
       
       // 添加商品数据
-      packingData.items.forEach((item, index) => {
+      data.items.forEach((item, index) => {
         const row = [
           item.serialNo,
           item.description,
@@ -691,10 +682,10 @@ export default function PackingPage() {
       });
       
       // 添加其他费用（如果显示价格）
-      if (packingData.showPrice && packingData.otherFees && packingData.otherFees.length > 0) {
+      if (data.showPrice && data.otherFees && data.otherFees.length > 0) {
         excelData.push([]); // 空行
         excelData.push(['Other Fees']); // 标题
-        packingData.otherFees.forEach(fee => {
+        data.otherFees.forEach(fee => {
           excelData.push([fee.description, '', '', '', '', '', formatNumber(fee.amount)]);
         });
       }
@@ -709,7 +700,7 @@ export default function PackingPage() {
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `packing_list_${packingData.invoiceNo || 'export'}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `packing_list_${data.invoiceNo || 'export'}_${new Date().toISOString().split('T')[0]}.csv`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
@@ -741,8 +732,8 @@ export default function PackingPage() {
                 <div className="flex items-center gap-4">
                   <h1 className={titleClassName}>
                     Generate {
-                      packingData.documentType === 'proforma' ? 'Proforma Invoice' :
-                      packingData.documentType === 'packing' ? 'Packing List' :
+                      data.documentType === 'proforma' ? 'Proforma Invoice' :
+                      data.documentType === 'packing' ? 'Packing List' :
                       'Proforma Invoice & Packing List'
                     }
                   </h1>
@@ -780,7 +771,7 @@ export default function PackingPage() {
                     )}
                     {saveMessage && (
                       <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 text-xs text-white rounded-lg whitespace-nowrap ${
-                        saveSuccess ? 'bg-green-500' : 'bg-red-500'
+                        saveMessage.includes('成功') ? 'bg-green-500' : 'bg-red-500'
                       }`}>
                         {saveMessage}
                       </div>
@@ -800,32 +791,32 @@ export default function PackingPage() {
               {/* 设置面板 */}
               <SettingsPanel
                 isVisible={showSettings}
-                documentType={packingData.documentType}
-                showHsCode={packingData.showHsCode}
-                showDimensions={packingData.showDimensions}
-                showWeightAndPackage={packingData.showWeightAndPackage}
-                showPrice={packingData.showPrice}
-                dimensionUnit={packingData.dimensionUnit}
-                currency={packingData.currency}
-                headerType={packingData.templateConfig.headerType}
-                customUnits={packingData.customUnits}
+                documentType={data.documentType}
+                showHsCode={data.showHsCode}
+                showDimensions={data.showDimensions}
+                showWeightAndPackage={data.showWeightAndPackage}
+                showPrice={data.showPrice}
+                dimensionUnit={data.dimensionUnit}
+                currency={data.currency}
+                headerType={data.templateConfig.headerType}
+                customUnits={data.customUnits}
                 onDocumentTypeChange={handleDocumentTypeChange}
-                onToggleHsCode={(show) => setPackingData(prev => ({ ...prev, showHsCode: show }))}
-                onToggleDimensions={(show) => setPackingData(prev => ({ ...prev, showDimensions: show }))}
-                onToggleWeightAndPackage={(show) => setPackingData(prev => ({ ...prev, showWeightAndPackage: show }))}
-                onTogglePrice={(show) => setPackingData(prev => ({ 
+                onToggleHsCode={(show) => setData(prev => ({ ...prev, showHsCode: show }))}
+                onToggleDimensions={(show) => setData(prev => ({ ...prev, showDimensions: show }))}
+                onToggleWeightAndPackage={(show) => setData(prev => ({ ...prev, showWeightAndPackage: show }))}
+                onTogglePrice={(show) => setData(prev => ({ 
                   ...prev, 
                   showPrice: show,
                   // 如果关闭价格显示，清除所有 other fees
                   otherFees: show ? prev.otherFees : []
                 }))}
-                onDimensionUnitChange={(unit) => setPackingData(prev => ({ ...prev, dimensionUnit: unit }))}
-                onCurrencyChange={(currency) => setPackingData(prev => ({ ...prev, currency }))}
-                onHeaderTypeChange={(headerType) => setPackingData(prev => ({ 
+                onDimensionUnitChange={(unit) => setData(prev => ({ ...prev, dimensionUnit: unit }))}
+                onCurrencyChange={(currency) => setData(prev => ({ ...prev, currency }))}
+                onHeaderTypeChange={(headerType) => setData(prev => ({ 
                   ...prev, 
                   templateConfig: { ...prev.templateConfig, headerType } 
                 }))}
-                onCustomUnitsChange={(units) => setPackingData(prev => ({ ...prev, customUnits: units }))}
+                onCustomUnitsChange={(units) => setData(prev => ({ ...prev, customUnits: units }))}
               />
 
               {/* 基本信息区域 */}
@@ -833,9 +824,9 @@ export default function PackingPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* 收货人信息组 */}
                   <ConsigneeSection
-                    consigneeName={packingData.consignee.name}
-                    orderNo={packingData.orderNo}
-                    onChange={({ consigneeName, orderNo }) => setPackingData(prev => ({
+                    consigneeName={data.consignee.name}
+                    orderNo={data.orderNo}
+                    onChange={({ consigneeName, orderNo }) => setData(prev => ({
                       ...prev,
                       consignee: { ...prev.consignee, name: consigneeName },
                       orderNo
@@ -851,8 +842,8 @@ export default function PackingPage() {
                         </label>
                         <input
                           type="text"
-                          value={packingData.invoiceNo}
-                          onChange={(e) => setPackingData(prev => ({ ...prev, invoiceNo: e.target.value }))}
+                          value={data.invoiceNo}
+                          onChange={(e) => setData(prev => ({ ...prev, invoiceNo: e.target.value }))}
                           className={inputClassName}
                           style={iosCaretStyle}
                           placeholder="Invoice No. *"
@@ -864,8 +855,8 @@ export default function PackingPage() {
                         </label>
                         <input
                           type="date"
-                          value={packingData.date}
-                          onChange={(e) => setPackingData(prev => ({ ...prev, date: e.target.value }))}
+                          value={data.date}
+                          onChange={(e) => setData(prev => ({ ...prev, date: e.target.value }))}
                           className={inputClassName}
                           style={iosCaretStyle}
                         />
@@ -877,7 +868,7 @@ export default function PackingPage() {
                           <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D]">
                             Shipping Marks
                           </label>
-                          {packingData.markingNo && (
+                          {data.markingNo && (
                             <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
                               Configured
                             </span>
@@ -885,13 +876,13 @@ export default function PackingPage() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => setShowShippingMarksModal(true)}
+                          onClick={() => setShowShippingMarks(true)}
                           className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-[#3A3A3C] hover:bg-gray-200 dark:hover:bg-[#48484A] hover:text-gray-700 dark:hover:text-gray-300 rounded-lg transition-all duration-200"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
-                          {packingData.markingNo ? 'Edit Marks' : 'Add Marks'}
+                          {data.markingNo ? 'Edit Marks' : 'Add Marks'}
                         </button>
                       </div>
                     </div>
@@ -903,17 +894,17 @@ export default function PackingPage() {
               <div className="px-0 sm:px-6 py-4">
                 <ItemsTable
                   data={{
-                    items: packingData.items,
-                    otherFees: packingData.otherFees,
-                    showHsCode: packingData.showHsCode,
-                    showDimensions: packingData.showDimensions,
-                    showWeightAndPackage: packingData.showWeightAndPackage,
-                    showPrice: packingData.showPrice,
-                    dimensionUnit: packingData.dimensionUnit,
-                    currency: packingData.currency,
-                    customUnits: packingData.customUnits,
-                    isInGroupMode: packingData.isInGroupMode,
-                    currentGroupId: packingData.currentGroupId
+                    items: data.items,
+                    otherFees: data.otherFees,
+                    showHsCode: data.showHsCode,
+                    showDimensions: data.showDimensions,
+                    showWeightAndPackage: data.showWeightAndPackage,
+                    showPrice: data.showPrice,
+                    dimensionUnit: data.dimensionUnit,
+                    currency: data.currency,
+                    customUnits: data.customUnits,
+                    isInGroupMode: data.isInGroupMode,
+                    currentGroupId: data.currentGroupId
                   }}
                   onItemChange={updateLineItem}
                   onAddLine={handleAddLine}
@@ -937,16 +928,16 @@ export default function PackingPage() {
                   {/* 分组按钮 */}
                   <button
                     type="button"
-                    onClick={packingData.isInGroupMode ? handleExitGroupMode : handleEnterGroupMode}
+                    onClick={data.isInGroupMode ? handleExitGroupMode : handleEnterGroupMode}
                     className={`px-2 sm:px-3 h-7 rounded-lg whitespace-nowrap text-[13px] font-medium
                       flex items-center gap-1 transition-all duration-200 ${
-                        packingData.isInGroupMode 
+                        data.isInGroupMode 
                           ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
                           : 'bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08] hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12] text-[#007AFF] dark:text-[#0A84FF]'
                       }`}
                   >
                     <span className="text-lg leading-none translate-y-[-1px]">+</span>
-                    <span>{packingData.isInGroupMode ? 'Exit Group' : 'Add Group'}</span>
+                    <span>{data.isInGroupMode ? 'Exit Group' : 'Add Group'}</span>
                   </button>
 
                   <button
@@ -964,7 +955,7 @@ export default function PackingPage() {
                     <span>Add Line</span>
                   </button>
 
-                  {packingData.showPrice && (
+                  {data.showPrice && (
                     <button
                       type="button"
                       onClick={handleAddOtherFee}
@@ -990,16 +981,16 @@ export default function PackingPage() {
                     {/* 分组按钮 */}
                     <button
                       type="button"
-                      onClick={packingData.isInGroupMode ? handleExitGroupMode : handleEnterGroupMode}
+                      onClick={data.isInGroupMode ? handleExitGroupMode : handleEnterGroupMode}
                       className={`px-2 h-8 rounded-lg whitespace-nowrap text-[13px] font-medium
                         flex items-center justify-center gap-1 transition-all duration-200 ${
-                          packingData.isInGroupMode 
+                          data.isInGroupMode 
                             ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
                             : 'bg-white/80 dark:bg-[#1C1C1E]/80 hover:bg-white dark:hover:bg-[#1C1C1E] text-[#007AFF] dark:text-[#0A84FF]'
                         }`}
                     >
                       <span className="text-lg leading-none translate-y-[-1px]">+</span>
-                      <span>{packingData.isInGroupMode ? 'Exit' : 'Group'}</span>
+                      <span>{data.isInGroupMode ? 'Exit' : 'Group'}</span>
                     </button>
 
                     <button
@@ -1017,7 +1008,7 @@ export default function PackingPage() {
                       <span>Add Line</span>
                     </button>
 
-                    {packingData.showPrice && (
+                    {data.showPrice && (
                       <button
                         type="button"
                         onClick={handleAddOtherFee}
@@ -1048,8 +1039,8 @@ export default function PackingPage() {
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={packingData.remarkOptions.shipsSpares}
-                          onChange={(e) => setPackingData(prev => ({
+                          checked={data.remarkOptions.shipsSpares}
+                          onChange={(e) => setData(prev => ({
                             ...prev,
                             remarkOptions: {
                               ...prev.remarkOptions,
@@ -1075,8 +1066,8 @@ export default function PackingPage() {
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={packingData.remarkOptions.customsPurpose}
-                          onChange={(e) => setPackingData(prev => ({
+                          checked={data.remarkOptions.customsPurpose}
+                          onChange={(e) => setData(prev => ({
                             ...prev,
                             remarkOptions: {
                               ...prev.remarkOptions,
@@ -1103,8 +1094,8 @@ export default function PackingPage() {
                     {/* 自定义备注文本框 */}
                     <div>
                       <textarea
-                        value={packingData.remarks}
-                        onChange={(e) => setPackingData(prev => ({ ...prev, remarks: e.target.value }))}
+                        value={data.remarks}
+                        onChange={(e) => setData(prev => ({ ...prev, remarks: e.target.value }))}
                         className={`${inputClassName} min-h-[80px] resize-none`}
                         style={iosCaretStyle}
                         placeholder="Enter any additional remarks or special instructions..."
@@ -1158,7 +1149,7 @@ export default function PackingPage() {
                   <button
                     type="button"
                     onClick={handlePreview}
-                    disabled={isLoading}
+                    disabled={false} // Removed isLoading state
                     className={`${buttonClassName}
                       bg-white dark:bg-[#2C2C2E]
                       text-[#007AFF] dark:text-[#0A84FF] font-medium
@@ -1171,10 +1162,10 @@ export default function PackingPage() {
                       flex-1 sm:flex-none sm:min-w-[140px] h-12
                       disabled:opacity-50 disabled:cursor-not-allowed
                       shadow-sm hover:shadow-md
-                      ${isLoading ? 'scale-[0.98] shadow-inner bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]' : ''}`}
+                      ${false ? 'scale-[0.98] shadow-inner bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]' : ''}`}
                   >
                     <div className="flex items-center justify-center gap-2.5">
-                      {isLoading ? (
+                      {false ? ( // Removed isLoading state
                         <>
                           <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -1211,10 +1202,10 @@ export default function PackingPage() {
 
       {/* Shipping Marks Modal */}
       <ShippingMarksModal
-        isOpen={showShippingMarksModal}
-        onClose={() => setShowShippingMarksModal(false)}
-        value={packingData.markingNo}
-        onChange={(value) => setPackingData(prev => ({ ...prev, markingNo: value }))}
+        isOpen={showShippingMarks}
+        onClose={() => setShowShippingMarks(false)}
+        value={data.markingNo}
+        onChange={(value) => setData(prev => ({ ...prev, markingNo: value }))}
       />
     </div>
   );

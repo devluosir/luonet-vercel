@@ -54,7 +54,6 @@ export default function QuotationPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewItem, setPreviewItem] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
   const [data, setData] = useState<QuotationData>(_initialData || {
@@ -775,7 +774,7 @@ export default function QuotationPage() {
                   <button
                     type="button"
                     onClick={handlePreview}
-                    disabled={isLoading}
+                    disabled={isSaving}
                     className={`${buttonClassName}
                       bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
                       text-[#007AFF] dark:text-[#0A84FF] font-medium
@@ -787,10 +786,10 @@ export default function QuotationPage() {
                       transform transition-all duration-75 ease-out
                       w-full sm:w-auto sm:min-w-[120px] h-10
                       disabled:opacity-50 disabled:cursor-not-allowed
-                      ${isLoading ? 'scale-[0.98] shadow-inner bg-[#007AFF]/[0.16] dark:bg-[#0A84FF]/[0.16]' : ''}`}
+                      ${isSaving ? 'scale-[0.98] shadow-inner bg-[#007AFF]/[0.16] dark:bg-[#0A84FF]/[0.16]' : ''}`}
                   >
                     <div className="flex items-center justify-center gap-2">
-                      {isLoading ? (
+                      {isSaving ? (
                         <>
                           <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

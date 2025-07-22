@@ -59,6 +59,21 @@ export default function PurchaseOrderPage() {
   const orderNumbersRef = useRef<HTMLTextAreaElement>(null);
   const paymentTermsRef = useRef<HTMLTextAreaElement>(null);
 
+  // 从 window 全局变量获取初始数据
+  const initialData = typeof window !== 'undefined' ? ((window as any).__PURCHASE_DATA__) : null;
+  const initialEditId = typeof window !== 'undefined' ? ((window as any).__EDIT_ID__) : null;
+
+  // 初始化数据
+  useEffect(() => {
+    if (initialData) {
+      setData(initialData);
+    }
+    if (initialEditId) {
+      setEditId(initialEditId);
+      setIsEditMode(true);
+    }
+  }, [initialData, initialEditId]);
+
   useEffect(() => {
     if (session?.user?.name) {
       setData(prevData => ({

@@ -99,47 +99,41 @@ export default function InvoicePage() {
     column: string;
   } | null>(null);
 
-  // 数据状态
-  const [invoiceData, setInvoiceData] = useState<InvoiceData>({
+  // 从 window 全局变量获取初始数据
+  const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__INVOICE_DATA__) : null;
+  const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
+
+  // 2. 数据状态
+  const [data, setData] = useState<InvoiceData>(initialData || {
+    to: '',
     invoiceNo: '',
     date: format(new Date(), 'yyyy-MM-dd'),
-    to: '',
-    customerPO: '',
+    from: typeof window !== 'undefined' ? 
+      (localStorage.getItem('username') ? 
+        localStorage.getItem('username')!.charAt(0).toUpperCase() + localStorage.getItem('username')!.slice(1).toLowerCase() : 
+        'Roger') : 
+      'Roger',
+    currency: 'USD',
     items: [{
-      lineNo: 1,
-      hsCode: '',
-      partname: '',
+      id: 1,
       description: '',
       quantity: 0,
       unit: 'pc',
       unitPrice: 0,
       amount: 0
     }],
-    bankInfo: `Bank Name: The Hongkong and Shanghai Banking Corporation Limited
-Swift code: HSBCHKHHHKH
-Bank address: Head Office 1 Queen's Road Central Hong Kong
-A/C No.: 801470337838
-Beneficiary: Luo & Company Co., Limited`,
-    paymentDate: format(addMonths(new Date(), 1), 'yyyy/MM/dd'),
-    showPaymentTerms: true,
-    additionalPaymentTerms: '',
+    otherFees: [],
     amountInWords: {
       dollars: '',
       cents: '',
       hasDecimals: false
     },
-    remarks: '',
-    showHsCode: false,
-    showDescription: true,
     showBank: false,
-    showInvoiceReminder: true,
-    currency: 'USD',
+    showStamp: false,
     templateConfig: {
       headerType: 'bilingual',
-      invoiceType: 'invoice',
       stampType: 'none'
-    },
-    otherFees: []
+    }
   });
 
   // 2. 工具函数定义
@@ -148,10 +142,10 @@ Beneficiary: Luo & Company Co., Limited`,
   }, []);
 
   const getTotalAmount = useCallback(() => {
-    const itemsTotal = invoiceData.items.reduce((sum, item) => sum + item.amount, 0);
-    const feesTotal = (invoiceData.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
+    const itemsTotal = data.items.reduce((sum, item) => sum + item.amount, 0);
+    const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
     return itemsTotal + feesTotal;
-  }, [invoiceData.items, invoiceData.otherFees]);
+  }, [data.items, data.otherFees]);
 
   const calculatePaymentDate = useCallback((date: string) => {
     const baseDate = new Date(date);
@@ -217,10 +211,10 @@ Beneficiary: Luo & Company Co., Limited`,
   }, []);
 
   const handleAddLine = useCallback(() => {
-    setInvoiceData(prev => ({
+    setData(prev => ({
       ...prev,
       items: [...prev.items, {
-        lineNo: prev.items.length + 1,
+        id: prev.items.length + 1,
         hsCode: '',
         partname: '',
         description: '',
@@ -235,16 +229,16 @@ Beneficiary: Luo & Company Co., Limited`,
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, rowIndex: number, column: string) => {
     const columns = [
-      ...(invoiceData.showHsCode ? ['hsCode'] : []),
+      ...(data.showHsCode ? ['hsCode'] : []),
       'partname',
-      ...(invoiceData.showDescription ? ['description'] : []),
+      ...(data.showDescription ? ['description'] : []),
       'quantity',
       'unit',
       'unitPrice'
     ];
 
     const currentColumnIndex = columns.indexOf(column);
-    const totalRows = invoiceData.items.length;
+    const totalRows = data.items.length;
     const isTextarea = e.target instanceof HTMLTextAreaElement;
 
     switch (e.key) {
@@ -293,10 +287,10 @@ Beneficiary: Luo & Company Co., Limited`,
         }
         break;
     }
-  }, [invoiceData.showHsCode, invoiceData.showDescription, invoiceData.items.length]);
+  }, [data.showHsCode, data.showDescription, data.items.length]);
 
   const handleDoubleClick = useCallback((index: number, field: keyof Exclude<LineItem['highlight'], undefined>) => {
-    const newItems = [...invoiceData.items];
+    const newItems = [...data.items];
     newItems[index] = {
       ...newItems[index],
       highlight: {
@@ -304,14 +298,14 @@ Beneficiary: Luo & Company Co., Limited`,
         [field]: !newItems[index].highlight?.[field]
       }
     };
-    setInvoiceData(prev => ({
+    setData(prev => ({
       ...prev,
       items: newItems
     }));
-  }, [invoiceData.items]);
+  }, [data.items]);
 
   const handleOtherFeeDoubleClick = useCallback((index: number, field: 'description' | 'amount') => {
-    const newFees = [...(invoiceData.otherFees || [])];
+    const newFees = [...(data.otherFees || [])];
     newFees[index] = {
       ...newFees[index],
       highlight: {
@@ -319,11 +313,11 @@ Beneficiary: Luo & Company Co., Limited`,
         [field]: !newFees[index].highlight?.[field]
       }
     };
-    setInvoiceData(prev => ({
+    setData(prev => ({
       ...prev,
       otherFees: newFees
     }));
-  }, [invoiceData.otherFees]);
+  }, [data.otherFees]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -336,11 +330,11 @@ Beneficiary: Luo & Company Co., Limited`,
           if (item.id === editId) {
             return {
               ...item,
-              customerName: invoiceData.to,
-              invoiceNo: invoiceData.invoiceNo,
+              customerName: data.to,
+              invoiceNo: data.invoiceNo,
               totalAmount: getTotalAmount(),
-              currency: invoiceData.currency,
-              data: invoiceData,
+              currency: data.currency,
+              data: data,
               updatedAt: new Date().toISOString()
             };
           }
@@ -349,22 +343,22 @@ Beneficiary: Luo & Company Co., Limited`,
         saveInvoiceHistory(updatedHistory);
         
         // 记录客户信息使用情况
-        if (invoiceData.to && invoiceData.invoiceNo) {
-          const customerName = invoiceData.to.split('\n')[0].trim();
-          recordCustomerUsage(customerName, 'invoice', invoiceData.invoiceNo);
+        if (data.to && data.invoiceNo) {
+          const customerName = data.to.split('\n')[0].trim();
+          recordCustomerUsage(customerName, 'invoice', data.invoiceNo);
         }
         
         // 生成 PDF
-        await generateInvoicePDF(invoiceData);
+        await generateInvoicePDF(data);
       } else {
         // 生成新发票并保存到历史记录
         const newInvoice = {
           id: uuidv4(),
-          customerName: invoiceData.to,
-          invoiceNo: invoiceData.invoiceNo,
+          customerName: data.to,
+          invoiceNo: data.invoiceNo,
           totalAmount: getTotalAmount(),
-          currency: invoiceData.currency,
-          data: invoiceData,
+          currency: data.currency,
+          data: data,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
@@ -376,22 +370,22 @@ Beneficiary: Luo & Company Co., Limited`,
         }
         
         // 记录客户信息使用情况
-        if (invoiceData.to && invoiceData.invoiceNo) {
-          const customerName = invoiceData.to.split('\n')[0].trim();
-          recordCustomerUsage(customerName, 'invoice', invoiceData.invoiceNo);
+        if (data.to && data.invoiceNo) {
+          const customerName = data.to.split('\n')[0].trim();
+          recordCustomerUsage(customerName, 'invoice', data.invoiceNo);
         }
         
         // 生成 PDF
-        await generateInvoicePDF(invoiceData);
+        await generateInvoicePDF(data);
       }
     } catch (error) {
       console.error('Error handling submit:', error);
       alert('处理发票时出错');
     }
-  }, [isEditMode, editId, invoiceData, getTotalAmount]);
+  }, [isEditMode, editId, data, getTotalAmount]);
 
   const updateLineItem = useCallback((index: number, field: keyof LineItem, value: string | number) => {
-    setInvoiceData(prev => {
+    setData(prev => {
       const newItems = [...prev.items];
       const item = { ...newItems[index] };
       
@@ -427,14 +421,14 @@ Beneficiary: Luo & Company Co., Limited`,
 
   // 处理保存功能
   const handleSave = useCallback(async () => {
-    if (!invoiceData.to.trim()) {
+    if (!data.to.trim()) {
       setSaveMessage('请填写客户名称');
       setSaveSuccess(false);
       setTimeout(() => setSaveMessage(''), 2000);
       return;
     }
 
-    if (invoiceData.items.length === 0 || (invoiceData.items.length === 1 && !invoiceData.items[0].partname)) {
+    if (data.items.length === 0 || (data.items.length === 1 && !data.items[0].partname)) {
       setSaveMessage('请添加至少一个商品');
       setSaveSuccess(false);
       setTimeout(() => setSaveMessage(''), 2000);
@@ -452,11 +446,11 @@ Beneficiary: Luo & Company Co., Limited`,
           if (item.id === editId) {
             return {
               ...item,
-              customerName: invoiceData.to,
-              invoiceNo: invoiceData.invoiceNo,
+              customerName: data.to,
+              invoiceNo: data.invoiceNo,
               totalAmount: totalAmount,
-              currency: invoiceData.currency,
-              data: invoiceData,
+              currency: data.currency,
+              data: data,
               updatedAt: new Date().toISOString()
             };
           }
@@ -475,11 +469,11 @@ Beneficiary: Luo & Company Co., Limited`,
         // 创建新发票记录
         const newInvoice = {
           id: uuidv4(),
-          customerName: invoiceData.to,
-          invoiceNo: invoiceData.invoiceNo,
+          customerName: data.to,
+          invoiceNo: data.invoiceNo,
           totalAmount: totalAmount,
-          currency: invoiceData.currency,
-          data: invoiceData,
+          currency: data.currency,
+          data: data,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
@@ -503,7 +497,7 @@ Beneficiary: Luo & Company Co., Limited`,
       setIsSaving(false);
       setTimeout(() => setSaveMessage(''), 2000);
     }
-  }, [invoiceData, isEditMode, editId, getTotalAmount]);
+  }, [data, isEditMode, editId, getTotalAmount]);
 
   // 处理粘贴功能
   const handlePasteButtonClick = useCallback(async () => {
@@ -557,7 +551,7 @@ Beneficiary: Luo & Company Co., Limited`,
           const baseUnit = unit.trim().replace(/s$/, '') || 'pc';
 
           return {
-            lineNo: index + 1,
+            id: index + 1, // Use index + 1 for new items
             hsCode: '',
             partname: partname || '',
             description: description || '',
@@ -570,7 +564,7 @@ Beneficiary: Luo & Company Co., Limited`,
         });
 
         // 更新发票数据，过滤掉完全空白的行
-        setInvoiceData(prev => {
+        setData(prev => {
           // 如果是从报价单导入的数据，尝试处理 partName 字段
           const processedItems = newItems.map(item => {
             // @ts-ignore - 处理可能的报价单数据
@@ -644,7 +638,7 @@ Beneficiary: Luo & Company Co., Limited`,
           const newItems = rows.map((row, index) => {
             const cells = row.split(/\t(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(cell => cell.replace(/^\s+|\s+$/g, ''));
             return {
-              lineNo: index + 1,
+              id: index + 1, // Use index + 1 for new items
               hsCode: '',
               partname: cells[0] || '',
               description: cells[1] || '',
@@ -656,7 +650,7 @@ Beneficiary: Luo & Company Co., Limited`,
             };
           });
 
-          setInvoiceData(prev => ({
+          setData(prev => ({
             ...prev,
             items: newItems.filter(item => item.partname || item.description).map(item => ({
               ...item,
@@ -681,7 +675,7 @@ Beneficiary: Luo & Company Co., Limited`,
   useEffect(() => {
     // 原有的 effect 代码
     // ...
-  }, [/* 其他依赖 */, invoiceData]);
+  }, [/* 其他依赖 */, data]);
 
   // 3. Effect Hooks
   useEffect(() => {
@@ -703,7 +697,7 @@ Beneficiary: Luo & Company Co., Limited`,
       if (typeof window !== 'undefined') {
         const customWindow = window as unknown as CustomWindow;
         if (customWindow.__INVOICE_DATA__) {
-          setInvoiceData(customWindow.__INVOICE_DATA__);
+          setData(customWindow.__INVOICE_DATA__);
         }
         if (customWindow.__EDIT_MODE__ !== undefined) {
           setIsEditMode(customWindow.__EDIT_MODE__);
@@ -722,21 +716,21 @@ Beneficiary: Luo & Company Co., Limited`,
   }, [mounted, router]);
 
   useEffect(() => {
-    const newPaymentDate = calculatePaymentDate(invoiceData.date);
-    setInvoiceData(prev => ({
+    const newPaymentDate = calculatePaymentDate(data.date);
+    setData(prev => ({
       ...prev,
       paymentDate: newPaymentDate
     }));
-  }, [invoiceData.date, calculatePaymentDate]);
+  }, [data.date, calculatePaymentDate]);
 
   useEffect(() => {
     const total = getTotalAmount();
     const words = numberToWords(total);
-    setInvoiceData(prev => ({
+    setData(prev => ({
       ...prev,
       amountInWords: words
     }));
-  }, [invoiceData.items, getTotalAmount, numberToWords]);
+  }, [data.items, getTotalAmount, numberToWords]);
 
   useEffect(() => {
     if (focusedCell) {
@@ -843,9 +837,9 @@ Beneficiary: Luo & Company Co., Limited`,
                             <button
                               key={option.value}
                               type="button"
-                              onClick={() => setInvoiceData(prev => ({ ...prev, currency: option.value as 'USD' | 'CNY' }))}
+                              onClick={() => setData(prev => ({ ...prev, currency: option.value as 'USD' | 'CNY' }))}
                               className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
-                                invoiceData.currency === option.value 
+                                data.currency === option.value 
                                   ? 'bg-[#007AFF] text-white shadow-sm' 
                                   : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
                               }`}
@@ -871,7 +865,7 @@ Beneficiary: Luo & Company Co., Limited`,
                             <button
                               key={option.value}
                               type="button"
-                              onClick={() => setInvoiceData(prev => ({
+                              onClick={() => setData(prev => ({
                                 ...prev,
                                 templateConfig: {
                                   ...prev.templateConfig,
@@ -879,7 +873,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                 }
                               }))}
                               className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
-                                invoiceData.templateConfig.headerType === option.value 
+                                data.templateConfig.headerType === option.value 
                                   ? 'bg-[#007AFF] text-white shadow-sm' 
                                   : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
                               }`}
@@ -905,7 +899,7 @@ Beneficiary: Luo & Company Co., Limited`,
                             <button
                               key={option.value}
                               type="button"
-                              onClick={() => setInvoiceData(prev => ({
+                              onClick={() => setData(prev => ({
                                 ...prev,
                                 templateConfig: {
                                   ...prev.templateConfig,
@@ -913,7 +907,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                 }
                               }))}
                               className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
-                                invoiceData.templateConfig.invoiceType === option.value 
+                                data.templateConfig.invoiceType === option.value 
                                   ? 'bg-[#007AFF] text-white shadow-sm' 
                                   : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
                               }`}
@@ -939,7 +933,7 @@ Beneficiary: Luo & Company Co., Limited`,
                             <button
                               key={option.value}
                               type="button"
-                              onClick={() => setInvoiceData(prev => ({
+                              onClick={() => setData(prev => ({
                                 ...prev,
                                 templateConfig: {
                                   ...prev.templateConfig,
@@ -947,7 +941,7 @@ Beneficiary: Luo & Company Co., Limited`,
                                 }
                               }))}
                               className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
-                                invoiceData.templateConfig.stampType === option.value 
+                                data.templateConfig.stampType === option.value 
                                   ? 'bg-[#007AFF] text-white shadow-sm' 
                                   : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
                               }`}
@@ -969,8 +963,8 @@ Beneficiary: Luo & Company Co., Limited`,
                         <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
                           <input
                             type="checkbox"
-                            checked={invoiceData.showBank}
-                            onChange={e => setInvoiceData(prev => ({ ...prev, showBank: e.target.checked }))}
+                            checked={data.showBank}
+                            onChange={e => setData(prev => ({ ...prev, showBank: e.target.checked }))}
                             className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
                               checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
                               focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
@@ -989,8 +983,8 @@ Beneficiary: Luo & Company Co., Limited`,
                         <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
                           <input
                             type="checkbox"
-                            checked={invoiceData.showHsCode}
-                            onChange={e => setInvoiceData(prev => ({ ...prev, showHsCode: e.target.checked }))}
+                            checked={data.showHsCode}
+                            onChange={e => setData(prev => ({ ...prev, showHsCode: e.target.checked }))}
                             className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
                               checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
                               focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
@@ -1009,8 +1003,8 @@ Beneficiary: Luo & Company Co., Limited`,
                         <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
                           <input
                             type="checkbox"
-                            checked={invoiceData.showDescription}
-                            onChange={e => setInvoiceData(prev => ({ ...prev, showDescription: e.target.checked }))}
+                            checked={data.showDescription}
+                            onChange={e => setData(prev => ({ ...prev, showDescription: e.target.checked }))}
                             className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
                               checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
                               focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
@@ -1034,10 +1028,10 @@ Beneficiary: Luo & Company Co., Limited`,
                   {/* 左侧：客户信息 */}
                   <div className="bg-gray-50/50 dark:bg-gray-800/20 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
                     <CustomerSection
-                      to={invoiceData.to}
-                      customerPO={invoiceData.customerPO}
+                      to={data.to}
+                      customerPO={data.customerPO}
                       onChange={({ to, customerPO }) => {
-                        setInvoiceData(prev => ({
+                        setData(prev => ({
                           ...prev,
                           to,
                           customerPO
@@ -1055,11 +1049,11 @@ Beneficiary: Luo & Company Co., Limited`,
                         </label>
                         <input
                           type="text"
-                          value={invoiceData.invoiceNo}
-                          onChange={e => setInvoiceData(prev => ({ ...prev, invoiceNo: e.target.value }))}
+                          value={data.invoiceNo}
+                          onChange={e => setData(prev => ({ ...prev, invoiceNo: e.target.value }))}
                           placeholder="Enter invoice number"
                           className={`${inputClassName} w-full [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 ${
-                            !invoiceData.invoiceNo 
+                            !data.invoiceNo 
                               ? 'border-[#007AFF]/50 dark:border-[#0A84FF]/50' 
                               : ''
                           }`}
@@ -1071,8 +1065,8 @@ Beneficiary: Luo & Company Co., Limited`,
                         </label>
                         <input
                           type="date"
-                          value={invoiceData.date}
-                          onChange={(e) => setInvoiceData(prev => ({ ...prev, date: e.target.value }))}
+                          value={data.date}
+                          onChange={(e) => setData(prev => ({ ...prev, date: e.target.value }))}
                           className={`${inputClassName} w-full`}
                           required
                         />
@@ -1083,8 +1077,8 @@ Beneficiary: Luo & Company Co., Limited`,
 
                 {/* 商品表格 */}
                 <ItemsTable
-                  invoiceData={invoiceData}
-                  setInvoiceData={setInvoiceData}
+                  invoiceData={data}
+                  setInvoiceData={setData}
                   updateLineItem={updateLineItem}
                   handleKeyDown={handleKeyDown}
                   handleDoubleClick={handleDoubleClick}
@@ -1113,13 +1107,13 @@ Beneficiary: Luo & Company Co., Limited`,
                     <button
                       type="button"
                       onClick={() => {
-                        const newFees = [...(invoiceData.otherFees || [])];
+                        const newFees = [...(data.otherFees || [])];
                         newFees.push({
                           id: Date.now(),
                           description: '',
                           amount: 0
                         });
-                        setInvoiceData(prev => ({ ...prev, otherFees: newFees }));
+                        setData(prev => ({ ...prev, otherFees: newFees }));
                       }}
                       className="px-2 sm:px-3 h-7 rounded-lg whitespace-nowrap
                         bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
@@ -1138,7 +1132,7 @@ Beneficiary: Luo & Company Co., Limited`,
                     <span className="text-sm font-medium text-gray-500 hidden md:inline">Total Amount</span>
                     <div className="text-right">
                       <span className="text-xl font-semibold tracking-tight whitespace-nowrap">
-                        {invoiceData.currency === 'USD' ? '$' : '¥'}
+                        {data.currency === 'USD' ? '$' : '¥'}
                         {getTotalAmount().toFixed(2)}
                       </span>
                     </div>
@@ -1150,25 +1144,25 @@ Beneficiary: Luo & Company Co., Limited`,
                   <div className="inline text-sm">
                     <span className="text-gray-600 dark:text-gray-400">SAY TOTAL </span>
                     <span className="text-blue-500">
-                      {invoiceData.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
+                      {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
                     </span>
-                    <span className="text-gray-600 dark:text-gray-400">{invoiceData.amountInWords.dollars}</span>
-                    {invoiceData.amountInWords.hasDecimals && (
+                    <span className="text-gray-600 dark:text-gray-400">{data.amountInWords.dollars}</span>
+                    {data.amountInWords.hasDecimals && (
                       <>
                         <span className="text-red-500"> AND </span>
                         <span className="text-gray-600 dark:text-gray-400">
-                          {invoiceData.amountInWords.cents}
+                          {data.amountInWords.cents}
                         </span>
                       </>
                     )}
-                    {!invoiceData.amountInWords.hasDecimals && (
+                    {!data.amountInWords.hasDecimals && (
                       <span className="text-gray-600 dark:text-gray-400"> ONLY</span>
                     )}
                   </div>
                 </div>
 
                 {/* 银行信息 */}
-                {invoiceData.showBank && (
+                {data.showBank && (
                   <div className="mt-4">
                     <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Bank Information:</h3>
                     <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-sm text-gray-600 dark:text-gray-400">
@@ -1191,9 +1185,9 @@ Beneficiary: Luo & Company Co., Limited`,
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={invoiceData.showPaymentTerms}
+                          checked={data.showPaymentTerms}
                           onChange={(e) => {
-                            setInvoiceData(prev => ({
+                            setData(prev => ({
                               ...prev,
                               showPaymentTerms: e.target.checked
                             }));
@@ -1214,8 +1208,8 @@ Beneficiary: Luo & Company Co., Limited`,
                           <span className="text-sm text-gray-600 dark:text-gray-400">Full paid not later than</span>
                           <input
                             type="date"
-                            value={invoiceData.paymentDate}
-                            onChange={(e) => setInvoiceData(prev => ({ 
+                            value={data.paymentDate}
+                            onChange={(e) => setData(prev => ({ 
                               ...prev, 
                               paymentDate: e.target.value 
                             }))}
@@ -1235,8 +1229,8 @@ Beneficiary: Luo & Company Co., Limited`,
                       </div>
                       <div className="flex items-center gap-2">
                         <textarea
-                          value={invoiceData.additionalPaymentTerms}
-                          onChange={(e) => setInvoiceData(prev => ({
+                          value={data.additionalPaymentTerms}
+                          onChange={(e) => setData(prev => ({
                             ...prev,
                             additionalPaymentTerms: e.target.value
                           }))}
@@ -1248,8 +1242,8 @@ Beneficiary: Luo & Company Co., Limited`,
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={invoiceData.showInvoiceReminder}
-                          onChange={e => setInvoiceData(prev => ({ ...prev, showInvoiceReminder: e.target.checked }))}
+                          checked={data.showInvoiceReminder}
+                          onChange={e => setData(prev => ({ ...prev, showInvoiceReminder: e.target.checked }))}
                           className="flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
                             checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
                             focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
@@ -1263,7 +1257,7 @@ Beneficiary: Luo & Company Co., Limited`,
                           }}
                         />
                         <div className="text-sm text-gray-600 dark:text-gray-400">
-                          Please state our invoice no. <span className="text-red-500 dark:text-red-400">&quot;{invoiceData.invoiceNo}&quot;</span> on your payment documents.
+                          Please state our invoice no. <span className="text-red-500 dark:text-red-400">&quot;{data.invoiceNo}&quot;</span> on your payment documents.
                         </div>
                       </div>
                     </div>
@@ -1294,11 +1288,11 @@ Beneficiary: Luo & Company Co., Limited`,
                           id: editId || 'preview',
                           createdAt: new Date().toISOString(),
                           updatedAt: new Date().toISOString(),
-                          customerName: invoiceData.to || 'Unknown',
-                          invoiceNo: invoiceData.invoiceNo || 'N/A',
+                          customerName: data.to || 'Unknown',
+                          invoiceNo: data.invoiceNo || 'N/A',
                           totalAmount: getTotalAmount(),
-                          currency: invoiceData.currency,
-                          data: invoiceData
+                          currency: data.currency,
+                          data: data
                         };
                         
                         setPreviewItem(previewData);
