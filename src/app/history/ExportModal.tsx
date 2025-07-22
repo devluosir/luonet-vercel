@@ -53,7 +53,6 @@ export default function ExportModal({
         showMessage('error', '导出失败，请重试');
       }
     } catch (error) {
-      console.error('Export error:', error);
       showMessage('error', '导出失败，请重试');
     } finally {
       setIsLoading(false);

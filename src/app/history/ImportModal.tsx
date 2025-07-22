@@ -50,13 +50,7 @@ export default function ImportModal({
     setIsLoading(true);
     clearMessage();
     
-    console.log('ImportModal: 开始处理文件导入');
-    console.log('文件信息:', { 
-      name: file.name, 
-      size: file.size, 
-      type: file.type,
-      lastModified: new Date(file.lastModified).toISOString()
-    });
+
     
     // 检查文件大小（限制为10MB）
     const maxSize = 10 * 1024 * 1024; // 10MB
@@ -79,65 +73,27 @@ export default function ImportModal({
         const reader = new FileReader();
         reader.onload = (e) => {
           const result = e.target?.result as string;
-          if (process.env.NODE_ENV === 'development') {
-            console.log('ImportModal: 文件读取成功');
-            console.log('ImportModal: 内容长度:', result.length);
-            console.log('ImportModal: 内容类型:', typeof result);
-            console.log('ImportModal: 前200字符:', result.substring(0, 200));
-            console.log('ImportModal: 后200字符:', result.substring(result.length - 200));
-            // 检查是否有BOM标记
-            if (result.charCodeAt(0) === 0xFEFF) {
-              console.log('ImportModal: 检测到BOM标记，已自动移除');
-            }
-            // 检查是否包含特殊字符
-            const specialChars = result.match(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g);
-            if (specialChars) {
-              console.log('ImportModal: 检测到特殊字符:', specialChars);
-            }
-          }
+
           resolve(result);
         };
         reader.onerror = (error) => {
-          if (process.env.NODE_ENV === 'development') {
-            console.error('ImportModal: 文件读取失败:', error);
-            console.error('ImportModal: 错误详情:', {
-              error,
-              readyState: reader.readyState,
-              result: reader.result
-            });
-          }
           reject(new Error('文件读取失败'));
         };
         reader.onabort = () => {
-          if (process.env.NODE_ENV === 'development') {
-            console.error('ImportModal: 文件读取被中断');
-          }
           reject(new Error('文件读取被中断'));
         };
         reader.onloadstart = () => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('ImportModal: 开始读取文件');
-          }
+          // 静默处理
         };
         reader.onloadend = () => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('ImportModal: 文件读取完成');
-          }
+          // 静默处理
         };
         reader.onprogress = (e) => {
-          if (process.env.NODE_ENV === 'development' && e.lengthComputable) {
-            console.log('ImportModal: 读取进度:', Math.round((e.loaded / e.total) * 100) + '%');
-          }
+          // 静默处理
         };
         try {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('ImportModal: 尝试UTF-8编码读取');
-          }
           reader.readAsText(file, 'UTF-8');
         } catch (encodingError) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('ImportModal: UTF-8读取失败，尝试默认编码');
-          }
           reader.readAsText(file);
         }
       });
@@ -145,56 +101,22 @@ export default function ImportModal({
       let parsedData;
       try {
         parsedData = JSON.parse(content);
-        if (process.env.NODE_ENV === 'development') {
-          console.log('ImportModal: JSON解析成功，数据类型:', typeof parsedData);
-          if (Array.isArray(parsedData)) {
-            console.log('ImportModal: 数据是数组，长度:', parsedData.length);
-          } else if (typeof parsedData === 'object') {
-            console.log('ImportModal: 数据是对象，键:', Object.keys(parsedData));
-          }
-        }
       } catch (parseError) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('ImportModal: JSON解析失败:', parseError);
-          console.error('ImportModal: 解析错误详情:', {
-            message: parseError instanceof Error ? parseError.message : String(parseError),
-            stack: parseError instanceof Error ? parseError.stack : undefined
-          });
-          console.log('ImportModal: 尝试修复JSON格式...');
-        }
         let fixedContent = content;
         if (fixedContent.charCodeAt(0) === 0xFEFF) {
           fixedContent = fixedContent.slice(1);
-          if (process.env.NODE_ENV === 'development') {
-            console.log('ImportModal: 移除BOM标记');
-          }
         }
         fixedContent = fixedContent.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-        if (process.env.NODE_ENV === 'development') {
-          console.log('ImportModal: 移除控制字符');
-        }
         try {
           parsedData = JSON.parse(fixedContent);
-          if (process.env.NODE_ENV === 'development') {
-            console.log('ImportModal: 修复后JSON解析成功');
-          }
         } catch (secondError) {
-          if (process.env.NODE_ENV === 'development') {
-            console.error('ImportModal: 修复后仍然解析失败:', secondError);
-          }
           showMessage('error', '文件格式错误：不是有效的JSON文件，请检查文件内容');
           setIsLoading(false);
           return;
         }
       }
       // 调用导入函数
-      if (process.env.NODE_ENV === 'development') {
-        console.log('ImportModal: 开始调用handleFileImport...');
-      }
       const result = await handleFileImport(file, activeTab);
-      if (process.env.NODE_ENV === 'development') {
-        console.log('ImportModal: 导入结果:', result);
-      }
       if (result.success) {
         const details = result.details || [];
         let message = `导入成功！\n${details.join('\n')}`;
@@ -204,26 +126,12 @@ export default function ImportModal({
           message += `\n\n💡 提示：已自动提取并保存 ${result.customerImported} 条客户信息到客户管理系统，您可以在客户管理页面查看。`;
         }
         
-        if (process.env.NODE_ENV === 'development') {
-          console.log('ImportModal: 显示成功消息:', message);
-        }
         showMessage('success', message);
       } else {
         const errorMessage = `导入失败：${result.error || '未知错误'}`;
-        if (process.env.NODE_ENV === 'development') {
-          console.error('ImportModal: 导入失败:', errorMessage);
-        }
         showMessage('error', errorMessage);
       }
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('ImportModal: 导入异常:', error);
-        console.error('ImportModal: 异常详情:', {
-          name: error instanceof Error ? error.name : 'Unknown',
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
-        });
-      }
       let errorMessage = '导入失败：文件读取错误，请检查文件格式';
       if (error instanceof Error && error.message.includes('文件读取失败')) {
         errorMessage = '导入失败：无法读取文件，请检查文件是否损坏或过大';

@@ -183,7 +183,7 @@ export default function PackingHistoryTab({
       const sortedHistory = sortHistory(filteredHistory);
       setHistory(sortedHistory);
     } catch (error) {
-      console.error('Error loading packing history:', error);
+      // 静默处理错误
     } finally {
       setLoading(false);
     }

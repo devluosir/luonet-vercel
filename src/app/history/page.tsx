@@ -355,12 +355,9 @@ export default function HistoryManagementPage() {
         
         return true;
       });
-    } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Error filtering history:', error);
+          } catch (error) {
+        return items; // 返回原始数据，避免页面崩溃
       }
-      return items; // 返回原始数据，避免页面崩溃
-    }
   }, [filters, activeTab]);
 
   // 获取排序后的数据
@@ -421,7 +418,7 @@ export default function HistoryManagementPage() {
       const sortedResults = getSortedHistory(filteredResults);
       // setHistory(sortedResults); // This line is removed
     } catch (error) {
-      console.error('Error loading history:', error);
+      // 静默处理错误
     }
   }, [activeTab, getFilteredHistory, getSortedHistory, getAvailableTabs]);
 
@@ -445,7 +442,6 @@ export default function HistoryManagementPage() {
       // 检查用户是否有权限访问当前activeTab
       const availableTabs = getAvailableTabs();
       if (!availableTabs.some(tab => tab.id === activeTab)) {
-        console.error('No permission to delete this type of document');
         return;
       }
       
@@ -478,12 +474,9 @@ export default function HistoryManagementPage() {
         // 强制刷新数据
         setRefreshKey(prev => prev + 1);
         loadHistory();
-        console.log('删除成功');
-      } else {
-        console.error('删除失败，请重试');
       }
     } catch (error) {
-      console.error('Error deleting item:', error);
+      // 静默处理错误
     } finally {
       setIsDeleting(false);
     }
@@ -495,7 +488,6 @@ export default function HistoryManagementPage() {
       // 检查用户是否有权限访问当前activeTab
       const availableTabs = getAvailableTabs();
       if (!availableTabs.some(tab => tab.id === activeTab)) {
-        console.error('No permission to delete this type of document');
         return;
       }
       
@@ -533,12 +525,9 @@ export default function HistoryManagementPage() {
         // 强制刷新数据
         setRefreshKey(prev => prev + 1);
         loadHistory();
-        console.log(`成功删除 ${successCount} 条记录`);
-      } else {
-        console.error('删除失败，请重试');
       }
     } catch (error) {
-      console.error('Error batch deleting items:', error);
+      // 静默处理错误
     } finally {
       setIsDeleting(false);
     }
@@ -550,7 +539,6 @@ export default function HistoryManagementPage() {
       // 检查用户是否有权限访问当前activeTab
       const availableTabs = getAvailableTabs();
       if (!availableTabs.some(tab => tab.id === activeTab)) {
-        console.error('No permission to edit this type of document');
         return;
       }
       
@@ -584,7 +572,7 @@ export default function HistoryManagementPage() {
           break;
       }
     } catch (error) {
-      console.error('Error navigating to edit page:', error);
+      // 静默处理错误
     }
   };
 
@@ -594,7 +582,6 @@ export default function HistoryManagementPage() {
       // 检查用户是否有权限访问当前activeTab
       const availableTabs = getAvailableTabs();
       if (!availableTabs.some(tab => tab.id === activeTab)) {
-        console.error('No permission to copy this type of document');
         return;
       }
       
@@ -614,7 +601,7 @@ export default function HistoryManagementPage() {
           break;
       }
     } catch (error) {
-      console.error('Error navigating to copy page:', error);
+      // 静默处理错误
     }
   };
 
@@ -624,7 +611,6 @@ export default function HistoryManagementPage() {
       // 检查用户是否有权限访问装箱单功能
       const availableTabs = getAvailableTabs();
       if (!availableTabs.some(tab => tab.id === 'packing')) {
-        console.error('No permission to convert to packing document');
         return;
       }
       
@@ -644,7 +630,7 @@ export default function HistoryManagementPage() {
         }
       }
     } catch (error) {
-      console.error('Error converting to packing:', error);
+      // 静默处理错误
     }
   };
 
@@ -732,12 +718,20 @@ export default function HistoryManagementPage() {
   // 全选/取消全选
   const handleSelectAll = (selected: boolean) => {
     if (selected) {
-      // 根据当前activeTab获取对应的历史数据
+      // 根据当前activeTab获取对应的历史数据，并应用过滤条件
       let currentHistory: HistoryItem[] = [];
       switch (activeTab) {
         case 'quotation':
+          // 报价单Tab只显示type为'quotation'的记录
+          currentHistory = getQuotationHistory().filter(item => 
+            'type' in item && (item as QuotationHistory).type === 'quotation'
+          );
+          break;
         case 'confirmation':
-          currentHistory = getQuotationHistory();
+          // 确认书Tab只显示type为'confirmation'的记录
+          currentHistory = getQuotationHistory().filter(item => 
+            'type' in item && (item as QuotationHistory).type === 'confirmation'
+          );
           break;
         case 'invoice':
           currentHistory = getInvoiceHistory();
@@ -747,8 +741,91 @@ export default function HistoryManagementPage() {
           break;
         case 'packing':
           currentHistory = getPackingHistory();
+          // 应用文档类型过滤（如果filters.type不是'all'且不是'packing'）
+          if (filters.type !== 'all' && filters.type !== 'packing') {
+            if (['proforma', 'packing', 'both'].includes(filters.type)) {
+              currentHistory = currentHistory.filter(item => 
+                (item as PackingHistory).documentType === filters.type
+              );
+            }
+          }
           break;
       }
+
+      // 应用搜索过滤 - 根据不同Tab使用不同的搜索逻辑
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        currentHistory = currentHistory.filter(item => {
+          switch (activeTab) {
+            case 'quotation':
+              return (item as QuotationHistory).customerName.toLowerCase().includes(searchLower) ||
+                     (item as QuotationHistory).quotationNo.toLowerCase().includes(searchLower);
+            case 'confirmation':
+              const confirmationItem = item as QuotationHistory;
+              return confirmationItem.customerName.toLowerCase().includes(searchLower) ||
+                     confirmationItem.quotationNo.toLowerCase().includes(searchLower) ||
+                     (confirmationItem.data?.contractNo && confirmationItem.data.contractNo.toLowerCase().includes(searchLower));
+            case 'invoice':
+              return (item as InvoiceHistory).customerName.toLowerCase().includes(searchLower) ||
+                     (item as InvoiceHistory).invoiceNo.toLowerCase().includes(searchLower) ||
+                     ((item as InvoiceHistory).data?.customerPO && (item as InvoiceHistory).data.customerPO.toLowerCase().includes(searchLower));
+            case 'purchase':
+              return (item as PurchaseHistory).supplierName.toLowerCase().includes(searchLower) ||
+                     (item as PurchaseHistory).orderNo.toLowerCase().includes(searchLower);
+            case 'packing':
+              return (item as PackingHistory).consigneeName.toLowerCase().includes(searchLower) ||
+                     (item as PackingHistory).invoiceNo.toLowerCase().includes(searchLower) ||
+                     (item as PackingHistory).orderNo.toLowerCase().includes(searchLower);
+            default:
+              return true;
+          }
+        });
+      }
+
+      // 应用日期范围过滤
+      if (filters.dateRange !== 'all') {
+        const now = new Date();
+        currentHistory = currentHistory.filter(item => {
+          const itemDate = new Date(item.createdAt);
+          const diffTime = Math.abs(now.getTime() - itemDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          switch (filters.dateRange) {
+            case 'today': return diffDays <= 1;
+            case 'week': return diffDays <= 7;
+            case 'month': return diffDays <= 30;
+            case 'year': return diffDays <= 365;
+            default: return true;
+          }
+        });
+      }
+
+      // 应用金额范围过滤 - 根据不同Tab使用不同的阈值
+      if (filters.amountRange !== 'all') {
+        currentHistory = currentHistory.filter(item => {
+          const amount = item.totalAmount;
+          switch (filters.amountRange) {
+            case 'low': 
+              // PackingHistoryTab使用不同的阈值
+              if (activeTab === 'packing') {
+                return amount < 1000;
+              }
+              return amount < 10000;
+            case 'medium': 
+              if (activeTab === 'packing') {
+                return amount >= 1000 && amount < 10000;
+              }
+              return amount >= 10000 && amount < 100000;
+            case 'high': 
+              if (activeTab === 'packing') {
+                return amount >= 10000;
+              }
+              return amount >= 100000;
+            default: 
+              return true;
+          }
+        });
+      }
+
       setSelectedItems(new Set(currentHistory.map(item => item.id)));
     } else {
       setSelectedItems(new Set());
@@ -802,7 +879,6 @@ export default function HistoryManagementPage() {
       // 检查用户是否有权限访问当前activeTab
       const availableTabs = getAvailableTabs();
       if (!availableTabs.some(tab => tab.id === activeTab)) {
-        console.error('No permission to preview this type of document');
         return;
       }
       
@@ -829,7 +905,7 @@ export default function HistoryManagementPage() {
         setShowPreview(true);
       }
     } catch (error) {
-      console.error('Error previewing item:', error);
+      // 静默处理错误
     }
   };
 
@@ -846,10 +922,16 @@ export default function HistoryManagementPage() {
       
       switch (tabType) {
         case 'quotation':
-          results = getQuotationHistory();
+          // 报价单Tab只显示type为'quotation'的记录
+          results = getQuotationHistory().filter(item => 
+            'type' in item && (item as QuotationHistory).type === 'quotation'
+          );
           break;
         case 'confirmation':
-          results = getQuotationHistory();
+          // 确认书Tab只显示type为'confirmation'的记录
+          results = getQuotationHistory().filter(item => 
+            'type' in item && (item as QuotationHistory).type === 'confirmation'
+          );
           break;
         case 'invoice':
           results = getInvoiceHistory();
@@ -864,13 +946,39 @@ export default function HistoryManagementPage() {
 
       // 应用所有过滤条件
       results = results.filter(item => {
-        // 搜索过滤
+        // 搜索过滤 - 根据不同Tab使用不同的搜索逻辑
         if (filters.search) {
           const searchLower = filters.search.toLowerCase();
-          const customerName = getCustomerName(item).toLowerCase();
-          const recordNumber = getRecordNumber(item, tabType).toLowerCase();
+          let matches = false;
           
-          if (!customerName.includes(searchLower) && !recordNumber.includes(searchLower)) {
+          switch (tabType) {
+            case 'quotation':
+              matches = (item as QuotationHistory).customerName.toLowerCase().includes(searchLower) ||
+                       (item as QuotationHistory).quotationNo.toLowerCase().includes(searchLower);
+              break;
+            case 'confirmation':
+              const confirmationItem = item as QuotationHistory;
+              matches = confirmationItem.customerName.toLowerCase().includes(searchLower) ||
+                       confirmationItem.quotationNo.toLowerCase().includes(searchLower) ||
+                       (confirmationItem.data?.contractNo && confirmationItem.data.contractNo.toLowerCase().includes(searchLower));
+              break;
+            case 'invoice':
+              matches = (item as InvoiceHistory).customerName.toLowerCase().includes(searchLower) ||
+                       (item as InvoiceHistory).invoiceNo.toLowerCase().includes(searchLower) ||
+                       ((item as InvoiceHistory).data?.customerPO && (item as InvoiceHistory).data.customerPO.toLowerCase().includes(searchLower));
+              break;
+            case 'purchase':
+              matches = (item as PurchaseHistory).supplierName.toLowerCase().includes(searchLower) ||
+                       (item as PurchaseHistory).orderNo.toLowerCase().includes(searchLower);
+              break;
+            case 'packing':
+              matches = (item as PackingHistory).consigneeName.toLowerCase().includes(searchLower) ||
+                       (item as PackingHistory).invoiceNo.toLowerCase().includes(searchLower) ||
+                       (item as PackingHistory).orderNo.toLowerCase().includes(searchLower);
+              break;
+          }
+          
+          if (!matches) {
             return false;
           }
         }
@@ -880,6 +988,14 @@ export default function HistoryManagementPage() {
           if (tabType === 'quotation' || tabType === 'confirmation') {
             if ((item as QuotationHistory).type !== filters.type) {
               return false;
+            }
+          }
+          // 装箱单的文档类型过滤
+          if (tabType === 'packing') {
+            if (['proforma', 'packing', 'both'].includes(filters.type)) {
+              if ((item as PackingHistory).documentType !== filters.type) {
+                return false;
+              }
             }
           }
         }
@@ -907,18 +1023,31 @@ export default function HistoryManagementPage() {
           }
         }
         
-        // 金额范围过滤
+        // 金额范围过滤 - 根据不同Tab使用不同的阈值
         if (filters.amountRange !== 'all') {
           const amount = item.totalAmount;
           switch (filters.amountRange) {
-            case 'low':
-              if (amount >= 1000) return false;
+            case 'low': 
+              // PackingHistoryTab使用不同的阈值
+              if (tabType === 'packing') {
+                if (amount >= 1000) return false;
+              } else {
+                if (amount >= 10000) return false;
+              }
               break;
-            case 'medium':
-              if (amount < 1000 || amount >= 10000) return false;
+            case 'medium': 
+              if (tabType === 'packing') {
+                if (amount < 1000 || amount >= 10000) return false;
+              } else {
+                if (amount < 10000 || amount >= 100000) return false;
+              }
               break;
-            case 'high':
-              if (amount < 10000) return false;
+            case 'high': 
+              if (tabType === 'packing') {
+                if (amount < 10000) return false;
+              } else {
+                if (amount < 100000) return false;
+              }
               break;
           }
         }
@@ -928,7 +1057,6 @@ export default function HistoryManagementPage() {
 
       return results.length;
     } catch (error) {
-      console.error('Error getting tab count:', error);
       return 0;
     }
   }, [filters, getAvailableTabs]);
@@ -1023,11 +1151,6 @@ export default function HistoryManagementPage() {
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-200 dark:border-blue-800 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mx-auto mb-4"></div>
           <div className="text-lg text-gray-900 dark:text-white">加载中...</div>
-          {process.env.NODE_ENV === 'development' && (
-            <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              正在获取用户权限信息...
-            </div>
-          )}
         </div>
       </div>
     );
@@ -1119,7 +1242,10 @@ export default function HistoryManagementPage() {
                 </button>
                 {selectedItems.size > 0 && (
                   <button
-                    onClick={() => setDeleteConfirmId('batch')}
+                    onClick={() => {
+                      setDeleteConfirmId('batch');
+                      setShowDeleteConfirm(true);
+                    }}
                     className="px-3 py-2 flex items-center bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
                     title="批量删除"
                   >
@@ -1240,7 +1366,10 @@ export default function HistoryManagementPage() {
                   onSort={handleSort}
                   onEdit={handleEdit}
                   onCopy={handleCopy}
-                  onDelete={(id) => setDeleteConfirmId(id)}
+                  onDelete={(id) => {
+                    setDeleteConfirmId(id);
+                    setShowDeleteConfirm(true);
+                  }}
                   onPreview={handlePreview}
                   selectedIds={selectedItems}
                   onSelect={handleSelect}
@@ -1256,7 +1385,10 @@ export default function HistoryManagementPage() {
                   onSort={handleSort}
                   onEdit={handleEdit}
                   onCopy={handleCopy}
-                  onDelete={(id) => setDeleteConfirmId(id)}
+                  onDelete={(id) => {
+                    setDeleteConfirmId(id);
+                    setShowDeleteConfirm(true);
+                  }}
                   onPreview={handlePreview}
                   onConvert={handleConvert}
                   selectedIds={selectedItems}
@@ -1273,7 +1405,10 @@ export default function HistoryManagementPage() {
                   onSort={handleSort}
                   onEdit={handleEdit}
                   onCopy={handleCopy}
-                  onDelete={(id) => setDeleteConfirmId(id)}
+                  onDelete={(id) => {
+                    setDeleteConfirmId(id);
+                    setShowDeleteConfirm(true);
+                  }}
                   onPreview={handlePreview}
                   selectedIds={selectedItems}
                   onSelect={handleSelect}
@@ -1289,7 +1424,10 @@ export default function HistoryManagementPage() {
                   onSort={handleSort}
                   onEdit={handleEdit}
                   onCopy={handleCopy}
-                  onDelete={(id) => setDeleteConfirmId(id)}
+                  onDelete={(id) => {
+                    setDeleteConfirmId(id);
+                    setShowDeleteConfirm(true);
+                  }}
                   onPreview={handlePreview}
                   selectedIds={selectedItems}
                   onSelect={handleSelect}
@@ -1305,7 +1443,10 @@ export default function HistoryManagementPage() {
                   onSort={handleSort}
                   onEdit={handleEdit}
                   onCopy={handleCopy}
-                  onDelete={(id) => setDeleteConfirmId(id)}
+                  onDelete={(id) => {
+                    setDeleteConfirmId(id);
+                    setShowDeleteConfirm(true);
+                  }}
                   onPreview={handlePreview}
                   selectedIds={selectedItems}
                   onSelect={handleSelect}
@@ -1438,29 +1579,7 @@ export default function HistoryManagementPage() {
                 </button>
               </div>
               
-              {/* 开发环境测试按钮 */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">开发环境测试：</p>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => {
-                        setSelectedItems(new Set(['test1', 'test2', 'test3']));
-                        setDeleteConfirmId('batch');
-                      }}
-                      className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded border border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/70"
-                    >
-                      测试批量删除
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirmId('test-single')}
-                      className="px-3 py-1 text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded border border-green-200 dark:border-green-700 hover:bg-green-200 dark:hover:bg-green-900/70"
-                    >
-                      测试单条删除
-                    </button>
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
         </div>
