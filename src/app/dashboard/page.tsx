@@ -30,10 +30,10 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
-import dynamic from 'next/dynamic';
 import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance } from '@/utils/performance';
 import { usePermissionStore } from '@/lib/permissions';
+import { Header } from '@/components/Header';
 
 interface Permission {
   id: string;
@@ -232,21 +232,21 @@ const TOOLS_MODULES = [
   }
 ];
 
-// 使用dynamic导入避免hydration问题
-const DynamicHeader = dynamic(() => import('@/components/Header').then(mod => mod.Header), {
-  ssr: true,
-  loading: () => (
-    <div className="bg-white dark:bg-[#1c1c1e] shadow-sm dark:shadow-gray-800/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-        </div>
-        <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
-      </div>
-    </div>
-  )
-});
+// 移除DynamicHeader的dynamic导入
+// const DynamicHeader = dynamic(() => import('@/components/Header').then(mod => mod.Header), {
+//   ssr: true,
+//   loading: () => (
+//     <div className="bg-white dark:bg-[#1c1c1e] shadow-sm dark:shadow-gray-800/30">
+//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+//         <div className="flex items-center space-x-4">
+//           <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+//           <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+//         </div>
+//         <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+//       </div>
+//     </div>
+//   )
+// });
 
 // 权限管理已移至 @/lib/permissions
 
@@ -514,7 +514,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
       <div className="flex-1">
-        <DynamicHeader 
+        <Header 
           user={{
             name: session?.user?.name || user?.username || '用户',
             isAdmin: user?.isAdmin || false
