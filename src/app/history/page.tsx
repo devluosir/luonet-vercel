@@ -1176,7 +1176,7 @@ export default function HistoryManagementPage() {
       <div className="flex-1">
         {/* Header */}
         <div className="bg-white dark:bg-[#1c1c1e] shadow-sm dark:shadow-gray-800/30">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
               <div className="flex items-center space-x-4">
                 <button
@@ -1210,6 +1210,40 @@ export default function HistoryManagementPage() {
                     </button>
                   )}
                 </div>
+                
+                {/* 中屏和大屏时的高级过滤器 */}
+                {showFilters && (
+                  <div className="hidden md:flex items-center space-x-3">
+                    {/* 日期范围过滤 */}
+                    <select
+                      value={filters.dateRange}
+                      onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
+                    >
+                      <option value="all">全部时间</option>
+                      <option value="today">今天</option>
+                      <option value="week">最近7天</option>
+                      <option value="month">最近30天</option>
+                      <option value="year">最近一年</option>
+                    </select>
+                    {/* 金额范围过滤 */}
+                    <select
+                      value={filters.amountRange}
+                      onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as any }))}
+                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
+                    >
+                      <option value="all">全部金额</option>
+                      <option value="low">小于 10,000</option>
+                      <option value="medium">10,000 - 100,000</option>
+                      <option value="high">大于 100,000</option>
+                    </select>
+                    {/* 重置按钮 */}
+                    <button
+                      onClick={() => setFilters({ ...filters, dateRange: 'all', amountRange: 'all' })}
+                      className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
+                    >重置</button>
+                  </div>
+                )}
                 
                 {/* 高级过滤按钮 */}
                 <button
@@ -1258,38 +1292,40 @@ export default function HistoryManagementPage() {
           </div>
         </div>
 
-        {/* 高级过滤器 */}
+        {/* 高级过滤器 - 小屏时显示 */}
         {showFilters && (
-          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 relative z-10">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-              <div className="flex items-center space-x-3">
+          <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 relative z-10 -mt-2">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+              <div className="flex items-center justify-center space-x-2">
                 {/* 日期范围过滤 */}
                 <select
                   value={filters.dateRange}
                   onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
-                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 max-w-[140px] px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-[10px]"
+                  style={{ fontSize: '10px' }}
                 >
-                  <option value="all">全部时间</option>
-                  <option value="today">今天</option>
-                  <option value="week">最近7天</option>
-                  <option value="month">最近30天</option>
-                  <option value="year">最近一年</option>
+                  <option value="all" style={{ fontSize: '10px' }}>时间</option>
+                  <option value="today" style={{ fontSize: '10px' }}>今天</option>
+                  <option value="week" style={{ fontSize: '10px' }}>7天</option>
+                  <option value="month" style={{ fontSize: '10px' }}>30天</option>
+                  <option value="year" style={{ fontSize: '10px' }}>一年</option>
                 </select>
                 {/* 金额范围过滤 */}
                 <select
                   value={filters.amountRange}
                   onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as any }))}
-                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 max-w-[140px] px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-[10px]"
+                  style={{ fontSize: '10px' }}
                 >
-                  <option value="all">全部金额</option>
-                  <option value="low">小于 10,000</option>
-                  <option value="medium">10,000 - 100,000</option>
-                  <option value="high">大于 100,000</option>
+                  <option value="all" style={{ fontSize: '10px' }}>金额</option>
+                  <option value="low" style={{ fontSize: '10px' }}>&lt;10K</option>
+                  <option value="medium" style={{ fontSize: '10px' }}>10K-100K</option>
+                  <option value="high" style={{ fontSize: '10px' }}>&gt;100K</option>
                 </select>
                 {/* 重置按钮 */}
                 <button
                   onClick={() => setFilters({ ...filters, dateRange: 'all', amountRange: 'all' })}
-                  className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm"
+                  className="px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-[10px] whitespace-nowrap"
                 >重置</button>
               </div>
             </div>
