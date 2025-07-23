@@ -285,6 +285,10 @@ export default function ToolsPage() {
       await fetchUser(true);
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
+      // 权限刷新后强制刷新页面以确保权限生效
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error('刷新权限失败:', error);
     }
@@ -416,13 +420,13 @@ export default function ToolsPage() {
             <div className="w-full max-w-7xl mx-auto px-2 sm:px-4">
               {/* 成功消息 */}
               {showSuccessMessage && (
-                <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <div className="flex items-center">
-                    <svg className="w-5 h-5 text-green-600 dark:text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    <span className="text-green-800 dark:text-green-200 text-sm font-medium">
-                      权限信息已成功刷新
+                    <span className="text-blue-800 dark:text-blue-200 text-sm font-medium">
+                      权限信息已更新，页面即将刷新...
                     </span>
                   </div>
                 </div>

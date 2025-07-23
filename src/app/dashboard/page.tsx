@@ -288,6 +288,7 @@ export default function DashboardPage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [recentDocuments, setRecentDocuments] = useState<any[]>([]);
   const [timeFilter, setTimeFilter] = useState<'today' | '3days' | 'week' | 'month'>('today');
   const [typeFilter, setTypeFilter] = useState<'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase'>('all');
@@ -457,6 +458,29 @@ export default function DashboardPage() {
     };
   }, [mounted, loadDocuments, timeFilter, typeFilter, permissionMap]);
 
+  // 监听权限变化事件，自动刷新页面
+  useEffect(() => {
+    if (!mounted) return;
+
+    const handlePermissionChange = (e: CustomEvent) => {
+      console.log('检测到权限变化，准备刷新页面:', e.detail?.message);
+      // 显示权限变化提示
+      setSuccessMessage(e.detail?.message || '权限信息已更新，页面即将刷新...');
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+      // 延迟刷新以确保权限数据已更新
+      setTimeout(() => {
+        window.location.reload();
+      }, e.detail?.forceRefresh ? 1500 : 1000);
+    };
+
+    window.addEventListener('permissionChanged', handlePermissionChange as EventListener);
+
+    return () => {
+      window.removeEventListener('permissionChanged', handlePermissionChange as EventListener);
+    };
+  }, [mounted]);
+
   // 优化的预加载逻辑 - 只预加载核心模块页面
   const prefetchPages = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -500,6 +524,25 @@ export default function DashboardPage() {
     };
     init();
   }, [fetchUser, prefetchPages]);
+
+  // 监听权限变化，自动刷新页面
+  useEffect(() => {
+    if (!mounted || !user) return;
+
+    // 检查权限是否发生变化
+    const checkPermissionChange = () => {
+      const currentPermissions = user.permissions;
+      // 这里可以添加更复杂的权限变化检测逻辑
+      // 目前依赖权限store中的变化检测
+    };
+
+    // 定期检查权限变化（可选）
+    const interval = setInterval(checkPermissionChange, 30000); // 30秒检查一次
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [mounted, user]);
 
   const handleLogout = async () => {
     // 清除权限store和所有相关缓存
@@ -650,9 +693,13 @@ export default function DashboardPage() {
           onRefreshPermissions={async () => {
             try {
               await fetchUser(true);
+              setSuccessMessage('权限信息已更新，页面即将刷新...');
               setShowSuccessMessage(true);
               setTimeout(() => setShowSuccessMessage(false), 3000);
-              // 不强制刷新页面，让组件自动重新渲染
+              // 权限刷新后强制刷新页面以确保权限生效
+              setTimeout(() => {
+                window.location.reload();
+              }, 1000);
             } catch (error) {
               console.error('刷新权限失败:', error);
             }
@@ -673,13 +720,13 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* 成功消息 */}
           {showSuccessMessage && (
-            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
               <div className="flex items-center">
-                <svg className="w-5 h-5 text-green-600 dark:text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <span className="text-green-800 dark:text-green-200 text-sm font-medium">
-                  权限信息已成功刷新
+                <span className="text-blue-800 dark:text-blue-200 text-sm font-medium">
+                  {successMessage}
                 </span>
               </div>
             </div>
@@ -1004,9 +1051,13 @@ export default function DashboardPage() {
                 onClick={async () => {
                   try {
                     await fetchUser(true);
+                    setSuccessMessage('权限信息已更新，页面即将刷新...');
                     setShowSuccessMessage(true);
                     setTimeout(() => setShowSuccessMessage(false), 3000);
-                    // 不强制刷新页面，让组件自动重新渲染
+                    // 权限刷新后强制刷新页面以确保权限生效
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 1000);
                   } catch (error) {
                     console.error('刷新权限失败:', error);
                   }

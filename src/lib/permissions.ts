@@ -157,7 +157,8 @@ export const usePermissionStore = create<PermissionStore>()(
           const currentUser = get().user;
           const permissionsChanged = currentUser && !forceRefresh && (
             currentUser.permissions.length !== userData.permissions.length ||
-            JSON.stringify(currentUser.permissions) !== JSON.stringify(userData.permissions)
+            JSON.stringify(currentUser.permissions) !== JSON.stringify(userData.permissions) ||
+            currentUser.isAdmin !== userData.isAdmin
           );
           
           set({ 
@@ -171,10 +172,13 @@ export const usePermissionStore = create<PermissionStore>()(
           backupPermissions(userData);
           
           // 权限变化通知
-          if (permissionsChanged && typeof window !== 'undefined') {
+          if ((permissionsChanged || forceRefresh) && typeof window !== 'undefined') {
             // 显示通知
             const event = new CustomEvent('permissionChanged', {
-              detail: { message: '检测到权限变化，请刷新页面以获取最新权限' }
+              detail: { 
+                message: forceRefresh ? '权限已强制刷新，页面即将更新' : '检测到权限变化，页面即将更新',
+                forceRefresh: forceRefresh
+              }
             });
             window.dispatchEvent(event);
           }
