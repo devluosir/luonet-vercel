@@ -17,19 +17,20 @@ export async function POST(
       );
     }
 
-    // 更新权限
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        permissions: {
-          deleteMany: {},  // 删除所有现有权限
-          create: permissions.map(permission => ({
-            name: permission,
-            moduleId: permission,
-            canAccess: true
-          }))
-        }
-      }
+    // 删除所有现有权限
+    await prisma.permission.deleteMany({
+      where: { userId }
+    });
+
+    // 创建新的权限记录
+    const permissionData = permissions.map(permission => ({
+      userId,
+      moduleId: permission.moduleId,
+      canAccess: permission.canAccess
+    }));
+
+    await prisma.permission.createMany({
+      data: permissionData
     });
 
     // 获取更新后的用户权限
@@ -38,10 +39,7 @@ export async function POST(
       include: { permissions: true }
     });
 
-    return NextResponse.json({
-      success: true,
-      permissions: updatedUser?.permissions || []
-    });
+    return NextResponse.json(updatedUser);
   } catch (error) {
     console.error('Error updating permissions:', error);
     return NextResponse.json(

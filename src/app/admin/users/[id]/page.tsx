@@ -384,7 +384,7 @@ export default function UserDetailPage() {
       }));
 
       const response = await fetch(`/api/admin/users/${user.id}/permissions/batch`, {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ permissions: updatedPermissions })
       });
