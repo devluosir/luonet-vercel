@@ -23,6 +23,7 @@ interface PermissionStore {
   error: string | null;
   permissionChanged: boolean; // 新增：权限变化标志
   isInitialized: boolean; // 新增：初始化标志
+  isFirstLoad: boolean; // 新增：首次加载标志
   
   // Actions
   setUser: (user: User) => void;
@@ -31,6 +32,7 @@ interface PermissionStore {
   clearUser: () => void;
   setPermissionChanged: (changed: boolean) => void; // 新增
   setInitialized: (initialized: boolean) => void; // 新增
+  setFirstLoad: (firstLoad: boolean) => void; // 新增
   
   // Permission checks
   hasPermission: (moduleId: string) => boolean;
@@ -63,6 +65,7 @@ export const usePermissionStore = create<PermissionStore>()(
       error: null,
       permissionChanged: false,
       isInitialized: false,
+      isFirstLoad: true, // 新增：首次加载标志
 
       setUser: (user) => {
         set({ user, lastFetched: Date.now(), error: null });
@@ -71,7 +74,7 @@ export const usePermissionStore = create<PermissionStore>()(
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
       clearUser: () => {
-        set({ user: null, lastFetched: null, error: null, permissionChanged: false });
+        set({ user: null, lastFetched: null, error: null, permissionChanged: false, isFirstLoad: true });
         // 清除持久化数据
         if (typeof window !== 'undefined') {
           localStorage.removeItem('permission-store');
@@ -80,6 +83,7 @@ export const usePermissionStore = create<PermissionStore>()(
       },
       setPermissionChanged: (changed) => set({ permissionChanged: changed }), // 新增
       setInitialized: (initialized) => set({ isInitialized: initialized }), // 新增
+      setFirstLoad: (firstLoad) => set({ isFirstLoad: firstLoad }), // 新增
 
       hasPermission: (moduleId) => {
         const { user } = get();
@@ -107,7 +111,7 @@ export const usePermissionStore = create<PermissionStore>()(
       },
 
       fetchUser: async (forceRefresh = false) => {
-        const { lastFetched, user, permissionChanged } = get();
+        const { lastFetched, user, permissionChanged, isFirstLoad } = get();
         
         // 智能刷新策略 - 重新登录时强制刷新
         const shouldRefresh = forceRefresh || 
@@ -157,9 +161,9 @@ export const usePermissionStore = create<PermissionStore>()(
 
           const userData = await response.json();
           
-          // 检测权限变化 - 只在非强制刷新时检测
+          // 检测权限变化 - 只在非首次加载且非强制刷新时检测
           const currentUser = get().user;
-          const permissionsChanged = currentUser && !forceRefresh && (
+          const permissionsChanged = currentUser && !forceRefresh && !isFirstLoad && (
             currentUser.permissions.length !== userData.permissions.length ||
             JSON.stringify(currentUser.permissions) !== JSON.stringify(userData.permissions) ||
             currentUser.isAdmin !== userData.isAdmin
@@ -169,15 +173,16 @@ export const usePermissionStore = create<PermissionStore>()(
             user: userData, 
             lastFetched: Date.now(), 
             error: null,
-            permissionChanged: permissionsChanged || false
+            permissionChanged: permissionsChanged || false,
+            isFirstLoad: false // 标记为非首次加载
           });
           
           // 备份新的权限数据
           backupPermissions(userData);
           
-          // 权限变化通知 - 只在真正检测到权限变化且已初始化时触发，避免初始化时的无限循环
+          // 权限变化通知 - 只在真正检测到权限变化且已初始化且非首次加载时触发
           const { isInitialized } = get();
-          if (permissionsChanged && isInitialized && typeof window !== 'undefined') {
+          if (permissionsChanged && isInitialized && !isFirstLoad && typeof window !== 'undefined') {
             // 显示通知
             const event = new CustomEvent('permissionChanged', {
               detail: { 
@@ -205,7 +210,8 @@ export const usePermissionStore = create<PermissionStore>()(
       partialize: (state) => ({
         user: state.user,
         lastFetched: state.lastFetched,
-        isInitialized: state.isInitialized
+        isInitialized: state.isInitialized,
+        isFirstLoad: state.isFirstLoad
       })
     }
   )

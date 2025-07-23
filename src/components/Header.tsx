@@ -46,8 +46,10 @@ export function Header({
   }, []);
 
   const handleLogout = async () => {
-    await signOut();
+    // 先调用onLogout回调，让dashboard清理权限store
     onLogout();
+    // 然后调用signOut，避免重复退出
+    await signOut();
   };
 
   const handleRefreshPermissions = () => {

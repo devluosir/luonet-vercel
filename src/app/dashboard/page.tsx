@@ -423,8 +423,6 @@ export default function DashboardPage() {
     }
   }, [mounted, loadDocuments, timeFilter, typeFilter, permissionMap]);
 
-
-
   // 切换展开/折叠状态（已移除，因为默认全部展开）
   const toggleSection = useCallback((section: string) => {
     // 已移除展开/折叠功能，默认全部展开
@@ -463,6 +461,13 @@ export default function DashboardPage() {
     if (!mounted) return;
 
     const handlePermissionChange = (e: CustomEvent) => {
+      // 检查是否是首次加载，避免首次加载时触发刷新
+      const { isFirstLoad } = usePermissionStore.getState();
+      if (isFirstLoad) {
+        console.log('首次加载，跳过权限变化刷新');
+        return;
+      }
+
       console.log('检测到权限变化，准备刷新页面:', e.detail?.message);
       // 显示权限变化提示
       setSuccessMessage(e.detail?.message || '权限信息已更新，页面即将刷新...');
@@ -513,11 +518,16 @@ export default function DashboardPage() {
     router.push(module.path);
   }, [router]);
 
+  // 优化的初始化逻辑 - 避免重复权限获取
   useEffect(() => {
     const init = async () => {
       setMounted(true);
-      // 获取用户权限 - 只在首次加载时获取，避免强制刷新
-      await fetchUser(false);
+      
+      // 只在首次加载时获取权限，避免重复获取
+      const { user, isInitialized } = usePermissionStore.getState();
+      if (!user && !isInitialized) {
+        await fetchUser(false);
+      }
       
       // 预加载所有模块页面
       prefetchPages();
@@ -530,17 +540,17 @@ export default function DashboardPage() {
     init();
   }, [fetchUser, prefetchPages]);
 
-  // 移除定期权限检查，避免权限刷个不停
-  // 权限变化检测已移至权限store中处理
-
-  const handleLogout = async () => {
+  // 优化的退出逻辑 - 避免重复退出
+  const handleLogout = useCallback(async () => {
     // 清除权限store和所有相关缓存
     usePermissionStore.getState().clearUser();
     localStorage.removeItem('username');
     localStorage.removeItem('permissions_backup');
     localStorage.removeItem('permission-store');
+    
+    // 只调用一次signOut，避免重复退出
     await signOut({ redirect: true, callbackUrl: '/' });
-  };
+  }, []);
 
   // 使用统一的权限映射
   const availableQuickCreateModules = useMemo(() => {
@@ -555,11 +565,11 @@ export default function DashboardPage() {
 
   const availableToolModules = useMemo(() => {
     return TOOL_MODULES.filter(module => hasPermission(module.id));
-  }, [hasPermission]);
+  }, [user?.permissions]); // 使用user.permissions作为依赖项
 
   const availableToolsModules = useMemo(() => {
     return TOOLS_MODULES.filter(module => hasPermission(module.id));
-  }, [hasPermission]);
+  }, [user?.permissions]); // 使用user.permissions作为依赖项
 
   // 根据权限过滤可用的文档类型筛选器
   const availableTypeFilters = useMemo(() => {
@@ -609,7 +619,7 @@ export default function DashboardPage() {
         console.log('📊 Dashboard页面加载性能:', metrics);
       }
     }
-  }, [mounted, refreshing, user]); // 移除loading检查
+  }, [mounted, refreshing, user]); // 移除调试相关的依赖项
 
   // 避免闪烁，在客户端渲染前返回空内容
   if (!mounted || status === 'loading') {
@@ -620,32 +630,6 @@ export default function DashboardPage() {
     router.push('/');
     return null;
   }
-
-  // 显示错误状态
-  // if (fetchError) { // 移除此行，因为fetchError已移除
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center">
-  //       <div className="text-center">
-  //         <div className="text-red-600 mb-4">加载失败</div>
-  //         <div className="text-sm text-gray-500 mb-4">{fetchError}</div>
-  //         <div className="flex space-x-2 justify-center">
-  //           <button 
-  //             onClick={() => fetchUser(false)}
-  //             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-  //           >
-  //             重试
-  //           </button>
-  //           <button 
-  //             onClick={handleRefreshPermissions}
-  //             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-  //           >
-  //             强制刷新
-  //           </button>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
 
   const getDocumentTypeName = (type: string) => {
     switch (type) {
@@ -721,10 +705,8 @@ export default function DashboardPage() {
             </div>
           )}
 
-
-
           {/* 功能按钮区域 */}
-          {(availableQuickCreateModules.length > 0 || availableToolsModules.length > 0 || availableToolModules.length > 0) && (
+          {(availableQuickCreateModules.length > 0 || availableToolsModules.length > 0 || availableToolsModules.length > 0) && (
             <div className="mb-8">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {/* 新建单据按钮 */}
@@ -772,8 +754,6 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
-
-
 
           {/* 4. 今天创建或修改的单据 */}
           <div className="mb-8">
