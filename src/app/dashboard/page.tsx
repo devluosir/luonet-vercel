@@ -298,6 +298,36 @@ export default function DashboardPage() {
   // 使用loading作为refreshing状态
   const refreshing = isLoading;
 
+  // 统一的权限映射和检查
+  const permissionMap = useMemo(() => {
+    const permissions = {
+      quotation: hasPermission('quotation'),
+      packing: hasPermission('packing'),
+      invoice: hasPermission('invoice'),
+      purchase: hasPermission('purchase')
+    };
+
+    // 文档类型到权限的映射
+    const documentTypePermissions = {
+      quotation: permissions.quotation,
+      confirmation: permissions.quotation, // 销售确认使用报价单权限
+      packing: permissions.packing,
+      invoice: permissions.invoice,
+      purchase: permissions.purchase
+    };
+
+    // 可访问的文档类型
+    const accessibleDocumentTypes = Object.entries(documentTypePermissions)
+      .filter(([_, hasAccess]) => hasAccess)
+      .map(([type]) => type);
+
+    return {
+      permissions,
+      documentTypePermissions,
+      accessibleDocumentTypes
+    };
+  }, [hasPermission]);
+
   // 性能监控
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -313,40 +343,26 @@ export default function DashboardPage() {
   // 加载指定时间范围内的文档函数
   const loadDocuments = useCallback(async (filter: 'today' | '3days' | 'week' | 'month' = 'today', typeFilter: 'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase' = 'all') => {
     try {
-      // 根据权限过滤可访问的文档类型
-      const accessibleTypes = [];
-      if (hasPermission('quotation')) {
-        accessibleTypes.push('quotation', 'confirmation'); // 销售确认使用与报价单相同的权限
-      }
-      if (hasPermission('packing')) {
-        accessibleTypes.push('packing');
-      }
-      if (hasPermission('invoice')) {
-        accessibleTypes.push('invoice');
-      }
-      if (hasPermission('purchase')) {
-        accessibleTypes.push('purchase');
-      }
-
-      // 只加载用户有权限的文档类型
+      // 使用统一的权限映射
       const allDocuments = [];
       
-      if (hasPermission('quotation')) {
+      // 只加载用户有权限的文档类型
+      if (permissionMap.documentTypePermissions.quotation) {
         const quotationHistory = JSON.parse(localStorage.getItem('quotation_history') || '[]');
         allDocuments.push(...quotationHistory.map((doc: any) => ({ ...doc, type: doc.type || 'quotation' })));
       }
       
-      if (hasPermission('packing')) {
+      if (permissionMap.documentTypePermissions.packing) {
         const packingHistory = JSON.parse(localStorage.getItem('packing_history') || '[]');
         allDocuments.push(...packingHistory.map((doc: any) => ({ ...doc, type: 'packing' })));
       }
       
-      if (hasPermission('invoice')) {
+      if (permissionMap.documentTypePermissions.invoice) {
         const invoiceHistory = JSON.parse(localStorage.getItem('invoice_history') || '[]');
         allDocuments.push(...invoiceHistory.map((doc: any) => ({ ...doc, type: 'invoice' })));
       }
       
-      if (hasPermission('purchase')) {
+      if (permissionMap.documentTypePermissions.purchase) {
         const purchaseHistory = JSON.parse(localStorage.getItem('purchase_history') || '[]');
         allDocuments.push(...purchaseHistory.map((doc: any) => ({ ...doc, type: 'purchase' })));
       }
@@ -397,14 +413,14 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('加载文档失败:', error);
     }
-  }, [hasPermission]);
+  }, [permissionMap]);
 
   // 加载指定时间范围内的文档
   useEffect(() => {
     if (mounted) {
       loadDocuments(timeFilter, typeFilter);
     }
-  }, [mounted, loadDocuments, timeFilter, typeFilter, hasPermission]);
+  }, [mounted, loadDocuments, timeFilter, typeFilter, permissionMap]);
 
 
 
@@ -439,7 +455,7 @@ export default function DashboardPage() {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener);
     };
-  }, [mounted, loadDocuments, timeFilter, typeFilter, hasPermission]);
+  }, [mounted, loadDocuments, timeFilter, typeFilter, permissionMap]);
 
   // 优化的预加载逻辑 - 只预加载核心模块页面
   const prefetchPages = useCallback(() => {
@@ -494,44 +510,43 @@ export default function DashboardPage() {
     await signOut({ redirect: true, callbackUrl: '/' });
   };
 
-  // 使用权限store的权限检查函数
+  // 使用统一的权限映射
   const availableQuickCreateModules = useMemo(() => {
     const modules = QUICK_CREATE_MODULES.filter(module => {
-      // 销售确认使用与报价单相同的权限
       if (module.id === 'confirmation') {
-        return hasPermission('quotation');
+        return permissionMap.documentTypePermissions.confirmation;
       }
-      return hasPermission(module.id);
+      return permissionMap.documentTypePermissions[module.id as keyof typeof permissionMap.documentTypePermissions];
     });
     return modules;
-  }, [hasPermission, user?.permissions]);
+  }, [permissionMap]);
 
   const availableToolModules = useMemo(() => {
-    return TOOL_MODULES.filter(module => hasPermission(module.id));
-  }, [hasPermission, user?.permissions]);
+    return TOOL_MODULES.filter(module => permissionMap.documentTypePermissions[module.id as keyof typeof permissionMap.documentTypePermissions]);
+  }, [permissionMap]);
 
   const availableToolsModules = useMemo(() => {
-    return TOOLS_MODULES.filter(module => hasPermission(module.id));
-  }, [hasPermission, user?.permissions]);
+    return TOOLS_MODULES.filter(module => permissionMap.documentTypePermissions[module.id as keyof typeof permissionMap.documentTypePermissions]);
+  }, [permissionMap]);
 
   // 根据权限过滤可用的文档类型筛选器
   const availableTypeFilters = useMemo(() => {
     const filters = [];
     
-    // 检查各种文档类型的权限
-    if (hasPermission('quotation')) {
+    // 使用统一的权限映射
+    if (permissionMap.documentTypePermissions.quotation) {
       filters.push({ type: 'quotation', label: 'QTN', color: 'blue' });
     }
-    if (hasPermission('quotation')) { // 销售确认使用与报价单相同的权限
+    if (permissionMap.documentTypePermissions.confirmation) {
       filters.push({ type: 'confirmation', label: 'SC', color: 'green' });
     }
-    if (hasPermission('packing')) {
+    if (permissionMap.documentTypePermissions.packing) {
       filters.push({ type: 'packing', label: 'PL', color: 'teal' });
     }
-    if (hasPermission('invoice')) {
+    if (permissionMap.documentTypePermissions.invoice) {
       filters.push({ type: 'invoice', label: 'INV', color: 'purple' });
     }
-    if (hasPermission('purchase')) {
+    if (permissionMap.documentTypePermissions.purchase) {
       filters.push({ type: 'purchase', label: 'PO', color: 'orange' });
     }
     
@@ -541,7 +556,7 @@ export default function DashboardPage() {
     }
     
     return filters;
-  }, [hasPermission, user?.permissions]);
+  }, [permissionMap]);
 
   // 检查当前选择的筛选器是否有效，如果无效则重置为第一个可用选项
   useEffect(() => {
