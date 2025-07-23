@@ -292,6 +292,7 @@ export default function DashboardPage() {
   const [refreshingDocuments, setRefreshingDocuments] = useState(false);
   const [recentDocuments, setRecentDocuments] = useState<any[]>([]);
   const [timeFilter, setTimeFilter] = useState<'today' | '3days' | 'week' | 'month'>('today');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase'>('all');
   
   // 使用权限store
   const { user, hasPermission, fetchUser, isLoading } = usePermissionStore();
@@ -312,7 +313,7 @@ export default function DashboardPage() {
   }, []);
 
   // 加载指定时间范围内的文档函数
-  const loadDocuments = useCallback(async (showLoading = false, filter: 'today' | '3days' | 'week' | 'month' = 'today') => {
+  const loadDocuments = useCallback(async (showLoading = false, filter: 'today' | '3days' | 'week' | 'month' = 'today', typeFilter: 'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase' = 'all') => {
     try {
       if (showLoading) {
         setRefreshingDocuments(true);
@@ -351,11 +352,18 @@ export default function DashboardPage() {
       }
 
       // 筛选指定时间范围内的文档
-      const filteredDocuments = allDocuments.filter((doc: any) => {
+      let filteredDocuments = allDocuments.filter((doc: any) => {
         // 优先使用date字段，如果没有则使用updatedAt或createdAt
         const docDate = new Date(doc.date || doc.updatedAt || doc.createdAt);
         return docDate >= startDate && docDate <= now;
       });
+
+      // 根据类型筛选
+      if (typeFilter !== 'all') {
+        filteredDocuments = filteredDocuments.filter((doc: any) => {
+          return doc.type === typeFilter;
+        });
+      }
 
       // 按日期排序（最新的在前）
       const sorted = filteredDocuments
@@ -384,14 +392,14 @@ export default function DashboardPage() {
   // 加载指定时间范围内的文档
   useEffect(() => {
     if (mounted) {
-      loadDocuments(false, timeFilter);
+      loadDocuments(false, timeFilter, typeFilter);
     }
-  }, [mounted, loadDocuments, timeFilter]);
+  }, [mounted, loadDocuments, timeFilter, typeFilter]);
 
   // 手动刷新处理函数
   const handleRefreshDocuments = useCallback(() => {
-    loadDocuments(true, timeFilter);
-  }, [loadDocuments, timeFilter]);
+    loadDocuments(true, timeFilter, typeFilter);
+  }, [loadDocuments, timeFilter, typeFilter]);
 
   // 切换展开/折叠状态（已移除，因为默认全部展开）
   const toggleSection = useCallback((section: string) => {
@@ -404,7 +412,7 @@ export default function DashboardPage() {
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key && (e.key.includes('_history') || e.key.includes('History'))) {
-        loadDocuments(false, timeFilter);
+        loadDocuments(false, timeFilter, typeFilter);
       }
     };
 
@@ -414,7 +422,7 @@ export default function DashboardPage() {
     // 创建自定义事件监听器（同标签页内）
     const handleCustomStorageChange = (e: CustomEvent) => {
       if (e.detail && (e.detail.key.includes('_history') || e.detail.key.includes('History'))) {
-        loadDocuments(false, timeFilter);
+        loadDocuments(false, timeFilter, typeFilter);
       }
     };
 
@@ -424,7 +432,7 @@ export default function DashboardPage() {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener);
     };
-  }, [mounted, loadDocuments, timeFilter]);
+  }, [mounted, loadDocuments, timeFilter, typeFilter]);
 
   // 优化的预加载逻辑 - 只预加载核心模块页面
   const prefetchPages = useCallback(() => {
@@ -674,6 +682,75 @@ export default function DashboardPage() {
           <div className="mb-8">
             <div className="flex items-center justify-end mb-4">
               <div className="flex items-center space-x-1 sm:space-x-2">
+                {/* 单据类型筛选器 */}
+                <div className="flex items-center space-x-0.5 sm:space-x-1 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1">
+                  <button
+                    onClick={() => setTypeFilter('all')}
+                    className={`px-2 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                      active:scale-95 ${
+                      typeFilter === 'all'
+                        ? 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                    }`}
+                  >
+                    ALL
+                  </button>
+                  <button
+                    onClick={() => setTypeFilter('quotation')}
+                    className={`px-2 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                      active:scale-95 ${
+                      typeFilter === 'quotation'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                    }`}
+                  >
+                    QTN
+                  </button>
+                  <button
+                    onClick={() => setTypeFilter('confirmation')}
+                    className={`px-2 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                      active:scale-95 ${
+                      typeFilter === 'confirmation'
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                    }`}
+                  >
+                    SC
+                  </button>
+                  <button
+                    onClick={() => setTypeFilter('packing')}
+                    className={`px-2 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                      active:scale-95 ${
+                      typeFilter === 'packing'
+                        ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                    }`}
+                  >
+                    PL
+                  </button>
+                  <button
+                    onClick={() => setTypeFilter('invoice')}
+                    className={`px-2 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                      active:scale-95 ${
+                      typeFilter === 'invoice'
+                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                    }`}
+                  >
+                    INV
+                  </button>
+                  <button
+                    onClick={() => setTypeFilter('purchase')}
+                    className={`px-2 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                      active:scale-95 ${
+                      typeFilter === 'purchase'
+                        ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                    }`}
+                  >
+                    PO
+                  </button>
+                </div>
                 {/* 时间筛选器 */}
                 <div className="flex items-center space-x-0.5 sm:space-x-1 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1">
                   <button
@@ -894,10 +971,25 @@ export default function DashboardPage() {
             ) : (
               <div className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 p-5 text-center">
                 <div className="text-gray-500 dark:text-gray-400 text-sm mb-2">
-                  {timeFilter === 'today' && '今天还没有创建或修改的单据'}
-                  {timeFilter === '3days' && '最近三天还没有创建或修改的单据'}
-                  {timeFilter === 'week' && '最近一周还没有创建或修改的单据'}
-                  {timeFilter === 'month' && '最近一个月还没有创建或修改的单据'}
+                  {(() => {
+                    const timeText = {
+                      'today': '今天',
+                      '3days': '最近三天',
+                      'week': '最近一周',
+                      'month': '最近一个月'
+                    }[timeFilter];
+                    
+                    const typeText = {
+                      'all': '所有类型',
+                      'quotation': '报价单',
+                      'confirmation': '销售确认',
+                      'packing': '装箱单',
+                      'invoice': '财务发票',
+                      'purchase': '采购订单'
+                    }[typeFilter];
+                    
+                    return `${timeText}还没有创建或修改的${typeText}单据`;
+                  })()}
                 </div>
                 <div className="text-xs text-gray-400 dark:text-gray-500">
                   开始创建第一个单据吧！
