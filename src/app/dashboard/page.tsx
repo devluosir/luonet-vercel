@@ -685,17 +685,6 @@ export default function DashboardPage() {
                 {/* 单据类型筛选器 */}
                 <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
                   <button
-                    onClick={() => setTypeFilter('all')}
-                    className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      active:scale-95 ${
-                      typeFilter === 'all'
-                        ? 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    ALL
-                  </button>
-                  <button
                     onClick={() => setTypeFilter('quotation')}
                     className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
                       active:scale-95 ${
@@ -749,6 +738,17 @@ export default function DashboardPage() {
                     }`}
                   >
                     PO
+                  </button>
+                  <button
+                    onClick={() => setTypeFilter('all')}
+                    className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                      active:scale-95 ${
+                      typeFilter === 'all'
+                        ? 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                    }`}
+                  >
+                    ALL
                   </button>
                 </div>
                 {/* 时间筛选器 */}
