@@ -522,12 +522,12 @@ export default function DashboardPage() {
   }, [permissionMap]);
 
   const availableToolModules = useMemo(() => {
-    return TOOL_MODULES.filter(module => permissionMap.documentTypePermissions[module.id as keyof typeof permissionMap.documentTypePermissions]);
-  }, [permissionMap]);
+    return TOOL_MODULES.filter(module => hasPermission(module.id));
+  }, [hasPermission]);
 
   const availableToolsModules = useMemo(() => {
-    return TOOLS_MODULES.filter(module => permissionMap.documentTypePermissions[module.id as keyof typeof permissionMap.documentTypePermissions]);
-  }, [permissionMap]);
+    return TOOLS_MODULES.filter(module => hasPermission(module.id));
+  }, [hasPermission]);
 
   // 根据权限过滤可用的文档类型筛选器
   const availableTypeFilters = useMemo(() => {
