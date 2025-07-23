@@ -1022,7 +1022,7 @@ export default function DashboardPage() {
                         'purchase': '采购订单'
                       }[typeFilter];
                       
-                      return `${timeText}还没有创建或修改的${typeText}单据`;
+                      return `${timeText}还没有创建或修改的${typeText}`;
                     })()}
                   </div>
                   <div className="text-xs text-gray-400 dark:text-gray-500">
