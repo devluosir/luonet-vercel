@@ -288,8 +288,6 @@ export default function DashboardPage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [showDocumentsRefreshMessage, setShowDocumentsRefreshMessage] = useState(false);
-  const [refreshingDocuments, setRefreshingDocuments] = useState(false);
   const [recentDocuments, setRecentDocuments] = useState<any[]>([]);
   const [timeFilter, setTimeFilter] = useState<'today' | '3days' | 'week' | 'month'>('today');
   const [typeFilter, setTypeFilter] = useState<'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase'>('all');
@@ -313,23 +311,45 @@ export default function DashboardPage() {
   }, []);
 
   // 加载指定时间范围内的文档函数
-  const loadDocuments = useCallback(async (showLoading = false, filter: 'today' | '3days' | 'week' | 'month' = 'today', typeFilter: 'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase' = 'all') => {
+  const loadDocuments = useCallback(async (filter: 'today' | '3days' | 'week' | 'month' = 'today', typeFilter: 'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase' = 'all') => {
     try {
-      if (showLoading) {
-        setRefreshingDocuments(true);
+      // 根据权限过滤可访问的文档类型
+      const accessibleTypes = [];
+      if (hasPermission('quotation')) {
+        accessibleTypes.push('quotation', 'confirmation'); // 销售确认使用与报价单相同的权限
+      }
+      if (hasPermission('packing')) {
+        accessibleTypes.push('packing');
+      }
+      if (hasPermission('invoice')) {
+        accessibleTypes.push('invoice');
+      }
+      if (hasPermission('purchase')) {
+        accessibleTypes.push('purchase');
+      }
+
+      // 只加载用户有权限的文档类型
+      const allDocuments = [];
+      
+      if (hasPermission('quotation')) {
+        const quotationHistory = JSON.parse(localStorage.getItem('quotation_history') || '[]');
+        allDocuments.push(...quotationHistory.map((doc: any) => ({ ...doc, type: doc.type || 'quotation' })));
       }
       
-      const quotationHistory = JSON.parse(localStorage.getItem('quotation_history') || '[]');
-      const invoiceHistory = JSON.parse(localStorage.getItem('invoice_history') || '[]');
-      const purchaseHistory = JSON.parse(localStorage.getItem('purchase_history') || '[]');
-      const packingHistory = JSON.parse(localStorage.getItem('packing_history') || '[]');
-
-      const allDocuments = [
-        ...quotationHistory.map((doc: any) => ({ ...doc, type: doc.type || 'quotation' })),
-        ...invoiceHistory.map((doc: any) => ({ ...doc, type: 'invoice' })),
-        ...purchaseHistory.map((doc: any) => ({ ...doc, type: 'purchase' })),
-        ...packingHistory.map((doc: any) => ({ ...doc, type: 'packing' }))
-      ];
+      if (hasPermission('packing')) {
+        const packingHistory = JSON.parse(localStorage.getItem('packing_history') || '[]');
+        allDocuments.push(...packingHistory.map((doc: any) => ({ ...doc, type: 'packing' })));
+      }
+      
+      if (hasPermission('invoice')) {
+        const invoiceHistory = JSON.parse(localStorage.getItem('invoice_history') || '[]');
+        allDocuments.push(...invoiceHistory.map((doc: any) => ({ ...doc, type: 'invoice' })));
+      }
+      
+      if (hasPermission('purchase')) {
+        const purchaseHistory = JSON.parse(localStorage.getItem('purchase_history') || '[]');
+        allDocuments.push(...purchaseHistory.map((doc: any) => ({ ...doc, type: 'purchase' })));
+      }
 
       // 获取当前日期
       const now = new Date();
@@ -374,32 +394,19 @@ export default function DashboardPage() {
         });
 
       setRecentDocuments(sorted);
-      
-      // 如果是手动刷新，显示成功消息
-      if (showLoading) {
-        setShowDocumentsRefreshMessage(true);
-        setTimeout(() => setShowDocumentsRefreshMessage(false), 2000);
-      }
     } catch (error) {
       console.error('加载文档失败:', error);
-    } finally {
-      if (showLoading) {
-        setRefreshingDocuments(false);
-      }
     }
-  }, []);
+  }, [hasPermission]);
 
   // 加载指定时间范围内的文档
   useEffect(() => {
     if (mounted) {
-      loadDocuments(false, timeFilter, typeFilter);
+      loadDocuments(timeFilter, typeFilter);
     }
-  }, [mounted, loadDocuments, timeFilter, typeFilter]);
+  }, [mounted, loadDocuments, timeFilter, typeFilter, hasPermission]);
 
-  // 手动刷新处理函数
-  const handleRefreshDocuments = useCallback(() => {
-    loadDocuments(true, timeFilter, typeFilter);
-  }, [loadDocuments, timeFilter, typeFilter]);
+
 
   // 切换展开/折叠状态（已移除，因为默认全部展开）
   const toggleSection = useCallback((section: string) => {
@@ -412,7 +419,7 @@ export default function DashboardPage() {
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key && (e.key.includes('_history') || e.key.includes('History'))) {
-        loadDocuments(false, timeFilter, typeFilter);
+        loadDocuments(timeFilter, typeFilter);
       }
     };
 
@@ -422,7 +429,7 @@ export default function DashboardPage() {
     // 创建自定义事件监听器（同标签页内）
     const handleCustomStorageChange = (e: CustomEvent) => {
       if (e.detail && (e.detail.key.includes('_history') || e.detail.key.includes('History'))) {
-        loadDocuments(false, timeFilter, typeFilter);
+        loadDocuments(timeFilter, typeFilter);
       }
     };
 
@@ -432,7 +439,7 @@ export default function DashboardPage() {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener);
     };
-  }, [mounted, loadDocuments, timeFilter, typeFilter]);
+  }, [mounted, loadDocuments, timeFilter, typeFilter, hasPermission]);
 
   // 优化的预加载逻辑 - 只预加载核心模块页面
   const prefetchPages = useCallback(() => {
@@ -506,6 +513,45 @@ export default function DashboardPage() {
   const availableToolsModules = useMemo(() => {
     return TOOLS_MODULES.filter(module => hasPermission(module.id));
   }, [hasPermission, user?.permissions]);
+
+  // 根据权限过滤可用的文档类型筛选器
+  const availableTypeFilters = useMemo(() => {
+    const filters = [];
+    
+    // 检查各种文档类型的权限
+    if (hasPermission('quotation')) {
+      filters.push({ type: 'quotation', label: 'QTN', color: 'blue' });
+    }
+    if (hasPermission('quotation')) { // 销售确认使用与报价单相同的权限
+      filters.push({ type: 'confirmation', label: 'SC', color: 'green' });
+    }
+    if (hasPermission('packing')) {
+      filters.push({ type: 'packing', label: 'PL', color: 'teal' });
+    }
+    if (hasPermission('invoice')) {
+      filters.push({ type: 'invoice', label: 'INV', color: 'purple' });
+    }
+    if (hasPermission('purchase')) {
+      filters.push({ type: 'purchase', label: 'PO', color: 'orange' });
+    }
+    
+    // 如果有任何权限，添加ALL选项
+    if (filters.length > 0) {
+      filters.unshift({ type: 'all', label: 'ALL', color: 'gray' });
+    }
+    
+    return filters;
+  }, [hasPermission, user?.permissions]);
+
+  // 检查当前选择的筛选器是否有效，如果无效则重置为第一个可用选项
+  useEffect(() => {
+    if (availableTypeFilters.length > 0) {
+      const currentFilterExists = availableTypeFilters.some(filter => filter.type === typeFilter);
+      if (!currentFilterExists) {
+        setTypeFilter(availableTypeFilters[0].type as any);
+      }
+    }
+  }, [availableTypeFilters, typeFilter]);
 
   // 页面加载完成后的性能记录
   useEffect(() => {
@@ -682,75 +728,35 @@ export default function DashboardPage() {
           <div className="mb-8">
             <div className="flex items-center justify-center sm:justify-end mb-4">
               <div className="flex items-center space-x-0.5 sm:space-x-2">
-                {/* 单据类型筛选器 */}
-                <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
-                  <button
-                    onClick={() => setTypeFilter('quotation')}
-                    className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      active:scale-95 ${
-                      typeFilter === 'quotation'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    QTN
-                  </button>
-                  <button
-                    onClick={() => setTypeFilter('confirmation')}
-                    className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      active:scale-95 ${
-                      typeFilter === 'confirmation'
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    SC
-                  </button>
-                  <button
-                    onClick={() => setTypeFilter('packing')}
-                    className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      active:scale-95 ${
-                      typeFilter === 'packing'
-                        ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    PL
-                  </button>
-                  <button
-                    onClick={() => setTypeFilter('invoice')}
-                    className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      active:scale-95 ${
-                      typeFilter === 'invoice'
-                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    INV
-                  </button>
-                  <button
-                    onClick={() => setTypeFilter('purchase')}
-                    className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      active:scale-95 ${
-                      typeFilter === 'purchase'
-                        ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    PO
-                  </button>
-                  <button
-                    onClick={() => setTypeFilter('all')}
-                    className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      active:scale-95 ${
-                      typeFilter === 'all'
-                        ? 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    ALL
-                  </button>
-                </div>
+                {/* 单据类型筛选器 - 根据权限动态显示 */}
+                {availableTypeFilters.length > 0 && (
+                  <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
+                    {availableTypeFilters.map((filter) => {
+                      const getColorClasses = (color: string, isActive: boolean) => {
+                        const colorMap = {
+                          blue: isActive ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                          green: isActive ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                          teal: isActive ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                          purple: isActive ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                          orange: isActive ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                          gray: isActive ? 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                        };
+                        return colorMap[color as keyof typeof colorMap] || colorMap.gray;
+                      };
+
+                      return (
+                        <button
+                          key={filter.type}
+                          onClick={() => setTypeFilter(filter.type as any)}
+                          className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                            active:scale-95 ${getColorClasses(filter.color, typeFilter === filter.type)}`}
+                        >
+                          {filter.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 {/* 时间筛选器 */}
                 <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
                   <button
@@ -798,35 +804,8 @@ export default function DashboardPage() {
                     1M
                   </button>
                 </div>
-                {/* 刷新按钮或成功提示 - 仅在大屏显示 */}
+                {/* 查看全部按钮 - 仅在大屏显示 */}
                 <div className="hidden sm:flex items-center space-x-1">
-                  {showDocumentsRefreshMessage ? (
-                    <div className="flex items-center space-x-1 text-xs sm:text-sm px-2 sm:px-3 py-1 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                      <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="text-green-800 dark:text-green-200 text-xs font-medium">
-                        刷新
-                      </span>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleRefreshDocuments}
-                      disabled={refreshingDocuments}
-                      className={`flex items-center space-x-1 text-xs sm:text-sm transition-all duration-200 ease-in-out
-                        active:scale-95 rounded-lg px-1.5 sm:px-2 py-1 ${
-                        refreshingDocuments 
-                          ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' 
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                      }`}
-                      title="刷新单据列表"
-                    >
-                      <svg className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${refreshingDocuments ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      <span className="hidden sm:inline">{refreshingDocuments ? '刷新中...' : '刷新'}</span>
-                    </button>
-                  )}
                   <button
                     onClick={() => router.push('/history')}
                     className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 
