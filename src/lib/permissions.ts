@@ -22,6 +22,7 @@ interface PermissionStore {
   lastFetched: number | null;
   error: string | null;
   permissionChanged: boolean; // 新增：权限变化标志
+  isInitialized: boolean; // 新增：初始化标志
   
   // Actions
   setUser: (user: User) => void;
@@ -29,6 +30,7 @@ interface PermissionStore {
   setError: (error: string | null) => void;
   clearUser: () => void;
   setPermissionChanged: (changed: boolean) => void; // 新增
+  setInitialized: (initialized: boolean) => void; // 新增
   
   // Permission checks
   hasPermission: (moduleId: string) => boolean;
@@ -60,6 +62,7 @@ export const usePermissionStore = create<PermissionStore>()(
       lastFetched: null,
       error: null,
       permissionChanged: false,
+      isInitialized: false,
 
       setUser: (user) => {
         set({ user, lastFetched: Date.now(), error: null });
@@ -76,6 +79,7 @@ export const usePermissionStore = create<PermissionStore>()(
         }
       },
       setPermissionChanged: (changed) => set({ permissionChanged: changed }), // 新增
+      setInitialized: (initialized) => set({ isInitialized: initialized }), // 新增
 
       hasPermission: (moduleId) => {
         const { user } = get();
@@ -153,7 +157,7 @@ export const usePermissionStore = create<PermissionStore>()(
 
           const userData = await response.json();
           
-          // 检测权限变化
+          // 检测权限变化 - 只在非强制刷新时检测
           const currentUser = get().user;
           const permissionsChanged = currentUser && !forceRefresh && (
             currentUser.permissions.length !== userData.permissions.length ||
@@ -171,16 +175,22 @@ export const usePermissionStore = create<PermissionStore>()(
           // 备份新的权限数据
           backupPermissions(userData);
           
-          // 权限变化通知
-          if ((permissionsChanged || forceRefresh) && typeof window !== 'undefined') {
+          // 权限变化通知 - 只在真正检测到权限变化且已初始化时触发，避免初始化时的无限循环
+          const { isInitialized } = get();
+          if (permissionsChanged && isInitialized && typeof window !== 'undefined') {
             // 显示通知
             const event = new CustomEvent('permissionChanged', {
               detail: { 
-                message: forceRefresh ? '权限已强制刷新，页面即将更新' : '检测到权限变化，页面即将更新',
-                forceRefresh: forceRefresh
+                message: '检测到权限变化，页面即将更新',
+                forceRefresh: false
               }
             });
             window.dispatchEvent(event);
+          }
+          
+          // 标记为已初始化
+          if (!isInitialized) {
+            set({ isInitialized: true });
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
@@ -194,7 +204,8 @@ export const usePermissionStore = create<PermissionStore>()(
       name: 'permission-store',
       partialize: (state) => ({
         user: state.user,
-        lastFetched: state.lastFetched
+        lastFetched: state.lastFetched,
+        isInitialized: state.isInitialized
       })
     }
   )

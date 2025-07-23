@@ -327,7 +327,7 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [hasPermission]);
+  }, [user?.permissions]); // 直接依赖用户权限数组，而不是hasPermission函数
 
   // 性能监控
   useEffect(() => {
@@ -471,7 +471,7 @@ export default function DashboardPage() {
       // 延迟刷新以确保权限数据已更新
       setTimeout(() => {
         window.location.reload();
-      }, e.detail?.forceRefresh ? 1500 : 1000);
+      }, 1000);
     };
 
     window.addEventListener('permissionChanged', handlePermissionChange as EventListener);
@@ -516,33 +516,22 @@ export default function DashboardPage() {
   useEffect(() => {
     const init = async () => {
       setMounted(true);
-      // 获取用户权限 - 每次登录都强制重新获取
-      await fetchUser(true);
+      // 获取用户权限 - 只在首次加载时获取，避免强制刷新
+      await fetchUser(false);
       
       // 预加载所有模块页面
       prefetchPages();
+      
+      // 标记权限store为已初始化，避免初始化时触发权限变化事件
+      setTimeout(() => {
+        usePermissionStore.getState().setInitialized(true);
+      }, 1000);
     };
     init();
   }, [fetchUser, prefetchPages]);
 
-  // 监听权限变化，自动刷新页面
-  useEffect(() => {
-    if (!mounted || !user) return;
-
-    // 检查权限是否发生变化
-    const checkPermissionChange = () => {
-      const currentPermissions = user.permissions;
-      // 这里可以添加更复杂的权限变化检测逻辑
-      // 目前依赖权限store中的变化检测
-    };
-
-    // 定期检查权限变化（可选）
-    const interval = setInterval(checkPermissionChange, 30000); // 30秒检查一次
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [mounted, user]);
+  // 移除定期权限检查，避免权限刷个不停
+  // 权限变化检测已移至权限store中处理
 
   const handleLogout = async () => {
     // 清除权限store和所有相关缓存
