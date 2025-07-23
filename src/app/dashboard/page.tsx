@@ -468,6 +468,12 @@ export default function DashboardPage() {
         return;
       }
 
+      // 检查是否已经显示刷新消息，避免重复刷新
+      if (showSuccessMessage) {
+        console.log('已有刷新消息显示，跳过重复刷新');
+        return;
+      }
+
       console.log('检测到权限变化，准备刷新页面:', e.detail?.message);
       // 显示权限变化提示
       setSuccessMessage(e.detail?.message || '权限信息已更新，页面即将刷新...');
@@ -484,7 +490,7 @@ export default function DashboardPage() {
     return () => {
       window.removeEventListener('permissionChanged', handlePermissionChange as EventListener);
     };
-  }, [mounted]);
+  }, [mounted, showSuccessMessage]);
 
   // 优化的预加载逻辑 - 只预加载核心模块页面
   const prefetchPages = useCallback(() => {
@@ -665,16 +671,27 @@ export default function DashboardPage() {
           onProfile={() => setShowProfileModal(true)}
           onRefreshPermissions={async () => {
             try {
-              await fetchUser(true);
-              setSuccessMessage('权限信息已更新，页面即将刷新...');
+              // 设置刷新状态，防止重复点击
+              setSuccessMessage('正在刷新权限信息...');
               setShowSuccessMessage(true);
-              setTimeout(() => setShowSuccessMessage(false), 3000);
-              // 权限刷新后强制刷新页面以确保权限生效
+              
+              // 获取新权限
+              await fetchUser(true);
+              
+              // 更新消息
+              setSuccessMessage('权限信息已更新，页面即将刷新...');
+              
+              // 延迟刷新页面，给用户时间看到消息
               setTimeout(() => {
                 window.location.reload();
-              }, 1000);
+              }, 1500);
+              
+              // 3秒后隐藏消息
+              setTimeout(() => setShowSuccessMessage(false), 3000);
             } catch (error) {
               console.error('刷新权限失败:', error);
+              setSuccessMessage('权限刷新失败，请重试');
+              setTimeout(() => setShowSuccessMessage(false), 3000);
             }
           }}
           isRefreshing={refreshing}
@@ -755,260 +772,266 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* 4. 今天创建或修改的单据 */}
-          <div className="mb-8">
-            <div className="flex items-center justify-center sm:justify-end mb-4">
-              <div className="flex items-center space-x-0.5 sm:space-x-2">
-                {/* 单据类型筛选器 - 根据权限动态显示 */}
-                {availableTypeFilters.length > 0 && (
-                  <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
-                    {availableTypeFilters.map((filter) => {
-                      const getColorClasses = (color: string, isActive: boolean) => {
-                        const colorMap = {
-                          blue: isActive ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
-                          green: isActive ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
-                          teal: isActive ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
-                          purple: isActive ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
-                          orange: isActive ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
-                          gray: isActive ? 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+          {/* 4. 今天创建或修改的单据 - 根据权限动态显示 */}
+          {availableTypeFilters.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center justify-center sm:justify-end mb-4">
+                <div className="flex items-center space-x-0.5 sm:space-x-2">
+                  {/* 单据类型筛选器 - 根据权限动态显示 */}
+                  {availableTypeFilters.length > 0 && (
+                    <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
+                      {availableTypeFilters.map((filter) => {
+                        const getColorClasses = (color: string, isActive: boolean) => {
+                          const colorMap = {
+                            blue: isActive ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                            green: isActive ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                            teal: isActive ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                            purple: isActive ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                            orange: isActive ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                            gray: isActive ? 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                          };
+                          return colorMap[color as keyof typeof colorMap] || colorMap.gray;
                         };
-                        return colorMap[color as keyof typeof colorMap] || colorMap.gray;
-                      };
 
-                      return (
-                        <button
-                          key={filter.type}
-                          onClick={() => setTypeFilter(filter.type as any)}
-                          className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                            active:scale-95 ${getColorClasses(filter.color, typeFilter === filter.type)}`}
-                        >
-                          {filter.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {/* 时间筛选器 */}
-                <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
-                  <button
-                    onClick={() => setTimeFilter('today')}
-                    className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      active:scale-95 ${
-                      timeFilter === 'today'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    1D
-                  </button>
-                  <button
-                    onClick={() => setTimeFilter('3days')}
-                    className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      active:scale-95 ${
-                      timeFilter === '3days'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    3D
-                  </button>
-                  <button
-                    onClick={() => setTimeFilter('week')}
-                    className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      active:scale-95 ${
-                      timeFilter === 'week'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    1W
-                  </button>
-                  <button
-                    onClick={() => setTimeFilter('month')}
-                    className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                      active:scale-95 ${
-                      timeFilter === 'month'
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    1M
-                  </button>
-                </div>
-                {/* 查看全部按钮 - 仅在大屏显示 */}
-                <div className="hidden sm:flex items-center space-x-1">
-                  <button
-                    onClick={() => router.push('/history')}
-                    className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 
-                      transition-all duration-200 ease-in-out active:scale-95 rounded-lg px-1.5 sm:px-2 py-1
-                      hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                  >
-                    查看全部
-                  </button>
+                        return (
+                          <button
+                            key={filter.type}
+                            onClick={() => setTypeFilter(filter.type as any)}
+                            className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                              active:scale-95 ${getColorClasses(filter.color, typeFilter === filter.type)}`}
+                          >
+                            {filter.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {/* 时间筛选器 - 根据权限动态显示 */}
+                  {availableTypeFilters.length > 0 && (
+                    <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
+                      <button
+                        onClick={() => setTimeFilter('today')}
+                        className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                          active:scale-95 ${
+                          timeFilter === 'today'
+                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                        }`}
+                      >
+                        1D
+                      </button>
+                      <button
+                        onClick={() => setTimeFilter('3days')}
+                        className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                          active:scale-95 ${
+                          timeFilter === '3days'
+                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                        }`}
+                      >
+                        3D
+                      </button>
+                      <button
+                        onClick={() => setTimeFilter('week')}
+                        className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                          active:scale-95 ${
+                          timeFilter === 'week'
+                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                        }`}
+                      >
+                        1W
+                      </button>
+                      <button
+                        onClick={() => setTimeFilter('month')}
+                        className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                          active:scale-95 ${
+                          timeFilter === 'month'
+                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                        }`}
+                      >
+                        1M
+                      </button>
+                    </div>
+                  )}
+                  {/* 查看全部按钮 - 仅在大屏显示，根据权限动态显示 */}
+                  {availableTypeFilters.length > 0 && (
+                    <div className="hidden sm:flex items-center space-x-1">
+                      <button
+                        onClick={() => router.push('/history')}
+                        className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 
+                          transition-all duration-200 ease-in-out active:scale-95 rounded-lg px-1.5 sm:px-2 py-1
+                          hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      >
+                        查看全部
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-            {recentDocuments.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {recentDocuments.map((doc, index) => {
-                  // 根据文档类型设置图标和颜色
-                  let Icon = FileText;
-                  let bgColor = 'bg-blue-100 dark:bg-blue-900/30';
-                  let textColor = 'text-blue-600 dark:text-blue-400';
-                  
-                  switch (doc.type) {
-                    case 'quotation':
-                      Icon = FileText;
-                      bgColor = 'bg-blue-100 dark:bg-blue-900/30';
-                      textColor = 'text-blue-600 dark:text-blue-400';
-                      break;
-                    case 'confirmation':
-                      Icon = FileText;
-                      bgColor = 'bg-green-100 dark:bg-green-900/30';
-                      textColor = 'text-green-600 dark:text-green-400';
-                      break;
-                    case 'packing':
-                      Icon = Package;
-                      bgColor = 'bg-teal-100 dark:bg-teal-900/30';
-                      textColor = 'text-teal-600 dark:text-teal-400';
-                      break;
-                    case 'invoice':
-                      Icon = Receipt;
-                      bgColor = 'bg-purple-100 dark:bg-purple-900/30';
-                      textColor = 'text-purple-600 dark:text-purple-400';
-                      break;
-                    case 'purchase':
-                      Icon = ShoppingCart;
-                      bgColor = 'bg-orange-100 dark:bg-orange-900/30';
-                      textColor = 'text-orange-600 dark:text-orange-400';
-                      break;
-                    default:
-                      Icon = FileText;
-                      bgColor = 'bg-gray-100 dark:bg-gray-900/30';
-                      textColor = 'text-gray-600 dark:text-gray-400';
-                  }
-                  
-                  return (
-                    <div
-                      key={doc.id}
-                      className={`group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 
-                        p-3 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 transition-all duration-200 cursor-pointer
-                        active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70
-                        ${(() => {
-                          // 根据文档类型匹配对应的模块颜色
-                          switch (doc.type) {
-                            case 'quotation':
-                              return 'hover:bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20';
-                            case 'confirmation':
-                              return 'hover:bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20';
-                            case 'packing':
-                              return 'hover:bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20';
-                            case 'invoice':
-                              return 'hover:bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20';
-                            case 'purchase':
-                              return 'hover:bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20';
-                            default:
-                              return 'hover:bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20';
-                          }
-                        })()}`}
-                      onClick={() => {
-                        // 根据文档类型跳转到编辑页面
-                        const editPath = `/${doc.type}/edit/${doc.id}`;
-                        router.push(editPath);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
+              {recentDocuments.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {recentDocuments.map((doc, index) => {
+                    // 根据文档类型设置图标和颜色
+                    let Icon = FileText;
+                    let bgColor = 'bg-blue-100 dark:bg-blue-900/30';
+                    let textColor = 'text-blue-600 dark:text-blue-400';
+                    
+                    switch (doc.type) {
+                      case 'quotation':
+                        Icon = FileText;
+                        bgColor = 'bg-blue-100 dark:bg-blue-900/30';
+                        textColor = 'text-blue-600 dark:text-blue-400';
+                        break;
+                      case 'confirmation':
+                        Icon = FileText;
+                        bgColor = 'bg-green-100 dark:bg-green-900/30';
+                        textColor = 'text-green-600 dark:text-green-400';
+                        break;
+                      case 'packing':
+                        Icon = Package;
+                        bgColor = 'bg-teal-100 dark:bg-teal-900/30';
+                        textColor = 'text-teal-600 dark:text-teal-400';
+                        break;
+                      case 'invoice':
+                        Icon = Receipt;
+                        bgColor = 'bg-purple-100 dark:bg-purple-900/30';
+                        textColor = 'text-purple-600 dark:text-purple-400';
+                        break;
+                      case 'purchase':
+                        Icon = ShoppingCart;
+                        bgColor = 'bg-orange-100 dark:bg-orange-900/30';
+                        textColor = 'text-orange-600 dark:text-orange-400';
+                        break;
+                      default:
+                        Icon = FileText;
+                        bgColor = 'bg-gray-100 dark:bg-gray-900/30';
+                        textColor = 'text-gray-600 dark:text-gray-400';
+                    }
+                    
+                    return (
+                      <div
+                        key={doc.id}
+                        className={`group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 
+                          p-3 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 transition-all duration-200 cursor-pointer
+                          active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70
+                          ${(() => {
+                            // 根据文档类型匹配对应的模块颜色
+                            switch (doc.type) {
+                              case 'quotation':
+                                return 'hover:bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20';
+                              case 'confirmation':
+                                return 'hover:bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20';
+                              case 'packing':
+                                return 'hover:bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20';
+                              case 'invoice':
+                                return 'hover:bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20';
+                              case 'purchase':
+                                return 'hover:bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20';
+                              default:
+                                return 'hover:bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20';
+                            }
+                          })()}`}
+                        onClick={() => {
+                          // 根据文档类型跳转到编辑页面
                           const editPath = `/${doc.type}/edit/${doc.id}`;
                           router.push(editPath);
-                        }
-                      }}
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`编辑${getDocumentTypeName(doc.type)}单据 ${getDocumentNumber(doc)}`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-7 h-7 rounded-lg ${bgColor} flex items-center justify-center flex-shrink-0
-                          group-hover:scale-110 transition-transform duration-200`}>
-                          <Icon className={`w-3.5 h-3.5 ${textColor}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className={`text-sm font-medium text-gray-900 dark:text-white truncate
-                            transition-colors duration-200 ${(() => {
-                              // 根据文档类型匹配对应的文字颜色
-                              switch (doc.type) {
-                                case 'quotation':
-                                  return 'group-hover:text-blue-600 dark:group-hover:text-blue-400';
-                                case 'confirmation':
-                                  return 'group-hover:text-green-600 dark:group-hover:text-green-400';
-                                case 'packing':
-                                  return 'group-hover:text-teal-600 dark:group-hover:text-teal-400';
-                                case 'invoice':
-                                  return 'group-hover:text-purple-600 dark:group-hover:text-purple-400';
-                                case 'purchase':
-                                  return 'group-hover:text-orange-600 dark:group-hover:text-orange-400';
-                                default:
-                                  return 'group-hover:text-gray-600 dark:group-hover:text-gray-400';
-                              }
-                            })()}`}>
-                            {getDocumentTypeName(doc.type)} - {getDocumentNumber(doc)}
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            const editPath = `/${doc.type}/edit/${doc.id}`;
+                            router.push(editPath);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`编辑${getDocumentTypeName(doc.type)}单据 ${getDocumentNumber(doc)}`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-7 h-7 rounded-lg ${bgColor} flex items-center justify-center flex-shrink-0
+                            group-hover:scale-110 transition-transform duration-200`}>
+                            <Icon className={`w-3.5 h-3.5 ${textColor}`} />
                           </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5
-                            group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors duration-200">
-                            {(() => {
-                              let name = '';
-                              if (doc.type === 'purchase') {
-                                name = doc.supplierName || '未命名供应商';
-                              } else if (doc.type === 'packing') {
-                                name = doc.consigneeName || '未命名收货人';
-                              } else {
-                                name = doc.customerName || '未命名客户';
-                              }
-                              // 只取第一行
-                              return name.split('\n')[0]?.trim() || name;
-                            })()}
+                          <div className="flex-1 min-w-0">
+                            <div className={`text-sm font-medium text-gray-900 dark:text-white truncate
+                              transition-colors duration-200 ${(() => {
+                                // 根据文档类型匹配对应的文字颜色
+                                switch (doc.type) {
+                                  case 'quotation':
+                                    return 'group-hover:text-blue-600 dark:group-hover:text-blue-400';
+                                  case 'confirmation':
+                                    return 'group-hover:text-green-600 dark:group-hover:text-green-400';
+                                  case 'packing':
+                                    return 'group-hover:text-teal-600 dark:group-hover:text-teal-400';
+                                  case 'invoice':
+                                    return 'group-hover:text-purple-600 dark:group-hover:text-purple-400';
+                                  case 'purchase':
+                                    return 'group-hover:text-orange-600 dark:group-hover:text-orange-400';
+                                  default:
+                                    return 'group-hover:text-gray-600 dark:group-hover:text-gray-400';
+                                }
+                              })()}`}>
+                              {getDocumentTypeName(doc.type)} - {getDocumentNumber(doc)}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5
+                              group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors duration-200">
+                              {(() => {
+                                let name = '';
+                                if (doc.type === 'purchase') {
+                                  name = doc.supplierName || '未命名供应商';
+                                } else if (doc.type === 'packing') {
+                                  name = doc.consigneeName || '未命名收货人';
+                                } else {
+                                  name = doc.customerName || '未命名客户';
+                                }
+                                // 只取第一行
+                                return name.split('\n')[0]?.trim() || name;
+                              })()}
+                            </div>
                           </div>
-                        </div>
-                        {/* 添加一个微妙的箭头指示器 */}
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
-                          <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
+                          {/* 添加一个微妙的箭头指示器 */}
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
+                            <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 p-5 text-center">
-                <div className="text-gray-500 dark:text-gray-400 text-sm mb-2">
-                  {(() => {
-                    const timeText = {
-                      'today': '今天',
-                      '3days': '最近三天',
-                      'week': '最近一周',
-                      'month': '最近一个月'
-                    }[timeFilter];
-                    
-                    const typeText = {
-                      'all': '所有类型',
-                      'quotation': '报价单',
-                      'confirmation': '销售确认',
-                      'packing': '装箱单',
-                      'invoice': '财务发票',
-                      'purchase': '采购订单'
-                    }[typeFilter];
-                    
-                    return `${timeText}还没有创建或修改的${typeText}单据`;
-                  })()}
+                    );
+                  })}
                 </div>
-                <div className="text-xs text-gray-400 dark:text-gray-500">
-                  开始创建第一个单据吧！
+              ) : (
+                <div className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 p-5 text-center">
+                  <div className="text-gray-500 dark:text-gray-400 text-sm mb-2">
+                    {(() => {
+                      const timeText = {
+                        'today': '今天',
+                        '3days': '最近三天',
+                        'week': '最近一周',
+                        'month': '最近一个月'
+                      }[timeFilter];
+                      
+                      const typeText = {
+                        'all': '所有类型',
+                        'quotation': '报价单',
+                        'confirmation': '销售确认',
+                        'packing': '装箱单',
+                        'invoice': '财务发票',
+                        'purchase': '采购订单'
+                      }[typeFilter];
+                      
+                      return `${timeText}还没有创建或修改的${typeText}单据`;
+                    })()}
+                  </div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500">
+                    开始创建第一个单据吧！
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* 无权限提示 */}
           {availableQuickCreateModules.length === 0 && availableToolModules.length === 0 && availableToolsModules.length === 0 && (
@@ -1019,16 +1042,27 @@ export default function DashboardPage() {
               <button
                 onClick={async () => {
                   try {
-                    await fetchUser(true);
-                    setSuccessMessage('权限信息已更新，页面即将刷新...');
+                    // 设置刷新状态，防止重复点击
+                    setSuccessMessage('正在刷新权限信息...');
                     setShowSuccessMessage(true);
-                    setTimeout(() => setShowSuccessMessage(false), 3000);
-                    // 权限刷新后强制刷新页面以确保权限生效
+                    
+                    // 获取新权限
+                    await fetchUser(true);
+                    
+                    // 更新消息
+                    setSuccessMessage('权限信息已更新，页面即将刷新...');
+                    
+                    // 延迟刷新页面，给用户时间看到消息
                     setTimeout(() => {
                       window.location.reload();
-                    }, 1000);
+                    }, 1500);
+                    
+                    // 3秒后隐藏消息
+                    setTimeout(() => setShowSuccessMessage(false), 3000);
                   } catch (error) {
                     console.error('刷新权限失败:', error);
+                    setSuccessMessage('权限刷新失败，请重试');
+                    setTimeout(() => setShowSuccessMessage(false), 3000);
                   }
                 }}
                 disabled={refreshing}
