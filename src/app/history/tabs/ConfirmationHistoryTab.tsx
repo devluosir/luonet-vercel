@@ -260,7 +260,7 @@ export default function ConfirmationHistoryTab({
                   />
                 </div>
                 <div className="flex-1 min-w-0 truncate text-xs sm:text-sm font-medium text-gray-900 dark:text-white pl-2" title={item.customerName}>
-                  {item.customerName}
+                  {item.customerName.split('\n')[0]?.trim() || item.customerName}
                 </div>
                 <div className="w-24 sm:w-40 flex-shrink-0">
                   <div className="whitespace-nowrap text-xs sm:text-sm font-bold text-green-600 dark:text-green-400 font-mono">
