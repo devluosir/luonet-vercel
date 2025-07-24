@@ -882,14 +882,18 @@ export default function DashboardPage() {
                   {/* 查看全部按钮 - 仅在大屏显示，根据权限动态显示 */}
                   {visibleTypeFilters.length > 0 && (
                     <div className="hidden sm:flex items-center space-x-1">
-                      <button
-                        onClick={() => router.push('/history')}
-                        className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 
-                          transition-all duration-200 ease-in-out active:scale-95 rounded-lg px-1.5 sm:px-2 py-1
-                          hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                      >
-                        单据管理
-                      </button>
+                      <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
+                        <button
+                          onClick={() => router.push('/history')}
+                          className="px-2 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
+                            active:scale-95 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 
+                            hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center space-x-1"
+                          title="单据管理"
+                        >
+                          <Archive className="w-3 h-3" />
+                          <span>管理</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
