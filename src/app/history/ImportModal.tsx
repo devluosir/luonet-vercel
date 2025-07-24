@@ -121,10 +121,7 @@ export default function ImportModal({
         const details = result.details || [];
         let message = `导入成功！\n${details.join('\n')}`;
         
-        // 如果有客户信息导入，添加特殊提示
-        if (result.customerImported && result.customerImported > 0) {
-          message += `\n\n💡 提示：已自动提取并保存 ${result.customerImported} 条客户信息到客户管理系统，您可以在客户管理页面查看。`;
-        }
+
         
         showMessage('success', message);
       } else {
@@ -238,7 +235,6 @@ export default function ImportModal({
                   <li>• 支持筛选数据文件（包含筛选结果）</li>
                   <li>• 支持单个类型文件（报价单、发票等）</li>
                   <li>• 自动识别数据类型并导入到对应选项卡</li>
-                  <li>• 自动提取客户信息并保存到客户管理系统</li>
                   <li>• 重复数据将被覆盖</li>
                   <li>• 导入后会自动刷新页面数据</li>
                 </ul>
