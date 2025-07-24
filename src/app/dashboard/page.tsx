@@ -292,6 +292,7 @@ export default function DashboardPage() {
   const [recentDocuments, setRecentDocuments] = useState<any[]>([]);
   const [timeFilter, setTimeFilter] = useState<'today' | '3days' | 'week' | 'month'>('today');
   const [typeFilter, setTypeFilter] = useState<'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase'>('all');
+  const [showAllFilters, setShowAllFilters] = useState(false);
   
   // 使用权限store
   const { user, hasPermission, fetchUser, isLoading } = usePermissionStore();
@@ -598,23 +599,34 @@ export default function DashboardPage() {
       filters.push({ type: 'purchase', label: 'PO', color: 'orange' });
     }
     
-    // 如果有任何权限，添加ALL选项
+    // 如果有任何权限，添加ALL选项到PO的右边
     if (filters.length > 0) {
-      filters.unshift({ type: 'all', label: 'ALL', color: 'gray' });
+      filters.push({ type: 'all', label: 'ALL', color: 'gray' });
     }
     
     return filters;
   }, [permissionMap]);
 
+  // 根据显示状态过滤按钮
+  const visibleTypeFilters = useMemo(() => {
+    if (showAllFilters) {
+      // 显示所有按钮
+      return availableTypeFilters;
+    } else {
+      // 只显示ALL按钮
+      return availableTypeFilters.filter(filter => filter.type === 'all');
+    }
+  }, [availableTypeFilters, showAllFilters]);
+
   // 检查当前选择的筛选器是否有效，如果无效则重置为第一个可用选项
   useEffect(() => {
-    if (availableTypeFilters.length > 0) {
-      const currentFilterExists = availableTypeFilters.some(filter => filter.type === typeFilter);
+    if (visibleTypeFilters.length > 0) {
+      const currentFilterExists = visibleTypeFilters.some(filter => filter.type === typeFilter);
       if (!currentFilterExists) {
-        setTypeFilter(availableTypeFilters[0].type as any);
+        setTypeFilter(visibleTypeFilters[0].type as any);
       }
     }
-  }, [availableTypeFilters, typeFilter]);
+  }, [visibleTypeFilters, typeFilter]);
 
   // 页面加载完成后的性能记录
   useEffect(() => {
@@ -773,14 +785,14 @@ export default function DashboardPage() {
           )}
 
           {/* 4. 今天创建或修改的单据 - 根据权限动态显示 */}
-          {availableTypeFilters.length > 0 && (
+          {visibleTypeFilters.length > 0 && (
             <div className="mb-8">
               <div className="flex items-center justify-center sm:justify-end mb-4">
                 <div className="flex items-center space-x-0.5 sm:space-x-2">
                   {/* 单据类型筛选器 - 根据权限动态显示 */}
-                  {availableTypeFilters.length > 0 && (
+                  {visibleTypeFilters.length > 0 && (
                     <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
-                      {availableTypeFilters.map((filter) => {
+                      {visibleTypeFilters.map((filter) => {
                         const getColorClasses = (color: string, isActive: boolean) => {
                           const colorMap = {
                             blue: isActive ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50',
@@ -796,9 +808,21 @@ export default function DashboardPage() {
                         return (
                           <button
                             key={filter.type}
-                            onClick={() => setTypeFilter(filter.type as any)}
+                            onClick={() => {
+                              if (filter.type === 'all') {
+                                // ALL按钮特殊处理：切换显示状态
+                                setShowAllFilters(!showAllFilters);
+                                // 如果当前不是ALL状态，切换到ALL
+                                if (typeFilter !== 'all') {
+                                  setTypeFilter('all');
+                                }
+                              } else {
+                                setTypeFilter(filter.type as any);
+                              }
+                            }}
                             className={`px-1.5 sm:px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                              active:scale-95 ${getColorClasses(filter.color, typeFilter === filter.type)}`}
+                              active:scale-95 ${getColorClasses(filter.color, typeFilter === filter.type)}
+                              ${filter.type === 'all' && !showAllFilters ? 'font-bold' : ''}`}
                           >
                             {filter.label}
                           </button>
@@ -807,7 +831,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                   {/* 时间筛选器 - 根据权限动态显示 */}
-                  {availableTypeFilters.length > 0 && (
+                  {visibleTypeFilters.length > 0 && (
                     <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
                       <button
                         onClick={() => setTimeFilter('today')}
@@ -856,7 +880,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                   {/* 查看全部按钮 - 仅在大屏显示，根据权限动态显示 */}
-                  {availableTypeFilters.length > 0 && (
+                  {visibleTypeFilters.length > 0 && (
                     <div className="hidden sm:flex items-center space-x-1">
                       <button
                         onClick={() => router.push('/history')}
@@ -864,7 +888,7 @@ export default function DashboardPage() {
                           transition-all duration-200 ease-in-out active:scale-95 rounded-lg px-1.5 sm:px-2 py-1
                           hover:bg-blue-50 dark:hover:bg-blue-900/20"
                       >
-                        查看全部
+                        单据管理
                       </button>
                     </div>
                   )}
