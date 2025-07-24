@@ -879,9 +879,9 @@ export default function DashboardPage() {
                       </button>
                     </div>
                   )}
-                  {/* 查看全部按钮 - 仅在大屏显示，根据权限动态显示 */}
+                  {/* 查看全部按钮 - 根据权限动态显示 */}
                   {visibleTypeFilters.length > 0 && (
-                    <div className="hidden sm:flex items-center space-x-1">
+                    <div className="flex items-center space-x-1">
                       <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
                         <button
                           onClick={() => router.push('/history')}
@@ -891,7 +891,7 @@ export default function DashboardPage() {
                           title="单据管理"
                         >
                           <Archive className="w-3 h-3" />
-                          <span>管理</span>
+                          <span className="hidden sm:inline">管理</span>
                         </button>
                       </div>
                     </div>

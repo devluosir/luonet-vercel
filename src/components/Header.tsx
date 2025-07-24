@@ -121,8 +121,11 @@ export function Header({
         <div className="flex items-center space-x-4">
           {showWelcome && (
             <>
-              {/* 小屏时只显示日期和简化星期几 */}
+              {/* 小屏时显示用户名和简化日期 */}
               <div className="flex sm:hidden items-center mr-4">
+                <span className="text-sm text-gray-900 dark:text-white font-medium mr-2">
+                  {user.name}
+                </span>
                 <span className="text-sm text-gray-600 dark:text-gray-400">
                   {date} {dayOfWeek}
                 </span>
