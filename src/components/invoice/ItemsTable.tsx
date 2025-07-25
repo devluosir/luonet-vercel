@@ -184,7 +184,7 @@ export default function ItemsTable({
                 <div>
                   <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
                   <select
-                    value={item.unit ? item.unit.replace(/s$/, '') : 'pc'}
+                    value={item.unit || 'pc'}
                     onChange={e => {
                       updateLineItem(index, 'unit', e.target.value);
                     }}
@@ -521,7 +521,7 @@ export default function ItemsTable({
                   </td>
                   <td className="py-1.5 px-1">
                     <select
-                      value={item.unit ? item.unit.replace(/s$/, '') : 'pc'}
+                      value={item.unit || 'pc'}
                       onChange={e => {
                         updateLineItem(index, 'unit', e.target.value);
                       }}
