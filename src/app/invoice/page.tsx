@@ -402,7 +402,11 @@ export default function InvoicePage() {
       if (field === 'quantity') {
         const quantity = Number(value);
         const baseUnit = item.unit.replace(/s$/, '');
-        item.unit = quantity > 1 ? `${baseUnit}s` : baseUnit;
+        // 只对默认单位进行复数处理，自定义单位保持不变
+        if (defaultUnits.includes(baseUnit)) {
+          item.unit = quantity > 1 ? `${baseUnit}s` : baseUnit;
+        }
+        // 自定义单位保持不变，不做任何处理
       }
       
       if (field !== 'highlight') {
@@ -420,14 +424,6 @@ export default function InvoicePage() {
       return { ...prev, items: newItems };
     });
   }, [calculateAmount]);
-
-  // 使用 useCallback 包装 getUnitDisplay 函数
-  const getUnitDisplay = useCallback((baseUnit: string, quantity: number) => {
-    if (defaultUnits.includes(baseUnit)) {
-      return quantity > 1 ? `${baseUnit}s` : baseUnit;
-    }
-    return baseUnit;
-  }, []);
 
   // 处理自定义单位
   const handleAddCustomUnit = useCallback(() => {
@@ -587,7 +583,7 @@ export default function InvoicePage() {
             partname: partname || '',
             description: description || '',
             quantity: cleanQuantity,
-            unit: defaultUnits.includes(baseUnit) ? getUnitDisplay(baseUnit, cleanQuantity) : baseUnit,
+            unit: defaultUnits.includes(baseUnit) ? (cleanQuantity > 1 ? `${baseUnit}s` : baseUnit) : baseUnit,
             unitPrice: cleanUnitPrice,
             amount: cleanQuantity * cleanUnitPrice,
             highlight: {}
@@ -701,7 +697,7 @@ export default function InvoicePage() {
       
       input.focus();
     }
-  }, [getUnitDisplay]);
+  }, []);
 
   // 修复 useEffect 的依赖警告
   useEffect(() => {
