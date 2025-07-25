@@ -186,9 +186,7 @@ export default function ItemsTable({
                   <select
                     value={item.unit ? item.unit.replace(/s$/, '') : 'pc'}
                     onChange={e => {
-                      const baseUnit = e.target.value;
-                      const unit = item.quantity <= 1 ? baseUnit : `${baseUnit}s`;
-                      updateLineItem(index, 'unit', unit);
+                      updateLineItem(index, 'unit', e.target.value);
                     }}
                     className={`w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                       focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
@@ -525,9 +523,7 @@ export default function ItemsTable({
                     <select
                       value={item.unit ? item.unit.replace(/s$/, '') : 'pc'}
                       onChange={e => {
-                        const baseUnit = e.target.value;
-                        const unit = item.quantity <= 1 ? baseUnit : `${baseUnit}s`;
-                        updateLineItem(index, 'unit', unit);
+                        updateLineItem(index, 'unit', e.target.value);
                       }}
                       onKeyDown={(e) => handleKeyDown(e, index, 'unit')}
                       onDoubleClick={() => handleDoubleClick(index, 'unit')}

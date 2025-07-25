@@ -586,7 +586,7 @@ export default function InvoicePage() {
             partname: partname || '',
             description: description || '',
             quantity: cleanQuantity,
-            unit: defaultUnits.includes(baseUnit) ? (cleanQuantity > 1 ? `${baseUnit}s` : baseUnit) : baseUnit,
+            unit: baseUnit, // 粘贴时保持原单位，不进行复数处理
             unitPrice: cleanUnitPrice,
             amount: cleanQuantity * cleanUnitPrice,
             highlight: {}
