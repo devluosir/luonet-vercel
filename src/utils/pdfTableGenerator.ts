@@ -15,9 +15,12 @@ interface ExtendedJsPDF extends jsPDF {
 const defaultUnits = ['pc', 'set', 'length'];
 
 // 处理单位的单复数
-const getUnitDisplay = (baseUnit: string, quantity: number) => {
+const getUnitDisplay = (baseUnit: string, quantity: number, customUnits: string[] = []) => {
   const singularUnit = baseUnit.replace(/s$/, '');
-  if (defaultUnits.includes(singularUnit)) {
+  // 检查是否是自定义单位
+  const isCustomUnit = customUnits.includes(baseUnit) || customUnits.includes(singularUnit);
+  
+  if (defaultUnits.includes(singularUnit) && !isCustomUnit) {
     return quantity > 1 ? `${singularUnit}s` : singularUnit;
   }
   return baseUnit; // 自定义单位不变化单复数
@@ -161,7 +164,7 @@ export const generateTableConfig = (
           }
         },
         {
-          content: getUnitDisplay(item.unit || '', item.quantity || 0),
+          content: getUnitDisplay(item.unit || '', item.quantity || 0, data.customUnits || []),
           styles: { 
             halign: 'center' as const,
             ...(item.highlight?.unit ? { textColor: [255, 0, 0] } : {})

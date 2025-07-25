@@ -403,7 +403,10 @@ export default function InvoicePage() {
         const quantity = Number(value);
         const baseUnit = item.unit.replace(/s$/, '');
         // 只对默认单位进行复数处理，自定义单位保持不变
-        if (defaultUnits.includes(baseUnit)) {
+        // 检查是否是自定义单位
+        const isCustomUnit = (prev.customUnits || []).includes(item.unit) || (prev.customUnits || []).includes(baseUnit);
+        
+        if (defaultUnits.includes(baseUnit) && !isCustomUnit) {
           item.unit = quantity > 1 ? `${baseUnit}s` : baseUnit;
         }
         // 自定义单位保持不变，不做任何处理
