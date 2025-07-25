@@ -305,7 +305,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     focus:outline-none focus:ring-1
                     focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
                     text-gray-800 dark:text-gray-200
-                    placeholder:text-gray-400"
+                    placeholder:text-gray-400 placeholder:text-[9px]"
                 />
                 {showSuccess && (
                   <div className="absolute left-0 right-0 -bottom-5 text-center text-[9px] text-green-500 dark:text-green-400

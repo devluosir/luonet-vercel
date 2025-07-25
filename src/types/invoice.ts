@@ -52,6 +52,7 @@ export interface InvoiceData {
   showInvoiceReminder: boolean;
   currency: 'USD' | 'CNY';
   templateConfig: InvoiceTemplateConfig;
+  customUnits?: string[];
   otherFees: Array<{
     id: number;
     description: string;

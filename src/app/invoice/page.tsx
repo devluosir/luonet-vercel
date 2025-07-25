@@ -87,6 +87,10 @@ export default function InvoicePage() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewItem, setPreviewItem] = useState<any>(null);
 
+  // 自定义单位相关状态
+  const [customUnit, setCustomUnit] = useState('');
+  const [showUnitSuccess, setShowUnitSuccess] = useState(false);
+
   // 编辑状态
   const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
   const [editingUnitPrice, setEditingUnitPrice] = useState<string>('');
@@ -138,6 +142,7 @@ export default function InvoicePage() {
       invoiceType: 'invoice',
       stampType: 'none'
     },
+    customUnits: [],
     otherFees: []
   });
 
@@ -423,6 +428,27 @@ export default function InvoicePage() {
     }
     return baseUnit;
   }, []);
+
+  // 处理自定义单位
+  const handleAddCustomUnit = useCallback(() => {
+    if (customUnit && !(data.customUnits || []).includes(customUnit)) {
+      setData(prev => ({
+        ...prev,
+        customUnits: [...(prev.customUnits || []), customUnit]
+      }));
+      setCustomUnit('');
+      setShowUnitSuccess(true);
+      setTimeout(() => setShowUnitSuccess(false), 2000);
+    }
+  }, [customUnit, data.customUnits]);
+
+  const handleRemoveCustomUnit = useCallback((index: number) => {
+    const newUnits = (data.customUnits || []).filter((_, i) => i !== index);
+    setData(prev => ({
+      ...prev,
+      customUnits: newUnits
+    }));
+  }, [data.customUnits]);
 
   // 处理保存功能
   const handleSave = useCallback(async () => {
@@ -1022,6 +1048,81 @@ export default function InvoicePage() {
                           <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Description</span>
                         </label>
                       </div>
+
+                      {/* 分隔线 */}
+                      <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+
+                      {/* 第六组：自定义单位 */}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Units:</span>
+                        
+                        {/* 自定义单位输入 */}
+                        <div className="flex items-center gap-2">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={customUnit}
+                              onChange={e => setCustomUnit(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddCustomUnit();
+                                }
+                              }}
+                              placeholder="Add custom unit"
+                              className="w-24 px-2 py-1 rounded text-[9px]
+                                bg-white/90 dark:bg-[#1c1c1e]/90
+                                border border-gray-200/30 dark:border-[#2c2c2e]/50
+                                focus:outline-none focus:ring-1
+                                focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
+                                text-gray-800 dark:text-gray-200
+                                placeholder:text-gray-400 placeholder:text-[9px]"
+                            />
+                            {showUnitSuccess && (
+                              <div className="absolute left-0 right-0 -bottom-5 text-center text-[9px] text-green-500 dark:text-green-400
+                                animate-[fadeIn_0.2s_ease-in,fadeOut_0.2s_ease-out_1.8s]">
+                                Added
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleAddCustomUnit}
+                            className="px-2 py-1 rounded text-[9px] font-medium
+                              bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
+                              hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
+                              text-[#007AFF] dark:text-[#0A84FF]"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        {/* 已添加的自定义单位 */}
+                        {(data.customUnits || []).length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {(data.customUnits || []).map((unit, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-1 px-1.5 py-0.5 rounded
+                                  bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
+                                  text-[#007AFF] dark:text-[#0A84FF]
+                                  text-[9px]"
+                              >
+                                <span>{unit}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveCustomUnit(index)}
+                                  className="w-3 h-3 flex items-center justify-center
+                                    hover:bg-[#007AFF]/20 dark:hover:bg-[#0A84FF]/20
+                                    rounded-full text-[8px]"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1086,7 +1187,7 @@ export default function InvoicePage() {
                   handleKeyDown={handleKeyDown}
                   handleDoubleClick={handleDoubleClick}
                   handleOtherFeeDoubleClick={handleOtherFeeDoubleClick}
-                  customUnits={[]} // 使用空数组替代 _customUnits
+                  customUnits={data.customUnits || []}
                 />
 
                 {/* 添加行按钮和总金额 */}

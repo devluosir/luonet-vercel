@@ -260,7 +260,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
                   focus:outline-none focus:ring-1
                   focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
                   text-gray-800 dark:text-gray-200
-                  placeholder:text-gray-400"
+                  placeholder:text-gray-400 placeholder:text-[9px]"
                 style={{ caretColor: '#007AFF' }}
               />
               {showSuccess && (
