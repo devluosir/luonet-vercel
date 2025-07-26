@@ -430,7 +430,15 @@ async function renderBankAndPaymentInfo(doc: ExtendedJsPDF, data: PDFGeneratorDa
     doc.setFont('NotoSansSC', 'normal');
     currentY += 5;
 
-    const bankInfoLines = data.bankInfo.split('\n').filter(line => line.trim());
+    // 硬编码银行信息，与UI保持一致
+    const bankInfoLines = [
+      'Bank Name: The Hongkong and Shanghai Banking Corporation Limited',
+      'Swift Code: HSBCHKHHHKH',
+      'Bank Address: Head Office 1 Queen\'s Road Central Hong Kong',
+      'A/C No.: 801470337838',
+      'Beneficiary: Luo & Company Co., Limited'
+    ];
+
     bankInfoLines.forEach((line, index) => {
       doc.text(String(line), margin, currentY + (index * 5));
     });
