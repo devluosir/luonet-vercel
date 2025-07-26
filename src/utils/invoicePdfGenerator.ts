@@ -320,6 +320,11 @@ async function renderInvoiceTable(doc: ExtendedJsPDF, data: PDFGeneratorData, st
     ])
   ];
 
+  // 计算表格宽度和边距
+  const pageWidth = doc.internal.pageSize.width;
+  const tableWidth = pageWidth - 30; // 左右各留15mm边距
+  const margin = 15; // 减少边距到15mm
+
   doc.autoTable({
     startY,
     head: [tableHeaders],
@@ -341,9 +346,9 @@ async function renderInvoiceTable(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       font: 'NotoSansSC',
       valign: 'middle'
     },
-    columnStyles: getColumnStyles(data),
-    margin: { left: 20, right: 20, bottom: 20 },
-    tableWidth: 'auto',
+    columnStyles: getColumnStyles(data, tableWidth),
+    margin: { left: margin, right: margin, bottom: 20 },
+    tableWidth: tableWidth.toString(),
     showFoot: 'lastPage',
     footStyles: {
       fontSize: 8,
@@ -372,26 +377,103 @@ async function renderInvoiceTable(doc: ExtendedJsPDF, data: PDFGeneratorData, st
 }
 
 // 获取表格列样式
-function getColumnStyles(data: PDFGeneratorData): Record<string, { halign: string; cellWidth: string }> {
-  return {
-    0: { halign: 'center', cellWidth: '7%' },
-    ...(data.showHsCode ? { 1: { halign: 'center', cellWidth: '10%' } } : {}),
-    [data.showHsCode ? 2 : 1]: { halign: 'center', cellWidth: '20%' },
-    ...(data.showDescription ? { [data.showHsCode ? 3 : 2]: { halign: 'center', cellWidth: '25%' } } : {}),
-    [getColumnIndex(data, 4)]: { halign: 'center', cellWidth: '8%' },
-    [getColumnIndex(data, 5)]: { halign: 'center', cellWidth: '8%' },
-    [getColumnIndex(data, 6)]: { halign: 'center', cellWidth: '12%' },
-    [getColumnIndex(data, 7)]: { halign: 'center', cellWidth: '10%' }
+function getColumnStyles(data: PDFGeneratorData, tableWidth: number): Record<string, { halign: string; cellWidth: number }> {
+  // 定义各列的相对宽度权重（参考包装清单PDF的设置）
+  const baseWidths = {
+    no: 3,           // No.
+    hsCode: 6,       // HS Code
+    partName: 13,    // Part Name
+    description: 16, // Description
+    qty: 4,          // Q'TY
+    unit: 4,         // Unit
+    unitPrice: 6,    // Unit Price
+    amount: 6        // Amount
   };
+
+  // 计算实际显示的列数
+  let visibleColumns = 1; // No.
+  if (data.showHsCode) visibleColumns++;
+  visibleColumns += 1; // Part Name
+  if (data.showDescription) visibleColumns++;
+  visibleColumns += 3; // Q'TY + Unit + Unit Price + Amount
+
+  // 计算总权重
+  let totalWeight = baseWidths.no;
+  if (data.showHsCode) totalWeight += baseWidths.hsCode;
+  totalWeight += baseWidths.partName;
+  if (data.showDescription) totalWeight += baseWidths.description;
+  totalWeight += baseWidths.qty + baseWidths.unit + baseWidths.unitPrice + baseWidths.amount;
+
+  // 计算单位权重对应的宽度
+  const unitWidth = tableWidth / totalWeight;
+
+  // 设置每列的宽度和对齐方式
+  const columnStyles: Record<string, { halign: string; cellWidth: number }> = {};
+  
+  // No. 列
+  columnStyles[0] = { 
+    halign: 'center', 
+    cellWidth: baseWidths.no * unitWidth 
+  };
+
+  let currentColumnIndex = 1;
+
+  // HS Code 列
+  if (data.showHsCode) {
+    columnStyles[currentColumnIndex] = { 
+      halign: 'center', 
+      cellWidth: baseWidths.hsCode * unitWidth 
+    };
+    currentColumnIndex++;
+  }
+
+  // Part Name 列
+  columnStyles[currentColumnIndex] = { 
+    halign: 'center', 
+    cellWidth: baseWidths.partName * unitWidth 
+  };
+  currentColumnIndex++;
+
+  // Description 列
+  if (data.showDescription) {
+    columnStyles[currentColumnIndex] = { 
+      halign: 'center', 
+      cellWidth: baseWidths.description * unitWidth 
+    };
+    currentColumnIndex++;
+  }
+
+  // Q'TY 列
+  columnStyles[currentColumnIndex] = { 
+    halign: 'center', 
+    cellWidth: baseWidths.qty * unitWidth 
+  };
+  currentColumnIndex++;
+
+  // Unit 列
+  columnStyles[currentColumnIndex] = { 
+    halign: 'center', 
+    cellWidth: baseWidths.unit * unitWidth 
+  };
+  currentColumnIndex++;
+
+  // Unit Price 列
+  columnStyles[currentColumnIndex] = { 
+    halign: 'center', 
+    cellWidth: baseWidths.unitPrice * unitWidth 
+  };
+  currentColumnIndex++;
+
+  // Amount 列
+  columnStyles[currentColumnIndex] = { 
+    halign: 'center', 
+    cellWidth: baseWidths.amount * unitWidth 
+  };
+
+  return columnStyles;
 }
 
-// 获取列索引
-function getColumnIndex(data: PDFGeneratorData, baseIndex: number): number {
-  let offset = 0;
-  if (!data.showHsCode) offset--;
-  if (!data.showDescription) offset--;
-  return baseIndex + offset;
-}
+
 
 // 渲染总金额
 function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: number, pageWidth: number, margin: number): number {
