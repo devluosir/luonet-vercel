@@ -230,25 +230,27 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
   if (data.consignee.name.trim()) {
     const consigneeLines = doc.splitTextToSize(data.consignee.name.trim(), 130);
     consigneeLines.forEach((line: string, index: number) => {
-      doc.text(String(line), margin + contentIndent, leftY + 4 + (index * 4)); // 内容行间距4px
+      doc.text(String(line), margin + contentIndent, leftY + 4 + (index * 4)); // 内容行间距4px，第一行额外加4px
     });
-    leftY += 4 + (consigneeLines.length * 4) + 5; // 最后加5px作为项目间距
+    leftY += 4 + (consigneeLines.length * 4) + 5; // 第一行额外加4px，最后加5px作为项目间距
   } else {
     leftY += 15; // 项目间距5px
   }
 
-  // 左侧：Order No.
-  doc.setFont('NotoSansSC', 'bold');
-  doc.text('Order No.:', margin, leftY);
-  doc.setFont('NotoSansSC', 'bold');
-  doc.setTextColor(0, 0, 255); // 设置为蓝色
-  const orderNoText = data.orderNo || '';
-  const orderNoLines = doc.splitTextToSize(orderNoText, 130);
-  orderNoLines.forEach((line: string, index: number) => {
-    doc.text(String(line), margin + orderNoIndent, leftY + (index * 4)); // 内容行间距4px
-  });
-  doc.setTextColor(0, 0, 0); // 重置为黑色
-  leftY += (orderNoLines.length * 4) + 5; // 最后加5px作为项目间距
+  // 左侧：Order No. - 只在有值时才显示
+  if (data.orderNo && data.orderNo.trim()) {
+    doc.setFont('NotoSansSC', 'bold');
+    doc.text('Order No.:', margin, leftY);
+    doc.setFont('NotoSansSC', 'bold');
+    doc.setTextColor(0, 0, 255); // 设置为蓝色
+    const orderNoText = data.orderNo.trim();
+    const orderNoLines = doc.splitTextToSize(orderNoText, 130);
+    orderNoLines.forEach((line: string, index: number) => {
+      doc.text(String(line), margin + orderNoIndent, leftY + (index * 4)); // 内容行间距4px
+    });
+    doc.setTextColor(0, 0, 0); // 重置为黑色
+    leftY += (orderNoLines.length * 4) + 5; // 最后加5px作为项目间距
+  }
 
   // 右侧：Invoice No. + Date
   let rightY = data.remarkOptions.shipsSpares ? startY + 5 : startY; // 调整右侧起始位置，使用5px间距
@@ -261,9 +263,16 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
   doc.text(':', colonX, rightY);
   doc.setFont('NotoSansSC', 'bold');
   doc.setTextColor(255, 0, 0); // 设置为红色，与发票一致
-  doc.text(data.invoiceNo || '', colonX + 3, rightY);
+  
+  // 处理 Invoice No. 换行
+  const invoiceNoText = data.invoiceNo || '';
+  const maxWidth = pageWidth - colonX - 15; // 留出右边距
+  const invoiceNoLines = doc.splitTextToSize(invoiceNoText, maxWidth);
+  invoiceNoLines.forEach((line: string, index: number) => {
+    doc.text(line, colonX + 3, rightY + (index * 4));
+  });
   doc.setTextColor(0, 0, 0); // 重置为黑色
-  rightY += 5; // 项目间距5px
+  rightY += Math.max(5, invoiceNoLines.length * 4); // 根据行数调整间距
 
   doc.setFont('NotoSansSC', 'bold');
   doc.text('Date', colonX - 2, rightY, { align: 'right' });
@@ -281,7 +290,8 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
     doc.text(data.currency, colonX + 3, rightY);
   }
 
-  return Math.max(leftY, rightY);
+  // 减少基础信息与表格之间的间距
+  return Math.max(leftY, rightY) - 3;
 }
 
 // 渲染运输标记
