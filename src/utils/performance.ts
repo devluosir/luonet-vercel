@@ -85,9 +85,15 @@ class PerformanceMonitor {
         const response = await originalFetch(...args);
         const duration = performance.now() - startTime;
         
-        // 提高阈值，只监控真正慢的API调用
-        if (duration > 3000) { // 从2秒提高到3秒
+        // 过滤Next.js编译请求和只监控真正慢的API调用
+        const isNextCompilation = url.includes('_rsc=') || url.includes('/_next/');
+        const isRealSlowCall = duration > 5000; // 提高到5秒
+        
+        if (isRealSlowCall && !isNextCompilation) {
           console.warn(`🐌 慢API调用: ${url} (${duration.toFixed(2)}ms)`);
+        } else if (isNextCompilation && duration > 8000) {
+          // 只报告超过8秒的编译时间
+          console.info(`⏱️ 页面编译耗时: ${url} (${duration.toFixed(2)}ms)`);
         }
         
         return response;

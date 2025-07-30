@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Footer } from '@/components/Footer';
 import { ArrowLeft, Calendar, Clock, CalendarDays } from 'lucide-react';
@@ -54,8 +54,8 @@ export default function DateTools() {
     return `${year}年${month}月${day}日`;
   };
 
-  // 计算工作日
-  const calculateWorkDays = (startDate: string, endDate: string) => {
+  // 优化：使用 useCallback 缓存计算函数
+  const calculateWorkDays = useCallback((startDate: string, endDate: string) => {
     if (!startDate || !endDate) return null;
     
     const start = new Date(startDate);
@@ -76,10 +76,10 @@ export default function DateTools() {
     }
     
     return workDays;
-  };
+  }, []); // 无依赖，函数逻辑不变
 
-  // 计算工作日后的日期
-  const calculateWorkDate = (baseDate: string, workDays: number) => {
+  // 优化：使用 useCallback 缓存计算函数
+  const calculateWorkDate = useCallback((baseDate: string, workDays: number) => {
     if (!baseDate || workDays === 0) return null;
     
     const date = new Date(baseDate);
@@ -97,80 +97,86 @@ export default function DateTools() {
     }
     
     return formatDateString(current.toISOString());
-  };
+  }, []); // 无依赖，函数逻辑不变
 
-  // 日期差值计算的效果
+  // 优化：使用 useMemo 缓存计算结果
+  const dateDiffResult = useMemo(() => {
+    if (!date1 || !date2) {
+      return { diffDays: null, workDays: null };
+    }
+    
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    const diffTime = Math.abs(d2.getTime() - d1.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const workDays = calculateWorkDays(date1, date2);
+    
+    return { diffDays, workDays };
+  }, [date1, date2, calculateWorkDays]);
+
+  // 同步计算结果到状态
   useEffect(() => {
-    if (date1 && date2) {
-      const d1 = new Date(date1);
-      const d2 = new Date(date2);
-      const diffTime = Math.abs(d2.getTime() - d1.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      setDiffDays(diffDays);
+    setDiffDays(dateDiffResult.diffDays);
+    setWorkDays(dateDiffResult.workDays);
+  }, [dateDiffResult]);
+
+  // 优化：使用 useMemo 缓存日期推算结果
+  const dateCalculationResult = useMemo(() => {
+    if (!baseDate || days === '') {
+      return { resultDate: null, resultWorkDate: null };
+    }
+    
+    try {
+      const date = new Date(baseDate);
+      const daysNum = parseInt(days) || 0;
+      const utcDate = new Date(Date.UTC(
+        date.getUTCFullYear(),
+        date.getUTCMonth(),
+        date.getUTCDate() + daysNum
+      ));
+      const resultDateStr = utcDate.toISOString().split('T')[0];
+      const workDate = calculateWorkDate(baseDate, daysNum);
       
-      // 计算工作日
-      const workDays = calculateWorkDays(date1, date2);
-      setWorkDays(workDays);
-    } else {
-      setDiffDays(null);
-      setWorkDays(null);
+      return { resultDate: resultDateStr, resultWorkDate: workDate };
+    } catch (error) {
+      console.error('Date calculation error:', error);
+      return { resultDate: null, resultWorkDate: null };
     }
-  }, [date1, date2]);
+  }, [baseDate, days, calculateWorkDate]);
 
-  // 修改日期推算的效果
+  // 同步计算结果到状态
   useEffect(() => {
-    if (baseDate && days !== '') {
-      try {
-        const date = new Date(baseDate);
-        const daysNum = parseInt(days) || 0;
-        const utcDate = new Date(Date.UTC(
-          date.getUTCFullYear(),
-          date.getUTCMonth(),
-          date.getUTCDate() + daysNum
-        ));
-        const resultDateStr = utcDate.toISOString().split('T')[0];
-        setResultDate(resultDateStr);
-        
-        // 计算工作日后的日期
-        const workDate = calculateWorkDate(baseDate, daysNum);
-        setResultWorkDate(workDate);
-      } catch (error) {
-        console.error('Date calculation error:', error);
-        setResultDate(null);
-        setResultWorkDate(null);
-      }
-    } else {
-      setResultDate(null);
-      setResultWorkDate(null);
-    }
-  }, [baseDate, days]);
+    setResultDate(dateCalculationResult.resultDate);
+    setResultWorkDate(dateCalculationResult.resultWorkDate);
+  }, [dateCalculationResult]);
 
-  // 日期格式化效果
-  useEffect(() => {
-    if (formatDate) {
-      try {
-        const date = new Date(formatDate);
-        const formatted = formatDisplayDate(formatDate);
-        setFormattedResult(formatted);
-      } catch (error) {
-        console.error('Date formatting error:', error);
-        setFormattedResult(null);
-      }
-    } else {
-      setFormattedResult(null);
+  // 优化：使用 useMemo 缓存格式化结果
+  const formattedDateResult = useMemo(() => {
+    if (!formatDate) return null;
+    
+    try {
+      return formatDisplayDate(formatDate);
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return null;
     }
   }, [formatDate]);
 
-  // 修改按钮点击处理函数
-  const handleDaysChange = (change: number) => {
+  // 同步格式化结果到状态
+  useEffect(() => {
+    setFormattedResult(formattedDateResult);
+  }, [formattedDateResult]);
+
+  // 优化：使用 useCallback 缓存处理函数
+  const handleDaysChange = useCallback((change: number) => {
     setDays(prev => {
       const currentDays = prev === '' ? 0 : parseInt(prev);
       return (currentDays + change).toString();
     });
-  };
+  }, []);
 
-  // 快捷选择日期
-  const quickSelectDate = (type: 'today' | 'tomorrow' | 'nextWeek' | 'nextMonth') => {
+  // 优化：使用 useCallback 缓存快捷选择函数
+  const quickSelectDate = useCallback((type: 'today' | 'tomorrow' | 'nextWeek' | 'nextMonth') => {
     const today = new Date();
     let targetDate = new Date(today);
 
@@ -189,7 +195,7 @@ export default function DateTools() {
     }
 
     return formatDateString(targetDate.toISOString());
-  };
+  }, []); // 无依赖，函数逻辑不变
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50/90 via-white/60 to-gray-100/90 
