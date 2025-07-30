@@ -16,10 +16,8 @@ interface HistoryItem {
 
 export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const [display, setDisplay] = useState('0');
-  const [previousValue, setPreviousValue] = useState<number | null>(null);
-  const [operation, setOperation] = useState<string | null>(null);
-  const [waitingForOperand, setWaitingForOperand] = useState(false);
   const [expression, setExpression] = useState(''); // 存储完整算式
+  const [waitingForOperand, setWaitingForOperand] = useState(false);
   const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -28,68 +26,310 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
 
+  // 重新设计：使用更简单的状态管理
+  const [currentNumber, setCurrentNumber] = useState('0');
+  const [operation, setOperation] = useState<string | null>(null);
+  const [previousValue, setPreviousValue] = useState<number | null>(null);
+  const [justCalculated, setJustCalculated] = useState(false); // 跟踪是否刚完成计算
+
   // 计算器功能
   const inputDigit = (digit: string) => {
-    if (waitingForOperand) {
+    // 如果刚完成计算，开始新算式
+    if (justCalculated) {
       setDisplay(digit);
-      setWaitingForOperand(false);
-      // 更新算式显示
-      if (operation) {
-        setExpression(`${previousValue} ${operation} ${digit}`);
+      setCurrentNumber(digit);
+      setExpression(digit);
+      setPreviousValue(null);
+      setOperation(null);
+      setJustCalculated(false);
+      return;
+    }
+    
+    if (display === '0' || currentNumber === '0') {
+      setDisplay(digit);
+      setCurrentNumber(digit);
+      // 立即更新表达式
+      if (expression === '') {
+        setExpression(digit);
+      } else {
+        setExpression(expression + ' ' + digit);
       }
     } else {
-      const newDisplay = display === '0' ? digit : display + digit;
+      const newDisplay = display + digit;
       setDisplay(newDisplay);
-      // 更新算式显示
-      if (operation) {
-        setExpression(`${previousValue} ${operation} ${newDisplay}`);
-      }
+      setCurrentNumber(newDisplay);
+      // 更新表达式中的最后一个数字
+      const parts = expression.split(' ');
+      parts[parts.length - 1] = newDisplay;
+      setExpression(parts.join(' '));
     }
   };
 
   const inputDecimal = () => {
-    if (waitingForOperand) {
+    // 如果刚完成计算，开始新算式
+    if (justCalculated) {
       setDisplay('0.');
-      setWaitingForOperand(false);
-      // 更新算式显示
-      if (operation) {
-        setExpression(`${previousValue} ${operation} 0.`);
-      }
-    } else if (display.indexOf('.') === -1) {
+      setCurrentNumber('0.');
+      setExpression('0.');
+      setPreviousValue(null);
+      setOperation(null);
+      setJustCalculated(false);
+      return;
+    }
+    
+    if (display.indexOf('.') === -1) {
       const newDisplay = display + '.';
       setDisplay(newDisplay);
-      // 更新算式显示
-      if (operation) {
-        setExpression(`${previousValue} ${operation} ${newDisplay}`);
+      setCurrentNumber(newDisplay);
+      // 更新表达式中的最后一个数字
+      if (expression === '') {
+        setExpression(newDisplay);
+      } else {
+        const parts = expression.split(' ');
+        parts[parts.length - 1] = newDisplay;
+        setExpression(parts.join(' '));
       }
     }
   };
 
   const clear = () => {
     setDisplay('0');
-    setPreviousValue(null);
+    setCurrentNumber('0');
     setOperation(null);
-    setWaitingForOperand(false);
+    setPreviousValue(null);
     setExpression('');
+    setOpenBrackets(0);
+    setInBrackets(false);
+    setJustCalculated(false);
   };
+
+  // 括号相关状态
+  const [openBrackets, setOpenBrackets] = useState(0);
+  const [inBrackets, setInBrackets] = useState(false);
 
   const performOperation = (nextOperation: string) => {
     const inputValue = parseFloat(display);
-
-    if (previousValue === null) {
+    
+    // 如果刚完成计算，使用结果作为新算式的开始
+    if (justCalculated) {
       setPreviousValue(inputValue);
-      setExpression(`${inputValue} ${nextOperation}`);
+      setOperation(nextOperation);
+      setExpression(display + ' ' + nextOperation);
+      setJustCalculated(false);
+    } else if (previousValue === null) {
+      // 第一次输入运算符
+      setPreviousValue(inputValue);
+      setOperation(nextOperation);
+      setExpression(expression + ' ' + nextOperation);
     } else if (operation) {
-      const currentValue = previousValue || 0;
-      const newValue = calculate(currentValue, inputValue, operation);
-      const formattedValue = formatDisplayValue(newValue);
-      setDisplay(formattedValue);
-      setPreviousValue(newValue);
-      setExpression(`${formattedValue} ${nextOperation}`);
+      // 只添加运算符到表达式，当前数字已经在表达式中了
+      setPreviousValue(inputValue);
+      setOperation(nextOperation);
+      setExpression(expression + ' ' + nextOperation);
     }
+    
+    setCurrentNumber('0');
+  };
 
-    setWaitingForOperand(true);
-    setOperation(nextOperation);
+  // 处理左括号
+  const handleOpenBracket = () => {
+    if (expression === '') {
+      setExpression('(');
+    } else {
+      setExpression(expression + ' (');
+    }
+    setOpenBrackets(openBrackets + 1);
+    setInBrackets(true);
+  };
+
+  // 处理右括号
+  const handleCloseBracket = () => {
+    if (openBrackets > 0) {
+      setExpression(expression + ' )');
+      setOpenBrackets(openBrackets - 1);
+      if (openBrackets - 1 === 0) {
+        setInBrackets(false);
+      }
+      setCurrentNumber('0');
+    }
+  };
+
+  // 处理百分号
+  const handlePercentage = () => {
+    const currentValue = parseFloat(display);
+    
+    // 如果刚完成计算，将结果转换为百分比
+    if (justCalculated) {
+      const percentValue = currentValue / 100;
+      const formattedValue = formatDisplayValue(percentValue);
+      setDisplay(formattedValue);
+      setExpression(formattedValue);
+      setCurrentNumber(formattedValue);
+      return;
+    }
+    
+    // 如果有前一个值和运算符，说明是在运算中使用百分号
+    if (previousValue !== null && operation) {
+      let percentResult: number;
+      
+      // 智能百分比计算
+      switch (operation) {
+        case '+':
+        case '-':
+          // 对于加减法，百分比是基于前一个值的
+          // 例如：100 + 20% = 100 + (100 * 20 / 100) = 120
+          percentResult = previousValue * (currentValue / 100);
+          break;
+        case '×':
+        case '÷':
+          // 对于乘除法，百分比就是简单的除以100
+          // 例如：50 × 20% = 50 × 0.2 = 10
+          percentResult = currentValue / 100;
+          break;
+        default:
+          percentResult = currentValue / 100;
+      }
+      
+      const formattedResult = formatDisplayValue(percentResult);
+      setDisplay(formattedResult);
+      setCurrentNumber(formattedResult);
+      
+      // 在表达式中显示百分号，而不是计算后的值
+      const parts = expression.split(' ');
+      if (parts.length > 0) {
+        parts[parts.length - 1] = display + '%';
+        setExpression(parts.join(' '));
+      }
+    } else {
+      // 单独使用百分号，简单地除以100
+      const percentValue = currentValue / 100;
+      const formattedValue = formatDisplayValue(percentValue);
+      setDisplay(formattedValue);
+      setCurrentNumber(formattedValue);
+      
+      // 在表达式中显示百分号
+      if (expression === '' || expression === display) {
+        setExpression(display + '%');
+      } else {
+        const parts = expression.split(' ');
+        if (parts.length > 0) {
+          parts[parts.length - 1] = display + '%';
+          setExpression(parts.join(' '));
+        }
+      }
+    }
+  };
+
+  // 处理退格键
+  const handleBackspace = () => {
+    // 如果刚完成计算，退格键清除结果，回到算式状态
+    if (justCalculated) {
+      const parts = expression.split(' = ');
+      if (parts.length > 1) {
+        // 回到计算前的算式
+        const originalExpression = parts[0];
+        setExpression(originalExpression);
+        
+        // 解析最后的数字作为显示值
+        const tokens = originalExpression.split(' ');
+        const lastToken = tokens[tokens.length - 1];
+        if (!isNaN(parseFloat(lastToken))) {
+          setDisplay(lastToken);
+          setCurrentNumber(lastToken);
+        }
+        
+        setJustCalculated(false);
+        return;
+      }
+    }
+    
+    // 如果表达式为空，只删除当前数字
+    if (expression === '') {
+      if (display.length > 1) {
+        const newDisplay = display.slice(0, -1);
+        setDisplay(newDisplay);
+        setCurrentNumber(newDisplay);
+        setExpression(newDisplay);
+      } else {
+        setDisplay('0');
+        setCurrentNumber('0');
+        setExpression('');
+      }
+      return;
+    }
+    
+    // 删除表达式中的最后一个字符/标记
+    const parts = expression.split(' ');
+    
+    if (parts.length === 0) {
+      setDisplay('0');
+      setCurrentNumber('0');
+      setExpression('');
+      return;
+    }
+    
+    const lastPart = parts[parts.length - 1];
+    
+    // 如果最后一部分是数字且当前正在输入数字
+    if (!isNaN(parseFloat(lastPart)) && currentNumber !== '0') {
+      if (lastPart.length > 1) {
+        // 删除数字的最后一位
+        const newNumber = lastPart.slice(0, -1);
+        parts[parts.length - 1] = newNumber;
+        setExpression(parts.join(' '));
+        setDisplay(newNumber);
+        setCurrentNumber(newNumber);
+      } else {
+        // 删除整个数字
+        parts.pop();
+        if (parts.length === 0) {
+          setExpression('');
+          setDisplay('0');
+          setCurrentNumber('0');
+          setPreviousValue(null);
+          setOperation(null);
+        } else {
+          setExpression(parts.join(' '));
+          // 如果删除后最后一个是运算符，等待新数字输入
+          const newLastPart = parts[parts.length - 1];
+          if (['+', '-', '×', '÷'].includes(newLastPart)) {
+            setDisplay('0');
+            setCurrentNumber('0');
+          } else if (!isNaN(parseFloat(newLastPart))) {
+            setDisplay(newLastPart);
+            setCurrentNumber(newLastPart);
+          }
+        }
+      }
+    } else {
+      // 删除最后一个元素（运算符、括号等）
+      parts.pop();
+      if (parts.length === 0) {
+        setExpression('');
+        setDisplay('0');
+        setCurrentNumber('0');
+        setPreviousValue(null);
+        setOperation(null);
+      } else {
+        setExpression(parts.join(' '));
+        // 设置显示为最后一个数字
+        const newLastPart = parts[parts.length - 1];
+        if (!isNaN(parseFloat(newLastPart))) {
+          setDisplay(newLastPart);
+          setCurrentNumber(newLastPart);
+        } else {
+          setDisplay('0');
+          setCurrentNumber('0');
+        }
+      }
+      
+      // 处理括号状态
+      if (lastPart === '(') {
+        setOpenBrackets(Math.max(0, openBrackets - 1));
+      } else if (lastPart === ')') {
+        setOpenBrackets(openBrackets + 1);
+      }
+    }
   };
 
   const calculate = (firstValue: number, secondValue: number, operation: string) => {
@@ -119,20 +359,124 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     if (!previousValue || !operation) return;
 
     const inputValue = parseFloat(display);
-    const newValue = calculate(previousValue, inputValue, operation);
+    const fullExpression = expression;
     
-    // 格式化显示结果，避免过长的小数
-    const formattedResult = formatDisplayValue(newValue);
+    // 计算完整表达式
+    const result = evaluateExpression(fullExpression);
+    
+    let formattedResult: string;
+    if (isNaN(result) || !isFinite(result)) {
+      formattedResult = 'Error';
+    } else {
+      formattedResult = formatDisplayValue(result);
+    }
     
     // 添加到历史记录
-    const fullExpression = `${previousValue} ${operation} ${inputValue}`;
     addToHistory(fullExpression, formattedResult);
     
     setDisplay(formattedResult);
-    setExpression(fullExpression);
+    setExpression(fullExpression + ' = ' + formattedResult);
     setPreviousValue(null);
     setOperation(null);
-    setWaitingForOperand(false);
+    setCurrentNumber('0');
+    setJustCalculated(true); // 标记刚完成计算
+  };
+
+  // 计算完整表达式的函数（用于处理优先级和括号）
+  const evaluateExpression = (expr: string): number => {
+    try {
+      // 处理括号的递归函数
+      const evaluateWithBrackets = (expression: string): number => {
+        const tokens = expression.split(' ').filter(token => token !== '');
+        const numbers: number[] = [];
+        const operators: string[] = [];
+        
+        for (let i = 0; i < tokens.length; i++) {
+          const token = tokens[i];
+          if (token === '(') {
+            // 找到对应的右括号
+            let bracketCount = 1;
+            let j = i + 1;
+            while (j < tokens.length && bracketCount > 0) {
+              if (tokens[j] === '(') bracketCount++;
+              if (tokens[j] === ')') bracketCount--;
+              j++;
+            }
+            
+            // 递归计算括号内的表达式
+            const bracketExpr = tokens.slice(i + 1, j - 1).join(' ');
+            const bracketResult = evaluateWithBrackets(bracketExpr);
+            if (isNaN(bracketResult)) return NaN;
+            numbers.push(bracketResult);
+            i = j - 1; // 跳过已处理的括号内容
+          } else if (token === '+' || token === '-' || token === '×' || token === '÷') {
+            operators.push(token);
+          } else if (token === ')') {
+            // 跳过右括号，不处理
+            continue;
+          } else {
+            // 检查是否是百分数（以%结尾）
+            if (token.endsWith('%')) {
+              const percentValue = parseFloat(token.slice(0, -1));
+              if (isNaN(percentValue)) return NaN;
+              
+              // 根据前面的运算符决定如何处理百分比
+              if (operators.length > 0) {
+                const lastOperator = operators[operators.length - 1];
+                if (lastOperator === '+' || lastOperator === '-') {
+                  // 对于加减法，百分比是基于前一个数字的
+                  const baseValue = numbers[numbers.length - 1];
+                  const percentResult = baseValue * (percentValue / 100);
+                  numbers.push(percentResult);
+                } else {
+                  // 对于乘除法，直接转换为小数
+                  numbers.push(percentValue / 100);
+                }
+              } else {
+                // 没有运算符，直接转换为小数
+                numbers.push(percentValue / 100);
+              }
+            } else {
+              const num = parseFloat(token);
+              if (isNaN(num)) return NaN;
+              numbers.push(num);
+            }
+          }
+        }
+        
+        // 检查数字和运算符的数量是否匹配
+        if (numbers.length === 0) return 0;
+        if (numbers.length !== operators.length + 1) return NaN;
+        
+        // 先处理乘除（优先级高）
+        for (let i = 0; i < operators.length; i++) {
+          if (operators[i] === '×' || operators[i] === '÷') {
+            const result = calculate(numbers[i], numbers[i + 1], operators[i]);
+            if (isNaN(result) || !isFinite(result)) return NaN;
+            numbers[i] = result;
+            numbers.splice(i + 1, 1);
+            operators.splice(i, 1);
+            i--;
+          }
+        }
+        
+        // 再处理加减（优先级低）
+        let result = numbers[0];
+        if (isNaN(result)) return NaN;
+        
+        for (let i = 0; i < operators.length; i++) {
+          result = calculate(result, numbers[i + 1], operators[i]);
+          if (isNaN(result) || !isFinite(result)) return NaN;
+        }
+        
+        return result;
+      };
+      
+      const result = evaluateWithBrackets(expr);
+      return result;
+    } catch (error) {
+      return NaN;
+    }
   };
 
   // 格式化显示值，处理精度和显示格式
@@ -175,7 +519,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const popupWidth = isHistoryExpanded ? 520 : 320; // 根据历史记录展开状态调整宽度
-    const popupHeight = 480; // 固定高度
+    const popupHeight = 520; // 固定高度
     const margin = 10; // 边距
 
     let top = buttonRect.top - popupHeight - margin;
@@ -220,7 +564,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const popupWidth = isHistoryExpanded ? 520 : 320;
-    const popupHeight = 480;
+    const popupHeight = 520;
     const margin = 10;
 
     let newLeft = e.clientX - dragOffset.x;
@@ -305,7 +649,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         transform: 'translateZ(0)', // 启用硬件加速
         userSelect: isDragging ? 'none' : 'auto',
         width: isHistoryExpanded ? '520px' : '320px',
-        height: '480px',
+        height: '520px',
         transition: 'width 0.3s ease-in-out'
       }}
     >
@@ -348,85 +692,99 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         {/* 左侧计算器 */}
         <div className="flex-1">
           {/* 显示屏 */}
-          <div className="mb-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+          <div className="mb-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg h-28 flex flex-col justify-end">
             {/* 算式显示 */}
-            {expression && (
-              <div className="text-right text-sm text-gray-500 dark:text-gray-400 mb-2 font-mono overflow-hidden">
-                {expression}
-              </div>
-            )}
+            <div className="text-right text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono overflow-y-auto max-h-16 break-words">
+              {expression || '\u00A0'}
+            </div>
             {/* 当前数值显示 */}
-            <div className="text-right text-2xl font-mono text-gray-900 dark:text-white overflow-hidden">
+            <div className="text-right text-xl font-mono text-gray-900 dark:text-white overflow-hidden">
               {display}
             </div>
           </div>
 
           {/* 按钮网格 */}
-          <div className="grid grid-cols-4 gap-2">
-            {/* 第一行 */}
-            <button onClick={clear} className="p-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+          <div className="grid grid-cols-4 gap-1.5">
+            {/* 第一行：C和退格键 */}
+            <div className="col-span-2"></div> {/* 左侧空占位 */}
+            <button onClick={clear} className="p-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm">
               C
             </button>
-                    <button onClick={() => setDisplay(formatDisplayValue(-parseFloat(display)))} className="p-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-          ±
-        </button>
-        <button onClick={() => setDisplay(formatDisplayValue(parseFloat(display) / 100))} className="p-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-          %
-        </button>
-            <button onClick={() => performOperation('÷')} className="p-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+            <button onClick={handleBackspace} className="p-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm">
+              ←
+            </button>
+
+            {/* 第二行：(,),%,除号 */}
+            <button onClick={handleOpenBracket} className="p-2.5 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+              (
+            </button>
+            <button onClick={handleCloseBracket} disabled={openBrackets === 0} className={`p-2.5 rounded-lg transition-colors text-sm ${
+              openBrackets === 0
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'
+            }`}>
+              )
+            </button>
+            <button onClick={handlePercentage} className="p-2.5 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+              %
+            </button>
+            <button onClick={() => performOperation('÷')} className="p-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
               ÷
             </button>
 
-            {/* 第二行 */}
-            <button onClick={() => inputDigit('7')} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            {/* 第三行：789，乘号 */}
+            <button onClick={() => inputDigit('7')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
               7
             </button>
-            <button onClick={() => inputDigit('8')} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            <button onClick={() => inputDigit('8')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
               8
             </button>
-            <button onClick={() => inputDigit('9')} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            <button onClick={() => inputDigit('9')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
               9
             </button>
-            <button onClick={() => performOperation('×')} className="p-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+            <button onClick={() => performOperation('×')} className="p-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
               ×
             </button>
 
-            {/* 第三行 */}
-            <button onClick={() => inputDigit('4')} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            {/* 第四行：456，减号 */}
+            <button onClick={() => inputDigit('4')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
               4
             </button>
-            <button onClick={() => inputDigit('5')} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            <button onClick={() => inputDigit('5')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
               5
             </button>
-            <button onClick={() => inputDigit('6')} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            <button onClick={() => inputDigit('6')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
               6
             </button>
-            <button onClick={() => performOperation('-')} className="p-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+            <button onClick={() => performOperation('-')} className="p-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
               -
             </button>
 
-            {/* 第四行 */}
-            <button onClick={() => inputDigit('1')} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            {/* 第五行：123，加号 */}
+            <button onClick={() => inputDigit('1')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
               1
             </button>
-            <button onClick={() => inputDigit('2')} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            <button onClick={() => inputDigit('2')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
               2
             </button>
-            <button onClick={() => inputDigit('3')} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            <button onClick={() => inputDigit('3')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
               3
             </button>
-            <button onClick={() => performOperation('+')} className="p-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+            <button onClick={() => performOperation('+')} className="p-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
               +
             </button>
 
-            {/* 第五行 */}
-            <button onClick={() => inputDigit('0')} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors col-span-2">
+            {/* 第六行：0,.,正负号,等号 */}
+            <button onClick={() => inputDigit('0')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
               0
             </button>
-            <button onClick={inputDecimal} className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+            <button onClick={inputDecimal} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
               .
             </button>
-            <button onClick={calculateResult} className="p-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+            <button onClick={() => setDisplay(formatDisplayValue(-parseFloat(display)))} className="p-2.5 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+              ±
+            </button>
+            <button onClick={calculateResult} className="p-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
               =
             </button>
           </div>
