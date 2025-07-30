@@ -14,7 +14,7 @@ export function Footer() {
 
   return (
     <footer className="w-full border-t border-gray-200/30 dark:border-gray-800/30 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto px-6 py-4">
+      <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <a 

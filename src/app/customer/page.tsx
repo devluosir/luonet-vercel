@@ -277,7 +277,7 @@ export default function CustomerPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
       <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
           <Link 
             href="/dashboard"

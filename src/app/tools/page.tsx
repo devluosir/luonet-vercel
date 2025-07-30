@@ -417,7 +417,7 @@ export default function ToolsPage() {
               </button>
             </div>
           ) : (
-            <div className="w-full max-w-7xl mx-auto px-2 sm:px-4">
+            <div className="w-full max-w-none px-2 sm:px-4 lg:px-6">
               {/* 成功消息 */}
               {showSuccessMessage && (
                 <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">

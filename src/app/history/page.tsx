@@ -1364,7 +1364,7 @@ export default function HistoryManagementPage() {
         {/* 高级过滤器 - 小屏时显示 */}
         {showFilters && (
           <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 relative z-10 -mt-2">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+            <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-2">
               <div className="flex items-center justify-center space-x-2">
                 {/* 日期范围过滤 */}
                 <select
@@ -1403,7 +1403,7 @@ export default function HistoryManagementPage() {
 
         {/* Tab Navigation */}
         <div className="bg-white dark:bg-[#1c1c1e] border-b border-gray-200 dark:border-gray-800">
-          <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+          <div className="w-full max-w-none px-2 sm:px-4 lg:px-6">
             {/* 小屏时使用可滚动的flex，大屏时使用正常间距，所有屏幕都居中 */}
             <div className="flex justify-center space-x-0.5 sm:space-x-4 lg:space-x-8 overflow-x-auto scrollbar-hide">
               {getAvailableTabs().map((tab) => {
@@ -1461,7 +1461,7 @@ export default function HistoryManagementPage() {
 
         {/* Content */}
         <div className="flex-1 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
+          <div className="w-full max-w-none">
             {/* Tab Content - 按照新的顺序：报价单、合同确认、装箱单、发票、采购单 */}
             <div className="bg-white dark:bg-[#1c1c1e] rounded-lg">
               {activeTab === 'quotation' && (

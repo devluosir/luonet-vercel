@@ -195,7 +195,7 @@ export default function DateTools() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50/90 via-white/60 to-gray-100/90 
                     dark:from-gray-900 dark:via-gray-800/80 dark:to-gray-900/90 flex flex-col">
       <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
           <Link 
             href="/dashboard" 
             className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
