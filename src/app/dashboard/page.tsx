@@ -247,7 +247,7 @@ const ModuleButton = ({ module, onClick }: {
         border border-gray-200/50 dark:border-gray-800/50
         hover:border-gray-300/70 dark:hover:border-gray-700/70
         active:shadow-sm
-        p-4 h-20 flex items-center space-x-3 w-full min-w-[250px]
+        p-4 h-20 flex items-center space-x-3 w-full
         hover:bg-gradient-to-br ${module.bgColor}`}
       onClick={() => onClick(module)}
     >
@@ -737,10 +737,7 @@ export default function DashboardPage() {
           {/* 功能按钮区域 */}
           {(availableQuickCreateModules.length > 0 || availableToolsModules.length > 0 || availableToolsModules.length > 0) && (
             <div className="mb-8">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3" style={{ 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                maxWidth: '100%'
-              }}>
+                                          <div className="dashboard-grid gap-3">
                 {/* 新建单据按钮 */}
                 {availableQuickCreateModules.map((module) => (
                   <ModuleButton 
@@ -902,10 +899,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               {recentDocuments.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4" style={{ 
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                  maxWidth: '100%'
-                }}>
+                <div className="dashboard-grid gap-4">
                   {recentDocuments.map((doc, index) => {
                     // 根据文档类型设置图标和颜色
                     let Icon = FileText;
@@ -949,7 +943,7 @@ export default function DashboardPage() {
                         key={doc.id}
                         className={`group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 
                           p-3 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 transition-all duration-200 cursor-pointer
-                          active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70 w-full min-w-[250px]
+                          active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70 w-full
                           ${(() => {
                             // 根据文档类型匹配对应的模块颜色
                             switch (doc.type) {

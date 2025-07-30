@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dashboard 自适应网格布局 */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 小屏强制2列 */
+  width: 100%; /* 确保容器占满宽度 */
+}
+
+.dashboard-grid > * {
+  min-width: 0; /* 防止内容撑大列宽 */
+  max-width: 100%; /* 确保不超出列宽 */
+}
+
+@media (min-width: 720px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* 大屏自适应 */
+  }
+}
+
 /* 全局样式 */
 html {
   scroll-behavior: smooth;
