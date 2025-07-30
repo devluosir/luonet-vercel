@@ -300,7 +300,7 @@ export default function DashboardPage() {
   // 使用loading作为refreshing状态
   const refreshing = isLoading;
 
-  // 统一的权限映射和检查
+  // 统一的权限映射和检查（优化版）
   const permissionMap = useMemo(() => {
     const permissions = {
       quotation: hasPermission('quotation'),
@@ -328,17 +328,23 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [user?.permissions]); // 直接依赖用户权限数组，而不是hasPermission函数
+  }, [user?.id, user?.permissions?.length]); // 优化依赖，只在用户ID或权限数量变化时重新计算
 
-  // 性能监控
+  // 优化性能监控 - 只在生产环境启用完整监控
   useEffect(() => {
     if (typeof window !== 'undefined') {
       performanceMonitor.startTimer('dashboard_page_load');
-      performanceMonitor.monitorResourceLoading();
-      performanceMonitor.monitorApiCalls();
       
-      optimizePerformance.optimizeFontLoading();
-      optimizePerformance.cleanupUnusedResources();
+      // 延迟执行性能监控，避免阻塞首屏渲染
+      requestIdleCallback(() => {
+        // 开发环境减少监控噪音
+        if (process.env.NODE_ENV === 'production') {
+          performanceMonitor.monitorResourceLoading();
+        }
+        performanceMonitor.monitorApiCalls();
+        optimizePerformance.optimizeFontLoading();
+        optimizePerformance.cleanupUnusedResources();
+      }, { timeout: 2000 });
     }
   }, []);
 

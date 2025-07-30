@@ -111,7 +111,12 @@ export const usePermissionStore = create<PermissionStore>()(
       },
 
       fetchUser: async (forceRefresh = false) => {
-        const { lastFetched, user, permissionChanged, isFirstLoad } = get();
+        const { lastFetched, user, permissionChanged, isFirstLoad, isLoading } = get();
+        
+        // 防止重复请求
+        if (isLoading && !forceRefresh) {
+          return;
+        }
         
         // 智能刷新策略 - 重新登录时强制刷新
         const shouldRefresh = forceRefresh || 
@@ -148,12 +153,19 @@ export const usePermissionStore = create<PermissionStore>()(
         set({ isLoading: true, error: null });
 
         try {
+          // 添加超时控制，避免长时间等待
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+
           const response = await fetch(`/api/users/me${forceRefresh ? '?force=true' : ''}`, {
             headers: {
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache'
-            }
+              'Cache-Control': forceRefresh ? 'no-cache' : 'max-age=300', // 非强制刷新时允许5分钟缓存
+              'Pragma': forceRefresh ? 'no-cache' : ''
+            },
+            signal: controller.signal
           });
+
+          clearTimeout(timeoutId);
 
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -198,8 +210,13 @@ export const usePermissionStore = create<PermissionStore>()(
             set({ isInitialized: true });
           }
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
-          set({ error: errorMessage });
+          if (error instanceof Error && error.name === 'AbortError') {
+            console.warn('权限请求超时');
+            set({ error: '请求超时，请检查网络连接' });
+          } else {
+            const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
+            set({ error: errorMessage });
+          }
         } finally {
           set({ isLoading: false });
         }

@@ -847,7 +847,7 @@ async function renderPackingTable(
   const totalRow = [];
   for (let i = 0; i < headers[0].length;) {
     if (i === 0) {
-      totalRow.push({ content: 'Total:', colSpan: mergeColCount, styles: { halign: 'center', fontStyle: 'bold', font: 'NotoSansSC-bold' } });
+      totalRow.push({ content: 'Total:', colSpan: mergeColCount, styles: { halign: 'center', fontStyle: 'bold', font: 'NotoSansSC' } });
       i += mergeColCount;
     } else if (headers[0][i].includes('Amount')) {
       totalRow.push({ content: data.showPrice ? totalPrice.toFixed(2) : '' });
@@ -875,7 +875,7 @@ async function renderPackingTable(
   // 为所有列设置粗体样式
   for (let i = 0; i < headers[0].length; i++) {
     totalStyles[`${totalRowIndex}-${i}`] = {
-      font: 'NotoSansSC-bold',
+      font: 'NotoSansSC',
       fontStyle: 'bold'
     };
   }
@@ -907,7 +907,7 @@ async function renderPackingTable(
     rowSpan: 1,
     styles: { 
       halign: 'center', // 将 Total 文本居中显示
-      font: 'NotoSansSC-bold',
+      font: 'NotoSansSC',
       fontStyle: 'bold'
     }
   }];
@@ -951,7 +951,7 @@ async function renderPackingTable(
         if (data.remarkOptions.customsPurpose) {
           const text = 'FOR CUSTOMS PURPOSE ONLY';
           const fontSize = 8;
-          doc.setFont('NotoSansSC-bold');
+          doc.setFont('NotoSansSC', 'bold');
           doc.setFontSize(fontSize);
           doc.text(text, margin +5, tableData.cursor?.y ? tableData.cursor.y + 6 : startY + 6);
         }

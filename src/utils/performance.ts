@@ -2,6 +2,7 @@
 class PerformanceMonitor {
   private timers: Map<string, number> = new Map();
   private metrics: Map<string, any> = new Map();
+  private isMonitoring: boolean = false;
 
   startTimer(name: string) {
     this.timers.set(name, performance.now());
@@ -41,11 +42,16 @@ class PerformanceMonitor {
   }
 
   monitorResourceLoading() {
+    // 避免重复监控
+    if (this.isMonitoring) return;
+    this.isMonitoring = true;
+
     const observer = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         if (entry.entryType === 'resource') {
           const resource = entry as PerformanceResourceTiming;
-          if (resource.duration > 1000) { // 超过1秒的资源
+          // 只监控真正慢的资源，避免字体等正常资源的误报
+          if (resource.duration > 5000) { // 提高到5秒，只监控真正的问题
             console.warn(`🐌 慢资源加载: ${resource.name} (${resource.duration.toFixed(2)}ms)`);
           }
         }
@@ -56,6 +62,9 @@ class PerformanceMonitor {
   }
 
   monitorApiCalls() {
+    // 避免重复包装fetch
+    if (window.fetch.toString().includes('originalFetch')) return;
+
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const startTime = performance.now();
@@ -76,7 +85,8 @@ class PerformanceMonitor {
         const response = await originalFetch(...args);
         const duration = performance.now() - startTime;
         
-        if (duration > 2000) { // 超过2秒的API调用
+        // 提高阈值，只监控真正慢的API调用
+        if (duration > 3000) { // 从2秒提高到3秒
           console.warn(`🐌 慢API调用: ${url} (${duration.toFixed(2)}ms)`);
         }
         
@@ -92,45 +102,58 @@ class PerformanceMonitor {
 
 // 性能优化工具
 class PerformanceOptimizer {
+  private fontPreloaded: boolean = false;
+
   optimizeFontLoading() {
-    // 预加载关键字体
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.as = 'font';
-    link.type = 'font/woff2';
-    link.href = '/fonts/NotoSansSC-Regular.ttf';
-    link.crossOrigin = 'anonymous';
-    document.head.appendChild(link);
+    // 由于网页使用系统字体 (Arial, Helvetica, sans-serif)
+    // NotoSans字体仅用于PDF生成，无需预加载
+    // 移除不必要的字体预加载以提升性能
+    console.log('🚀 使用系统字体，跳过字体预加载');
   }
 
   cleanupUnusedResources() {
-    // 清理未使用的定时器
-    const originalSetTimeout = window.setTimeout;
-    const originalSetInterval = window.setInterval;
-    const timers = new Set<number>();
-    
-    window.setTimeout = ((fn: (...args: any[]) => void, delay: number, ...args: any[]) => {
-      const id = originalSetTimeout(fn, delay, ...args);
-      timers.add(id);
-      return id;
-    }) as typeof window.setTimeout;
-    
-    window.setInterval = ((fn: (...args: any[]) => void, delay: number, ...args: any[]) => {
-      const id = originalSetInterval(fn, delay, ...args);
-      timers.add(id);
-      return id;
-    }) as typeof window.setInterval;
-    
-    // 页面卸载时清理
-    window.addEventListener('beforeunload', () => {
-      timers.forEach(id => {
-        clearTimeout(id);
-        clearInterval(id);
-      });
-    });
+    // 简化定时器清理逻辑，减少性能开销
+    if (typeof window !== 'undefined') {
+      const timers = new Set<number>();
+      
+      // 只在开发环境启用定时器跟踪
+      if (process.env.NODE_ENV === 'development') {
+        const originalSetTimeout = window.setTimeout;
+        const originalSetInterval = window.setInterval;
+        
+        window.setTimeout = ((fn: (...args: any[]) => void, delay: number, ...args: any[]) => {
+          const id = originalSetTimeout(fn, delay, ...args);
+          timers.add(id);
+          return id;
+        }) as typeof window.setTimeout;
+        
+        window.setInterval = ((fn: (...args: any[]) => void, delay: number, ...args: any[]) => {
+          const id = originalSetInterval(fn, delay, ...args);
+          timers.add(id);
+          return id;
+        }) as typeof window.setInterval;
+        
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', () => {
+          timers.forEach(id => {
+            clearTimeout(id);
+            clearInterval(id);
+          });
+        }, { once: true });
+      }
+    }
   }
 
   optimizeImages() {
+    // 延迟执行图片优化，避免阻塞主线程
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => this.setupImageLazyLoading());
+    } else {
+      setTimeout(() => this.setupImageLazyLoading(), 100);
+    }
+  }
+
+  private setupImageLazyLoading() {
     // 懒加载图片
     if ('IntersectionObserver' in window) {
       const imageObserver = new IntersectionObserver((entries) => {
