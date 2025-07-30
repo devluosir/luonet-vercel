@@ -952,7 +952,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       {/* 桌面端表格视图 - 中屏及以上显示 */}
       <div className="hidden lg:block overflow-x-auto rounded-2xl border border-gray-200/30 dark:border-white/10
                     bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl shadow-lg">
-        <div className="min-w-[600px]">
+        <div className="min-w-[800px] lg:min-w-[1000px] xl:min-w-[1200px]">
           <table className="w-full">
               <thead>
               <tr className="border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10
@@ -963,13 +963,13 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     HS Code
                   </th>
                 )}
-                <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[150px] md:w-[210px]">Description</th>
+                <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[200px] lg:w-[280px] xl:w-[350px]">Description</th>
                 <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[100px]">Qty</th>
                 <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[100px]">Unit</th>
                 {data.showPrice && (
                   <>
-                  <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[130px]">U/Price</th>
-                  <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[150px]">Amount</th>
+                                  <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[120px] lg:w-[140px]">U/Price</th>
+                <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[130px] lg:w-[150px]">Amount</th>
                   </>
                 )}
                 {data.showWeightAndPackage && (
@@ -984,7 +984,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   </>
                 )}
                 {data.showDimensions && (
-                <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[120px]">
+                <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[140px] lg:w-[160px]">
                   Dimensions<br/>({data.dimensionUnit})
                 </th>
                 )}

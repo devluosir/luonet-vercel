@@ -719,7 +719,7 @@ export default function DashboardPage() {
           />
         )}
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-6">
           {/* 成功消息 */}
           {showSuccessMessage && (
             <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">

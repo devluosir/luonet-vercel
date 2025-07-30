@@ -780,7 +780,7 @@ export default function InvoicePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#000000] dark:text-gray-100 flex flex-col">
       <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
           <Link 
             href={pathname?.includes('/edit/') || pathname?.includes('/copy/') ? '/history' : '/dashboard'} 

@@ -1245,7 +1245,7 @@ export default function HistoryManagementPage() {
       <div className="flex-1">
         {/* Header */}
         <div className="bg-white dark:bg-[#1c1c1e] shadow-sm dark:shadow-gray-800/30">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+          <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-2">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
               <div className="flex items-center space-x-4">
                 <button

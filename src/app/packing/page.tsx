@@ -715,7 +715,7 @@ export default function PackingPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
       <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
           <Link 
             href={pathname?.includes('/edit/') || pathname?.includes('/copy/') ? '/history' : '/dashboard'} 
