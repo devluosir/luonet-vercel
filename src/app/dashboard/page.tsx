@@ -31,7 +31,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
-import { performanceMonitor, optimizePerformance } from '@/utils/performance';
+import { performanceMonitor, optimizePerformance, safeRequestIdleCallback } from '@/utils/performance';
 import { usePermissionStore } from '@/lib/permissions';
 import { Header } from '@/components/Header';
 
@@ -335,8 +335,8 @@ export default function DashboardPage() {
     if (typeof window !== 'undefined') {
       performanceMonitor.startTimer('dashboard_page_load');
       
-      // 延迟执行性能监控，避免阻塞首屏渲染
-      requestIdleCallback(() => {
+      // 延迟执行性能监控，避免阻塞首屏渲染（使用兼容性polyfill）
+      safeRequestIdleCallback(() => {
         // 开发环境减少监控噪音
         if (process.env.NODE_ENV === 'production') {
           performanceMonitor.monitorResourceLoading();

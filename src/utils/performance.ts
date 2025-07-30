@@ -1,3 +1,16 @@
+// requestIdleCallback polyfill for better browser compatibility
+const safeRequestIdleCallback = (
+  callback: () => void, 
+  options?: { timeout?: number }
+): void => {
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(callback, options);
+  } else {
+    // Fallback to setTimeout for unsupported browsers (e.g., Safari)
+    setTimeout(callback, options?.timeout ? Math.min(options.timeout, 100) : 50);
+  }
+};
+
 // 性能监控工具
 class PerformanceMonitor {
   private timers: Map<string, number> = new Map();
@@ -152,11 +165,7 @@ class PerformanceOptimizer {
 
   optimizeImages() {
     // 延迟执行图片优化，避免阻塞主线程
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => this.setupImageLazyLoading());
-    } else {
-      setTimeout(() => this.setupImageLazyLoading(), 100);
-    }
+    safeRequestIdleCallback(() => this.setupImageLazyLoading());
   }
 
   private setupImageLazyLoading() {
@@ -183,4 +192,5 @@ class PerformanceOptimizer {
 }
 
 export const performanceMonitor = new PerformanceMonitor();
-export const optimizePerformance = new PerformanceOptimizer(); 
+export const optimizePerformance = new PerformanceOptimizer();
+export { safeRequestIdleCallback }; 
