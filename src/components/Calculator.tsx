@@ -664,27 +664,20 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           <Move className="h-4 w-4 text-gray-400 dark:text-gray-500" />
           <CalculatorIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">计算器</h3>
-        </div>
-        <div className="flex items-center space-x-2">
           <button
             onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-            className="flex items-center space-x-1 px-2 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-          >
-            <History className="h-4 w-4" />
-            <span>历史</span>
-            {isHistoryExpanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
-          <button
-            onClick={onClose}
             className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            title={isHistoryExpanded ? "隐藏历史记录" : "显示历史记录"}
           >
-            <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            <History className="h-4 w-4 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
           </button>
         </div>
+        <button
+          onClick={onClose}
+          className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        >
+          <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+        </button>
       </div>
 
       {/* 主要内容区域 */}
