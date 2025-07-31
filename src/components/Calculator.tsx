@@ -934,24 +934,34 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
             </div>
             
             {/* 历史记录内容区域 */}
-            <div className="flex-1 p-3 overflow-y-auto">
+            <div className="flex-1 p-2 overflow-y-auto">
               {history.length === 0 ? (
-                <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">
+                <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-6">
                   暂无历史记录
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {history.map((item, index) => (
-                    <div key={index} className="p-2 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <div className="text-xs text-gray-600 dark:text-gray-400 font-mono mb-1 break-words">
-                        {item.expression} = {item.result}
+                    <div 
+                      key={index} 
+                      onClick={() => {
+                        setDisplay(item.result);
+                        setCurrentNumber(item.result);
+                        setExpression(item.result);
+                        setPreviousValue(null);
+                        setOperation(null);
+                        setJustCalculated(false);
+                      }}
+                      className="px-2 py-1.5 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+                      title="点击使用此结果"
+                    >
+                      {/* 算式和结果在同一行 */}
+                      <div className="text-xs font-mono break-words leading-tight">
+                        <span className="text-gray-500 dark:text-gray-400">{item.expression}</span>
+                        <span className="text-gray-900 dark:text-white font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          {' = '}{item.result}
+                        </span>
                       </div>
-                      <button
-                        onClick={() => setDisplay(item.result)}
-                        className="w-full px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                      >
-                        使用结果
-                      </button>
                     </div>
                   ))}
                 </div>
