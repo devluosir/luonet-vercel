@@ -23,8 +23,10 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [historyPanelPosition, setHistoryPanelPosition] = useState({ top: 0, left: 0, height: 0 });
   const popupRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const calculatorBodyRef = useRef<HTMLDivElement>(null); // 计算器主体的引用
 
   // 重新设计：使用更简单的状态管理
   const [currentNumber, setCurrentNumber] = useState('0');
@@ -520,24 +522,24 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     const viewportHeight = window.innerHeight;
     const isMobile = viewportWidth < 768;
     
-    // 响应式尺寸
+    // 响应式尺寸 - 主弹窗保持固定宽度，历史记录作为独立浮窗
     const popupWidth = isMobile 
       ? Math.min(viewportWidth - 20, 320) 
-      : (isHistoryExpanded ? 520 : 320);
-    const popupHeight = isMobile 
+      : 320; // 桌面端固定宽度，不再根据历史记录状态调整
+    const estimatedPopupHeight = isMobile 
       ? Math.min(400, viewportHeight - 80) // 移动端使用更合理的高度
-      : 520;
+      : 450; // 桌面端估算高度（用于位置计算）
     const margin = isMobile ? 10 : 10; // 边距
 
     let top, left;
 
     if (isMobile) {
       // 移动端：居中显示
-      top = (viewportHeight - popupHeight) / 2;
+      top = (viewportHeight - estimatedPopupHeight) / 2;
       left = (viewportWidth - popupWidth) / 2;
     } else {
-      // 桌面端：原有逻辑
-      top = buttonRect.top - popupHeight - margin;
+      // 桌面端：简化定位逻辑，弹窗高度为auto
+      top = buttonRect.top - estimatedPopupHeight - margin;
       left = buttonRect.left + (buttonRect.width / 2) - (popupWidth / 2);
 
       // 如果上方空间不够，显示在下方
@@ -545,23 +547,22 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         top = buttonRect.bottom + margin;
       }
 
-      // 如果下方空间也不够，显示在中间
-      if (top + popupHeight > viewportHeight - margin) {
-        top = (viewportHeight - popupHeight) / 2;
+      // 如果下方空间也不够，显示在安全位置
+      if (top + estimatedPopupHeight > viewportHeight - margin) {
+        top = Math.max(margin, viewportHeight - estimatedPopupHeight - margin);
       }
     }
 
-    // 确保不超出边界
+    // 确保左右不超出边界
     if (left < margin) {
       left = margin;
     } else if (left + popupWidth > viewportWidth - margin) {
       left = viewportWidth - popupWidth - margin;
     }
 
+    // 确保顶部不超出边界
     if (top < margin) {
       top = margin;
-    } else if (top + popupHeight > viewportHeight - margin) {
-      top = viewportHeight - popupHeight - margin;
     }
 
     setPopupPosition({ top, left });
@@ -597,8 +598,8 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const isMobile = viewportWidth < 768;
-    const popupWidth = isMobile ? Math.min(viewportWidth - 20, 320) : (isHistoryExpanded ? 520 : 320);
-    const popupHeight = isMobile ? Math.min(400, viewportHeight - 80) : 520;
+    const popupWidth = isMobile ? Math.min(viewportWidth - 20, 320) : 320;
+    const popupHeight = popupRef.current.offsetHeight; // 使用实际高度
     const margin = 10;
 
     let newLeft = e.clientX - dragOffset.x;
@@ -626,8 +627,8 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const isMobile = viewportWidth < 768;
-    const popupWidth = isMobile ? Math.min(viewportWidth - 20, 320) : (isHistoryExpanded ? 520 : 320);
-    const popupHeight = isMobile ? Math.min(400, viewportHeight - 80) : 520;
+    const popupWidth = isMobile ? Math.min(viewportWidth - 20, 320) : 320;
+    const popupHeight = popupRef.current.offsetHeight; // 使用实际高度
     const margin = 10;
 
     let newLeft = touch.clientX - dragOffset.x;
@@ -706,6 +707,40 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     }
   }, [isOpen]);
 
+  // 计算历史记录面板位置，确保与计算器主体同高
+  const updateHistoryPanelPosition = () => {
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 768;
+    const isMobileCheck = viewportWidth < 768;
+    
+    if (isOpen && !isMobileCheck && isHistoryExpanded && calculatorBodyRef.current) {
+      const calculatorBody = calculatorBodyRef.current;
+      setHistoryPanelPosition({
+        top: calculatorBody.offsetTop,
+        left: calculatorBody.offsetLeft + calculatorBody.offsetWidth + 16,
+        height: calculatorBody.offsetHeight
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && isHistoryExpanded) {
+      // 延迟执行以确保DOM完全渲染
+      setTimeout(updateHistoryPanelPosition, 10);
+    }
+  }, [isOpen, isHistoryExpanded]);
+
+  // 监听窗口大小变化，重新计算历史记录面板位置
+  useEffect(() => {
+    if (isOpen && isHistoryExpanded) {
+      const handleResize = () => {
+        updateHistoryPanelPosition();
+      };
+
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [isOpen, isHistoryExpanded]);
+
   if (!isOpen) return null;
 
   const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 768;
@@ -724,11 +759,10 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         userSelect: isDragging ? 'none' : 'auto',
         width: isMobile 
           ? `${Math.min(viewportWidth - 20, 320)}px` 
-          : (isHistoryExpanded ? '520px' : '320px'),
-        height: isMobile ? 'auto' : '520px',
+          : '320px', // 桌面端固定宽度
+        height: 'auto', // 根据内容自动调整高度
         maxWidth: isMobile ? 'calc(100vw - 20px)' : 'none',
-        maxHeight: isMobile ? 'calc(100vh - 40px)' : '520px',
-        transition: 'width 0.3s ease-in-out'
+        maxHeight: isMobile ? 'calc(100vh - 40px)' : 'none'
       }}
     >
       {/* 弹窗头部 - 可拖动区域 */}
@@ -762,10 +796,13 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         </button>
       </div>
 
-      {/* 主要内容区域 */}
-      <div className={`flex ${isMobile ? 'flex-col' : 'gap-4'} ${isMobile ? 'h-auto' : 'h-full'}`}>
+      {/* 主要内容区域 - 计算器主体 */}
+      <div className={`${isMobile ? 'h-auto' : 'h-fit'} relative`}>
         {/* 计算器部分 */}
-        <div className={`${isMobile ? 'w-full' : 'flex-1'}`}>
+        <div 
+          ref={calculatorBodyRef}
+          className={`${isMobile ? 'w-full' : 'w-full'} ${!isMobile ? 'h-fit' : ''}`}
+        >
           {/* 显示屏 */}
           <div className={`mb-3 p-3 md:p-4 bg-gray-100 dark:bg-gray-800 rounded-lg ${isMobile ? 'h-20' : 'h-28'} flex flex-col justify-end`}>
             {/* 算式显示 */}
@@ -865,22 +902,39 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           </div>
         </div>
 
-        {/* 右侧历史记录区域 - 只在桌面端显示 */}
+        {/* 右侧历史记录浮窗 - 只在桌面端显示，精确匹配计算器主体高度 */}
         {!isMobile && isHistoryExpanded && (
-          <div className="w-48 border-l border-gray-200 dark:border-gray-700 pl-4">
-            <div className="flex items-center justify-between mb-3">
+          <div 
+            className="absolute w-52 bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 flex flex-col"
+            style={{
+              top: `${historyPanelPosition.top}px`,
+              left: `${historyPanelPosition.left}px`,
+              height: `${historyPanelPosition.height}px`, // 精确匹配计算器主体高度
+            }}
+          >
+            {/* 历史记录标题栏 */}
+            <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
               <h4 className="text-sm font-medium text-gray-900 dark:text-white">历史记录</h4>
-              {history.length > 0 && (
+              <div className="flex items-center space-x-2">
+                {history.length > 0 && (
+                  <button
+                    onClick={clearHistory}
+                    className="text-xs text-red-500 hover:text-red-600 transition-colors"
+                  >
+                    清空
+                  </button>
+                )}
                 <button
-                  onClick={clearHistory}
-                  className="text-xs text-red-500 hover:text-red-600 transition-colors"
+                  onClick={() => setIsHistoryExpanded(false)}
+                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                  清空
+                  <ChevronUp className="h-3 w-3 text-gray-500 dark:text-gray-400" />
                 </button>
-              )}
+              </div>
             </div>
             
-            <div className="max-h-80 overflow-y-auto">
+            {/* 历史记录内容区域 */}
+            <div className="flex-1 p-3 overflow-y-auto">
               {history.length === 0 ? (
                 <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">
                   暂无历史记录
