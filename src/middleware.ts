@@ -15,6 +15,7 @@ const STATIC_PATHS = [
   '/images',
   '/fonts',
   '/icons',
+  '/logo',
 ];
 
 // 定义需要管理员权限的路径
