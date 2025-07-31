@@ -16,10 +16,20 @@ export const parseExcelData = (text: string): string[][] => {
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     
-    // 处理引号
+    // 处理引号 - 只有成对的引号才处理，单独的引号(如英寸符号)忽略
     if (char === '"' && lastChar !== '\\') {
-      inQuotes = !inQuotes;
-      continue;
+      // 检查是否是Excel格式的引号对（引号后面跟制表符或行尾）
+      const nextChar = text[i + 1];
+      const prevChar = text[i - 1];
+      
+      // 只有在引号前后是制表符、换行符或字符串开头/结尾时才处理
+      if (
+        (!inQuotes && (i === 0 || prevChar === '\t' || prevChar === '\n' || prevChar === '\r')) ||
+        (inQuotes && (nextChar === '\t' || nextChar === '\n' || nextChar === '\r' || nextChar === undefined))
+      ) {
+        inQuotes = !inQuotes;
+        continue;
+      }
     }
     
     // 处理制表符（仅在引号外有效）
@@ -37,11 +47,9 @@ export const parseExcelData = (text: string): string[][] => {
       }
       
       // 保存当前单元格和行
-      if (currentCell || currentRow.length > 0) {
-        currentRow.push(currentCell.trim());
-        if (currentRow.some(cell => cell.trim())) {
-          rows.push([...currentRow]);
-        }
+      currentRow.push(currentCell.trim());
+      if (currentRow.some(cell => cell.trim())) {
+        rows.push([...currentRow]);
       }
       
       // 重置当前行和单元格
@@ -140,7 +148,7 @@ export const convertExcelToLineItems = (rows: string[][], existingItems: ExcelLi
       partName = row[0].trim();
     }
 
-    items.push({
+    const newItem = {
       id: items.length + 1,
       partName,
       description,
@@ -148,7 +156,8 @@ export const convertExcelToLineItems = (rows: string[][], existingItems: ExcelLi
       unit,
       unitPrice,
       amount: Math.floor(quantity) * unitPrice
-    });
+    };
+    items.push(newItem);
   }
 
   return items;
