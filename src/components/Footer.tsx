@@ -49,8 +49,8 @@ export function Footer() {
               <button
                 ref={calculatorButtonRef}
                 onClick={openCalculator}
-                className="p-2 rounded-lg bg-gray-100/80 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400
-                         hover:bg-gray-200/80 dark:hover:bg-gray-700/50 hover:text-gray-700 dark:hover:text-gray-300 
+                className="p-2 rounded-lg bg-blue-50/80 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400
+                         hover:bg-blue-100/80 dark:hover:bg-blue-800/40 hover:text-blue-700 dark:hover:text-blue-300 
                          transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
                 aria-label="打开计算器"
                 title="打开计算器"
@@ -60,8 +60,8 @@ export function Footer() {
               <button
                 ref={dateCalculatorButtonRef}
                 onClick={openDateCalculator}
-                className="p-2 rounded-lg bg-gray-100/80 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400
-                         hover:bg-gray-200/80 dark:hover:bg-gray-700/50 hover:text-gray-700 dark:hover:text-gray-300 
+                className="p-2 rounded-lg bg-green-50/80 dark:bg-green-900/30 text-green-600 dark:text-green-400
+                         hover:bg-green-100/80 dark:hover:bg-green-800/40 hover:text-green-700 dark:hover:text-green-300 
                          transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
                 aria-label="打开日期计算器"
                 title="打开日期计算器"
