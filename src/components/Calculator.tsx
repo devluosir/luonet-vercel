@@ -24,6 +24,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [historyPanelPosition, setHistoryPanelPosition] = useState({ top: 0, left: 0, height: 0 });
+  const [hasBeenDragged, setHasBeenDragged] = useState(false); // 标记是否已经拖动过
   const popupRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const calculatorBodyRef = useRef<HTMLDivElement>(null); // 计算器主体的引用
@@ -103,6 +104,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     setOpenBrackets(0);
     setInBrackets(false);
     setJustCalculated(false);
+    // 注意：不清除拖动标记，保持位置记忆
   };
 
   // 括号相关状态
@@ -586,13 +588,13 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       top = (viewportHeight - estimatedPopupHeight) / 2;
       left = (viewportWidth - popupWidth) / 2;
     } else {
-      // 桌面端：简化定位逻辑，弹窗高度为auto
-      top = buttonRect.top - estimatedPopupHeight - margin;
+      // 桌面端：优先显示在按钮上方，增加更多间距避免遮挡
+      top = buttonRect.top - estimatedPopupHeight - margin - 50; // 增加50px额外间距
       left = buttonRect.left + (buttonRect.width / 2) - (popupWidth / 2);
 
       // 如果上方空间不够，显示在下方
       if (top < margin) {
-        top = buttonRect.bottom + margin;
+        top = buttonRect.bottom + margin + 10; // 下方也增加10px间距
       }
 
       // 如果下方空间也不够，显示在安全位置
@@ -620,6 +622,12 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!popupRef.current) return;
     
+    // 检查点击的目标元素，如果是按钮或显示屏，则不开始拖动
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'BUTTON' || target.closest('.calc-display') || target.closest('.calc-buttons') || target.closest('.calc-history') || target.closest('button')) {
+      return;
+    }
+    
     const rect = popupRef.current.getBoundingClientRect();
     setDragOffset({
       x: e.clientX - rect.left,
@@ -630,6 +638,12 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!popupRef.current) return;
+    
+    // 检查触摸的目标元素，如果是按钮或显示屏，则不开始拖动
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'BUTTON' || target.closest('.calc-display') || target.closest('.calc-buttons') || target.closest('.calc-history') || target.closest('button')) {
+      return;
+    }
     
     const touch = e.touches[0];
     const rect = popupRef.current.getBoundingClientRect();
@@ -664,6 +678,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     }
 
     setPopupPosition({ top: newTop, left: newLeft });
+    setHasBeenDragged(true); // 标记已经拖动过
   };
 
   const handleTouchMove = (e: TouchEvent) => {
@@ -693,6 +708,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     }
 
     setPopupPosition({ top: newTop, left: newLeft });
+    setHasBeenDragged(true); // 标记已经拖动过
   };
 
   const handleMouseUp = () => {
@@ -750,10 +766,14 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   // 当弹窗打开时计算位置
   useEffect(() => {
     if (isOpen) {
-      // 延迟计算位置，确保弹窗已渲染
-      setTimeout(calculatePopupPosition, 10);
+      // 如果已经拖动过，保持当前位置；否则重新计算位置
+      if (!hasBeenDragged) {
+        // 延迟计算位置，确保弹窗已渲染
+        setTimeout(calculatePopupPosition, 10);
+      }
     }
-  }, [isOpen]);
+    // 移除弹窗关闭时重置拖动标记的逻辑，让位置保持记忆
+  }, [isOpen, hasBeenDragged]);
 
   // 计算历史记录面板位置，确保与计算器主体同高
   const updateHistoryPanelPosition = () => {
@@ -797,8 +817,10 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   return (
     <div 
       ref={popupRef}
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
       className={`fixed z-50 bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-800/50 ${isMobile ? 'p-3' : 'p-6'} ${
-        isDragging ? 'cursor-grabbing select-none' : 'cursor-default'
+        isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
       }`}
       style={{
         top: `${popupPosition.top}px`,
@@ -836,6 +858,19 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
             </button>
           )}
         </div>
+        {/* 添加重置位置按钮 */}
+        {hasBeenDragged && (
+          <button
+            onClick={() => {
+              setHasBeenDragged(false);
+              setTimeout(calculatePopupPosition, 10);
+            }}
+            className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            title="重置位置"
+          >
+            <Move className="h-4 w-4 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
+          </button>
+        )}
         <button
           onClick={onClose}
           className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -852,7 +887,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           className={`${isMobile ? 'w-full' : 'w-full'} ${!isMobile ? 'h-fit' : ''}`}
         >
           {/* 显示屏 */}
-          <div className={`mb-3 p-3 md:p-4 bg-gray-100 dark:bg-gray-800 rounded-lg ${isMobile ? 'h-20' : 'h-28'} flex flex-col justify-end`}>
+          <div className={`calc-display mb-3 p-3 md:p-4 bg-gray-100 dark:bg-gray-800 rounded-lg ${isMobile ? 'h-20' : 'h-28'} flex flex-col justify-end`}>
             {/* 算式显示 */}
             <div className={`text-right ${isMobile ? 'text-xs' : 'text-xs'} text-gray-500 dark:text-gray-400 ${isMobile ? 'mb-1' : 'mb-2'} font-mono ${isMobile ? 'overflow-hidden' : 'overflow-y-auto'} ${isMobile ? 'h-8' : 'max-h-16'} break-words ${isMobile ? 'leading-tight' : ''}`}>
               {expression || '\u00A0'}
@@ -864,7 +899,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           </div>
 
           {/* 按钮网格 */}
-          <div className={`grid grid-cols-4 ${isMobile ? 'gap-1' : 'gap-1.5'}`}>
+          <div className={`calc-buttons grid grid-cols-4 ${isMobile ? 'gap-1' : 'gap-1.5'}`}>
             {/* 第一行：C和退格键 */}
             <div className="col-span-2"></div> {/* 左侧空占位 */}
             <button onClick={clear} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm`}>
@@ -953,7 +988,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         {/* 右侧历史记录浮窗 - 只在桌面端显示，精确匹配计算器主体高度 */}
         {!isMobile && isHistoryExpanded && (
           <div 
-            className="absolute w-52 bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 flex flex-col"
+            className="calc-history absolute w-52 bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 flex flex-col"
             style={{
               top: `${historyPanelPosition.top}px`,
               left: `${historyPanelPosition.left}px`,
