@@ -302,7 +302,14 @@ export function DateCalculator({ isOpen, onClose, triggerRef }: DateCalculatorPr
                 ].map(({ label, value, color }) => (
                   <button
                     key={label}
-                    onClick={() => setDays(value.toString())}
+                    onClick={() => {
+                      if (label === '0') {
+                        setDays('0');
+                      } else {
+                        const currentValue = parseInt(days) || 0;
+                        setDays((currentValue + value).toString());
+                      }
+                    }}
                     className={`px-2 py-1.5 text-sm rounded-lg transition-all ${
                       color === 'red' 
                         ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30'
