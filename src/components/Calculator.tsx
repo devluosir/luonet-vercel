@@ -518,29 +518,50 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     const buttonRect = triggerRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const popupWidth = isHistoryExpanded ? 520 : 320; // 根据历史记录展开状态调整宽度
-    const popupHeight = 520; // 固定高度
-    const margin = 10; // 边距
+    const isMobile = viewportWidth < 768;
+    
+    // 响应式尺寸
+    const popupWidth = isMobile 
+      ? Math.min(viewportWidth - 20, 320) 
+      : (isHistoryExpanded ? 520 : 320);
+    const popupHeight = isMobile 
+      ? Math.min(400, viewportHeight - 80) // 移动端使用更合理的高度
+      : 520;
+    const margin = isMobile ? 10 : 10; // 边距
 
-    let top = buttonRect.top - popupHeight - margin;
-    // 保持左侧对齐，避免展开时位置跳动
-    let left = buttonRect.left + (buttonRect.width / 2) - 160; // 固定左侧位置（320px的一半）
+    let top, left;
 
-    // 如果上方空间不够，显示在下方
-    if (top < margin) {
-      top = buttonRect.bottom + margin;
-    }
-
-    // 如果下方空间也不够，显示在中间
-    if (top + popupHeight > viewportHeight - margin) {
+    if (isMobile) {
+      // 移动端：居中显示
       top = (viewportHeight - popupHeight) / 2;
+      left = (viewportWidth - popupWidth) / 2;
+    } else {
+      // 桌面端：原有逻辑
+      top = buttonRect.top - popupHeight - margin;
+      left = buttonRect.left + (buttonRect.width / 2) - (popupWidth / 2);
+
+      // 如果上方空间不够，显示在下方
+      if (top < margin) {
+        top = buttonRect.bottom + margin;
+      }
+
+      // 如果下方空间也不够，显示在中间
+      if (top + popupHeight > viewportHeight - margin) {
+        top = (viewportHeight - popupHeight) / 2;
+      }
     }
 
-    // 确保不超出左右边界
+    // 确保不超出边界
     if (left < margin) {
       left = margin;
     } else if (left + popupWidth > viewportWidth - margin) {
       left = viewportWidth - popupWidth - margin;
+    }
+
+    if (top < margin) {
+      top = margin;
+    } else if (top + popupHeight > viewportHeight - margin) {
+      top = viewportHeight - popupHeight - margin;
     }
 
     setPopupPosition({ top, left });
@@ -558,13 +579,26 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     setIsDragging(true);
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!popupRef.current) return;
+    
+    const touch = e.touches[0];
+    const rect = popupRef.current.getBoundingClientRect();
+    setDragOffset({
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
+    });
+    setIsDragging(true);
+  };
+
   const handleMouseMove = (e: MouseEvent) => {
     if (!isDragging || !popupRef.current) return;
 
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const popupWidth = isHistoryExpanded ? 520 : 320;
-    const popupHeight = 520;
+    const isMobile = viewportWidth < 768;
+    const popupWidth = isMobile ? Math.min(viewportWidth - 20, 320) : (isHistoryExpanded ? 520 : 320);
+    const popupHeight = isMobile ? Math.min(400, viewportHeight - 80) : 520;
     const margin = 10;
 
     let newLeft = e.clientX - dragOffset.x;
@@ -583,19 +617,56 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     setPopupPosition({ top: newTop, left: newLeft });
   };
 
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!isDragging || !popupRef.current) return;
+    
+    e.preventDefault(); // 防止页面滚动
+    const touch = e.touches[0];
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const isMobile = viewportWidth < 768;
+    const popupWidth = isMobile ? Math.min(viewportWidth - 20, 320) : (isHistoryExpanded ? 520 : 320);
+    const popupHeight = isMobile ? Math.min(400, viewportHeight - 80) : 520;
+    const margin = 10;
+
+    let newLeft = touch.clientX - dragOffset.x;
+    let newTop = touch.clientY - dragOffset.y;
+
+    // 边界检查
+    if (newLeft < margin) newLeft = margin;
+    if (newLeft + popupWidth > viewportWidth - margin) {
+      newLeft = viewportWidth - popupWidth - margin;
+    }
+    if (newTop < margin) newTop = margin;
+    if (newTop + popupHeight > viewportHeight - margin) {
+      newTop = viewportHeight - popupHeight - margin;
+    }
+
+    setPopupPosition({ top: newTop, left: newLeft });
+  };
+
   const handleMouseUp = () => {
     setIsDragging(false);
   };
 
-  // 监听鼠标移动和释放
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  // 监听鼠标和触摸移动和释放
   useEffect(() => {
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
       
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
       };
     }
   }, [isDragging, dragOffset]);
@@ -637,10 +708,13 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
 
   if (!isOpen) return null;
 
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 768;
+  const isMobile = viewportWidth < 768;
+
   return (
     <div 
       ref={popupRef}
-      className={`fixed z-50 bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-800/50 p-6 ${
+      className={`fixed z-50 bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-800/50 ${isMobile ? 'p-3' : 'p-6'} ${
         isDragging ? 'cursor-grabbing select-none' : 'cursor-default'
       }`}
       style={{
@@ -648,8 +722,12 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         left: `${popupPosition.left}px`,
         transform: 'translateZ(0)', // 启用硬件加速
         userSelect: isDragging ? 'none' : 'auto',
-        width: isHistoryExpanded ? '520px' : '320px',
-        height: '520px',
+        width: isMobile 
+          ? `${Math.min(viewportWidth - 20, 320)}px` 
+          : (isHistoryExpanded ? '520px' : '320px'),
+        height: isMobile ? 'auto' : '520px',
+        maxWidth: isMobile ? 'calc(100vw - 20px)' : 'none',
+        maxHeight: isMobile ? 'calc(100vh - 40px)' : '520px',
         transition: 'width 0.3s ease-in-out'
       }}
     >
@@ -657,20 +735,24 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       <div 
         ref={headerRef}
         onMouseDown={handleMouseDown}
-        className="flex items-center justify-between mb-4 cursor-grab active:cursor-grabbing select-none"
+        onTouchStart={handleTouchStart}
+        className={`flex items-center justify-between ${isMobile ? 'mb-3' : 'mb-4'} cursor-grab active:cursor-grabbing select-none touch-none`}
         style={{ userSelect: 'none' }}
       >
         <div className="flex items-center space-x-2">
           <Move className="h-4 w-4 text-gray-400 dark:text-gray-500" />
           <CalculatorIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">计算器</h3>
-          <button
-            onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-            className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            title={isHistoryExpanded ? "隐藏历史记录" : "显示历史记录"}
-          >
-            <History className="h-4 w-4 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
-          </button>
+          <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">计算器</h3>
+          {/* 在小屏幕上隐藏历史记录按钮 */}
+          {!isMobile && (
+            <button
+              onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title={isHistoryExpanded ? "隐藏历史记录" : "显示历史记录"}
+            >
+              <History className="h-4 w-4 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
+            </button>
+          )}
         </div>
         <button
           onClick={onClose}
@@ -681,110 +763,110 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       </div>
 
       {/* 主要内容区域 */}
-      <div className="flex gap-4 h-full">
-        {/* 左侧计算器 */}
-        <div className="flex-1">
+      <div className={`flex ${isMobile ? 'flex-col' : 'gap-4'} ${isMobile ? 'h-auto' : 'h-full'}`}>
+        {/* 计算器部分 */}
+        <div className={`${isMobile ? 'w-full' : 'flex-1'}`}>
           {/* 显示屏 */}
-          <div className="mb-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg h-28 flex flex-col justify-end">
+          <div className={`mb-3 p-3 md:p-4 bg-gray-100 dark:bg-gray-800 rounded-lg ${isMobile ? 'h-20' : 'h-28'} flex flex-col justify-end`}>
             {/* 算式显示 */}
-            <div className="text-right text-xs text-gray-500 dark:text-gray-400 mb-2 font-mono overflow-y-auto max-h-16 break-words">
+            <div className={`text-right ${isMobile ? 'text-xs' : 'text-xs'} text-gray-500 dark:text-gray-400 ${isMobile ? 'mb-1' : 'mb-2'} font-mono ${isMobile ? 'overflow-hidden' : 'overflow-y-auto'} ${isMobile ? 'h-8' : 'max-h-16'} break-words ${isMobile ? 'leading-tight' : ''}`}>
               {expression || '\u00A0'}
             </div>
             {/* 当前数值显示 */}
-            <div className="text-right text-xl font-mono text-gray-900 dark:text-white overflow-hidden">
+            <div className={`text-right ${isMobile ? 'text-lg' : 'text-xl'} font-mono text-gray-900 dark:text-white overflow-hidden`}>
               {display}
             </div>
           </div>
 
           {/* 按钮网格 */}
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className={`grid grid-cols-4 ${isMobile ? 'gap-1' : 'gap-1.5'}`}>
             {/* 第一行：C和退格键 */}
             <div className="col-span-2"></div> {/* 左侧空占位 */}
-            <button onClick={clear} className="p-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm">
+            <button onClick={clear} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm`}>
               C
             </button>
-            <button onClick={handleBackspace} className="p-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm">
+            <button onClick={handleBackspace} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm`}>
               ←
             </button>
 
             {/* 第二行：(,),%,除号 */}
-            <button onClick={handleOpenBracket} className="p-2.5 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+            <button onClick={handleOpenBracket} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm`}>
               (
             </button>
-            <button onClick={handleCloseBracket} disabled={openBrackets === 0} className={`p-2.5 rounded-lg transition-colors text-sm ${
+            <button onClick={handleCloseBracket} disabled={openBrackets === 0} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} rounded-lg transition-colors text-sm ${
               openBrackets === 0
                 ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed' 
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'
             }`}>
               )
             </button>
-            <button onClick={handlePercentage} className="p-2.5 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+            <button onClick={handlePercentage} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm`}>
               %
             </button>
-            <button onClick={() => performOperation('÷')} className="p-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
+            <button onClick={() => performOperation('÷')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm`}>
               ÷
             </button>
 
             {/* 第三行：789，乘号 */}
-            <button onClick={() => inputDigit('7')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
+            <button onClick={() => inputDigit('7')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
               7
             </button>
-            <button onClick={() => inputDigit('8')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
+            <button onClick={() => inputDigit('8')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
               8
             </button>
-            <button onClick={() => inputDigit('9')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
+            <button onClick={() => inputDigit('9')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
               9
             </button>
-            <button onClick={() => performOperation('×')} className="p-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
+            <button onClick={() => performOperation('×')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm`}>
               ×
             </button>
 
             {/* 第四行：456，减号 */}
-            <button onClick={() => inputDigit('4')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
+            <button onClick={() => inputDigit('4')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
               4
             </button>
-            <button onClick={() => inputDigit('5')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
+            <button onClick={() => inputDigit('5')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
               5
             </button>
-            <button onClick={() => inputDigit('6')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
+            <button onClick={() => inputDigit('6')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
               6
             </button>
-            <button onClick={() => performOperation('-')} className="p-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
+            <button onClick={() => performOperation('-')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm`}>
               -
             </button>
 
             {/* 第五行：123，加号 */}
-            <button onClick={() => inputDigit('1')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
+            <button onClick={() => inputDigit('1')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
               1
             </button>
-            <button onClick={() => inputDigit('2')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
+            <button onClick={() => inputDigit('2')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
               2
             </button>
-            <button onClick={() => inputDigit('3')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
+            <button onClick={() => inputDigit('3')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
               3
             </button>
-            <button onClick={() => performOperation('+')} className="p-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
+            <button onClick={() => performOperation('+')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm`}>
               +
             </button>
 
             {/* 第六行：0,.,正负号,等号 */}
-            <button onClick={() => inputDigit('0')} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
+            <button onClick={() => inputDigit('0')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
               0
             </button>
-            <button onClick={inputDecimal} className="p-2.5 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm">
+            <button onClick={inputDecimal} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
               .
             </button>
-            <button onClick={() => setDisplay(formatDisplayValue(-parseFloat(display)))} className="p-2.5 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+            <button onClick={() => setDisplay(formatDisplayValue(-parseFloat(display)))} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm`}>
               ±
             </button>
-            <button onClick={calculateResult} className="p-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
+            <button onClick={calculateResult} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm`}>
               =
             </button>
           </div>
         </div>
 
-        {/* 右侧历史记录区域 */}
-        {isHistoryExpanded && (
+        {/* 右侧历史记录区域 - 只在桌面端显示 */}
+        {!isMobile && isHistoryExpanded && (
           <div className="w-48 border-l border-gray-200 dark:border-gray-700 pl-4">
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-medium text-gray-900 dark:text-white">历史记录</h4>
@@ -807,7 +889,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
                 <div className="space-y-2">
                   {history.map((item, index) => (
                     <div key={index} className="p-2 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <div className="text-xs text-gray-600 dark:text-gray-400 font-mono mb-1">
+                      <div className="text-xs text-gray-600 dark:text-gray-400 font-mono mb-1 break-words">
                         {item.expression} = {item.result}
                       </div>
                       <button
