@@ -11,14 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [logoLoaded, setLogoLoaded] = useState(false);
   const router = useRouter();
   const { data: session } = useSession();
-
-  // 处理logo加载完成
-  const handleLogoLoad = () => {
-    setLogoLoaded(true);
-  };
 
   useEffect(() => {
     // 性能监控
@@ -103,22 +97,11 @@ export default function LoginPage() {
               height={80}
               className="object-contain"
               priority
-              placeholder="blur"
-              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
-              onLoad={handleLogoLoad}
-              style={{
-                opacity: logoLoaded ? 1 : 0,
-                transition: 'opacity 0.3s ease-in-out'
-              }}
             />
-            {/* 只在logo未加载时显示占位符 */}
-            {!logoLoaded && (
-              <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" style={{ opacity: 0.3 }} />
-            )}
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
-          欢迎使用 LC APP
+          LC App
         </h2>
       </div>
 
