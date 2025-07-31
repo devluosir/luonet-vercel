@@ -156,6 +156,54 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     }
   };
 
+  // 处理正负号
+  const handlePlusMinus = () => {
+    // 如果刚完成计算，将结果转换为相反数
+    if (justCalculated) {
+      const negatedValue = -parseFloat(display);
+      const formattedValue = formatDisplayValue(negatedValue);
+      setDisplay(formattedValue);
+      setExpression(formattedValue);
+      setCurrentNumber(formattedValue);
+      return;
+    }
+    
+    // 如果当前显示为0，不做任何操作
+    if (display === '0') {
+      return;
+    }
+    
+    // 获取当前数字的负值
+    const currentValue = parseFloat(display);
+    const negatedValue = -currentValue;
+    const formattedValue = formatDisplayValue(negatedValue);
+    
+    setDisplay(formattedValue);
+    setCurrentNumber(formattedValue);
+    
+    // 更新表达式中的当前数字
+    if (expression === '' || expression === display) {
+      // 如果表达式为空或等于当前显示值，直接设置为新值
+      setExpression(formattedValue);
+    } else {
+      // 替换表达式中的最后一个数字
+      const parts = expression.split(' ');
+      if (parts.length > 0) {
+        const lastPart = parts[parts.length - 1];
+        // 检查最后一部分是否是数字
+        if (!isNaN(parseFloat(lastPart))) {
+          parts[parts.length - 1] = formattedValue;
+          setExpression(parts.join(' '));
+        } else {
+          // 如果最后一部分是运算符，添加负号数字
+          if (['+', '-', '×', '÷', '('].includes(lastPart)) {
+            setExpression(expression + ' ' + formattedValue);
+          }
+        }
+      }
+    }
+  };
+
   // 处理百分号
   const handlePercentage = () => {
     const currentValue = parseFloat(display);
@@ -893,7 +941,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
             <button onClick={inputDecimal} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
               .
             </button>
-            <button onClick={() => setDisplay(formatDisplayValue(-parseFloat(display)))} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm`}>
+            <button onClick={handlePlusMinus} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm`}>
               ±
             </button>
             <button onClick={calculateResult} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm`}>
