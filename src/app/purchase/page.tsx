@@ -7,6 +7,7 @@ import { Download, Settings, ChevronDown, ChevronUp, ArrowLeft, Save, History, E
 import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
 import { SettingsPanel } from '@/components/purchase/SettingsPanel';
 import { BankInfoSection } from '@/components/purchase/BankInfoSection';
+import { SupplierInfoSection } from '@/components/purchase/SupplierInfoSection';
 import type { PurchaseOrderData } from '@/types/purchase';
 import { savePurchaseHistory, getPurchaseHistory } from '@/utils/purchaseHistory';
 import { useRouter, usePathname } from 'next/navigation';
@@ -301,40 +302,22 @@ export default function PurchaseOrderPage() {
               {/* 基本信息 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* 供应商信息组 */}
-                <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">供应商信息</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <label className={labelClass}>供应商 Attn:</label>
-                      <input
-                        className={inputClass}
-                        value={data.attn}
-                        onChange={e => setData({ ...data, attn: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>报价号码 Your ref:</label>
-                      <input
-                        className={inputClass}
-                        value={data.yourRef}
-                        onChange={e => setData({ ...data, yourRef: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>报价日期 Quote Date:</label>
-                      <input
-                        type="date"
-                        className={inputClass}
-                        value={data.supplierQuoteDate}
-                        onChange={e => setData({ ...data, supplierQuoteDate: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
+                <SupplierInfoSection
+                  data={{
+                    attn: data.attn,
+                    yourRef: data.yourRef,
+                    supplierQuoteDate: data.supplierQuoteDate
+                  }}
+                  onChange={(supplierData) => setData({
+                    ...data,
+                    attn: supplierData.attn,
+                    yourRef: supplierData.yourRef,
+                    supplierQuoteDate: supplierData.supplierQuoteDate
+                  })}
+                />
 
                 {/* 订单信息组 */}
                 <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">订单信息</h3>
                   <div className="space-y-3">
                     <div>
                       <label className={labelClass}>订单号 Order No.:</label>
