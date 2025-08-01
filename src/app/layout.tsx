@@ -25,12 +25,15 @@ export const metadata: Metadata = {
   title: 'Luo & Company',
   description: '专业的报价和订单确认系统',
   manifest: '/static/manifest.json',
-  icons: [
-    { rel: 'icon', url: '/favicon.ico' },
-    { rel: 'apple-touch-icon', url: '/logo/apple-touch-icon.png' },
-    { rel: 'icon', url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-    { rel: 'icon', url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' }
-  ]
+  icons: {
+    icon: [
+      { url: '/assets/logo/favicon.ico' },
+      { url: '/assets/logo/icon.png', sizes: '32x32', type: 'image/png' }
+    ],
+    apple: [
+      { url: '/assets/logo/apple-icon.png' }
+    ]
+  }
 }
 
 export default function RootLayout({

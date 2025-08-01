@@ -91,7 +91,7 @@ export default function LoginPage() {
         <div className="flex justify-center">
           <div className="relative">
             <Image
-              src="/logo/logo.png"
+              src="/assets/logo/logo.png"
               alt="LC APP"
               width={80}
               height={80}
