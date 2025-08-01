@@ -50,13 +50,12 @@ export default {
     }
 
     // 处理用户管理
-    if (path.startsWith('/api/admin/users') && request.method === 'GET') {
-      return handleGetUsers(request, env);
-    }
-
-    // 处理单个用户获取
     if (path.startsWith('/api/admin/users/') && request.method === 'GET') {
       return handleGetUser(request, env);
+    }
+
+    if (path.startsWith('/api/admin/users') && request.method === 'GET') {
+      return handleGetUsers(request, env);
     }
 
     // 处理用户更新
