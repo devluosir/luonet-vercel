@@ -57,6 +57,15 @@ export default function CustomerPage() {
   });
   const [editLoading, setEditLoading] = useState(false);
 
+  // 编辑供应商相关状态
+  const [showEditSupplierModal, setShowEditSupplierModal] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<SupplierInfo | null>(null);
+  const [editSupplierForm, setEditSupplierForm] = useState({
+    name: '',
+    originalName: ''
+  });
+  const [editSupplierLoading, setEditSupplierLoading] = useState(false);
+
   // 加载客户和供应商数据
   useEffect(() => {
     if (!mounted) return;
@@ -410,6 +419,59 @@ export default function CustomerPage() {
     }
   };
 
+  // 打开编辑供应商模态框
+  const handleEditSupplier = (supplier: SupplierInfo) => {
+    setEditingSupplier(supplier);
+    setEditSupplierForm({
+      name: supplier.name,
+      originalName: supplier.name
+    });
+    setShowEditSupplierModal(true);
+  };
+
+  // 保存供应商信息修改
+  const handleSaveSupplierEdit = async () => {
+    if (!editingSupplier || !editSupplierForm.name.trim()) {
+      alert('请输入有效的供应商名称');
+      return;
+    }
+
+    setEditSupplierLoading(true);
+    try {
+      // 获取采购订单历史记录
+      const purchaseHistory = JSON.parse(localStorage.getItem('purchase_history') || '[]');
+
+      // 更新所有相关文档中的供应商名称
+      const updatedPurchaseHistory = purchaseHistory.map((doc: any) => {
+        if (doc.supplierName === editSupplierForm.originalName) {
+          return { ...doc, supplierName: editSupplierForm.name };
+        }
+        return doc;
+      });
+
+      // 保存到localStorage
+      localStorage.setItem('purchase_history', JSON.stringify(updatedPurchaseHistory));
+
+      // 触发自定义事件通知其他组件
+      window.dispatchEvent(new CustomEvent('customStorageChange', {
+        detail: { key: 'history_updated' }
+      }));
+
+      // 关闭模态框
+      setShowEditSupplierModal(false);
+      setEditingSupplier(null);
+      setEditSupplierForm({ name: '', originalName: '' });
+      
+      // 显示成功消息
+      alert(`供应商信息已更新，共更新了 ${editingSupplier.documents.length} 个相关文档`);
+    } catch (error) {
+      console.error('保存失败:', error);
+      alert('保存失败，请重试');
+    } finally {
+      setEditSupplierLoading(false);
+    }
+  };
+
   // 避免闪烁
   if (!mounted || status === 'loading') {
     return null;
@@ -423,12 +485,13 @@ export default function CustomerPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
       <main className="flex-1">
-        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
+        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-3 sm:py-6 lg:py-8">
           {/* 返回按钮和设置按钮 */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <Link 
               href="/dashboard"
-              className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
+              className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7] 
+                text-sm sm:text-base"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
@@ -438,17 +501,18 @@ export default function CustomerPage() {
               onClick={() => setShowSettings(true)}
               className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 
                 bg-white dark:bg-[#1c1c1e] border border-gray-300 dark:border-gray-600 rounded-lg 
-                hover:bg-gray-50 dark:hover:bg-[#2c2c2e] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                hover:bg-gray-50 dark:hover:bg-[#2c2c2e] focus:outline-none focus:ring-2 focus:ring-blue-500
+                w-full sm:w-auto justify-center"
             >
               <Settings className="w-4 h-4 mr-2" />
-              设置
+              {activeTab === 'customer' ? '客户文档管理' : '供应商文档管理'}
             </button>
           </div>
 
           {/* Tab切换 */}
-          <div className="mt-8">
+          <div className="mt-4 sm:mt-8">
             <div className="border-b border-gray-200 dark:border-gray-800">
-              <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+              <nav className="-mb-px flex space-x-4 sm:space-x-8" aria-label="Tabs">
                 <button
                   onClick={() => setActiveTab('customer')}
                   className={`
@@ -456,10 +520,11 @@ export default function CustomerPage() {
                       ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700'
                     }
-                    whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2
+                    whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2
+                    flex-1 sm:flex-none justify-center sm:justify-start
                   `}
                 >
-                  <Users className="w-5 h-5" />
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span>客户</span>
                 </button>
 
@@ -470,10 +535,11 @@ export default function CustomerPage() {
                       ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700'
                     }
-                    whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2
+                    whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2
+                    flex-1 sm:flex-none justify-center sm:justify-start
                   `}
                 >
-                  <Building2 className="w-5 h-5" />
+                  <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span>供应商</span>
                 </button>
               </nav>
@@ -482,113 +548,115 @@ export default function CustomerPage() {
 
           {/* 客户列表 */}
           {activeTab === 'customer' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-6 mt-4 sm:mt-8">
               {customers.map((customer) => (
                 <div
                   key={customer.name}
-                  className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-200/50 dark:border-gray-800/50 
+                  className="bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-2xl shadow-sm border border-gray-200/50 dark:border-gray-800/50 
                     hover:shadow-md transition-all duration-200 overflow-hidden"
                 >
                   {/* 客户信息头部 */}
-                  <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <div className="p-3 sm:p-6 border-b border-gray-100 dark:border-gray-800">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
                           {customer.name.split('\n')[0]}
                         </h3>
                         {customer.name.split('\n').length > 1 && (
-                          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 whitespace-pre-line">
+                          <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-pre-line line-clamp-2">
                             {customer.name.split('\n').slice(1).join('\n')}
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center space-x-2">
+                      
+                      <div className="flex items-center justify-between sm:justify-end gap-2">
                         <button
                           onClick={() => handleEditCustomer(customer)}
-                          className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 
+                          className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 
                             bg-white dark:bg-[#1c1c1e] border border-gray-300 dark:border-gray-600 rounded-lg 
                             hover:bg-gray-50 dark:hover:bg-[#2c2c2e] focus:outline-none focus:ring-2 focus:ring-blue-500
                             transition-all duration-200"
                         >
-                          <Edit className="w-4 h-4 mr-2" />
-                          编辑
+                          <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                          <span className="hidden sm:inline">编辑</span>
                         </button>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        {customer.quotationCount > 0 && (
-                          <div className="relative group">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 
-                              border border-blue-100 dark:border-blue-800">
-                              <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                              <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-blue-600 dark:bg-blue-500 
-                                flex items-center justify-center">
-                                <span className="text-xs font-medium text-white">{customer.quotationCount}</span>
+                        
+                        <div className="flex items-center space-x-1 sm:space-x-2">
+                          {customer.quotationCount > 0 && (
+                            <div className="relative group">
+                              <div className="flex items-center justify-center w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 
+                                border border-blue-100 dark:border-blue-800">
+                                <FileText className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400" />
+                                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-blue-600 dark:bg-blue-500 
+                                  flex items-center justify-center">
+                                  <span className="text-xs font-medium text-white">{customer.quotationCount}</span>
+                                </div>
+                              </div>
+                              <div className="absolute -bottom-6 sm:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
+                                text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                报价
                               </div>
                             </div>
-                            <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
-                              text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              报价
-                            </div>
-                          </div>
-                        )}
+                          )}
 
-                        {customer.confirmationCount > 0 && (
-                          <div className="relative group">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/20 
-                              border border-green-100 dark:border-green-800">
-                              <FileText className="w-4 h-4 text-green-600 dark:text-green-400" />
-                              <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-green-600 dark:bg-green-500 
-                                flex items-center justify-center">
-                                <span className="text-xs font-medium text-white">{customer.confirmationCount}</span>
+                          {customer.confirmationCount > 0 && (
+                            <div className="relative group">
+                              <div className="flex items-center justify-center w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-green-50 dark:bg-green-900/20 
+                                border border-green-100 dark:border-green-800">
+                                <FileText className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-green-600 dark:text-green-400" />
+                                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-green-600 dark:bg-green-500 
+                                  flex items-center justify-center">
+                                  <span className="text-xs font-medium text-white">{customer.confirmationCount}</span>
+                                </div>
+                              </div>
+                              <div className="absolute -bottom-6 sm:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
+                                text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                确认
                               </div>
                             </div>
-                            <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
-                              text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              确认
-                            </div>
-                          </div>
-                        )}
+                          )}
 
-                        {customer.packingCount > 0 && (
-                          <div className="relative group">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-900/20 
-                              border border-teal-100 dark:border-teal-800">
-                              <Package className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                              <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-teal-600 dark:bg-teal-500 
-                                flex items-center justify-center">
-                                <span className="text-xs font-medium text-white">{customer.packingCount}</span>
+                          {customer.packingCount > 0 && (
+                            <div className="relative group">
+                              <div className="flex items-center justify-center w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-teal-50 dark:bg-teal-900/20 
+                                border border-teal-100 dark:border-teal-800">
+                                <Package className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-teal-600 dark:text-teal-400" />
+                                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-teal-600 dark:bg-teal-500 
+                                  flex items-center justify-center">
+                                  <span className="text-xs font-medium text-white">{customer.packingCount}</span>
+                                </div>
+                              </div>
+                              <div className="absolute -bottom-6 sm:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
+                                text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                装箱
                               </div>
                             </div>
-                            <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
-                              text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              装箱
-                            </div>
-                          </div>
-                        )}
+                          )}
 
-                        {customer.invoiceCount > 0 && (
-                          <div className="relative group">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/20 
-                              border border-purple-100 dark:border-purple-800">
-                              <Receipt className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                              <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-purple-600 dark:bg-purple-500 
-                                flex items-center justify-center">
-                                <span className="text-xs font-medium text-white">{customer.invoiceCount}</span>
+                          {customer.invoiceCount > 0 && (
+                            <div className="relative group">
+                              <div className="flex items-center justify-center w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-purple-50 dark:bg-purple-900/20 
+                                border border-purple-100 dark:border-purple-800">
+                                <Receipt className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-purple-600 dark:text-purple-400" />
+                                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-purple-600 dark:bg-purple-500 
+                                  flex items-center justify-center">
+                                  <span className="text-xs font-medium text-white">{customer.invoiceCount}</span>
+                                </div>
+                              </div>
+                              <div className="absolute -bottom-6 sm:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
+                                text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                开票
                               </div>
                             </div>
-                            <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
-                              text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                              开票
-                            </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* 单据列表 */}
-                  <div className="p-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="p-2 sm:p-4">
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-3">
                       {customer.documents
                         .sort((a, b) => b.date.getTime() - a.date.getTime())
                         .map((doc) => {
@@ -629,11 +697,11 @@ export default function CustomerPage() {
                             <Link 
                               key={doc.id}
                               href={editLink}
-                              className={`group bg-white dark:bg-[#1c1c1e] p-3 flex items-center space-x-3 rounded-xl
+                              className={`group bg-white dark:bg-[#1c1c1e] p-1.5 sm:p-3 flex items-center space-x-1.5 sm:space-x-3 rounded-lg sm:rounded-xl
                                 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 transition-all duration-200 cursor-pointer
                                 active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70 ${color.hover}`}
                             >
-                              <div className={`w-7 h-7 rounded-lg ${color.bg} flex items-center justify-center flex-shrink-0
+                              <div className={`w-5 h-5 sm:w-7 sm:h-7 rounded-lg ${color.bg} flex items-center justify-center flex-shrink-0
                                 group-hover:scale-110 transition-transform duration-200`}>
                                 <span className={`text-xs font-medium ${color.text}`}>
                                   {doc.type === 'quotation' ? 'QTN' : 
@@ -643,14 +711,14 @@ export default function CustomerPage() {
                                 </span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className={`text-sm font-medium text-gray-900 dark:text-white truncate
+                                <div className={`text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate
                                   transition-colors duration-200 ${color.text}`}>
                                   {doc.number}
                                 </div>
                               </div>
                               {/* 添加一个微妙的箭头指示器 */}
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
-                                <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 dark:text-gray-500" />
                               </div>
                             </Link>
                           );
@@ -662,10 +730,10 @@ export default function CustomerPage() {
 
               {customers.length === 0 && (
                 <div className="col-span-full">
-                  <div className="text-center py-12 bg-white dark:bg-[#1c1c1e] rounded-2xl border border-gray-200/50 dark:border-gray-800/50">
-                    <Users className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-4 text-sm font-medium text-gray-900 dark:text-white">暂无客户</h3>
-                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-6 sm:py-12 bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-2xl border border-gray-200/50 dark:border-gray-800/50">
+                    <Users className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
+                    <h3 className="mt-3 sm:mt-4 text-sm font-medium text-gray-900 dark:text-white">暂无客户</h3>
+                    <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                       创建单据时会自动添加客户信息
                     </p>
                   </div>
@@ -676,39 +744,52 @@ export default function CustomerPage() {
 
           {/* 供应商列表 */}
           {activeTab === 'supplier' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-6 mt-4 sm:mt-8">
               {suppliers.map((supplier) => (
                 <div
                   key={supplier.name}
-                  className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-sm border border-gray-200/50 dark:border-gray-800/50 
+                  className="bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-2xl shadow-sm border border-gray-200/50 dark:border-gray-800/50 
                     hover:shadow-md transition-all duration-200 overflow-hidden"
                 >
                   {/* 供应商信息头部 */}
-                  <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <div className="p-3 sm:p-6 border-b border-gray-100 dark:border-gray-800">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
                           {supplier.name.split('\n')[0]}
                         </h3>
                         {supplier.name.split('\n').length > 1 && (
-                          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 whitespace-pre-line">
+                          <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 whitespace-pre-line line-clamp-2">
                             {supplier.name.split('\n').slice(1).join('\n')}
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="relative group">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-900/20 
-                            border border-orange-100 dark:border-orange-800">
-                            <ShoppingCart className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                            <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-orange-600 dark:bg-orange-500 
-                              flex items-center justify-center">
-                              <span className="text-xs font-medium text-white">{supplier.purchaseCount}</span>
+                      <div className="flex items-center justify-between sm:justify-end gap-2">
+                        <button
+                          onClick={() => handleEditSupplier(supplier)}
+                          className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 
+                            bg-white dark:bg-[#1c1c1e] border border-gray-300 dark:border-gray-600 rounded-lg 
+                            hover:bg-gray-50 dark:hover:bg-[#2c2c2e] focus:outline-none focus:ring-2 focus:ring-orange-500
+                            transition-all duration-200"
+                        >
+                          <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                          <span className="hidden sm:inline">编辑</span>
+                        </button>
+                        
+                        <div className="flex items-center justify-end">
+                          <div className="relative group">
+                            <div className="flex items-center justify-center w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-orange-50 dark:bg-orange-900/20 
+                              border border-orange-100 dark:border-orange-800">
+                              <ShoppingCart className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-orange-600 dark:text-orange-400" />
+                              <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-orange-600 dark:bg-orange-500 
+                                flex items-center justify-center">
+                                <span className="text-xs font-medium text-white">{supplier.purchaseCount}</span>
+                              </div>
                             </div>
-                          </div>
-                          <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
-                            text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                            采购
+                            <div className="absolute -bottom-6 sm:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
+                              text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                              采购
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -716,8 +797,8 @@ export default function CustomerPage() {
                   </div>
 
                   {/* 供应商单据列表 */}
-                  <div className="p-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="p-2 sm:p-4">
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-3">
                       {supplier.documents
                         .sort((a, b) => b.date.getTime() - a.date.getTime())
                         .map((doc) => {
@@ -731,23 +812,23 @@ export default function CustomerPage() {
                             <Link 
                               key={doc.id}
                               href={`/purchase/edit/${doc.id}`}
-                              className={`group bg-white dark:bg-[#1c1c1e] p-3 flex items-center space-x-3 rounded-xl
+                              className={`group bg-white dark:bg-[#1c1c1e] p-1.5 sm:p-3 flex items-center space-x-1.5 sm:space-x-3 rounded-lg sm:rounded-xl
                                 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 transition-all duration-200 cursor-pointer
                                 active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70 ${color.hover}`}
                             >
-                              <div className={`w-7 h-7 rounded-lg ${color.bg} flex items-center justify-center flex-shrink-0
+                              <div className={`w-5 h-5 sm:w-7 sm:h-7 rounded-lg ${color.bg} flex items-center justify-center flex-shrink-0
                                 group-hover:scale-110 transition-transform duration-200`}>
                                 <span className={`text-xs font-medium ${color.text}`}>PO</span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className={`text-sm font-medium text-gray-900 dark:text-white truncate
+                                <div className={`text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate
                                   transition-colors duration-200 ${color.text}`}>
                                   {doc.number}
                                 </div>
                               </div>
                               {/* 添加一个微妙的箭头指示器 */}
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
-                                <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 dark:text-gray-500" />
                               </div>
                             </Link>
                           );
@@ -759,10 +840,10 @@ export default function CustomerPage() {
 
               {suppliers.length === 0 && (
                 <div className="col-span-full">
-                  <div className="text-center py-12 bg-white dark:bg-[#1c1c1e] rounded-2xl border border-gray-200/50 dark:border-gray-800/50">
-                    <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-4 text-sm font-medium text-gray-900 dark:text-white">暂无供应商</h3>
-                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-6 sm:py-12 bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-2xl border border-gray-200/50 dark:border-gray-800/50">
+                    <Building2 className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
+                    <h3 className="mt-3 sm:mt-4 text-sm font-medium text-gray-900 dark:text-white">暂无供应商</h3>
+                    <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                       创建采购订单时会自动添加供应商信息
                     </p>
                   </div>
@@ -775,32 +856,48 @@ export default function CustomerPage() {
 
       {/* 设置模态框 */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-3 lg:p-4">
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-2xl shadow-xl w-full max-w-5xl max-h-[95vh] overflow-hidden">
             {/* 模态框头部 */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">文档管理</h2>
+            <div className="flex items-center justify-between p-3 sm:p-4 lg:p-6 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
+                  {activeTab === 'customer' ? (
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
+                  ) : (
+                    <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600 dark:text-orange-400" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white">
+                    {activeTab === 'customer' ? '客户文档管理' : '供应商文档管理'}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    管理相关文档，支持批量操作
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => {
                   setShowSettings(false);
                   setSelectedDocuments(new Set());
                 }}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
             {/* 模态框内容 */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+            <div className="p-3 sm:p-4 lg:p-6 overflow-y-auto max-h-[calc(95vh-120px)]">
               {/* 操作栏 */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 lg:gap-4 mb-3 sm:mb-4 lg:mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 lg:gap-4">
                   <button
                     onClick={handleSelectAll}
-                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline text-left sm:text-center"
                   >
-                    {selectedDocuments.size === customers.flatMap(c => c.documents).length ? '取消全选' : '全选'}
+                    {selectedDocuments.size === (activeTab === 'customer' ? customers.flatMap(c => c.documents) : suppliers.flatMap(s => s.documents)).length ? '取消全选' : '全选'}
                   </button>
                   {selectedDocuments.size > 0 && (
                     <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -811,8 +908,8 @@ export default function CustomerPage() {
                 {selectedDocuments.size > 0 && (
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg 
-                      hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="flex items-center px-3 sm:px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg 
+                      hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 w-full sm:w-auto justify-center"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     删除选中
@@ -821,67 +918,124 @@ export default function CustomerPage() {
               </div>
 
               {/* 文档列表 */}
-              <div className="space-y-4">
-                {customers.map((customer) => (
-                  <div key={customer.name} className="border border-gray-200 dark:border-gray-800 rounded-lg">
-                    <div className="p-4 bg-gray-50 dark:bg-gray-900">
-                      <h3 className="font-medium text-gray-900 dark:text-white">{customer.name}</h3>
-                    </div>
-                    <div className="p-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {customer.documents.map((doc) => {
-                          const isSelected = selectedDocuments.has(doc.id);
-                          const colors = {
-                            quotation: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400' },
-                            confirmation: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400' },
-                            packing: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-600 dark:text-teal-400' },
-                            invoice: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400' }
-                          };
-                          const color = colors[doc.type] || colors.quotation;
+              <div className="space-y-2 sm:space-y-3 lg:space-y-4">
+                {activeTab === 'customer' ? (
+                  // 客户文档列表
+                  customers.map((customer) => (
+                    <div key={customer.name} className="border border-gray-200 dark:border-gray-800 rounded-lg">
+                      <div className="p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-gray-900">
+                        <h3 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">{customer.name}</h3>
+                      </div>
+                      <div className="p-2 sm:p-3 lg:p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
+                          {customer.documents.map((doc) => {
+                            const isSelected = selectedDocuments.has(doc.id);
+                            const colors = {
+                              quotation: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400' },
+                              confirmation: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400' },
+                              packing: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-600 dark:text-teal-400' },
+                              invoice: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400' }
+                            };
+                            const color = colors[doc.type] || colors.quotation;
 
-                          return (
-                            <div
-                              key={doc.id}
-                              className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200
-                                ${isSelected 
-                                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                                }`}
-                              onClick={() => handleDocumentSelect(doc.id)}
-                            >
-                              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center mr-3
-                                ${isSelected 
-                                  ? 'border-blue-500 bg-blue-500' 
-                                  : 'border-gray-300 dark:border-gray-600'
-                                }`}
+                            return (
+                              <div
+                                key={doc.id}
+                                className={`flex items-center p-2 sm:p-3 rounded-lg border-2 cursor-pointer transition-all duration-200
+                                  ${isSelected 
+                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                  }`}
+                                onClick={() => handleDocumentSelect(doc.id)}
                               >
-                                {isSelected && <Check className="w-4 h-4 text-white" />}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2">
-                                  <div className={`w-6 h-6 rounded ${color.bg} flex items-center justify-center`}>
-                                    <span className={`text-xs font-medium ${color.text}`}>
-                                      {doc.type === 'quotation' ? 'QTN' : 
-                                       doc.type === 'confirmation' ? 'SC' : 
-                                       doc.type === 'packing' ? 'PL' : 
-                                       'INV'}
+                                <div className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 rounded border-2 flex items-center justify-center mr-2 sm:mr-3
+                                  ${isSelected 
+                                    ? 'border-blue-500 bg-blue-500' 
+                                    : 'border-gray-300 dark:border-gray-600'
+                                  }`}
+                                >
+                                  {isSelected && <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 text-white" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center space-x-2">
+                                    <div className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 rounded ${color.bg} flex items-center justify-center`}>
+                                      <span className={`text-xs font-medium ${color.text}`}>
+                                        {doc.type === 'quotation' ? 'QTN' : 
+                                         doc.type === 'confirmation' ? 'SC' : 
+                                         doc.type === 'packing' ? 'PL' : 
+                                         'INV'}
+                                      </span>
+                                    </div>
+                                    <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">
+                                      {doc.number}
                                     </span>
                                   </div>
-                                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                    {doc.number}
-                                  </span>
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  {format(doc.date, 'yyyy-MM-dd HH:mm')}
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {format(doc.date, 'yyyy-MM-dd HH:mm')}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  // 供应商文档列表
+                  suppliers.map((supplier) => (
+                    <div key={supplier.name} className="border border-gray-200 dark:border-gray-800 rounded-lg">
+                      <div className="p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-gray-900">
+                        <h3 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base">{supplier.name}</h3>
+                      </div>
+                      <div className="p-2 sm:p-3 lg:p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3">
+                          {supplier.documents.map((doc) => {
+                            const isSelected = selectedDocuments.has(doc.id);
+                            const color = {
+                              bg: 'bg-orange-100 dark:bg-orange-900/30',
+                              text: 'text-orange-600 dark:text-orange-400'
+                            };
+
+                            return (
+                              <div
+                                key={doc.id}
+                                className={`flex items-center p-2 sm:p-3 rounded-lg border-2 cursor-pointer transition-all duration-200
+                                  ${isSelected 
+                                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' 
+                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                  }`}
+                                onClick={() => handleDocumentSelect(doc.id)}
+                              >
+                                <div className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 rounded border-2 flex items-center justify-center mr-2 sm:mr-3
+                                  ${isSelected 
+                                    ? 'border-orange-500 bg-orange-500' 
+                                    : 'border-gray-300 dark:border-gray-600'
+                                  }`}
+                                >
+                                  {isSelected && <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 text-white" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center space-x-2">
+                                    <div className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 rounded ${color.bg} flex items-center justify-center`}>
+                                      <span className={`text-xs font-medium ${color.text}`}>PO</span>
+                                    </div>
+                                    <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">
+                                      {doc.number}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {format(doc.date, 'yyyy-MM-dd HH:mm')}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -890,24 +1044,24 @@ export default function CustomerPage() {
 
       {/* 删除确认对话框 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-xl max-w-md w-full">
-            <div className="p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-xl w-full max-w-md">
+            <div className="p-4 sm:p-6">
               <div className="flex items-center mb-4">
-                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center mr-4">
-                  <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${activeTab === 'customer' ? 'bg-red-100 dark:bg-red-900/20' : 'bg-orange-100 dark:bg-orange-900/20'} flex items-center justify-center mr-3 sm:mr-4`}>
+                  <Trash2 className={`w-5 h-5 sm:w-6 sm:h-6 ${activeTab === 'customer' ? 'text-red-600 dark:text-red-400' : 'text-orange-600 dark:text-orange-400'}`} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">确认删除</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">确认删除</h3>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                     此操作无法撤销
                   </p>
                 </div>
               </div>
-              <p className="text-gray-700 dark:text-gray-300 mb-6">
-                确定要删除选中的 <span className="font-semibold">{selectedDocuments.size}</span> 个文档吗？
+              <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4 sm:mb-6">
+                确定要删除选中的 <span className="font-semibold">{selectedDocuments.size}</span> 个{activeTab === 'customer' ? '客户' : '供应商'}文档吗？
               </p>
-              <div className="flex space-x-3">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={deleteLoading}
@@ -920,8 +1074,12 @@ export default function CustomerPage() {
                 <button
                   onClick={handleDeleteSelected}
                   disabled={deleteLoading}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg 
-                    hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`flex-1 px-4 py-2 text-sm font-medium text-white rounded-lg 
+                    disabled:opacity-50 disabled:cursor-not-allowed ${
+                      activeTab === 'customer' 
+                        ? 'bg-red-600 hover:bg-red-700' 
+                        : 'bg-orange-600 hover:bg-orange-700'
+                    }`}
                 >
                   {deleteLoading ? '删除中...' : '确认删除'}
                 </button>
@@ -933,17 +1091,17 @@ export default function CustomerPage() {
 
       {/* 编辑客户模态框 */}
       {showEditModal && editingCustomer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-xl max-w-md w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-xl w-full max-w-md">
             {/* 模态框头部 */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
-                  <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">编辑客户信息</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">编辑客户信息</h2>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                     修改后将应用到所有相关单据
                   </p>
                 </div>
@@ -956,13 +1114,13 @@ export default function CustomerPage() {
                 }}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
             {/* 模态框内容 */}
-            <div className="p-6">
-              <div className="space-y-4">
+            <div className="p-4 sm:p-6">
+              <div className="space-y-3 sm:space-y-4">
                 {/* 客户名称输入 */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -974,23 +1132,23 @@ export default function CustomerPage() {
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
                       bg-white dark:bg-[#1c1c1e] text-gray-900 dark:text-white 
                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                      resize-none"
+                      resize-none text-sm sm:text-base"
                     rows={3}
                     placeholder="请输入客户名称"
                   />
                 </div>
 
                 {/* 影响范围提示 */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <FileText className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
+                  <div className="flex items-start space-x-2 sm:space-x-3">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <FileText className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
                       <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
                         影响范围
                       </h4>
-                      <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                      <div className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 space-y-1">
                         <div className="flex items-center space-x-2">
                           <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                           <span>报价单：{editingCustomer.quotationCount} 个</span>
@@ -1014,7 +1172,7 @@ export default function CustomerPage() {
               </div>
 
               {/* 操作按钮 */}
-              <div className="flex space-x-3 mt-6">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-4 sm:mt-6">
                 <button
                   onClick={() => {
                     setShowEditModal(false);
@@ -1036,6 +1194,116 @@ export default function CustomerPage() {
                     flex items-center justify-center"
                 >
                   {editLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      保存中...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      保存
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 编辑供应商模态框 */}
+      {showEditSupplierModal && editingSupplier && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-xl w-full max-w-md">
+            {/* 模态框头部 */}
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center">
+                  <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">编辑供应商信息</h2>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    修改后将应用到所有相关单据
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEditSupplierModal(false);
+                  setEditingSupplier(null);
+                  setEditSupplierForm({ name: '', originalName: '' });
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </div>
+
+            {/* 模态框内容 */}
+            <div className="p-4 sm:p-6">
+              <div className="space-y-3 sm:space-y-4">
+                {/* 供应商名称输入 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    供应商名称
+                  </label>
+                  <textarea
+                    value={editSupplierForm.name}
+                    onChange={(e) => setEditSupplierForm({ ...editSupplierForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+                      bg-white dark:bg-[#1c1c1e] text-gray-900 dark:text-white 
+                      focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+                      resize-none text-sm sm:text-base"
+                    rows={3}
+                    placeholder="请输入供应商名称"
+                  />
+                </div>
+
+                {/* 影响范围提示 */}
+                <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 sm:p-4">
+                  <div className="flex items-start space-x-2 sm:space-x-3">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <ShoppingCart className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-1">
+                        影响范围
+                      </h4>
+                      <div className="text-xs sm:text-sm text-orange-700 dark:text-orange-300 space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                          <span>采购订单：{editingSupplier.purchaseCount} 个</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 操作按钮 */}
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-4 sm:mt-6">
+                <button
+                  onClick={() => {
+                    setShowEditSupplierModal(false);
+                    setEditingSupplier(null);
+                    setEditSupplierForm({ name: '', originalName: '' });
+                  }}
+                  disabled={editSupplierLoading}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 
+                    bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 
+                    disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSaveSupplierEdit}
+                  disabled={editSupplierLoading || !editSupplierForm.name.trim()}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg 
+                    hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed
+                    flex items-center justify-center"
+                >
+                  {editSupplierLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                       保存中...
