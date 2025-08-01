@@ -193,7 +193,7 @@ export default function UserDetailPage() {
     const fetchUser = async () => {
       try {
         setLoading(true);
-        const data = await apiRequestWithError(API_ENDPOINTS.USERS.GET(params.id));
+        const data = await apiRequestWithError(API_ENDPOINTS.USERS.GET(params.id as string));
         setUser(data);
         // 初始化权限状态
         const initialPermissions = new Map();

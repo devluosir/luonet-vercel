@@ -8,6 +8,7 @@ import { CreateUserModal } from '@/components/admin/CreateUserModal';
 import { UserPlus, Users, Clock, Mail, User, Edit } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { usePermissionStore, validatePermissions } from '@/lib/permissions';
+import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
 
 interface User {
   id: string;
@@ -59,8 +60,6 @@ export default function AdminPage() {
 
     checkPermissionsAndLoad();
   }, [mounted, status, router]);
-
-import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
 
   const fetchUsers = useCallback(async () => {
     try {
