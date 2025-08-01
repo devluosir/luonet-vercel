@@ -542,12 +542,25 @@ export default function DashboardPage() {
       // 异步获取权限，不阻塞页面显示
       setTimeout(async () => {
         const { user, isInitialized } = usePermissionStore.getState();
-        if (!user && !isInitialized) {
+        console.log('初始化检查 - 用户:', user?.username, '已初始化:', isInitialized);
+        console.log('Session状态:', {
+          hasSession: !!session,
+          sessionUser: session?.user?.name,
+          sessionStatus: status
+        });
+        
+        // 如果用户已登录但没有权限数据，强制获取
+        if (session?.user && (!user || !user.permissions)) {
+          console.log('用户已登录但权限数据缺失，强制获取权限...');
+          await fetchUser(true);
+        } else if (!user && !isInitialized) {
+          console.log('开始获取用户权限...');
           await fetchUser(false);
         }
         
         // 标记权限store为已初始化，避免初始化时触发权限变化事件
         usePermissionStore.getState().setInitialized(true);
+        console.log('权限初始化完成');
       }, 100);
     };
     init();

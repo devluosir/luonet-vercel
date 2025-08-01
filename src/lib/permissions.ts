@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
+import { API_ENDPOINTS, apiRequestWithError, getNextAuthSession } from '@/lib/api-config';
 
 interface Permission {
   id: string;
@@ -126,6 +126,14 @@ export const usePermissionStore = create<PermissionStore>()(
           permissionChanged ||
           (Date.now() - lastFetched > CACHE_DURATION);
         
+        console.log('权限获取检查:', {
+          forceRefresh,
+          hasUser: !!user,
+          lastFetched,
+          permissionChanged,
+          shouldRefresh
+        });
+        
         // 如果不需要刷新且不是强制刷新，尝试从备份恢复
         if (!shouldRefresh && !forceRefresh) {
           try {
@@ -161,6 +169,39 @@ export const usePermissionStore = create<PermissionStore>()(
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
 
+          console.log('开始API调用:', `${API_ENDPOINTS.USERS.ME}${forceRefresh ? '?force=true' : ''}`);
+          
+          // 首先尝试获取NextAuth session
+          const session = await getNextAuthSession();
+          console.log('NextAuth session:', session);
+          
+          // 如果session存在，使用session中的用户信息
+          if (session && session.user) {
+            console.log('使用NextAuth session中的用户信息');
+            const userData = {
+              id: session.user.id || session.user.sub,
+              username: session.user.username || session.user.name,
+              email: session.user.email,
+              status: true,
+              isAdmin: session.user.isAdmin || false,
+              permissions: session.user.permissions || []
+            };
+            
+            set({ 
+              user: userData, 
+              lastFetched: Date.now(), 
+              error: null,
+              permissionChanged: false,
+              isFirstLoad: false
+            });
+            
+            backupPermissions(userData);
+            console.log('✅ 成功从NextAuth session获取用户数据');
+            return;
+          }
+          
+          // 如果session不存在，尝试API调用
+          console.log('NextAuth session不存在，尝试API调用');
           const userData = await apiRequestWithError(
             `${API_ENDPOINTS.USERS.ME}${forceRefresh ? '?force=true' : ''}`,
             {
@@ -171,6 +212,8 @@ export const usePermissionStore = create<PermissionStore>()(
               signal: controller.signal
             }
           );
+          
+          console.log('API响应数据:', userData);
           
           clearTimeout(timeoutId);
           
