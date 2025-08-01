@@ -194,9 +194,19 @@ export const usePermissionStore = create<PermissionStore>()(
         return; // 使用当前缓存数据
       }
 
-      // 强制刷新时清除当前用户的缓存
-      if (forceRefresh && user) {
-        clearUserPermissionCache(user.id);
+      // 强制刷新时清除当前用户的缓存和NextAuth session
+      if (forceRefresh) {
+        if (user) {
+          clearUserPermissionCache(user.id);
+        }
+        // 强制刷新NextAuth session
+        if (typeof window !== 'undefined') {
+          // 清除NextAuth的session缓存
+          sessionStorage.removeItem('next-auth.session-token');
+          sessionStorage.removeItem('next-auth.csrf-token');
+          localStorage.removeItem('next-auth.session-token');
+          localStorage.removeItem('next-auth.csrf-token');
+        }
       }
 
       set({ isLoading: true, error: null });
@@ -211,57 +221,49 @@ export const usePermissionStore = create<PermissionStore>()(
 
 
         
-        // 强制刷新时，直接从API获取最新数据，不使用session缓存
-        if (forceRefresh) {
-
-        } else {
-          // 非强制刷新时，首先尝试获取NextAuth session
-          const session = await getNextAuthSession();
-          console.log('NextAuth session:', session);
-          
-          // 如果session存在，使用session中的用户信息
-          if (session && session.user) {
-
-            
-            // 确保权限数据格式正确
-            let permissions: Permission[] = [];
-            const sessionPermissions = session.user.permissions || [];
-            if (Array.isArray(sessionPermissions) && sessionPermissions.length > 0) {
-              // 如果权限数据是字符串数组（moduleId），转换为对象格式
-              if (typeof sessionPermissions[0] === 'string') {
-
-                permissions = (sessionPermissions as string[]).map(moduleId => ({
-                  id: `session-${moduleId}`,
-                  moduleId: moduleId,
-                  canAccess: true
-                }));
-              } else {
-                // 如果已经是对象数组，直接使用
-                permissions = sessionPermissions as unknown as Permission[];
-              }
+        // 首先尝试获取NextAuth session
+        const session = await getNextAuthSession();
+        console.log('NextAuth session:', session);
+        
+        // 如果session存在，使用session中的用户信息
+        if (session && session.user) {
+          // 确保权限数据格式正确
+          let permissions: Permission[] = [];
+          const sessionPermissions = session.user.permissions || [];
+          if (Array.isArray(sessionPermissions) && sessionPermissions.length > 0) {
+            // 如果权限数据是字符串数组（moduleId），转换为对象格式
+            if (typeof sessionPermissions[0] === 'string') {
+              permissions = (sessionPermissions as string[]).map(moduleId => ({
+                id: `session-${moduleId}`,
+                moduleId: moduleId,
+                canAccess: true
+              }));
+            } else {
+              // 如果已经是对象数组，直接使用
+              permissions = sessionPermissions as unknown as Permission[];
             }
-            
-            const userData = {
-              id: session.user.id || '',
-              username: session.user.username || session.user.name || '',
-              email: session.user.email ?? null,
-              status: true,
-              isAdmin: session.user.isAdmin || false,
-              permissions: permissions
-            };
-            
-            set({ 
-              user: userData, 
-              lastFetched: Date.now(), 
-              error: null,
-              permissionChanged: false,
-              isFirstLoad: false
-            });
-            
-            backupPermissions(userData);
-
-            return;
           }
+          
+          const userData = {
+            id: session.user.id || '',
+            username: session.user.username || session.user.name || '',
+            email: session.user.email ?? null,
+            status: true,
+            isAdmin: session.user.isAdmin || false,
+            permissions: permissions
+          };
+          
+          set({ 
+            user: userData, 
+            lastFetched: Date.now(), 
+            error: null,
+            permissionChanged: false,
+            isFirstLoad: false
+          });
+          
+          backupPermissions(userData);
+
+          return;
         }
         
         // 如果session不存在，尝试API调用
