@@ -13,12 +13,15 @@ async function testPermissionSave() {
     
     console.log('测试权限数据:', testPermissions);
     
+    // 尝试获取真实的认证token
+    let authToken = 'test-token'; // 默认值
+    
     // 发送请求
     const response = await fetch(`${API_BASE_URL}/api/admin/users/test-user-id/permissions/batch`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer test-token'
+        'Authorization': `Bearer ${authToken}`
       },
       body: JSON.stringify({ permissions: testPermissions })
     });

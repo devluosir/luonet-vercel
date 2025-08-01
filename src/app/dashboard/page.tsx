@@ -323,12 +323,20 @@ export default function DashboardPage() {
       .filter(([_, hasAccess]) => hasAccess)
       .map(([type]) => type);
 
+    // 调试日志
+    console.log('权限映射更新:', {
+      user: user?.username,
+      permissions: permissions,
+      documentTypePermissions: documentTypePermissions,
+      accessibleDocumentTypes: accessibleDocumentTypes
+    });
+
     return {
       permissions,
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [user?.id, user?.permissions?.length]); // 优化依赖，只在用户ID或权限数量变化时重新计算
+  }, [user?.permissions, hasPermission]); // 修复依赖，当权限数据或hasPermission函数变化时重新计算
 
   // 优化性能监控 - 只在生产环境启用完整监控
   useEffect(() => {
@@ -591,11 +599,11 @@ export default function DashboardPage() {
 
   const availableToolModules = useMemo(() => {
     return TOOL_MODULES.filter(module => hasPermission(module.id));
-  }, [user?.permissions]); // 使用user.permissions作为依赖项
+  }, [user?.permissions, hasPermission]); // 修复依赖，当权限数据或hasPermission函数变化时重新计算
 
   const availableToolsModules = useMemo(() => {
     return TOOLS_MODULES.filter(module => hasPermission(module.id));
-  }, [user?.permissions]); // 使用user.permissions作为依赖项
+  }, [user?.permissions, hasPermission]); // 修复依赖，当权限数据或hasPermission函数变化时重新计算
 
   // 根据权限过滤可用的文档类型筛选器
   const availableTypeFilters = useMemo(() => {

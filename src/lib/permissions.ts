@@ -89,11 +89,14 @@ export const usePermissionStore = create<PermissionStore>()(
       hasPermission: (moduleId) => {
         const { user } = get();
         if (!user?.permissions) {
+          console.log(`权限检查失败 - ${moduleId}: 用户无权限数据`);
           return false;
         }
         
         const permission = user.permissions.find(p => p.moduleId === moduleId);
-        return permission?.canAccess || false;
+        const hasAccess = permission?.canAccess || false;
+        console.log(`权限检查 - ${moduleId}: ${hasAccess ? '✅' : '❌'}`);
+        return hasAccess;
       },
 
       hasAnyPermission: (moduleIds) => {
@@ -178,13 +181,29 @@ export const usePermissionStore = create<PermissionStore>()(
           // 如果session存在，使用session中的用户信息
           if (session && session.user) {
             console.log('使用NextAuth session中的用户信息');
+            console.log('Session权限数据:', session.user.permissions);
+            
+            // 确保权限数据格式正确
+            let permissions = session.user.permissions || [];
+            if (Array.isArray(permissions) && permissions.length > 0) {
+              // 如果权限数据是字符串数组（moduleId），转换为对象格式
+              if (typeof permissions[0] === 'string') {
+                console.log('转换权限数据格式从字符串数组到对象数组');
+                permissions = permissions.map(moduleId => ({
+                  id: `session-${moduleId}`,
+                  moduleId: moduleId,
+                  canAccess: true
+                }));
+              }
+            }
+            
             const userData = {
               id: session.user.id || session.user.sub,
               username: session.user.username || session.user.name,
               email: session.user.email,
               status: true,
               isAdmin: session.user.isAdmin || false,
-              permissions: session.user.permissions || []
+              permissions: permissions
             };
             
             set({ 

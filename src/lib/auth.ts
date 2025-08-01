@@ -50,7 +50,7 @@ export const authOptions: NextAuthOptions = {
             username: data.user.username,
             isAdmin: data.user.isAdmin,
             image: null,
-            permissions: data.permissions.map((p: any) => p.moduleId)
+            permissions: data.permissions // 保持原始权限数据格式
           };
         } catch (error) {
           console.error('认证失败:', error);

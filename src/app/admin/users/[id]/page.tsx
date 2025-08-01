@@ -240,9 +240,9 @@ export default function UserDetailPage() {
           });
         } else {
           console.log('用户没有权限数据，初始化默认权限');
-          // 如果用户没有权限数据，为所有模块设置默认权限
+          // 如果用户没有权限数据，为所有模块设置默认权限（默认全部关闭）
           MODULES.forEach(module => {
-            initialPermissions.set(module.id, userData.isAdmin); // 管理员默认全部开启，普通用户默认全部关闭
+            initialPermissions.set(module.id, false); // 默认全部关闭，需要手动开启
           });
         }
         console.log('初始化权限状态:', Array.from(initialPermissions.entries()));
@@ -388,6 +388,8 @@ export default function UserDetailPage() {
       return;
     }
     
+    let updatedPermissions = null;
+    
     try {
       setSaving(true);
       
@@ -395,9 +397,17 @@ export default function UserDetailPage() {
       const currentPermissions = user.permissions || [];
       const permissionMap = new Map(currentPermissions.map(p => [p.moduleId, p]));
       
-      const updatedPermissions = MODULES.map(module => {
+      console.log('当前用户权限数据:', currentPermissions);
+      console.log('权限映射:', Array.from(permissionMap.entries()));
+      
+      updatedPermissions = MODULES.map(module => {
         const canAccess = pendingPermissions.get(module.id) ?? false;
         const existingPermission = permissionMap.get(module.id);
+        
+        console.log(`处理模块 ${module.id}:`, {
+          canAccess,
+          existingPermission: existingPermission ? existingPermission.id : '无现有权限'
+        });
         
         // 如果权限已存在，使用现有ID；如果不存在，创建新权限
         if (existingPermission) {
@@ -416,6 +426,8 @@ export default function UserDetailPage() {
       });
 
       console.log('准备发送的权限数据:', updatedPermissions);
+      console.log('用户ID:', user.id);
+      console.log('API端点:', API_ENDPOINTS.USERS.BATCH_PERMISSIONS(user.id));
 
       const response = await apiRequestWithError(API_ENDPOINTS.USERS.BATCH_PERMISSIONS(user.id), {
         method: 'POST',

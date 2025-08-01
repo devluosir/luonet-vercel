@@ -22,7 +22,7 @@ export interface Env {
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Pragma',
+  'Access-Control-Allow-Headers': 'Content-Type, X-User-ID, X-User-Name, X-User-Admin, Cache-Control, Pragma',
   'Access-Control-Max-Age': '86400',
 };
 
@@ -30,6 +30,10 @@ export default {
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
+
+    console.log('请求路径:', path);
+    console.log('请求方法:', request.method);
+    console.log('路径分割:', path.split('/'));
 
     // 处理 CORS 预检请求
     if (request.method === 'OPTIONS') {
@@ -50,12 +54,14 @@ export default {
     }
 
     // 处理用户管理
-    if (path.startsWith('/api/admin/users/') && request.method === 'GET') {
-      return handleGetUser(request, env);
+    if (path === '/api/admin/users' && request.method === 'GET') {
+      console.log('匹配用户列表路由:', path);
+      return handleGetUsers(request, env);
     }
 
-    if (path.startsWith('/api/admin/users') && request.method === 'GET') {
-      return handleGetUsers(request, env);
+    if (path.startsWith('/api/admin/users/') && path.split('/').length === 5 && request.method === 'GET') {
+      console.log('匹配单个用户路由:', path);
+      return handleGetUser(request, env);
     }
 
     // 处理用户更新
@@ -309,9 +315,12 @@ async function handleGetCurrentUser(request: Request, env: Env): Promise<Respons
 
 async function handleGetUsers(request: Request, env: Env): Promise<Response> {
   try {
-    // 检查认证
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 检查认证 - 使用session头信息
+    const userId = request.headers.get('X-User-ID');
+    const userName = request.headers.get('X-User-Name');
+    const isAdmin = request.headers.get('X-User-Admin') === 'true';
+    
+    if (!userId || !userName) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
         { 
@@ -323,6 +332,8 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
         }
       );
     }
+    
+    console.log('用户认证信息:', { userId, userName, isAdmin });
 
     const d1Client = new D1UserClient(env.USERS_DB);
     const users = await d1Client.getAllUsers();
@@ -354,9 +365,12 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
 
 async function handleGetUser(request: Request, env: Env): Promise<Response> {
   try {
-    // 检查认证
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 检查认证 - 使用session头信息
+    const sessionUserId = request.headers.get('X-User-ID');
+    const userName = request.headers.get('X-User-Name');
+    const isAdmin = request.headers.get('X-User-Admin') === 'true';
+    
+    if (!sessionUserId || !userName) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
         { 
@@ -368,6 +382,8 @@ async function handleGetUser(request: Request, env: Env): Promise<Response> {
         }
       );
     }
+    
+    console.log('用户认证信息:', { sessionUserId, userName, isAdmin });
 
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4]; // 从路径中提取用户ID
@@ -389,6 +405,10 @@ async function handleGetUser(request: Request, env: Env): Promise<Response> {
     }
 
     const permissions = await d1Client.getUserPermissions(userId);
+    
+    console.log('获取用户权限 - 用户ID:', userId);
+    console.log('用户基本信息:', user);
+    console.log('用户权限数据:', permissions);
 
     return new Response(
       JSON.stringify({
@@ -424,9 +444,12 @@ async function handleGetUser(request: Request, env: Env): Promise<Response> {
 
 async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
   try {
-    // 检查认证
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 检查认证 - 使用session头信息
+    const sessionUserId = request.headers.get('X-User-ID');
+    const userName = request.headers.get('X-User-Name');
+    const isAdmin = request.headers.get('X-User-Admin') === 'true';
+    
+    if (!sessionUserId || !userName) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
         { 
@@ -438,6 +461,8 @@ async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
         }
       );
     }
+    
+    console.log('用户认证信息:', { sessionUserId, userName, isAdmin });
 
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4];
@@ -531,9 +556,12 @@ async function handleUpdatePermissions(request: Request, env: Env): Promise<Resp
 
 async function handleBatchUpdatePermissions(request: Request, env: Env): Promise<Response> {
   try {
-    // 检查认证
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 检查认证 - 使用session头信息
+    const sessionUserId = request.headers.get('X-User-ID');
+    const userName = request.headers.get('X-User-Name');
+    const isAdmin = request.headers.get('X-User-Admin') === 'true';
+    
+    if (!sessionUserId || !userName) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
         { 
@@ -545,6 +573,8 @@ async function handleBatchUpdatePermissions(request: Request, env: Env): Promise
         }
       );
     }
+    
+    console.log('用户认证信息:', { sessionUserId, userName, isAdmin });
 
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4];
