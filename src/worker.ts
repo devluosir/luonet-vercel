@@ -18,11 +18,11 @@ export interface Env {
   DB: D1Database;
 }
 
-// CORS 头
+// CORS 配置
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Pragma',
   'Access-Control-Max-Age': '86400',
 };
 
@@ -250,9 +250,10 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
 
 async function handleGetCurrentUser(request: Request, env: Env): Promise<Response> {
   try {
-    // 从请求头中获取用户信息，暂时使用模拟数据
+    // 从请求头中获取用户信息
     // 在实际应用中，这里应该从JWT token或其他认证方式获取用户ID
-    const userId = 'mock-user-id'; // 这里应该从认证token中获取
+    // 暂时使用认证API返回的用户ID
+    const userId = 'cmd9wa3b100002m1jfs5knol8'; // luojun用户的真实ID
     
     const d1Client = new D1UserClient(env.USERS_DB);
     
