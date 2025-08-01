@@ -323,13 +323,15 @@ export default function DashboardPage() {
       .filter(([_, hasAccess]) => hasAccess)
       .map(([type]) => type);
 
-    // 调试日志
-    console.log('权限映射更新:', {
-      user: user?.username,
-      permissions: permissions,
-      documentTypePermissions: documentTypePermissions,
-      accessibleDocumentTypes: accessibleDocumentTypes
-    });
+    // 调试日志 - 只在开发环境显示
+    if (process.env.NODE_ENV === 'development') {
+      console.log('权限映射更新:', {
+        user: user?.username,
+        permissions: permissions,
+        documentTypePermissions: documentTypePermissions,
+        accessibleDocumentTypes: accessibleDocumentTypes
+      });
+    }
 
     return {
       permissions,

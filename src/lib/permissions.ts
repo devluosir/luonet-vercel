@@ -89,13 +89,11 @@ export const usePermissionStore = create<PermissionStore>()(
       hasPermission: (moduleId) => {
         const { user } = get();
         if (!user?.permissions) {
-          console.log(`权限检查失败 - ${moduleId}: 用户无权限数据`);
           return false;
         }
         
         const permission = user.permissions.find(p => p.moduleId === moduleId);
         const hasAccess = permission?.canAccess || false;
-        console.log(`权限检查 - ${moduleId}: ${hasAccess ? '✅' : '❌'}`);
         return hasAccess;
       },
 
