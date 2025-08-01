@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
 
 interface Permission {
   id: string;
@@ -157,21 +158,16 @@ export const usePermissionStore = create<PermissionStore>()(
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
 
-          const response = await fetch(`/api/users/me${forceRefresh ? '?force=true' : ''}`, {
-            headers: {
-              'Cache-Control': forceRefresh ? 'no-cache' : 'max-age=300', // 非强制刷新时允许5分钟缓存
-              'Pragma': forceRefresh ? 'no-cache' : ''
-            },
-            signal: controller.signal
-          });
-
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-
-          const userData = await response.json();
+          const userData = await apiRequestWithError(
+            `${API_ENDPOINTS.USERS.ME}${forceRefresh ? '?force=true' : ''}`,
+            {
+              headers: {
+                'Cache-Control': forceRefresh ? 'no-cache' : 'max-age=300', // 非强制刷新时允许5分钟缓存
+                'Pragma': forceRefresh ? 'no-cache' : ''
+              },
+              signal: controller.signal
+            }
+          );
           
           // 检测权限变化 - 只在非首次加载且非强制刷新时检测
           const currentUser = get().user;

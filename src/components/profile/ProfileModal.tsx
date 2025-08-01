@@ -9,6 +9,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
+import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
 
 interface Permission {
   id: string;
@@ -59,22 +60,13 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     setError(null);
 
     try {
-      const response = await fetch('/api/users/change-password', {
+      await apiRequestWithError(API_ENDPOINTS.USERS.CHANGE_PASSWORD, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           currentPassword: passwordForm.currentPassword,
           newPassword: passwordForm.newPassword,
         }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || '修改密码失败');
-      }
 
       // 成功后重置表单和状态
       setShowChangePassword(false);
@@ -108,19 +100,10 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     setError(null);
 
     try {
-      const response = await fetch('/api/users/me', {
+      await apiRequestWithError(API_ENDPOINTS.USERS.ME, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ email: emailValue }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || '更新邮箱失败');
-      }
 
       setEditingEmail(false);
       setEmailValue('');

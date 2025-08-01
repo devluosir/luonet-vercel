@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
 import { 
   ArrowLeft, 
   User, 
@@ -192,12 +193,7 @@ export default function UserDetailPage() {
     const fetchUser = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/admin/users/${params.id}`);
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || '获取用户信息失败');
-        }
-        const data = await response.json();
+        const data = await apiRequestWithError(API_ENDPOINTS.USERS.GET(params.id));
         setUser(data);
         // 初始化权限状态
         const initialPermissions = new Map();
@@ -226,23 +222,14 @@ export default function UserDetailPage() {
 
   const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
+      await apiRequestWithError(API_ENDPOINTS.USERS.UPDATE(userId), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isAdmin: !currentIsAdmin }),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '更新管理员权限失败');
-      }
-
       // 重新获取用户信息
-      const userResponse = await fetch(`/api/admin/users/${userId}`);
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        setUser(userData);
-      }
+      const userData = await apiRequestWithError(API_ENDPOINTS.USERS.GET(userId));
+      setUser(userData);
     } catch (error) {
       console.error('Error updating admin status:', error);
       alert(error instanceof Error ? error.message : '更新管理员权限失败');
@@ -251,23 +238,14 @@ export default function UserDetailPage() {
 
   const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
+      await apiRequestWithError(API_ENDPOINTS.USERS.UPDATE(userId), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: !currentStatus }),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '更新用户状态失败');
-      }
-
       // 重新获取用户信息
-      const userResponse = await fetch(`/api/admin/users/${userId}`);
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        setUser(userData);
-      }
+      const userData = await apiRequestWithError(API_ENDPOINTS.USERS.GET(userId));
+      setUser(userData);
     } catch (error) {
       console.error('Error updating user status:', error);
       alert(error instanceof Error ? error.message : '更新用户状态失败');
@@ -299,14 +277,9 @@ export default function UserDetailPage() {
       console.log('Email update successful, fetching updated user data...'); // 调试日志
 
       // 重新获取用户信息
-      const userResponse = await fetch(`/api/admin/users/${user.id}`);
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        console.log('Updated user data:', userData); // 调试日志
-        setUser(userData);
-      } else {
-        console.error('Failed to fetch updated user data'); // 调试日志
-      }
+      const userData = await apiRequestWithError(API_ENDPOINTS.USERS.GET(user.id));
+      console.log('Updated user data:', userData); // 调试日志
+      setUser(userData);
       
       setEditingEmail(false);
       setEmailValue('');
@@ -334,16 +307,10 @@ export default function UserDetailPage() {
     }
     
     try {
-      const response = await fetch(`/api/admin/users/${user.id}`, {
+      await apiRequestWithError(API_ENDPOINTS.USERS.UPDATE(user.id), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: passwordValue }),
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '更新密码失败');
-      }
 
       setEditingPassword(false);
       setPasswordValue('');
@@ -383,18 +350,10 @@ export default function UserDetailPage() {
         canAccess: pendingPermissions.get(module.id) ?? false
       }));
 
-      const response = await fetch(`/api/admin/users/${user.id}/permissions/batch`, {
+      const data = await apiRequestWithError(API_ENDPOINTS.USERS.BATCH_PERMISSIONS(user.id), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ permissions: updatedPermissions })
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '更新模块权限失败');
-      }
-
-      const data = await response.json();
       setUser(data);
       setHasChanges(false);
       alert('权限更新成功');
@@ -411,20 +370,9 @@ export default function UserDetailPage() {
     
     try {
       setIsDeleting(true);
-      const response = await fetch(`/api/admin/users/${user.id}`, {
+      await apiRequestWithError(API_ENDPOINTS.USERS.DELETE(user.id), {
         method: 'DELETE',
       });
-
-      if (!response.ok) {
-        let errorMessage = '删除用户失败';
-        try {
-          const data = await response.json();
-          errorMessage = data.error || errorMessage;
-        } catch {
-          errorMessage = response.statusText || errorMessage;
-        }
-        throw new Error(errorMessage);
-      }
 
       router.push('/admin');
       alert('用户已成功删除');

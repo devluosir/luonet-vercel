@@ -1,19 +1,19 @@
-name = "quotation-system"
-main = "dist/worker.js"
+name = "mluonet-users"
+main = "src/worker.ts"
 compatibility_date = "2024-02-20"
 
 [[d1_databases]]
-binding = "DB"
-database_name = "quotation-history"
-database_id = "fe5975d3-4a87-4965-b86a-4670db3656e7"
+binding = "USERS_DB"
+database_name = "mluonet-users"
+database_id = "f8dac0b4-d25a-4d11-b64f-b592ea24e17d"
 
 [vars]
 API_TOKEN = "Kqm0uVxJuVRkJ1GUoAwT4SrfvYAbaVbcwV6jQ8hY"
 MAIN_SITE_URL = "https://luocompany.net"
 
-# 修改路由配置
+# 启用自定义域名配置，绑定 udb.luocompany.net
 [[routes]]
-pattern = "bj.luocompany.net/*"
+pattern = "udb.luocompany.net"
 zone_name = "luocompany.net"
 custom_domain = true
 
@@ -23,12 +23,7 @@ bucket = "./public"
 [triggers]
 crons = []
 
-[build]
-command = "npm run build:worker"
-watch_dir = "src"
-
-[build.upload]
-format = "modules"
+# 已删除[build]配置
 
 [env.production]
 workers_dev = false
@@ -50,6 +45,4 @@ retry_on = [500, 502, 503, 504, 408, 429, "ERR_CONNECTION_CLOSED"]
 retry_delay = 1000
 max_concurrent_requests = 100
 
-[limits]
-cpu_ms = 50
-memory_mb = 512
+# 免费计划不支持CPU限制，已移除[limits]配置

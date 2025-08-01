@@ -60,16 +60,13 @@ export default function AdminPage() {
     checkPermissionsAndLoad();
   }, [mounted, status, router]);
 
+import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
+
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/admin/users');
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '获取用户列表失败');
-      }
-      const data = await response.json();
+      const data = await apiRequestWithError(API_ENDPOINTS.USERS.LIST);
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -81,10 +78,10 @@ export default function AdminPage() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/auth/signout', {
+      const response = await apiRequestWithError(API_ENDPOINTS.AUTH.SIGNOUT, {
         method: 'POST',
       });
-      if (response.ok) {
+      if (response) {
         router.push('/auth/signin');
       }
     } catch (error) {

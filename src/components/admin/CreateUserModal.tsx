@@ -10,6 +10,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
+import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -34,17 +35,10 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUserModalP
     setError(null);
 
     try {
-      const response = await fetch('/api/admin/users', {
+      await apiRequestWithError(API_ENDPOINTS.USERS.CREATE, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || '创建用户失败');
-      }
 
       onSuccess();
       onClose();

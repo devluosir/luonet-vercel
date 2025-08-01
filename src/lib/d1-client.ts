@@ -1,0 +1,202 @@
+// 定义D1数据库接口
+interface D1Database {
+  prepare: (sql: string) => {
+    bind: (...args: any[]) => {
+      first: <T>() => Promise<T | null>;
+      all: <T>() => Promise<{ results: T[] }>;
+      run: () => Promise<{ meta: { changes: number } }>;
+    };
+    all: <T>() => Promise<{ results: T[] }>;
+  };
+  batch: (statements: any[]) => Promise<void>;
+}
+
+export interface D1User {
+  id: string;
+  username: string;
+  password: string;
+  email: string | null;
+  status: boolean;
+  isAdmin: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface D1Permission {
+  id: string;
+  userId: string;
+  moduleId: string;
+  canAccess: boolean;
+}
+
+export class D1UserClient {
+  constructor(private db: D1Database) {}
+
+  // 用户相关操作
+  async createUser(user: Omit<D1User, 'id' | 'createdAt' | 'updatedAt'>): Promise<D1User> {
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    
+    const result = await this.db.prepare(`
+      INSERT INTO User (id, username, password, email, status, isAdmin, lastLoginAt, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      id,
+      user.username,
+      user.password,
+      user.email,
+      user.status ? 1 : 0,
+      user.isAdmin ? 1 : 0,
+      user.lastLoginAt,
+      now,
+      now
+    ).run();
+
+    return { ...user, id, createdAt: now, updatedAt: now };
+  }
+
+  async getUserById(id: string): Promise<D1User | null> {
+    const result = await this.db.prepare(`
+      SELECT * FROM User WHERE id = ?
+    `).bind(id).first<D1User>();
+
+    if (!result) return null;
+
+    return {
+      ...result,
+      status: Boolean(result.status),
+      isAdmin: Boolean(result.isAdmin)
+    };
+  }
+
+  async getUserByUsername(username: string): Promise<D1User | null> {
+    const result = await this.db.prepare(`
+      SELECT * FROM User WHERE username = ?
+    `).bind(username).first<D1User>();
+
+    if (!result) return null;
+
+    return {
+      ...result,
+      status: Boolean(result.status),
+      isAdmin: Boolean(result.isAdmin)
+    };
+  }
+
+  async updateUser(id: string, updates: Partial<D1User>): Promise<D1User | null> {
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (key !== 'id' && key !== 'createdAt' && key !== 'updatedAt') {
+        fields.push(`${key} = ?`);
+        if (key === 'status' || key === 'isAdmin') {
+          values.push(value ? 1 : 0);
+        } else {
+          values.push(value);
+        }
+      }
+    });
+
+    if (fields.length === 0) return null;
+
+    values.push(id);
+    const sql = `UPDATE User SET ${fields.join(', ')}, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`;
+    
+    await this.db.prepare(sql).bind(...values).run();
+
+    return this.getUserById(id);
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const result = await this.db.prepare(`
+      DELETE FROM User WHERE id = ?
+    `).bind(id).run();
+
+    return result.meta.changes > 0;
+  }
+
+  async getAllUsers(): Promise<D1User[]> {
+    const result = await this.db.prepare(`
+      SELECT * FROM User ORDER BY createdAt DESC
+    `).all<D1User>();
+
+    return result.results.map(user => ({
+      ...user,
+      status: Boolean(user.status),
+      isAdmin: Boolean(user.isAdmin)
+    }));
+  }
+
+  // 权限相关操作
+  async createPermission(permission: Omit<D1Permission, 'id'>): Promise<D1Permission> {
+    const id = crypto.randomUUID();
+    
+    await this.db.prepare(`
+      INSERT INTO Permission (id, userId, moduleId, canAccess)
+      VALUES (?, ?, ?, ?)
+    `).bind(
+      id,
+      permission.userId,
+      permission.moduleId,
+      permission.canAccess ? 1 : 0
+    ).run();
+
+    return { ...permission, id };
+  }
+
+  async getUserPermissions(userId: string): Promise<D1Permission[]> {
+    const result = await this.db.prepare(`
+      SELECT * FROM Permission WHERE userId = ?
+    `).bind(userId).all<D1Permission>();
+
+    return result.results.map(permission => ({
+      ...permission,
+      canAccess: Boolean(permission.canAccess)
+    }));
+  }
+
+  async updatePermission(id: string, canAccess: boolean): Promise<D1Permission | null> {
+    await this.db.prepare(`
+      UPDATE Permission SET canAccess = ? WHERE id = ?
+    `).bind(canAccess ? 1 : 0, id).run();
+
+    const result = await this.db.prepare(`
+      SELECT * FROM Permission WHERE id = ?
+    `).bind(id).first<D1Permission>();
+
+    if (!result) return null;
+
+    return {
+      ...result,
+      canAccess: Boolean(result.canAccess)
+    };
+  }
+
+  async deletePermission(id: string): Promise<boolean> {
+    const result = await this.db.prepare(`
+      DELETE FROM Permission WHERE id = ?
+    `).bind(id).run();
+
+    return result.meta.changes > 0;
+  }
+
+  async deleteUserPermissions(userId: string): Promise<boolean> {
+    const result = await this.db.prepare(`
+      DELETE FROM Permission WHERE userId = ?
+    `).bind(userId).run();
+
+    return result.meta.changes > 0;
+  }
+
+  // 批量操作
+  async batchUpdatePermissions(permissions: Array<{ id: string; canAccess: boolean }>): Promise<void> {
+    const stmt = this.db.prepare(`
+      UPDATE Permission SET canAccess = ? WHERE id = ?
+    `);
+
+    const batch = permissions.map(p => stmt.bind(p.canAccess ? 1 : 0, p.id));
+    await this.db.batch(batch);
+  }
+} 
