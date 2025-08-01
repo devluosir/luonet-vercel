@@ -388,7 +388,7 @@ export const validatePermissions = {
     if (!user) {
       try {
         // 尝试从当前用户的备份恢复
-        const backup = getUserPermissionBackup(user?.id || '');
+        const backup = getUserPermissionBackup('');
         if (backup) {
           const { user: backupUser, timestamp } = backup;
           if (Date.now() - timestamp < CACHE_DURATION) {
