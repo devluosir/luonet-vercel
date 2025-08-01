@@ -282,8 +282,8 @@ export default function ToolsPage() {
   // 使用权限store的fetchUser
   const handleRefreshPermissions = useCallback(async () => {
     try {
-      // 先清除所有缓存
-      usePermissionStore.getState().clearAllCache();
+      // 先清除当前用户的缓存
+      usePermissionStore.getState().clearUser();
       
       await fetchUser(true);
       setShowSuccessMessage(true);

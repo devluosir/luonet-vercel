@@ -89,264 +89,248 @@ const getUserPermissionBackup = (userId: string) => {
   return null;
 };
 
+// 创建一个不依赖持久化的权限store，完全依赖用户特定的缓存
 export const usePermissionStore = create<PermissionStore>()(
-  persist(
-    (set, get) => ({
-      user: null,
-      isLoading: false,
-      lastFetched: null,
-      error: null,
-      permissionChanged: false,
-      isInitialized: false,
-      isFirstLoad: true, // 新增：首次加载标志
+  (set, get) => ({
+    user: null,
+    isLoading: false,
+    lastFetched: null,
+    error: null,
+    permissionChanged: false,
+    isInitialized: false,
+    isFirstLoad: true, // 新增：首次加载标志
 
-      setUser: (user) => {
-        set({ user, lastFetched: Date.now(), error: null });
-        backupPermissions(user); // 备份权限
-      },
-      setLoading: (loading) => set({ isLoading: loading }),
-      setError: (error) => set({ error }),
-      clearUser: () => {
-        const currentUser = get().user;
-        if (currentUser) {
-          // 清除当前用户的特定缓存
-          clearUserPermissionCache(currentUser.id);
-        }
-        set({ user: null, lastFetched: null, error: null, permissionChanged: false, isFirstLoad: true });
-        // 清除全局持久化数据
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('permission-store');
-        }
-      },
-      setPermissionChanged: (changed) => set({ permissionChanged: changed }), // 新增
-      setInitialized: (initialized) => set({ isInitialized: initialized }), // 新增
-      setFirstLoad: (firstLoad) => set({ isFirstLoad: firstLoad }), // 新增
-      
-      // 清除所有权限缓存
-      clearAllCache: () => {
-        if (typeof window !== 'undefined') {
-          // 清除所有用户特定的缓存
-          const keys = Object.keys(localStorage);
-          keys.forEach(key => {
-            if (key.startsWith('permissions_backup_') || key.startsWith('permission-store_')) {
-              localStorage.removeItem(key);
-            }
-          });
-          // 清除全局缓存
-          localStorage.removeItem('permission-store');
-        }
-      },
-
-      hasPermission: (moduleId) => {
-        const { user } = get();
-        if (!user?.permissions) {
-          return false;
-        }
-        
-        const permission = user.permissions.find(p => p.moduleId === moduleId);
-        const hasAccess = permission?.canAccess || false;
-        return hasAccess;
-      },
-
-      hasAnyPermission: (moduleIds) => {
-        const { user } = get();
-        if (!user?.permissions) return false;
-        
-        return moduleIds.some(moduleId => {
-          const permission = user.permissions.find(p => p.moduleId === moduleId);
-          return permission?.canAccess || false;
+    setUser: (user) => {
+      set({ user, lastFetched: Date.now(), error: null });
+      backupPermissions(user); // 备份权限
+    },
+    setLoading: (loading) => set({ isLoading: loading }),
+    setError: (error) => set({ error }),
+    clearUser: () => {
+      const currentUser = get().user;
+      if (currentUser) {
+        // 清除当前用户的特定缓存
+        clearUserPermissionCache(currentUser.id);
+      }
+      set({ user: null, lastFetched: null, error: null, permissionChanged: false, isFirstLoad: true });
+    },
+    setPermissionChanged: (changed) => set({ permissionChanged: changed }), // 新增
+    setInitialized: (initialized) => set({ isInitialized: initialized }), // 新增
+    setFirstLoad: (firstLoad) => set({ isFirstLoad: firstLoad }), // 新增
+    
+    // 清除所有权限缓存
+    clearAllCache: () => {
+      if (typeof window !== 'undefined') {
+        // 清除所有用户特定的缓存
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith('permissions_backup_') || key.startsWith('permission-store_')) {
+            localStorage.removeItem(key);
+          }
         });
-      },
+      }
+    },
 
-      isAdmin: () => {
-        const { user } = get();
-        return user?.isAdmin || false;
-      },
+    hasPermission: (moduleId) => {
+      const { user } = get();
+      if (!user?.permissions) {
+        return false;
+      }
+      
+      const permission = user.permissions.find(p => p.moduleId === moduleId);
+      const hasAccess = permission?.canAccess || false;
+      return hasAccess;
+    },
 
-      fetchUser: async (forceRefresh = false) => {
-        const { lastFetched, user, permissionChanged, isFirstLoad, isLoading } = get();
-        
-        // 防止重复请求
-        if (isLoading && !forceRefresh) {
-          return;
-        }
-        
-        // 智能刷新策略 - 重新登录时强制刷新
-        const shouldRefresh = forceRefresh || 
-          !user || 
-          !lastFetched || 
-          permissionChanged ||
-          (Date.now() - lastFetched > CACHE_DURATION);
-        
+    hasAnyPermission: (moduleIds) => {
+      const { user } = get();
+      if (!user?.permissions) return false;
+      
+      return moduleIds.some(moduleId => {
+        const permission = user.permissions.find(p => p.moduleId === moduleId);
+        return permission?.canAccess || false;
+      });
+    },
 
-        
-        // 如果不需要刷新且不是强制刷新，尝试从备份恢复
-        if (!shouldRefresh && !forceRefresh) {
-          try {
-            if (user) {
-              const backup = getUserPermissionBackup(user.id);
-              if (backup) {
-                const { user: backupUser, timestamp } = backup;
-                // 检查备份是否在有效期内
-                if (Date.now() - timestamp < CACHE_DURATION) {
-                  set({ user: backupUser, lastFetched: timestamp });
-                  return;
-                }
-              }
-            }
-          } catch (error) {
-            // 静默处理备份加载错误
-          }
-          return; // 使用当前缓存数据
-        }
+    isAdmin: () => {
+      const { user } = get();
+      return user?.isAdmin || false;
+    },
 
-        // 强制刷新时清除当前用户的缓存
-        if (forceRefresh && user) {
-          clearUserPermissionCache(user.id);
-        }
+    fetchUser: async (forceRefresh = false) => {
+      const { lastFetched, user, permissionChanged, isFirstLoad, isLoading } = get();
+      
+      // 防止重复请求
+      if (isLoading && !forceRefresh) {
+        return;
+      }
+      
+      // 智能刷新策略 - 重新登录时强制刷新
+      const shouldRefresh = forceRefresh || 
+        !user || 
+        !lastFetched || 
+        permissionChanged ||
+        (Date.now() - lastFetched > CACHE_DURATION);
+      
 
-        set({ isLoading: true, error: null });
-
+      
+      // 如果不需要刷新且不是强制刷新，尝试从备份恢复
+      if (!shouldRefresh && !forceRefresh) {
         try {
-          // 从远程 API 获取数据
-
-          
-          // 添加超时控制，避免长时间等待
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
-
-
-          
-          // 强制刷新时，直接从API获取最新数据，不使用session缓存
-          if (forceRefresh) {
-
-          } else {
-            // 非强制刷新时，首先尝试获取NextAuth session
-            const session = await getNextAuthSession();
-            console.log('NextAuth session:', session);
-            
-            // 如果session存在，使用session中的用户信息
-            if (session && session.user) {
-
-              
-              // 确保权限数据格式正确
-              let permissions: Permission[] = [];
-              const sessionPermissions = session.user.permissions || [];
-              if (Array.isArray(sessionPermissions) && sessionPermissions.length > 0) {
-                // 如果权限数据是字符串数组（moduleId），转换为对象格式
-                if (typeof sessionPermissions[0] === 'string') {
-
-                  permissions = (sessionPermissions as string[]).map(moduleId => ({
-                    id: `session-${moduleId}`,
-                    moduleId: moduleId,
-                    canAccess: true
-                  }));
-                } else {
-                  // 如果已经是对象数组，直接使用
-                  permissions = sessionPermissions as unknown as Permission[];
-                }
+          if (user) {
+            const backup = getUserPermissionBackup(user.id);
+            if (backup) {
+              const { user: backupUser, timestamp } = backup;
+              // 检查备份是否在有效期内
+              if (Date.now() - timestamp < CACHE_DURATION) {
+                set({ user: backupUser, lastFetched: timestamp });
+                return;
               }
-              
-              const userData = {
-                id: session.user.id || '',
-                username: session.user.username || session.user.name || '',
-                email: session.user.email ?? null,
-                status: true,
-                isAdmin: session.user.isAdmin || false,
-                permissions: permissions
-              };
-              
-              set({ 
-                user: userData, 
-                lastFetched: Date.now(), 
-                error: null,
-                permissionChanged: false,
-                isFirstLoad: false
-              });
-              
-              backupPermissions(userData);
-
-              return;
             }
-          }
-          
-          // 如果session不存在，尝试API调用
-
-          const userData = await apiRequestWithError(
-            `${API_ENDPOINTS.USERS.ME}${forceRefresh ? '?force=true' : ''}`,
-            {
-              headers: {
-                'Cache-Control': forceRefresh ? 'no-cache' : 'max-age=300', // 非强制刷新时允许5分钟缓存
-                'Pragma': forceRefresh ? 'no-cache' : ''
-              },
-              signal: controller.signal
-            }
-          );
-          
-
-          
-          clearTimeout(timeoutId);
-          
-          // 检测权限变化 - 只在非首次加载且非强制刷新时检测
-          const currentUser = get().user;
-          const permissionsChanged = currentUser && !forceRefresh && !isFirstLoad && (
-            currentUser.permissions.length !== userData.permissions.length ||
-            JSON.stringify(currentUser.permissions) !== JSON.stringify(userData.permissions) ||
-            currentUser.isAdmin !== userData.isAdmin
-          );
-          
-          set({ 
-            user: userData, 
-            lastFetched: Date.now(), 
-            error: null,
-            permissionChanged: permissionsChanged || false,
-            isFirstLoad: false // 标记为非首次加载
-          });
-          
-          // 备份新的权限数据
-          backupPermissions(userData);
-          
-
-          
-          // 权限变化通知 - 只在真正检测到权限变化且已初始化且非首次加载时触发
-          const { isInitialized } = get();
-          if (permissionsChanged && isInitialized && !isFirstLoad && typeof window !== 'undefined') {
-            // 显示通知
-            const event = new CustomEvent('permissionChanged', {
-              detail: { 
-                message: '检测到权限变化，页面即将更新',
-                forceRefresh: false
-              }
-            });
-            window.dispatchEvent(event);
-          }
-          
-          // 标记为已初始化
-          if (!isInitialized) {
-            set({ isInitialized: true });
           }
         } catch (error) {
-          if (error instanceof Error && error.name === 'AbortError') {
-            set({ error: '请求超时，请检查网络连接' });
-          } else {
-            const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
-            set({ error: errorMessage });
-          }
-        } finally {
-          set({ isLoading: false });
+          // 静默处理备份加载错误
         }
+        return; // 使用当前缓存数据
       }
-    }),
-    {
-      name: 'permission-store',
-      partialize: (state) => ({
-        user: state.user,
-        lastFetched: state.lastFetched,
-        isInitialized: state.isInitialized,
-        isFirstLoad: state.isFirstLoad
-      })
+
+      // 强制刷新时清除当前用户的缓存
+      if (forceRefresh && user) {
+        clearUserPermissionCache(user.id);
+      }
+
+      set({ isLoading: true, error: null });
+
+      try {
+        // 从远程 API 获取数据
+
+        
+        // 添加超时控制，避免长时间等待
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+
+
+        
+        // 强制刷新时，直接从API获取最新数据，不使用session缓存
+        if (forceRefresh) {
+
+        } else {
+          // 非强制刷新时，首先尝试获取NextAuth session
+          const session = await getNextAuthSession();
+          console.log('NextAuth session:', session);
+          
+          // 如果session存在，使用session中的用户信息
+          if (session && session.user) {
+
+            
+            // 确保权限数据格式正确
+            let permissions: Permission[] = [];
+            const sessionPermissions = session.user.permissions || [];
+            if (Array.isArray(sessionPermissions) && sessionPermissions.length > 0) {
+              // 如果权限数据是字符串数组（moduleId），转换为对象格式
+              if (typeof sessionPermissions[0] === 'string') {
+
+                permissions = (sessionPermissions as string[]).map(moduleId => ({
+                  id: `session-${moduleId}`,
+                  moduleId: moduleId,
+                  canAccess: true
+                }));
+              } else {
+                // 如果已经是对象数组，直接使用
+                permissions = sessionPermissions as unknown as Permission[];
+              }
+            }
+            
+            const userData = {
+              id: session.user.id || '',
+              username: session.user.username || session.user.name || '',
+              email: session.user.email ?? null,
+              status: true,
+              isAdmin: session.user.isAdmin || false,
+              permissions: permissions
+            };
+            
+            set({ 
+              user: userData, 
+              lastFetched: Date.now(), 
+              error: null,
+              permissionChanged: false,
+              isFirstLoad: false
+            });
+            
+            backupPermissions(userData);
+
+            return;
+          }
+        }
+        
+        // 如果session不存在，尝试API调用
+
+        const userData = await apiRequestWithError(
+          `${API_ENDPOINTS.USERS.ME}${forceRefresh ? '?force=true' : ''}`,
+          {
+            headers: {
+              'Cache-Control': forceRefresh ? 'no-cache' : 'max-age=300', // 非强制刷新时允许5分钟缓存
+              'Pragma': forceRefresh ? 'no-cache' : ''
+            },
+            signal: controller.signal
+          }
+        );
+        
+
+        
+        clearTimeout(timeoutId);
+        
+        // 检测权限变化 - 只在非首次加载且非强制刷新时检测
+        const currentUser = get().user;
+        const permissionsChanged = currentUser && !forceRefresh && !isFirstLoad && (
+          currentUser.permissions.length !== userData.permissions.length ||
+          JSON.stringify(currentUser.permissions) !== JSON.stringify(userData.permissions) ||
+          currentUser.isAdmin !== userData.isAdmin
+        );
+        
+        set({ 
+          user: userData, 
+          lastFetched: Date.now(), 
+          error: null,
+          permissionChanged: permissionsChanged || false,
+          isFirstLoad: false // 标记为非首次加载
+        });
+        
+        // 备份新的权限数据
+        backupPermissions(userData);
+        
+
+        
+        // 权限变化通知 - 只在真正检测到权限变化且已初始化且非首次加载时触发
+        const { isInitialized } = get();
+        if (permissionsChanged && isInitialized && !isFirstLoad && typeof window !== 'undefined') {
+          // 显示通知
+          const event = new CustomEvent('permissionChanged', {
+            detail: { 
+              message: '检测到权限变化，页面即将更新',
+              forceRefresh: false
+            }
+          });
+          window.dispatchEvent(event);
+        }
+        
+        // 标记为已初始化
+        if (!isInitialized) {
+          set({ isInitialized: true });
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          set({ error: '请求超时，请检查网络连接' });
+        } else {
+          const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
+          set({ error: errorMessage });
+        }
+      } finally {
+        set({ isLoading: false });
+      }
     }
-  )
+  })
 );
 
 // 权限检查工具函数
@@ -387,15 +371,7 @@ export const validatePermissions = {
     const { user, fetchUser } = usePermissionStore.getState();
     if (!user) {
       try {
-        // 尝试从当前用户的备份恢复
-        const backup = getUserPermissionBackup('');
-        if (backup) {
-          const { user: backupUser, timestamp } = backup;
-          if (Date.now() - timestamp < CACHE_DURATION) {
-            usePermissionStore.getState().setUser(backupUser);
-            return;
-          }
-        }
+        // 如果没有用户，直接获取用户数据
         await fetchUser();
       } catch (error) {
         // 静默处理预加载错误

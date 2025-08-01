@@ -727,8 +727,8 @@ export default function DashboardPage() {
               setSuccessMessage('正在刷新权限信息...');
               setShowSuccessMessage(true);
               
-              // 先清除所有缓存
-              usePermissionStore.getState().clearAllCache();
+              // 先清除当前用户的缓存
+              usePermissionStore.getState().clearUser();
               
               // 获取新权限
               await fetchUser(true);
@@ -1115,8 +1115,8 @@ export default function DashboardPage() {
                     setSuccessMessage('正在刷新权限信息...');
                     setShowSuccessMessage(true);
                     
-                    // 先清除所有缓存
-                    usePermissionStore.getState().clearAllCache();
+                    // 先清除当前用户的缓存
+                    usePermissionStore.getState().clearUser();
                     
                     // 获取新权限
                     await fetchUser(true);
