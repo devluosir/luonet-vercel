@@ -579,11 +579,9 @@ export default function DashboardPage() {
 
   // 优化的退出逻辑 - 避免重复退出
   const handleLogout = useCallback(async () => {
-    // 清除权限store和所有相关缓存
+    // 清除权限store和当前用户的相关缓存
     usePermissionStore.getState().clearUser();
     localStorage.removeItem('username');
-    localStorage.removeItem('permissions_backup');
-    localStorage.removeItem('permission-store');
     
     // 只调用一次signOut，避免重复退出
     await signOut({ redirect: true, callbackUrl: '/' });

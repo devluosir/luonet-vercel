@@ -48,14 +48,45 @@ interface PermissionStore {
 // 修改缓存时间为7天
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7天缓存
 
-// 添加权限备份功能
+// 获取用户特定的权限备份key
+const getUserPermissionBackupKey = (userId: string) => `permissions_backup_${userId}`;
+const getUserPermissionStoreKey = (userId: string) => `permission-store_${userId}`;
+
+// 添加权限备份功能 - 支持用户特定的备份
 const backupPermissions = (user: User | null) => {
-  if (user) {
-    localStorage.setItem('permissions_backup', JSON.stringify({
+  if (user && typeof window !== 'undefined') {
+    const backupKey = getUserPermissionBackupKey(user.id);
+    localStorage.setItem(backupKey, JSON.stringify({
       user,
       timestamp: Date.now()
     }));
   }
+};
+
+// 清除用户特定的权限缓存
+const clearUserPermissionCache = (userId: string) => {
+  if (typeof window !== 'undefined') {
+    const backupKey = getUserPermissionBackupKey(userId);
+    const storeKey = getUserPermissionStoreKey(userId);
+    localStorage.removeItem(backupKey);
+    localStorage.removeItem(storeKey);
+  }
+};
+
+// 获取用户特定的权限备份
+const getUserPermissionBackup = (userId: string) => {
+  if (typeof window !== 'undefined') {
+    const backupKey = getUserPermissionBackupKey(userId);
+    const backup = localStorage.getItem(backupKey);
+    if (backup) {
+      try {
+        return JSON.parse(backup);
+      } catch (error) {
+        // 静默处理解析错误
+      }
+    }
+  }
+  return null;
 };
 
 export const usePermissionStore = create<PermissionStore>()(
@@ -76,11 +107,15 @@ export const usePermissionStore = create<PermissionStore>()(
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
       clearUser: () => {
+        const currentUser = get().user;
+        if (currentUser) {
+          // 清除当前用户的特定缓存
+          clearUserPermissionCache(currentUser.id);
+        }
         set({ user: null, lastFetched: null, error: null, permissionChanged: false, isFirstLoad: true });
-        // 清除持久化数据
+        // 清除全局持久化数据
         if (typeof window !== 'undefined') {
           localStorage.removeItem('permission-store');
-          localStorage.removeItem('permissions_backup');
         }
       },
       setPermissionChanged: (changed) => set({ permissionChanged: changed }), // 新增
@@ -90,9 +125,15 @@ export const usePermissionStore = create<PermissionStore>()(
       // 清除所有权限缓存
       clearAllCache: () => {
         if (typeof window !== 'undefined') {
+          // 清除所有用户特定的缓存
+          const keys = Object.keys(localStorage);
+          keys.forEach(key => {
+            if (key.startsWith('permissions_backup_') || key.startsWith('permission-store_')) {
+              localStorage.removeItem(key);
+            }
+          });
+          // 清除全局缓存
           localStorage.removeItem('permission-store');
-          localStorage.removeItem('permissions_backup');
-
         }
       },
 
@@ -142,13 +183,15 @@ export const usePermissionStore = create<PermissionStore>()(
         // 如果不需要刷新且不是强制刷新，尝试从备份恢复
         if (!shouldRefresh && !forceRefresh) {
           try {
-            const backup = localStorage.getItem('permissions_backup');
-            if (backup) {
-              const { user: backupUser, timestamp } = JSON.parse(backup);
-              // 检查备份是否在有效期内
-              if (Date.now() - timestamp < CACHE_DURATION) {
-                set({ user: backupUser, lastFetched: timestamp });
-                return;
+            if (user) {
+              const backup = getUserPermissionBackup(user.id);
+              if (backup) {
+                const { user: backupUser, timestamp } = backup;
+                // 检查备份是否在有效期内
+                if (Date.now() - timestamp < CACHE_DURATION) {
+                  set({ user: backupUser, lastFetched: timestamp });
+                  return;
+                }
               }
             }
           } catch (error) {
@@ -157,13 +200,9 @@ export const usePermissionStore = create<PermissionStore>()(
           return; // 使用当前缓存数据
         }
 
-        // 强制刷新时清除所有缓存
-        if (forceRefresh) {
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('permissions_backup');
-            localStorage.removeItem('permission-store'); // 清除Zustand持久化数据
-
-          }
+        // 强制刷新时清除当前用户的缓存
+        if (forceRefresh && user) {
+          clearUserPermissionCache(user.id);
         }
 
         set({ isLoading: true, error: null });
@@ -348,9 +387,10 @@ export const validatePermissions = {
     const { user, fetchUser } = usePermissionStore.getState();
     if (!user) {
       try {
-        const backup = localStorage.getItem('permissions_backup');
+        // 尝试从当前用户的备份恢复
+        const backup = getUserPermissionBackup(user?.id || '');
         if (backup) {
-          const { user: backupUser, timestamp } = JSON.parse(backup);
+          const { user: backupUser, timestamp } = backup;
           if (Date.now() - timestamp < CACHE_DURATION) {
             usePermissionStore.getState().setUser(backupUser);
             return;
