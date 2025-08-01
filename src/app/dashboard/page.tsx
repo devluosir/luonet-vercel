@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance, safeRequestIdleCallback } from '@/utils/performance';
-import { usePermissionStore } from '@/lib/permissions';
+import { usePermissionStore, validatePermissions } from '@/lib/permissions';
 import { Header } from '@/components/Header';
 
 interface Permission {
@@ -549,6 +549,9 @@ export default function DashboardPage() {
       
       // 预加载所有模块页面
       prefetchPages();
+      
+      // 初始化管理员权限变化监听器
+      validatePermissions.initAdminPermissionListener();
       
       // 异步获取权限，不阻塞页面显示
       setTimeout(async () => {

@@ -379,6 +379,19 @@ export const validatePermissions = {
         // 静默处理预加载错误
       }
     }
+  },
+
+  // 初始化管理员权限变化监听器
+  initAdminPermissionListener(): void {
+    if (typeof window !== 'undefined') {
+      // 监听权限变化事件
+      const handlePermissionChange = () => {
+        const { setPermissionChanged } = usePermissionStore.getState();
+        setPermissionChanged(true);
+      };
+
+      window.addEventListener('permissionChanged', handlePermissionChange);
+    }
   }
 };
 
