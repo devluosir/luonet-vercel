@@ -293,6 +293,7 @@ export default function DashboardPage() {
   const [timeFilter, setTimeFilter] = useState<'today' | '3days' | 'week' | 'month'>('today');
   const [typeFilter, setTypeFilter] = useState<'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase'>('all');
   const [showAllFilters, setShowAllFilters] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // 添加刷新键来强制重新渲染
   
   // 使用权限store
   const { user, hasPermission, fetchUser, isLoading } = usePermissionStore();
@@ -338,7 +339,7 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [user?.permissions, hasPermission]); // 修复依赖，当权限数据或hasPermission函数变化时重新计算
+  }, [user?.permissions, hasPermission, refreshKey]); // 添加refreshKey依赖，强制重新计算
 
   // 优化性能监控 - 只在生产环境启用完整监控
   useEffect(() => {
@@ -491,15 +492,15 @@ export default function DashboardPage() {
         return;
       }
 
-      console.log('检测到权限变化，准备刷新页面:', e.detail?.message);
+      console.log('检测到权限变化，准备更新页面:', e.detail?.message);
       // 显示权限变化提示
-      setSuccessMessage(e.detail?.message || '权限信息已更新，页面即将刷新...');
+      setSuccessMessage(e.detail?.message || '权限信息已更新');
       setShowSuccessMessage(true);
+      
+      // 强制重新渲染而不是刷新页面
+      setRefreshKey(prev => prev + 1);
+      
       setTimeout(() => setShowSuccessMessage(false), 3000);
-      // 延迟刷新以确保权限数据已更新
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
     };
 
     window.addEventListener('permissionChanged', handlePermissionChange as EventListener);
@@ -601,11 +602,11 @@ export default function DashboardPage() {
 
   const availableToolModules = useMemo(() => {
     return TOOL_MODULES.filter(module => hasPermission(module.id));
-  }, [user?.permissions, hasPermission]); // 修复依赖，当权限数据或hasPermission函数变化时重新计算
+  }, [user?.permissions, hasPermission, refreshKey]); // 添加refreshKey依赖，强制重新计算
 
   const availableToolsModules = useMemo(() => {
     return TOOLS_MODULES.filter(module => hasPermission(module.id));
-  }, [user?.permissions, hasPermission]); // 修复依赖，当权限数据或hasPermission函数变化时重新计算
+  }, [user?.permissions, hasPermission, refreshKey]); // 添加refreshKey依赖，强制重新计算
 
   // 根据权限过滤可用的文档类型筛选器
   const availableTypeFilters = useMemo(() => {
@@ -634,7 +635,7 @@ export default function DashboardPage() {
     }
     
     return filters;
-  }, [permissionMap]);
+  }, [permissionMap, refreshKey]); // 添加refreshKey依赖，强制重新计算
 
   // 根据显示状态过滤按钮
   const visibleTypeFilters = useMemo(() => {
@@ -728,19 +729,20 @@ export default function DashboardPage() {
               setSuccessMessage('正在刷新权限信息...');
               setShowSuccessMessage(true);
               
+              // 先清除所有缓存
+              usePermissionStore.getState().clearAllCache();
+              
               // 获取新权限
               await fetchUser(true);
               
+              // 强制重新渲染
+              setRefreshKey(prev => prev + 1);
+              
               // 更新消息
-              setSuccessMessage('权限信息已更新，页面即将刷新...');
+              setSuccessMessage('权限信息已更新');
               
-              // 延迟刷新页面，给用户时间看到消息
-              setTimeout(() => {
-                window.location.reload();
-              }, 1500);
-              
-              // 3秒后隐藏消息
-              setTimeout(() => setShowSuccessMessage(false), 3000);
+              // 2秒后隐藏消息
+              setTimeout(() => setShowSuccessMessage(false), 2000);
             } catch (error) {
               console.error('刷新权限失败:', error);
               setSuccessMessage('权限刷新失败，请重试');
@@ -1115,19 +1117,20 @@ export default function DashboardPage() {
                     setSuccessMessage('正在刷新权限信息...');
                     setShowSuccessMessage(true);
                     
+                    // 先清除所有缓存
+                    usePermissionStore.getState().clearAllCache();
+                    
                     // 获取新权限
                     await fetchUser(true);
                     
+                    // 强制重新渲染
+                    setRefreshKey(prev => prev + 1);
+                    
                     // 更新消息
-                    setSuccessMessage('权限信息已更新，页面即将刷新...');
+                    setSuccessMessage('权限信息已更新');
                     
-                    // 延迟刷新页面，给用户时间看到消息
-                    setTimeout(() => {
-                      window.location.reload();
-                    }, 1500);
-                    
-                    // 3秒后隐藏消息
-                    setTimeout(() => setShowSuccessMessage(false), 3000);
+                    // 2秒后隐藏消息
+                    setTimeout(() => setShowSuccessMessage(false), 2000);
                   } catch (error) {
                     console.error('刷新权限失败:', error);
                     setSuccessMessage('权限刷新失败，请重试');

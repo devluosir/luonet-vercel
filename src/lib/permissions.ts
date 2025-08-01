@@ -31,9 +31,10 @@ interface PermissionStore {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearUser: () => void;
-  setPermissionChanged: (changed: boolean) => void; // 新增
-  setInitialized: (initialized: boolean) => void; // 新增
-  setFirstLoad: (firstLoad: boolean) => void; // 新增
+      setPermissionChanged: (changed: boolean) => void; // 新增
+    setInitialized: (initialized: boolean) => void; // 新增
+    setFirstLoad: (firstLoad: boolean) => void; // 新增
+    clearAllCache: () => void; // 新增
   
   // Permission checks
   hasPermission: (moduleId: string) => boolean;
@@ -85,6 +86,15 @@ export const usePermissionStore = create<PermissionStore>()(
       setPermissionChanged: (changed) => set({ permissionChanged: changed }), // 新增
       setInitialized: (initialized) => set({ isInitialized: initialized }), // 新增
       setFirstLoad: (firstLoad) => set({ isFirstLoad: firstLoad }), // 新增
+      
+      // 清除所有权限缓存
+      clearAllCache: () => {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('permission-store');
+          localStorage.removeItem('permissions_backup');
+          console.log('清除所有权限缓存');
+        }
+      },
 
       hasPermission: (moduleId) => {
         const { user } = get();
@@ -157,6 +167,8 @@ export const usePermissionStore = create<PermissionStore>()(
         if (forceRefresh) {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('permissions_backup');
+            localStorage.removeItem('permission-store'); // 清除Zustand持久化数据
+            console.log('强制刷新：清除所有权限缓存');
           }
         }
 

@@ -282,13 +282,12 @@ export default function ToolsPage() {
   // 使用权限store的fetchUser
   const handleRefreshPermissions = useCallback(async () => {
     try {
+      // 先清除所有缓存
+      usePermissionStore.getState().clearAllCache();
+      
       await fetchUser(true);
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
-      // 权限刷新后强制刷新页面以确保权限生效
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
     } catch (error) {
       console.error('刷新权限失败:', error);
     }
