@@ -8,14 +8,18 @@ interface APIError {
   status?: number;
 }
 
-if (!process.env.DEEPSEEK_API_KEY) {
-  throw new Error('Missing DEEPSEEK_API_KEY environment variable');
-}
-
 const BASE_URL = 'https://api.deepseek.com';
 
 export async function POST(request: NextRequest) {
   try {
+    // 检查环境变量
+    if (!process.env.DEEPSEEK_API_KEY) {
+      return NextResponse.json(
+        { error: 'API 密钥未配置，请联系管理员' },
+        { status: 500 }
+      );
+    }
+
     const { content, language, type, originalMail = '', mode } = await request.json();
 
     const systemPrompt = mode === 'mail' 
