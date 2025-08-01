@@ -263,21 +263,11 @@ export default function UserDetailPage() {
     try {
       console.log('Saving email:', emailValue); // 调试日志
       
-      const response = await fetch(`/api/admin/users/${user.id}`, {
+      const userData = await apiRequestWithError(API_ENDPOINTS.USERS.UPDATE(user.id), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailValue }),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '更新邮箱失败');
-      }
-
-      console.log('Email update successful, fetching updated user data...'); // 调试日志
-
-      // 重新获取用户信息
-      const userData = await apiRequestWithError(API_ENDPOINTS.USERS.GET(user.id));
       console.log('Updated user data:', userData); // 调试日志
       setUser(userData);
       
