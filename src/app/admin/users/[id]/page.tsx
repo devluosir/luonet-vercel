@@ -171,7 +171,8 @@ export default function UserDetailPage() {
     pendingPermissionsSize: pendingPermissions.size,
     pendingPermissionsEntries: Array.from(pendingPermissions.entries()),
     enabledCount: enabledModulesCount,
-    totalModules: MODULES.length
+    totalModules: MODULES.length,
+    userPermissions: user?.permissions || []
   });
 
   // 辅助函数：处理用户数据获取
@@ -226,17 +227,23 @@ export default function UserDetailPage() {
         // 初始化权限状态
         const initialPermissions = new Map();
         if (userData.permissions && userData.permissions.length > 0) {
+          // 使用用户实际的权限数据
           userData.permissions.forEach((permission: Permission) => {
             initialPermissions.set(permission.moduleId, permission.canAccess);
           });
+          
+          // 为所有MODULES中的模块设置权限，如果用户没有该模块的权限记录，则默认为false
+          MODULES.forEach(module => {
+            if (!initialPermissions.has(module.id)) {
+              initialPermissions.set(module.id, false);
+            }
+          });
         } else {
           console.log('用户没有权限数据，初始化默认权限');
-          // 如果用户没有权限数据，为所有模块设置默认权限（管理员默认全部开启）
-          if (userData.isAdmin) {
-            MODULES.forEach(module => {
-              initialPermissions.set(module.id, true);
-            });
-          }
+          // 如果用户没有权限数据，为所有模块设置默认权限
+          MODULES.forEach(module => {
+            initialPermissions.set(module.id, userData.isAdmin); // 管理员默认全部开启，普通用户默认全部关闭
+          });
         }
         console.log('初始化权限状态:', Array.from(initialPermissions.entries()));
         setPendingPermissions(initialPermissions);
@@ -384,10 +391,29 @@ export default function UserDetailPage() {
     try {
       setSaving(true);
       
-      const updatedPermissions = MODULES.map(module => ({
-        moduleId: module.id,
-        canAccess: pendingPermissions.get(module.id) ?? false
-      }));
+      // 获取用户当前的权限数据，用于匹配权限ID
+      const currentPermissions = user.permissions || [];
+      const permissionMap = new Map(currentPermissions.map(p => [p.moduleId, p]));
+      
+      const updatedPermissions = MODULES.map(module => {
+        const canAccess = pendingPermissions.get(module.id) ?? false;
+        const existingPermission = permissionMap.get(module.id);
+        
+        // 如果权限已存在，使用现有ID；如果不存在，创建新权限
+        if (existingPermission) {
+          return {
+            id: existingPermission.id,
+            canAccess: canAccess
+          };
+        } else {
+          // 对于新权限，需要先创建
+          return {
+            moduleId: module.id,
+            canAccess: canAccess,
+            userId: user.id
+          };
+        }
+      });
 
       console.log('准备发送的权限数据:', updatedPermissions);
 
@@ -406,7 +432,13 @@ export default function UserDetailPage() {
       alert('权限更新成功');
     } catch (error) {
       console.error('Error updating permissions:', error);
-      alert(error instanceof Error ? error.message : '更新模块权限失败');
+      const errorMessage = error instanceof Error ? error.message : '更新模块权限失败';
+      console.error('权限更新失败详情:', {
+        error: errorMessage,
+        user: user?.id,
+        permissions: updatedPermissions
+      });
+      alert(`权限更新失败: ${errorMessage}`);
     } finally {
       setSaving(false);
     }

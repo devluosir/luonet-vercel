@@ -309,6 +309,21 @@ async function handleGetCurrentUser(request: Request, env: Env): Promise<Respons
 
 async function handleGetUsers(request: Request, env: Env): Promise<Response> {
   try {
+    // 检查认证
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: '未授权访问' }),
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
     const d1Client = new D1UserClient(env.USERS_DB);
     const users = await d1Client.getAllUsers();
 
@@ -339,6 +354,21 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
 
 async function handleGetUser(request: Request, env: Env): Promise<Response> {
   try {
+    // 检查认证
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: '未授权访问' }),
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4]; // 从路径中提取用户ID
     
@@ -394,6 +424,21 @@ async function handleGetUser(request: Request, env: Env): Promise<Response> {
 
 async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
   try {
+    // 检查认证
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: '未授权访问' }),
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4];
     const updates = await request.json();
@@ -486,15 +531,56 @@ async function handleUpdatePermissions(request: Request, env: Env): Promise<Resp
 
 async function handleBatchUpdatePermissions(request: Request, env: Env): Promise<Response> {
   try {
+    // 检查认证
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: '未授权访问' }),
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4];
     const { permissions } = await request.json();
 
+    console.log('批量更新权限 - 用户ID:', userId);
+    console.log('接收到的权限数据:', permissions);
+
     const d1Client = new D1UserClient(env.USERS_DB);
     
-    // 批量更新权限
-    await d1Client.batchUpdatePermissions(permissions);
+    // 分离已存在的权限和新权限
+    const existingPermissions = permissions.filter((p: any) => p.id);
+    const newPermissions = permissions.filter((p: any) => !p.id && p.moduleId);
+    
+    console.log('已存在的权限数量:', existingPermissions.length);
+    console.log('新权限数量:', newPermissions.length);
+    
+    // 批量更新已存在的权限
+    if (existingPermissions.length > 0) {
+      console.log('更新已存在的权限:', existingPermissions);
+      await d1Client.batchUpdatePermissions(existingPermissions);
+    }
+    
+    // 创建新权限
+    if (newPermissions.length > 0) {
+      console.log('创建新权限:', newPermissions);
+      for (const permission of newPermissions) {
+        await d1Client.createPermission({
+          userId: userId,
+          moduleId: permission.moduleId,
+          canAccess: permission.canAccess
+        });
+      }
+    }
 
+    console.log('权限更新完成');
     return new Response(
       JSON.stringify({ success: true }),
       { 
@@ -508,7 +594,10 @@ async function handleBatchUpdatePermissions(request: Request, env: Env): Promise
   } catch (error) {
     console.error('批量更新权限错误:', error);
     return new Response(
-      JSON.stringify({ error: '服务器错误' }),
+      JSON.stringify({ 
+        error: '服务器错误',
+        details: error instanceof Error ? error.message : '未知错误'
+      }),
       { 
         status: 500, 
         headers: { 
