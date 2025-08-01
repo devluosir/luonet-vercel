@@ -184,9 +184,12 @@ class PerformanceOptimizer {
         });
       });
       
-      document.querySelectorAll('img[data-src]').forEach(img => {
-        imageObserver.observe(img);
-      });
+      const images = document.querySelectorAll('img[data-src]');
+      if (images && images.length > 0) {
+        images.forEach(img => {
+          imageObserver.observe(img);
+        });
+      }
     }
   }
 }
