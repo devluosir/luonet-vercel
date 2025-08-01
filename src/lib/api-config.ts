@@ -34,11 +34,21 @@ export async function apiRequest(
   url: string, 
   options: RequestInit = {}
 ): Promise<Response> {
+  // 获取认证token
+  let authToken = null;
+  if (typeof window !== 'undefined') {
+    // 在客户端环境中，尝试从localStorage获取token
+    authToken = localStorage.getItem('next-auth.session-token') || 
+                localStorage.getItem('__Secure-next-auth.session-token');
+  }
+
   const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
+      ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
       ...options.headers,
     },
+    credentials: 'include', // 包含cookies
     ...options,
   };
 

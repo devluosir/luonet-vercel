@@ -166,6 +166,7 @@ export default function UserDetailPage() {
 
   // 计算已启用的模块数量
   const enabledModulesCount = Array.from(pendingPermissions.values()).filter(Boolean).length;
+  console.log('已启用模块数量:', enabledModulesCount, '总模块数:', MODULES.length);
 
   // 辅助函数：处理用户数据获取
   const fetchUserData = async (userId: string): Promise<User> => {
@@ -222,6 +223,7 @@ export default function UserDetailPage() {
             initialPermissions.set(permission.moduleId, permission.canAccess);
           });
         }
+        console.log('初始化权限状态:', Array.from(initialPermissions.entries()));
         setPendingPermissions(initialPermissions);
         setEmailValue(userData.email || '');
       } catch (error) {
@@ -236,10 +238,12 @@ export default function UserDetailPage() {
   }, [mounted, params?.id]);
 
   const handleTogglePermission = (moduleId: string, currentAccess: boolean) => {
+    console.log('切换权限:', moduleId, '从', currentAccess, '到', !currentAccess);
     const newPermissions = new Map(pendingPermissions);
     newPermissions.set(moduleId, !currentAccess);
     setPendingPermissions(newPermissions);
     setHasChanges(true);
+    console.log('权限变化状态:', hasChanges);
   };
 
   const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
@@ -355,7 +359,12 @@ export default function UserDetailPage() {
   };
 
   const handleSavePermissions = async () => {
-    if (!user || !hasChanges) return;
+    console.log('保存权限 - 用户:', user?.id, '有变化:', hasChanges);
+    if (!user || !hasChanges) {
+      console.log('跳过保存 - 没有用户或没有变化');
+      return;
+    }
+    
     try {
       setSaving(true);
       
@@ -364,11 +373,19 @@ export default function UserDetailPage() {
         canAccess: pendingPermissions.get(module.id) ?? false
       }));
 
-      const data = await apiRequestWithError(API_ENDPOINTS.USERS.BATCH_PERMISSIONS(user.id), {
+      console.log('准备发送的权限数据:', updatedPermissions);
+
+      const response = await apiRequestWithError(API_ENDPOINTS.USERS.BATCH_PERMISSIONS(user.id), {
         method: 'POST',
         body: JSON.stringify({ permissions: updatedPermissions })
       });
-      setUser(data);
+      
+      console.log('API响应:', response);
+      
+      // 重新获取用户信息以确保数据一致性
+      const userData = await fetchUserData(user.id);
+      console.log('重新获取的用户数据:', userData);
+      setUser(userData);
       setHasChanges(false);
       alert('权限更新成功');
     } catch (error) {
@@ -706,7 +723,10 @@ export default function UserDetailPage() {
                       </div>
                       {/* 小屏时保存按钮显示在标题右侧 */}
                       <button
-                        onClick={handleSavePermissions}
+                        onClick={() => {
+                          console.log('点击保存按钮 - 小屏');
+                          handleSavePermissions();
+                        }}
                         disabled={!hasChanges || saving}
                         className={`flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 sm:hidden ${
                           hasChanges && !saving
@@ -720,7 +740,10 @@ export default function UserDetailPage() {
                     </div>
                     {/* 大屏时保存按钮显示在右侧 */}
                     <button
-                      onClick={handleSavePermissions}
+                      onClick={() => {
+                        console.log('点击保存按钮 - 大屏');
+                        handleSavePermissions();
+                      }}
                       disabled={!hasChanges || saving}
                       className={`hidden sm:flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                         hasChanges && !saving
@@ -763,6 +786,7 @@ export default function UserDetailPage() {
                               checked={hasAccess}
                               onChange={(e) => {
                                 e.stopPropagation();
+                                console.log('点击权限切换:', module.id, '当前状态:', hasAccess);
                                 handleTogglePermission(module.id, hasAccess);
                               }}
                               disabled={saving}
