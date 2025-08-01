@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     // 性能监控
@@ -24,10 +24,6 @@ export default function LoginPage() {
     
     // 监控资源加载
     performanceMonitor.monitorResourceLoading();
-
-    if (session) {
-      router.push('/dashboard');
-    }
 
     // 页面加载完成后的性能记录
     const handleLoad = () => {
@@ -44,10 +40,52 @@ export default function LoginPage() {
       window.addEventListener('load', handleLoad);
       return () => window.removeEventListener('load', handleLoad);
     }
-  }, [session, router]);
+    
+    // 更新调试信息
+    // setDebugInfo('页面初始化完成'); // Removed debugInfo state
+    
+    // 添加全局错误处理
+    const handleError = (event: ErrorEvent) => {
+      console.error('全局错误:', event.error);
+      // setDebugInfo(`错误: ${event.error?.message || '未知错误'}`); // Removed debugInfo state
+    };
+    
+    window.addEventListener('error', handleError);
+    
+    // 添加原生JavaScript测试
+    // const testButton = document.getElementById('native-test'); // Removed native test button
+    // if (testButton) {
+    //   testButton.addEventListener('click', () => {
+    //     alert('原生JavaScript测试成功！');
+    //     console.log('原生JavaScript事件处理正常');
+    //   });
+    // }
+    
+    return () => {
+      window.removeEventListener('error', handleError);
+      // if (testButton) { // Removed native test button
+      //   testButton.removeEventListener('click', () => {});
+      // }
+    };
+  }, []);
+
+  // 监听session状态变化
+  useEffect(() => {
+    if (session && status === 'authenticated') {
+      router.push('/dashboard');
+    }
+  }, [session, status, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // 防止表单进行默认的GET请求
+    if (!username || !password) {
+      setError('请输入用户名和密码');
+      return;
+    }
+    
     setError('');
     setLoading(true);
 
@@ -75,6 +113,8 @@ export default function LoginPage() {
       // 保存用户名到localStorage，首字母大写
       const formattedUsername = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
       localStorage.setItem('username', formattedUsername);
+      
+      // 直接跳转
       router.push('/dashboard');
     } catch (error) {
       performanceMonitor.endTimer('login_request');
@@ -87,6 +127,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      {/* 调试信息 - 仅在开发环境显示 */}
+      {/* Removed debug info div */}
+      
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="relative">
@@ -107,7 +150,11 @@ export default function LoginPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow-lg sm:rounded-3xl sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form 
+            className="space-y-6" 
+            onSubmit={handleSubmit}
+            method="POST"
+          >
             <div>
               <label htmlFor="username" className="block text-base font-medium text-gray-700 dark:text-gray-200">
                 用户名
@@ -164,6 +211,12 @@ export default function LoginPage() {
               >
                 {loading ? '登录中...' : '登录 →'}
               </button>
+              
+              {/* 简单登录按钮 - 不依赖表单提交 */}
+              {/* Removed direct login button */}
+              
+              {/* 测试按钮 - 仅在开发环境显示 */}
+              {/* Removed test buttons */}
             </div>
           </form>
         </div>

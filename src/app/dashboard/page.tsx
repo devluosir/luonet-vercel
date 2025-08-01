@@ -536,19 +536,19 @@ export default function DashboardPage() {
     const init = async () => {
       setMounted(true);
       
-      // 只在首次加载时获取权限，避免重复获取
-      const { user, isInitialized } = usePermissionStore.getState();
-      if (!user && !isInitialized) {
-        await fetchUser(false);
-      }
-      
       // 预加载所有模块页面
       prefetchPages();
       
-      // 标记权限store为已初始化，避免初始化时触发权限变化事件
-      setTimeout(() => {
+      // 异步获取权限，不阻塞页面显示
+      setTimeout(async () => {
+        const { user, isInitialized } = usePermissionStore.getState();
+        if (!user && !isInitialized) {
+          await fetchUser(false);
+        }
+        
+        // 标记权限store为已初始化，避免初始化时触发权限变化事件
         usePermissionStore.getState().setInitialized(true);
-      }, 1000);
+      }, 100);
     };
     init();
   }, [fetchUser, prefetchPages]);
@@ -646,8 +646,20 @@ export default function DashboardPage() {
   }, [mounted, refreshing, user]); // 移除调试相关的依赖项
 
   // 避免闪烁，在客户端渲染前返回空内容
-  if (!mounted || status === 'loading') {
+  if (!mounted) {
     return null;
+  }
+
+  // 如果session还在加载中，显示加载状态
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-lg text-gray-600 dark:text-gray-400">验证登录中...</div>
+        </div>
+      </div>
+    );
   }
 
   if (!session) {

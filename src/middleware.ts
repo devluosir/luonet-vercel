@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 // 定义公开路由
 const PUBLIC_ROUTES = [
   '/',
-  '/login',
   '/api/auth',
 ];
 
@@ -68,6 +67,10 @@ export default withAuth(
         // 5. 业务路由需要对应的权限
         const moduleId = getModuleIdFromPath(pathname);
         if (moduleId) {
+          // 特殊处理dashboard页面
+          if (moduleId === 'dashboard') {
+            return true; // dashboard页面只要有token就可以访问
+          }
           return Array.isArray(token.permissions) && 
                  token.permissions.includes(moduleId);
         }
