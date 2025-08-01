@@ -250,26 +250,49 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
     if (!data.to.trim()) return;
 
     const customerName = data.to.split('\n')[0].trim(); // 使用第一行作为客户名称
+    const normalizedCustomerName = normalizeCustomerName(customerName);
     
     // 保存到历史记录中，这样客户页面就能读取到
     const quotationHistory = JSON.parse(localStorage.getItem('quotation_history') || '[]');
     
-    // 创建新的历史记录
-    const newRecord = {
-      id: Date.now().toString(),
-      customerName: customerName,
-      to: data.to,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      type: 'quotation',
-      data: {
-        to: data.to,
-        customerName: customerName
-      }
-    };
+    // 检查是否已经存在相同的客户信息
+    const existingIndex = quotationHistory.findIndex((record: any) => {
+      if (!record.customerName) return false;
+      const recordNormalizedName = normalizeCustomerName(record.customerName);
+      return recordNormalizedName === normalizedCustomerName;
+    });
     
-    // 添加到历史记录
-    quotationHistory.push(newRecord);
+    if (existingIndex !== -1) {
+      // 如果已存在，更新现有记录
+      quotationHistory[existingIndex] = {
+        ...quotationHistory[existingIndex],
+        to: data.to,
+        updatedAt: new Date().toISOString(),
+        data: {
+          ...quotationHistory[existingIndex].data,
+          to: data.to,
+          customerName: customerName
+        }
+      };
+    } else {
+      // 如果不存在，创建新的历史记录
+      const newRecord = {
+        id: Date.now().toString(),
+        customerName: customerName,
+        to: data.to,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        type: 'quotation',
+        data: {
+          to: data.to,
+          customerName: customerName
+        }
+      };
+      
+      // 添加到历史记录
+      quotationHistory.push(newRecord);
+    }
+    
     localStorage.setItem('quotation_history', JSON.stringify(quotationHistory));
     
     // 重新加载客户数据

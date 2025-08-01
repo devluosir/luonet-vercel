@@ -126,26 +126,48 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
     if (!data.attn.trim()) return;
 
     const supplierName = data.attn.split('\n')[0].trim(); // 使用第一行作为供应商名称
+    const normalizedSupplierName = normalizeSupplierName(supplierName);
     
     // 保存到历史记录中，这样客户页面就能读取到
     const purchaseHistory = JSON.parse(localStorage.getItem('purchase_history') || '[]');
     
-    // 创建新的历史记录
-    const newRecord = {
-      id: Date.now().toString(),
-      supplierName: supplierName,
-      attn: data.attn,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      type: 'purchase',
-      data: {
-        attn: data.attn
-        // 只保存供应商基本信息，不保存报价号码和报价日期
-      }
-    };
+    // 检查是否已经存在相同的供应商信息
+    const existingIndex = purchaseHistory.findIndex((record: any) => {
+      if (!record.supplierName) return false;
+      const recordNormalizedName = normalizeSupplierName(record.supplierName);
+      return recordNormalizedName === normalizedSupplierName;
+    });
     
-    // 添加到历史记录
-    purchaseHistory.push(newRecord);
+    if (existingIndex !== -1) {
+      // 如果已存在，更新现有记录
+      purchaseHistory[existingIndex] = {
+        ...purchaseHistory[existingIndex],
+        attn: data.attn,
+        updatedAt: new Date().toISOString(),
+        data: {
+          ...purchaseHistory[existingIndex].data,
+          attn: data.attn
+        }
+      };
+    } else {
+      // 如果不存在，创建新的历史记录
+      const newRecord = {
+        id: Date.now().toString(),
+        supplierName: supplierName,
+        attn: data.attn,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        type: 'purchase',
+        data: {
+          attn: data.attn
+          // 只保存供应商基本信息，不保存报价号码和报价日期
+        }
+      };
+      
+      // 添加到历史记录
+      purchaseHistory.push(newRecord);
+    }
+    
     localStorage.setItem('purchase_history', JSON.stringify(purchaseHistory));
     
     // 重新加载供应商数据

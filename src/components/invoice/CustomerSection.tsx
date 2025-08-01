@@ -244,28 +244,53 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
     if (!to.trim()) return;
 
     const customerName = to.split('\n')[0].trim(); // 使用第一行作为客户名称
+    const normalizedCustomerName = normalizeCustomerName(customerName);
     
     // 保存到历史记录中，这样客户页面就能读取到
     const invoiceHistory = JSON.parse(localStorage.getItem('invoice_history') || '[]');
     
-    // 创建新的历史记录
-    const newRecord = {
-      id: Date.now().toString(),
-      customerName: customerName,
-      to: to,
-      customerPO: customerPO,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      type: 'invoice',
-      data: {
-        to: to,
-        customerName: customerName,
-        customerPO: customerPO
-      }
-    };
+    // 检查是否已经存在相同的客户信息
+    const existingIndex = invoiceHistory.findIndex((record: any) => {
+      if (!record.customerName) return false;
+      const recordNormalizedName = normalizeCustomerName(record.customerName);
+      return recordNormalizedName === normalizedCustomerName;
+    });
     
-    // 添加到历史记录
-    invoiceHistory.push(newRecord);
+    if (existingIndex !== -1) {
+      // 如果已存在，更新现有记录
+      invoiceHistory[existingIndex] = {
+        ...invoiceHistory[existingIndex],
+        to: to,
+        customerPO: customerPO,
+        updatedAt: new Date().toISOString(),
+        data: {
+          ...invoiceHistory[existingIndex].data,
+          to: to,
+          customerName: customerName,
+          customerPO: customerPO
+        }
+      };
+    } else {
+      // 如果不存在，创建新的历史记录
+      const newRecord = {
+        id: Date.now().toString(),
+        customerName: customerName,
+        to: to,
+        customerPO: customerPO,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        type: 'invoice',
+        data: {
+          to: to,
+          customerName: customerName,
+          customerPO: customerPO
+        }
+      };
+      
+      // 添加到历史记录
+      invoiceHistory.push(newRecord);
+    }
+    
     localStorage.setItem('invoice_history', JSON.stringify(invoiceHistory));
     
     // 重新加载客户数据

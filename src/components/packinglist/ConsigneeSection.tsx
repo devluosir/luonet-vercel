@@ -236,28 +236,54 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
     if (!consigneeName.trim()) return;
 
     const consigneeNameFirstLine = consigneeName.split('\n')[0].trim(); // 使用第一行作为收货人名称
+    const normalizedConsigneeName = normalizeCustomerName(consigneeNameFirstLine);
     
     // 保存到历史记录中，这样客户页面就能读取到
     const packingHistory = JSON.parse(localStorage.getItem('packing_history') || '[]');
     
-    // 创建新的历史记录
-    const newRecord = {
-      id: Date.now().toString(),
-      consigneeName: consigneeNameFirstLine,
-      customerName: consigneeNameFirstLine, // 兼容性字段
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      type: 'packing',
-      data: {
-        consignee: {
-          name: consigneeName
-        },
-        consigneeName: consigneeNameFirstLine
-      }
-    };
+    // 检查是否已经存在相同的收货人信息
+    const existingIndex = packingHistory.findIndex((record: any) => {
+      if (!record.consigneeName) return false;
+      const recordNormalizedName = normalizeCustomerName(record.consigneeName);
+      return recordNormalizedName === normalizedConsigneeName;
+    });
     
-    // 添加到历史记录
-    packingHistory.push(newRecord);
+    if (existingIndex !== -1) {
+      // 如果已存在，更新现有记录
+      packingHistory[existingIndex] = {
+        ...packingHistory[existingIndex],
+        consigneeName: consigneeNameFirstLine,
+        customerName: consigneeNameFirstLine, // 兼容性字段
+        updatedAt: new Date().toISOString(),
+        data: {
+          ...packingHistory[existingIndex].data,
+          consignee: {
+            name: consigneeName
+          },
+          consigneeName: consigneeNameFirstLine
+        }
+      };
+    } else {
+      // 如果不存在，创建新的历史记录
+      const newRecord = {
+        id: Date.now().toString(),
+        consigneeName: consigneeNameFirstLine,
+        customerName: consigneeNameFirstLine, // 兼容性字段
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        type: 'packing',
+        data: {
+          consignee: {
+            name: consigneeName
+          },
+          consigneeName: consigneeNameFirstLine
+        }
+      };
+      
+      // 添加到历史记录
+      packingHistory.push(newRecord);
+    }
+    
     localStorage.setItem('packing_history', JSON.stringify(packingHistory));
     
     // 重新加载客户数据

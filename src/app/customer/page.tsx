@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Building2, FileText, Package, Receipt, ShoppingCart, ArrowLeft, Edit, ChevronRight } from 'lucide-react';
+import { Users, Building2, FileText, Package, Receipt, ShoppingCart, ArrowLeft, Edit, ChevronRight, Settings, Trash2, X, Check } from 'lucide-react';
 import { usePermissionStore } from '@/lib/permissions';
 import { format } from 'date-fns';
 
@@ -41,6 +41,12 @@ export default function CustomerPage() {
   const [customers, setCustomers] = useState<CustomerInfo[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierInfo[]>([]);
   const { user, hasPermission } = usePermissionStore();
+
+  // 设置相关状态
+  const [showSettings, setShowSettings] = useState(false);
+  const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // 加载客户和供应商数据
   useEffect(() => {
@@ -264,6 +270,70 @@ export default function CustomerPage() {
     setMounted(true);
   }, []);
 
+  // 处理文档选择
+  const handleDocumentSelect = (documentId: string) => {
+    const newSelected = new Set(selectedDocuments);
+    if (newSelected.has(documentId)) {
+      newSelected.delete(documentId);
+    } else {
+      newSelected.add(documentId);
+    }
+    setSelectedDocuments(newSelected);
+  };
+
+  // 全选/取消全选
+  const handleSelectAll = () => {
+    const allDocumentIds = customers.flatMap(customer => 
+      customer.documents.map(doc => doc.id)
+    );
+    
+    if (selectedDocuments.size === allDocumentIds.length) {
+      setSelectedDocuments(new Set());
+    } else {
+      setSelectedDocuments(new Set(allDocumentIds));
+    }
+  };
+
+  // 删除选中的文档
+  const handleDeleteSelected = async () => {
+    if (selectedDocuments.size === 0) return;
+
+    setDeleteLoading(true);
+    try {
+      // 获取所有历史记录
+      const quotationHistory = JSON.parse(localStorage.getItem('quotation_history') || '[]');
+      const packingHistory = JSON.parse(localStorage.getItem('packing_history') || '[]');
+      const invoiceHistory = JSON.parse(localStorage.getItem('invoice_history') || '[]');
+
+      // 过滤掉选中的文档
+      const newQuotationHistory = quotationHistory.filter((doc: any) => !selectedDocuments.has(doc.id));
+      const newPackingHistory = packingHistory.filter((doc: any) => !selectedDocuments.has(doc.id));
+      const newInvoiceHistory = invoiceHistory.filter((doc: any) => !selectedDocuments.has(doc.id));
+
+      // 更新localStorage
+      localStorage.setItem('quotation_history', JSON.stringify(newQuotationHistory));
+      localStorage.setItem('packing_history', JSON.stringify(newPackingHistory));
+      localStorage.setItem('invoice_history', JSON.stringify(newInvoiceHistory));
+
+      // 触发自定义事件通知其他组件
+      window.dispatchEvent(new CustomEvent('customStorageChange', {
+        detail: { key: 'history_updated' }
+      }));
+
+      // 清空选择
+      setSelectedDocuments(new Set());
+      setShowDeleteConfirm(false);
+      
+      // 显示成功消息
+      alert(`成功删除 ${selectedDocuments.size} 个文档`);
+    } catch (error) {
+      console.error('删除失败:', error);
+      alert('删除失败，请重试');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   // 避免闪烁
   if (!mounted || status === 'loading') {
     return null;
@@ -278,14 +348,26 @@ export default function CustomerPage() {
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
       <main className="flex-1">
         <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
-          {/* 返回按钮 */}
-          <Link 
-            href="/dashboard"
-            className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Link>
+          {/* 返回按钮和设置按钮 */}
+          <div className="flex items-center justify-between">
+            <Link 
+              href="/dashboard"
+              className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Link>
+
+            <button
+              onClick={() => setShowSettings(true)}
+              className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 
+                bg-white dark:bg-[#1c1c1e] border border-gray-300 dark:border-gray-600 rounded-lg 
+                hover:bg-gray-50 dark:hover:bg-[#2c2c2e] focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              设置
+            </button>
+          </div>
 
           {/* Tab切换 */}
           <div className="mt-8">
@@ -602,6 +684,164 @@ export default function CustomerPage() {
           )}
         </div>
       </main>
+
+      {/* 设置模态框 */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* 模态框头部 */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">文档管理</h2>
+              <button
+                onClick={() => {
+                  setShowSettings(false);
+                  setSelectedDocuments(new Set());
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* 模态框内容 */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              {/* 操作栏 */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={handleSelectAll}
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    {selectedDocuments.size === customers.flatMap(c => c.documents).length ? '取消全选' : '全选'}
+                  </button>
+                  {selectedDocuments.size > 0 && (
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      已选择 {selectedDocuments.size} 个文档
+                    </span>
+                  )}
+                </div>
+                {selectedDocuments.size > 0 && (
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg 
+                      hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    删除选中
+                  </button>
+                )}
+              </div>
+
+              {/* 文档列表 */}
+              <div className="space-y-4">
+                {customers.map((customer) => (
+                  <div key={customer.name} className="border border-gray-200 dark:border-gray-800 rounded-lg">
+                    <div className="p-4 bg-gray-50 dark:bg-gray-900">
+                      <h3 className="font-medium text-gray-900 dark:text-white">{customer.name}</h3>
+                    </div>
+                    <div className="p-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {customer.documents.map((doc) => {
+                          const isSelected = selectedDocuments.has(doc.id);
+                          const colors = {
+                            quotation: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400' },
+                            confirmation: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400' },
+                            packing: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-600 dark:text-teal-400' },
+                            invoice: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400' }
+                          };
+                          const color = colors[doc.type] || colors.quotation;
+
+                          return (
+                            <div
+                              key={doc.id}
+                              className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200
+                                ${isSelected 
+                                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                }`}
+                              onClick={() => handleDocumentSelect(doc.id)}
+                            >
+                              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center mr-3
+                                ${isSelected 
+                                  ? 'border-blue-500 bg-blue-500' 
+                                  : 'border-gray-300 dark:border-gray-600'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-4 h-4 text-white" />}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2">
+                                  <div className={`w-6 h-6 rounded ${color.bg} flex items-center justify-center`}>
+                                    <span className={`text-xs font-medium ${color.text}`}>
+                                      {doc.type === 'quotation' ? 'QTN' : 
+                                       doc.type === 'confirmation' ? 'SC' : 
+                                       doc.type === 'packing' ? 'PL' : 
+                                       'INV'}
+                                    </span>
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                    {doc.number}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  {format(doc.date, 'yyyy-MM-dd HH:mm')}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 删除确认对话框 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center mr-4">
+                  <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">确认删除</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    此操作无法撤销
+                  </p>
+                </div>
+              </div>
+              <p className="text-gray-700 dark:text-gray-300 mb-6">
+                确定要删除选中的 <span className="font-semibold">{selectedDocuments.size}</span> 个文档吗？
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleteLoading}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 
+                    bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 
+                    disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleDeleteSelected}
+                  disabled={deleteLoading}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg 
+                    hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleteLoading ? '删除中...' : '确认删除'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
