@@ -17,6 +17,10 @@ export const API_ENDPOINTS = {
     BATCH_PERMISSIONS: (id: string) => `${API_BASE_URL}/api/admin/users/${id}/permissions/batch`,
   },
   
+  AUTH: {
+    SIGNOUT: `${API_BASE_URL}/api/auth/signout`,
+  },
+  
   // 其他API
   GENERATE: `${API_BASE_URL}/generate`,
 };

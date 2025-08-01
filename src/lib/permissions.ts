@@ -198,23 +198,27 @@ export const usePermissionStore = create<PermissionStore>()(
               console.log('Session权限数据:', session.user.permissions);
               
               // 确保权限数据格式正确
-              let permissions = session.user.permissions || [];
-              if (Array.isArray(permissions) && permissions.length > 0) {
+              let permissions: Permission[] = [];
+              const sessionPermissions = session.user.permissions || [];
+              if (Array.isArray(sessionPermissions) && sessionPermissions.length > 0) {
                 // 如果权限数据是字符串数组（moduleId），转换为对象格式
-                if (typeof permissions[0] === 'string') {
+                if (typeof sessionPermissions[0] === 'string') {
                   console.log('转换权限数据格式从字符串数组到对象数组');
-                  permissions = permissions.map(moduleId => ({
+                  permissions = (sessionPermissions as string[]).map(moduleId => ({
                     id: `session-${moduleId}`,
                     moduleId: moduleId,
                     canAccess: true
                   }));
+                } else {
+                  // 如果已经是对象数组，直接使用
+                  permissions = sessionPermissions as unknown as Permission[];
                 }
               }
               
               const userData = {
-                id: session.user.id || session.user.sub,
-                username: session.user.username || session.user.name,
-                email: session.user.email,
+                id: session.user.id || '',
+                username: session.user.username || session.user.name || '',
+                email: session.user.email ?? null,
                 status: true,
                 isAdmin: session.user.isAdmin || false,
                 permissions: permissions
