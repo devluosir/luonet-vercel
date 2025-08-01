@@ -167,6 +167,12 @@ export default function UserDetailPage() {
   // 计算已启用的模块数量
   const enabledModulesCount = Array.from(pendingPermissions.values()).filter(Boolean).length;
   console.log('已启用模块数量:', enabledModulesCount, '总模块数:', MODULES.length);
+  console.log('权限状态详情:', {
+    pendingPermissionsSize: pendingPermissions.size,
+    pendingPermissionsEntries: Array.from(pendingPermissions.entries()),
+    enabledCount: enabledModulesCount,
+    totalModules: MODULES.length
+  });
 
   // 辅助函数：处理用户数据获取
   const fetchUserData = async (userId: string): Promise<User> => {
@@ -214,6 +220,7 @@ export default function UserDetailPage() {
         const userData = await fetchUserData(params.id as string);
         
         console.log('获取到的用户数据:', userData); // 调试日志
+        console.log('用户权限数据:', userData.permissions);
         setUser(userData);
         
         // 初始化权限状态
@@ -222,6 +229,14 @@ export default function UserDetailPage() {
           userData.permissions.forEach((permission: Permission) => {
             initialPermissions.set(permission.moduleId, permission.canAccess);
           });
+        } else {
+          console.log('用户没有权限数据，初始化默认权限');
+          // 如果用户没有权限数据，为所有模块设置默认权限（管理员默认全部开启）
+          if (userData.isAdmin) {
+            MODULES.forEach(module => {
+              initialPermissions.set(module.id, true);
+            });
+          }
         }
         console.log('初始化权限状态:', Array.from(initialPermissions.entries()));
         setPendingPermissions(initialPermissions);
@@ -244,6 +259,7 @@ export default function UserDetailPage() {
     setPendingPermissions(newPermissions);
     setHasChanges(true);
     console.log('权限变化状态:', hasChanges);
+    console.log('更新后的权限状态:', Array.from(newPermissions.entries()));
   };
 
   const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
