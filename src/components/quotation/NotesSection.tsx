@@ -33,11 +33,13 @@ export function NotesSection({ data, onChange }: NotesSectionProps) {
   };
 
   useEffect(() => {
-    textareaRefs.current.forEach(textarea => {
-      if (textarea) {
-        adjustHeight(textarea);
-      }
-    });
+    if (textareaRefs.current && textareaRefs.current.length > 0) {
+      textareaRefs.current.forEach(textarea => {
+        if (textarea) {
+          adjustHeight(textarea);
+        }
+      });
+    }
   }, [data.notes]);
 
   return (

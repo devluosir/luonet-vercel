@@ -170,10 +170,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   const initializeTextareaHeights = useCallback(() => {
     setTimeout(() => {
       const textareas = document.querySelectorAll('textarea');
-      textareas.forEach(textarea => {
-        textarea.style.height = '28px';
-        textarea.style.height = `${textarea.scrollHeight}px`;
-      });
+      if (textareas && textareas.length > 0) {
+        textareas.forEach(textarea => {
+          textarea.style.height = '28px';
+          textarea.style.height = `${textarea.scrollHeight}px`;
+        });
+      }
     }, 0);
   }, []);
 

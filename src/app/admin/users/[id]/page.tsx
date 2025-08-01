@@ -197,9 +197,11 @@ export default function UserDetailPage() {
         setUser(data);
         // 初始化权限状态
         const initialPermissions = new Map();
-        data.permissions.forEach((permission: Permission) => {
-          initialPermissions.set(permission.moduleId, permission.canAccess);
-        });
+        if (data.permissions && data.permissions.length > 0) {
+          data.permissions.forEach((permission: Permission) => {
+            initialPermissions.set(permission.moduleId, permission.canAccess);
+          });
+        }
         setPendingPermissions(initialPermissions);
         setEmailValue(data.email || '');
       } catch (error) {
@@ -551,7 +553,7 @@ export default function UserDetailPage() {
                         ? 'bg-gradient-to-br from-blue-500 to-purple-600' 
                         : 'bg-gradient-to-br from-gray-500 to-gray-600'
                     }`}>
-                      {user?.username.charAt(0).toUpperCase()}
+                      {user?.username ? user.username.charAt(0).toUpperCase() : '?'}
                       <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-gray-900 ${
                         user?.status ? 'bg-green-500' : 'bg-red-500'
                       }`}></div>
