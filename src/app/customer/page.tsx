@@ -485,9 +485,9 @@ export default function CustomerPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
       <main className="flex-1">
-        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-3 sm:py-6 lg:py-8">
+        <div className="w-full max-w-none px-2 sm:px-3 lg:px-4 py-3 sm:py-4 lg:py-6">
           {/* 返回按钮和设置按钮 */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-3 lg:gap-4">
             <Link 
               href="/dashboard"
               className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7] 
@@ -510,9 +510,9 @@ export default function CustomerPage() {
           </div>
 
           {/* Tab切换 */}
-          <div className="mt-4 sm:mt-8">
+          <div className="mt-4 sm:mt-6 lg:mt-6">
             <div className="border-b border-gray-200 dark:border-gray-800">
-              <nav className="-mb-px flex space-x-4 sm:space-x-8" aria-label="Tabs">
+              <nav className="-mb-px flex space-x-4 sm:space-x-6 lg:space-x-8" aria-label="Tabs">
                 <button
                   onClick={() => setActiveTab('customer')}
                   className={`
@@ -520,11 +520,11 @@ export default function CustomerPage() {
                       ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700'
                     }
-                    whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2
+                    whitespace-nowrap py-3 sm:py-3 lg:py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2
                     flex-1 sm:flex-none justify-center sm:justify-start
                   `}
                 >
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Users className="w-4 h-4 sm:w-4 lg:w-5 lg:h-5" />
                   <span>客户</span>
                 </button>
 
@@ -535,11 +535,11 @@ export default function CustomerPage() {
                       ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-700'
                     }
-                    whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2
+                    whitespace-nowrap py-3 sm:py-3 lg:py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2
                     flex-1 sm:flex-none justify-center sm:justify-start
                   `}
                 >
-                  <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Building2 className="w-4 h-4 sm:w-4 lg:w-5 lg:h-5" />
                   <span>供应商</span>
                 </button>
               </nav>
@@ -548,18 +548,18 @@ export default function CustomerPage() {
 
           {/* 客户列表 */}
           {activeTab === 'customer' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-6 mt-4 sm:mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-5 mt-4 sm:mt-6 lg:mt-6">
               {customers.map((customer) => (
                 <div
                   key={customer.name}
-                  className="bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-2xl shadow-sm border border-gray-200/50 dark:border-gray-800/50 
+                  className="bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-xl lg:rounded-2xl shadow-sm border border-gray-200/50 dark:border-gray-800/50 
                     hover:shadow-md transition-all duration-200 overflow-hidden"
                 >
                   {/* 客户信息头部 */}
-                  <div className="p-3 sm:p-6 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                  <div className="p-3 sm:p-4 lg:p-5 border-b border-gray-100 dark:border-gray-800">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 lg:gap-4">
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
+                        <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 dark:text-white truncate">
                           {customer.name.split('\n')[0]}
                         </h3>
                         {customer.name.split('\n').length > 1 && (
@@ -572,27 +572,27 @@ export default function CustomerPage() {
                       <div className="flex items-center justify-between sm:justify-end gap-2">
                         <button
                           onClick={() => handleEditCustomer(customer)}
-                          className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 
+                          className="inline-flex items-center px-2 sm:px-2 lg:px-3 py-1 sm:py-1.5 lg:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 
                             bg-white dark:bg-[#1c1c1e] border border-gray-300 dark:border-gray-600 rounded-lg 
                             hover:bg-gray-50 dark:hover:bg-[#2c2c2e] focus:outline-none focus:ring-2 focus:ring-blue-500
                             transition-all duration-200"
                         >
-                          <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                          <Edit className="w-3 h-3 sm:w-3 lg:w-4 lg:h-4 mr-1 sm:mr-1 lg:mr-2" />
                           <span className="hidden sm:inline">编辑</span>
                         </button>
                         
-                        <div className="flex items-center space-x-1 sm:space-x-2">
+                        <div className="flex items-center space-x-1 sm:space-x-1.5 lg:space-x-2">
                           {customer.quotationCount > 0 && (
                             <div className="relative group">
-                              <div className="flex items-center justify-center w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 
+                              <div className="flex items-center justify-center w-5 h-5 sm:w-6 lg:w-7 lg:h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 
                                 border border-blue-100 dark:border-blue-800">
-                                <FileText className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400" />
-                                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-blue-600 dark:bg-blue-500 
+                                <FileText className="w-2.5 h-2.5 sm:w-3 lg:w-3.5 lg:h-3.5 text-blue-600 dark:text-blue-400" />
+                                <div className="absolute -top-1 -right-1 sm:-top-1 lg:-top-1.5 lg:-right-1.5 w-3.5 h-3.5 sm:w-4 lg:w-4.5 lg:h-4.5 rounded-full bg-blue-600 dark:bg-blue-500 
                                   flex items-center justify-center">
                                   <span className="text-xs font-medium text-white">{customer.quotationCount}</span>
                                 </div>
                               </div>
-                              <div className="absolute -bottom-6 sm:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
+                              <div className="absolute -bottom-6 sm:-bottom-7 lg:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
                                 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
                                 报价
                               </div>
@@ -601,15 +601,15 @@ export default function CustomerPage() {
 
                           {customer.confirmationCount > 0 && (
                             <div className="relative group">
-                              <div className="flex items-center justify-center w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-green-50 dark:bg-green-900/20 
+                              <div className="flex items-center justify-center w-5 h-5 sm:w-6 lg:w-7 lg:h-7 rounded-lg bg-green-50 dark:bg-green-900/20 
                                 border border-green-100 dark:border-green-800">
-                                <FileText className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-green-600 dark:text-green-400" />
-                                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-green-600 dark:bg-green-500 
+                                <FileText className="w-2.5 h-2.5 sm:w-3 lg:w-3.5 lg:h-3.5 text-green-600 dark:text-green-400" />
+                                <div className="absolute -top-1 -right-1 sm:-top-1 lg:-top-1.5 lg:-right-1.5 w-3.5 h-3.5 sm:w-4 lg:w-4.5 lg:h-4.5 rounded-full bg-green-600 dark:bg-green-500 
                                   flex items-center justify-center">
                                   <span className="text-xs font-medium text-white">{customer.confirmationCount}</span>
                                 </div>
                               </div>
-                              <div className="absolute -bottom-6 sm:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
+                              <div className="absolute -bottom-6 sm:-bottom-7 lg:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
                                 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
                                 确认
                               </div>
@@ -618,15 +618,15 @@ export default function CustomerPage() {
 
                           {customer.packingCount > 0 && (
                             <div className="relative group">
-                              <div className="flex items-center justify-center w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-teal-50 dark:bg-teal-900/20 
+                              <div className="flex items-center justify-center w-5 h-5 sm:w-6 lg:w-7 lg:h-7 rounded-lg bg-teal-50 dark:bg-teal-900/20 
                                 border border-teal-100 dark:border-teal-800">
-                                <Package className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-teal-600 dark:text-teal-400" />
-                                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-teal-600 dark:bg-teal-500 
+                                <Package className="w-2.5 h-2.5 sm:w-3 lg:w-3.5 lg:h-3.5 text-teal-600 dark:text-teal-400" />
+                                <div className="absolute -top-1 -right-1 sm:-top-1 lg:-top-1.5 lg:-right-1.5 w-3.5 h-3.5 sm:w-4 lg:w-4.5 lg:h-4.5 rounded-full bg-teal-600 dark:bg-teal-500 
                                   flex items-center justify-center">
                                   <span className="text-xs font-medium text-white">{customer.packingCount}</span>
                                 </div>
                               </div>
-                              <div className="absolute -bottom-6 sm:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
+                              <div className="absolute -bottom-6 sm:-bottom-7 lg:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
                                 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
                                 装箱
                               </div>
@@ -635,15 +635,15 @@ export default function CustomerPage() {
 
                           {customer.invoiceCount > 0 && (
                             <div className="relative group">
-                              <div className="flex items-center justify-center w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-purple-50 dark:bg-purple-900/20 
+                              <div className="flex items-center justify-center w-5 h-5 sm:w-6 lg:w-7 lg:h-7 rounded-lg bg-purple-50 dark:bg-purple-900/20 
                                 border border-purple-100 dark:border-purple-800">
-                                <Receipt className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-purple-600 dark:text-purple-400" />
-                                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-purple-600 dark:bg-purple-500 
+                                <Receipt className="w-2.5 h-2.5 sm:w-3 lg:w-3.5 lg:h-3.5 text-purple-600 dark:text-purple-400" />
+                                <div className="absolute -top-1 -right-1 sm:-top-1 lg:-top-1.5 lg:-right-1.5 w-3.5 h-3.5 sm:w-4 lg:w-4.5 lg:h-4.5 rounded-full bg-purple-600 dark:bg-purple-500 
                                   flex items-center justify-center">
                                   <span className="text-xs font-medium text-white">{customer.invoiceCount}</span>
                                 </div>
                               </div>
-                              <div className="absolute -bottom-6 sm:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
+                              <div className="absolute -bottom-6 sm:-bottom-7 lg:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
                                 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
                                 开票
                               </div>
@@ -655,8 +655,8 @@ export default function CustomerPage() {
                   </div>
 
                   {/* 单据列表 */}
-                  <div className="p-2 sm:p-4">
-                    <div className="grid grid-cols-2 gap-1.5 sm:gap-3">
+                  <div className="p-2 sm:p-3 lg:p-4">
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2 lg:gap-3">
                       {customer.documents
                         .sort((a, b) => b.date.getTime() - a.date.getTime())
                         .map((doc) => {
@@ -697,11 +697,11 @@ export default function CustomerPage() {
                             <Link 
                               key={doc.id}
                               href={editLink}
-                              className={`group bg-white dark:bg-[#1c1c1e] p-1.5 sm:p-3 flex items-center space-x-1.5 sm:space-x-3 rounded-lg sm:rounded-xl
+                              className={`group bg-white dark:bg-[#1c1c1e] p-1.5 sm:p-2 lg:p-2.5 flex items-center space-x-1.5 sm:space-x-2 lg:space-x-2.5 rounded-lg sm:rounded-lg lg:rounded-xl
                                 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 transition-all duration-200 cursor-pointer
                                 active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70 ${color.hover}`}
                             >
-                              <div className={`w-5 h-5 sm:w-7 sm:h-7 rounded-lg ${color.bg} flex items-center justify-center flex-shrink-0
+                              <div className={`w-5 h-5 sm:w-6 lg:w-6 lg:h-6 rounded-lg ${color.bg} flex items-center justify-center flex-shrink-0
                                 group-hover:scale-110 transition-transform duration-200`}>
                                 <span className={`text-xs font-medium ${color.text}`}>
                                   {doc.type === 'quotation' ? 'QTN' : 
@@ -711,14 +711,14 @@ export default function CustomerPage() {
                                 </span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className={`text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate
+                                <div className={`text-xs sm:text-sm lg:text-sm font-medium text-gray-900 dark:text-white truncate
                                   transition-colors duration-200 ${color.text}`}>
                                   {doc.number}
                                 </div>
                               </div>
                               {/* 添加一个微妙的箭头指示器 */}
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
-                                <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 dark:text-gray-500" />
+                                <ChevronRight className="w-3 h-3 sm:w-3 lg:w-3.5 lg:h-3.5 text-gray-400 dark:text-gray-500" />
                               </div>
                             </Link>
                           );
@@ -730,10 +730,10 @@ export default function CustomerPage() {
 
               {customers.length === 0 && (
                 <div className="col-span-full">
-                  <div className="text-center py-6 sm:py-12 bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-2xl border border-gray-200/50 dark:border-gray-800/50">
-                    <Users className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
-                    <h3 className="mt-3 sm:mt-4 text-sm font-medium text-gray-900 dark:text-white">暂无客户</h3>
-                    <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-6 sm:py-8 lg:py-10 bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-xl lg:rounded-2xl border border-gray-200/50 dark:border-gray-800/50">
+                    <Users className="mx-auto h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-gray-400" />
+                    <h3 className="mt-3 sm:mt-4 lg:mt-4 text-sm sm:text-base lg:text-lg font-medium text-gray-900 dark:text-white">暂无客户</h3>
+                    <p className="mt-1 sm:mt-2 lg:mt-2 text-xs sm:text-sm lg:text-sm text-gray-500 dark:text-gray-400">
                       创建单据时会自动添加客户信息
                     </p>
                   </div>
@@ -744,18 +744,18 @@ export default function CustomerPage() {
 
           {/* 供应商列表 */}
           {activeTab === 'supplier' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-6 mt-4 sm:mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-5 mt-4 sm:mt-6 lg:mt-6">
               {suppliers.map((supplier) => (
                 <div
                   key={supplier.name}
-                  className="bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-2xl shadow-sm border border-gray-200/50 dark:border-gray-800/50 
+                  className="bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-xl lg:rounded-2xl shadow-sm border border-gray-200/50 dark:border-gray-800/50 
                     hover:shadow-md transition-all duration-200 overflow-hidden"
                 >
                   {/* 供应商信息头部 */}
-                  <div className="p-3 sm:p-6 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                  <div className="p-3 sm:p-4 lg:p-5 border-b border-gray-100 dark:border-gray-800">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 lg:gap-4">
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
+                        <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 dark:text-white truncate">
                           {supplier.name.split('\n')[0]}
                         </h3>
                         {supplier.name.split('\n').length > 1 && (
@@ -767,26 +767,26 @@ export default function CustomerPage() {
                       <div className="flex items-center justify-between sm:justify-end gap-2">
                         <button
                           onClick={() => handleEditSupplier(supplier)}
-                          className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 
+                          className="inline-flex items-center px-2 sm:px-2 lg:px-3 py-1 sm:py-1.5 lg:py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 
                             bg-white dark:bg-[#1c1c1e] border border-gray-300 dark:border-gray-600 rounded-lg 
                             hover:bg-gray-50 dark:hover:bg-[#2c2c2e] focus:outline-none focus:ring-2 focus:ring-orange-500
                             transition-all duration-200"
                         >
-                          <Edit className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                          <Edit className="w-3 h-3 sm:w-3 lg:w-4 lg:h-4 mr-1 sm:mr-1 lg:mr-2" />
                           <span className="hidden sm:inline">编辑</span>
                         </button>
                         
                         <div className="flex items-center justify-end">
                           <div className="relative group">
-                            <div className="flex items-center justify-center w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-orange-50 dark:bg-orange-900/20 
+                            <div className="flex items-center justify-center w-5 h-5 sm:w-6 lg:w-7 lg:h-7 rounded-lg bg-orange-50 dark:bg-orange-900/20 
                               border border-orange-100 dark:border-orange-800">
-                              <ShoppingCart className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-orange-600 dark:text-orange-400" />
-                              <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-orange-600 dark:bg-orange-500 
+                              <ShoppingCart className="w-2.5 h-2.5 sm:w-3 lg:w-3.5 lg:h-3.5 text-orange-600 dark:text-orange-400" />
+                              <div className="absolute -top-1 -right-1 sm:-top-1 lg:-top-1.5 lg:-right-1.5 w-3.5 h-3.5 sm:w-4 lg:w-4.5 lg:h-4.5 rounded-full bg-orange-600 dark:bg-orange-500 
                                 flex items-center justify-center">
                                 <span className="text-xs font-medium text-white">{supplier.purchaseCount}</span>
                               </div>
                             </div>
-                            <div className="absolute -bottom-6 sm:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
+                            <div className="absolute -bottom-6 sm:-bottom-7 lg:-bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 
                               text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
                               采购
                             </div>
@@ -797,8 +797,8 @@ export default function CustomerPage() {
                   </div>
 
                   {/* 供应商单据列表 */}
-                  <div className="p-2 sm:p-4">
-                    <div className="grid grid-cols-2 gap-1.5 sm:gap-3">
+                  <div className="p-2 sm:p-3 lg:p-4">
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2 lg:gap-3">
                       {supplier.documents
                         .sort((a, b) => b.date.getTime() - a.date.getTime())
                         .map((doc) => {
@@ -812,23 +812,23 @@ export default function CustomerPage() {
                             <Link 
                               key={doc.id}
                               href={`/purchase/edit/${doc.id}`}
-                              className={`group bg-white dark:bg-[#1c1c1e] p-1.5 sm:p-3 flex items-center space-x-1.5 sm:space-x-3 rounded-lg sm:rounded-xl
+                              className={`group bg-white dark:bg-[#1c1c1e] p-1.5 sm:p-2 lg:p-2.5 flex items-center space-x-1.5 sm:space-x-2 lg:space-x-2.5 rounded-lg sm:rounded-lg lg:rounded-xl
                                 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 transition-all duration-200 cursor-pointer
                                 active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70 ${color.hover}`}
                             >
-                              <div className={`w-5 h-5 sm:w-7 sm:h-7 rounded-lg ${color.bg} flex items-center justify-center flex-shrink-0
+                              <div className={`w-5 h-5 sm:w-6 lg:w-6 lg:h-6 rounded-lg ${color.bg} flex items-center justify-center flex-shrink-0
                                 group-hover:scale-110 transition-transform duration-200`}>
                                 <span className={`text-xs font-medium ${color.text}`}>PO</span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className={`text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate
+                                <div className={`text-xs sm:text-sm lg:text-sm font-medium text-gray-900 dark:text-white truncate
                                   transition-colors duration-200 ${color.text}`}>
                                   {doc.number}
                                 </div>
                               </div>
                               {/* 添加一个微妙的箭头指示器 */}
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
-                                <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 dark:text-gray-500" />
+                                <ChevronRight className="w-3 h-3 sm:w-3 lg:w-3.5 lg:h-3.5 text-gray-400 dark:text-gray-500" />
                               </div>
                             </Link>
                           );
@@ -840,10 +840,10 @@ export default function CustomerPage() {
 
               {suppliers.length === 0 && (
                 <div className="col-span-full">
-                  <div className="text-center py-6 sm:py-12 bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-2xl border border-gray-200/50 dark:border-gray-800/50">
-                    <Building2 className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
-                    <h3 className="mt-3 sm:mt-4 text-sm font-medium text-gray-900 dark:text-white">暂无供应商</h3>
-                    <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-center py-6 sm:py-8 lg:py-10 bg-white dark:bg-[#1c1c1e] rounded-xl sm:rounded-xl lg:rounded-2xl border border-gray-200/50 dark:border-gray-800/50">
+                    <Building2 className="mx-auto h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-gray-400" />
+                    <h3 className="mt-3 sm:mt-4 lg:mt-4 text-sm sm:text-base lg:text-lg font-medium text-gray-900 dark:text-white">暂无供应商</h3>
+                    <p className="mt-1 sm:mt-2 lg:mt-2 text-xs sm:text-sm lg:text-sm text-gray-500 dark:text-gray-400">
                       创建采购订单时会自动添加供应商信息
                     </p>
                   </div>
