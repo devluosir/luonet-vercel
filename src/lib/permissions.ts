@@ -184,49 +184,54 @@ export const usePermissionStore = create<PermissionStore>()(
 
           console.log('开始API调用:', `${API_ENDPOINTS.USERS.ME}${forceRefresh ? '?force=true' : ''}`);
           
-          // 首先尝试获取NextAuth session
-          const session = await getNextAuthSession();
-          console.log('NextAuth session:', session);
-          
-          // 如果session存在，使用session中的用户信息
-          if (session && session.user) {
-            console.log('使用NextAuth session中的用户信息');
-            console.log('Session权限数据:', session.user.permissions);
+          // 强制刷新时，直接从API获取最新数据，不使用session缓存
+          if (forceRefresh) {
+            console.log('强制刷新：跳过session缓存，直接从API获取最新权限数据');
+          } else {
+            // 非强制刷新时，首先尝试获取NextAuth session
+            const session = await getNextAuthSession();
+            console.log('NextAuth session:', session);
             
-            // 确保权限数据格式正确
-            let permissions = session.user.permissions || [];
-            if (Array.isArray(permissions) && permissions.length > 0) {
-              // 如果权限数据是字符串数组（moduleId），转换为对象格式
-              if (typeof permissions[0] === 'string') {
-                console.log('转换权限数据格式从字符串数组到对象数组');
-                permissions = permissions.map(moduleId => ({
-                  id: `session-${moduleId}`,
-                  moduleId: moduleId,
-                  canAccess: true
-                }));
+            // 如果session存在，使用session中的用户信息
+            if (session && session.user) {
+              console.log('使用NextAuth session中的用户信息');
+              console.log('Session权限数据:', session.user.permissions);
+              
+              // 确保权限数据格式正确
+              let permissions = session.user.permissions || [];
+              if (Array.isArray(permissions) && permissions.length > 0) {
+                // 如果权限数据是字符串数组（moduleId），转换为对象格式
+                if (typeof permissions[0] === 'string') {
+                  console.log('转换权限数据格式从字符串数组到对象数组');
+                  permissions = permissions.map(moduleId => ({
+                    id: `session-${moduleId}`,
+                    moduleId: moduleId,
+                    canAccess: true
+                  }));
+                }
               }
+              
+              const userData = {
+                id: session.user.id || session.user.sub,
+                username: session.user.username || session.user.name,
+                email: session.user.email,
+                status: true,
+                isAdmin: session.user.isAdmin || false,
+                permissions: permissions
+              };
+              
+              set({ 
+                user: userData, 
+                lastFetched: Date.now(), 
+                error: null,
+                permissionChanged: false,
+                isFirstLoad: false
+              });
+              
+              backupPermissions(userData);
+              console.log('✅ 成功从NextAuth session获取用户数据');
+              return;
             }
-            
-            const userData = {
-              id: session.user.id || session.user.sub,
-              username: session.user.username || session.user.name,
-              email: session.user.email,
-              status: true,
-              isAdmin: session.user.isAdmin || false,
-              permissions: permissions
-            };
-            
-            set({ 
-              user: userData, 
-              lastFetched: Date.now(), 
-              error: null,
-              permissionChanged: false,
-              isFirstLoad: false
-            });
-            
-            backupPermissions(userData);
-            console.log('✅ 成功从NextAuth session获取用户数据');
-            return;
           }
           
           // 如果session不存在，尝试API调用

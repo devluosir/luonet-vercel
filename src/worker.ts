@@ -64,19 +64,19 @@ export default {
       return handleGetUser(request, env);
     }
 
-    // 处理用户更新
-    if (path.startsWith('/api/admin/users/') && request.method === 'PUT') {
-      return handleUpdateUser(request, env);
+    // 处理批量权限更新（需要放在前面，因为更具体）
+    if (path.startsWith('/api/admin/users/') && path.includes('/permissions/batch') && request.method === 'POST') {
+      return handleBatchUpdatePermissions(request, env);
     }
 
-    // 处理权限管理
-    if (path.startsWith('/api/admin/users/') && path.includes('/permissions') && request.method === 'PUT') {
+    // 处理权限管理（单个权限更新）
+    if (path.startsWith('/api/admin/users/') && path.includes('/permissions') && !path.includes('/permissions/batch') && request.method === 'PUT') {
       return handleUpdatePermissions(request, env);
     }
 
-    // 处理批量权限更新
-    if (path.startsWith('/api/admin/users/') && path.includes('/permissions/batch') && request.method === 'POST') {
-      return handleBatchUpdatePermissions(request, env);
+    // 处理用户更新（需要排除权限相关的路径）
+    if (path.startsWith('/api/admin/users/') && !path.includes('/permissions') && request.method === 'PUT') {
+      return handleUpdateUser(request, env);
     }
 
     return new Response('Not Found', { 
@@ -520,15 +520,62 @@ async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
 
 async function handleUpdatePermissions(request: Request, env: Env): Promise<Response> {
   try {
+    // 检查认证 - 使用session头信息
+    const sessionUserId = request.headers.get('X-User-ID');
+    const userName = request.headers.get('X-User-Name');
+    const isAdmin = request.headers.get('X-User-Admin') === 'true';
+    
+    if (!sessionUserId || !userName) {
+      return new Response(
+        JSON.stringify({ error: '未授权访问' }),
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+    
+    console.log('用户认证信息:', { sessionUserId, userName, isAdmin });
+
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4];
     const { permissions } = await request.json();
 
+    console.log('更新权限 - 用户ID:', userId);
+    console.log('接收到的权限数据:', permissions);
+
     const d1Client = new D1UserClient(env.USERS_DB);
     
-    // 批量更新权限
-    await d1Client.batchUpdatePermissions(permissions);
+    // 使用与批量更新相同的逻辑
+    // 分离已存在的权限和新权限
+    const existingPermissions = permissions.filter((p: any) => p.id);
+    const newPermissions = permissions.filter((p: any) => !p.id && p.moduleId);
+    
+    console.log('已存在的权限数量:', existingPermissions.length);
+    console.log('新权限数量:', newPermissions.length);
+    
+    // 批量更新已存在的权限
+    if (existingPermissions.length > 0) {
+      console.log('更新已存在的权限:', existingPermissions);
+      await d1Client.batchUpdatePermissions(existingPermissions);
+    }
+    
+    // 创建新权限
+    if (newPermissions.length > 0) {
+      console.log('创建新权限:', newPermissions);
+      for (const permission of newPermissions) {
+        await d1Client.createPermission({
+          userId: userId,
+          moduleId: permission.moduleId,
+          canAccess: permission.canAccess
+        });
+      }
+    }
 
+    console.log('权限更新完成');
     return new Response(
       JSON.stringify({ success: true }),
       { 
@@ -541,6 +588,11 @@ async function handleUpdatePermissions(request: Request, env: Env): Promise<Resp
 
   } catch (error) {
     console.error('更新权限错误:', error);
+    console.error('错误详情:', {
+      message: error instanceof Error ? error.message : '未知错误',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    });
     return new Response(
       JSON.stringify({ error: '服务器错误' }),
       { 
