@@ -25,7 +25,7 @@ export const authOptions: NextAuthOptions = {
 
         try {
           // 使用远程 API 进行认证
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/auth/d1-users`, {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/auth/d1-users`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
