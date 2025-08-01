@@ -136,7 +136,6 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
     
     return newHistory;
   } catch (error) {
-    console.error('Error saving packing history:', error);
     return null;
   }
 };

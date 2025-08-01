@@ -50,12 +50,7 @@ async function makeRequest(url: string, data: RequestData): Promise<DeepSeekResp
 
   if (!response.ok) {
     const text = await response.text();
-    console.error('API Response:', {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
-      body: text
-    });
+
     throw new Error(`API 请求失败: ${response.status} ${response.statusText} - ${text}`);
   }
 
@@ -70,7 +65,7 @@ export async function generateMail({
   mode
 }: GenerateMailOptions): Promise<string> {
   try {
-    console.log('Starting mail generation with params:', { content, language, type, mode });
+
     
     const systemPrompt = mode === 'mail' 
       ? `You are a professional business email assistant. Help users write business emails in ${language}. 
@@ -94,7 +89,7 @@ export async function generateMail({
     
     while (retryCount <= maxRetries) {
       try {
-        console.log(`Attempt ${retryCount + 1} of ${maxRetries + 1}`);
+
         
         const requestData = {
           model: "deepseek-chat",
@@ -108,10 +103,7 @@ export async function generateMail({
           frequency_penalty: 0
         };
 
-        console.log('Request data:', JSON.stringify(requestData, null, 2));
-        
         const response = await makeRequest(`${BASE_URL}/chat/completions`, requestData);
-        console.log('Response received:', JSON.stringify(response, null, 2));
 
         if (!response.choices?.[0]?.message?.content) {
           throw new Error('API 返回数据格式错误');
@@ -120,7 +112,7 @@ export async function generateMail({
         return response.choices[0].message.content;
         
       } catch (error: unknown) {
-        console.error(`Attempt ${retryCount + 1} failed:`, error);
+
         
         const err = error as Error;
         
@@ -144,7 +136,7 @@ export async function generateMail({
     throw new Error('达到最大重试次数');
     
   } catch (error: unknown) {
-    console.error('Final Error:', error);
+
     if (error instanceof Error) {
       throw error;
     }

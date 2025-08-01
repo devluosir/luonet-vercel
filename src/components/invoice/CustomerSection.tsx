@@ -200,7 +200,6 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
 
       setSavedCustomers(formattedCustomers);
     } catch (error) {
-      console.error('加载客户数据失败:', error);
       // 兼容旧的保存格式
       const saved = localStorage.getItem('savedInvoiceCustomers');
       if (saved) {

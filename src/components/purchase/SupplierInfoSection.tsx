@@ -87,7 +87,7 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
       
       setSavedSuppliers(Array.from(supplierMap.values()));
     } catch (error) {
-      console.error('加载供应商数据失败:', error);
+      // 静默处理加载错误
     }
   };
 

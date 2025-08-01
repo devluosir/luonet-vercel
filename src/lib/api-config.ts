@@ -34,7 +34,6 @@ export async function getNextAuthSession() {
     }
     return null;
   } catch (error) {
-    console.error('获取NextAuth session失败:', error);
     return null;
   }
 }
@@ -47,12 +46,7 @@ export async function apiRequest(
   // 获取NextAuth session
   const session = await getNextAuthSession();
   
-  console.log('API请求认证信息:', {
-    url,
-    hasSession: !!session,
-    sessionUser: session?.user?.name,
-    sessionExpires: session?.expires
-  });
+
 
   const defaultOptions: RequestInit = {
     headers: {

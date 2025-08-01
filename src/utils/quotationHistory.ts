@@ -73,7 +73,6 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
     
     return newHistory;
   } catch (error) {
-    console.error('Error saving quotation history:', error);
     return null;
   }
 };
@@ -102,7 +101,6 @@ export const getQuotationHistory = (filters?: QuotationHistoryFilters): Quotatio
 
     return history;
   } catch (error) {
-    console.error('Error getting quotation history:', error);
     return [];
   }
 };
@@ -113,7 +111,6 @@ export const getQuotationHistoryById = (id: string): QuotationHistory | null => 
     const history = getQuotationHistory();
     return history.find(item => item.id === id) || null;
   } catch (error) {
-    console.error('Error getting quotation history by id:', error);
     return null;
   }
 };
@@ -126,7 +123,6 @@ export const deleteQuotationHistory = (id: string): boolean => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
     return true;
   } catch (error) {
-    console.error('Error deleting quotation history:', error);
     return false;
   }
 };
@@ -137,7 +133,6 @@ export const exportQuotationHistory = (): string => {
     const history = getQuotationHistory();
     return JSON.stringify(history, null, 2);
   } catch (error) {
-    console.error('Error exporting quotation history:', error);
     return '';
   }
 };
@@ -147,7 +142,6 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
   try {
     // 确保输入是有效的JSON字符串
     if (!jsonData || typeof jsonData !== 'string') {
-      console.error('Invalid input: jsonData must be a string');
       return false;
     }
 
@@ -155,9 +149,7 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
     let cleanJsonData = jsonData;
     if (jsonData.charCodeAt(0) === 0xFEFF) {
       cleanJsonData = jsonData.slice(1);
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Removed BOM marker from JSON data');
-      }
+
     }
 
     // 尝试解析JSON
@@ -175,17 +167,16 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
           .trim();
         importedHistory = JSON.parse(fixedJson);
         if (process.env.NODE_ENV === 'development') {
-          console.log('Successfully parsed JSON after fixing format issues');
+
         }
       } catch (secondError) {
-        console.error('Failed to parse JSON even after cleanup:', secondError);
+
         return false;
       }
     }
     
     // 验证导入的数据格式
     if (!Array.isArray(importedHistory)) {
-      console.error('Invalid data format: expected an array');
       return false;
     }
 
@@ -193,9 +184,7 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
     const processedData = importedHistory.map(item => {
       // 基本验证：确保item是对象且有id
       if (!item || typeof item !== 'object' || !item.id) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Skipping invalid item:', item);
-        }
+
         return null;
       }
 
@@ -203,9 +192,7 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
       if (item.data && item.data.customerPO !== undefined) {
         // 确保items数组存在
         if (!Array.isArray(item.data.items)) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Invalid items array in invoice data:', item);
-          }
+
           return item; // 返回原始项，不进行转换
         }
 
@@ -265,7 +252,6 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
 
     // 确保至少有一条有效记录
     if (processedData.length === 0) {
-      console.error('No valid records found in imported data');
       return false;
     }
 
@@ -284,7 +270,6 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
       }
       return true;
     } catch (storageError) {
-      console.error('Error saving to localStorage:', storageError);
       // 尝试分块保存（如果数据太大）
       if (
         typeof storageError === 'object' && 
@@ -292,7 +277,6 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
         'name' in storageError && 
         (storageError.name === 'QuotaExceededError' || storageError.name === 'NS_ERROR_DOM_QUOTA_REACHED')
       ) {
-        console.warn('Storage quota exceeded, trying to free up space...');
         // 尝试清理其他不重要的数据
         try {
           // 保留最重要的数据
@@ -300,19 +284,16 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
           // 只保留最近的50条记录
           const trimmedHistory = existingHistory.slice(-50);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
-          console.log('Successfully trimmed history to make space');
           
           // 再次尝试保存导入的数据
           return importQuotationHistory(jsonData, mergeStrategy);
         } catch (e) {
-          console.error('Failed to free up space:', e);
           return false;
         }
       }
       return false;
     }
   } catch (error) {
-    console.error('Error importing quotation history:', error);
     return false;
   }
 }; 

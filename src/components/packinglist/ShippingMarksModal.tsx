@@ -40,7 +40,6 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
     try {
       await generateShippingMarksPDF(value, false, pdfOrientation, fontSize, 'bold', '#000000');
     } catch (error) {
-      console.error('Error exporting PDF:', error);
       alert('PDF生成失败，请重试');
     } finally {
       setIsGenerating(false);
@@ -56,7 +55,6 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
       setPdfPreviewUrl(previewUrl);
       setShowPDFPreview(true);
     } catch (error) {
-      console.error('Error generating PDF preview:', error);
       alert('PDF预览生成失败，请重试');
     } finally {
       setIsGeneratingPreview(false);

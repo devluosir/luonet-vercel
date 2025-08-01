@@ -46,7 +46,7 @@ const IOSFileInput: React.FC<IOSFileInputProps> = ({
     }
 
     const file = files[0];
-    console.log('Selected file:', file.name, file.type);
+
 
     // 检查文件名（不再检查MIME类型，因为iOS可能返回不准确的MIME类型）
     if (!file.name.toLowerCase().endsWith('.json')) {
@@ -80,7 +80,7 @@ const IOSFileInput: React.FC<IOSFileInputProps> = ({
     reader.onerror = () => {
       setIsLoading(false);
       setError('读取文件时出错');
-      console.error('FileReader error:', reader.error);
+
     };
 
     reader.readAsText(file);

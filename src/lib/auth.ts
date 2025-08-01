@@ -53,7 +53,6 @@ export const authOptions: NextAuthOptions = {
             permissions: data.permissions // 保持原始权限数据格式
           };
         } catch (error) {
-          console.error('认证失败:', error);
           throw new Error("用户名或密码错误");
         }
       }

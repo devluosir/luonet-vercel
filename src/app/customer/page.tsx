@@ -78,8 +78,7 @@ export default function CustomerPage() {
         const invoiceHistory = JSON.parse(localStorage.getItem('invoice_history') || '[]');
         const purchaseHistory = JSON.parse(localStorage.getItem('purchase_history') || '[]');
 
-        console.log('=== Debug Info ===');
-        console.log('Raw Quotation History:', quotationHistory);
+
 
         // 过滤掉无效的记录
         const validQuotationHistory = quotationHistory.filter((doc: any) => {
@@ -88,13 +87,11 @@ export default function CustomerPage() {
             typeof doc === 'object' && 
             (doc.customerName || doc.quotationNo); // 至少要有客户名称或报价单号
 
-          if (!isValid) {
-            console.log('Invalid quotation record:', doc);
-          }
+
           return isValid;
         });
 
-        console.log('Valid Quotation History:', validQuotationHistory);
+
 
         // 合并所有历史记录并按时间排序
         const allRecords = [
@@ -114,19 +111,18 @@ export default function CustomerPage() {
           return dateB.getTime() - dateA.getTime();
         });
 
-        console.log('All Records:', allRecords);
+
 
         // 统一处理客户名称格式
         const normalizeCustomerName = (name: string) => {
           if (!name || typeof name !== 'string') {
-            console.log('Invalid customer name:', name);
             return '未命名客户';
           }
           const normalized = name
             .trim()
             .replace(/\s+/g, ' ') // 将多个空格替换为单个空格
             .toUpperCase(); // 转换为大写
-          console.log(`Normalizing name: "${name}" -> "${normalized}"`);
+
           return normalized;
         };
 
@@ -137,7 +133,6 @@ export default function CustomerPage() {
         allRecords.forEach((doc: any) => {
           // 检查记录的有效性
           if (!doc || typeof doc !== 'object') {
-            console.log('Invalid record:', doc);
             return;
           }
 
@@ -150,12 +145,11 @@ export default function CustomerPage() {
           
           // 如果客户名称为空或无效，跳过该记录
           if (!rawCustomerName || rawCustomerName === '未命名客户') {
-            console.log('Skipping record with invalid customer name:', doc);
             return;
           }
 
           const customerName = normalizeCustomerName(rawCustomerName);
-          console.log(`Processing record - Type: ${doc.type}, Raw Name: "${rawCustomerName}", Normalized: "${customerName}"`);
+
           
           if (!customerMap.has(customerName)) {
             customerMap.set(customerName, {

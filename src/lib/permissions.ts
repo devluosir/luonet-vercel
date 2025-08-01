@@ -92,7 +92,7 @@ export const usePermissionStore = create<PermissionStore>()(
         if (typeof window !== 'undefined') {
           localStorage.removeItem('permission-store');
           localStorage.removeItem('permissions_backup');
-          console.log('清除所有权限缓存');
+
         }
       },
 
@@ -137,13 +137,7 @@ export const usePermissionStore = create<PermissionStore>()(
           permissionChanged ||
           (Date.now() - lastFetched > CACHE_DURATION);
         
-        console.log('权限获取检查:', {
-          forceRefresh,
-          hasUser: !!user,
-          lastFetched,
-          permissionChanged,
-          shouldRefresh
-        });
+
         
         // 如果不需要刷新且不是强制刷新，尝试从备份恢复
         if (!shouldRefresh && !forceRefresh) {
@@ -158,7 +152,7 @@ export const usePermissionStore = create<PermissionStore>()(
               }
             }
           } catch (error) {
-            console.error('Error loading permissions backup:', error);
+            // 静默处理备份加载错误
           }
           return; // 使用当前缓存数据
         }
@@ -168,7 +162,7 @@ export const usePermissionStore = create<PermissionStore>()(
           if (typeof window !== 'undefined') {
             localStorage.removeItem('permissions_backup');
             localStorage.removeItem('permission-store'); // 清除Zustand持久化数据
-            console.log('强制刷新：清除所有权限缓存');
+
           }
         }
 
@@ -176,17 +170,17 @@ export const usePermissionStore = create<PermissionStore>()(
 
         try {
           // 从远程 API 获取数据
-          console.log('🔄 从远程 API 获取权限数据...');
+
           
           // 添加超时控制，避免长时间等待
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
 
-          console.log('开始API调用:', `${API_ENDPOINTS.USERS.ME}${forceRefresh ? '?force=true' : ''}`);
+
           
           // 强制刷新时，直接从API获取最新数据，不使用session缓存
           if (forceRefresh) {
-            console.log('强制刷新：跳过session缓存，直接从API获取最新权限数据');
+
           } else {
             // 非强制刷新时，首先尝试获取NextAuth session
             const session = await getNextAuthSession();
@@ -194,8 +188,7 @@ export const usePermissionStore = create<PermissionStore>()(
             
             // 如果session存在，使用session中的用户信息
             if (session && session.user) {
-              console.log('使用NextAuth session中的用户信息');
-              console.log('Session权限数据:', session.user.permissions);
+
               
               // 确保权限数据格式正确
               let permissions: Permission[] = [];
@@ -203,7 +196,7 @@ export const usePermissionStore = create<PermissionStore>()(
               if (Array.isArray(sessionPermissions) && sessionPermissions.length > 0) {
                 // 如果权限数据是字符串数组（moduleId），转换为对象格式
                 if (typeof sessionPermissions[0] === 'string') {
-                  console.log('转换权限数据格式从字符串数组到对象数组');
+
                   permissions = (sessionPermissions as string[]).map(moduleId => ({
                     id: `session-${moduleId}`,
                     moduleId: moduleId,
@@ -233,13 +226,13 @@ export const usePermissionStore = create<PermissionStore>()(
               });
               
               backupPermissions(userData);
-              console.log('✅ 成功从NextAuth session获取用户数据');
+
               return;
             }
           }
           
           // 如果session不存在，尝试API调用
-          console.log('NextAuth session不存在，尝试API调用');
+
           const userData = await apiRequestWithError(
             `${API_ENDPOINTS.USERS.ME}${forceRefresh ? '?force=true' : ''}`,
             {
@@ -251,7 +244,7 @@ export const usePermissionStore = create<PermissionStore>()(
             }
           );
           
-          console.log('API响应数据:', userData);
+
           
           clearTimeout(timeoutId);
           
@@ -274,7 +267,7 @@ export const usePermissionStore = create<PermissionStore>()(
           // 备份新的权限数据
           backupPermissions(userData);
           
-          console.log('✅ 成功从远程 API 获取权限数据');
+
           
           // 权限变化通知 - 只在真正检测到权限变化且已初始化且非首次加载时触发
           const { isInitialized } = get();
@@ -294,10 +287,7 @@ export const usePermissionStore = create<PermissionStore>()(
             set({ isInitialized: true });
           }
         } catch (error) {
-          console.error('❌ 从远程 API 获取权限数据失败:', error);
-          
           if (error instanceof Error && error.name === 'AbortError') {
-            console.warn('权限请求超时');
             set({ error: '请求超时，请检查网络连接' });
           } else {
             const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
@@ -368,7 +358,7 @@ export const validatePermissions = {
         }
         await fetchUser();
       } catch (error) {
-        console.error('Error preloading permissions:', error);
+        // 静默处理预加载错误
       }
     }
   }

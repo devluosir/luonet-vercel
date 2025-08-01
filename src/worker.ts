@@ -31,9 +31,7 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    console.log('请求路径:', path);
-    console.log('请求方法:', request.method);
-    console.log('路径分割:', path.split('/'));
+
 
     // 处理 CORS 预检请求
     if (request.method === 'OPTIONS') {
@@ -55,12 +53,10 @@ export default {
 
     // 处理用户管理
     if (path === '/api/admin/users' && request.method === 'GET') {
-      console.log('匹配用户列表路由:', path);
       return handleGetUsers(request, env);
     }
 
     if (path.startsWith('/api/admin/users/') && path.split('/').length === 5 && request.method === 'GET') {
-      console.log('匹配单个用户路由:', path);
       return handleGetUser(request, env);
     }
 
@@ -106,46 +102,7 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
     const d1Client = new D1UserClient(env.USERS_DB);
     const user = await d1Client.getUserByUsername(username);
 
-    // 如果用户不存在，检查是否是模拟用户
     if (!user) {
-      // 支持 luojun/jschina8 模拟用户
-      if (username === 'luojun' && password === 'jschina8') {
-        return new Response(
-          JSON.stringify({
-            user: {
-              id: 'mock-luojun-id',
-              username: 'luojun',
-              email: 'luojun@example.com',
-              isAdmin: true,
-              status: true
-            },
-            permissions: [
-              { id: '1', moduleId: 'admin', canAccess: true },
-              { id: '2', moduleId: 'quotation', canAccess: true },
-              { id: '3', moduleId: 'invoice', canAccess: true },
-              { id: '4', moduleId: 'packing', canAccess: true },
-              { id: '5', moduleId: 'purchase', canAccess: true },
-              { id: '6', moduleId: 'customer', canAccess: true },
-              { id: '7', moduleId: 'ai-email', canAccess: true },
-              { id: '8', moduleId: 'date-tools', canAccess: true },
-              { id: '9', moduleId: 'history', canAccess: true },
-              { id: '10', moduleId: 'feature5', canAccess: true },
-              { id: '11', moduleId: 'feature3', canAccess: true },
-              { id: '12', moduleId: 'feature8', canAccess: true },
-              { id: '13', moduleId: 'feature7', canAccess: true },
-              { id: '14', moduleId: 'feature6', canAccess: true },
-              { id: '15', moduleId: 'feature9', canAccess: true }
-            ]
-          }),
-          { 
-            headers: { 
-              'Content-Type': 'application/json',
-              ...corsHeaders
-            } 
-          }
-        );
-      }
-      
       return new Response(
         JSON.stringify({ error: '用户不存在' }),
         { 
@@ -185,11 +142,10 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
         if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
           // 对于bcrypt哈希，我们暂时跳过验证，因为Cloudflare Worker不支持bcrypt
           // 在实际部署中，应该使用适当的bcrypt验证库
-          console.warn('⚠️  bcrypt验证暂未实现，跳过密码验证');
+
           passwordValid = true; // 临时跳过验证
         }
       } catch (error) {
-        console.error('密码验证错误:', error);
         passwordValid = false;
       }
     }
@@ -239,7 +195,6 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
     );
 
   } catch (error) {
-    console.error('登录错误:', error);
     return new Response(
       JSON.stringify({ error: '服务器错误' }),
       { 
@@ -256,9 +211,20 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
 async function handleGetCurrentUser(request: Request, env: Env): Promise<Response> {
   try {
     // 从请求头中获取用户信息
-    // 在实际应用中，这里应该从JWT token或其他认证方式获取用户ID
-    // 暂时使用认证API返回的用户ID
-    const userId = 'cmd9wa3b100002m1jfs5knol8'; // luojun用户的真实ID
+    const userId = request.headers.get('X-User-ID');
+    
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: '未授权访问' }),
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
     
     const d1Client = new D1UserClient(env.USERS_DB);
     
@@ -299,7 +265,6 @@ async function handleGetCurrentUser(request: Request, env: Env): Promise<Respons
       }
     );
   } catch (error) {
-    console.error('获取当前用户错误:', error);
     return new Response(
       JSON.stringify({ error: '服务器错误' }),
       { 
@@ -333,7 +298,7 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
       );
     }
     
-    console.log('用户认证信息:', { userId, userName, isAdmin });
+
 
     const d1Client = new D1UserClient(env.USERS_DB);
     const users = await d1Client.getAllUsers();
@@ -349,7 +314,6 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
     );
 
   } catch (error) {
-    console.error('获取用户列表错误:', error);
     return new Response(
       JSON.stringify({ error: '服务器错误' }),
       { 
@@ -383,7 +347,7 @@ async function handleGetUser(request: Request, env: Env): Promise<Response> {
       );
     }
     
-    console.log('用户认证信息:', { sessionUserId, userName, isAdmin });
+
 
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4]; // 从路径中提取用户ID
@@ -406,9 +370,7 @@ async function handleGetUser(request: Request, env: Env): Promise<Response> {
 
     const permissions = await d1Client.getUserPermissions(userId);
     
-    console.log('获取用户权限 - 用户ID:', userId);
-    console.log('用户基本信息:', user);
-    console.log('用户权限数据:', permissions);
+
 
     return new Response(
       JSON.stringify({
@@ -428,7 +390,6 @@ async function handleGetUser(request: Request, env: Env): Promise<Response> {
     );
 
   } catch (error) {
-    console.error('获取用户错误:', error);
     return new Response(
       JSON.stringify({ error: '服务器错误' }),
       { 
@@ -462,7 +423,7 @@ async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
       );
     }
     
-    console.log('用户认证信息:', { sessionUserId, userName, isAdmin });
+
 
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4];
@@ -504,7 +465,6 @@ async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
     );
 
   } catch (error) {
-    console.error('更新用户错误:', error);
     return new Response(
       JSON.stringify({ error: '服务器错误' }),
       { 
@@ -554,18 +514,13 @@ async function handleUpdatePermissions(request: Request, env: Env): Promise<Resp
     const existingPermissions = permissions.filter((p: any) => p.id);
     const newPermissions = permissions.filter((p: any) => !p.id && p.moduleId);
     
-    console.log('已存在的权限数量:', existingPermissions.length);
-    console.log('新权限数量:', newPermissions.length);
-    
     // 批量更新已存在的权限
     if (existingPermissions.length > 0) {
-      console.log('更新已存在的权限:', existingPermissions);
       await d1Client.batchUpdatePermissions(existingPermissions);
     }
     
     // 创建新权限
     if (newPermissions.length > 0) {
-      console.log('创建新权限:', newPermissions);
       for (const permission of newPermissions) {
         await d1Client.createPermission({
           userId: userId,
@@ -574,8 +529,6 @@ async function handleUpdatePermissions(request: Request, env: Env): Promise<Resp
         });
       }
     }
-
-    console.log('权限更新完成');
     return new Response(
       JSON.stringify({ success: true }),
       { 
@@ -587,12 +540,6 @@ async function handleUpdatePermissions(request: Request, env: Env): Promise<Resp
     );
 
   } catch (error) {
-    console.error('更新权限错误:', error);
-    console.error('错误详情:', {
-      message: error instanceof Error ? error.message : '未知错误',
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined
-    });
     return new Response(
       JSON.stringify({ error: '服务器错误' }),
       { 
@@ -626,14 +573,13 @@ async function handleBatchUpdatePermissions(request: Request, env: Env): Promise
       );
     }
     
-    console.log('用户认证信息:', { sessionUserId, userName, isAdmin });
+
 
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4];
     const { permissions } = await request.json();
 
-    console.log('批量更新权限 - 用户ID:', userId);
-    console.log('接收到的权限数据:', permissions);
+
 
     const d1Client = new D1UserClient(env.USERS_DB);
     
@@ -641,18 +587,13 @@ async function handleBatchUpdatePermissions(request: Request, env: Env): Promise
     const existingPermissions = permissions.filter((p: any) => p.id);
     const newPermissions = permissions.filter((p: any) => !p.id && p.moduleId);
     
-    console.log('已存在的权限数量:', existingPermissions.length);
-    console.log('新权限数量:', newPermissions.length);
-    
     // 批量更新已存在的权限
     if (existingPermissions.length > 0) {
-      console.log('更新已存在的权限:', existingPermissions);
       await d1Client.batchUpdatePermissions(existingPermissions);
     }
     
     // 创建新权限
     if (newPermissions.length > 0) {
-      console.log('创建新权限:', newPermissions);
       for (const permission of newPermissions) {
         await d1Client.createPermission({
           userId: userId,
@@ -661,8 +602,6 @@ async function handleBatchUpdatePermissions(request: Request, env: Env): Promise
         });
       }
     }
-
-    console.log('权限更新完成');
     return new Response(
       JSON.stringify({ success: true }),
       { 
@@ -674,7 +613,6 @@ async function handleBatchUpdatePermissions(request: Request, env: Env): Promise
     );
 
   } catch (error) {
-    console.error('批量更新权限错误:', error);
     return new Response(
       JSON.stringify({ 
         error: '服务器错误',

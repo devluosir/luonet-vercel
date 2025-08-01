@@ -5,8 +5,8 @@ import { useState } from 'react';
 
 export default function AuthStatusPage() {
   const { data: session, status } = useSession();
-  const [username, setUsername] = useState('luojun');
-  const [password, setPassword] = useState('jschina8');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -90,11 +90,10 @@ export default function AuthStatusPage() {
       )}
 
       <div className="p-4 bg-yellow-100 rounded">
-        <h2 className="text-xl font-semibold mb-2">测试账户</h2>
-        <ul className="space-y-1">
-          <li>• <strong>luojun</strong> / <strong>jschina8</strong> (管理员)</li>
-          <li>• <strong>admin</strong> / <strong>admin</strong> (备用管理员)</li>
-        </ul>
+        <h2 className="text-xl font-semibold mb-2">测试说明</h2>
+        <p className="text-sm text-gray-600">
+          请使用有效的用户账户进行测试。测试账户信息请联系系统管理员。
+        </p>
       </div>
     </div>
   );

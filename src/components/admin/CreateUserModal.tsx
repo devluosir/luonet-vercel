@@ -49,7 +49,6 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUserModalP
         isAdmin: false,
       });
     } catch (error) {
-      console.error('Error creating user:', error);
       setError(error instanceof Error ? error.message : '创建用户失败');
     } finally {
       setLoading(false);

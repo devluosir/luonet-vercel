@@ -52,7 +52,6 @@ export default function PDFPreviewComponent({
 
   // 检测iframe加载失败
   const handleIframeError = () => {
-    console.log('PDF iframe加载失败，切换到fallback模式');
     setIsLoadingPDF(false);
     setShowFallback(true);
   };
@@ -62,7 +61,6 @@ export default function PDFPreviewComponent({
     setIframeLoaded(true);
     setIsLoadingPDF(false);
     setAttemptedIframeLoad(true);
-    console.log('PDF iframe加载成功');
   };
 
   // 下载PDF
@@ -89,7 +87,6 @@ export default function PDFPreviewComponent({
         await generatePackingListPDF(data, false);
       }
     } catch (error) {
-      console.error('Error downloading PDF:', error);
       alert('PDF下载失败，请重试');
     } finally {
       setIsDownloading(false);

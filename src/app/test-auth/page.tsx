@@ -7,8 +7,8 @@ export default function TestAuthPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [username, setUsername] = useState('luojun');
-  const [password, setPassword] = useState('jschina8');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleTestLogin = async () => {
     setLoading(true);
@@ -87,11 +87,10 @@ export default function TestAuthPage() {
       )}
 
       <div className="mt-4 p-4 bg-gray-100 rounded">
-        <h3 className="font-bold">测试账户:</h3>
-        <ul className="mt-2 space-y-1">
-          <li>• luojun / jschina8 (管理员)</li>
-          <li>• admin / admin (备用管理员)</li>
-        </ul>
+        <h3 className="font-bold">测试说明:</h3>
+        <p className="mt-2 text-sm text-gray-600">
+          请使用有效的用户账户进行测试。测试账户信息请联系系统管理员。
+        </p>
       </div>
     </div>
   );

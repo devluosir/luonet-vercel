@@ -78,7 +78,6 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
       setShowPassword({ current: false, new: false, confirm: false });
       alert('密码修改成功');
     } catch (error) {
-      console.error('Error changing password:', error);
       setError(error instanceof Error ? error.message : '修改密码失败');
     } finally {
       setLoading(false);
@@ -110,7 +109,6 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
       alert('邮箱更新成功');
       // 这里可以触发父组件重新获取用户信息
     } catch (error) {
-      console.error('Error updating email:', error);
       setError(error instanceof Error ? error.message : '更新邮箱失败');
     } finally {
       setLoading(false);

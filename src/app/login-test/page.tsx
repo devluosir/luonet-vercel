@@ -5,8 +5,8 @@ import { useState } from 'react';
 
 export default function LoginTestPage() {
   const { data: session, status } = useSession();
-  const [username, setUsername] = useState('luojun');
-  const [password, setPassword] = useState('jschina8');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState('');

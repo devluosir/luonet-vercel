@@ -1,32 +1,32 @@
 // 测试供应商信息功能
 console.log('🧪 测试供应商信息功能...');
 
-// 模拟一些采购订单历史数据
+// 测试数据
 const mockPurchaseHistory = [
   {
     id: '1',
-    supplierName: 'ABC供应商',
+    supplierName: '测试供应商A',
     orderNo: 'PO-001',
     totalAmount: 10000,
     currency: 'CNY',
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
     data: {
-      attn: 'ABC供应商\n地址：上海市浦东新区\n电话：021-12345678',
+      attn: '测试供应商A\n地址：测试地址\n电话：测试电话',
       yourRef: 'REF-001',
       supplierQuoteDate: '2024-01-01'
     }
   },
   {
     id: '2',
-    supplierName: 'XYZ供应商',
+    supplierName: '测试供应商B',
     orderNo: 'PO-002',
     totalAmount: 20000,
     currency: 'USD',
     createdAt: '2024-01-02T00:00:00.000Z',
     updatedAt: '2024-01-02T00:00:00.000Z',
     data: {
-      attn: 'XYZ供应商\n地址：深圳市南山区\n电话：0755-87654321',
+      attn: '测试供应商B\n地址：测试地址\n电话：测试电话',
       yourRef: 'REF-002',
       supplierQuoteDate: '2024-01-02'
     }

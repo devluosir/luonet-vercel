@@ -68,7 +68,6 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         }
       }
     } catch (error) {
-      console.error('Error generating PDF preview:', error);
       setShowDownloadFallback(true);
     } finally {
       setIsGeneratingPdf(false);
@@ -94,7 +93,6 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         await generatePackingListPDF(item.data, false);
       }
     } catch (error) {
-      console.error('Error downloading PDF:', error);
       alert('PDF下载失败，请重试');
     } finally {
       setIsGeneratingPdf(false);

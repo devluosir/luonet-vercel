@@ -18,7 +18,7 @@ async function testPerformance() {
       url: '/api/users/me',
       method: 'GET',
       headers: {
-        'Cookie': 'next-auth.session-token=test' // 模拟登录状态
+        'Cookie': 'next-auth.session-token=test' // 测试登录状态
       }
     }
   ];

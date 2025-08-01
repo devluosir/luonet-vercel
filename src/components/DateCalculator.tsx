@@ -139,7 +139,6 @@ export function DateCalculator({ isOpen, onClose, triggerRef }: DateCalculatorPr
       
       return { resultDate: resultDateStr, resultWorkDate: workDate };
     } catch (error) {
-      console.error('Date calculation error:', error);
       return { resultDate: null, resultWorkDate: null };
     }
   }, [baseDate, days, calculateWorkDate]);
