@@ -154,10 +154,12 @@ class PerformanceOptimizer {
         
         // 页面卸载时清理
         window.addEventListener('beforeunload', () => {
-          timers.forEach(id => {
-            clearTimeout(id);
-            clearInterval(id);
-          });
+          if (timers && timers.size > 0) {
+            timers.forEach(id => {
+              clearTimeout(id);
+              clearInterval(id);
+            });
+          }
         }, { once: true });
       }
     }
@@ -172,16 +174,18 @@ class PerformanceOptimizer {
     // 懒加载图片
     if ('IntersectionObserver' in window) {
       const imageObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const img = entry.target as HTMLImageElement;
-            if (img.dataset.src) {
-              img.src = img.dataset.src;
-              img.removeAttribute('data-src');
-              imageObserver.unobserve(img);
+        if (entries && entries.length > 0) {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const img = entry.target as HTMLImageElement;
+              if (img.dataset.src) {
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+                imageObserver.unobserve(img);
+              }
             }
-          }
-        });
+          });
+        }
       });
       
       const images = document.querySelectorAll('img[data-src]');
