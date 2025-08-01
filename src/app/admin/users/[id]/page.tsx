@@ -167,6 +167,23 @@ export default function UserDetailPage() {
   // 计算已启用的模块数量
   const enabledModulesCount = Array.from(pendingPermissions.values()).filter(Boolean).length;
 
+  // 辅助函数：处理用户数据获取
+  const fetchUserData = async (userId: string): Promise<User> => {
+    const response = await apiRequestWithError(API_ENDPOINTS.USERS.GET(userId));
+    let userData;
+    if (response.users && Array.isArray(response.users)) {
+      userData = response.users.find((user: User) => user.id === userId);
+      if (!userData) {
+        throw new Error('未找到指定用户');
+      }
+    } else if (response.id) {
+      userData = response;
+    } else {
+      throw new Error('API返回数据格式错误');
+    }
+    return userData;
+  };
+
   // 初始化
   useEffect(() => {
     setMounted(true);
@@ -193,17 +210,20 @@ export default function UserDetailPage() {
     const fetchUser = async () => {
       try {
         setLoading(true);
-        const data = await apiRequestWithError(API_ENDPOINTS.USERS.GET(params.id as string));
-        setUser(data);
+        const userData = await fetchUserData(params.id as string);
+        
+        console.log('获取到的用户数据:', userData); // 调试日志
+        setUser(userData);
+        
         // 初始化权限状态
         const initialPermissions = new Map();
-        if (data.permissions && data.permissions.length > 0) {
-          data.permissions.forEach((permission: Permission) => {
+        if (userData.permissions && userData.permissions.length > 0) {
+          userData.permissions.forEach((permission: Permission) => {
             initialPermissions.set(permission.moduleId, permission.canAccess);
           });
         }
         setPendingPermissions(initialPermissions);
-        setEmailValue(data.email || '');
+        setEmailValue(userData.email || '');
       } catch (error) {
         console.error('Error fetching user:', error);
         setError(error instanceof Error ? error.message : '获取用户信息失败');
@@ -230,7 +250,7 @@ export default function UserDetailPage() {
       });
 
       // 重新获取用户信息
-      const userData = await apiRequestWithError(API_ENDPOINTS.USERS.GET(userId));
+      const userData = await fetchUserData(userId);
       setUser(userData);
     } catch (error) {
       console.error('Error updating admin status:', error);
@@ -246,7 +266,7 @@ export default function UserDetailPage() {
       });
 
       // 重新获取用户信息
-      const userData = await apiRequestWithError(API_ENDPOINTS.USERS.GET(userId));
+      const userData = await fetchUserData(userId);
       setUser(userData);
     } catch (error) {
       console.error('Error updating user status:', error);
@@ -265,12 +285,14 @@ export default function UserDetailPage() {
     try {
       console.log('Saving email:', emailValue); // 调试日志
       
-      const userData = await apiRequestWithError(API_ENDPOINTS.USERS.UPDATE(user.id), {
+      const response = await apiRequestWithError(API_ENDPOINTS.USERS.UPDATE(user.id), {
         method: 'PUT',
         body: JSON.stringify({ email: emailValue }),
       });
 
-      console.log('Updated user data:', userData); // 调试日志
+      console.log('Updated user data:', response); // 调试日志
+      // 重新获取用户信息以确保数据一致性
+      const userData = await fetchUserData(user.id);
       setUser(userData);
       
       setEditingEmail(false);
