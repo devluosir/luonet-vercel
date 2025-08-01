@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Building2, FileText, Package, Receipt, ShoppingCart, ArrowLeft, Edit, ChevronRight, Settings, Trash2, X, Check } from 'lucide-react';
+import { Users, Building2, FileText, Package, Receipt, ShoppingCart, ArrowLeft, Edit, ChevronRight, Settings, Trash2, X, Check, Save, User } from 'lucide-react';
 import { usePermissionStore } from '@/lib/permissions';
 import { format } from 'date-fns';
 
@@ -47,6 +47,15 @@ export default function CustomerPage() {
   const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  
+  // 编辑客户相关状态
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerInfo | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    originalName: ''
+  });
+  const [editLoading, setEditLoading] = useState(false);
 
   // 加载客户和供应商数据
   useEffect(() => {
@@ -334,6 +343,73 @@ export default function CustomerPage() {
     }
   };
 
+  // 打开编辑客户模态框
+  const handleEditCustomer = (customer: CustomerInfo) => {
+    setEditingCustomer(customer);
+    setEditForm({
+      name: customer.name,
+      originalName: customer.name
+    });
+    setShowEditModal(true);
+  };
+
+  // 保存客户信息修改
+  const handleSaveCustomerEdit = async () => {
+    if (!editingCustomer || !editForm.name.trim()) {
+      alert('请输入有效的客户名称');
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      // 获取所有历史记录
+      const quotationHistory = JSON.parse(localStorage.getItem('quotation_history') || '[]');
+      const packingHistory = JSON.parse(localStorage.getItem('packing_history') || '[]');
+      const invoiceHistory = JSON.parse(localStorage.getItem('invoice_history') || '[]');
+
+      // 更新所有相关文档中的客户名称
+      const updateCustomerName = (docs: any[], oldName: string, newName: string) => {
+        return docs.map((doc: any) => {
+          if (doc.customerName === oldName) {
+            return { ...doc, customerName: newName };
+          }
+          if (doc.consigneeName === oldName) {
+            return { ...doc, consigneeName: newName };
+          }
+          return doc;
+        });
+      };
+
+      // 更新各个历史记录
+      const updatedQuotationHistory = updateCustomerName(quotationHistory, editForm.originalName, editForm.name);
+      const updatedPackingHistory = updateCustomerName(packingHistory, editForm.originalName, editForm.name);
+      const updatedInvoiceHistory = updateCustomerName(invoiceHistory, editForm.originalName, editForm.name);
+
+      // 保存到localStorage
+      localStorage.setItem('quotation_history', JSON.stringify(updatedQuotationHistory));
+      localStorage.setItem('packing_history', JSON.stringify(updatedPackingHistory));
+      localStorage.setItem('invoice_history', JSON.stringify(updatedInvoiceHistory));
+
+      // 触发自定义事件通知其他组件
+      window.dispatchEvent(new CustomEvent('customStorageChange', {
+        detail: { key: 'history_updated' }
+      }));
+
+      // 关闭模态框
+      setShowEditModal(false);
+      setEditingCustomer(null);
+      setEditForm({ name: '', originalName: '' });
+      
+      // 显示成功消息
+      alert(`客户信息已更新，共更新了 ${editingCustomer.documents.length} 个相关文档`);
+    } catch (error) {
+      console.error('保存失败:', error);
+      alert('保存失败，请重试');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   // 避免闪烁
   if (!mounted || status === 'loading') {
     return null;
@@ -425,6 +501,18 @@ export default function CustomerPage() {
                             {customer.name.split('\n').slice(1).join('\n')}
                           </p>
                         )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleEditCustomer(customer)}
+                          className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 
+                            bg-white dark:bg-[#1c1c1e] border border-gray-300 dark:border-gray-600 rounded-lg 
+                            hover:bg-gray-50 dark:hover:bg-[#2c2c2e] focus:outline-none focus:ring-2 focus:ring-blue-500
+                            transition-all duration-200"
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          编辑
+                        </button>
                       </div>
                       <div className="flex items-center space-x-3">
                         {customer.quotationCount > 0 && (
@@ -836,6 +924,128 @@ export default function CustomerPage() {
                     hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {deleteLoading ? '删除中...' : '确认删除'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 编辑客户模态框 */}
+      {showEditModal && editingCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-xl max-w-md w-full">
+            {/* 模态框头部 */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
+                  <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">编辑客户信息</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    修改后将应用到所有相关单据
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingCustomer(null);
+                  setEditForm({ name: '', originalName: '' });
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* 模态框内容 */}
+            <div className="p-6">
+              <div className="space-y-4">
+                {/* 客户名称输入 */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    客户名称
+                  </label>
+                  <textarea
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+                      bg-white dark:bg-[#1c1c1e] text-gray-900 dark:text-white 
+                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                      resize-none"
+                    rows={3}
+                    placeholder="请输入客户名称"
+                  />
+                </div>
+
+                {/* 影响范围提示 */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <FileText className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                        影响范围
+                      </h4>
+                      <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                          <span>报价单：{editingCustomer.quotationCount} 个</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                          <span>确认单：{editingCustomer.confirmationCount} 个</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="w-2 h-2 rounded-full bg-teal-500"></span>
+                          <span>装箱单：{editingCustomer.packingCount} 个</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                          <span>发票：{editingCustomer.invoiceCount} 个</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 操作按钮 */}
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingCustomer(null);
+                    setEditForm({ name: '', originalName: '' });
+                  }}
+                  disabled={editLoading}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 
+                    bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 
+                    disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSaveCustomerEdit}
+                  disabled={editLoading || !editForm.name.trim()}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg 
+                    hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed
+                    flex items-center justify-center"
+                >
+                  {editLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      保存中...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      保存
+                    </>
+                  )}
                 </button>
               </div>
             </div>
