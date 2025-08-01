@@ -53,22 +53,8 @@ export const authOptions: NextAuthOptions = {
             permissions: data.permissions.map((p: any) => p.moduleId)
           };
         } catch (error) {
-          console.warn('⚠️  本地开发环境：使用模拟用户数据');
-          
-          // 本地开发时使用模拟数据
-          if (credentials.username === 'admin' && credentials.password === 'admin') {
-            return {
-              id: 'mock-admin-id',
-              email: 'admin@example.com',
-              name: 'admin',
-              username: 'admin',
-              isAdmin: true,
-              image: null,
-              permissions: ['admin', 'quotation', 'invoice', 'packing', 'purchase']
-            };
-          }
-          
-          throw new Error("Invalid credentials");
+          console.error('认证失败:', error);
+          throw new Error("用户名或密码错误");
         }
       }
     })

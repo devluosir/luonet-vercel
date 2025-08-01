@@ -66,7 +66,8 @@ export default function AdminPage() {
       setLoading(true);
       setError(null);
       const data = await apiRequestWithError(API_ENDPOINTS.USERS.LIST);
-      setUsers(data);
+      // API返回的是 { users: [...] } 格式，需要提取 users 数组
+      setUsers(data.users || data);
     } catch (error) {
       console.error('Error fetching users:', error);
       setError(error instanceof Error ? error.message : '获取用户列表失败');

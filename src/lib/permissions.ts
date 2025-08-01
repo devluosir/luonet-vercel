@@ -154,6 +154,9 @@ export const usePermissionStore = create<PermissionStore>()(
         set({ isLoading: true, error: null });
 
         try {
+          // 从远程 API 获取数据
+          console.log('🔄 从远程 API 获取权限数据...');
+          
           // 添加超时控制，避免长时间等待
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
@@ -168,6 +171,8 @@ export const usePermissionStore = create<PermissionStore>()(
               signal: controller.signal
             }
           );
+          
+          clearTimeout(timeoutId);
           
           // 检测权限变化 - 只在非首次加载且非强制刷新时检测
           const currentUser = get().user;
@@ -188,6 +193,8 @@ export const usePermissionStore = create<PermissionStore>()(
           // 备份新的权限数据
           backupPermissions(userData);
           
+          console.log('✅ 成功从远程 API 获取权限数据');
+          
           // 权限变化通知 - 只在真正检测到权限变化且已初始化且非首次加载时触发
           const { isInitialized } = get();
           if (permissionsChanged && isInitialized && !isFirstLoad && typeof window !== 'undefined') {
@@ -206,6 +213,8 @@ export const usePermissionStore = create<PermissionStore>()(
             set({ isInitialized: true });
           }
         } catch (error) {
+          console.error('❌ 从远程 API 获取权限数据失败:', error);
+          
           if (error instanceof Error && error.name === 'AbortError') {
             console.warn('权限请求超时');
             set({ error: '请求超时，请检查网络连接' });

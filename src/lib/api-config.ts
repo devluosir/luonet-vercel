@@ -16,13 +16,13 @@ export const API_ENDPOINTS = {
   USERS: {
     ME: `${API_BASE_URL}/users/me`,
     CHANGE_PASSWORD: `${API_BASE_URL}/users/change-password`,
-    LIST: `${API_BASE_URL}/admin/users`,
-    CREATE: `${API_BASE_URL}/admin/users`,
-    GET: (id: string) => `${API_BASE_URL}/admin/users/${id}`,
-    UPDATE: (id: string) => `${API_BASE_URL}/admin/users/${id}`,
-    DELETE: (id: string) => `${API_BASE_URL}/admin/users/${id}`,
-    PERMISSIONS: (id: string) => `${API_BASE_URL}/admin/users/${id}/permissions`,
-    BATCH_PERMISSIONS: (id: string) => `${API_BASE_URL}/admin/users/${id}/permissions/batch`,
+    LIST: `${API_BASE_URL}/api/admin/users`,
+    CREATE: `${API_BASE_URL}/api/admin/users`,
+    GET: (id: string) => `${API_BASE_URL}/api/admin/users/${id}`,
+    UPDATE: (id: string) => `${API_BASE_URL}/api/admin/users/${id}`,
+    DELETE: (id: string) => `${API_BASE_URL}/api/admin/users/${id}`,
+    PERMISSIONS: (id: string) => `${API_BASE_URL}/api/admin/users/${id}/permissions`,
+    BATCH_PERMISSIONS: (id: string) => `${API_BASE_URL}/api/admin/users/${id}/permissions/batch`,
   },
   
   // 其他API
