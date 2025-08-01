@@ -479,12 +479,7 @@ export default function DashboardPage() {
     if (!mounted) return;
 
     const handlePermissionChange = (e: CustomEvent) => {
-      // 检查是否是首次加载，避免首次加载时触发刷新
-      const { isFirstLoad } = usePermissionStore.getState();
-      if (isFirstLoad) {
-        console.log('首次加载，跳过权限变化刷新');
-        return;
-      }
+              // 检查是否已经显示刷新消息，避免重复刷新
 
       // 检查是否已经显示刷新消息，避免重复刷新
       if (showSuccessMessage) {
@@ -550,13 +545,10 @@ export default function DashboardPage() {
       // 预加载所有模块页面
       prefetchPages();
       
-      // 初始化管理员权限变化监听器
-      validatePermissions.initAdminPermissionListener();
-      
       // 异步获取权限，不阻塞页面显示
       setTimeout(async () => {
-        const { user, isInitialized } = usePermissionStore.getState();
-        console.log('初始化检查 - 用户:', user?.username, '已初始化:', isInitialized);
+        const { user } = usePermissionStore.getState();
+        console.log('初始化检查 - 用户:', user?.username);
         console.log('Session状态:', {
           hasSession: !!session,
           sessionUser: session?.user?.name,
@@ -567,13 +559,11 @@ export default function DashboardPage() {
         if (session?.user && (!user || !user.permissions)) {
           console.log('用户已登录但权限数据缺失，强制获取权限...');
           await fetchUser(true);
-        } else if (!user && !isInitialized) {
+        } else if (!user) {
           console.log('开始获取用户权限...');
           await fetchUser(false);
         }
         
-        // 标记权限store为已初始化，避免初始化时触发权限变化事件
-        usePermissionStore.getState().setInitialized(true);
         console.log('权限初始化完成');
       }, 100);
     };

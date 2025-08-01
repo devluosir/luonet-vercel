@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { API_ENDPOINTS, apiRequestWithError, getNextAuthSession } from '@/lib/api-config';
 
 interface Permission {
@@ -20,21 +19,13 @@ interface User {
 interface PermissionStore {
   user: User | null;
   isLoading: boolean;
-  lastFetched: number | null;
   error: string | null;
-  permissionChanged: boolean; // 新增：权限变化标志
-  isInitialized: boolean; // 新增：初始化标志
-  isFirstLoad: boolean; // 新增：首次加载标志
   
   // Actions
   setUser: (user: User) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearUser: () => void;
-      setPermissionChanged: (changed: boolean) => void; // 新增
-    setInitialized: (initialized: boolean) => void; // 新增
-    setFirstLoad: (firstLoad: boolean) => void; // 新增
-    clearAllCache: () => void; // 新增
   
   // Permission checks
   hasPermission: (moduleId: string) => boolean;
@@ -45,101 +36,24 @@ interface PermissionStore {
   fetchUser: (forceRefresh?: boolean) => Promise<void>;
 }
 
-// 修改缓存时间为7天
-const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7天缓存
-
-// 获取用户特定的权限备份key
-const getUserPermissionBackupKey = (userId: string) => `permissions_backup_${userId}`;
-const getUserPermissionStoreKey = (userId: string) => `permission-store_${userId}`;
-
-// 添加权限备份功能 - 支持用户特定的备份
-const backupPermissions = (user: User | null) => {
-  if (user && typeof window !== 'undefined') {
-    const backupKey = getUserPermissionBackupKey(user.id);
-    localStorage.setItem(backupKey, JSON.stringify({
-      user,
-      timestamp: Date.now()
-    }));
-  }
-};
-
-// 清除用户特定的权限缓存
-const clearUserPermissionCache = (userId: string) => {
-  if (typeof window !== 'undefined') {
-    const backupKey = getUserPermissionBackupKey(userId);
-    const storeKey = getUserPermissionStoreKey(userId);
-    localStorage.removeItem(backupKey);
-    localStorage.removeItem(storeKey);
-  }
-};
-
-// 获取用户特定的权限备份
-const getUserPermissionBackup = (userId: string) => {
-  if (typeof window !== 'undefined') {
-    const backupKey = getUserPermissionBackupKey(userId);
-    const backup = localStorage.getItem(backupKey);
-    if (backup) {
-      try {
-        return JSON.parse(backup);
-      } catch (error) {
-        // 静默处理解析错误
-      }
-    }
-  }
-  return null;
-};
-
-// 创建一个不依赖持久化的权限store，完全依赖用户特定的缓存
+// 简化的权限store
 export const usePermissionStore = create<PermissionStore>()(
   (set, get) => ({
     user: null,
     isLoading: false,
-    lastFetched: null,
     error: null,
-    permissionChanged: false,
-    isInitialized: false,
-    isFirstLoad: true, // 新增：首次加载标志
 
-    setUser: (user) => {
-      set({ user, lastFetched: Date.now(), error: null });
-      backupPermissions(user); // 备份权限
-    },
+    setUser: (user) => set({ user, error: null }),
     setLoading: (loading) => set({ isLoading: loading }),
     setError: (error) => set({ error }),
-    clearUser: () => {
-      const currentUser = get().user;
-      if (currentUser) {
-        // 清除当前用户的特定缓存
-        clearUserPermissionCache(currentUser.id);
-      }
-      set({ user: null, lastFetched: null, error: null, permissionChanged: false, isFirstLoad: true });
-    },
-    setPermissionChanged: (changed) => set({ permissionChanged: changed }), // 新增
-    setInitialized: (initialized) => set({ isInitialized: initialized }), // 新增
-    setFirstLoad: (firstLoad) => set({ isFirstLoad: firstLoad }), // 新增
+    clearUser: () => set({ user: null, error: null }),
     
-    // 清除所有权限缓存
-    clearAllCache: () => {
-      if (typeof window !== 'undefined') {
-        // 清除所有用户特定的缓存
-        const keys = Object.keys(localStorage);
-        keys.forEach(key => {
-          if (key.startsWith('permissions_backup_') || key.startsWith('permission-store_')) {
-            localStorage.removeItem(key);
-          }
-        });
-      }
-    },
-
     hasPermission: (moduleId) => {
       const { user } = get();
-      if (!user?.permissions) {
-        return false;
-      }
+      if (!user?.permissions) return false;
       
       const permission = user.permissions.find(p => p.moduleId === moduleId);
-      const hasAccess = permission?.canAccess || false;
-      return hasAccess;
+      return permission?.canAccess || false;
     },
 
     hasAnyPermission: (moduleIds) => {
@@ -158,178 +72,37 @@ export const usePermissionStore = create<PermissionStore>()(
     },
 
     fetchUser: async (forceRefresh = false) => {
-      const { lastFetched, user, permissionChanged, isFirstLoad, isLoading } = get();
+      const { isLoading } = get();
       
       // 防止重复请求
       if (isLoading && !forceRefresh) {
         return;
       }
       
-      // 智能刷新策略 - 重新登录时强制刷新
-      const shouldRefresh = forceRefresh || 
-        !user || 
-        !lastFetched || 
-        permissionChanged ||
-        (Date.now() - lastFetched > CACHE_DURATION);
-      
-
-      
-      // 如果不需要刷新且不是强制刷新，尝试从备份恢复
-      if (!shouldRefresh && !forceRefresh) {
-        try {
-          if (user) {
-            const backup = getUserPermissionBackup(user.id);
-            if (backup) {
-              const { user: backupUser, timestamp } = backup;
-              // 检查备份是否在有效期内
-              if (Date.now() - timestamp < CACHE_DURATION) {
-                set({ user: backupUser, lastFetched: timestamp });
-                return;
-              }
-            }
-          }
-        } catch (error) {
-          // 静默处理备份加载错误
-        }
-        return; // 使用当前缓存数据
-      }
-
-      // 强制刷新时清除当前用户的缓存和NextAuth session
-      if (forceRefresh) {
-        if (user) {
-          clearUserPermissionCache(user.id);
-        }
-        // 强制刷新NextAuth session
-        if (typeof window !== 'undefined') {
-          // 清除NextAuth的session缓存
-          sessionStorage.removeItem('next-auth.session-token');
-          sessionStorage.removeItem('next-auth.csrf-token');
-          localStorage.removeItem('next-auth.session-token');
-          localStorage.removeItem('next-auth.csrf-token');
-        }
-      }
-
       set({ isLoading: true, error: null });
-
+      
       try {
-        // 从远程 API 获取数据
-
-        
-        // 添加超时控制，避免长时间等待
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
-
-
-        
-        // 首先尝试获取NextAuth session
         const session = await getNextAuthSession();
-        console.log('NextAuth session:', session);
-        
-        // 如果session存在，使用session中的用户信息
-        if (session && session.user) {
-          // 确保权限数据格式正确
-          let permissions: Permission[] = [];
-          const sessionPermissions = session.user.permissions || [];
-          if (Array.isArray(sessionPermissions) && sessionPermissions.length > 0) {
-            // 如果权限数据是字符串数组（moduleId），转换为对象格式
-            if (typeof sessionPermissions[0] === 'string') {
-              permissions = (sessionPermissions as string[]).map(moduleId => ({
-                id: `session-${moduleId}`,
-                moduleId: moduleId,
-                canAccess: true
-              }));
-            } else {
-              // 如果已经是对象数组，直接使用
-              permissions = sessionPermissions as unknown as Permission[];
-            }
-          }
-          
-          const userData = {
-            id: session.user.id || '',
-            username: session.user.username || session.user.name || '',
-            email: session.user.email ?? null,
-            status: true,
-            isAdmin: session.user.isAdmin || false,
-            permissions: permissions
-          };
-          
-          set({ 
-            user: userData, 
-            lastFetched: Date.now(), 
-            error: null,
-            permissionChanged: false,
-            isFirstLoad: false
-          });
-          
-          backupPermissions(userData);
-
-          return;
+        if (!session?.user?.email) {
+          throw new Error('未登录');
         }
-        
-        // 如果session不存在，尝试API调用
 
-        const userData = await apiRequestWithError(
-          `${API_ENDPOINTS.USERS.ME}${forceRefresh ? '?force=true' : ''}`,
-          {
-            headers: {
-              'Cache-Control': forceRefresh ? 'no-cache' : 'max-age=300', // 非强制刷新时允许5分钟缓存
-              'Pragma': forceRefresh ? 'no-cache' : ''
-            },
-            signal: controller.signal
-          }
-        );
-        
-
-        
-        clearTimeout(timeoutId);
-        
-        // 检测权限变化 - 只在非首次加载且非强制刷新时检测
-        const currentUser = get().user;
-        const permissionsChanged = currentUser && !forceRefresh && !isFirstLoad && (
-          currentUser.permissions.length !== userData.permissions.length ||
-          JSON.stringify(currentUser.permissions) !== JSON.stringify(userData.permissions) ||
-          currentUser.isAdmin !== userData.isAdmin
-        );
-        
-        set({ 
-          user: userData, 
-          lastFetched: Date.now(), 
-          error: null,
-          permissionChanged: permissionsChanged || false,
-          isFirstLoad: false // 标记为非首次加载
+        const response = await apiRequestWithError(API_ENDPOINTS.USERS.ME, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
-        
-        // 备份新的权限数据
-        backupPermissions(userData);
-        
 
-        
-        // 权限变化通知 - 只在真正检测到权限变化且已初始化且非首次加载时触发
-        const { isInitialized } = get();
-        if (permissionsChanged && isInitialized && !isFirstLoad && typeof window !== 'undefined') {
-          // 显示通知
-          const event = new CustomEvent('permissionChanged', {
-            detail: { 
-              message: '检测到权限变化，页面即将更新',
-              forceRefresh: false
-            }
-          });
-          window.dispatchEvent(event);
-        }
-        
-        // 标记为已初始化
-        if (!isInitialized) {
-          set({ isInitialized: true });
+        if (response) {
+          set({ user: response, isLoading: false });
+        } else {
+          throw new Error('获取用户信息失败');
         }
       } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          set({ error: '请求超时，请检查网络连接' });
-        } else {
-          const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
-          set({ error: errorMessage });
-        }
-      } finally {
-        set({ isLoading: false });
+        const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
+        set({ error: errorMessage, isLoading: false });
+        throw error;
       }
     }
   })
@@ -373,24 +146,10 @@ export const validatePermissions = {
     const { user, fetchUser } = usePermissionStore.getState();
     if (!user) {
       try {
-        // 如果没有用户，直接获取用户数据
         await fetchUser();
       } catch (error) {
         // 静默处理预加载错误
       }
-    }
-  },
-
-  // 初始化管理员权限变化监听器
-  initAdminPermissionListener(): void {
-    if (typeof window !== 'undefined') {
-      // 监听权限变化事件
-      const handlePermissionChange = () => {
-        const { setPermissionChanged } = usePermissionStore.getState();
-        setPermissionChanged(true);
-      };
-
-      window.addEventListener('permissionChanged', handlePermissionChange);
     }
   }
 };
