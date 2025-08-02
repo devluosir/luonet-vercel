@@ -1,0 +1,28 @@
+/* PDF字体加载样式 - 仅在PDF生成页面使用 */
+
+/* 预加载字体文件，确保PDF生成时字体可用 */
+@font-face {
+  font-family: 'NotoSansSC';
+  src: url('/fonts/NotoSansSC-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NotoSansSC';
+  src: url('/fonts/NotoSansSC-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* PDF生成页面的字体优化 */
+.pdf-page {
+  font-family: 'NotoSansSC', Arial, Helvetica, sans-serif;
+}
+
+/* 确保字体在PDF生成时可用 */
+.pdf-generator {
+  font-family: 'NotoSansSC', Arial, Helvetica, sans-serif;
+} 

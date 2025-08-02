@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { embeddedResources } from '@/lib/embedded-resources';
+import { addChineseFontsToPDF } from '@/utils/fontLoader';
 
 // 格式化货币
 function formatCurrency(value: number): string {
@@ -96,12 +97,8 @@ export async function generatePackingListPDF(
   }) as ExtendedJsPDF;
 
   try {
-    // 添加字体
-    doc.addFileToVFS('NotoSansSC-Regular.ttf', embeddedResources.notoSansSCRegular);
-    doc.addFont('NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
-    doc.addFileToVFS('NotoSansSC-Bold.ttf', embeddedResources.notoSansSCBold);
-    doc.addFont('NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
-    doc.setFont('NotoSansSC', 'normal');
+    // 添加中文字体
+    addChineseFontsToPDF(doc);
 
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;

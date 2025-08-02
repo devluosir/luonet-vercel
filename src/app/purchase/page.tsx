@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import './pdf-fonts.css';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { Download, Settings, ChevronDown, ChevronUp, ArrowLeft, Save, History, Eye } from 'lucide-react';

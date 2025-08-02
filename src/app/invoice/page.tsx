@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import './pdf-fonts.css';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Download, Settings, Clipboard, History, Save } from 'lucide-react';

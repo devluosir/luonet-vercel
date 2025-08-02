@@ -4,6 +4,7 @@ import { PDFGeneratorData } from '@/types/pdf';
 import { getInvoiceTitle } from '@/utils/pdfHelpers';
 import { embeddedResources } from '@/lib/embedded-resources';
 import { getOptimizedStampImage } from './pdfHelpers';
+import { addChineseFontsToPDF } from '@/utils/fontLoader';
 
 interface AutoTableOptions {
   startY: number;
@@ -122,12 +123,8 @@ export async function generateInvoicePDF(data: PDFGeneratorData, preview: boolea
   }) as ExtendedJsPDF;
 
   try {
-    // 添加字体
-    doc.addFileToVFS('NotoSansSC-Regular.ttf', embeddedResources.notoSansSCRegular);
-    doc.addFont('NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
-    doc.addFileToVFS('NotoSansSC-Bold.ttf', embeddedResources.notoSansSCBold);
-    doc.addFont('NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
-    doc.setFont('NotoSansSC', 'normal');
+    // 添加中文字体
+    addChineseFontsToPDF(doc);
 
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;

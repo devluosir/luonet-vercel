@@ -4,6 +4,7 @@ import { QuotationData } from '@/types/quotation';
 import { UserOptions } from 'jspdf-autotable';
 import { embeddedResources } from '@/lib/embedded-resources';
 import { generateTableConfig } from './pdfTableGenerator';
+import { addChineseFontsToPDF } from '@/utils/fontLoader';
 
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
@@ -42,12 +43,8 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     format: 'a4'
   }) as ExtendedJsPDF;
 
-  // 添加字体
-  doc.addFileToVFS('NotoSansSC-Regular.ttf', embeddedResources.notoSansSCRegular);
-  doc.addFont('NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
-  doc.addFileToVFS('NotoSansSC-Bold.ttf', embeddedResources.notoSansSCBold);
-  doc.addFont('NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
-  doc.setFont('NotoSansSC', 'normal');
+  // 添加中文字体
+  addChineseFontsToPDF(doc);
 
   const pageWidth = doc.internal.pageSize.width;
   const margin = 20;  // 页面边距

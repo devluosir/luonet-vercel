@@ -3,6 +3,7 @@ import { Providers } from './providers'
 import localFont from 'next/font/local'
 import type { Metadata } from 'next'
 
+// 字体配置 - 仅在需要时加载，不预加载
 const noto_sans_sc = localFont({
   src: [
     {
@@ -17,7 +18,7 @@ const noto_sans_sc = localFont({
     },
   ],
   display: 'swap',
-  preload: false,
+  preload: false, // 不预加载，按需加载
   variable: '--font-noto-sans-sc',
 })
 

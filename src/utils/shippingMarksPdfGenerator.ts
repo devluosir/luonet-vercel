@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { UserOptions } from 'jspdf-autotable';
 import { embeddedResources } from '@/lib/embedded-resources';
+import { addChineseFontsToPDF } from '@/utils/fontLoader';
 
 // 扩展 jsPDF 类型
 interface ExtendedJsPDF extends jsPDF {
@@ -30,11 +31,8 @@ export async function generateShippingMarksPDF(
   }) as ExtendedJsPDF;
 
   try {
-    // 添加字体
-    doc.addFileToVFS('NotoSansSC-Regular.ttf', embeddedResources.notoSansSCRegular);
-    doc.addFont('NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
-    doc.addFileToVFS('NotoSansSC-Bold.ttf', embeddedResources.notoSansSCBold);
-    doc.addFont('NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
+    // 添加中文字体
+    addChineseFontsToPDF(doc);
     doc.setFont('NotoSansSC', fontStyle);
 
     // 设置文字颜色
