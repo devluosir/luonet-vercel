@@ -1,7 +1,7 @@
 import { getSession } from 'next-auth/react';
 
-// API基础URL
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8787';
+// API基础URL - 使用环境变量，支持Vercel部署
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net';
 
 // API端点配置
 export const API_ENDPOINTS = {
