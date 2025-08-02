@@ -210,24 +210,24 @@ export default function AdminPage() {
           onLogout={handleLogout}
         />
 
-        <div className="w-full max-w-none px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full max-w-none px-3 sm:px-4 lg:px-6 py-6">
           {/* 标题和添加按钮 */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
-                <Users className="w-8 h-8 mr-3 text-blue-600 dark:text-blue-400" />
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+                <Users className="w-6 h-6 mr-2 text-blue-600 dark:text-blue-400" />
                 用户管理
               </h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                 管理系统用户账户和权限
               </p>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center justify-center px-6 py-3 text-sm font-medium text-white 
-                       bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl 
+              className="flex items-center justify-center px-4 py-2 text-sm font-medium text-white 
+                       bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg 
                        hover:from-blue-700 hover:to-purple-700 
-                       shadow-lg hover:shadow-xl transform hover:-translate-y-0.5
+                       shadow-md hover:shadow-lg transform hover:-translate-y-0.5
                        transition-all duration-200"
             >
               <UserPlus className="w-4 h-4 mr-2" />
@@ -235,82 +235,82 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* 统计卡片 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-            <div className="bg-white dark:bg-[#1c1c1e] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+          {/* 统计卡片 - 更紧凑 */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-800">
               <div className="flex items-center">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                  <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                  <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">总用户数</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">总用户数</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#1c1c1e] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-800">
               <div className="flex items-center">
-                <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                  <UserCheck className="w-6 h-6 text-green-600 dark:text-green-400" />
+                <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                  <UserCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">活跃用户</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.active}</p>
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">活跃用户</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.active}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#1c1c1e] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-800">
               <div className="flex items-center">
-                <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-lg">
-                  <UserX className="w-6 h-6 text-red-600 dark:text-red-400" />
+                <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg">
+                  <UserX className="w-5 h-5 text-red-600 dark:text-red-400" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">非活跃用户</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.inactive}</p>
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">非活跃用户</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.inactive}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#1c1c1e] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-800">
               <div className="flex items-center">
-                <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                  <Shield className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                  <Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">管理员</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.admin}</p>
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">管理员</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.admin}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#1c1c1e] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-800">
               <div className="flex items-center">
-                <div className="p-3 bg-gray-100 dark:bg-gray-900/20 rounded-lg">
-                  <User className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+                <div className="p-2 bg-gray-100 dark:bg-gray-900/20 rounded-lg">
+                  <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">普通用户</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.user}</p>
+                <div className="ml-3">
+                  <p className="text-xs font-medium text-gray-600 dark:text-gray-400">普通用户</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{stats.user}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 搜索和筛选 */}
-          <div className="bg-white dark:bg-[#1c1c1e] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-800 mb-6">
-            <div className="flex flex-col lg:flex-row gap-4">
+          {/* 搜索和筛选 - 更紧凑 */}
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-800 mb-4">
+            <div className="flex flex-col lg:flex-row gap-3">
               {/* 搜索框 */}
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="搜索用户名或邮箱..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
+                    className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg 
                              bg-white dark:bg-[#2c2c2e] text-gray-900 dark:text-white 
                              focus:ring-2 focus:ring-blue-500 focus:border-transparent
                              placeholder-gray-500 dark:placeholder-gray-400"
@@ -319,11 +319,11 @@ export default function AdminPage() {
               </div>
 
               {/* 筛选器 */}
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex gap-2">
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
-                  className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
+                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg 
                            bg-white dark:bg-[#2c2c2e] text-gray-900 dark:text-white 
                            focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
@@ -335,7 +335,7 @@ export default function AdminPage() {
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value as 'all' | 'admin' | 'user')}
-                  className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
+                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg 
                            bg-white dark:bg-[#2c2c2e] text-gray-900 dark:text-white 
                            focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
@@ -347,49 +347,49 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* 用户卡片网格 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {/* 用户卡片网格 - 更紧凑 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
-                className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 
-                         hover:shadow-lg transition-all duration-200 overflow-hidden"
+                className="bg-white dark:bg-[#1c1c1e] rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 
+                         hover:shadow-md transition-all duration-200 overflow-hidden"
               >
-                <div className="p-6">
+                <div className="p-4">
                   {/* 用户头像和基本信息 */}
-                  <div className="flex items-center mb-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg relative ${
+                  <div className="flex items-center mb-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm relative ${
                       user.isAdmin 
                         ? 'bg-gradient-to-br from-blue-500 to-purple-600' 
                         : 'bg-gradient-to-br from-gray-500 to-gray-600'
                     }`}>
                       {user.username.charAt(0).toUpperCase()}
-                      <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-900 ${
+                      <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-900 ${
                         user.status ? 'bg-green-500' : 'bg-red-500'
                       }`}></div>
                     </div>
-                    <div className="ml-4 flex-1">
+                    <div className="ml-3 flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                           {user.username}
                         </h3>
                         {user.isAdmin && (
-                          <span className="px-2 py-1 text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-full">
+                          <span className="px-1.5 py-0.5 text-xs font-medium bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-full flex-shrink-0">
                             管理员
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                         {user.email || '未设置邮箱'}
                       </p>
                     </div>
                   </div>
 
-                  {/* 用户状态信息 */}
-                  <div className="space-y-3 mb-4">
+                  {/* 用户状态信息 - 更紧凑 */}
+                  <div className="space-y-2 mb-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">状态</span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      <span className="text-xs text-gray-500 dark:text-gray-400">状态</span>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                         user.status 
                           ? 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400'
                           : 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400'
@@ -399,15 +399,15 @@ export default function AdminPage() {
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">注册时间</span>
-                      <span className="text-sm text-gray-900 dark:text-white">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">注册时间</span>
+                      <span className="text-xs text-gray-900 dark:text-white">
                         {new Date(user.createdAt).toLocaleDateString()}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">最后登录</span>
-                      <span className="text-sm text-gray-900 dark:text-white">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">最后登录</span>
+                      <span className="text-xs text-gray-900 dark:text-white">
                         {user.lastLoginAt ? (
                           <div className="flex items-center">
                             <Clock className="w-3 h-3 mr-1 text-gray-400" />
@@ -424,12 +424,12 @@ export default function AdminPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => router.push(`/admin/users/${user.id}`)}
-                      className="flex-1 inline-flex items-center justify-center px-4 py-2 
+                      className="flex-1 inline-flex items-center justify-center px-3 py-1.5 
                                bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 
-                               text-sm font-medium rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 
+                               text-xs font-medium rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 
                                transition-colors duration-200"
                     >
-                      <Edit className="w-4 h-4 mr-2" />
+                      <Edit className="w-3 h-3 mr-1" />
                       编辑
                     </button>
                   </div>
@@ -438,14 +438,14 @@ export default function AdminPage() {
             ))}
           </div>
 
-          {/* 空状态 */}
+          {/* 空状态 - 更紧凑 */}
           {filteredUsers.length === 0 && (
-            <div className="text-center py-16 bg-white dark:bg-[#1c1c1e] rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
-              <Users className="w-20 h-20 text-gray-400 mx-auto mb-6" />
-              <div className="text-2xl font-medium text-gray-900 dark:text-white mb-2">
+            <div className="text-center py-12 bg-white dark:bg-[#1c1c1e] rounded-lg shadow-sm border border-gray-200 dark:border-gray-800">
+              <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <div className="text-xl font-medium text-gray-900 dark:text-white mb-2">
                 {searchTerm || statusFilter !== 'all' || roleFilter !== 'all' ? '没有找到匹配的用户' : '暂无用户'}
               </div>
-              <div className="text-gray-500 dark:text-gray-400 mb-8">
+              <div className="text-gray-500 dark:text-gray-400 mb-6">
                 {searchTerm || statusFilter !== 'all' || roleFilter !== 'all' 
                   ? '请尝试调整搜索条件或筛选器' 
                   : '点击添加用户按钮创建第一个用户'
@@ -453,7 +453,7 @@ export default function AdminPage() {
               </div>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
                 添加用户
@@ -461,11 +461,11 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* 加载状态 */}
+          {/* 加载状态 - 更紧凑 */}
           {loading && (
-            <div className="text-center py-16">
-              <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-              <div className="text-lg text-gray-600 dark:text-gray-400">加载用户数据中...</div>
+            <div className="text-center py-12">
+              <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">加载用户数据中...</div>
             </div>
           )}
         </div>
