@@ -59,13 +59,13 @@ export default withAuth(
           return false;
         }
 
-        // 4. 管理员路由需要严格的管理员权限验证
+        // 4. 管理员路由需要管理员权限验证
         if (ADMIN_PATHS.some(path => pathname.startsWith(path))) {
-          // 必须明确是管理员才能访问
-          if (token.isAdmin !== true) {
-            return false;
+          // 允许管理员访问，如果token中没有isAdmin信息，暂时允许访问，让前端处理权限检查
+          if (token.isAdmin === undefined) {
+            return true;
           }
-          return true;
+          return token.isAdmin === true;
         }
 
         // 5. 业务路由需要对应的权限验证

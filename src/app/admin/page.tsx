@@ -1,13 +1,26 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { 
+  Users, 
+  UserPlus, 
+  Search, 
+  Filter, 
+  MoreHorizontal, 
+  Edit, 
+  Trash2, 
+  UserCheck, 
+  UserX, 
+  Shield, 
+  User,
+  Mail,
+  Clock
+} from 'lucide-react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { CreateUserModal } from '@/components/admin/CreateUserModal';
-import { UserPlus, Users, Clock, Mail, User, Edit, Search, Filter, Shield, UserCheck, UserX } from 'lucide-react';
 import { Footer } from '@/components/Footer';
-import { usePermissionStore, isUserAdmin } from '@/lib/permissions';
 import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
 
 interface User {
@@ -35,7 +48,7 @@ export default function AdminPage() {
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
   
   // 使用权限store
-  const { user: permissionUser, isAdmin, fetchPermissions } = usePermissionStore();
+  // const { user: permissionUser, isAdmin, fetchPermissions } = usePermissionStore();
 
   // 初始化
   useEffect(() => {
@@ -54,15 +67,10 @@ export default function AdminPage() {
           return;
         }
 
-        // 如果session存在但权限数据未加载，先获取权限
-        if (session?.user && !permissionUser) {
-          await fetchPermissions();
-          return; // 等待权限加载完成后再检查
-        }
-
-        // 权限检查
-        const hasAdminPermission = isUserAdmin();
+        // 直接检查session中的管理员权限
+        const hasAdminPermission = session?.user?.isAdmin === true;
         if (!hasAdminPermission) {
+          console.log('用户不是管理员，重定向到登录页');
           router.push('/api/auth/signin');
           return;
         }
@@ -80,7 +88,7 @@ export default function AdminPage() {
     };
 
     checkPermissionsAndLoad();
-  }, [mounted, session, permissionUser, router, fetchPermissions, status]);
+  }, [mounted, session, router, status]);
 
   // 过滤用户
   useEffect(() => {
@@ -170,7 +178,7 @@ export default function AdminPage() {
   }
 
   // 权限不足时返回null，让重定向逻辑处理
-  if (permissionChecked && !isUserAdmin()) {
+  if (permissionChecked && session?.user?.isAdmin !== true) {
     return null;
   }
 

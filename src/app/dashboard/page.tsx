@@ -748,6 +748,8 @@ export default function DashboardPage() {
       setSuccessMessage('正在刷新权限信息...');
       setShowSuccessMessage(true);
       
+      console.log('开始刷新权限...');
+      
       // 调用权限刷新API
       const response = await fetch('/api/auth/update-session-permissions', {
         method: 'POST',
@@ -765,10 +767,12 @@ export default function DashboardPage() {
       }
 
       const data = await response.json();
+      console.log('权限刷新响应:', data);
       
       if (data.success) {
         // 更新最新权限数据
         setLatestPermissions(data.permissions);
+        console.log('更新权限数据:', data.permissions);
 
         // 触发权限变化事件，通知其他组件
         window.dispatchEvent(new CustomEvent('permissionChanged', {
@@ -852,13 +856,15 @@ export default function DashboardPage() {
           showWelcome={true}
         />
 
-        {user && (
-          <ProfileModal
-            isOpen={showProfileModal}
-            onClose={() => setShowProfileModal(false)}
-            user={user}
-          />
-        )}
+        <ProfileModal
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          user={{
+            username: session?.user?.username || session?.user?.name || '',
+            email: session?.user?.email || null,
+            permissions: session?.user?.permissions || []
+          }}
+        />
 
         <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-6">
           {/* 成功消息 */}
