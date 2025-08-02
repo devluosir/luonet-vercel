@@ -72,6 +72,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub || "";
         session.user.username = token.username;
         session.user.isAdmin = token.isAdmin;
+        
+        // 直接使用token中的权限，避免每次都请求数据库
         session.user.permissions = token.permissions;
       }
       return session;

@@ -553,22 +553,7 @@ export default function DashboardPage() {
       if (session?.user) {
         console.log('开始获取用户权限...');
         
-        // 尝试强制刷新权限
-        try {
-          const response = await fetch('/api/auth/force-refresh', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-          
-          if (response.ok) {
-            console.log('强制刷新权限成功');
-          }
-        } catch (error) {
-          console.log('强制刷新权限失败，使用默认权限获取');
-        }
-        
+        // 直接获取用户权限
         await fetchUser();
         console.log('权限初始化完成');
       }
@@ -686,7 +671,8 @@ export default function DashboardPage() {
     );
   }
 
-  if (!session) {
+  // 如果没有session且没有用户信息，才重定向到登录页
+  if (!session && !user) {
     router.push('/');
     return null;
   }
@@ -729,31 +715,17 @@ export default function DashboardPage() {
               setSuccessMessage('正在刷新权限信息...');
               setShowSuccessMessage(true);
               
-              // 调用强制刷新API
-              const response = await fetch('/api/auth/force-refresh', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-              });
+              // 清除当前权限缓存
+              usePermissionStore.getState().clearUser();
               
-              if (response.ok) {
-                const data = await response.json();
-                
-                // 清除当前权限缓存
-                usePermissionStore.getState().clearUser();
-                
-                // 重新获取用户权限
-                await fetchUser();
-                
-                // 强制重新渲染
-                setRefreshKey(prev => prev + 1);
-                
-                // 更新消息
-                setSuccessMessage(data.message || '权限信息已更新');
-              } else {
-                throw new Error('权限刷新失败');
-              }
+              // 重新获取用户权限
+              await fetchUser();
+              
+              // 强制重新渲染
+              setRefreshKey(prev => prev + 1);
+              
+              // 更新消息
+              setSuccessMessage('权限信息已更新');
               
               // 2秒后隐藏消息
               setTimeout(() => setShowSuccessMessage(false), 2000);

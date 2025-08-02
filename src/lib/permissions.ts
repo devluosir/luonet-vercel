@@ -143,17 +143,47 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
 
   refreshPermissions: async () => {
     try {
-      // 清除当前用户数据
-      set({ user: null, isLoading: true, error: null });
+      set({ isLoading: true, error: null });
       
-      // 重新获取用户权限
-      await get().fetchUser();
+      // 获取当前session
+      const session = await getSession();
+      if (!session?.user) {
+        throw new Error('未登录');
+      }
+
+      // 从API获取最新权限
+      const response = await fetch('/api/auth/get-latest-permissions', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-User-ID': session.user.id || '',
+          'X-User-Name': session.user.username || session.user.name || '',
+          'X-User-Admin': session.user.isAdmin ? 'true' : 'false'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('获取权限失败');
+      }
+
+      const data = await response.json();
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('权限刷新成功');
+      if (data.success) {
+        set({ 
+          user: data.user,
+          isLoading: false,
+          error: null
+        });
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('权限刷新成功');
+        }
+      } else {
+        throw new Error(data.error || '获取权限失败');
       }
     } catch (error) {
       console.error('权限刷新失败:', error);
+      set({ error: error instanceof Error ? error.message : '刷新权限失败', isLoading: false });
       throw error;
     }
   }

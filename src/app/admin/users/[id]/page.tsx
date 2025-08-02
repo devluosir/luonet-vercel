@@ -441,7 +441,9 @@ export default function UserDetailPage() {
       console.log('重新获取的用户数据:', userData);
       setUser(userData);
       setHasChanges(false);
-      alert('权限更新成功');
+      
+      // 通知用户权限已更新
+      alert('权限更新成功，用户需要点击"刷新权限"按钮来获取最新权限');
     } catch (error) {
       console.error('Error updating permissions:', error);
       const errorMessage = error instanceof Error ? error.message : '更新模块权限失败';
