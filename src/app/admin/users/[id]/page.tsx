@@ -46,13 +46,6 @@ interface User {
 // 简化的模块定义
 const MODULES = [
   { 
-    id: 'history', 
-    name: '单据管理中心',
-    icon: Archive,
-    color: 'text-gray-600 dark:text-gray-400',
-    bgColor: 'bg-gray-100 dark:bg-gray-800/20'
-  },
-  { 
     id: 'quotation', 
     name: '报价及确认',
     icon: FileText,
@@ -81,6 +74,13 @@ const MODULES = [
     bgColor: 'bg-orange-100 dark:bg-orange-900/20'
   },
   { 
+    id: 'history', 
+    name: '单据管理中心',
+    icon: Archive,
+    color: 'text-gray-600 dark:text-gray-400',
+    bgColor: 'bg-gray-100 dark:bg-gray-800/20'
+  },
+  { 
     id: 'customer', 
     name: '客户管理',
     icon: Users,
@@ -101,48 +101,48 @@ const MODULES = [
     color: 'text-purple-600 dark:text-purple-400',
     bgColor: 'bg-purple-100 dark:bg-purple-900/20'
   },
-  { 
-    id: 'feature5', 
-    name: '库存管理',
-    icon: Database,
-    color: 'text-amber-600 dark:text-amber-400',
-    bgColor: 'bg-amber-100 dark:bg-amber-900/20'
-  },
-  { 
-    id: 'feature3', 
-    name: '数据分析',
-    icon: BarChart3,
-    color: 'text-cyan-600 dark:text-cyan-400',
-    bgColor: 'bg-cyan-100 dark:bg-cyan-900/20'
-  },
-  { 
-    id: 'feature8', 
-    name: '销售预测',
-    icon: TrendingUp,
-    color: 'text-emerald-600 dark:text-emerald-400',
-    bgColor: 'bg-emerald-100 dark:bg-emerald-900/20'
-  },
-  { 
-    id: 'feature7', 
-    name: '时间管理',
-    icon: Clock,
-    color: 'text-indigo-600 dark:text-indigo-400',
-    bgColor: 'bg-indigo-100 dark:bg-indigo-900/20'
-  },
-  { 
-    id: 'feature6', 
-    name: '自动化工具',
-    icon: Zap,
-    color: 'text-red-600 dark:text-red-400',
-    bgColor: 'bg-red-100 dark:bg-red-900/20'
-  },
-  { 
-    id: 'feature9', 
-    name: '系统设置',
-    icon: Settings,
-    color: 'text-gray-600 dark:text-gray-400',
-    bgColor: 'bg-gray-100 dark:bg-gray-800/20'
-  },
+  // { 
+  //   id: 'feature5', 
+  //   name: '库存管理',
+  //   icon: Database,
+  //   color: 'text-amber-600 dark:text-amber-400',
+  //   bgColor: 'bg-amber-100 dark:bg-amber-900/20'
+  // },
+  // { 
+  //   id: 'feature3', 
+  //   name: '数据分析',
+  //   icon: BarChart3,
+  //   color: 'text-cyan-600 dark:text-cyan-400',
+  //   bgColor: 'bg-cyan-100 dark:bg-cyan-900/20'
+  // },
+  // { 
+  //   id: 'feature8', 
+  //   name: '销售预测',
+  //   icon: TrendingUp,
+  //   color: 'text-emerald-600 dark:text-emerald-400',
+  //   bgColor: 'bg-emerald-100 dark:bg-emerald-900/20'
+  // },
+  // { 
+  //   id: 'feature7', 
+  //   name: '时间管理',
+  //   icon: Clock,
+  //   color: 'text-indigo-600 dark:text-indigo-400',
+  //   bgColor: 'bg-indigo-100 dark:bg-indigo-900/20'
+  // },
+//  { 
+//    id: 'feature6', 
+//    name: '自动化工具',
+//    icon: Zap,
+//    color: 'text-red-600 dark:text-red-400',
+//    bgColor: 'bg-red-100 dark:bg-red-900/20'
+//  },
+//  { 
+//    id: 'feature9', 
+//    name: '系统设置',
+//    icon: Settings,
+//    color: 'text-gray-600 dark:text-gray-400',
+//    bgColor: 'bg-gray-100 dark:bg-gray-800/20'
+//  },
 ];
 
 export default function UserDetailPage() {
