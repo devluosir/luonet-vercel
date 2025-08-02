@@ -7,7 +7,7 @@ import { AdminHeader } from '@/components/admin/AdminHeader';
 import { CreateUserModal } from '@/components/admin/CreateUserModal';
 import { UserPlus, Users, Clock, Mail, User, Edit } from 'lucide-react';
 import { Footer } from '@/components/Footer';
-import { usePermissionStore, validatePermissions } from '@/lib/permissions';
+import { usePermissionStore, isUserAdmin } from '@/lib/permissions';
 import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
 
 interface User {
@@ -43,8 +43,8 @@ export default function AdminPage() {
 
     const checkPermissionsAndLoad = async () => {
       try {
-        // 使用完整权限验证
-        const hasAdminPermission = await validatePermissions.validateAdmin();
+        // 使用简化的权限检查
+        const hasAdminPermission = isUserAdmin();
         if (!hasAdminPermission) {
           router.push('/dashboard');
           return;

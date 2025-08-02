@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance, safeRequestIdleCallback } from '@/utils/performance';
-import { usePermissionStore, validatePermissions } from '@/lib/permissions';
+import { usePermissionStore, hasPermission } from '@/lib/permissions';
 import { Header } from '@/components/Header';
 
 interface Permission {
@@ -295,7 +295,7 @@ export default function DashboardPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase'>('all');
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { user, hasPermission, fetchUser, isLoading } = usePermissionStore();
+  const { user, isLoading } = usePermissionStore();
   const refreshing = isLoading;
 
   // 统一的权限映射和检查（优化版）
@@ -320,33 +320,12 @@ export default function DashboardPage() {
       };
     }
 
-    // 直接从用户权限数据计算，避免调用hasPermission函数
-    const userPermissions = user.permissions || [];
-    const hasPermissionDirect = (moduleId: string) => {
-      // 简化权限检查逻辑，直接匹配moduleId
-      const permission = userPermissions.find(p => 
-        p.moduleId === moduleId || 
-        (moduleId === 'confirmation' && p.moduleId === 'quotation')
-      );
-      
-      // 添加详细的权限检查调试信息
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`权限检查 ${moduleId}:`, {
-          moduleId,
-          foundPermission: permission,
-          canAccess: permission?.canAccess,
-          allUserPermissions: userPermissions.map(p => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
-        });
-      }
-      
-      return permission?.canAccess || false;
-    };
-
+    // 使用统一的权限检查函数
     const permissions = {
-      quotation: hasPermissionDirect('quotation'),
-      packing: hasPermissionDirect('packing'),
-      invoice: hasPermissionDirect('invoice'),
-      purchase: hasPermissionDirect('purchase')
+      quotation: hasPermission('quotation'),
+      packing: hasPermission('packing'),
+      invoice: hasPermission('invoice'),
+      purchase: hasPermission('purchase')
     };
 
     // 文档类型到权限的映射
@@ -371,21 +350,25 @@ export default function DashboardPage() {
         permissions: permissions,
         documentTypePermissions: documentTypePermissions,
         accessibleDocumentTypes: accessibleDocumentTypes,
-        // 添加详细的权限检查信息
-        permissionChecks: {
-          quotation: hasPermissionDirect('quotation'),
-          packing: hasPermissionDirect('packing'),
-          invoice: hasPermissionDirect('invoice'),
-          purchase: hasPermissionDirect('purchase')
-        },
         // 添加权限数据样本
-        samplePermissions: userPermissions.slice(0, 3),
-        // 添加完整的权限数据用于调试
-        allPermissionsDetailed: userPermissions.map(p => ({
+        samplePermissions: user?.permissions?.slice(0, 3) || [],
+        // 添加详细的权限检查调试
+        permissionChecks: {
+          quotation: hasPermission('quotation'),
+          packing: hasPermission('packing'),
+          invoice: hasPermission('invoice'),
+          purchase: hasPermission('purchase')
+        },
+        // 添加所有权限数据
+        allPermissions: user?.permissions?.map(p => ({
           id: p.id,
           moduleId: p.moduleId,
-          canAccess: p.canAccess
-        }))
+          canAccess: p.canAccess,
+          canAccessType: typeof p.canAccess
+        })) || [],
+        // 添加可访问文档类型的详细信息
+        accessibleDocumentTypesDetails: accessibleDocumentTypes,
+        accessibleDocumentTypesCount: accessibleDocumentTypes.length
       });
     }
 
@@ -619,7 +602,7 @@ export default function DashboardPage() {
         console.log('开始获取用户权限...');
         
         // 从API获取最新权限，而不是从session
-        await usePermissionStore.getState().refreshPermissions();
+        await usePermissionStore.getState().fetchPermissions();
         console.log('权限初始化完成');
       }
     };
@@ -741,9 +724,8 @@ export default function DashboardPage() {
       setSuccessMessage('正在刷新权限信息...');
       setShowSuccessMessage(true);
       
-      // 使用 refreshPermissions 从 API 获取最新权限
-      const { refreshPermissions } = usePermissionStore.getState();
-      await refreshPermissions();
+      // 使用 fetchPermissions 从 API 获取最新权限
+      await usePermissionStore.getState().fetchPermissions();
       
       setRefreshKey(prev => prev + 1);
       setSuccessMessage('权限信息已更新');
@@ -760,9 +742,8 @@ export default function DashboardPage() {
       setSuccessMessage('正在刷新权限信息...');
       setShowSuccessMessage(true);
       
-      // 使用 refreshPermissions 从 API 获取最新权限
-      const { refreshPermissions } = usePermissionStore.getState();
-      await refreshPermissions();
+      // 使用 fetchPermissions 从 API 获取最新权限
+      await usePermissionStore.getState().fetchPermissions();
       
       setRefreshKey(prev => prev + 1);
       setSuccessMessage('权限信息已更新');
