@@ -48,24 +48,7 @@ export const authOptions: NextAuthOptions = {
             throw new Error("用户账户已被禁用");
           }
 
-          // 验证管理员权限（如果用户不是管理员，检查是否有模块权限）
-          if (!data.user.isAdmin) {
-            // 非管理员用户必须有至少一个模块的权限
-            if (!data.permissions || !Array.isArray(data.permissions) || data.permissions.length === 0) {
-              throw new Error("用户没有访问任何模块的权限");
-            }
-            
-            // 检查是否有可访问的模块
-            const hasAccessibleModule = data.permissions.some((perm: any) => 
-              perm.canAccess === true || perm.canAccess === 'true'
-            );
-            
-            if (!hasAccessibleModule) {
-              throw new Error("用户没有访问任何模块的权限");
-            }
-          }
-          
-          // 确保权限数据格式正确
+          // 确保权限数据格式正确（无论是否为管理员都需要处理）
           let permissions = [];
           if (Array.isArray(data.permissions)) {
             permissions = data.permissions.map((perm: any) => ({
@@ -79,6 +62,28 @@ export const authOptions: NextAuthOptions = {
               moduleId,
               canAccess: !!canAccess
             }));
+          }
+          
+          // 验证用户权限
+          if (data.user.isAdmin) {
+            // 管理员用户，直接允许登录，但记录权限信息
+            console.log('管理员用户登录:', data.user.username, '权限模块数:', permissions.length);
+          } else {
+            // 非管理员用户必须有至少一个模块的权限
+            if (permissions.length === 0) {
+              throw new Error("用户没有访问任何模块的权限");
+            }
+            
+            // 检查是否有可访问的模块
+            const hasAccessibleModule = permissions.some((perm: any) => 
+              perm.canAccess === true
+            );
+            
+            if (!hasAccessibleModule) {
+              throw new Error("用户没有访问任何模块的权限");
+            }
+            
+            console.log('普通用户登录:', data.user.username, '权限模块数:', permissions.length);
           }
           
           return {

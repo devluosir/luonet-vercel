@@ -61,10 +61,8 @@ export default withAuth(
 
         // 4. 管理员路由需要管理员权限验证
         if (ADMIN_PATHS.some(path => pathname.startsWith(path))) {
-          // 允许管理员访问，如果token中没有isAdmin信息，暂时允许访问，让前端处理权限检查
-          if (token.isAdmin === undefined) {
-            return true;
-          }
+          console.log('访问管理员路由:', pathname, 'token.isAdmin:', token.isAdmin);
+          // 管理员路由需要明确的isAdmin=true
           return token.isAdmin === true;
         }
 

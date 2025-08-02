@@ -73,13 +73,20 @@ export default function AdminPage() {
         console.log('isAdmin值:', session?.user?.isAdmin);
         console.log('isAdmin类型:', typeof session?.user?.isAdmin);
         
+        // 检查session是否存在
+        if (!session?.user) {
+          console.log('没有session数据，重定向到登录页');
+          router.push('/api/auth/signin');
+          return;
+        }
+        
         // 直接检查session中的管理员权限
-        const hasAdminPermission = session?.user?.isAdmin === true;
+        const hasAdminPermission = session.user.isAdmin === true;
         console.log('hasAdminPermission:', hasAdminPermission);
         
         if (!hasAdminPermission) {
-          console.log('用户不是管理员，重定向到登录页');
-          router.push('/api/auth/signin');
+          console.log('用户不是管理员，显示权限不足页面');
+          setPermissionChecked(true);
           return;
         }
 

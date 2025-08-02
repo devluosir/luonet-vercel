@@ -330,24 +330,53 @@ export default function DashboardPage() {
     // 优先使用最新权限数据，如果没有则使用session中的权限数据
     const permissions = latestPermissions.length > 0 ? latestPermissions : (session?.user?.permissions || []);
     
+    // 调试信息
+    console.log('Dashboard权限映射 - session.user:', session?.user);
+    console.log('Dashboard权限映射 - isAdmin:', session?.user?.isAdmin);
+    console.log('Dashboard权限映射 - permissions:', permissions);
+    console.log('Dashboard权限映射 - latestPermissions:', latestPermissions);
+    
     if (!permissions || permissions.length === 0) {
-      // 如果没有权限数据，默认显示所有模块
-      return {
-        permissions: {
-          quotation: true,
-          packing: true,
-          invoice: true,
-          purchase: true
-        },
-        documentTypePermissions: {
-          quotation: true,
-          confirmation: true,
-          packing: true,
-          invoice: true,
-          purchase: true
-        },
-        accessibleDocumentTypes: ['quotation', 'confirmation', 'packing', 'invoice', 'purchase']
-      };
+      // 如果没有权限数据，根据用户类型决定显示
+      const isAdmin = session?.user?.isAdmin === true;
+      
+      if (isAdmin) {
+        // 管理员用户，显示所有模块
+        return {
+          permissions: {
+            quotation: true,
+            packing: true,
+            invoice: true,
+            purchase: true
+          },
+          documentTypePermissions: {
+            quotation: true,
+            confirmation: true,
+            packing: true,
+            invoice: true,
+            purchase: true
+          },
+          accessibleDocumentTypes: ['quotation', 'confirmation', 'packing', 'invoice', 'purchase']
+        };
+      } else {
+        // 普通用户，不显示任何模块
+        return {
+          permissions: {
+            quotation: false,
+            packing: false,
+            invoice: false,
+            purchase: false
+          },
+          documentTypePermissions: {
+            quotation: false,
+            confirmation: false,
+            packing: false,
+            invoice: false,
+            purchase: false
+          },
+          accessibleDocumentTypes: []
+        };
+      }
     }
 
     // 根据权限数据构建权限映射
