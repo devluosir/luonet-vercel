@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { performanceMonitor, optimizePerformance } from '@/utils/performance';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -15,58 +14,15 @@ export default function LoginPage() {
   const { data: session, status } = useSession();
 
   useEffect(() => {
-    // 暂时禁用性能监控，避免无限重新渲染
-    // performanceMonitor.startTimer('page_load');
-    
-    // 性能优化
-    // optimizePerformance.optimizeFontLoading();
-    // optimizePerformance.cleanupUnusedResources();
-    
-    // 监控资源加载
-    // performanceMonitor.monitorResourceLoading();
-
-    // 页面加载完成后的性能记录
-    // const handleLoad = () => {
-    //   performanceMonitor.endTimer('page_load');
-    //   const metrics = performanceMonitor.getPageLoadMetrics();
-    //   if (process.env.NODE_ENV === 'development') {
-    //     console.log('📊 页面加载性能:', metrics);
-    //   }
-    // };
-
-    // 暂时禁用性能监控相关的事件监听
-    // if (document.readyState === 'complete') {
-    //   handleLoad();
-    // } else {
-    //   window.addEventListener('load', handleLoad);
-    //   return () => window.removeEventListener('load', handleLoad);
-    // }
-    
-    // 更新调试信息
-    // setDebugInfo('页面初始化完成'); // Removed debugInfo state
-    
     // 添加全局错误处理
     const handleError = (event: ErrorEvent) => {
       console.error('全局错误:', event.error);
-      // setDebugInfo(`错误: ${event.error?.message || '未知错误'}`); // Removed debugInfo state
     };
     
     window.addEventListener('error', handleError);
     
-    // 添加原生JavaScript测试
-    // const testButton = document.getElementById('native-test'); // Removed native test button
-    // if (testButton) {
-    //   testButton.addEventListener('click', () => {
-    //     alert('原生JavaScript测试成功！');
-    //     console.log('原生JavaScript事件处理正常');
-    //   });
-    // }
-    
     return () => {
       window.removeEventListener('error', handleError);
-      // if (testButton) { // Removed native test button
-      //   testButton.removeEventListener('click', () => {});
-      // }
     };
   }, []);
 
@@ -90,8 +46,6 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    // performanceMonitor.startTimer('login_request');
-
     try {
       console.log('尝试登录:', { username, password });
       const result = await signIn('credentials', {
@@ -99,8 +53,6 @@ export default function LoginPage() {
         password,
         redirect: false,
       });
-
-      // performanceMonitor.endTimer('login_request');
 
       if (!result) {
         setError('登录请求失败，请重试');
@@ -119,7 +71,6 @@ export default function LoginPage() {
       // 直接跳转
       router.push('/dashboard');
     } catch (error) {
-      performanceMonitor.endTimer('login_request');
       console.error('登录错误:', error);
       setError('登录过程中发生错误，请重试');
     } finally {
@@ -129,9 +80,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      {/* 调试信息 - 仅在开发环境显示 */}
-      {/* Removed debug info div */}
-      
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="relative">
@@ -213,12 +161,6 @@ export default function LoginPage() {
               >
                 {loading ? '登录中...' : '登录 →'}
               </button>
-              
-              {/* 简单登录按钮 - 不依赖表单提交 */}
-              {/* Removed direct login button */}
-              
-              {/* 测试按钮 - 仅在开发环境显示 */}
-              {/* Removed test buttons */}
             </div>
           </form>
         </div>

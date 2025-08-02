@@ -12,6 +12,10 @@ const nextConfig = {
         },
       },
     },
+    // 启用更激进的代码分割
+    optimizeCss: true,
+    // 启用更快的构建
+    swcMinify: true,
   },
   env: {
     WORKER_URL: process.env.WORKER_URL,
@@ -72,13 +76,17 @@ const nextConfig = {
           },
         ],
       },
-      // 优化字体缓存
+      // 优化字体缓存 - 长期缓存
       {
         source: '/fonts/(.*)',
         headers: [
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
+          },
+          {
+            key: 'Content-Encoding',
+            value: 'gzip',
           },
         ],
       },
@@ -89,6 +97,16 @@ const nextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // 优化图片缓存
+      {
+        source: '/images/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate=604800',
           },
         ],
       },
@@ -106,19 +124,65 @@ const nextConfig = {
     
     // 优化生产环境
     if (!dev && !isServer) {
+      // 更激进的代码分割
       config.optimization.splitChunks = {
         chunks: 'all',
         cacheGroups: {
+          // 第三方库
           vendor: {
             test: /[\\/]node_modules[\\/]/,
             name: 'vendors',
             chunks: 'all',
+            priority: 10,
+          },
+          // PDF相关代码单独分割
+          pdf: {
+            test: /[\\/](jspdf|jspdf-autotable)[\\/]/,
+            name: 'pdf-vendor',
+            chunks: 'all',
+            priority: 20,
+          },
+          // 大型组件
+          components: {
+            test: /[\\/]components[\\/]/,
+            name: 'components',
+            chunks: 'all',
+            priority: 5,
+          },
+          // 工具函数
+          utils: {
+            test: /[\\/]utils[\\/]/,
+            name: 'utils',
+            chunks: 'all',
+            priority: 5,
           },
         },
       }
+      
+      // 优化字体加载
+      config.module.rules.push({
+        test: /\.(woff|woff2|eot|ttf|otf)$/,
+        use: {
+          loader: 'file-loader',
+          options: {
+            name: '[name].[hash].[ext]',
+            outputPath: 'fonts/',
+            publicPath: '/_next/static/fonts/',
+          },
+        },
+      })
     }
     
     return config
+  },
+  // 移动端优化
+  async rewrites() {
+    return [
+      {
+        source: '/fonts/:path*',
+        destination: '/fonts/:path*',
+      },
+    ]
   },
 };
 

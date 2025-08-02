@@ -1,26 +1,6 @@
 import './globals.css'
 import { Providers } from './providers'
-import localFont from 'next/font/local'
 import type { Metadata } from 'next'
-
-// 字体配置 - 仅在需要时加载，不预加载
-const noto_sans_sc = localFont({
-  src: [
-    {
-      path: '../../public/fonts/NotoSansSC-Regular.ttf',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: '../../public/fonts/NotoSansSC-Bold.ttf',
-      weight: '700',
-      style: 'normal',
-    },
-  ],
-  display: 'swap',
-  preload: false, // 不预加载，按需加载
-  variable: '--font-noto-sans-sc',
-})
 
 export const metadata: Metadata = {
   title: 'Luo & Company',
@@ -43,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning className={`${noto_sans_sc.variable}`}>
+    <html lang="zh-CN" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -53,7 +33,7 @@ export default function RootLayout({
         <meta httpEquiv="Content-Language" content="zh-CN" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </head>
-      <body className={noto_sans_sc.className} suppressHydrationWarning>
+      <body className="font-sans" suppressHydrationWarning>
         <Providers>
           {children}
         </Providers>
