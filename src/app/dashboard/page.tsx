@@ -562,11 +562,6 @@ export default function DashboardPage() {
         });
       }
       
-      // 等待session加载完成后再获取权限
-      if (status === 'loading') {
-        return;
-      }
-      
       // 如果用户已登录且没有权限数据，获取权限
       if (session?.user && !user) {
         // 从API获取最新权限，而不是从session
@@ -574,7 +569,7 @@ export default function DashboardPage() {
       }
     };
     init();
-  }, [session, status, router]); // 移除fetchUser和prefetchPages依赖
+  }, [session, router]); // 移除status依赖，因为中间件已经处理了认证
 
   // 优化的退出逻辑 - 避免重复退出
   const handleLogout = useCallback(async () => {
@@ -714,11 +709,13 @@ export default function DashboardPage() {
 
   // 所有 hooks 声明完毕后，再做提前 return
   if (!mounted) return null;
-  if (status === 'loading') return (
+  
+  // 只在权限加载时显示加载状态，移除登录验证提示
+  if (isLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
       <div className="text-center">
         <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-        <div className="text-lg text-gray-600 dark:text-gray-400">验证登录中...</div>
+        <div className="text-lg text-gray-600 dark:text-gray-400">加载权限中...</div>
       </div>
     </div>
   );

@@ -48,17 +48,7 @@ export default function AdminPage() {
 
     const checkPermissionsAndLoad = async () => {
       try {
-        // 等待session加载完成
-        if (status === 'loading') {
-          return;
-        }
-
-        // 如果未登录，重定向到首页
-        if (status === 'unauthenticated') {
-          router.push('/');
-          return;
-        }
-
+        // 移除session加载检查，因为中间件已经处理了认证
         // 如果session存在但权限数据未加载，先获取权限
         if (session?.user && !permissionUser) {
           await fetchPermissions();
@@ -85,7 +75,7 @@ export default function AdminPage() {
     };
 
     checkPermissionsAndLoad();
-  }, [mounted, status, session, permissionUser, router, fetchPermissions]);
+  }, [mounted, session, permissionUser, router, fetchPermissions]);
 
   // 过滤用户
   useEffect(() => {
@@ -160,7 +150,7 @@ export default function AdminPage() {
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
           <div className="text-lg text-gray-600 dark:text-gray-400">
-            {status === 'loading' ? '验证登录中...' : '验证权限中...'}
+            验证权限中...
           </div>
         </div>
       </div>

@@ -467,12 +467,12 @@ export default function CustomerPage() {
   };
 
   // 避免闪烁
-  if (!mounted || status === 'loading') {
+  if (!mounted) {
     return null;
   }
 
+  // 移除登录检查，因为中间件已经处理了认证
   if (!session) {
-    router.push('/');
     return null;
   }
 
