@@ -61,6 +61,10 @@ export default withAuth(
 
         // 4. 管理员路由需要管理员权限
         if (ADMIN_PATHS.some(path => pathname.startsWith(path))) {
+          // 如果token中没有isAdmin信息，暂时允许访问，让前端处理权限检查
+          if (token.isAdmin === undefined) {
+            return true;
+          }
           return token.isAdmin === true;
         }
 
@@ -71,6 +75,12 @@ export default withAuth(
           if (moduleId === 'dashboard') {
             return true; // dashboard页面只要有token就可以访问
           }
+          
+          // 如果token中没有permissions信息，暂时允许访问，让前端处理权限检查
+          if (!token.permissions) {
+            return true;
+          }
+          
           return Array.isArray(token.permissions) && 
                  token.permissions.some(perm => perm.moduleId === moduleId && perm.canAccess);
         }

@@ -104,7 +104,9 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       // 1. 获取session信息
       const session = await getSession();
       if (!session?.user) {
-        throw new Error('未登录');
+        // 如果没有session，清除用户数据但不抛出错误
+        set({ user: null, isLoading: false, error: null });
+        return;
       }
 
       // 2. 从API获取最新权限
@@ -120,7 +122,10 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       });
 
       if (!response.ok) {
-        throw new Error('获取权限失败');
+        // 如果API请求失败，保留现有用户数据，不抛出错误
+        console.warn('获取权限失败，使用现有权限数据');
+        set({ isLoading: false, error: null });
+        return;
       }
 
       const data = await response.json();
@@ -146,12 +151,14 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         // 5. 更新store
         set({ user, isLoading: false, error: null, lastFetchTime: now });
       } else {
-        throw new Error(data.error || '获取权限失败');
+        // 如果API返回失败，保留现有用户数据
+        console.warn('权限API返回失败，使用现有权限数据');
+        set({ isLoading: false, error: null });
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '获取权限失败';
-      set({ error: errorMessage, isLoading: false });
-      throw error;
+      // 网络错误或其他异常，保留现有用户数据
+      console.warn('权限获取异常，使用现有权限数据:', error);
+      set({ isLoading: false, error: null });
     }
   }
 }));

@@ -28,38 +28,60 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [permissionChecked, setPermissionChecked] = useState(false);
   
   // 使用权限store
-  const { user: permissionUser, isAdmin } = usePermissionStore();
+  const { user: permissionUser, isAdmin, fetchPermissions } = usePermissionStore();
 
   // 初始化
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 权限检查和数据加载
+  // 权限检查和数据加载 - 优化版本
   useEffect(() => {
-    if (!mounted || status === 'loading') return;
+    if (!mounted) return;
 
     const checkPermissionsAndLoad = async () => {
       try {
-        // 使用简化的权限检查
+        // 等待session加载完成
+        if (status === 'loading') {
+          return;
+        }
+
+        // 如果未登录，重定向到首页
+        if (status === 'unauthenticated') {
+          router.push('/');
+          return;
+        }
+
+        // 如果session存在但权限数据未加载，先获取权限
+        if (session?.user && !permissionUser) {
+          await fetchPermissions();
+          return; // 等待权限加载完成后再检查
+        }
+
+        // 权限检查
         const hasAdminPermission = isUserAdmin();
         if (!hasAdminPermission) {
           router.push('/dashboard');
           return;
         }
 
+        // 标记权限检查完成
+        setPermissionChecked(true);
+
         // 加载用户列表
         await fetchUsers();
       } catch (error) {
         console.error('权限检查失败:', error);
-        router.push('/dashboard');
+        // 不要立即重定向，给用户一个重试的机会
+        setError('权限验证失败，请刷新页面重试');
       }
     };
 
     checkPermissionsAndLoad();
-  }, [mounted, status, router]);
+  }, [mounted, status, session, permissionUser, router, fetchPermissions]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -89,22 +111,27 @@ export default function AdminPage() {
     }
   };
 
-
-
-  // 避免闪烁的加载状态
-  if (!mounted || status === 'loading' || loading) {
+  // 避免闪烁的加载状态 - 优化版本
+  if (!mounted || status === 'loading' || (!permissionChecked && session?.user)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-lg text-gray-600 dark:text-gray-400">加载中...</div>
+          <div className="text-lg text-gray-600 dark:text-gray-400">
+            {status === 'loading' ? '验证登录中...' : '验证权限中...'}
+          </div>
         </div>
       </div>
     );
   }
 
-  // 权限不足时直接返回null，避免闪烁
-  if (!isAdmin()) {
+  // 未登录状态 - 返回null而不是重定向，让中间件处理
+  if (status === 'unauthenticated') {
+    return null;
+  }
+
+  // 权限不足时返回null，避免闪烁
+  if (permissionChecked && !isUserAdmin()) {
     return null;
   }
 
@@ -120,7 +147,10 @@ export default function AdminPage() {
           <div className="text-lg font-medium text-red-600 dark:text-red-400 mb-2">加载失败</div>
           <div className="text-gray-600 dark:text-gray-400">{error}</div>
           <button 
-            onClick={fetchUsers}
+            onClick={() => {
+              setError(null);
+              fetchUsers();
+            }}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             重试
