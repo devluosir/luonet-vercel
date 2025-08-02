@@ -77,7 +77,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     return user?.isAdmin || false;
   },
 
-  // 统一的权限获取逻辑 - 只从API获取
+  // 统一的权限获取逻辑 - 优先使用session数据
   fetchPermissions: async (forceRefresh = false) => {
     const state = get();
     
@@ -109,7 +109,22 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         return;
       }
 
-      // 2. 从API获取最新权限
+      // 2. 优先使用session中的权限数据
+      if (session.user.permissions && Array.isArray(session.user.permissions)) {
+        const userData = {
+          id: session.user.id || session.user.username || '',
+          username: session.user.username || session.user.name || '',
+          email: session.user.email || null,
+          status: true,
+          isAdmin: session.user.isAdmin || false,
+          permissions: session.user.permissions
+        };
+        
+        set({ user: userData, isLoading: false, error: null, lastFetchTime: now });
+        return;
+      }
+
+      // 3. 如果session中没有权限数据，才从API获取
       const response = await fetch('/api/auth/get-latest-permissions', {
         method: 'POST',
         headers: { 
@@ -131,14 +146,14 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       const data = await response.json();
       
       if (data.success) {
-        // 3. 统一处理权限数据格式
+        // 4. 统一处理权限数据格式
         const permissions: Permission[] = data.permissions.map((perm: any) => ({
           id: perm.id || `api-${perm.moduleId}`,
           moduleId: perm.moduleId,
           canAccess: !!perm.canAccess
         }));
 
-        // 4. 创建用户对象
+        // 5. 创建用户对象
         const user: User = {
           id: session.user.id || session.user.username || '',
           username: session.user.username || session.user.name || '',
@@ -148,7 +163,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           permissions: permissions
         };
 
-        // 5. 更新store
+        // 6. 更新store
         set({ user, isLoading: false, error: null, lastFetchTime: now });
       } else {
         // 如果API返回失败，保留现有用户数据
