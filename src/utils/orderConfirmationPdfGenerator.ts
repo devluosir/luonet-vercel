@@ -2,9 +2,7 @@ import jsPDF, { ImageProperties } from 'jspdf';
 import 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
 import { UserOptions } from 'jspdf-autotable';
-import { embeddedResources } from '@/lib/embedded-resources';
 import { generateTableConfig } from './pdfTableGenerator';
-import { getOptimizedStampImage } from './pdfHelpers';
 import { addChineseFontsToPDF } from '@/utils/fontLoader';
 
 // 扩展jsPDF类型
@@ -40,6 +38,17 @@ const getUnitDisplay = (baseUnit: string, quantity: number) => {
   return baseUnit; // 自定义单位不变化单复数
 };
 
+// 获取印章图片的简化版本
+async function getStampImage(stampType: string): Promise<string> {
+  const { embeddedResources } = await import('@/lib/embedded-resources');
+  if (stampType === 'shanghai') {
+    return embeddedResources.shanghaiStamp;
+  } else if (stampType === 'hongkong') {
+    return embeddedResources.hongkongStamp;
+  }
+  return '';
+}
+
 // 生成订单确认PDF
 export const generateOrderConfirmationPDF = async (data: QuotationData, preview = false): Promise<Blob> => {
   // 检查是否在客户端环境
@@ -65,6 +74,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     try {
       const headerType = data.templateConfig?.headerType || 'none';
       if (headerType !== 'none') {
+        const { embeddedResources } = await import('@/lib/embedded-resources');
         const headerImage = `data:image/png;base64,${
           headerType === 'bilingual' 
             ? embeddedResources.headerImage 
@@ -284,7 +294,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     if (data.showStamp && stampWillBeAlone) {
       try {
         // 使用优化的印章图片
-        const stampImageBase64 = await getOptimizedStampImage('hongkong');
+        const stampImageBase64 = await getStampImage('hongkong');
         const stampImage = `data:image/png;base64,${stampImageBase64}`;
         const imgProperties = doc.getImageProperties(stampImage);
         if (!imgProperties) {
@@ -553,7 +563,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     if (data.showStamp && !stampWillBeAlone) {
       try {
         // 使用优化的印章图片
-        const stampImageBase64 = await getOptimizedStampImage('hongkong');
+        const stampImageBase64 = await getStampImage('hongkong');
         const stampImage = `data:image/png;base64,${stampImageBase64}`;
         const imgProperties = doc.getImageProperties(stampImage);
         if (!imgProperties) {

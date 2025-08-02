@@ -463,41 +463,24 @@ export default function ToolsPage() {
     return null;
   }
 
-  // 只在权限加载时显示加载状态，移除登录验证
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-lg">加载权限中...</div>
-          {process.env.NODE_ENV === 'development' && (
-            <div className="text-sm text-gray-500 mt-2">
-              正在获取用户权限信息...
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   // 移除登录检查，因为中间件已经处理了认证
   if (!session?.user) {
     return null;
   }
 
-  // 显示错误状态
+  // 如果没有权限信息，显示提示而不是错误
   if (!session?.user?.permissions) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-600 mb-4">加载失败</div>
-          <div className="text-sm text-gray-500 mb-4">无法加载权限信息</div>
+          <div className="text-gray-600 dark:text-gray-400 mb-4">暂无权限信息</div>
+          <div className="text-sm text-gray-500 mb-4">请联系管理员分配权限</div>
           <div className="flex space-x-2 justify-center">
             <button 
               onClick={handleRefreshPermissions}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              重试
+              刷新权限
             </button>
           </div>
         </div>

@@ -2,8 +2,6 @@ import jsPDF, { ImageProperties } from 'jspdf';
 import 'jspdf-autotable';
 import { PDFGeneratorData } from '@/types/pdf';
 import { getInvoiceTitle } from '@/utils/pdfHelpers';
-import { embeddedResources } from '@/lib/embedded-resources';
-import { getOptimizedStampImage } from './pdfHelpers';
 import { addChineseFontsToPDF } from '@/utils/fontLoader';
 
 interface AutoTableOptions {
@@ -105,6 +103,17 @@ function getHeaderImageBase64(headerType: string): string {
     default:
       return embeddedResources.headerImage;
   }
+}
+
+// 获取印章图片的简化版本
+async function getStampImage(stampType: string): Promise<string> {
+  const { embeddedResources } = await import('@/lib/embedded-resources');
+  if (stampType === 'shanghai') {
+    return embeddedResources.shanghaiStamp;
+  } else if (stampType === 'hongkong') {
+    return embeddedResources.hongkongStamp;
+  }
+  return '';
 }
 
 // 函数重载签名
@@ -630,7 +639,7 @@ async function renderStamp(doc: ExtendedJsPDF, data: PDFGeneratorData, startY: n
   if (data.templateConfig.stampType !== 'none') {
     try {
       // 使用优化的印章图片
-      const stampImageBase64 = await getOptimizedStampImage(data.templateConfig.stampType);
+      const stampImageBase64 = await getStampImage(data.templateConfig.stampType);
       
       if (stampImageBase64) {
         const stampImage = `data:image/png;base64,${stampImageBase64}`;

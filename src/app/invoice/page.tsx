@@ -130,7 +130,9 @@ import {
   FolderDown2,
   FolderUp2,
   FolderRight2,
-  FolderLeft2
+  FolderLeft2,
+  Settings,
+  History
 } from 'lucide-react';
 import { generateInvoicePDF } from '@/utils/pdfGenerator';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';

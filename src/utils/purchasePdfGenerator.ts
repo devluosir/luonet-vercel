@@ -2,8 +2,6 @@ import jsPDF, { GState, ImageProperties } from 'jspdf';
 import { UserOptions } from 'jspdf-autotable';
 import { PurchaseOrderData } from '@/types/purchase';
 import { getBankInfo } from '@/utils/bankInfo';
-import { embeddedResources } from '@/lib/embedded-resources';
-import { getOptimizedStampImage } from './pdfHelpers';
 import { addChineseFontsToPDF } from '@/utils/fontLoader';
 
 // 扩展jsPDF类型
@@ -18,6 +16,23 @@ interface ExtendedJsPDF extends jsPDF {
   setGState: (gState: GState) => jsPDF;
   GState: (parameters: GState) => GState;
   getImageProperties: (image: string) => ImageProperties;
+}
+
+// 获取印章图片的简化版本
+async function getStampImage(stampType: string): Promise<string> {
+  const { embeddedResources } = await import('@/lib/embedded-resources');
+  if (stampType === 'shanghai') {
+    return embeddedResources.shanghaiStamp;
+  } else if (stampType === 'hongkong') {
+    return embeddedResources.hongkongStamp;
+  }
+  return '';
+}
+
+// 获取表头图片
+async function getHeaderImage(): Promise<string> {
+  const { embeddedResources } = await import('@/lib/embedded-resources');
+  return embeddedResources.headerImage;
 }
 
 // 生成采购订单PDF
@@ -52,7 +67,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
   try {
     // 添加表头
     try {
-      const headerImage = `data:image/png;base64,${embeddedResources.headerImage}`;
+      const headerImage = `data:image/png;base64,${await getHeaderImage()}`;
       const imgProperties = doc.getImageProperties(headerImage);
       const imgWidth = pageWidth - 30;  // 左右各留15mm
       const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
@@ -358,9 +373,9 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     if (data.stampType !== 'none') {
       try {
         // 使用优化的印章图片
-        const stampImageBase64 = await getOptimizedStampImage(data.stampType);
+        const stampImageBase64 = await getStampImage(data.stampType);
         
-        if (stampImageBase64) {
+        if (stampImageBase64 && stampImageBase64.trim()) {
           const stampImage = `data:image/png;base64,${stampImageBase64}`;
           const stampWidth = data.stampType === 'shanghai' ? 40 : 73;
 
@@ -380,6 +395,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
         }
       } catch (error) {
         console.error('Error loading stamp image:', error);
+        // 如果印章加载失败，继续执行，不中断PDF生成
       }
     }
     
