@@ -43,6 +43,18 @@ export const authOptions: NextAuthOptions = {
 
           const data = await response.json();
           
+          // 确保权限数据格式正确
+          let permissions = [];
+          if (Array.isArray(data.permissions)) {
+            permissions = data.permissions;
+          } else if (typeof data.permissions === 'object' && data.permissions !== null) {
+            permissions = Object.entries(data.permissions).map(([moduleId, canAccess]) => ({
+              id: `session-${moduleId}`,
+              moduleId,
+              canAccess: !!canAccess
+            }));
+          }
+          
           return {
             id: data.user.id,
             email: data.user.email || "",
@@ -50,7 +62,7 @@ export const authOptions: NextAuthOptions = {
             username: data.user.username,
             isAdmin: data.user.isAdmin,
             image: null,
-            permissions: data.permissions // 保持原始权限数据格式
+            permissions: permissions
           };
         } catch (error) {
           throw new Error("用户名或密码错误");
@@ -73,8 +85,20 @@ export const authOptions: NextAuthOptions = {
         session.user.username = token.username;
         session.user.isAdmin = token.isAdmin;
         
-        // 直接使用token中的权限，避免每次都请求数据库
-        session.user.permissions = token.permissions;
+        // 确保权限数据格式正确
+        if (Array.isArray(token.permissions)) {
+          session.user.permissions = token.permissions;
+        } else if (typeof token.permissions === 'object' && token.permissions !== null) {
+          // 如果是对象格式，转换为数组格式
+          session.user.permissions = Object.entries(token.permissions).map(([moduleId, canAccess]) => ({
+            id: `session-${moduleId}`,
+            moduleId,
+            canAccess: !!canAccess
+          }));
+        } else {
+          // 默认为空数组
+          session.user.permissions = [];
+        }
       }
       return session;
     }

@@ -20,18 +20,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 从数据库获取最新权限
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/auth/d1-users`, {
-      method: 'POST',
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users/${userId}`, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'X-User-ID': userId,
         'X-User-Name': userName,
         'X-User-Admin': isAdmin ? 'true' : 'false'
-      },
-      body: JSON.stringify({
-        username: userName,
-        password: 'dummy' // 使用虚拟密码，实际会使用session验证
-      })
+      }
     });
 
     if (!response.ok) {

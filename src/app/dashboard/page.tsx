@@ -283,6 +283,7 @@ const ModuleButton = ({ module, onClick }: {
 // 权限管理已移至 @/lib/permissions
 
 export default function DashboardPage() {
+  // 所有 hooks 统一声明
   const { data: session, status } = useSession();
   const router = useRouter();
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -293,16 +294,32 @@ export default function DashboardPage() {
   const [timeFilter, setTimeFilter] = useState<'today' | '3days' | 'week' | 'month'>('today');
   const [typeFilter, setTypeFilter] = useState<'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase'>('all');
   const [showAllFilters, setShowAllFilters] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); // 添加刷新键来强制重新渲染
-  
-  // 使用权限store
+  const [refreshKey, setRefreshKey] = useState(0);
   const { user, hasPermission, fetchUser, isLoading } = usePermissionStore();
-  
-  // 使用loading作为refreshing状态
   const refreshing = isLoading;
 
   // 统一的权限映射和检查（优化版）
   const permissionMap = useMemo(() => {
+    // 如果用户数据还没有加载完成，返回默认值
+    if (!user || isLoading) {
+      return {
+        permissions: {
+          quotation: false,
+          packing: false,
+          invoice: false,
+          purchase: false
+        },
+        documentTypePermissions: {
+          quotation: false,
+          confirmation: false,
+          packing: false,
+          invoice: false,
+          purchase: false
+        },
+        accessibleDocumentTypes: []
+      };
+    }
+
     const permissions = {
       quotation: hasPermission('quotation'),
       packing: hasPermission('packing'),
@@ -340,7 +357,7 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [user?.permissions, hasPermission, refreshKey]); // 添加refreshKey依赖，强制重新计算
+  }, [user, isLoading, hasPermission]); // 添加user和isLoading依赖
 
   // 优化性能监控 - 只在生产环境启用完整监控
   useEffect(() => {
@@ -433,14 +450,14 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('加载文档失败:', error);
     }
-  }, [permissionMap]);
+  }, [permissionMap.documentTypePermissions]);
 
   // 加载指定时间范围内的文档
   useEffect(() => {
     if (mounted) {
       loadDocuments(timeFilter, typeFilter);
     }
-  }, [mounted, loadDocuments, timeFilter, typeFilter, permissionMap]);
+  }, [mounted, loadDocuments, timeFilter, typeFilter]);
 
   // 切换展开/折叠状态（已移除，因为默认全部展开）
   const toggleSection = useCallback((section: string) => {
@@ -473,7 +490,7 @@ export default function DashboardPage() {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener);
     };
-  }, [mounted, loadDocuments, timeFilter, typeFilter, permissionMap]);
+  }, [mounted, loadDocuments, timeFilter, typeFilter]);
 
   // 监听权限变化事件，自动刷新页面
   useEffect(() => {
@@ -538,9 +555,11 @@ export default function DashboardPage() {
 
   // 简化的初始化逻辑
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     const init = async () => {
-      setMounted(true);
-      
       // 预加载所有模块页面
       prefetchPages();
       
@@ -583,15 +602,17 @@ export default function DashboardPage() {
 
     
     return modules;
-  }, [permissionMap]);
+  }, [permissionMap.documentTypePermissions]);
 
   const availableToolModules = useMemo(() => {
+    if (!user || isLoading) return [];
     return TOOL_MODULES.filter(module => hasPermission(module.id));
-  }, [user?.permissions, hasPermission, refreshKey]); // 添加refreshKey依赖，强制重新计算
+  }, [user, isLoading, hasPermission]);
 
   const availableToolsModules = useMemo(() => {
+    if (!user || isLoading) return [];
     return TOOLS_MODULES.filter(module => hasPermission(module.id));
-  }, [user?.permissions, hasPermission, refreshKey]); // 添加refreshKey依赖，强制重新计算
+  }, [user, isLoading, hasPermission]);
 
   // 根据权限过滤可用的文档类型筛选器
   const availableTypeFilters = useMemo(() => {
@@ -620,7 +641,7 @@ export default function DashboardPage() {
     }
     
     return filters;
-  }, [permissionMap, refreshKey]); // 添加refreshKey依赖，强制重新计算
+  }, [permissionMap.documentTypePermissions, refreshKey]); // 添加refreshKey依赖，强制重新计算
 
   // 根据显示状态过滤按钮
   const visibleTypeFilters = useMemo(() => {
@@ -654,28 +675,50 @@ export default function DashboardPage() {
     }
   }, [mounted, refreshing, user]); // 移除调试相关的依赖项
 
-  // 避免闪烁，在客户端渲染前返回空内容
-  if (!mounted) {
-    return null;
-  }
+  // 所有事件处理函数统一声明
+  const handleRefreshPermissions = useCallback(async () => {
+    try {
+      setSuccessMessage('正在刷新权限信息...');
+      setShowSuccessMessage(true);
+      usePermissionStore.getState().clearUser();
+      await fetchUser();
+      setRefreshKey(prev => prev + 1);
+      setSuccessMessage('权限信息已更新');
+      setTimeout(() => setShowSuccessMessage(false), 2000);
+    } catch (error) {
+      console.error('刷新权限失败:', error);
+      setSuccessMessage('权限刷新失败，请重试');
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+    }
+  }, [fetchUser]);
 
-  // 如果session还在加载中，显示加载状态
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-lg text-gray-600 dark:text-gray-400">验证登录中...</div>
-        </div>
+  const handleNoPermissionRefresh = useCallback(async () => {
+    try {
+      setSuccessMessage('正在刷新权限信息...');
+      setShowSuccessMessage(true);
+      usePermissionStore.getState().clearUser();
+      await fetchUser();
+      setRefreshKey(prev => prev + 1);
+      setSuccessMessage('权限信息已更新');
+      setTimeout(() => setShowSuccessMessage(false), 2000);
+    } catch (error) {
+      console.error('刷新权限失败:', error);
+      setSuccessMessage('权限刷新失败，请重试');
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+    }
+  }, [fetchUser]);
+
+  // 所有 hooks 声明完毕后，再做提前 return
+  if (!mounted) return null;
+  if (status === 'loading') return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
+      <div className="text-center">
+        <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+        <div className="text-lg text-gray-600 dark:text-gray-400">验证登录中...</div>
       </div>
-    );
-  }
-
-  // 如果没有session且没有用户信息，才重定向到登录页
-  if (!session && !user) {
-    router.push('/');
-    return null;
-  }
+    </div>
+  );
+  if (!session && !user) { router.push('/'); return null; }
 
   const getDocumentTypeName = (type: string) => {
     switch (type) {
@@ -699,6 +742,7 @@ export default function DashboardPage() {
     }
   };
 
+  // 页面正常 return
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
       <div className="flex-1">
@@ -709,32 +753,7 @@ export default function DashboardPage() {
           }}
           onLogout={handleLogout}
           onProfile={() => setShowProfileModal(true)}
-          onRefreshPermissions={async () => {
-            try {
-              // 设置刷新状态，防止重复点击
-              setSuccessMessage('正在刷新权限信息...');
-              setShowSuccessMessage(true);
-              
-              // 清除当前权限缓存
-              usePermissionStore.getState().clearUser();
-              
-              // 重新获取用户权限
-              await fetchUser();
-              
-              // 强制重新渲染
-              setRefreshKey(prev => prev + 1);
-              
-              // 更新消息
-              setSuccessMessage('权限信息已更新');
-              
-              // 2秒后隐藏消息
-              setTimeout(() => setShowSuccessMessage(false), 2000);
-            } catch (error) {
-              console.error('刷新权限失败:', error);
-              setSuccessMessage('权限刷新失败，请重试');
-              setTimeout(() => setShowSuccessMessage(false), 3000);
-            }
-          }}
+          onRefreshPermissions={handleRefreshPermissions}
           isRefreshing={refreshing}
           title="Dashboard"
           showWelcome={true}
@@ -1099,32 +1118,7 @@ export default function DashboardPage() {
               </div>
               <div className="space-y-4">
                 <button
-                  onClick={async () => {
-                    try {
-                      // 设置刷新状态，防止重复点击
-                      setSuccessMessage('正在刷新权限信息...');
-                      setShowSuccessMessage(true);
-                      
-                      // 先清除当前用户的缓存
-                      usePermissionStore.getState().clearUser();
-                      
-                      // 获取新权限
-                      await fetchUser();
-                      
-                      // 强制重新渲染
-                      setRefreshKey(prev => prev + 1);
-                      
-                      // 更新消息
-                      setSuccessMessage('权限信息已更新');
-                      
-                      // 2秒后隐藏消息
-                      setTimeout(() => setShowSuccessMessage(false), 2000);
-                    } catch (error) {
-                      console.error('刷新权限失败:', error);
-                      setSuccessMessage('权限刷新失败，请重试');
-                      setTimeout(() => setShowSuccessMessage(false), 3000);
-                    }
-                  }}
+                  onClick={handleNoPermissionRefresh}
                   disabled={refreshing}
                   className={`px-4 py-2 rounded-lg transition-all duration-200 ease-in-out
                     focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2

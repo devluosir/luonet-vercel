@@ -55,18 +55,39 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
 
   hasPermission: (moduleId: string) => {
     const { user } = get();
-    if (!user?.permissions) return false;
+    if (!user?.permissions || !Array.isArray(user.permissions)) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('权限检查失败:', { moduleId, user, permissions: user?.permissions });
+      }
+      return false;
+    }
     
-    const permission = user.permissions.find(p => p.moduleId === moduleId);
-    return permission?.canAccess || false;
+    // 处理对象数组格式的权限
+    const permission = user.permissions.find(p => 
+      p.moduleId === moduleId || 
+      // 特殊处理销售确认权限
+      (moduleId === 'confirmation' && p.moduleId === 'quotation')
+    );
+    
+    const hasAccess = permission?.canAccess || false;
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('权限检查:', { moduleId, hasAccess, permission, allPermissions: user.permissions });
+    }
+    
+    return hasAccess;
   },
 
   hasAnyPermission: (moduleIds: string[]) => {
     const { user } = get();
-    if (!user?.permissions) return false;
+    if (!user?.permissions || !Array.isArray(user.permissions)) return false;
     
     return moduleIds.some(moduleId => {
-      const permission = user.permissions.find(p => p.moduleId === moduleId);
+      const permission = user.permissions.find(p => 
+        p.moduleId === moduleId || 
+        // 特殊处理销售确认权限
+        (moduleId === 'confirmation' && p.moduleId === 'quotation')
+      );
       return permission?.canAccess || false;
     });
   },
@@ -131,7 +152,10 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         console.log('获取用户权限成功:', {
           username: userData.username,
           permissions: userData.permissions,
-          isAdmin: userData.isAdmin
+          isAdmin: userData.isAdmin,
+          permissionsLength: userData.permissions?.length,
+          permissionsType: typeof userData.permissions,
+          isArray: Array.isArray(userData.permissions)
         });
       }
     } catch (error) {
@@ -143,23 +167,29 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
 
   refreshPermissions: async () => {
     try {
-      set({ isLoading: true, error: null });
-      
-      // 获取当前session
-      const session = await getSession();
-      if (!session?.user) {
+      // 获取当前用户信息
+      const currentUser = get().user;
+      if (!currentUser) {
         throw new Error('未登录');
       }
+
+      // 先设置loading状态，但保留当前用户信息
+      set(state => ({ 
+        ...state,
+        isLoading: true, 
+        error: null 
+      }));
 
       // 从API获取最新权限
       const response = await fetch('/api/auth/get-latest-permissions', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-User-ID': session.user.id || '',
-          'X-User-Name': session.user.username || session.user.name || '',
-          'X-User-Admin': session.user.isAdmin ? 'true' : 'false'
-        }
+          'X-User-ID': currentUser.id,
+          'X-User-Name': currentUser.username,
+          'X-User-Admin': currentUser.isAdmin ? 'true' : 'false'
+        },
+        cache: 'no-store'
       });
 
       if (!response.ok) {
@@ -169,11 +199,16 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       const data = await response.json();
       
       if (data.success) {
-        set({ 
-          user: data.user,
+        // 更新用户信息，但保留其他状态
+        set(state => ({ 
+          ...state,
+          user: {
+            ...state.user!,
+            permissions: data.permissions
+          },
           isLoading: false,
           error: null
-        });
+        }));
         
         if (process.env.NODE_ENV === 'development') {
           console.log('权限刷新成功');
