@@ -58,8 +58,10 @@ export default function PerformanceMonitor() {
         const fidObserver = new PerformanceObserver((list) => {
           const entries = list.getEntries();
           entries.forEach((entry) => {
-            if (entry.processingStart && entry.startTime) {
-              newMetrics.fid = entry.processingStart - entry.startTime;
+            // 修复类型错误，使用类型断言
+            const firstInputEntry = entry as PerformanceEventTiming;
+            if (firstInputEntry.processingStart && firstInputEntry.startTime) {
+              newMetrics.fid = firstInputEntry.processingStart - firstInputEntry.startTime;
             }
           });
         });
@@ -83,8 +85,9 @@ export default function PerformanceMonitor() {
       const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
       if (navigation) {
         newMetrics.ttfb = navigation.responseStart - navigation.requestStart;
-        newMetrics.domLoad = navigation.domContentLoadedEventEnd - navigation.navigationStart;
-        newMetrics.windowLoad = navigation.loadEventEnd - navigation.navigationStart;
+        // 修复类型错误，使用正确的属性名
+        newMetrics.domLoad = navigation.domContentLoadedEventEnd - navigation.fetchStart;
+        newMetrics.windowLoad = navigation.loadEventEnd - navigation.fetchStart;
       }
 
       // 延迟更新，确保所有指标都被收集

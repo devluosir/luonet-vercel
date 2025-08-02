@@ -18,14 +18,24 @@ const PDFGenerator = dynamic(
 );
 
 interface LazyPDFGeneratorProps {
-  pdfData: any;
-  onGenerate?: (pdfBlob: Blob) => void;
+  pdfUrl: string | null;
+  onClose: () => void;
+  title?: string;
+  data?: any;
+  itemType?: 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
+  showDownloadButton?: boolean;
+  showOpenInNewTab?: boolean;
   className?: string;
 }
 
 export default function LazyPDFGenerator({ 
-  pdfData, 
-  onGenerate, 
+  pdfUrl,
+  onClose,
+  title = 'PDF Preview',
+  data,
+  itemType,
+  showDownloadButton = true,
+  showOpenInNewTab = true,
   className = '' 
 }: LazyPDFGeneratorProps) {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -58,9 +68,13 @@ export default function LazyPDFGenerator({
   return (
     <div className={className}>
       <PDFGenerator
-        pdfData={pdfData}
-        onGenerate={onGenerate}
-        onLoad={handleLoad}
+        pdfUrl={pdfUrl}
+        onClose={onClose}
+        title={title}
+        data={data}
+        itemType={itemType}
+        showDownloadButton={showDownloadButton}
+        showOpenInNewTab={showOpenInNewTab}
       />
       {!isLoaded && (
         <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
