@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession, signOut, signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { 
@@ -726,20 +726,35 @@ export default function DashboardPage() {
               setSuccessMessage('正在刷新权限信息...');
               setShowSuccessMessage(true);
               
-              // 先清除当前用户的缓存
-              usePermissionStore.getState().clearUser();
+              // 强制用户重新登录以获取最新权限
+              await signOut({ redirect: false });
               
-              // 获取新权限
-              await fetchUser(true);
+              // 延迟一下，然后重新登录
+              setTimeout(async () => {
+                try {
+                  await signIn('credentials', {
+                    username: session?.user?.username || session?.user?.name || '',
+                    password: 'dummy',
+                    redirect: false,
+                    callbackUrl: '/dashboard'
+                  });
+                  
+                  // 重新获取用户权限
+                  await fetchUser(true);
+                  
+                  // 强制重新渲染
+                  setRefreshKey(prev => prev + 1);
+                  
+                  // 更新消息
+                  setSuccessMessage('权限信息已更新，请重新登录');
+                } catch (error) {
+                  console.error('重新登录失败:', error);
+                  setSuccessMessage('权限刷新失败，请手动重新登录');
+                }
+              }, 1000);
               
-              // 强制重新渲染
-              setRefreshKey(prev => prev + 1);
-              
-              // 更新消息
-              setSuccessMessage('权限信息已更新');
-              
-              // 2秒后隐藏消息
-              setTimeout(() => setShowSuccessMessage(false), 2000);
+              // 3秒后隐藏消息
+              setTimeout(() => setShowSuccessMessage(false), 3000);
             } catch (error) {
               console.error('刷新权限失败:', error);
               setSuccessMessage('权限刷新失败，请重试');

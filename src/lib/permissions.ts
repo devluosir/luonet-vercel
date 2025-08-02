@@ -34,6 +34,9 @@ interface PermissionStore {
   
   // Fetch user data
   fetchUser: (forceRefresh?: boolean) => Promise<void>;
+  
+  // Force refresh permissions
+  forceRefreshPermissions: () => Promise<void>;
 }
 
 // 简化的权限store
@@ -79,7 +82,7 @@ export const usePermissionStore = create<PermissionStore>()(
       return user?.isAdmin || false;
     },
 
-    fetchUser: async (forceRefresh = false) => {
+        fetchUser: async (forceRefresh = false) => {
       const { isLoading } = get();
       
       // 防止重复请求
@@ -115,7 +118,7 @@ export const usePermissionStore = create<PermissionStore>()(
             // 检查数组元素是字符串还是对象
             if (session.user.permissions.length > 0 && typeof session.user.permissions[0] === 'string') {
               // 字符串数组格式
-              permissions = session.user.permissions.map(moduleId => ({
+              permissions = session.user.permissions.map((moduleId: string) => ({
                 id: `session-${moduleId}`,
                 moduleId: moduleId,
                 canAccess: true
@@ -161,6 +164,34 @@ export const usePermissionStore = create<PermissionStore>()(
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
         set({ error: errorMessage, isLoading: false });
+        throw error;
+      }
+    },
+
+    // 强制刷新权限 - 重新登录以获取最新权限
+    forceRefreshPermissions: async () => {
+      try {
+        // 清除当前用户数据
+        set({ user: null, isLoading: true, error: null });
+        
+        // 强制刷新session
+        const response = await fetch('/api/auth/session', {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (response.ok) {
+          const sessionData = await response.json();
+          if (sessionData.user) {
+            // 重新获取用户权限
+            await get().fetchUser(true);
+          }
+        }
+      } catch (error) {
+        console.error('强制刷新权限失败:', error);
         throw error;
       }
     }
