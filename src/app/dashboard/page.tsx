@@ -714,8 +714,8 @@ export default function DashboardPage() {
       <div className="flex-1">
         <Header 
           user={{
-            name: session?.user?.name || user?.username || '用户',
-            isAdmin: user?.isAdmin || false
+            name: session?.user?.name || session?.user?.username || '用户',
+            isAdmin: session?.user?.isAdmin || false
           }}
           onLogout={handleLogout}
           onProfile={() => setShowProfileModal(true)}

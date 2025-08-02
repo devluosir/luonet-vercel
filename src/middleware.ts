@@ -59,16 +59,16 @@ export default withAuth(
           return false;
         }
 
-        // 4. 管理员路由需要管理员权限
+        // 4. 管理员路由需要严格的管理员权限验证
         if (ADMIN_PATHS.some(path => pathname.startsWith(path))) {
-          // 如果token中没有isAdmin信息，暂时允许访问，让前端处理权限检查
-          if (token.isAdmin === undefined) {
-            return true;
+          // 必须明确是管理员才能访问
+          if (token.isAdmin !== true) {
+            return false;
           }
-          return token.isAdmin === true;
+          return true;
         }
 
-        // 5. 业务路由需要对应的权限
+        // 5. 业务路由需要对应的权限验证
         const moduleId = getModuleIdFromPath(pathname);
         if (moduleId) {
           // 特殊处理dashboard页面
@@ -76,17 +76,34 @@ export default withAuth(
             return true; // dashboard页面只要有token就可以访问
           }
           
-          // 如果token中没有permissions信息，暂时允许访问，让前端处理权限检查
-          if (!token.permissions) {
+          // 管理员可以访问所有页面
+          if (token.isAdmin === true) {
             return true;
           }
           
-          return Array.isArray(token.permissions) && 
-                 token.permissions.some(perm => perm.moduleId === moduleId && perm.canAccess);
+          // 非管理员必须有对应的模块权限
+          if (!token.permissions || !Array.isArray(token.permissions)) {
+            return false;
+          }
+          
+          const hasPermission = token.permissions.some(perm => 
+            perm.moduleId === moduleId && perm.canAccess === true
+          );
+          
+          return hasPermission;
         }
 
-        // 6. 其他情况只要有token就可以
-        return true;
+        // 6. 其他情况，管理员可以访问，普通用户需要至少有一个模块权限
+        if (token.isAdmin === true) {
+          return true;
+        }
+        
+        // 普通用户必须有至少一个模块权限
+        if (!token.permissions || !Array.isArray(token.permissions)) {
+          return false;
+        }
+        
+        return token.permissions.some(perm => perm.canAccess === true);
       },
     },
   }

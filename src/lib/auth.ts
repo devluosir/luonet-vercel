@@ -43,10 +43,36 @@ export const authOptions: NextAuthOptions = {
 
           const data = await response.json();
           
+          // 验证用户状态
+          if (!data.user || !data.user.status) {
+            throw new Error("用户账户已被禁用");
+          }
+
+          // 验证管理员权限（如果用户不是管理员，检查是否有模块权限）
+          if (!data.user.isAdmin) {
+            // 非管理员用户必须有至少一个模块的权限
+            if (!data.permissions || !Array.isArray(data.permissions) || data.permissions.length === 0) {
+              throw new Error("用户没有访问任何模块的权限");
+            }
+            
+            // 检查是否有可访问的模块
+            const hasAccessibleModule = data.permissions.some((perm: any) => 
+              perm.canAccess === true || perm.canAccess === 'true'
+            );
+            
+            if (!hasAccessibleModule) {
+              throw new Error("用户没有访问任何模块的权限");
+            }
+          }
+          
           // 确保权限数据格式正确
           let permissions = [];
           if (Array.isArray(data.permissions)) {
-            permissions = data.permissions;
+            permissions = data.permissions.map((perm: any) => ({
+              id: `session-${perm.moduleId || perm.id}`,
+              moduleId: perm.moduleId || perm.id,
+              canAccess: !!perm.canAccess
+            }));
           } else if (typeof data.permissions === 'object' && data.permissions !== null) {
             permissions = Object.entries(data.permissions).map(([moduleId, canAccess]) => ({
               id: `session-${moduleId}`,
@@ -60,12 +86,13 @@ export const authOptions: NextAuthOptions = {
             email: data.user.email || "",
             name: data.user.username,
             username: data.user.username,
-            isAdmin: data.user.isAdmin,
+            isAdmin: !!data.user.isAdmin,
             image: null,
             permissions: permissions
           };
         } catch (error) {
-          throw new Error("用户名或密码错误");
+          console.error('登录验证失败:', error);
+          throw new Error(error instanceof Error ? error.message : "用户名或密码错误");
         }
       }
     })
