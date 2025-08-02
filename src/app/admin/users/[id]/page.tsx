@@ -260,7 +260,7 @@ export default function UserDetailPage() {
   }, [mounted, params?.id]);
 
   const handleTogglePermission = (moduleId: string, currentAccess: boolean) => {
-    console.log('切换权限:', moduleId, '从', currentAccess, '到', !currentAccess);
+    console.log('选择权限:', moduleId, '当前状态:', currentAccess);
     const newPermissions = new Map(pendingPermissions);
     newPermissions.set(moduleId, !currentAccess);
     setPendingPermissions(newPermissions);
@@ -442,8 +442,7 @@ export default function UserDetailPage() {
       setUser(userData);
       setHasChanges(false);
       
-      // 通知用户权限已更新
-      alert('权限更新成功，用户需要点击"刷新权限"按钮来获取最新权限');
+      
     } catch (error) {
       console.error('Error updating permissions:', error);
       const errorMessage = error instanceof Error ? error.message : '更新模块权限失败';
@@ -782,6 +781,9 @@ export default function UserDetailPage() {
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 hidden sm:block">
                         已启用 {enabledModulesCount} / {MODULES.length} 个功能模块
                         </p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          选择权限后点击保存
+                        </p>
                       </div>
                       {/* 小屏时保存按钮显示在标题右侧 */}
                       <button
@@ -797,7 +799,7 @@ export default function UserDetailPage() {
                         }`}
                       >
                         <Save className="w-3 h-3 mr-1" />
-                        {saving ? '保存中' : '保存'}
+                        {saving ? '保存中' : '保存更改'}
                       </button>
                     </div>
                     {/* 大屏时保存按钮显示在右侧 */}
@@ -842,13 +844,13 @@ export default function UserDetailPage() {
                                   {module.name}
                             </span>
                           </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
+                          <label className="relative inline-flex items-center cursor-pointer" title="选择此权限">
                             <input
                               type="checkbox"
                               checked={hasAccess}
                               onChange={(e) => {
                                 e.stopPropagation();
-                                console.log('点击权限切换:', module.id, '当前状态:', hasAccess);
+                                console.log('选择权限:', module.id, '当前状态:', hasAccess);
                                 handleTogglePermission(module.id, hasAccess);
                               }}
                               disabled={saving}
