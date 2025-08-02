@@ -362,21 +362,18 @@ export default function DashboardPage() {
   // 优化性能监控 - 只在生产环境启用完整监控
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // 使用 setTimeout 避免在渲染过程中调用
-      setTimeout(() => {
-        performanceMonitor.startTimer('dashboard_page_load');
-        
-        // 延迟执行性能监控，避免阻塞首屏渲染（使用兼容性polyfill）
-        safeRequestIdleCallback(() => {
-          // 开发环境减少监控噪音
-          if (process.env.NODE_ENV === 'production') {
-            performanceMonitor.monitorResourceLoading();
-          }
-          performanceMonitor.monitorApiCalls();
-          optimizePerformance.optimizeFontLoading();
-          optimizePerformance.cleanupUnusedResources();
-        }, { timeout: 2000 });
-      }, 0);
+      performanceMonitor.startTimer('dashboard_page_load');
+      
+      // 延迟执行性能监控，避免阻塞首屏渲染（使用兼容性polyfill）
+      safeRequestIdleCallback(() => {
+        // 开发环境减少监控噪音
+        if (process.env.NODE_ENV === 'production') {
+          performanceMonitor.monitorResourceLoading();
+        }
+        performanceMonitor.monitorApiCalls();
+        optimizePerformance.optimizeFontLoading();
+        optimizePerformance.cleanupUnusedResources();
+      }, { timeout: 2000 });
     }
   }, []);
 
@@ -449,10 +446,7 @@ export default function DashboardPage() {
           return dateB.getTime() - dateA.getTime();
         });
 
-      // 使用 setTimeout 避免在渲染过程中调用 setState
-      setTimeout(() => {
-        setRecentDocuments(sorted);
-      }, 0);
+      setRecentDocuments(sorted);
     } catch (error) {
       console.error('加载文档失败:', error);
     }
@@ -480,20 +474,17 @@ export default function DashboardPage() {
       }
     };
 
-    // 使用 setTimeout 避免在渲染过程中调用
-    setTimeout(() => {
-      // 监听storage事件（跨标签页）
-      window.addEventListener('storage', handleStorageChange);
+    const handleCustomStorageChange = (e: CustomEvent) => {
+      if (e.detail && (e.detail.key.includes('_history') || e.detail.key.includes('History'))) {
+        loadDocuments(timeFilter, typeFilter);
+      }
+    };
 
-      // 创建自定义事件监听器（同标签页内）
-      const handleCustomStorageChange = (e: CustomEvent) => {
-        if (e.detail && (e.detail.key.includes('_history') || e.detail.key.includes('History'))) {
-          loadDocuments(timeFilter, typeFilter);
-        }
-      };
+    // 监听storage事件（跨标签页）
+    window.addEventListener('storage', handleStorageChange);
 
-      window.addEventListener('customStorageChange', handleCustomStorageChange as EventListener);
-    }, 0);
+    // 创建自定义事件监听器（同标签页内）
+    window.addEventListener('customStorageChange', handleCustomStorageChange as EventListener);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -513,23 +504,17 @@ export default function DashboardPage() {
       }
 
       console.log('检测到权限变化，准备更新页面:', e.detail?.message);
-      // 使用 setTimeout 避免在渲染过程中调用 setState
-      setTimeout(() => {
-        // 显示权限变化提示
-        setSuccessMessage(e.detail?.message || '权限信息已更新');
-        setShowSuccessMessage(true);
-        
-        // 强制重新渲染而不是刷新页面
-        setRefreshKey(prev => prev + 1);
-        
-        setTimeout(() => setShowSuccessMessage(false), 3000);
-      }, 0);
+      // 显示权限变化提示
+      setSuccessMessage(e.detail?.message || '权限信息已更新');
+      setShowSuccessMessage(true);
+      
+      // 强制重新渲染而不是刷新页面
+      setRefreshKey(prev => prev + 1);
+      
+      setTimeout(() => setShowSuccessMessage(false), 3000);
     };
 
-    // 使用 setTimeout 避免在渲染过程中调用
-    setTimeout(() => {
-      window.addEventListener('permissionChanged', handlePermissionChange as EventListener);
-    }, 0);
+    window.addEventListener('permissionChanged', handlePermissionChange as EventListener);
 
     return () => {
       window.removeEventListener('permissionChanged', handlePermissionChange as EventListener);
@@ -570,36 +555,27 @@ export default function DashboardPage() {
 
   // 简化的初始化逻辑
   useEffect(() => {
-    // 使用 setTimeout 避免在渲染过程中调用 setState
-    setTimeout(() => {
-      setMounted(true);
-    }, 0);
+    setMounted(true);
   }, []);
 
   useEffect(() => {
     const init = async () => {
-      // 使用 setTimeout 避免在渲染过程中调用
-      setTimeout(() => {
-        // 预加载所有模块页面
-        prefetchPages();
-      }, 0);
+      // 预加载所有模块页面
+      prefetchPages();
       
       // 等待session加载完成后再获取权限
       if (status === 'loading') {
         return;
       }
       
-      // 如果用户已登录，获取权限
-      if (session?.user) {
-        console.log('开始获取用户权限...');
-        
-        // 使用 setTimeout 避免在渲染过程中调用
-        setTimeout(async () => {
+              // 如果用户已登录，获取权限
+        if (session?.user) {
+          console.log('开始获取用户权限...');
+          
           // 直接获取用户权限
           await fetchUser();
           console.log('权限初始化完成');
-        }, 0);
-      }
+        }
     };
     init();
   }, [session, status, fetchUser, prefetchPages]);
@@ -683,10 +659,7 @@ export default function DashboardPage() {
     if (visibleTypeFilters.length > 0) {
       const currentFilterExists = visibleTypeFilters.some(filter => filter.type === typeFilter);
       if (!currentFilterExists) {
-        // 使用 setTimeout 避免在渲染过程中调用 setState
-        setTimeout(() => {
-          setTypeFilter(visibleTypeFilters[0].type as any);
-        }, 0);
+        setTypeFilter(visibleTypeFilters[0].type as any);
       }
     }
   }, [visibleTypeFilters]); // 移除 typeFilter 依赖，避免无限循环
@@ -694,14 +667,11 @@ export default function DashboardPage() {
   // 页面加载完成后的性能记录
   useEffect(() => {
     if (mounted && !refreshing && user) { // 移除loading检查
-      // 使用 setTimeout 避免在渲染过程中调用
-      setTimeout(() => {
-        performanceMonitor.endTimer('dashboard_page_load');
-        const metrics = performanceMonitor.getPageLoadMetrics();
-        if (process.env.NODE_ENV === 'development') {
-          console.log('📊 Dashboard页面加载性能:', metrics);
-        }
-      }, 0);
+      performanceMonitor.endTimer('dashboard_page_load');
+      const metrics = performanceMonitor.getPageLoadMetrics();
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📊 Dashboard页面加载性能:', metrics);
+      }
     }
   }, [mounted, refreshing, user]); // 移除调试相关的依赖项
 
@@ -738,6 +708,13 @@ export default function DashboardPage() {
     }
   }, [fetchUser]);
 
+  // 使用 useEffect 处理重定向，避免在渲染过程中调用 router.push
+  useEffect(() => {
+    if (!session && !user) {
+      router.push('/');
+    }
+  }, [session, user, router]);
+
   // 所有 hooks 声明完毕后，再做提前 return
   if (!mounted) return null;
   if (status === 'loading') return (
@@ -748,13 +725,6 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-  
-  // 使用 useEffect 处理重定向，避免在渲染过程中调用 router.push
-  useEffect(() => {
-    if (!session && !user) {
-      router.push('/');
-    }
-  }, [session, user, router]);
 
   // 如果未登录，返回空内容而不是直接重定向
   if (!session && !user) return null;
