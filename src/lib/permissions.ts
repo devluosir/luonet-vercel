@@ -83,22 +83,28 @@ export const usePermissionStore = create<PermissionStore>()(
       
       try {
         const session = await getNextAuthSession();
-        if (!session?.user?.email) {
+        if (!session?.user) {
           throw new Error('未登录');
         }
 
-        const response = await apiRequestWithError(API_ENDPOINTS.USERS.ME, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+        // 直接从session中获取用户信息和权限
+        // 将string[]权限转换为Permission[]格式
+        const permissions: Permission[] = (session.user.permissions || []).map(moduleId => ({
+          id: `session-${moduleId}`,
+          moduleId: moduleId,
+          canAccess: true
+        }));
 
-        if (response) {
-          set({ user: response, isLoading: false });
-        } else {
-          throw new Error('获取用户信息失败');
-        }
+        const userData = {
+          id: session.user.id || '',
+          username: session.user.username || session.user.name || '',
+          email: session.user.email || null,
+          status: true,
+          isAdmin: session.user.isAdmin || false,
+          permissions: permissions
+        };
+
+        set({ user: userData, isLoading: false });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
         set({ error: errorMessage, isLoading: false });
