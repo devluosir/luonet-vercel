@@ -67,6 +67,12 @@ export default function AdminPage() {
           return;
         }
 
+        // 如果还在加载中，等待session加载完成
+        if (status === 'loading') {
+          console.log('session还在加载中，等待...');
+          return;
+        }
+
         // 调试信息：打印session数据
         console.log('当前session数据:', session);
         console.log('用户信息:', session?.user);
@@ -103,7 +109,7 @@ export default function AdminPage() {
     };
 
     checkPermissionsAndLoad();
-  }, [mounted, session, router, status]);
+  }, [mounted, session, router, status, fetchUsers]);
 
   // 过滤用户
   useEffect(() => {
