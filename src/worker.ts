@@ -310,8 +310,23 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
     const d1Client = new D1UserClient(env.USERS_DB);
     const users = await d1Client.getAllUsers();
 
+    // 为每个用户获取权限信息
+    const usersWithPermissions = await Promise.all(
+      users.map(async (user) => {
+        const permissions = await d1Client.getUserPermissions(user.id);
+        return {
+          ...user,
+          permissions: permissions.map(p => ({
+            id: p.id,
+            moduleId: p.moduleId,
+            canAccess: p.canAccess
+          }))
+        };
+      })
+    );
+
     return new Response(
-      JSON.stringify({ users }),
+      JSON.stringify({ users: usersWithPermissions }),
       { 
         headers: { 
           'Content-Type': 'application/json',
