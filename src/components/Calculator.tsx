@@ -554,7 +554,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       result
     };
     
-    setHistory(prev => [newHistoryItem, ...prev.slice(0, 9)]); // 保留最近10条记录
+    setHistory(prev => [newHistoryItem, ...prev.slice(0, 49)]); // 保留最近50条记录，超出时可通过滚动查看
   };
 
   const clearHistory = () => {
@@ -622,9 +622,14 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!popupRef.current) return;
     
-    // 检查点击的目标元素，如果是按钮或显示屏，则不开始拖动
+    // 检查点击的目标元素，如果是按钮、显示屏或历史记录内容区域，则不开始拖动
     const target = e.target as HTMLElement;
-    if (target.tagName === 'BUTTON' || target.closest('.calc-display') || target.closest('.calc-buttons') || target.closest('.calc-history') || target.closest('button')) {
+    if (target.tagName === 'BUTTON' || 
+        target.closest('.calc-display') || 
+        target.closest('.calc-buttons') || 
+        target.closest('.calc-history-content') || // 只排除历史记录内容区域
+        target.closest('button') ||
+        target.closest('[data-no-drag]')) {
       return;
     }
     
@@ -639,9 +644,14 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!popupRef.current) return;
     
-    // 检查触摸的目标元素，如果是按钮或显示屏，则不开始拖动
+    // 检查触摸的目标元素，如果是按钮、显示屏或历史记录内容区域，则不开始拖动
     const target = e.target as HTMLElement;
-    if (target.tagName === 'BUTTON' || target.closest('.calc-display') || target.closest('.calc-buttons') || target.closest('.calc-history') || target.closest('button')) {
+    if (target.tagName === 'BUTTON' || 
+        target.closest('.calc-display') || 
+        target.closest('.calc-buttons') || 
+        target.closest('.calc-history-content') || // 只排除历史记录内容区域
+        target.closest('button') ||
+        target.closest('[data-no-drag]')) {
       return;
     }
     
@@ -775,18 +785,30 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     // 移除弹窗关闭时重置拖动标记的逻辑，让位置保持记忆
   }, [isOpen, hasBeenDragged]);
 
-  // 计算历史记录面板位置，确保与计算器主体同高
+  // 计算历史记录面板位置，确保与计算器主体同高且对称
   const updateHistoryPanelPosition = () => {
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 768;
     const isMobileCheck = viewportWidth < 768;
     
     if (isOpen && !isMobileCheck && isHistoryExpanded && calculatorBodyRef.current) {
       const calculatorBody = calculatorBodyRef.current;
-      setHistoryPanelPosition({
-        top: calculatorBody.offsetTop,
-        left: calculatorBody.offsetLeft + calculatorBody.offsetWidth + 16,
-        height: calculatorBody.offsetHeight
-      });
+      const popupRect = popupRef.current?.getBoundingClientRect();
+      
+                    if (popupRect) {
+          // 历史记录面板应该与整个计算器窗口同高同宽，在右边拼接
+          // popupRect 是整个弹窗的尺寸，包括标题栏和内容区域
+          
+          // 历史记录面板应该与计算器显示区域顶部对齐，但与整个计算器窗口同高
+          // 精确计算位置
+          const headerHeight = -65; // 微调向上偏移量
+          const gap = 5; // 增加间距，让两个面板更美观
+          
+          setHistoryPanelPosition({
+            top: headerHeight, // 与计算器显示区域顶部对齐
+            left: 300 + gap, // 弹窗宽度 + 间距
+            height: 488 // 与整个计算器窗口同高
+          });
+        }
     }
   };
 
@@ -819,7 +841,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       ref={popupRef}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
-      className={`fixed z-50 bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-800/50 ${isMobile ? 'p-3' : 'p-6'} ${
+      className={`fixed z-50 bg-gray-50 dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 ${isMobile ? 'p-3' : 'p-6'} ${
         isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
       }`}
       style={{
@@ -853,6 +875,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
               onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
               className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               title={isHistoryExpanded ? "隐藏历史记录" : "显示历史记录"}
+              data-no-drag
             >
               <History className="h-4 w-4 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
             </button>
@@ -867,6 +890,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
             }}
             className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             title="重置位置"
+            data-no-drag
           >
             <Move className="h-4 w-4 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
           </button>
@@ -874,6 +898,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         <button
           onClick={onClose}
           className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          data-no-drag
         >
           <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
         </button>
@@ -887,7 +912,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           className={`${isMobile ? 'w-full' : 'w-full'} ${!isMobile ? 'h-fit' : ''}`}
         >
           {/* 显示屏 */}
-          <div className={`calc-display mb-3 p-3 md:p-4 bg-gray-100 dark:bg-gray-800 rounded-lg ${isMobile ? 'h-20' : 'h-28'} flex flex-col justify-end`}>
+          <div className={`calc-display mb-3 p-3 md:p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 ${isMobile ? 'h-20' : 'h-28'} flex flex-col justify-end`} data-no-drag>
             {/* 算式显示 */}
             <div className={`text-right ${isMobile ? 'text-xs' : 'text-xs'} text-gray-500 dark:text-gray-400 ${isMobile ? 'mb-1' : 'mb-2'} font-mono ${isMobile ? 'overflow-hidden' : 'overflow-y-auto'} ${isMobile ? 'h-8' : 'max-h-16'} break-words ${isMobile ? 'leading-tight' : ''}`}>
               {expression || '\u00A0'}
@@ -899,110 +924,117 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           </div>
 
           {/* 按钮网格 */}
-          <div className={`calc-buttons grid grid-cols-4 ${isMobile ? 'gap-1' : 'gap-1.5'}`}>
+          <div className={`calc-buttons grid grid-cols-4 ${isMobile ? 'gap-1' : 'gap-1.5'}`} data-no-drag>
             {/* 第一行：C和退格键 */}
             <div className="col-span-2"></div> {/* 左侧空占位 */}
-            <button onClick={clear} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm`}>
+            <button onClick={clear} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-red-400 text-white rounded-lg hover:bg-red-500 transition-colors text-sm shadow-sm`} data-no-drag>
               C
             </button>
-            <button onClick={handleBackspace} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm`}>
+            <button onClick={handleBackspace} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-red-400 text-white rounded-lg hover:bg-red-500 transition-colors text-sm shadow-sm`} data-no-drag>
               ←
             </button>
 
             {/* 第二行：(,),%,除号 */}
-            <button onClick={handleOpenBracket} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm`}>
+            <button onClick={handleOpenBracket} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               (
             </button>
-            <button onClick={handleCloseBracket} disabled={openBrackets === 0} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} rounded-lg transition-colors text-sm ${
+            <button onClick={handleCloseBracket} disabled={openBrackets === 0} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} rounded-lg transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600 ${
               openBrackets === 0
-                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed' 
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600'
-            }`}>
+                ? 'bg-gray-50 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                : 'bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-500'
+            }`} data-no-drag>
               )
             </button>
-            <button onClick={handlePercentage} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm`}>
+            <button onClick={handlePercentage} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               %
             </button>
-            <button onClick={() => performOperation('÷')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm`}>
+            <button onClick={() => performOperation('÷')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-400 text-white rounded-lg hover:bg-orange-500 transition-colors text-sm shadow-sm`} data-no-drag>
               ÷
             </button>
 
             {/* 第三行：789，乘号 */}
-            <button onClick={() => inputDigit('7')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
+            <button onClick={() => inputDigit('7')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               7
             </button>
-            <button onClick={() => inputDigit('8')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
+            <button onClick={() => inputDigit('8')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               8
             </button>
-            <button onClick={() => inputDigit('9')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
+            <button onClick={() => inputDigit('9')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               9
             </button>
-            <button onClick={() => performOperation('×')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm`}>
+            <button onClick={() => performOperation('×')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-400 text-white rounded-lg hover:bg-orange-500 transition-colors text-sm shadow-sm`} data-no-drag>
               ×
             </button>
 
             {/* 第四行：456，减号 */}
-            <button onClick={() => inputDigit('4')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
+            <button onClick={() => inputDigit('4')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               4
             </button>
-            <button onClick={() => inputDigit('5')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
+            <button onClick={() => inputDigit('5')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               5
             </button>
-            <button onClick={() => inputDigit('6')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
+            <button onClick={() => inputDigit('6')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               6
             </button>
-            <button onClick={() => performOperation('-')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm`}>
+            <button onClick={() => performOperation('-')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-400 text-white rounded-lg hover:bg-orange-500 transition-colors text-sm shadow-sm`} data-no-drag>
               -
             </button>
 
             {/* 第五行：123，加号 */}
-            <button onClick={() => inputDigit('1')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
+            <button onClick={() => inputDigit('1')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               1
             </button>
-            <button onClick={() => inputDigit('2')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
+            <button onClick={() => inputDigit('2')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               2
             </button>
-            <button onClick={() => inputDigit('3')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
+            <button onClick={() => inputDigit('3')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               3
             </button>
-            <button onClick={() => performOperation('+')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm`}>
+            <button onClick={() => performOperation('+')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-400 text-white rounded-lg hover:bg-orange-500 transition-colors text-sm shadow-sm`} data-no-drag>
               +
             </button>
 
             {/* 第六行：0,.,正负号,等号 */}
-            <button onClick={() => inputDigit('0')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
+            <button onClick={() => inputDigit('0')} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               0
             </button>
-            <button onClick={inputDecimal} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm`}>
+            <button onClick={inputDecimal} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               .
             </button>
-            <button onClick={handlePlusMinus} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm`}>
+            <button onClick={handlePlusMinus} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               ±
             </button>
-            <button onClick={calculateResult} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm`}>
+            <button onClick={calculateResult} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-400 text-white rounded-lg hover:bg-orange-500 transition-colors text-sm shadow-sm`} data-no-drag>
               =
             </button>
           </div>
         </div>
 
-        {/* 右侧历史记录浮窗 - 只在桌面端显示，精确匹配计算器主体高度 */}
+                {/* 右侧历史记录浮窗 - 只在桌面端显示，与计算器主体对称且大小相同 */}
         {!isMobile && isHistoryExpanded && (
           <div 
-            className="calc-history absolute w-52 bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 flex flex-col"
+            className="calc-history absolute bg-gray-50 dark:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl z-10 flex flex-col"
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
             style={{
               top: `${historyPanelPosition.top}px`,
               left: `${historyPanelPosition.left}px`,
-              height: `${historyPanelPosition.height}px`, // 精确匹配计算器主体高度
+              width: '320px', // 与计算器主体相同的宽度
+              height: `${historyPanelPosition.height}px`, // 动态匹配计算器主体高度
             }}
           >
-            {/* 历史记录标题栏 */}
-            <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white">历史记录</h4>
+            {/* 历史记录标题栏 - 与计算器头部样式保持一致 */}
+            <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+              <div className="flex items-center space-x-2">
+                <History className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white">历史记录</h4>
+              </div>
               <div className="flex items-center space-x-2">
                 {history.length > 0 && (
                   <button
                     onClick={clearHistory}
-                    className="text-xs text-red-500 hover:text-red-600 transition-colors"
+                    className="text-xs text-red-500 hover:text-red-600 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                    data-no-drag
                   >
                     清空
                   </button>
@@ -1010,17 +1042,20 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
                 <button
                   onClick={() => setIsHistoryExpanded(false)}
                   className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  title="隐藏历史记录"
+                  data-no-drag
                 >
                   <ChevronUp className="h-3 w-3 text-gray-500 dark:text-gray-400" />
                 </button>
               </div>
             </div>
             
-            {/* 历史记录内容区域 */}
-            <div className="flex-1 p-2 overflow-y-auto">
+            {/* 历史记录内容区域 - 与计算器显示屏样式保持一致 */}
+            <div className="calc-history-content flex-1 p-3 overflow-y-auto bg-gray-50 dark:bg-gray-900 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
               {history.length === 0 ? (
-                <div className="text-center text-xs text-gray-500 dark:text-gray-400 py-6">
-                  暂无历史记录
+                <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">
+                  <History className="h-8 w-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                  <div>暂无历史记录</div>
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -1035,14 +1070,15 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
                         setOperation(null);
                         setJustCalculated(false);
                       }}
-                      className="px-2 py-1.5 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group"
+                      className="p-2 rounded-lg cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-all duration-200 group border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
                       title="点击使用此结果"
+                      data-no-drag
                     >
-                      {/* 算式和结果在同一行 */}
-                      <div className="text-xs font-mono break-words leading-tight">
-                        <span className="text-gray-500 dark:text-gray-400">{item.expression}</span>
-                        <span className="text-gray-900 dark:text-white font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                          {' = '}{item.result}
+                      {/* 算式和结果在同一行显示，更紧凑 */}
+                      <div className="text-sm font-mono break-words leading-tight flex items-center justify-between">
+                        <span className="text-gray-500 dark:text-gray-400 flex-1 mr-2">{item.expression}</span>
+                        <span className="text-gray-900 dark:text-white font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors whitespace-nowrap">
+                          = {item.result}
                         </span>
                       </div>
                     </div>
