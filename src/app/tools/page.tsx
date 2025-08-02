@@ -282,10 +282,7 @@ export default function ToolsPage() {
   // 使用权限store的fetchPermissions
   const handleRefreshPermissions = useCallback(async () => {
     try {
-      // 先清除当前用户的缓存
-      usePermissionStore.getState().clearUser();
-      
-      await fetchPermissions();
+      await fetchPermissions(true); // 强制刷新权限
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
     } catch (error) {

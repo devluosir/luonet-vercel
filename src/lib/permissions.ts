@@ -21,6 +21,7 @@ interface PermissionStore {
   user: User | null;
   isLoading: boolean;
   error: string | null;
+  lastFetchTime: number | null; // 添加最后获取时间
   
   // 基础操作
   setUser: (user: User) => void;
@@ -34,13 +35,14 @@ interface PermissionStore {
   isAdmin: () => boolean;
   
   // 权限获取 - 统一从API获取
-  fetchPermissions: () => Promise<void>;
+  fetchPermissions: (forceRefresh?: boolean) => Promise<void>;
 }
 
 export const usePermissionStore = create<PermissionStore>((set, get) => ({
   user: null,
   isLoading: false,
   error: null,
+  lastFetchTime: null,
 
   setUser: (user: User) => set({ user }),
   setLoading: (loading: boolean) => set({ isLoading: loading }),
@@ -76,11 +78,23 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   },
 
   // 统一的权限获取逻辑 - 只从API获取
-  fetchPermissions: async () => {
+  fetchPermissions: async (forceRefresh = false) => {
     const state = get();
     
     // 防止重复请求
     if (state.isLoading) {
+      return;
+    }
+    
+    // 检查缓存时间（5分钟内不重复获取）
+    const CACHE_DURATION = 5 * 60 * 1000; // 5分钟
+    const now = Date.now();
+    
+    if (!forceRefresh && 
+        state.user && 
+        state.lastFetchTime && 
+        (now - state.lastFetchTime) < CACHE_DURATION) {
+      // 使用缓存的权限数据
       return;
     }
     
@@ -130,7 +144,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         };
 
         // 5. 更新store
-        set({ user, isLoading: false, error: null });
+        set({ user, isLoading: false, error: null, lastFetchTime: now });
       } else {
         throw new Error(data.error || '获取权限失败');
       }

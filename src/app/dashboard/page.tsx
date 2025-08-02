@@ -567,8 +567,8 @@ export default function DashboardPage() {
         return;
       }
       
-      // 如果用户已登录，获取权限
-      if (session?.user) {
+      // 如果用户已登录且没有权限数据，获取权限
+      if (session?.user && !user) {
         // 从API获取最新权限，而不是从session
         await usePermissionStore.getState().fetchPermissions();
       }
@@ -685,32 +685,14 @@ export default function DashboardPage() {
   //   }
   // }, [mounted, refreshing]);
 
-  // 所有事件处理函数统一声明
+  // 权限刷新处理函数
   const handleRefreshPermissions = useCallback(async () => {
     try {
       setSuccessMessage('正在刷新权限信息...');
       setShowSuccessMessage(true);
       
       // 使用 fetchPermissions 从 API 获取最新权限
-      await usePermissionStore.getState().fetchPermissions();
-      
-      setRefreshKey(prev => prev + 1);
-      setSuccessMessage('权限信息已更新');
-      setTimeout(() => setShowSuccessMessage(false), 2000);
-    } catch (error) {
-      console.error('刷新权限失败:', error);
-      setSuccessMessage('权限刷新失败，请重试');
-      setTimeout(() => setShowSuccessMessage(false), 3000);
-    }
-  }, []);
-
-  const handleNoPermissionRefresh = useCallback(async () => {
-    try {
-      setSuccessMessage('正在刷新权限信息...');
-      setShowSuccessMessage(true);
-      
-      // 使用 fetchPermissions 从 API 获取最新权限
-      await usePermissionStore.getState().fetchPermissions();
+      await usePermissionStore.getState().fetchPermissions(true);
       
       setRefreshKey(prev => prev + 1);
       setSuccessMessage('权限信息已更新');
@@ -1134,27 +1116,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* 无权限提示 */}
-          {availableQuickCreateModules.length === 0 && availableToolModules.length === 0 && availableToolsModules.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-gray-500 dark:text-gray-400 text-lg mb-4">
-                暂无可用功能，请联系管理员分配权限
-              </div>
-              <button
-                onClick={handleNoPermissionRefresh}
-                disabled={refreshing}
-                className={`px-4 py-2 rounded-lg transition-all duration-200 ease-in-out
-                  focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
-                  dark:focus:ring-offset-gray-900 active:scale-95 ${
-                  refreshing
-                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-                }`}
-              >
-                {refreshing ? '刷新中...' : '刷新权限'}
-              </button>
-            </div>
-          )}
+
         </div>
       </div>
       <Footer />
