@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Copy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Footer } from '@/components/Footer';
 import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
+import { performanceMonitor, optimizePerformance } from '@/utils/performance';
 
 export default function MailPage() {
   const router = useRouter();
@@ -24,7 +25,40 @@ export default function MailPage() {
   const [error, setError] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
 
-  const handleGenerate = async () => {
+  // 性能监控
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      performanceMonitor.startTimer('mail_page_load');
+      
+      // 延迟执行性能优化，避免阻塞页面渲染
+      setTimeout(() => {
+        optimizePerformance.optimizeFontLoading();
+        optimizePerformance.cleanupUnusedResources();
+      }, 100);
+    }
+  }, []);
+
+  // 页面加载完成后的性能记录
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleLoad = () => {
+        performanceMonitor.endTimer('mail_page_load');
+        const metrics = performanceMonitor.getPageLoadMetrics();
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📊 邮件助手页面加载性能:', metrics);
+        }
+      };
+
+      if (document.readyState === 'complete') {
+        handleLoad();
+      } else {
+        window.addEventListener('load', handleLoad);
+        return () => window.removeEventListener('load', handleLoad);
+      }
+    }
+  }, []);
+
+  const handleGenerate = useCallback(async () => {
     try {
       setError('');
       setIsLoading(true);
@@ -65,9 +99,9 @@ export default function MailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeTab, userInput, mailType]);
 
-  const handleCopy = async (content: string) => {
+  const handleCopy = useCallback(async (content: string) => {
     try {
       await navigator.clipboard.writeText(content);
       setCopySuccess(true);
@@ -75,7 +109,7 @@ export default function MailPage() {
     } catch (err) {
       console.error('Failed to copy:', err);
     }
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col">
