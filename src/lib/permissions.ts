@@ -77,6 +77,13 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
 
   // 统一的权限获取逻辑 - 只从API获取
   fetchPermissions: async () => {
+    const state = get();
+    
+    // 防止重复请求
+    if (state.isLoading) {
+      return;
+    }
+    
     set({ isLoading: true, error: null });
     
     try {

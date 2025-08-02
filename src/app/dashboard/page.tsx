@@ -724,10 +724,11 @@ export default function DashboardPage() {
 
   // 使用 useEffect 处理重定向，避免在渲染过程中调用 router.push
   useEffect(() => {
-    if (!session && !user) {
+    // 只有在session状态明确为unauthenticated时才重定向
+    if (status === 'unauthenticated' && !user) {
       router.push('/');
     }
-  }, [session, user, router]);
+  }, [status, user, router]);
 
   // 所有 hooks 声明完毕后，再做提前 return
   if (!mounted) return null;

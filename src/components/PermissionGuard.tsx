@@ -56,7 +56,7 @@ export function PermissionGuard({
         return;
       }
     }
-  }, [session, status, user, isLoading, requiredPermissions, hasPermission, fetchPermissions, router, redirectTo, fastCheck]);
+  }, [session, status, user, isLoading, requiredPermissions, hasPermission, router, redirectTo, fastCheck]);
 
   // 快速验证模式：直接检查权限
   if (fastCheck && user) {
