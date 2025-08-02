@@ -472,7 +472,7 @@ export default function AdminPage() {
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
             // 重新加载用户数据
-            checkPermissionsAndLoad();
+            window.location.reload();
           }}
         />
       </div>
