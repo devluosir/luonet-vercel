@@ -204,9 +204,10 @@ const TOOLS_MODULES = [
 ];
 
 // 统一的模块按钮组件
-const ModuleButton = ({ module, onClick }: { 
+const ModuleButton = ({ module, onClick, onHover }: { 
   module: any; 
   onClick: (module: any) => void; 
+  onHover?: (module: any) => void;
 }) => {
   const Icon = module.icon;
   
@@ -265,6 +266,7 @@ const ModuleButton = ({ module, onClick }: {
         p-4 h-20 flex items-center space-x-3 w-full`}
       style={bgStyle}
       onClick={() => onClick(module)}
+      onMouseEnter={() => onHover?.(module)}
     >
       {/* 图标容器 */}
       <div className={`p-2 rounded-lg ${iconBg} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
@@ -642,24 +644,7 @@ export default function DashboardPage() {
     };
   }, [mounted, showSuccessMessage]);
 
-  // 优化的预加载逻辑 - 只预加载核心模块页面
-  const prefetchPages = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      // 只预加载核心模块：报价、箱单、财务、采购、单据
-      const coreModules = [
-        { path: '/quotation' },      // 报价
-        { path: '/packing' },        // 箱单
-        { path: '/invoice' },        // 财务
-        { path: '/purchase' },       // 采购
-        { path: '/history' }         // 单据
-      ];
-      
-      // 预加载核心模块页面
-      coreModules.forEach(module => {
-        router.prefetch(module.path);
-      });
-    }
-  }, [router]);
+
 
   // 优化的模块点击处理 - 即点即开
   const handleModuleClick = useCallback((module: any) => {
@@ -674,31 +659,61 @@ export default function DashboardPage() {
     router.push(module.path);
   }, [router]);
 
+  // 智能预加载 - 用户悬停时预加载
+  const handleModuleHover = useCallback((module: any) => {
+    // 预加载模块页面
+    router.prefetch(module.path);
+  }, [router]);
+
+  // 模块点击处理 - 添加加载状态
+  const handleModuleClickWithLoading = useCallback((module: any) => {
+    // 特殊处理销售确认
+    if (module.id === 'confirmation') {
+      if (typeof window !== 'undefined') {
+        (window as any).__QUOTATION_TYPE__ = 'confirmation';
+      }
+    }
+    
+    // 显示加载状态（可选）
+    if (typeof window !== 'undefined') {
+      // 可以在这里添加加载指示器
+      console.log('正在加载模块:', module.name);
+    }
+    
+    // 立即导航
+    router.push(module.path);
+  }, [router]);
+
   // 简化的初始化逻辑
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // 优化的预加载逻辑 - 延迟预加载，避免阻塞初始渲染
   useEffect(() => {
     const init = async () => {
-      // 只预加载页面，不重新加载权限
-      if (typeof window !== 'undefined') {
-        const coreModules = [
-          { path: '/quotation' },
-          { path: '/packing' },
-          { path: '/invoice' },
-          { path: '/purchase' },
-          { path: '/history' },
-          { path: '/customer' },
-          { path: '/mail' },
-          { path: '/date-tools' }
-        ];
-        coreModules.forEach(module => {
-          router.prefetch(module.path);
-        });
-      }
-      
-      // 移除权限重新加载逻辑，只依赖菜单中的权限刷新功能
+      // 延迟预加载，避免阻塞初始渲染
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          const coreModules = [
+            { path: '/quotation' },
+            { path: '/packing' },
+            { path: '/invoice' },
+            { path: '/purchase' },
+            { path: '/history' },
+            { path: '/customer' },
+            { path: '/mail' },
+            { path: '/date-tools' }
+          ];
+          
+          // 分批预加载，避免同时加载所有模块
+          coreModules.forEach((module, index) => {
+            setTimeout(() => {
+              router.prefetch(module.path);
+            }, index * 100); // 每个模块间隔100ms预加载
+          });
+        }
+      }, 1000); // 延迟1秒开始预加载
     };
     init();
   }, [router]); // 只依赖router，移除session和user依赖
@@ -974,7 +989,8 @@ export default function DashboardPage() {
                   <ModuleButton 
                       key={module.id}
                     module={module}
-                    onClick={handleModuleClick}
+                    onClick={handleModuleClickWithLoading}
+                    onHover={handleModuleHover}
                   />
                 ))}
                 
@@ -983,7 +999,8 @@ export default function DashboardPage() {
                   <ModuleButton 
                       key={module.id}
                     module={module}
-                    onClick={handleModuleClick}
+                    onClick={handleModuleClickWithLoading}
+                    onHover={handleModuleHover}
                   />
                 ))}
                 
@@ -992,7 +1009,8 @@ export default function DashboardPage() {
                   <ModuleButton 
                       key={module.id}
                     module={module}
-                    onClick={handleModuleClick}
+                    onClick={handleModuleClickWithLoading}
+                    onHover={handleModuleHover}
                   />
                 ))}
                 
@@ -1009,7 +1027,8 @@ export default function DashboardPage() {
                       iconBg: 'bg-gray-500',
                       textColor: 'text-gray-700'
                     }}
-                    onClick={handleModuleClick}
+                    onClick={handleModuleClickWithLoading}
+                    onHover={handleModuleHover}
                   />
                 )}
               </div>
