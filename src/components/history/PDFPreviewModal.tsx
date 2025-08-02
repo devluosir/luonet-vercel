@@ -20,19 +20,41 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [showDownloadFallback, setShowDownloadFallback] = useState(false);
+  const [deviceInfo, setDeviceInfo] = useState<any>(null);
+  const [previewInfo, setPreviewInfo] = useState<any>(null);
 
-  const deviceInfo = getDeviceInfo();
-  const previewInfo = handlePDFPreview(pdfPreviewUrl, {
-    autoDetectDevice: true,
-    forceAndroidFallback: true
-  });
-
-  // 检测PDF预览支持
+  // 在客户端环境下获取设备信息
   useEffect(() => {
-    if (deviceInfo.isAndroid || !deviceInfo.canPreviewPDF) {
-      setShowDownloadFallback(true);
+    if (typeof window !== 'undefined') {
+      try {
+        const info = getDeviceInfo();
+        setDeviceInfo(info);
+        
+        if (info.isAndroid || !info.canPreviewPDF) {
+          setShowDownloadFallback(true);
+        }
+      } catch (error) {
+        console.warn('获取设备信息失败:', error);
+        setShowDownloadFallback(true);
+      }
     }
-  }, [deviceInfo.isAndroid, deviceInfo.canPreviewPDF]);
+  }, []);
+
+  // 更新预览信息
+  useEffect(() => {
+    if (typeof window !== 'undefined' && deviceInfo) {
+      try {
+        const info = handlePDFPreview(pdfPreviewUrl, {
+          autoDetectDevice: true,
+          forceAndroidFallback: true
+        });
+        setPreviewInfo(info);
+      } catch (error) {
+        console.warn('处理PDF预览失败:', error);
+        setShowDownloadFallback(true);
+      }
+    }
+  }, [pdfPreviewUrl, deviceInfo]);
 
   // 生成PDF预览
   const generatePdfPreview = async () => {
@@ -143,7 +165,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
   if (!isOpen) return null;
 
   // 安卓设备专用简化界面
-  if (deviceInfo.isAndroid) {
+  if (deviceInfo?.isAndroid) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden">
@@ -187,7 +209,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                 {/* 主操作按钮 */}
                 <div className="space-y-3">
                   {/* 推荐操作 - 新窗口打开 */}
-                  {pdfPreviewUrl && deviceInfo.browser.name === 'Chrome' && (
+                  {pdfPreviewUrl && deviceInfo?.browser?.name === 'Chrome' && (
                     <button
                       onClick={openInNewTab}
                       className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-lg"
@@ -203,7 +225,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                     onClick={downloadPDF}
                     disabled={isGeneratingPdf}
                     className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-medium transition-colors shadow-md ${
-                      deviceInfo.browser.name === 'Chrome' 
+                      deviceInfo?.browser?.name === 'Chrome' 
                         ? 'border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700' 
                         : 'bg-green-600 text-white hover:bg-green-700 shadow-lg'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -217,7 +239,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                       <>
                         <Download className="w-5 h-5" />
                         <span>下载到手机</span>
-                        {deviceInfo.browser.name !== 'Chrome' && (
+                        {deviceInfo?.browser?.name !== 'Chrome' && (
                           <span className="px-2 py-0.5 bg-green-500 text-xs rounded-full">推荐</span>
                         )}
                       </>
@@ -225,7 +247,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                   </button>
                   
                   {/* 备用选项 - 只有在Chrome中才显示 */}
-                  {pdfPreviewUrl && deviceInfo.browser.name === 'Chrome' && (
+                  {pdfPreviewUrl && deviceInfo?.browser?.name === 'Chrome' && (
                     <button
                       onClick={downloadPDF}
                       disabled={isGeneratingPdf}
@@ -238,7 +260,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                 </div>
                 
                 {/* 简化的提示信息 */}
-                {deviceInfo.browser.name !== 'Chrome' && (
+                {deviceInfo?.browser?.name !== 'Chrome' && (
                   <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
                     <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2">
                       <span>💡</span>
@@ -317,7 +339,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
               
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 {/* 推荐操作按钮 */}
-                {deviceInfo.recommendedAction === 'newTab' && pdfPreviewUrl && (
+                {deviceInfo?.recommendedAction === 'newTab' && pdfPreviewUrl && (
                   <button
                     onClick={openInNewTab}
                     className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -331,7 +353,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                   onClick={downloadPDF}
                   disabled={isGeneratingPdf}
                   className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors ${
-                    deviceInfo.recommendedAction === 'download' 
+                    deviceInfo?.recommendedAction === 'download' 
                       ? 'bg-blue-600 text-white hover:bg-blue-700' 
                       : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -344,12 +366,12 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                   ) : (
                     <>
                       <Download className="w-4 h-4" />
-                      <span>下载PDF {deviceInfo.recommendedAction === 'download' ? '(推荐)' : ''}</span>
+                      <span>下载PDF {deviceInfo?.recommendedAction === 'download' ? '(推荐)' : ''}</span>
                     </>
                   )}
                 </button>
                 
-                {deviceInfo.recommendedAction !== 'newTab' && pdfPreviewUrl && (
+                {deviceInfo?.recommendedAction !== 'newTab' && pdfPreviewUrl && (
                   <button
                     onClick={openInNewTab}
                     className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
