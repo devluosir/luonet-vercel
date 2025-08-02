@@ -228,7 +228,7 @@ export default function ToolsPage() {
     user, 
     isLoading: loading, 
     error: fetchError, 
-    fetchUser, 
+    fetchPermissions, 
     hasPermission 
   } = usePermissionStore();
   
@@ -279,19 +279,19 @@ export default function ToolsPage() {
     await signOut({ redirect: true, callbackUrl: '/' });
   };
 
-  // 使用权限store的fetchUser
+  // 使用权限store的fetchPermissions
   const handleRefreshPermissions = useCallback(async () => {
     try {
       // 先清除当前用户的缓存
       usePermissionStore.getState().clearUser();
       
-      await fetchUser(true);
+      await fetchPermissions();
       setShowSuccessMessage(true);
       setTimeout(() => setShowSuccessMessage(false), 3000);
     } catch (error) {
       console.error('刷新权限失败:', error);
     }
-  }, [fetchUser]);
+  }, [fetchPermissions]);
 
   useEffect(() => {
     if (!mounted || status === 'loading') return;
@@ -302,8 +302,8 @@ export default function ToolsPage() {
     }
 
     // 使用权限store获取用户信息
-    fetchUser();
-  }, [mounted, session, status, router, fetchUser]);
+    fetchPermissions();
+  }, [mounted, session, status, router, fetchPermissions]);
 
   // 使用权限store的权限检查函数
   const availableModules = useMemo(() => {
