@@ -40,7 +40,13 @@ const getUnitDisplay = (baseUnit: string, quantity: number) => {
   return baseUnit; // 自定义单位不变化单复数
 };
 
+// 生成订单确认PDF
 export const generateOrderConfirmationPDF = async (data: QuotationData, preview = false): Promise<Blob> => {
+  // 检查是否在客户端环境
+  if (typeof window === 'undefined') {
+    throw new Error('PDF generation is only available in client-side environment');
+  }
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

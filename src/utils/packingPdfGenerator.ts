@@ -87,6 +87,11 @@ export async function generatePackingListPDF(
   preview: boolean = false,
   totals?: { netWeight: number; grossWeight: number; packageQty: number; totalPrice: number }
 ): Promise<string | void> {
+  // 检查是否在客户端环境
+  if (typeof window === 'undefined') {
+    throw new Error('PDF generation is only available in client-side environment');
+  }
+
   // 创建 PDF 文档
   const doc = new jsPDF({
     orientation: 'portrait',

@@ -22,6 +22,11 @@ interface ExtendedJsPDF extends jsPDF {
 
 // 生成采购订单PDF
 export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview = false): Promise<Blob> => {
+  // 检查是否在客户端环境
+  if (typeof window === 'undefined') {
+    throw new Error('PDF generation is only available in client-side environment');
+  }
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

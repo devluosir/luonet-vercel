@@ -37,6 +37,11 @@ const _getUnitDisplay = (baseUnit: string, quantity: number) => {
 
 // 生成报价单PDF
 export const generateQuotationPDF = async (data: QuotationData, preview = false): Promise<Blob> => {
+  // 检查是否在客户端环境
+  if (typeof window === 'undefined') {
+    throw new Error('PDF generation is only available in client-side environment');
+  }
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
