@@ -68,7 +68,6 @@ import {
   BarChart,
   ScatterChart,
   AreaChart,
-  RadarChart,
   Gauge,
   Target,
   Award,
@@ -89,45 +88,11 @@ import {
   FolderHeart,
   FolderKey,
   FolderLock,
-  FolderUnlock,
-  FolderShield,
-  FolderUser,
   FolderCog,
-  FolderSettings,
   FolderGit,
   FolderGit2,
-  FolderKanban,
-  FolderTree,
-  FolderSymlink,
-  FolderInput,
-  FolderOutput,
   FolderDown,
-  FolderUp,
-  FolderRight,
-  FolderLeft,
-  FolderPlus2,
-  FolderMinus2,
-  FolderX2,
-  FolderCheck2,
-  FolderSearch2,
-  FolderHeart2,
-  FolderKey2,
-  FolderLock2,
-  FolderUnlock2,
-  FolderShield2,
-  FolderUser2,
-  FolderCog2,
-  FolderSettings2,
-  FolderGit2 as FolderGit2Icon,
-  FolderKanban2,
-  FolderTree2,
-  FolderSymlink2,
-  FolderInput2,
-  FolderOutput2,
-  FolderDown2,
-  FolderUp2,
-  FolderRight2,
-  FolderLeft2
+  FolderUp
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance } from '@/utils/performance';
@@ -508,7 +473,11 @@ export default function ToolsPage() {
             <ProfileModal
               isOpen={showProfileModal}
               onClose={() => setShowProfileModal(false)}
-              user={session.user}
+              user={{
+                username: session.user.username || session.user.name || '',
+                email: session.user.email || null,
+                permissions: session.user.permissions || []
+              }}
             />
           </>
         )}

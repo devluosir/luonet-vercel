@@ -172,7 +172,7 @@ export default function PDFPreviewComponent({
                 
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   {/* 推荐操作按钮 */}
-                  {deviceInfo.recommendedAction === 'newTab' && (
+                  {deviceInfo.canPreviewPDF && (
                     <button
                       onClick={handleOpenInNewTab}
                       className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -186,7 +186,7 @@ export default function PDFPreviewComponent({
                     onClick={handleDownload}
                     disabled={isDownloading}
                     className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors ${
-                      deviceInfo.recommendedAction === 'download' 
+                      !deviceInfo.canPreviewPDF 
                         ? 'bg-blue-600 text-white hover:bg-blue-700' 
                         : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
@@ -199,12 +199,12 @@ export default function PDFPreviewComponent({
                     ) : (
                       <>
                         <Download className="w-4 h-4" />
-                        <span>下载PDF {deviceInfo.recommendedAction === 'download' ? '(推荐)' : ''}</span>
+                        <span>下载PDF {!deviceInfo.canPreviewPDF ? '(推荐)' : ''}</span>
                       </>
                     )}
                   </button>
                   
-                  {deviceInfo.recommendedAction !== 'newTab' && showOpenInNewTab && (
+                  {deviceInfo.canPreviewPDF && showOpenInNewTab && (
                     <button
                       onClick={handleOpenInNewTab}
                       className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
