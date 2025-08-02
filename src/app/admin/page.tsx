@@ -177,9 +177,27 @@ export default function AdminPage() {
     return null;
   }
 
-  // 权限不足时返回null，让重定向逻辑处理
+  // 权限不足时显示错误信息
   if (permissionChecked && session?.user?.isAdmin !== true) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
+        <div className="text-center p-8 bg-white dark:bg-gray-900 rounded-xl shadow-lg">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Shield className="w-8 h-8 text-red-600 dark:text-red-400" />
+          </div>
+          <div className="text-lg font-medium text-red-600 dark:text-red-400 mb-2">权限不足</div>
+          <div className="text-gray-600 dark:text-gray-400 mb-4">
+            您没有访问管理后台的权限，请联系系统管理员。
+          </div>
+          <button 
+            onClick={() => router.push('/dashboard')}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            返回首页
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
