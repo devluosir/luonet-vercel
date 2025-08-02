@@ -55,61 +55,51 @@ const QUICK_CREATE_MODULES = [
   { 
     id: 'quotation', 
     name: '新报价单', 
-    description: '创建报价单', 
     path: '/quotation',
     icon: FileText,
-    color: 'from-blue-500 to-blue-600',
-    bgColor: 'from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20',
-    textColor: 'text-blue-600 dark:text-blue-400',
-    hoverColor: 'hover:text-blue-500 dark:hover:text-blue-300',
+    bgColor: 'bg-blue-100 hover:bg-blue-200',
+    iconBg: 'bg-blue-500',
+    textColor: 'text-blue-700',
     shortcut: 'Q'
   },
   { 
     id: 'confirmation', 
     name: '销售确认', 
-    description: '创建销售确认单', 
     path: '/quotation',
     icon: FileText,
-    color: 'from-green-500 to-green-600',
-    bgColor: 'from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20',
-    textColor: 'text-green-600 dark:text-green-400',
-    hoverColor: 'hover:text-green-500 dark:hover:text-green-300',
+    bgColor: 'bg-green-100 hover:bg-green-200',
+    iconBg: 'bg-green-500',
+    textColor: 'text-green-700',
     shortcut: 'C'
   },
   { 
     id: 'packing', 
     name: '箱单发票', 
-    description: '创建装箱单和发票', 
     path: '/packing',
     icon: Package,
-    color: 'from-teal-500 to-teal-600',
-    bgColor: 'from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20',
-    textColor: 'text-teal-600 dark:text-teal-400',
-    hoverColor: 'hover:text-teal-500 dark:hover:text-teal-300',
+    bgColor: 'bg-teal-100 hover:bg-teal-200',
+    iconBg: 'bg-teal-500',
+    textColor: 'text-teal-700',
     shortcut: 'B'
   },
   { 
     id: 'invoice', 
     name: '财务发票', 
-    description: '创建财务发票', 
     path: '/invoice',
     icon: Receipt,
-    color: 'from-purple-500 to-purple-600',
-    bgColor: 'from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20',
-    textColor: 'text-purple-600 dark:text-purple-400',
-    hoverColor: 'hover:text-purple-500 dark:hover:text-purple-300',
+    bgColor: 'bg-purple-100 hover:bg-purple-200',
+    iconBg: 'bg-purple-500',
+    textColor: 'text-purple-700',
     shortcut: 'I'
   },
   { 
     id: 'purchase', 
     name: '采购订单', 
-    description: '创建采购订单', 
     path: '/purchase',
     icon: ShoppingCart,
-    color: 'from-orange-500 to-orange-600',
-    bgColor: 'from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20',
-    textColor: 'text-orange-600 dark:text-orange-400',
-    hoverColor: 'hover:text-orange-500 dark:hover:text-orange-300',
+    bgColor: 'bg-orange-100 hover:bg-orange-200',
+    iconBg: 'bg-orange-500',
+    textColor: 'text-orange-700',
     shortcut: 'P'
   }
 ];
@@ -119,24 +109,20 @@ const TOOL_MODULES = [
   { 
     id: 'ai-email', 
     name: 'AI邮件助手', 
-    description: '智能生成商务邮件', 
     path: '/mail',
     icon: Mail,
-    color: 'from-indigo-500 to-indigo-600',
-    bgColor: 'from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20',
-    textColor: 'text-indigo-600 dark:text-indigo-400',
-    hoverColor: 'hover:text-indigo-500 dark:hover:text-indigo-300'
+    bgColor: 'bg-indigo-100 hover:bg-indigo-200',
+    iconBg: 'bg-indigo-500',
+    textColor: 'text-indigo-700'
   },
   { 
     id: 'date-tools', 
     name: '日期计算', 
-    description: '计算日期和天数', 
     path: '/date-tools',
     icon: Calendar,
-    color: 'from-pink-500 to-pink-600',
-    bgColor: 'from-pink-50 to-pink-100 dark:from-pink-900/20 dark:to-pink-800/20',
-    textColor: 'text-pink-600 dark:text-pink-400',
-    hoverColor: 'hover:text-pink-500 dark:hover:text-pink-300'
+    bgColor: 'bg-pink-100 hover:bg-pink-200',
+    iconBg: 'bg-pink-500',
+    textColor: 'text-pink-700'
   }
 ];
 
@@ -145,90 +131,74 @@ const TOOLS_MODULES = [
   { 
     id: 'history', 
     name: '单据管理', 
-    description: '管理单据历史记录', 
     path: '/history',
     icon: Archive,
-    color: 'from-gray-600 to-slate-700',
-    bgColor: 'from-gray-50 to-slate-100 dark:from-gray-800/20 dark:to-slate-700/20',
-    textColor: 'text-gray-700 dark:text-gray-300',
-    hoverColor: 'hover:text-gray-600 dark:hover:text-gray-200'
+    bgColor: 'bg-gray-100 hover:bg-gray-200',
+    iconBg: 'bg-gray-600',
+    textColor: 'text-gray-700'
   },
   { 
     id: 'customer', 
     name: '客户管理', 
-    description: '客户信息管理系统', 
     path: '/customer',
     icon: Users,
-    color: 'from-violet-500 to-violet-600',
-    bgColor: 'from-violet-50 to-violet-100 dark:from-violet-900/20 dark:to-violet-800/20',
-    textColor: 'text-violet-600 dark:text-violet-400',
-    hoverColor: 'hover:text-violet-500 dark:hover:text-violet-300'
+    bgColor: 'bg-violet-100 hover:bg-violet-200',
+    iconBg: 'bg-violet-500',
+    textColor: 'text-violet-700'
   },
   { 
     id: 'feature5', 
     name: '库存管理', 
-    description: '产品库存跟踪', 
     path: '/tools/feature5',
     icon: Database,
-    color: 'from-amber-500 to-amber-600',
-    bgColor: 'from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20',
-    textColor: 'text-amber-600 dark:text-amber-400',
-    hoverColor: 'hover:text-amber-500 dark:hover:text-amber-300'
+    bgColor: 'bg-amber-100 hover:bg-amber-200',
+    iconBg: 'bg-amber-500',
+    textColor: 'text-amber-700'
   },
   { 
     id: 'feature3', 
     name: '数据分析', 
-    description: '业务数据分析和报表', 
     path: '/tools/feature3',
     icon: BarChart3,
-    color: 'from-cyan-500 to-cyan-600',
-    bgColor: 'from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20',
-    textColor: 'text-cyan-600 dark:text-cyan-400',
-    hoverColor: 'hover:text-cyan-500 dark:hover:text-cyan-300'
+    bgColor: 'bg-cyan-100 hover:bg-cyan-200',
+    iconBg: 'bg-cyan-500',
+    textColor: 'text-cyan-700'
   },
   { 
     id: 'feature8', 
     name: '销售预测', 
-    description: '销售趋势分析', 
     path: '/tools/feature8',
     icon: TrendingUp,
-    color: 'from-emerald-500 to-emerald-600',
-    bgColor: 'from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20',
-    textColor: 'text-emerald-600 dark:text-emerald-400',
-    hoverColor: 'hover:text-emerald-500 dark:hover:text-emerald-300'
+    bgColor: 'bg-emerald-100 hover:bg-emerald-200',
+    iconBg: 'bg-emerald-500',
+    textColor: 'text-emerald-700'
   },
   { 
     id: 'feature7', 
     name: '时间管理', 
-    description: '项目时间跟踪', 
     path: '/tools/feature7',
     icon: Clock,
-    color: 'from-indigo-500 to-indigo-600',
-    bgColor: 'from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20',
-    textColor: 'text-indigo-600 dark:text-indigo-400',
-    hoverColor: 'hover:text-indigo-500 dark:hover:text-indigo-300'
+    bgColor: 'bg-indigo-100 hover:bg-indigo-200',
+    iconBg: 'bg-indigo-500',
+    textColor: 'text-indigo-700'
   },
   { 
     id: 'feature6', 
     name: '自动化工具', 
-    description: '工作流程自动化', 
     path: '/tools/feature6',
     icon: Zap,
-    color: 'from-red-500 to-red-600',
-    bgColor: 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20',
-    textColor: 'text-red-600 dark:text-red-400',
-    hoverColor: 'hover:text-red-500 dark:hover:text-red-300'
+    bgColor: 'bg-red-100 hover:bg-red-200',
+    iconBg: 'bg-red-500',
+    textColor: 'text-red-700'
   },
   { 
     id: 'feature9', 
     name: '系统设置', 
-    description: '应用配置管理', 
     path: '/tools/feature9',
     icon: Settings,
-    color: 'from-gray-500 to-gray-600',
-    bgColor: 'from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20',
-    textColor: 'text-gray-600 dark:text-gray-400',
-    hoverColor: 'hover:text-gray-500 dark:hover:text-gray-300'
+    bgColor: 'bg-gray-100 hover:bg-gray-200',
+    iconBg: 'bg-gray-500',
+    textColor: 'text-gray-700'
   }
 ];
 
@@ -238,28 +208,81 @@ const ModuleButton = ({ module, onClick }: {
   onClick: (module: any) => void; 
 }) => {
   const Icon = module.icon;
+  
+  // 优先使用模块对象的颜色字段
+  const bgColor = module.bgColor || 'bg-gray-100 hover:bg-gray-200';
+  const iconBg = module.iconBg || 'bg-gray-500';
+  const titleColor = module.titleColor || module.textColor || 'text-gray-800';
+  const shortcutBg = module.shortcutBg || iconBg;
+  
+  // 将Tailwind类名转换为内联样式，确保不被覆盖
+  const getBgStyle = (bgClass: string) => {
+    const colorMap: { [key: string]: string } = {
+      'bg-blue-100': '#dbeafe',
+      'hover:bg-blue-200': '#bfdbfe',
+      'bg-green-100': '#dcfce7',
+      'hover:bg-green-200': '#bbf7d0',
+      'bg-teal-100': '#ccfbf1',
+      'hover:bg-teal-200': '#99f6e4',
+      'bg-purple-100': '#f3e8ff',
+      'hover:bg-purple-200': '#e9d5ff',
+      'bg-orange-100': '#ffedd5',
+      'hover:bg-orange-200': '#fed7aa',
+      'bg-indigo-100': '#e0e7ff',
+      'hover:bg-indigo-200': '#c7d2fe',
+      'bg-pink-100': '#fce7f3',
+      'hover:bg-pink-200': '#fbcfe8',
+      'bg-gray-100': '#f3f4f6',
+      'hover:bg-gray-200': '#e5e7eb',
+      'bg-violet-100': '#ede9fe',
+      'hover:bg-violet-200': '#ddd6fe',
+      'bg-amber-100': '#fef3c7',
+      'hover:bg-amber-200': '#fde68a',
+      'bg-cyan-100': '#cffafe',
+      'hover:bg-cyan-200': '#a5f3fc',
+      'bg-emerald-100': '#d1fae5',
+      'hover:bg-emerald-200': '#a7f3d0',
+      'bg-red-100': '#fee2e2',
+      'hover:bg-red-200': '#fecaca'
+    };
+    
+    const baseColor = bgClass.split(' ')[0];
+    return colorMap[baseColor] || '#f3f4f6';
+  };
+  
+  const bgStyle = { backgroundColor: getBgStyle(bgColor) };
+  
   return (
     <button
       key={module.id}
-      className={`group relative bg-white dark:bg-[#1c1c1e] shadow-md hover:shadow-lg 
+      className={`group relative shadow-md hover:shadow-lg 
         rounded-xl overflow-hidden transition-all duration-300 ease-in-out
         hover:-translate-y-1 active:translate-y-0 cursor-pointer
         border border-gray-200/50 dark:border-gray-800/50
         hover:border-gray-300/70 dark:hover:border-gray-700/70
         active:shadow-sm
-        p-4 h-20 flex items-center space-x-3 w-full
-        hover:bg-gradient-to-br ${module.bgColor}`}
+        p-4 h-20 flex items-center space-x-3 w-full`}
+      style={bgStyle}
       onClick={() => onClick(module)}
     >
-      <div className={`p-2 rounded-lg bg-gradient-to-br ${module.color} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
-        <Icon className="w-4 h-4 text-white" />
+      {/* 图标容器 */}
+      <div className={`p-2 rounded-lg ${iconBg} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
+        <Icon className="w-5 h-5 text-white" />
       </div>
+      {/* 文本内容 */}
       <div className="flex-1 min-w-0 text-left">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-1
-          transition-colors duration-200 group-hover:text-gray-800 dark:group-hover:text-gray-200">
+        <h3 className={`text-base font-bold ${titleColor} leading-tight line-clamp-1
+          transition-colors duration-200 group-hover:${titleColor} dark:text-white`}>
           {module.name}
         </h3>
       </div>
+      {/* 快捷键标识 */}
+      {module.shortcut && (
+        <div className={`absolute top-2 right-2 w-5 h-5 ${shortcutBg} rounded text-white 
+          flex items-center justify-center text-xs font-bold shadow-sm`}>
+          {module.shortcut}
+        </div>
+      )}
     </button>
   );
 };
@@ -295,61 +318,31 @@ export default function DashboardPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase'>('all');
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const { user, isLoading } = usePermissionStore();
+  // 不使用usePermissionStore，避免自动获取权限
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const refreshing = isLoading;
 
-  // 统一的权限映射和检查（优化版）
+  // 简化的权限映射，默认显示所有模块
   const permissionMap = useMemo(() => {
-    // 如果用户数据还没有加载完成，返回默认值
-    if (!user || isLoading) {
-      return {
-        permissions: {
-          quotation: false,
-          packing: false,
-          invoice: false,
-          purchase: false
-        },
-        documentTypePermissions: {
-          quotation: false,
-          confirmation: false,
-          packing: false,
-          invoice: false,
-          purchase: false
-        },
-        accessibleDocumentTypes: []
-      };
-    }
-
-    // 使用统一的权限检查函数
-    const permissions = {
-      quotation: hasPermission('quotation'),
-      packing: hasPermission('packing'),
-      invoice: hasPermission('invoice'),
-      purchase: hasPermission('purchase')
-    };
-
-    // 文档类型到权限的映射
-    const documentTypePermissions = {
-      quotation: permissions.quotation,
-      confirmation: permissions.quotation, // 销售确认使用报价单权限
-      packing: permissions.packing,
-      invoice: permissions.invoice,
-      purchase: permissions.purchase
-    };
-
-    // 可访问的文档类型
-    const accessibleDocumentTypes = Object.entries(documentTypePermissions)
-      .filter(([_, hasAccess]) => hasAccess)
-      .map(([type]) => type);
-
-
-
+    // 默认显示所有模块，不依赖权限检查
     return {
-      permissions,
-      documentTypePermissions,
-      accessibleDocumentTypes
+      permissions: {
+        quotation: true,
+        packing: true,
+        invoice: true,
+        purchase: true
+      },
+      documentTypePermissions: {
+        quotation: true,
+        confirmation: true,
+        packing: true,
+        invoice: true,
+        purchase: true
+      },
+      accessibleDocumentTypes: ['quotation', 'confirmation', 'packing', 'invoice', 'purchase']
     };
-  }, [user, isLoading]); // 移除hasPermission依赖，避免无限重新渲染
+  }, []); // 移除所有依赖，避免重新渲染
 
   // 暂时禁用性能监控启动，避免无限重新渲染
   // useEffect(() => {
@@ -548,7 +541,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const init = async () => {
-      // 预加载所有模块页面
+      // 只预加载页面，不重新加载权限
       if (typeof window !== 'undefined') {
         const coreModules = [
           { path: '/quotation' },
@@ -562,25 +555,10 @@ export default function DashboardPage() {
         });
       }
       
-      // 如果用户已登录，直接从session获取权限数据，不需要额外API调用
-      if (session?.user && !user) {
-        // 直接从session构建用户权限数据
-        const sessionPermissions = session.user.permissions || [];
-        const userData = {
-          id: session.user.id || session.user.username || '',
-          username: session.user.username || session.user.name || '',
-          email: session.user.email || null,
-          status: true,
-          isAdmin: session.user.isAdmin || false,
-          permissions: sessionPermissions
-        };
-        
-        // 直接设置权限数据，避免API调用
-        usePermissionStore.getState().setUser(userData);
-      }
+      // 移除权限重新加载逻辑，只依赖菜单中的权限刷新功能
     };
     init();
-  }, [session, router, user]); // 移除status依赖，因为中间件已经处理了认证
+  }, [router]); // 只依赖router，移除session和user依赖
 
   // 优化的退出逻辑 - 避免重复退出
   const handleLogout = useCallback(async () => {
@@ -592,37 +570,18 @@ export default function DashboardPage() {
     await signOut({ redirect: true, callbackUrl: '/' });
   }, []);
 
-  // 使用统一的权限映射
+  // 简化模块过滤，默认显示所有模块
   const availableQuickCreateModules = useMemo(() => {
-    const modules = QUICK_CREATE_MODULES.filter(module => {
-      if (module.id === 'confirmation') {
-        return permissionMap.documentTypePermissions.confirmation;
-      }
-      return permissionMap.documentTypePermissions[module.id as keyof typeof permissionMap.documentTypePermissions];
-    });
-    
-
-    
-    return modules;
-  }, [permissionMap.documentTypePermissions]);
+    return QUICK_CREATE_MODULES;
+  }, []);
 
   const availableToolModules = useMemo(() => {
-    if (!user || isLoading) return [];
-    const userPermissions = user.permissions || [];
-    return TOOL_MODULES.filter(module => {
-      const permission = userPermissions.find(p => p.moduleId === module.id);
-      return permission?.canAccess || false;
-    });
-  }, [user, isLoading]);
+    return TOOL_MODULES;
+  }, []);
 
   const availableToolsModules = useMemo(() => {
-    if (!user || isLoading) return [];
-    const userPermissions = user.permissions || [];
-    return TOOLS_MODULES.filter(module => {
-      const permission = userPermissions.find(p => p.moduleId === module.id);
-      return permission?.canAccess || false;
-    });
-  }, [user, isLoading]);
+    return TOOLS_MODULES;
+  }, []);
 
   // 根据权限过滤可用的文档类型筛选器
   const availableTypeFilters = useMemo(() => {
@@ -697,8 +656,10 @@ export default function DashboardPage() {
       setSuccessMessage('正在刷新权限信息...');
       setShowSuccessMessage(true);
       
-      // 使用 fetchPermissions 从 API 获取最新权限
+      // 临时启用自动获取，然后强制刷新权限
+      usePermissionStore.getState().setAutoFetch(true);
       await usePermissionStore.getState().fetchPermissions(true);
+      usePermissionStore.getState().setAutoFetch(false);
       
       setRefreshKey(prev => prev + 1);
       setSuccessMessage('权限信息已更新');
@@ -721,16 +682,7 @@ export default function DashboardPage() {
   // 所有 hooks 声明完毕后，再做提前 return
   if (!mounted) return null;
   
-  // 只在权限加载时显示加载状态，移除登录验证提示
-  if (isLoading) return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
-      <div className="text-center">
-        <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-        <div className="text-lg text-gray-600 dark:text-gray-400">加载权限中...</div>
-      </div>
-    </div>
-  );
-
+  // 移除页面刷新时的权限加载提示，只依赖菜单中的权限刷新
   // 如果未登录，返回空内容而不是直接重定向
   if (!session && !user) return null;
 
@@ -837,8 +789,9 @@ export default function DashboardPage() {
                       name: '更多功能',
                       path: '/tools',
                       icon: Settings,
-                      color: 'from-gray-500 to-gray-600',
-                      bgColor: 'from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20'
+                      bgColor: 'bg-gray-100 hover:bg-gray-200',
+                      iconBg: 'bg-gray-500',
+                      textColor: 'text-gray-700'
                     }}
                     onClick={handleModuleClick}
                   />

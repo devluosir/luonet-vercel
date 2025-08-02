@@ -22,12 +22,14 @@ interface PermissionStore {
   isLoading: boolean;
   error: string | null;
   lastFetchTime: number | null; // 添加最后获取时间
+  autoFetch: boolean; // 添加自动获取控制
   
   // 基础操作
   setUser: (user: User) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearUser: () => void;
+  setAutoFetch: (autoFetch: boolean) => void; // 添加设置自动获取的方法
   
   // 权限检查 - 统一接口
   hasPermission: (moduleId: string) => boolean;
@@ -43,11 +45,13 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   isLoading: false,
   error: null,
   lastFetchTime: null,
+  autoFetch: false, // 默认不自动获取
 
   setUser: (user: User) => set({ user }),
   setLoading: (loading: boolean) => set({ isLoading: loading }),
   setError: (error: string | null) => set({ error }),
   clearUser: () => set({ user: null, error: null }),
+  setAutoFetch: (autoFetch: boolean) => set({ autoFetch }),
 
   // 统一的权限检查逻辑
   hasPermission: (moduleId: string) => {
@@ -56,8 +60,6 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     
     const permission = user.permissions.find(p => p.moduleId === moduleId);
     const hasAccess = permission?.canAccess || false;
-    
-
     
     return hasAccess;
   },
@@ -77,7 +79,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     return user?.isAdmin || false;
   },
 
-  // 统一的权限获取逻辑 - 优先使用session数据
+  // 权限获取 - 只在强制刷新时获取
   fetchPermissions: async (forceRefresh = false) => {
     const state = get();
     
@@ -86,15 +88,8 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       return;
     }
     
-    // 检查缓存时间（30分钟内不重复获取）
-    const CACHE_DURATION = 30 * 60 * 1000; // 30分钟
-    const now = Date.now();
-    
-    if (!forceRefresh && 
-        state.user && 
-        state.lastFetchTime && 
-        (now - state.lastFetchTime) < CACHE_DURATION) {
-      // 使用缓存的权限数据
+    // 如果不是强制刷新，则不获取权限
+    if (!forceRefresh) {
       return;
     }
     
@@ -120,7 +115,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           permissions: session.user.permissions
         };
         
-        set({ user: userData, isLoading: false, error: null, lastFetchTime: now });
+        set({ user: userData, isLoading: false, error: null, lastFetchTime: Date.now() });
         return;
       }
 
@@ -164,7 +159,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         };
 
         // 6. 更新store
-        set({ user, isLoading: false, error: null, lastFetchTime: now });
+        set({ user, isLoading: false, error: null, lastFetchTime: Date.now() });
       } else {
         // 如果API返回失败，保留现有用户数据
         console.warn('权限API返回失败，使用现有权限数据');
