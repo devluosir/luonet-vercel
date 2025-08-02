@@ -100,7 +100,20 @@ export default function AdminPage() {
         setPermissionChecked(true);
 
         // 加载用户列表
-        await fetchUsers();
+        try {
+          setLoading(true);
+          setError(null);
+          const data = await apiRequestWithError(API_ENDPOINTS.USERS.LIST);
+          // API返回的是 { users: [...] } 格式，需要提取 users 数组
+          const usersData = data.users || data;
+          console.log('获取到的用户数据:', usersData);
+          setUsers(usersData);
+        } catch (error) {
+          console.error('Error fetching users:', error);
+          setError(error instanceof Error ? error.message : '获取用户列表失败');
+        } finally {
+          setLoading(false);
+        }
       } catch (error) {
         console.error('权限检查失败:', error);
         // 权限检查失败时重定向到登录页
@@ -109,7 +122,7 @@ export default function AdminPage() {
     };
 
     checkPermissionsAndLoad();
-  }, [mounted, session, router, status, fetchUsers]);
+  }, [mounted, session, router, status]);
 
   // 过滤用户
   useEffect(() => {
@@ -140,22 +153,7 @@ export default function AdminPage() {
     setFilteredUsers(filtered);
   }, [users, searchTerm, statusFilter, roleFilter]);
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await apiRequestWithError(API_ENDPOINTS.USERS.LIST);
-      // API返回的是 { users: [...] } 格式，需要提取 users 数组
-      const usersData = data.users || data;
-      console.log('获取到的用户数据:', usersData);
-      setUsers(usersData);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setError(error instanceof Error ? error.message : '获取用户列表失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+
 
   const handleLogout = async () => {
     try {
