@@ -48,7 +48,12 @@ export default function AdminPage() {
 
     const checkPermissionsAndLoad = async () => {
       try {
-        // 移除session加载检查，因为中间件已经处理了认证
+        // 检查登录状态
+        if (status === 'unauthenticated') {
+          router.push('/api/auth/signin');
+          return;
+        }
+
         // 如果session存在但权限数据未加载，先获取权限
         if (session?.user && !permissionUser) {
           await fetchPermissions();
@@ -58,7 +63,7 @@ export default function AdminPage() {
         // 权限检查
         const hasAdminPermission = isUserAdmin();
         if (!hasAdminPermission) {
-          router.push('/dashboard');
+          router.push('/api/auth/signin');
           return;
         }
 
@@ -69,13 +74,13 @@ export default function AdminPage() {
         await fetchUsers();
       } catch (error) {
         console.error('权限检查失败:', error);
-        // 不要立即重定向，给用户一个重试的机会
-        setError('权限验证失败，请刷新页面重试');
+        // 权限检查失败时重定向到登录页
+        router.push('/api/auth/signin');
       }
     };
 
     checkPermissionsAndLoad();
-  }, [mounted, session, permissionUser, router, fetchPermissions]);
+  }, [mounted, session, permissionUser, router, fetchPermissions, status]);
 
   // 过滤用户
   useEffect(() => {
@@ -159,12 +164,12 @@ export default function AdminPage() {
     );
   }
 
-  // 未登录状态 - 返回null而不是重定向，让中间件处理
+  // 未登录状态 - 直接返回null，让重定向逻辑处理
   if (status === 'unauthenticated') {
     return null;
   }
 
-  // 权限不足时返回null，避免闪烁
+  // 权限不足时返回null，让重定向逻辑处理
   if (permissionChecked && !isUserAdmin()) {
     return null;
   }

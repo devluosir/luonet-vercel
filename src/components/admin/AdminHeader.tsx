@@ -35,11 +35,11 @@ export function AdminHeader({ username, onLogout }: AdminHeaderProps) {
       <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/dashboard')}
             className="flex items-center text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
           >
             <ArrowLeft className="h-5 w-5" />
-            <span className="ml-2">返回主页</span>
+            <span className="ml-2">返回</span>
           </button>
         </div>
 
