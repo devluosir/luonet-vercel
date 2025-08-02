@@ -35,25 +35,43 @@ export class D1UserClient {
 
   // 用户相关操作
   async createUser(user: Omit<D1User, 'id' | 'createdAt' | 'updatedAt'>): Promise<D1User> {
-    const id = crypto.randomUUID();
-    const now = new Date().toISOString();
-    
-    const result = await this.db.prepare(`
-      INSERT INTO User (id, username, password, email, status, isAdmin, lastLoginAt, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      id,
-      user.username,
-      user.password,
-      user.email,
-      user.status ? 1 : 0,
-      user.isAdmin ? 1 : 0,
-      user.lastLoginAt,
-      now,
-      now
-    ).run();
+    try {
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      
+      console.log('D1UserClient.createUser - 开始创建用户:', { id, username: user.username });
+      
+      const sql = `
+        INSERT INTO User (id, username, password, email, status, isAdmin, lastLoginAt, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      
+      console.log('执行SQL:', sql);
+      console.log('参数:', [id, user.username, user.password, user.email, user.status ? 1 : 0, user.isAdmin ? 1 : 0, user.lastLoginAt, now, now]);
+      
+      const result = await this.db.prepare(sql).bind(
+        id,
+        user.username,
+        user.password,
+        user.email,
+        user.status ? 1 : 0,
+        user.isAdmin ? 1 : 0,
+        user.lastLoginAt,
+        now,
+        now
+      ).run();
 
-    return { ...user, id, createdAt: now, updatedAt: now };
+      console.log('SQL执行结果:', result);
+
+      const createdUser = { ...user, id, createdAt: now, updatedAt: now };
+      console.log('创建的用户对象:', createdUser);
+      
+      return createdUser;
+      
+    } catch (error) {
+      console.error('D1UserClient.createUser - 创建用户失败:', error);
+      throw new Error(`创建用户失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
   }
 
   async getUserById(id: string): Promise<D1User | null> {

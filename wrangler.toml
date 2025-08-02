@@ -23,8 +23,6 @@ bucket = "./public"
 [triggers]
 crons = []
 
-# 已删除[build]配置
-
 [env.production]
 workers_dev = false
 vars = { MAIN_SITE_URL = "https://luocompany.net" }
@@ -32,17 +30,3 @@ vars = { MAIN_SITE_URL = "https://luocompany.net" }
 [env.development]
 workers_dev = true
 vars = { MAIN_SITE_URL = "http://localhost:3000" }
-
-# 增加超时和连接配置
-[http_timeout]
-read = 60000
-write = 60000
-connect = 30000
-
-[http]
-max_retries = 5
-retry_on = [500, 502, 503, 504, 408, 429, "ERR_CONNECTION_CLOSED"]
-retry_delay = 1000
-max_concurrent_requests = 100
-
-# 免费计划不支持CPU限制，已移除[limits]配置

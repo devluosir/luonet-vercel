@@ -643,6 +643,8 @@ async function handleCreateUser(request: Request, env: Env): Promise<Response> {
     const userName = request.headers.get('X-User-Name');
     const isAdmin = request.headers.get('X-User-Admin') === 'true';
     
+    console.log('创建用户请求 - 认证信息:', { sessionUserId, userName, isAdmin });
+    
     if (!sessionUserId || !userName) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
@@ -672,6 +674,8 @@ async function handleCreateUser(request: Request, env: Env): Promise<Response> {
 
     const { username, password, email, isAdmin: newUserIsAdmin } = await request.json();
     
+    console.log('创建用户数据:', { username, email, isAdmin: newUserIsAdmin });
+    
     if (!username || !password) {
       return new Response(
         JSON.stringify({ error: '用户名和密码不能为空' }),
@@ -688,6 +692,7 @@ async function handleCreateUser(request: Request, env: Env): Promise<Response> {
     const d1Client = new D1UserClient(env.USERS_DB);
     
     // 检查用户是否已存在
+    console.log('检查用户是否已存在:', username);
     const existingUser = await d1Client.getUserByUsername(username);
     if (existingUser) {
       return new Response(
@@ -703,6 +708,7 @@ async function handleCreateUser(request: Request, env: Env): Promise<Response> {
     }
 
     // 创建新用户
+    console.log('开始创建新用户...');
     const newUser = await d1Client.createUser({
       username,
       password,
@@ -711,6 +717,8 @@ async function handleCreateUser(request: Request, env: Env): Promise<Response> {
       isAdmin: newUserIsAdmin || false,
       lastLoginAt: null
     });
+
+    console.log('用户创建成功:', newUser);
 
     return new Response(
       JSON.stringify({
@@ -732,10 +740,22 @@ async function handleCreateUser(request: Request, env: Env): Promise<Response> {
     );
 
   } catch (error) {
+    console.error('创建用户时发生错误:', error);
+    
+    // 提供更详细的错误信息
+    let errorMessage = '服务器错误';
+    let errorDetails = '';
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorDetails = error.stack || '';
+    }
+    
     return new Response(
       JSON.stringify({ 
-        error: '服务器错误',
-        details: error instanceof Error ? error.message : '未知错误'
+        error: errorMessage,
+        details: errorDetails,
+        timestamp: new Date().toISOString()
       }),
       { 
         status: 500, 
