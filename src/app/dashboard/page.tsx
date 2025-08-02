@@ -145,61 +145,62 @@ const TOOLS_MODULES = [
     bgColor: 'bg-violet-100 hover:bg-violet-200',
     iconBg: 'bg-violet-500',
     textColor: 'text-violet-700'
-  },
-  { 
-    id: 'feature5', 
-    name: '库存管理', 
-    path: '/tools/feature5',
-    icon: Database,
-    bgColor: 'bg-amber-100 hover:bg-amber-200',
-    iconBg: 'bg-amber-500',
-    textColor: 'text-amber-700'
-  },
-  { 
-    id: 'feature3', 
-    name: '数据分析', 
-    path: '/tools/feature3',
-    icon: BarChart3,
-    bgColor: 'bg-cyan-100 hover:bg-cyan-200',
-    iconBg: 'bg-cyan-500',
-    textColor: 'text-cyan-700'
-  },
-  { 
-    id: 'feature8', 
-    name: '销售预测', 
-    path: '/tools/feature8',
-    icon: TrendingUp,
-    bgColor: 'bg-emerald-100 hover:bg-emerald-200',
-    iconBg: 'bg-emerald-500',
-    textColor: 'text-emerald-700'
-  },
-  { 
-    id: 'feature7', 
-    name: '时间管理', 
-    path: '/tools/feature7',
-    icon: Clock,
-    bgColor: 'bg-indigo-100 hover:bg-indigo-200',
-    iconBg: 'bg-indigo-500',
-    textColor: 'text-indigo-700'
-  },
-  { 
-    id: 'feature6', 
-    name: '自动化工具', 
-    path: '/tools/feature6',
-    icon: Zap,
-    bgColor: 'bg-red-100 hover:bg-red-200',
-    iconBg: 'bg-red-500',
-    textColor: 'text-red-700'
-  },
-  { 
-    id: 'feature9', 
-    name: '系统设置', 
-    path: '/tools/feature9',
-    icon: Settings,
-    bgColor: 'bg-gray-100 hover:bg-gray-200',
-    iconBg: 'bg-gray-500',
-    textColor: 'text-gray-700'
   }
+  // 注释掉其他模块
+  // { 
+  //   id: 'feature5', 
+  //   name: '库存管理', 
+  //   path: '/tools/feature5',
+  //   icon: Database,
+  //   bgColor: 'bg-amber-100 hover:bg-amber-200',
+  //   iconBg: 'bg-amber-500',
+  //   textColor: 'text-amber-700'
+  // },
+  // { 
+  //   id: 'feature3', 
+  //   name: '数据分析', 
+  //   path: '/tools/feature3',
+  //   icon: BarChart3,
+  //   bgColor: 'bg-cyan-100 hover:bg-cyan-200',
+  //   iconBg: 'bg-cyan-500',
+  //   textColor: 'text-cyan-700'
+  // },
+  // { 
+  //   id: 'feature8', 
+  //   name: '销售预测', 
+  //   path: '/tools/feature8',
+  //   icon: TrendingUp,
+  //   bgColor: 'bg-emerald-100 hover:bg-emerald-200',
+  //   iconBg: 'bg-emerald-500',
+  //   textColor: 'text-emerald-700'
+  // },
+  // { 
+  //   id: 'feature7', 
+  //   name: '时间管理', 
+  //   path: '/tools/feature7',
+  //   icon: Clock,
+  //   bgColor: 'bg-indigo-100 hover:bg-indigo-200',
+  //   iconBg: 'bg-indigo-500',
+  //   textColor: 'text-indigo-700'
+  // },
+  // { 
+  //   id: 'feature6', 
+  //   name: '自动化工具', 
+  //   path: '/tools/feature6',
+  //   icon: Zap,
+  //   bgColor: 'bg-red-100 hover:bg-red-200',
+  //   iconBg: 'bg-red-500',
+  //   textColor: 'text-red-700'
+  // },
+  // { 
+  //   id: 'feature9', 
+  //   name: '系统设置', 
+  //   path: '/tools/feature9',
+  //   icon: Settings,
+  //   bgColor: 'bg-gray-100 hover:bg-gray-200',
+  //   iconBg: 'bg-gray-500',
+  //   textColor: 'text-gray-700'
+  // }
 ];
 
 // 统一的模块按钮组件
@@ -330,24 +331,24 @@ export default function DashboardPage() {
     // 优先使用最新权限数据，如果没有则使用session中的权限数据
     const permissions = latestPermissions.length > 0 ? latestPermissions : (session?.user?.permissions || []);
     
-    // 调试信息
-    console.log('Dashboard权限映射 - session.user:', session?.user);
-    console.log('Dashboard权限映射 - isAdmin:', session?.user?.isAdmin);
-    console.log('Dashboard权限映射 - permissions:', permissions);
-    console.log('Dashboard权限映射 - latestPermissions:', latestPermissions);
+
     
     if (!permissions || permissions.length === 0) {
       // 如果没有权限数据，根据用户类型决定显示
       const isAdmin = session?.user?.isAdmin === true;
       
       if (isAdmin) {
-        // 管理员用户，显示所有模块
+        // 管理员用户，显示所有保留的模块
         return {
           permissions: {
             quotation: true,
             packing: true,
             invoice: true,
-            purchase: true
+            purchase: true,
+            history: true,
+            customer: true,
+            'ai-email': true,
+            'date-tools': true
           },
           documentTypePermissions: {
             quotation: true,
@@ -365,7 +366,11 @@ export default function DashboardPage() {
             quotation: false,
             packing: false,
             invoice: false,
-            purchase: false
+            purchase: false,
+            history: false,
+            customer: false,
+            'ai-email': false,
+            'date-tools': false
           },
           documentTypePermissions: {
             quotation: false,
@@ -384,7 +389,11 @@ export default function DashboardPage() {
       quotation: false,
       packing: false,
       invoice: false,
-      purchase: false
+      purchase: false,
+      history: false,
+      customer: false,
+      'ai-email': false,
+      'date-tools': false
     };
 
     const documentTypePermissions = {
@@ -415,6 +424,18 @@ export default function DashboardPage() {
           case 'purchase':
             permissionMap.purchase = true;
             documentTypePermissions.purchase = true;
+            break;
+          case 'history':
+            permissionMap.history = true;
+            break;
+          case 'customer':
+            permissionMap.customer = true;
+            break;
+          case 'ai-email':
+            permissionMap['ai-email'] = true;
+            break;
+          case 'date-tools':
+            permissionMap['date-tools'] = true;
             break;
         }
       }
@@ -639,7 +660,10 @@ export default function DashboardPage() {
           { path: '/packing' },
           { path: '/invoice' },
           { path: '/purchase' },
-          { path: '/history' }
+          { path: '/history' },
+          { path: '/customer' },
+          { path: '/mail' },
+          { path: '/date-tools' }
         ];
         coreModules.forEach(module => {
           router.prefetch(module.path);
@@ -683,14 +707,10 @@ export default function DashboardPage() {
   const availableToolModules = useMemo(() => {
     return TOOL_MODULES.filter(module => {
       switch (module.id) {
-        case 'quotation':
-          return permissionMap.permissions.quotation;
-        case 'packing':
-          return permissionMap.permissions.packing;
-        case 'invoice':
-          return permissionMap.permissions.invoice;
-        case 'purchase':
-          return permissionMap.permissions.purchase;
+        case 'ai-email':
+          return permissionMap.permissions['ai-email'];
+        case 'date-tools':
+          return permissionMap.permissions['date-tools'];
         default:
           return true;
       }
@@ -700,14 +720,10 @@ export default function DashboardPage() {
   const availableToolsModules = useMemo(() => {
     return TOOLS_MODULES.filter(module => {
       switch (module.id) {
-        case 'quotation':
-          return permissionMap.permissions.quotation;
-        case 'packing':
-          return permissionMap.permissions.packing;
-        case 'invoice':
-          return permissionMap.permissions.invoice;
-        case 'purchase':
-          return permissionMap.permissions.purchase;
+        case 'history':
+          return permissionMap.permissions.history;
+        case 'customer':
+          return permissionMap.permissions.customer;
         default:
           return true;
       }

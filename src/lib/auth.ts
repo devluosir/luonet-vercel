@@ -67,7 +67,6 @@ export const authOptions: NextAuthOptions = {
           // 验证用户权限
           if (data.user.isAdmin) {
             // 管理员用户，直接允许登录，但记录权限信息
-            console.log('管理员用户登录:', data.user.username, '权限模块数:', permissions.length);
           } else {
             // 非管理员用户必须有至少一个模块的权限
             if (permissions.length === 0) {
@@ -82,8 +81,6 @@ export const authOptions: NextAuthOptions = {
             if (!hasAccessibleModule) {
               throw new Error("用户没有访问任何模块的权限");
             }
-            
-            console.log('普通用户登录:', data.user.username, '权限模块数:', permissions.length);
           }
           
           return {
