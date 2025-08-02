@@ -72,7 +72,7 @@ export default withAuth(
             return true; // dashboard页面只要有token就可以访问
           }
           return Array.isArray(token.permissions) && 
-                 token.permissions.includes(moduleId);
+                 token.permissions.some(perm => perm.moduleId === moduleId && perm.canAccess);
         }
 
         // 6. 其他情况只要有token就可以

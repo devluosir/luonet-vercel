@@ -22,7 +22,7 @@ export function PermissionGuard({
 }: PermissionGuardProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { user, isLoading, hasPermission, fetchUser } = usePermissionStore();
+  const { user, isLoading, hasPermission, fetchPermissions } = usePermissionStore();
 
   useEffect(() => {
     if (status === 'loading' || isLoading) return;
@@ -39,7 +39,7 @@ export function PermissionGuard({
 
     // 如果没有用户信息，获取用户信息
     if (!user) {
-      fetchUser();
+      fetchPermissions();
       return;
     }
 
@@ -56,7 +56,7 @@ export function PermissionGuard({
         return;
       }
     }
-  }, [session, status, user, isLoading, requiredPermissions, hasPermission, fetchUser, router, redirectTo, fastCheck]);
+  }, [session, status, user, isLoading, requiredPermissions, hasPermission, fetchPermissions, router, redirectTo, fastCheck]);
 
   // 快速验证模式：直接检查权限
   if (fastCheck && user) {

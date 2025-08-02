@@ -69,21 +69,12 @@ export async function POST(request: NextRequest) {
         
         if (session?.user?.permissions) {
           if (Array.isArray(session.user.permissions)) {
-            if (session.user.permissions.length > 0 && typeof session.user.permissions[0] === 'string') {
-              // 字符串数组格式
-              permissions = session.user.permissions.map(moduleId => ({
-                id: `session-${moduleId}`,
-                moduleId: moduleId,
-                canAccess: true
-              }));
-            } else {
-              // 对象数组格式
-              permissions = session.user.permissions.map((perm: any) => ({
-                id: perm.id || `session-${perm.moduleId}`,
-                moduleId: perm.moduleId,
-                canAccess: !!perm.canAccess
-              }));
-            }
+            // 对象数组格式
+            permissions = session.user.permissions.map((perm: any) => ({
+              id: perm.id || `session-${perm.moduleId}`,
+              moduleId: perm.moduleId,
+              canAccess: !!perm.canAccess
+            }));
           } else if (typeof session.user.permissions === 'object') {
             // 对象格式
             permissions = Object.entries(session.user.permissions).map(([moduleId, canAccess]) => ({

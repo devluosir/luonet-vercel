@@ -355,7 +355,7 @@ export default function ToolsPage() {
           <div className="text-sm text-gray-500 mb-4">{fetchError}</div>
           <div className="flex space-x-2 justify-center">
             <button 
-              onClick={() => fetchUser(false)}
+              onClick={() => fetchPermissions()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               重试

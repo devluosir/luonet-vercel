@@ -673,7 +673,8 @@ async function handleCreateUser(request: Request, env: Env): Promise<Response> {
       password,
       email: email || null,
       status: true,
-      isAdmin: isAdmin || false
+      isAdmin: isAdmin || false,
+      lastLoginAt: null
     });
 
     return new Response(
