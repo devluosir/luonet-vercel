@@ -56,23 +56,10 @@ export async function POST(request: NextRequest) {
           }));
           
           userEmail = userData.email || null;
-          
-          if (process.env.NODE_ENV === 'development') {
-            console.log('从后端获取到最新权限:', {
-              permissionsCount: permissions.length,
-              samplePermission: permissions[0],
-              allPermissions: permissions,
-              userData: userData
-            });
-          }
-        } else {
-          console.log('后端API返回的用户数据中没有权限信息');
         }
-      } else {
-        console.log('后端API获取用户数据失败，尝试从session获取');
       }
     } catch (backendError) {
-      console.log('后端API调用失败，尝试从session获取权限');
+      // 后端API调用失败，继续尝试从session获取
     }
     
     // 如果后端获取失败，尝试从session获取权限
@@ -109,7 +96,7 @@ export async function POST(request: NextRequest) {
         
         userEmail = session?.user?.email || null;
       } catch (sessionError) {
-        console.log('无法从session获取权限，使用默认权限');
+        // 无法从session获取权限，使用默认权限
       }
     }
     
@@ -134,22 +121,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 添加调试信息
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Session权限数据:', {
-        permissionsCount: permissions.length,
-        samplePermission: permissions[0],
-        allPermissions: permissions,
-        // 添加详细的权限格式分析
-        permissionAnalysis: {
-          isArray: Array.isArray(permissions),
-          firstPermissionType: typeof permissions[0],
-          firstPermissionKeys: permissions[0] ? Object.keys(permissions[0]) : [],
-          moduleIds: permissions.map(p => p.moduleId),
-          canAccessValues: permissions.map(p => p.canAccess)
-        }
-      });
-    }
+
 
     // 返回最新的用户权限数据
     return NextResponse.json({ 

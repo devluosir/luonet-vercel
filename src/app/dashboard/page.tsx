@@ -342,35 +342,7 @@ export default function DashboardPage() {
       .filter(([_, hasAccess]) => hasAccess)
       .map(([type]) => type);
 
-    // 调试日志 - 只在开发环境显示
-    if (process.env.NODE_ENV === 'development') {
-      console.log('权限映射更新:', {
-        user: user?.username,
-        userPermissions: user?.permissions,
-        permissions: permissions,
-        documentTypePermissions: documentTypePermissions,
-        accessibleDocumentTypes: accessibleDocumentTypes,
-        // 添加权限数据样本
-        samplePermissions: user?.permissions?.slice(0, 3) || [],
-        // 添加详细的权限检查调试
-        permissionChecks: {
-          quotation: hasPermission('quotation'),
-          packing: hasPermission('packing'),
-          invoice: hasPermission('invoice'),
-          purchase: hasPermission('purchase')
-        },
-        // 添加所有权限数据
-        allPermissions: user?.permissions?.map(p => ({
-          id: p.id,
-          moduleId: p.moduleId,
-          canAccess: p.canAccess,
-          canAccessType: typeof p.canAccess
-        })) || [],
-        // 添加可访问文档类型的详细信息
-        accessibleDocumentTypesDetails: accessibleDocumentTypes,
-        accessibleDocumentTypesCount: accessibleDocumentTypes.length
-      });
-    }
+
 
     return {
       permissions,
@@ -517,11 +489,9 @@ export default function DashboardPage() {
     const handlePermissionChange = (e: CustomEvent) => {
       // 检查是否已经显示刷新消息，避免重复刷新
       if (showSuccessMessage) {
-        console.log('已有刷新消息显示，跳过重复刷新');
         return;
       }
 
-      console.log('检测到权限变化，准备更新页面:', e.detail?.message);
       // 显示权限变化提示
       setSuccessMessage(e.detail?.message || '权限信息已更新');
       setShowSuccessMessage(true);
@@ -599,11 +569,8 @@ export default function DashboardPage() {
       
       // 如果用户已登录，获取权限
       if (session?.user) {
-        console.log('开始获取用户权限...');
-        
         // 从API获取最新权限，而不是从session
         await usePermissionStore.getState().fetchPermissions();
-        console.log('权限初始化完成');
       }
     };
     init();
@@ -1172,29 +1139,19 @@ export default function DashboardPage() {
               <div className="text-gray-500 dark:text-gray-400 text-lg mb-4">
                 暂无可用功能，请联系管理员分配权限
               </div>
-              <div className="space-y-4">
-                <button
-                  onClick={handleNoPermissionRefresh}
-                  disabled={refreshing}
-                  className={`px-4 py-2 rounded-lg transition-all duration-200 ease-in-out
-                    focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
-                    dark:focus:ring-offset-gray-900 active:scale-95 ${
-                    refreshing
-                      ? 'bg-gray-400 text-white cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-                  }`}
-                >
-                  {refreshing ? '刷新中...' : '刷新权限'}
-                </button>
-                
-                {/* 调试信息 */}
-                <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded text-sm">
-                  <p><strong>当前用户:</strong> {user?.username || '未获取'}</p>
-                  <p><strong>Session用户:</strong> {session?.user?.username || session?.user?.name || '未获取'}</p>
-                  <p><strong>权限数量:</strong> {user?.permissions?.length || 0}</p>
-                  <p><strong>Session权限:</strong> {session?.user?.permissions?.length || 0}</p>
-                </div>
-              </div>
+              <button
+                onClick={handleNoPermissionRefresh}
+                disabled={refreshing}
+                className={`px-4 py-2 rounded-lg transition-all duration-200 ease-in-out
+                  focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
+                  dark:focus:ring-offset-gray-900 active:scale-95 ${
+                  refreshing
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                }`}
+              >
+                {refreshing ? '刷新中...' : '刷新权限'}
+              </button>
             </div>
           )}
         </div>

@@ -55,19 +55,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     const permission = user.permissions.find(p => p.moduleId === moduleId);
     const hasAccess = permission?.canAccess || false;
     
-    // 添加详细的权限检查调试信息
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`权限检查 ${moduleId}:`, {
-        moduleId,
-        foundPermission: permission,
-        canAccess: permission?.canAccess,
-        hasAccess,
-        userPermissions: user.permissions.map(p => ({
-          moduleId: p.moduleId,
-          canAccess: p.canAccess
-        }))
-      });
-    }
+
     
     return hasAccess;
   },
@@ -136,22 +124,6 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
 
         // 5. 更新store
         set({ user, isLoading: false, error: null });
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log('权限获取成功:', {
-            username: user.username,
-            permissionsCount: permissions.length,
-            isAdmin: user.isAdmin,
-            samplePermissions: permissions.slice(0, 3),
-            // 添加详细的权限数据调试
-            allPermissions: permissions.map(p => ({
-              id: p.id,
-              moduleId: p.moduleId,
-              canAccess: p.canAccess,
-              canAccessType: typeof p.canAccess
-            }))
-          });
-        }
       } else {
         throw new Error(data.error || '获取权限失败');
       }
