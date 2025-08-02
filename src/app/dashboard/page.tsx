@@ -328,8 +328,36 @@ export default function DashboardPage() {
 
   // 动态权限映射，根据session中的权限数据或最新权限数据
   const permissionMap = useMemo(() => {
-    // 优先使用最新权限数据，如果没有则使用session中的权限数据
-    const permissions = latestPermissions.length > 0 ? latestPermissions : (session?.user?.permissions || []);
+    // 优先使用最新权限数据，如果没有则尝试从localStorage恢复
+    let permissions = latestPermissions;
+    
+    if (permissions.length === 0 && typeof window !== 'undefined') {
+      try {
+        const storedPermissions = localStorage.getItem('latestPermissions');
+        const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
+        
+        // 检查权限数据是否在24小时内（避免使用过期的权限数据）
+        const isRecent = permissionsTimestamp && (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000;
+        
+        if (storedPermissions && isRecent) {
+          permissions = JSON.parse(storedPermissions);
+          console.log('从localStorage恢复权限数据:', permissions);
+        } else {
+          // 清除过期的权限数据
+          localStorage.removeItem('latestPermissions');
+          localStorage.removeItem('permissionsTimestamp');
+        }
+      } catch (error) {
+        console.error('恢复权限数据失败:', error);
+        localStorage.removeItem('latestPermissions');
+        localStorage.removeItem('permissionsTimestamp');
+      }
+    }
+    
+    // 如果还是没有权限数据，使用session中的权限数据
+    if (permissions.length === 0) {
+      permissions = session?.user?.permissions || [];
+    }
     
 
     
@@ -454,7 +482,7 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [session?.user?.permissions, latestPermissions]); // 依赖session中的权限数据和最新权限数据
+  }, [session?.user?.permissions, latestPermissions, mounted]); // 依赖session中的权限数据、最新权限数据和mounted状态
 
   // 暂时禁用性能监控启动，避免无限重新渲染
   // useEffect(() => {
@@ -681,6 +709,10 @@ export default function DashboardPage() {
     usePermissionStore.getState().clearUser();
     localStorage.removeItem('username');
     
+    // 清除权限相关的localStorage数据
+    localStorage.removeItem('latestPermissions');
+    localStorage.removeItem('permissionsTimestamp');
+    
     // 只调用一次signOut，避免重复退出
     await signOut({ redirect: true, callbackUrl: '/' });
   }, []);
@@ -818,6 +850,12 @@ export default function DashboardPage() {
         // 更新最新权限数据
         setLatestPermissions(data.permissions);
         console.log('更新权限数据:', data.permissions);
+
+        // 将最新权限数据保存到localStorage，确保页面刷新时保持最新权限
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('latestPermissions', JSON.stringify(data.permissions));
+          localStorage.setItem('permissionsTimestamp', Date.now().toString());
+        }
 
         // 触发权限变化事件，通知其他组件
         window.dispatchEvent(new CustomEvent('permissionChanged', {
