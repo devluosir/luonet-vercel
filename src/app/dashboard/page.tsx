@@ -781,6 +781,9 @@ export default function DashboardPage() {
   const availableTypeFilters = useMemo(() => {
     const filters = [];
     
+    // 添加ALL按钮
+    filters.push({ type: 'all', label: 'ALL', color: 'gray' });
+    
     // 使用动态权限映射
     if (permissionMap.documentTypePermissions.quotation) {
       filters.push({ type: 'quotation', label: 'QTN', color: 'blue' });
@@ -801,10 +804,10 @@ export default function DashboardPage() {
     return filters;
   }, [permissionMap.documentTypePermissions]);
 
-  // 根据权限过滤可见的类型筛选器
+  // 根据权限过滤可见的类型筛选器 - 显示所有筛选按钮
   const visibleTypeFilters = useMemo(() => {
-    return availableTypeFilters.slice(0, showAllFilters ? availableTypeFilters.length : 3);
-  }, [availableTypeFilters, showAllFilters]);
+    return availableTypeFilters;
+  }, [availableTypeFilters]);
 
   // 检查当前选择的筛选器是否有效，如果无效则重置为第一个可用选项
   useEffect(() => {
