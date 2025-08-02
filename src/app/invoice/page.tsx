@@ -1,10 +1,137 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import '../pdf-fonts.css';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Download, Settings, Clipboard, History, Save } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Plus, 
+  Trash2, 
+  Download, 
+  Copy, 
+  Save, 
+  Edit, 
+  Eye, 
+  EyeOff, 
+  Calendar,
+  Clipboard,
+  Calculator,
+  FileText,
+  Receipt,
+  Building2,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  CreditCard,
+  Truck,
+  Package,
+  Box,
+  Tag,
+  Star,
+  Heart,
+  Eye as EyeIcon,
+  Download as DownloadIcon,
+  Upload,
+  Share2,
+  Copy as CopyIcon,
+  Edit as EditIcon,
+  Trash2 as Trash2Icon,
+  Plus as PlusIcon,
+  Search,
+  Filter,
+  SortAsc,
+  SortDesc,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  ChevronUp,
+  ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  Check,
+  X,
+  AlertCircle,
+  Info,
+  HelpCircle,
+  ExternalLink,
+  Link as LinkIcon,
+  Lock,
+  Unlock,
+  Shield,
+  UserCheck,
+  UserX,
+  UserPlus,
+  Users,
+  Activity,
+  PieChart,
+  LineChart,
+  BarChart,
+  ScatterChart,
+  AreaChart,
+  RadarChart,
+  Gauge,
+  Target,
+  Award,
+  Trophy,
+  Medal,
+  Crown,
+  Flag,
+  Bookmark,
+  BookOpen,
+  File,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  FolderMinus,
+  FolderX,
+  FolderCheck,
+  FolderSearch,
+  FolderHeart,
+  FolderKey,
+  FolderLock,
+  FolderUnlock,
+  FolderShield,
+  FolderUser,
+  FolderCog,
+  FolderSettings,
+  FolderGit,
+  FolderGit2,
+  FolderKanban,
+  FolderTree,
+  FolderSymlink,
+  FolderInput,
+  FolderOutput,
+  FolderDown,
+  FolderUp,
+  FolderRight,
+  FolderLeft,
+  FolderPlus2,
+  FolderMinus2,
+  FolderX2,
+  FolderCheck2,
+  FolderSearch2,
+  FolderHeart2,
+  FolderKey2,
+  FolderLock2,
+  FolderUnlock2,
+  FolderShield2,
+  FolderUser2,
+  FolderCog2,
+  FolderSettings2,
+  FolderGit2 as FolderGit2Icon,
+  FolderKanban2,
+  FolderTree2,
+  FolderSymlink2,
+  FolderInput2,
+  FolderOutput2,
+  FolderDown2,
+  FolderUp2,
+  FolderRight2,
+  FolderLeft2
+} from 'lucide-react';
 import { generateInvoicePDF } from '@/utils/pdfGenerator';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { InvoiceTemplateConfig, InvoiceData, LineItem } from '@/types/invoice';
@@ -15,7 +142,6 @@ import ItemsTable from '@/components/invoice/ItemsTable';
 import { addInvoiceHistory, getInvoiceHistory, saveInvoiceHistory } from '@/utils/invoiceHistory';
 import { v4 as uuidv4 } from 'uuid';
 import dynamic from 'next/dynamic';
-import { usePermissionStore } from '@/lib/permissions';
 import { useSession } from 'next-auth/react';
 
 // 动态导入PDFPreviewModal
@@ -718,8 +844,8 @@ export default function InvoicePage() {
     const init = async () => {
       if (!mounted) return;
       
-      // 检查权限
-      const hasAccess = usePermissionStore.getState().hasPermission('invoice');
+      // 检查权限 - 使用session中的权限信息
+      const hasAccess = session?.user?.permissions?.some(p => p.moduleId === 'invoice' && p.canAccess) || false;
       if (!hasAccess) {
         router.push('/dashboard');
         return;
@@ -744,7 +870,7 @@ export default function InvoicePage() {
     };
     
     init();
-  }, [mounted, router]);
+  }, [mounted, router, session?.user?.permissions]);
 
   useEffect(() => {
     const newPaymentDate = calculatePaymentDate(data.date);

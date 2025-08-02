@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import '../pdf-fonts.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
@@ -18,7 +18,7 @@ import {
   X
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
-import { usePermissionStore } from '@/lib/permissions';
+import { useSession } from 'next-auth/react';
 
 // 导入历史记录工具函数
 import { 
@@ -148,9 +148,17 @@ const ImportModal = dynamic(() => import('./ImportModal'), { ssr: false });
 const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
 
 export default function HistoryManagementPage() {
+  const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, hasPermission } = usePermissionStore();
+
+  // 使用session中的权限信息进行权限检查
+  const hasPermission = useCallback((moduleId: string): boolean => {
+    if (!session?.user?.permissions) return false;
+    
+    const permission = session.user.permissions.find(p => p.moduleId === moduleId);
+    return permission?.canAccess || false;
+  }, [session?.user?.permissions]);
 
   // 基础状态
   const [mounted, setMounted] = useState(false);
@@ -306,13 +314,13 @@ export default function HistoryManagementPage() {
 
   // 如果当前activeTab没有权限，自动切换到第一个有权限的tab
   useEffect(() => {
-    if (user && !isFromOtherPage) {
+    if (session?.user && !isFromOtherPage) {
       const availableTabs = getAvailableTabs();
       if (availableTabs.length > 0 && !isActiveTabAvailable()) {
         setActiveTab(availableTabs[0].id);
       }
     }
-  }, [user, getAvailableTabs, isActiveTabAvailable, isFromOtherPage]);
+  }, [session?.user, getAvailableTabs, isActiveTabAvailable, isFromOtherPage]);
 
   // 处理返回按钮点击
   const handleBack = () => {
@@ -1227,7 +1235,7 @@ export default function HistoryManagementPage() {
   }
 
   // 如果没有可用权限，显示提示信息
-  if (user && !isFromOtherPage && getAvailableTabs().length === 0) {
+  if (session?.user && !isFromOtherPage && getAvailableTabs().length === 0) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-black">
         <div className="flex-1 flex items-center justify-center">

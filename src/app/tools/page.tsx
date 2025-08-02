@@ -1,29 +1,138 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { ProfileModal } from '@/components/profile/ProfileModal';
 import { 
-  Mail, 
+  Settings, 
   FileText, 
   Receipt, 
-  Calendar, 
   ShoppingCart, 
-  Settings, 
-  BarChart3, 
+  Package, 
   Users, 
   Database, 
+  BarChart3, 
+  TrendingUp, 
   Zap,
   Clock,
-  TrendingUp,
-  Archive,
-  Package
+  Calendar,
+  Calculator,
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  CreditCard,
+  Truck,
+  Box,
+  Tag,
+  Star,
+  Heart,
+  Eye,
+  Download,
+  Upload,
+  Share2,
+  Copy,
+  Edit,
+  Trash2,
+  Plus,
+  Search,
+  Filter,
+  SortAsc,
+  SortDesc,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  ChevronUp,
+  ArrowRight,
+  ArrowLeft,
+  ArrowUp,
+  ArrowDown,
+  Check,
+  X,
+  AlertCircle,
+  Info,
+  HelpCircle,
+  ExternalLink,
+  Link,
+  Lock,
+  Unlock,
+  Shield,
+  User,
+  UserCheck,
+  UserX,
+  UserPlus,
+  UsersIcon,
+  Activity,
+  PieChart,
+  LineChart,
+  BarChart,
+  ScatterChart,
+  AreaChart,
+  RadarChart,
+  Gauge,
+  Target,
+  Award,
+  Trophy,
+  Medal,
+  Crown,
+  Flag,
+  Bookmark,
+  BookOpen,
+  File,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  FolderMinus,
+  FolderX,
+  FolderCheck,
+  FolderSearch,
+  FolderHeart,
+  FolderKey,
+  FolderLock,
+  FolderUnlock,
+  FolderShield,
+  FolderUser,
+  FolderCog,
+  FolderSettings,
+  FolderGit,
+  FolderGit2,
+  FolderKanban,
+  FolderTree,
+  FolderSymlink,
+  FolderInput,
+  FolderOutput,
+  FolderDown,
+  FolderUp,
+  FolderRight,
+  FolderLeft,
+  FolderPlus2,
+  FolderMinus2,
+  FolderX2,
+  FolderCheck2,
+  FolderSearch2,
+  FolderHeart2,
+  FolderKey2,
+  FolderLock2,
+  FolderUnlock2,
+  FolderShield2,
+  FolderUser2,
+  FolderCog2,
+  FolderSettings2,
+  FolderGit2 as FolderGit2Icon,
+  FolderKanban2,
+  FolderTree2,
+  FolderSymlink2,
+  FolderInput2,
+  FolderOutput2,
+  FolderDown2,
+  FolderUp2,
+  FolderRight2,
+  FolderLeft2
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance } from '@/utils/performance';
-import { usePermissionStore } from '@/lib/permissions';
 import { Header } from '@/components/Header';
+import { ProfileModal } from '@/components/profile/ProfileModal';
 
 interface Permission {
   id: string;
@@ -47,7 +156,7 @@ const MODULES = [
     name: '单据管理中心', 
     description: '管理单据历史记录', 
     path: '/history',
-    icon: Archive,
+    icon: Box,
     color: 'from-gray-600 to-slate-700',
     bgColor: 'from-gray-50 to-slate-100 dark:from-gray-800/20 dark:to-slate-700/20',
     textColor: 'text-gray-700 dark:text-gray-300',
@@ -102,7 +211,7 @@ const MODULES = [
     name: '客户管理', 
     description: '客户信息管理系统', 
     path: '/customer',
-    icon: Users,
+    icon: UsersIcon,
     color: 'from-violet-500 to-violet-600',
     bgColor: 'from-violet-50 to-violet-100 dark:from-violet-900/20 dark:to-violet-800/20',
     textColor: 'text-violet-600 dark:text-violet-400',
@@ -222,18 +331,10 @@ export default function ToolsPage() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  
-  // 使用权限store
-  const { 
-    user, 
-    isLoading: loading, 
-    error: fetchError, 
-    fetchPermissions, 
-    hasPermission 
-  } = usePermissionStore();
+  const [isLoading, setIsLoading] = useState(false);
   
   // 使用loading作为refreshing状态
-  const refreshing = loading;
+  const refreshing = isLoading;
 
   // 暂时禁用性能监控，避免无限重新渲染
   // useEffect(() => {
@@ -274,21 +375,55 @@ export default function ToolsPage() {
 
   const handleLogout = async () => {
     // 清除权限store
-    usePermissionStore.getState().clearUser();
+    // usePermissionStore.getState().clearUser(); // 移除此行
     localStorage.removeItem('username');
     await signOut({ redirect: true, callbackUrl: '/' });
   };
 
-  // 使用权限store的fetchPermissions
+  // 权限刷新处理函数
   const handleRefreshPermissions = useCallback(async () => {
     try {
-      await fetchPermissions(true); // 强制刷新权限
+      setIsLoading(true);
       setShowSuccessMessage(true);
-      setTimeout(() => setShowSuccessMessage(false), 3000);
+      
+      // 调用权限刷新API
+      const response = await fetch('/api/auth/update-session-permissions', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-User-ID': session?.user?.id || session?.user?.username || '',
+          'X-User-Name': session?.user?.username || session?.user?.name || '',
+          'X-User-Admin': session?.user?.isAdmin ? 'true' : 'false'
+        },
+        cache: 'no-store'
+      });
+
+      if (!response.ok) {
+        throw new Error('权限刷新失败');
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // 触发权限变化事件，通知其他组件
+        window.dispatchEvent(new CustomEvent('permissionChanged', {
+          detail: {
+            message: '权限信息已更新',
+            permissions: data.permissions
+          }
+        }));
+        
+        setShowSuccessMessage(true);
+        setTimeout(() => setShowSuccessMessage(false), 3000);
+      } else {
+        throw new Error(data.error || '权限刷新失败');
+      }
     } catch (error) {
       console.error('刷新权限失败:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [fetchPermissions]);
+  }, [session?.user]);
 
   useEffect(() => {
     if (!mounted || status === 'loading') return;
@@ -297,12 +432,17 @@ export default function ToolsPage() {
       router.push('/');
       return;
     }
+  }, [mounted, session, status, router]);
 
-    // 使用权限store获取用户信息
-    fetchPermissions();
-  }, [mounted, session, status, router, fetchPermissions]);
+  // 使用session中的权限信息进行权限检查
+  const hasPermission = useCallback((moduleId: string): boolean => {
+    if (!session?.user?.permissions) return false;
+    
+    const permission = session.user.permissions.find(p => p.moduleId === moduleId);
+    return permission?.canAccess || false;
+  }, [session?.user?.permissions]);
 
-  // 使用权限store的权限检查函数
+  // 使用session中的权限信息过滤可用模块
   const availableModules = useMemo(() => {
     return MODULES.filter(module => hasPermission(module.id));
   }, [hasPermission]);
@@ -324,7 +464,7 @@ export default function ToolsPage() {
   }
 
   // 只在权限加载时显示加载状态，移除登录验证
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -341,29 +481,23 @@ export default function ToolsPage() {
   }
 
   // 移除登录检查，因为中间件已经处理了认证
-  if (!user) {
+  if (!session?.user) {
     return null;
   }
 
   // 显示错误状态
-  if (fetchError) {
+  if (!session?.user?.permissions) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-600 mb-4">加载失败</div>
-          <div className="text-sm text-gray-500 mb-4">{fetchError}</div>
+          <div className="text-sm text-gray-500 mb-4">无法加载权限信息</div>
           <div className="flex space-x-2 justify-center">
             <button 
-              onClick={() => fetchPermissions()}
+              onClick={handleRefreshPermissions}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               重试
-            </button>
-            <button 
-              onClick={handleRefreshPermissions}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              强制刷新
             </button>
           </div>
         </div>
@@ -374,12 +508,12 @@ export default function ToolsPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-black">
       <div className="flex-1">
-        {user && (
+        {session?.user && (
           <>
             <Header 
               user={{
-                name: user.username,
-                isAdmin: user.isAdmin
+                name: session.user.username,
+                isAdmin: session.user.isAdmin
               }}
               onLogout={handleLogout}
               onProfile={() => setShowProfileModal(true)}
@@ -391,7 +525,7 @@ export default function ToolsPage() {
             <ProfileModal
               isOpen={showProfileModal}
               onClose={() => setShowProfileModal(false)}
-              user={user}
+              user={session.user}
             />
           </>
         )}

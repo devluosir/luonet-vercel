@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Users, Building2, FileText, Package, Receipt, ShoppingCart, ArrowLeft, Edit, ChevronRight, Settings, Trash2, X, Check, Save, User } from 'lucide-react';
-import { usePermissionStore } from '@/lib/permissions';
 import { format } from 'date-fns';
 
 // 修改客户/供应商信息接口
@@ -40,7 +39,14 @@ export default function CustomerPage() {
   const [mounted, setMounted] = useState(false);
   const [customers, setCustomers] = useState<CustomerInfo[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierInfo[]>([]);
-  const { user, hasPermission } = usePermissionStore();
+
+  // 使用session中的权限信息进行权限检查
+  const hasPermission = useCallback((moduleId: string): boolean => {
+    if (!session?.user?.permissions) return false;
+    
+    const permission = session.user.permissions.find(p => p.moduleId === moduleId);
+    return permission?.canAccess || false;
+  }, [session?.user?.permissions]);
 
   // 设置相关状态
   const [showSettings, setShowSettings] = useState(false);
