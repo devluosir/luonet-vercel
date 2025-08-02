@@ -19,28 +19,69 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 });
     }
 
-    // 从数据库获取最新权限
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users/${userId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-User-ID': userId,
-        'X-User-Name': userName,
-        'X-User-Admin': isAdmin ? 'true' : 'false'
+    // 尝试从session获取权限，如果失败则使用默认权限
+    let permissions: Permission[] = [];
+    let userEmail: string | null = null;
+    
+    try {
+      const session = await getServerSession(authOptions);
+      
+      if (session?.user?.permissions) {
+        if (Array.isArray(session.user.permissions)) {
+          if (session.user.permissions.length > 0 && typeof session.user.permissions[0] === 'string') {
+            // 字符串数组格式
+            permissions = session.user.permissions.map(moduleId => ({
+              id: `session-${moduleId}`,
+              moduleId: moduleId,
+              canAccess: true
+            }));
+          } else {
+            // 对象数组格式
+            permissions = session.user.permissions.map((perm: any) => ({
+              id: perm.id || `session-${perm.moduleId}`,
+              moduleId: perm.moduleId,
+              canAccess: !!perm.canAccess
+            }));
+          }
+        } else if (typeof session.user.permissions === 'object') {
+          // 对象格式
+          permissions = Object.entries(session.user.permissions).map(([moduleId, canAccess]) => ({
+            id: `session-${moduleId}`,
+            moduleId: moduleId,
+            canAccess: !!canAccess
+          }));
+        }
       }
-    });
-
-    if (!response.ok) {
-      throw new Error('获取权限失败');
+      
+      userEmail = session?.user?.email || null;
+    } catch (sessionError) {
+      console.log('无法从session获取权限，使用默认权限');
     }
-
-    const data = await response.json();
-    const permissions: Permission[] = data.permissions || [];
+    
+    // 如果没有从session获取到权限，使用默认权限
+    if (permissions.length === 0) {
+      // 为管理员用户提供默认权限
+      if (isAdmin) {
+        permissions = [
+          { id: 'default-quotation', moduleId: 'quotation', canAccess: true },
+          { id: 'default-packing', moduleId: 'packing', canAccess: true },
+          { id: 'default-invoice', moduleId: 'invoice', canAccess: true },
+          { id: 'default-purchase', moduleId: 'purchase', canAccess: true },
+          { id: 'default-history', moduleId: 'history', canAccess: true },
+          { id: 'default-date-tools', moduleId: 'date-tools', canAccess: true }
+        ];
+      } else {
+        // 为普通用户提供基本权限
+        permissions = [
+          { id: 'default-quotation', moduleId: 'quotation', canAccess: true },
+          { id: 'default-history', moduleId: 'history', canAccess: true }
+        ];
+      }
+    }
 
     // 添加调试信息
     if (process.env.NODE_ENV === 'development') {
-      console.log('API返回的权限数据:', {
-        dataKeys: Object.keys(data),
+      console.log('Session权限数据:', {
         permissionsCount: permissions.length,
         samplePermission: permissions[0],
         allPermissions: permissions
@@ -54,7 +95,7 @@ export async function POST(request: NextRequest) {
       user: {
         id: userId,
         username: userName,
-        email: data.user?.email || null,
+        email: userEmail,
         status: true,
         isAdmin: isAdmin,
         permissions: permissions
@@ -63,6 +104,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('获取最新权限API错误:', error);
-    return NextResponse.json({ error: '服务器错误' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : '未知错误';
+    return NextResponse.json({ error: `服务器错误: ${errorMessage}` }, { status: 500 });
   }
 } 

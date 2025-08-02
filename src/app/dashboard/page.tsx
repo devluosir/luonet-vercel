@@ -320,11 +320,21 @@ export default function DashboardPage() {
       };
     }
 
+    // 直接从用户权限数据计算，避免调用hasPermission函数
+    const userPermissions = user.permissions || [];
+    const hasPermissionDirect = (moduleId: string) => {
+      const permission = userPermissions.find(p => 
+        p.moduleId === moduleId || 
+        (moduleId === 'confirmation' && p.moduleId === 'quotation')
+      );
+      return permission?.canAccess || false;
+    };
+
     const permissions = {
-      quotation: hasPermission('quotation'),
-      packing: hasPermission('packing'),
-      invoice: hasPermission('invoice'),
-      purchase: hasPermission('purchase')
+      quotation: hasPermissionDirect('quotation'),
+      packing: hasPermissionDirect('packing'),
+      invoice: hasPermissionDirect('invoice'),
+      purchase: hasPermissionDirect('purchase')
     };
 
     // 文档类型到权限的映射
@@ -357,25 +367,23 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [user, isLoading, hasPermission]); // 添加user和isLoading依赖
+  }, [user, isLoading]); // 移除hasPermission依赖，避免无限重新渲染
 
-  // 优化性能监控 - 只在生产环境启用完整监控
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      performanceMonitor.startTimer('dashboard_page_load');
-      
-      // 延迟执行性能监控，避免阻塞首屏渲染（使用兼容性polyfill）
-      safeRequestIdleCallback(() => {
-        // 开发环境减少监控噪音
-        if (process.env.NODE_ENV === 'production') {
-          performanceMonitor.monitorResourceLoading();
-        }
-        performanceMonitor.monitorApiCalls();
-        optimizePerformance.optimizeFontLoading();
-        optimizePerformance.cleanupUnusedResources();
-      }, { timeout: 2000 });
-    }
-  }, []);
+  // 暂时禁用性能监控启动，避免无限重新渲染
+  // useEffect(() => {
+  //   if (typeof window !== 'undefined') {
+  //     performanceMonitor.startTimer('dashboard_page_load');
+  //     
+  //     safeRequestIdleCallback(() => {
+  //       if (process.env.NODE_ENV === 'production') {
+  //         performanceMonitor.monitorResourceLoading();
+  //       }
+  //       performanceMonitor.monitorApiCalls();
+  //       optimizePerformance.optimizeFontLoading();
+  //       optimizePerformance.cleanupUnusedResources();
+  //     }, { timeout: 2000 });
+  //   }
+  // }, []);
 
   // 加载指定时间范围内的文档函数
   const loadDocuments = useCallback(async (filter: 'today' | '3days' | 'week' | 'month' = 'today', typeFilter: 'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase' = 'all') => {
@@ -561,24 +569,35 @@ export default function DashboardPage() {
   useEffect(() => {
     const init = async () => {
       // 预加载所有模块页面
-      prefetchPages();
+      if (typeof window !== 'undefined') {
+        const coreModules = [
+          { path: '/quotation' },
+          { path: '/packing' },
+          { path: '/invoice' },
+          { path: '/purchase' },
+          { path: '/history' }
+        ];
+        coreModules.forEach(module => {
+          router.prefetch(module.path);
+        });
+      }
       
       // 等待session加载完成后再获取权限
       if (status === 'loading') {
         return;
       }
       
-              // 如果用户已登录，获取权限
-        if (session?.user) {
-          console.log('开始获取用户权限...');
-          
-          // 直接获取用户权限
-          await fetchUser();
-          console.log('权限初始化完成');
-        }
+      // 如果用户已登录，获取权限
+      if (session?.user) {
+        console.log('开始获取用户权限...');
+        
+        // 直接获取用户权限
+        await fetchUser();
+        console.log('权限初始化完成');
+      }
     };
     init();
-  }, [session, status, fetchUser, prefetchPages]);
+  }, [session, status, router]); // 移除fetchUser和prefetchPages依赖
 
   // 优化的退出逻辑 - 避免重复退出
   const handleLogout = useCallback(async () => {
@@ -606,13 +625,21 @@ export default function DashboardPage() {
 
   const availableToolModules = useMemo(() => {
     if (!user || isLoading) return [];
-    return TOOL_MODULES.filter(module => hasPermission(module.id));
-  }, [user, isLoading, hasPermission]);
+    const userPermissions = user.permissions || [];
+    return TOOL_MODULES.filter(module => {
+      const permission = userPermissions.find(p => p.moduleId === module.id);
+      return permission?.canAccess || false;
+    });
+  }, [user, isLoading]);
 
   const availableToolsModules = useMemo(() => {
     if (!user || isLoading) return [];
-    return TOOLS_MODULES.filter(module => hasPermission(module.id));
-  }, [user, isLoading, hasPermission]);
+    const userPermissions = user.permissions || [];
+    return TOOLS_MODULES.filter(module => {
+      const permission = userPermissions.find(p => p.moduleId === module.id);
+      return permission?.canAccess || false;
+    });
+  }, [user, isLoading]);
 
   // 根据权限过滤可用的文档类型筛选器
   const availableTypeFilters = useMemo(() => {
@@ -641,7 +668,7 @@ export default function DashboardPage() {
     }
     
     return filters;
-  }, [permissionMap.documentTypePermissions, refreshKey]); // 添加refreshKey依赖，强制重新计算
+  }, [permissionMap.documentTypePermissions]); // 移除refreshKey依赖，避免无限循环
 
   // 根据显示状态过滤按钮
   const visibleTypeFilters = useMemo(() => {
@@ -664,24 +691,33 @@ export default function DashboardPage() {
     }
   }, [visibleTypeFilters]); // 移除 typeFilter 依赖，避免无限循环
 
-  // 页面加载完成后的性能记录
-  useEffect(() => {
-    if (mounted && !refreshing && user) { // 移除loading检查
-      performanceMonitor.endTimer('dashboard_page_load');
-      const metrics = performanceMonitor.getPageLoadMetrics();
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📊 Dashboard页面加载性能:', metrics);
-      }
-    }
-  }, [mounted, refreshing, user]); // 移除调试相关的依赖项
+  // 暂时禁用性能监控，避免无限重新渲染
+  // useEffect(() => {
+  //   if (mounted && !refreshing) {
+  //     try {
+  //       performanceMonitor.endTimer('dashboard_page_load');
+  //       const metrics = performanceMonitor.getPageLoadMetrics();
+  //       if (process.env.NODE_ENV === 'development') {
+  //         console.log('📊 Dashboard页面加载性能:', metrics);
+  //       }
+  //     } catch (error) {
+  //       if (process.env.NODE_ENV === 'development') {
+  //         console.log('性能监控错误:', error);
+  //       }
+  //     }
+  //   }
+  // }, [mounted, refreshing]);
 
   // 所有事件处理函数统一声明
   const handleRefreshPermissions = useCallback(async () => {
     try {
       setSuccessMessage('正在刷新权限信息...');
       setShowSuccessMessage(true);
-      usePermissionStore.getState().clearUser();
-      await fetchUser();
+      
+      // 使用 refreshPermissions 从 API 获取最新权限
+      const { refreshPermissions } = usePermissionStore.getState();
+      await refreshPermissions();
+      
       setRefreshKey(prev => prev + 1);
       setSuccessMessage('权限信息已更新');
       setTimeout(() => setShowSuccessMessage(false), 2000);
@@ -690,14 +726,17 @@ export default function DashboardPage() {
       setSuccessMessage('权限刷新失败，请重试');
       setTimeout(() => setShowSuccessMessage(false), 3000);
     }
-  }, [fetchUser]);
+  }, []);
 
   const handleNoPermissionRefresh = useCallback(async () => {
     try {
       setSuccessMessage('正在刷新权限信息...');
       setShowSuccessMessage(true);
-      usePermissionStore.getState().clearUser();
-      await fetchUser();
+      
+      // 使用 refreshPermissions 从 API 获取最新权限
+      const { refreshPermissions } = usePermissionStore.getState();
+      await refreshPermissions();
+      
       setRefreshKey(prev => prev + 1);
       setSuccessMessage('权限信息已更新');
       setTimeout(() => setShowSuccessMessage(false), 2000);
@@ -706,7 +745,7 @@ export default function DashboardPage() {
       setSuccessMessage('权限刷新失败，请重试');
       setTimeout(() => setShowSuccessMessage(false), 3000);
     }
-  }, [fetchUser]);
+  }, []);
 
   // 使用 useEffect 处理重定向，避免在渲染过程中调用 router.push
   useEffect(() => {
