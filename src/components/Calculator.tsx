@@ -25,6 +25,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [historyPanelPosition, setHistoryPanelPosition] = useState({ top: 0, left: 0, height: 0 });
   const [hasBeenDragged, setHasBeenDragged] = useState(false); // 标记是否已经拖动过
+  const [isMobileHistoryOpen, setIsMobileHistoryOpen] = useState(false); // 移动端历史记录开关
   const popupRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const calculatorBodyRef = useRef<HTMLDivElement>(null); // 计算器主体的引用
@@ -869,17 +870,21 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           <Move className="h-4 w-4 text-gray-400 dark:text-gray-500" />
           <CalculatorIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">计算器</h3>
-          {/* 在小屏幕上隐藏历史记录按钮 */}
-          {!isMobile && (
-            <button
-              onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              title={isHistoryExpanded ? "隐藏历史记录" : "显示历史记录"}
-              data-no-drag
-            >
-              <History className="h-4 w-4 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
-            </button>
-          )}
+          {/* 历史记录按钮 - 桌面端显示侧边栏，移动端显示底部抽屉 */}
+          <button
+            onClick={() => {
+              if (isMobile) {
+                setIsMobileHistoryOpen(!isMobileHistoryOpen);
+              } else {
+                setIsHistoryExpanded(!isHistoryExpanded);
+              }
+            }}
+            className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            title={isMobile ? (isMobileHistoryOpen ? "隐藏历史记录" : "显示历史记录") : (isHistoryExpanded ? "隐藏历史记录" : "显示历史记录")}
+            data-no-drag
+          >
+            <History className="h-4 w-4 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" />
+          </button>
         </div>
         {/* 添加重置位置按钮 */}
         {hasBeenDragged && (
@@ -1010,7 +1015,77 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           </div>
         </div>
 
-                {/* 右侧历史记录浮窗 - 只在桌面端显示，与计算器主体对称且大小相同 */}
+        {/* 移动端历史记录抽屉 - 只在移动端显示 */}
+        {isMobile && isMobileHistoryOpen && (
+          <div className="mt-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-lg">
+            {/* 移动端历史记录标题栏 */}
+            <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-600">
+              <div className="flex items-center space-x-2">
+                <History className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white">历史记录</h4>
+              </div>
+              <div className="flex items-center space-x-2">
+                {history.length > 0 && (
+                  <button
+                    onClick={clearHistory}
+                    className="text-xs text-red-500 hover:text-red-600 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                    data-no-drag
+                  >
+                    清空
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsMobileHistoryOpen(false)}
+                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  title="隐藏历史记录"
+                  data-no-drag
+                >
+                  <ChevronUp className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                </button>
+              </div>
+            </div>
+            
+            {/* 移动端历史记录内容区域 */}
+            <div className="max-h-48 overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+              {history.length === 0 ? (
+                <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">
+                  <History className="h-6 w-6 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                  <div>暂无历史记录</div>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {history.map((item, index) => (
+                    <div 
+                      key={index} 
+                      onClick={() => {
+                        setDisplay(item.result);
+                        setCurrentNumber(item.result);
+                        setExpression(item.result);
+                        setPreviousValue(null);
+                        setOperation(null);
+                        setJustCalculated(false);
+                        // 移除自动关闭，让用户手动控制历史记录区域的开关
+                      }}
+                      className="p-2 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 group border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                      title="点击使用此结果"
+                      data-no-drag
+                    >
+                      {/* 算式和结果在同一行显示，更紧凑 */}
+                      <div className="text-sm font-mono break-words leading-tight flex items-center justify-between">
+                        <span className="text-gray-500 dark:text-gray-400 flex-1 mr-2">{item.expression}</span>
+                        <span className="text-gray-900 dark:text-white font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors whitespace-nowrap">
+                          = {item.result}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 右侧历史记录浮窗 - 只在桌面端显示，与计算器主体对称且大小相同 */}
         {!isMobile && isHistoryExpanded && (
           <div 
             className="calc-history absolute bg-gray-50 dark:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl z-10 flex flex-col"
