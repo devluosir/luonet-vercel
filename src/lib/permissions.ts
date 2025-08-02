@@ -86,8 +86,8 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       return;
     }
     
-    // 检查缓存时间（5分钟内不重复获取）
-    const CACHE_DURATION = 5 * 60 * 1000; // 5分钟
+    // 检查缓存时间（30分钟内不重复获取）
+    const CACHE_DURATION = 30 * 60 * 1000; // 30分钟
     const now = Date.now();
     
     if (!forceRefresh && 
