@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import './pdf-fonts.css';
+import '../pdf-fonts.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   FileText, 
