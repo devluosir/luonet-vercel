@@ -323,10 +323,22 @@ export default function DashboardPage() {
     // 直接从用户权限数据计算，避免调用hasPermission函数
     const userPermissions = user.permissions || [];
     const hasPermissionDirect = (moduleId: string) => {
+      // 简化权限检查逻辑，直接匹配moduleId
       const permission = userPermissions.find(p => 
         p.moduleId === moduleId || 
         (moduleId === 'confirmation' && p.moduleId === 'quotation')
       );
+      
+      // 添加详细的权限检查调试信息
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`权限检查 ${moduleId}:`, {
+          moduleId,
+          foundPermission: permission,
+          canAccess: permission?.canAccess,
+          allUserPermissions: userPermissions.map(p => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
+        });
+      }
+      
       return permission?.canAccess || false;
     };
 
@@ -358,7 +370,22 @@ export default function DashboardPage() {
         userPermissions: user?.permissions,
         permissions: permissions,
         documentTypePermissions: documentTypePermissions,
-        accessibleDocumentTypes: accessibleDocumentTypes
+        accessibleDocumentTypes: accessibleDocumentTypes,
+        // 添加详细的权限检查信息
+        permissionChecks: {
+          quotation: hasPermissionDirect('quotation'),
+          packing: hasPermissionDirect('packing'),
+          invoice: hasPermissionDirect('invoice'),
+          purchase: hasPermissionDirect('purchase')
+        },
+        // 添加权限数据样本
+        samplePermissions: userPermissions.slice(0, 3),
+        // 添加完整的权限数据用于调试
+        allPermissionsDetailed: userPermissions.map(p => ({
+          id: p.id,
+          moduleId: p.moduleId,
+          canAccess: p.canAccess
+        }))
       });
     }
 
@@ -591,8 +618,8 @@ export default function DashboardPage() {
       if (session?.user) {
         console.log('开始获取用户权限...');
         
-        // 直接获取用户权限
-        await fetchUser();
+        // 从API获取最新权限，而不是从session
+        await usePermissionStore.getState().refreshPermissions();
         console.log('权限初始化完成');
       }
     };

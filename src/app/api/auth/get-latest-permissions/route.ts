@@ -84,7 +84,15 @@ export async function POST(request: NextRequest) {
       console.log('Session权限数据:', {
         permissionsCount: permissions.length,
         samplePermission: permissions[0],
-        allPermissions: permissions
+        allPermissions: permissions,
+        // 添加详细的权限格式分析
+        permissionAnalysis: {
+          isArray: Array.isArray(permissions),
+          firstPermissionType: typeof permissions[0],
+          firstPermissionKeys: permissions[0] ? Object.keys(permissions[0]) : [],
+          moduleIds: permissions.map(p => p.moduleId),
+          canAccessValues: permissions.map(p => p.canAccess)
+        }
       });
     }
 

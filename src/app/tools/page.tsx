@@ -235,18 +235,18 @@ export default function ToolsPage() {
   // 使用loading作为refreshing状态
   const refreshing = loading;
 
-  // 性能监控
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      performanceMonitor.startTimer('tools_page_load');
-      performanceMonitor.monitorResourceLoading();
-      performanceMonitor.monitorApiCalls();
-      
-      // 性能优化
-      optimizePerformance.optimizeFontLoading();
-      optimizePerformance.cleanupUnusedResources();
-    }
-  }, []);
+  // 暂时禁用性能监控，避免无限重新渲染
+  // useEffect(() => {
+  //   if (typeof window !== 'undefined') {
+  //     performanceMonitor.startTimer('tools_page_load');
+  //     performanceMonitor.monitorResourceLoading();
+  //     performanceMonitor.monitorApiCalls();
+  //     
+  //     // 性能优化
+  //     optimizePerformance.optimizeFontLoading();
+  //     optimizePerformance.cleanupUnusedResources();
+  //   }
+  // }, []);
 
   // 优化预加载逻辑 - 使用useCallback避免重复创建
   const prefetchPages = useCallback(() => {
@@ -310,16 +310,16 @@ export default function ToolsPage() {
     return MODULES.filter(module => hasPermission(module.id));
   }, [hasPermission]);
 
-  // 页面加载完成后的性能记录
-  useEffect(() => {
-    if (mounted && !loading && user) {
-      performanceMonitor.endTimer('tools_page_load');
-      const metrics = performanceMonitor.getPageLoadMetrics();
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📊 Tools页面加载性能:', metrics);
-      }
-    }
-  }, [mounted, loading, user]);
+  // 暂时禁用性能监控，避免无限重新渲染
+  // useEffect(() => {
+  //   if (mounted && !loading && user) {
+  //     performanceMonitor.endTimer('tools_page_load');
+  //     const metrics = performanceMonitor.getPageLoadMetrics();
+  //     if (process.env.NODE_ENV === 'development') {
+  //       console.log('📊 Tools页面加载性能:', metrics);
+  //     }
+  //   }
+  // }, [mounted, loading, user]);
 
   // 避免闪烁，在客户端渲染前返回空内容
   if (!mounted) {

@@ -15,31 +15,32 @@ export default function LoginPage() {
   const { data: session, status } = useSession();
 
   useEffect(() => {
-    // 性能监控
-    performanceMonitor.startTimer('page_load');
+    // 暂时禁用性能监控，避免无限重新渲染
+    // performanceMonitor.startTimer('page_load');
     
     // 性能优化
-    optimizePerformance.optimizeFontLoading();
-    optimizePerformance.cleanupUnusedResources();
+    // optimizePerformance.optimizeFontLoading();
+    // optimizePerformance.cleanupUnusedResources();
     
     // 监控资源加载
-    performanceMonitor.monitorResourceLoading();
+    // performanceMonitor.monitorResourceLoading();
 
     // 页面加载完成后的性能记录
-    const handleLoad = () => {
-      performanceMonitor.endTimer('page_load');
-      const metrics = performanceMonitor.getPageLoadMetrics();
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📊 页面加载性能:', metrics);
-      }
-    };
+    // const handleLoad = () => {
+    //   performanceMonitor.endTimer('page_load');
+    //   const metrics = performanceMonitor.getPageLoadMetrics();
+    //   if (process.env.NODE_ENV === 'development') {
+    //     console.log('📊 页面加载性能:', metrics);
+    //   }
+    // };
 
-    if (document.readyState === 'complete') {
-      handleLoad();
-    } else {
-      window.addEventListener('load', handleLoad);
-      return () => window.removeEventListener('load', handleLoad);
-    }
+    // 暂时禁用性能监控相关的事件监听
+    // if (document.readyState === 'complete') {
+    //   handleLoad();
+    // } else {
+    //   window.addEventListener('load', handleLoad);
+    //   return () => window.removeEventListener('load', handleLoad);
+    // }
     
     // 更新调试信息
     // setDebugInfo('页面初始化完成'); // Removed debugInfo state
@@ -89,7 +90,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    performanceMonitor.startTimer('login_request');
+    // performanceMonitor.startTimer('login_request');
 
     try {
       console.log('尝试登录:', { username, password });
@@ -99,7 +100,7 @@ export default function LoginPage() {
         redirect: false,
       });
 
-      performanceMonitor.endTimer('login_request');
+      // performanceMonitor.endTimer('login_request');
 
       if (!result) {
         setError('登录请求失败，请重试');

@@ -162,7 +162,11 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           isAdmin: userData.isAdmin,
           permissionsLength: userData.permissions?.length,
           permissionsType: typeof userData.permissions,
-          isArray: Array.isArray(userData.permissions)
+          isArray: Array.isArray(userData.permissions),
+          // 添加session权限数据调试
+          sessionPermissions: session.user.permissions,
+          sessionPermissionsType: typeof session.user.permissions,
+          sessionPermissionsIsArray: Array.isArray(session.user.permissions)
         });
       }
     } catch (error) {
@@ -175,9 +179,32 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   refreshPermissions: async () => {
     try {
       // 获取当前用户信息
-      const currentUser = get().user;
+      let currentUser = get().user;
+      
+      // 如果没有用户信息，尝试从session获取
       if (!currentUser) {
-        throw new Error('未登录');
+        const session = await getSession();
+        if (!session?.user) {
+          throw new Error('未登录');
+        }
+        
+        // 从session创建用户信息
+        currentUser = {
+          id: session.user.id || session.user.username || '',
+          username: session.user.username || session.user.name || '',
+          email: session.user.email || null,
+          status: true,
+          isAdmin: session.user.isAdmin || false,
+          permissions: []
+        };
+        
+        // 先设置用户信息到store
+        set(state => ({ 
+          ...state,
+          user: currentUser,
+          isLoading: false,
+          error: null
+        }));
       }
 
       // 先设置loading状态，但保留当前用户信息
