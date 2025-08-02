@@ -480,8 +480,6 @@ export default function DashboardPage() {
     if (!mounted) return;
 
     const handlePermissionChange = (e: CustomEvent) => {
-              // 检查是否已经显示刷新消息，避免重复刷新
-
       // 检查是否已经显示刷新消息，避免重复刷新
       if (showSuccessMessage) {
         console.log('已有刷新消息显示，跳过重复刷新');
@@ -538,7 +536,7 @@ export default function DashboardPage() {
     router.push(module.path);
   }, [router]);
 
-  // 优化的初始化逻辑 - 避免重复权限获取
+  // 简化的初始化逻辑
   useEffect(() => {
     const init = async () => {
       setMounted(true);
@@ -546,32 +544,37 @@ export default function DashboardPage() {
       // 预加载所有模块页面
       prefetchPages();
       
-      // 异步获取权限，不阻塞页面显示
-      setTimeout(async () => {
-        const { user } = usePermissionStore.getState();
-        console.log('初始化检查 - 用户:', user?.username);
-        console.log('Session状态:', {
-          hasSession: !!session,
-          sessionUser: session?.user?.name,
-          sessionStatus: status
-        });
-        console.log('Session用户权限:', session?.user?.permissions);
-        console.log('Store用户权限:', user?.permissions);
+      // 等待session加载完成后再获取权限
+      if (status === 'loading') {
+        return;
+      }
+      
+      // 如果用户已登录，获取权限
+      if (session?.user) {
+        console.log('开始获取用户权限...');
         
-        // 如果用户已登录但没有权限数据，强制获取
-        if (session?.user && (!user || !user.permissions)) {
-          console.log('用户已登录但权限数据缺失，强制获取权限...');
-          await fetchUser(true);
-        } else if (!user) {
-          console.log('开始获取用户权限...');
-          await fetchUser(false);
+        // 尝试强制刷新权限
+        try {
+          const response = await fetch('/api/auth/force-refresh', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (response.ok) {
+            console.log('强制刷新权限成功');
+          }
+        } catch (error) {
+          console.log('强制刷新权限失败，使用默认权限获取');
         }
         
+        await fetchUser();
         console.log('权限初始化完成');
-      }, 100);
+      }
     };
     init();
-  }, [fetchUser, prefetchPages]);
+  }, [session, status, fetchUser, prefetchPages]);
 
   // 优化的退出逻辑 - 避免重复退出
   const handleLogout = useCallback(async () => {
@@ -726,35 +729,34 @@ export default function DashboardPage() {
               setSuccessMessage('正在刷新权限信息...');
               setShowSuccessMessage(true);
               
-              // 强制用户重新登录以获取最新权限
-              await signOut({ redirect: false });
+              // 调用强制刷新API
+              const response = await fetch('/api/auth/force-refresh', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              });
               
-              // 延迟一下，然后重新登录
-              setTimeout(async () => {
-                try {
-                  await signIn('credentials', {
-                    username: session?.user?.username || session?.user?.name || '',
-                    password: 'dummy',
-                    redirect: false,
-                    callbackUrl: '/dashboard'
-                  });
-                  
-                  // 重新获取用户权限
-                  await fetchUser(true);
-                  
-                  // 强制重新渲染
-                  setRefreshKey(prev => prev + 1);
-                  
-                  // 更新消息
-                  setSuccessMessage('权限信息已更新，请重新登录');
-                } catch (error) {
-                  console.error('重新登录失败:', error);
-                  setSuccessMessage('权限刷新失败，请手动重新登录');
-                }
-              }, 1000);
+              if (response.ok) {
+                const data = await response.json();
+                
+                // 清除当前权限缓存
+                usePermissionStore.getState().clearUser();
+                
+                // 重新获取用户权限
+                await fetchUser();
+                
+                // 强制重新渲染
+                setRefreshKey(prev => prev + 1);
+                
+                // 更新消息
+                setSuccessMessage(data.message || '权限信息已更新');
+              } else {
+                throw new Error('权限刷新失败');
+              }
               
-              // 3秒后隐藏消息
-              setTimeout(() => setShowSuccessMessage(false), 3000);
+              // 2秒后隐藏消息
+              setTimeout(() => setShowSuccessMessage(false), 2000);
             } catch (error) {
               console.error('刷新权限失败:', error);
               setSuccessMessage('权限刷新失败，请重试');
@@ -1135,7 +1137,7 @@ export default function DashboardPage() {
                       usePermissionStore.getState().clearUser();
                       
                       // 获取新权限
-                      await fetchUser(true);
+                      await fetchUser();
                       
                       // 强制重新渲染
                       setRefreshKey(prev => prev + 1);

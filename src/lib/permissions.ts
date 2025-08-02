@@ -1,12 +1,14 @@
 import { create } from 'zustand';
-import { API_ENDPOINTS, apiRequestWithError, getNextAuthSession } from '@/lib/api-config';
+import { getSession } from 'next-auth/react';
 
+// 权限接口
 interface Permission {
   id: string;
   moduleId: string;
   canAccess: boolean;
 }
 
+// 用户接口
 interface User {
   id: string;
   username: string;
@@ -16,187 +18,146 @@ interface User {
   permissions: Permission[];
 }
 
+// 权限存储接口
 interface PermissionStore {
   user: User | null;
   isLoading: boolean;
   error: string | null;
   
-  // Actions
+  // 基础操作
   setUser: (user: User) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearUser: () => void;
   
-  // Permission checks
+  // 权限检查
   hasPermission: (moduleId: string) => boolean;
   hasAnyPermission: (moduleIds: string[]) => boolean;
   isAdmin: () => boolean;
   
-  // Fetch user data
-  fetchUser: (forceRefresh?: boolean) => Promise<void>;
+  // 获取用户数据
+  fetchUser: () => Promise<void>;
   
-  // Force refresh permissions
-  forceRefreshPermissions: () => Promise<void>;
+  // 刷新权限
+  refreshPermissions: () => Promise<void>;
 }
 
-// 简化的权限store
-export const usePermissionStore = create<PermissionStore>()(
-  (set, get) => ({
-    user: null,
-    isLoading: false,
-    error: null,
+// 创建权限存储
+export const usePermissionStore = create<PermissionStore>((set, get) => ({
+  user: null,
+  isLoading: false,
+  error: null,
 
-    setUser: (user) => set({ user, error: null }),
-    setLoading: (loading) => set({ isLoading: loading }),
-    setError: (error) => set({ error }),
-    clearUser: () => set({ user: null, error: null }),
+  setUser: (user: User) => set({ user }),
+  setLoading: (loading: boolean) => set({ isLoading: loading }),
+  setError: (error: string | null) => set({ error }),
+  clearUser: () => set({ user: null, error: null }),
+
+  hasPermission: (moduleId: string) => {
+    const { user } = get();
+    if (!user?.permissions) return false;
     
-    hasPermission: (moduleId) => {
-      const { user } = get();
-      if (!user?.permissions) {
-        console.log(`权限检查失败 - 用户: ${user?.username}, 模块: ${moduleId}, 原因: 无权限数据`);
-        return false;
-      }
-      
+    const permission = user.permissions.find(p => p.moduleId === moduleId);
+    return permission?.canAccess || false;
+  },
+
+  hasAnyPermission: (moduleIds: string[]) => {
+    const { user } = get();
+    if (!user?.permissions) return false;
+    
+    return moduleIds.some(moduleId => {
       const permission = user.permissions.find(p => p.moduleId === moduleId);
-      const hasAccess = permission?.canAccess || false;
-      // 调试信息 - 只在开发环境显示
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`权限检查 - 用户: ${user.username}, 模块: ${moduleId}, 权限: ${hasAccess}`);
+      return permission?.canAccess || false;
+    });
+  },
+
+  isAdmin: () => {
+    const { user } = get();
+    return user?.isAdmin || false;
+  },
+
+  fetchUser: async () => {
+    set({ isLoading: true, error: null });
+    
+    try {
+      const session = await getSession();
+      
+      if (!session?.user) {
+        throw new Error('未登录');
       }
-      return hasAccess;
-    },
 
-    hasAnyPermission: (moduleIds) => {
-      const { user } = get();
-      if (!user?.permissions) return false;
+      // 转换权限数据
+      let permissions: Permission[] = [];
       
-      return moduleIds.some(moduleId => {
-        const permission = user.permissions.find(p => p.moduleId === moduleId);
-        return permission?.canAccess || false;
-      });
-    },
-
-    isAdmin: () => {
-      const { user } = get();
-      return user?.isAdmin || false;
-    },
-
-        fetchUser: async (forceRefresh = false) => {
-      const { isLoading } = get();
-      
-      // 防止重复请求
-      if (isLoading && !forceRefresh) {
-        return;
-      }
-      
-      set({ isLoading: true, error: null });
-      
-      try {
-        const session = await getNextAuthSession();
-        if (!session?.user) {
-          throw new Error('未登录');
-        }
-
-        // 直接从session中获取用户信息和权限
-        // 调试信息 - 只在开发环境显示
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Session原始权限数据:', session.user.permissions);
-          console.log('权限数据类型:', typeof session.user.permissions);
-          console.log('权限数据长度:', session.user.permissions?.length);
-          if (session.user.permissions?.length > 0) {
-            console.log('第一个权限项:', session.user.permissions[0]);
-            console.log('第一个权限项类型:', typeof session.user.permissions[0]);
-          }
-        }
-        
-        // 将权限数据转换为Permission[]格式
-        let permissions: Permission[] = [];
-        
-        if (session.user.permissions) {
-          if (Array.isArray(session.user.permissions)) {
-            // 检查数组元素是字符串还是对象
-            if (session.user.permissions.length > 0 && typeof session.user.permissions[0] === 'string') {
-              // 字符串数组格式
-              permissions = session.user.permissions.map((moduleId: string) => ({
-                id: `session-${moduleId}`,
-                moduleId: moduleId,
-                canAccess: true
-              }));
-            } else {
-              // 对象数组格式，直接使用
-              permissions = session.user.permissions.map((perm: any) => ({
-                id: perm.id || `session-${perm.moduleId}`,
-                moduleId: perm.moduleId,
-                canAccess: !!perm.canAccess
-              }));
-            }
-          } else if (typeof session.user.permissions === 'object') {
-            // 对象格式，转换为数组
-            permissions = Object.entries(session.user.permissions).map(([moduleId, canAccess]) => ({
+      if (session.user.permissions) {
+        if (Array.isArray(session.user.permissions)) {
+          if (session.user.permissions.length > 0 && typeof session.user.permissions[0] === 'string') {
+            // 字符串数组格式
+            permissions = session.user.permissions.map(moduleId => ({
               id: `session-${moduleId}`,
               moduleId: moduleId,
-              canAccess: !!canAccess
+              canAccess: true
+            }));
+          } else {
+            // 对象数组格式
+            permissions = session.user.permissions.map((perm: any) => ({
+              id: perm.id || `session-${perm.moduleId}`,
+              moduleId: perm.moduleId,
+              canAccess: !!perm.canAccess
             }));
           }
+        } else if (typeof session.user.permissions === 'object') {
+          // 对象格式
+          permissions = Object.entries(session.user.permissions).map(([moduleId, canAccess]) => ({
+            id: `session-${moduleId}`,
+            moduleId: moduleId,
+            canAccess: !!canAccess
+          }));
         }
-        
-        // 调试信息 - 只在开发环境显示
-        if (process.env.NODE_ENV === 'development') {
-          console.log('转换后的权限数据:', permissions);
-          console.log('获取用户权限数据:', {
-            sessionUser: session.user.username,
-            sessionPermissions: session.user.permissions,
-            convertedPermissions: permissions
-          });
-        }
-
-        const userData = {
-          id: session.user.id || '',
-          username: session.user.username || session.user.name || '',
-          email: session.user.email || null,
-          status: true,
-          isAdmin: session.user.isAdmin || false,
-          permissions: permissions
-        };
-
-        set({ user: userData, isLoading: false });
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
-        set({ error: errorMessage, isLoading: false });
-        throw error;
       }
-    },
 
-    // 强制刷新权限 - 重新登录以获取最新权限
-    forceRefreshPermissions: async () => {
-      try {
-        // 清除当前用户数据
-        set({ user: null, isLoading: true, error: null });
-        
-        // 强制刷新session
-        const response = await fetch('/api/auth/session', {
-          method: 'GET',
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
+      const userData: User = {
+        id: session.user.id || '',
+        username: session.user.username || session.user.name || '',
+        email: session.user.email || null,
+        status: true,
+        isAdmin: session.user.isAdmin || false,
+        permissions: permissions
+      };
+
+      set({ user: userData, isLoading: false });
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('获取用户权限成功:', {
+          username: userData.username,
+          permissions: userData.permissions,
+          isAdmin: userData.isAdmin
         });
-        
-        if (response.ok) {
-          const sessionData = await response.json();
-          if (sessionData.user) {
-            // 重新获取用户权限
-            await get().fetchUser(true);
-          }
-        }
-      } catch (error) {
-        console.error('强制刷新权限失败:', error);
-        throw error;
       }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '获取用户信息失败';
+      set({ error: errorMessage, isLoading: false });
+      throw error;
     }
-  })
-);
+  },
+
+  refreshPermissions: async () => {
+    try {
+      // 清除当前用户数据
+      set({ user: null, isLoading: true, error: null });
+      
+      // 重新获取用户权限
+      await get().fetchUser();
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('权限刷新成功');
+      }
+    } catch (error) {
+      console.error('权限刷新失败:', error);
+      throw error;
+    }
+  }
+}));
 
 // 权限检查工具函数
 export const checkPermission = (moduleId: string): boolean => {
@@ -211,36 +172,23 @@ export const isUserAdmin = (): boolean => {
   return usePermissionStore.getState().isAdmin();
 };
 
-// 权限验证工具函数
+// 权限验证工具
 export const validatePermissions = {
-  // 完整权限验证 - 用于管理员页面
   async validateAdmin(): Promise<boolean> {
-    const { user, fetchUser } = usePermissionStore.getState();
-    
-    if (!user) {
-      await fetchUser();
-      return usePermissionStore.getState().isAdmin();
-    }
-    
-    return user.isAdmin;
+    return usePermissionStore.getState().isAdmin();
   },
 
-  // 快速权限验证 - 用于业务页面
   validateBusiness(moduleId: string): boolean {
-    const { user, hasPermission } = usePermissionStore.getState();
-    return user ? hasPermission(moduleId) : false;
+    return usePermissionStore.getState().hasPermission(moduleId);
   },
 
-  // 权限缓存预加载
   async preloadPermissions(): Promise<void> {
-    const { user, fetchUser } = usePermissionStore.getState();
-    if (!user) {
-      try {
-        await fetchUser();
-      } catch (error) {
-        // 静默处理预加载错误
-      }
-    }
+    await usePermissionStore.getState().fetchUser();
+  },
+
+  initAdminPermissionListener(): void {
+    // 简化版本，不需要复杂的监听器
+    console.log('权限监听器已初始化');
   }
 };
 
