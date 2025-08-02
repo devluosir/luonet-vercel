@@ -56,6 +56,10 @@ export default {
       return handleGetUsers(request, env);
     }
 
+    if (path === '/api/admin/users' && request.method === 'POST') {
+      return handleCreateUser(request, env);
+    }
+
     if (path.startsWith('/api/admin/users/') && path.split('/').length === 5 && request.method === 'GET') {
       return handleGetUser(request, env);
     }
@@ -604,6 +608,85 @@ async function handleBatchUpdatePermissions(request: Request, env: Env): Promise
     }
     return new Response(
       JSON.stringify({ success: true }),
+      { 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        } 
+      }
+    );
+
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ 
+        error: '服务器错误',
+        details: error instanceof Error ? error.message : '未知错误'
+      }),
+      { 
+        status: 500, 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        } 
+      }
+    );
+  }
+} 
+
+async function handleCreateUser(request: Request, env: Env): Promise<Response> {
+  try {
+    const { username, password, email, isAdmin } = await request.json();
+    
+    if (!username || !password) {
+      return new Response(
+        JSON.stringify({ error: '用户名和密码不能为空' }),
+        { 
+          status: 400, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    const d1Client = new D1UserClient(env.USERS_DB);
+    
+    // 检查用户是否已存在
+    const existingUser = await d1Client.getUserByUsername(username);
+    if (existingUser) {
+      return new Response(
+        JSON.stringify({ error: '用户名已存在' }),
+        { 
+          status: 400, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    // 创建新用户
+    const newUser = await d1Client.createUser({
+      username,
+      password,
+      email: email || null,
+      status: true,
+      isAdmin: isAdmin || false
+    });
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          email: newUser.email,
+          isAdmin: newUser.isAdmin,
+          status: newUser.status
+        }
+      }),
       { 
         headers: { 
           'Content-Type': 'application/json',

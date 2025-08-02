@@ -92,6 +92,7 @@ export default function LoginPage() {
     performanceMonitor.startTimer('login_request');
 
     try {
+      console.log('尝试登录:', { username, password });
       const result = await signIn('credentials', {
         username,
         password,

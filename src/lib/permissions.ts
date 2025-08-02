@@ -50,10 +50,18 @@ export const usePermissionStore = create<PermissionStore>()(
     
     hasPermission: (moduleId) => {
       const { user } = get();
-      if (!user?.permissions) return false;
+      if (!user?.permissions) {
+        console.log(`权限检查失败 - 用户: ${user?.username}, 模块: ${moduleId}, 原因: 无权限数据`);
+        return false;
+      }
       
       const permission = user.permissions.find(p => p.moduleId === moduleId);
-      return permission?.canAccess || false;
+      const hasAccess = permission?.canAccess || false;
+      // 调试信息 - 只在开发环境显示
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`权限检查 - 用户: ${user.username}, 模块: ${moduleId}, 权限: ${hasAccess}`);
+      }
+      return hasAccess;
     },
 
     hasAnyPermission: (moduleIds) => {
@@ -88,12 +96,57 @@ export const usePermissionStore = create<PermissionStore>()(
         }
 
         // 直接从session中获取用户信息和权限
-        // 将string[]权限转换为Permission[]格式
-        const permissions: Permission[] = (session.user.permissions || []).map(moduleId => ({
-          id: `session-${moduleId}`,
-          moduleId: moduleId,
-          canAccess: true
-        }));
+        // 调试信息 - 只在开发环境显示
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Session原始权限数据:', session.user.permissions);
+          console.log('权限数据类型:', typeof session.user.permissions);
+          console.log('权限数据长度:', session.user.permissions?.length);
+          if (session.user.permissions?.length > 0) {
+            console.log('第一个权限项:', session.user.permissions[0]);
+            console.log('第一个权限项类型:', typeof session.user.permissions[0]);
+          }
+        }
+        
+        // 将权限数据转换为Permission[]格式
+        let permissions: Permission[] = [];
+        
+        if (session.user.permissions) {
+          if (Array.isArray(session.user.permissions)) {
+            // 检查数组元素是字符串还是对象
+            if (session.user.permissions.length > 0 && typeof session.user.permissions[0] === 'string') {
+              // 字符串数组格式
+              permissions = session.user.permissions.map(moduleId => ({
+                id: `session-${moduleId}`,
+                moduleId: moduleId,
+                canAccess: true
+              }));
+            } else {
+              // 对象数组格式，直接使用
+              permissions = session.user.permissions.map((perm: any) => ({
+                id: perm.id || `session-${perm.moduleId}`,
+                moduleId: perm.moduleId,
+                canAccess: !!perm.canAccess
+              }));
+            }
+          } else if (typeof session.user.permissions === 'object') {
+            // 对象格式，转换为数组
+            permissions = Object.entries(session.user.permissions).map(([moduleId, canAccess]) => ({
+              id: `session-${moduleId}`,
+              moduleId: moduleId,
+              canAccess: !!canAccess
+            }));
+          }
+        }
+        
+        // 调试信息 - 只在开发环境显示
+        if (process.env.NODE_ENV === 'development') {
+          console.log('转换后的权限数据:', permissions);
+          console.log('获取用户权限数据:', {
+            sessionUser: session.user.username,
+            sessionPermissions: session.user.permissions,
+            convertedPermissions: permissions
+          });
+        }
 
         const userData = {
           id: session.user.id || '',

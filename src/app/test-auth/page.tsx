@@ -1,96 +1,137 @@
 'use client';
 
-import { signIn, useSession } from 'next-auth/react';
-import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { usePermissionStore } from '@/lib/permissions';
+import { useEffect, useState } from 'react';
 
 export default function TestAuthPage() {
-  const { data: session } = useSession();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const { data: session, status } = useSession();
+  const { user, hasPermission, fetchUser } = usePermissionStore();
+  const [testResults, setTestResults] = useState<any>({});
 
-  const handleTestLogin = async () => {
-    setLoading(true);
-    setError('');
+  useEffect(() => {
+    const runTests = async () => {
+      const results: any = {
+        session: {
+          status,
+          user: session?.user,
+          permissions: session?.user?.permissions
+        },
+        store: {
+          user: user,
+          permissions: user?.permissions
+        }
+      };
 
-    try {
-      const result = await signIn('credentials', {
-        username,
-        password,
-        redirect: false,
-      });
-
-      console.log('SignIn result:', result);
-
-      if (result?.error) {
-        setError(result.error);
-      } else if (result?.ok) {
-        setError('登录成功！');
+      // 测试权限检查
+      if (user) {
+        results.permissionTests = {
+          quotation: hasPermission('quotation'),
+          invoice: hasPermission('invoice'),
+          purchase: hasPermission('purchase'),
+          packing: hasPermission('packing'),
+          history: hasPermission('history'),
+          customer: hasPermission('customer')
+        };
       }
+
+      setTestResults(results);
+    };
+
+    if (status === 'authenticated') {
+      runTests();
+    }
+  }, [session, status, user, hasPermission]);
+
+  const handleRefreshPermissions = async () => {
+    try {
+      await fetchUser(true);
     } catch (error) {
-      console.error('Login error:', error);
-      setError('登录失败');
-    } finally {
-      setLoading(false);
+      console.error('刷新权限失败:', error);
     }
   };
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">认证测试页面</h1>
-      
-      <div className="mb-4">
-        <p>当前会话状态: {session ? '已登录' : '未登录'}</p>
-        {session && (
-          <div>
-            <p>用户: {session.user?.name}</p>
-            <p>邮箱: {session.user?.email}</p>
-            <p>权限: {session.user?.permissions?.join(', ')}</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-black p-8">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6">权限测试页面</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Session信息 */}
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+            <h2 className="text-lg font-semibold mb-4">Session信息</h2>
+            <div className="space-y-2">
+              <p><strong>状态:</strong> {status}</p>
+              <p><strong>用户:</strong> {session?.user?.username || session?.user?.name}</p>
+              <p><strong>邮箱:</strong> {session?.user?.email}</p>
+              <p><strong>管理员:</strong> {session?.user?.isAdmin ? '是' : '否'}</p>
+              <p><strong>权限:</strong></p>
+              <ul className="ml-4">
+                {session?.user?.permissions?.map((perm: string, index: number) => (
+                  <li key={index} className="text-sm">{perm}</li>
+                ))}
+              </ul>
+            </div>
           </div>
-        )}
-      </div>
 
-      <div className="mb-4 space-y-2">
-        <div>
-          <label className="block text-sm font-medium">用户名:</label>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-          />
+          {/* Store信息 */}
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+            <h2 className="text-lg font-semibold mb-4">Store信息</h2>
+            <div className="space-y-2">
+              <p><strong>用户:</strong> {user?.username}</p>
+              <p><strong>邮箱:</strong> {user?.email}</p>
+              <p><strong>管理员:</strong> {user?.isAdmin ? '是' : '否'}</p>
+              <p><strong>权限:</strong></p>
+              <ul className="ml-4">
+                {user?.permissions?.map((perm: any, index: number) => (
+                  <li key={index} className="text-sm">
+                    {perm.moduleId} - {perm.canAccess ? '允许' : '拒绝'}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* 权限测试 */}
+          {testResults.permissionTests && (
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow md:col-span-2">
+              <h2 className="text-lg font-semibold mb-4">权限测试结果</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {Object.entries(testResults.permissionTests).map(([module, hasAccess]) => (
+                  <div key={module} className="flex items-center space-x-2">
+                    <span className="font-medium">{module}:</span>
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      hasAccess ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {hasAccess ? '✓' : '✗'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 操作按钮 */}
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow md:col-span-2">
+            <h2 className="text-lg font-semibold mb-4">操作</h2>
+            <div className="space-x-4">
+              <button
+                onClick={handleRefreshPermissions}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                刷新权限
+              </button>
+            </div>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium">密码:</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-          />
+
+        {/* 原始数据 */}
+        <div className="mt-8 bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-4">原始数据</h2>
+          <pre className="bg-gray-100 dark:bg-gray-900 p-4 rounded text-xs overflow-auto">
+            {JSON.stringify(testResults, null, 2)}
+          </pre>
         </div>
-      </div>
-
-      <button
-        onClick={handleTestLogin}
-        disabled={loading}
-        className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
-      >
-        {loading ? '测试中...' : '测试登录'}
-      </button>
-
-      {error && (
-        <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
-        </div>
-      )}
-
-      <div className="mt-4 p-4 bg-gray-100 rounded">
-        <h3 className="font-bold">测试说明:</h3>
-        <p className="mt-2 text-sm text-gray-600">
-          请使用有效的用户账户进行测试。测试账户信息请联系系统管理员。
-        </p>
       </div>
     </div>
   );

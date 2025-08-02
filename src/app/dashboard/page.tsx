@@ -328,6 +328,7 @@ export default function DashboardPage() {
     if (process.env.NODE_ENV === 'development') {
       console.log('权限映射更新:', {
         user: user?.username,
+        userPermissions: user?.permissions,
         permissions: permissions,
         documentTypePermissions: documentTypePermissions,
         accessibleDocumentTypes: accessibleDocumentTypes
@@ -554,6 +555,8 @@ export default function DashboardPage() {
           sessionUser: session?.user?.name,
           sessionStatus: status
         });
+        console.log('Session用户权限:', session?.user?.permissions);
+        console.log('Store用户权限:', user?.permissions);
         
         // 如果用户已登录但没有权限数据，强制获取
         if (session?.user && (!user || !user.permissions)) {
@@ -588,6 +591,9 @@ export default function DashboardPage() {
       }
       return permissionMap.documentTypePermissions[module.id as keyof typeof permissionMap.documentTypePermissions];
     });
+    
+
+    
     return modules;
   }, [permissionMap]);
 
@@ -768,9 +774,10 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* 功能按钮区域 */}
-          {(availableQuickCreateModules.length > 0 || availableToolsModules.length > 0 || availableToolsModules.length > 0) && (
+                    {/* 功能按钮区域 */}
+          {(availableQuickCreateModules.length > 0 || availableToolModules.length > 0 || availableToolsModules.length > 0) && (
             <div className="mb-8">
+
                                           <div className="dashboard-grid gap-3">
                 {/* 新建单据按钮 */}
                 {availableQuickCreateModules.map((module) => (
@@ -1101,44 +1108,54 @@ export default function DashboardPage() {
               <div className="text-gray-500 dark:text-gray-400 text-lg mb-4">
                 暂无可用功能，请联系管理员分配权限
               </div>
-              <button
-                onClick={async () => {
-                  try {
-                    // 设置刷新状态，防止重复点击
-                    setSuccessMessage('正在刷新权限信息...');
-                    setShowSuccessMessage(true);
-                    
-                    // 先清除当前用户的缓存
-                    usePermissionStore.getState().clearUser();
-                    
-                    // 获取新权限
-                    await fetchUser(true);
-                    
-                    // 强制重新渲染
-                    setRefreshKey(prev => prev + 1);
-                    
-                    // 更新消息
-                    setSuccessMessage('权限信息已更新');
-                    
-                    // 2秒后隐藏消息
-                    setTimeout(() => setShowSuccessMessage(false), 2000);
-                  } catch (error) {
-                    console.error('刷新权限失败:', error);
-                    setSuccessMessage('权限刷新失败，请重试');
-                    setTimeout(() => setShowSuccessMessage(false), 3000);
-                  }
-                }}
-                disabled={refreshing}
-                className={`px-4 py-2 rounded-lg transition-all duration-200 ease-in-out
-                  focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
-                  dark:focus:ring-offset-gray-900 active:scale-95 ${
-                  refreshing
-                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
-                }`}
-              >
-                {refreshing ? '刷新中...' : '刷新权限'}
-              </button>
+              <div className="space-y-4">
+                <button
+                  onClick={async () => {
+                    try {
+                      // 设置刷新状态，防止重复点击
+                      setSuccessMessage('正在刷新权限信息...');
+                      setShowSuccessMessage(true);
+                      
+                      // 先清除当前用户的缓存
+                      usePermissionStore.getState().clearUser();
+                      
+                      // 获取新权限
+                      await fetchUser(true);
+                      
+                      // 强制重新渲染
+                      setRefreshKey(prev => prev + 1);
+                      
+                      // 更新消息
+                      setSuccessMessage('权限信息已更新');
+                      
+                      // 2秒后隐藏消息
+                      setTimeout(() => setShowSuccessMessage(false), 2000);
+                    } catch (error) {
+                      console.error('刷新权限失败:', error);
+                      setSuccessMessage('权限刷新失败，请重试');
+                      setTimeout(() => setShowSuccessMessage(false), 3000);
+                    }
+                  }}
+                  disabled={refreshing}
+                  className={`px-4 py-2 rounded-lg transition-all duration-200 ease-in-out
+                    focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2
+                    dark:focus:ring-offset-gray-900 active:scale-95 ${
+                    refreshing
+                      ? 'bg-gray-400 text-white cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+                  }`}
+                >
+                  {refreshing ? '刷新中...' : '刷新权限'}
+                </button>
+                
+                {/* 调试信息 */}
+                <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+                  <p><strong>当前用户:</strong> {user?.username || '未获取'}</p>
+                  <p><strong>Session用户:</strong> {session?.user?.username || session?.user?.name || '未获取'}</p>
+                  <p><strong>权限数量:</strong> {user?.permissions?.length || 0}</p>
+                  <p><strong>Session权限:</strong> {session?.user?.permissions?.length || 0}</p>
+                </div>
+              </div>
             </div>
           )}
         </div>
