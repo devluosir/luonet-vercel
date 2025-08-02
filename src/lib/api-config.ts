@@ -45,8 +45,6 @@ export async function apiRequest(
 ): Promise<Response> {
   // 获取NextAuth session
   const session = await getNextAuthSession();
-  
-
 
   const defaultOptions: RequestInit = {
     headers: {
@@ -61,7 +59,7 @@ export async function apiRequest(
     // 使用session中的用户信息作为认证
     defaultOptions.headers = {
       ...defaultOptions.headers,
-      'X-User-ID': session.user.id || '',
+      'X-User-ID': session.user.id || session.user.username || '',
       'X-User-Name': session.user.username || session.user.name || '',
       'X-User-Admin': session.user.isAdmin ? 'true' : 'false',
     };

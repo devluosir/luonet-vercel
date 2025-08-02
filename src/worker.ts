@@ -31,8 +31,6 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-
-
     // 处理 CORS 预检请求
     if (request.method === 'OPTIONS') {
       return new Response(null, {
@@ -62,6 +60,11 @@ export default {
 
     if (path.startsWith('/api/admin/users/') && path.split('/').length === 5 && request.method === 'GET') {
       return handleGetUser(request, env);
+    }
+
+    // 处理用户删除
+    if (path.startsWith('/api/admin/users/') && path.split('/').length === 5 && request.method === 'DELETE') {
+      return handleDeleteUser(request, env);
     }
 
     // 处理批量权限更新（需要放在前面，因为更具体）
@@ -635,7 +638,39 @@ async function handleBatchUpdatePermissions(request: Request, env: Env): Promise
 
 async function handleCreateUser(request: Request, env: Env): Promise<Response> {
   try {
-    const { username, password, email, isAdmin } = await request.json();
+    // 检查认证 - 使用session头信息
+    const sessionUserId = request.headers.get('X-User-ID');
+    const userName = request.headers.get('X-User-Name');
+    const isAdmin = request.headers.get('X-User-Admin') === 'true';
+    
+    if (!sessionUserId || !userName) {
+      return new Response(
+        JSON.stringify({ error: '未授权访问' }),
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    // 检查是否是管理员
+    if (!isAdmin) {
+      return new Response(
+        JSON.stringify({ error: '只有管理员可以创建用户' }),
+        { 
+          status: 403, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    const { username, password, email, isAdmin: newUserIsAdmin } = await request.json();
     
     if (!username || !password) {
       return new Response(
@@ -673,7 +708,7 @@ async function handleCreateUser(request: Request, env: Env): Promise<Response> {
       password,
       email: email || null,
       status: true,
-      isAdmin: isAdmin || false,
+      isAdmin: newUserIsAdmin || false,
       lastLoginAt: null
     });
 
@@ -686,6 +721,116 @@ async function handleCreateUser(request: Request, env: Env): Promise<Response> {
           email: newUser.email,
           isAdmin: newUser.isAdmin,
           status: newUser.status
+        }
+      }),
+      { 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        } 
+      }
+    );
+
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ 
+        error: '服务器错误',
+        details: error instanceof Error ? error.message : '未知错误'
+      }),
+      { 
+        status: 500, 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        } 
+      }
+    );
+  }
+} 
+
+async function handleDeleteUser(request: Request, env: Env): Promise<Response> {
+  try {
+    // 检查认证 - 使用session头信息
+    const sessionUserId = request.headers.get('X-User-ID');
+    const userName = request.headers.get('X-User-Name');
+    const isAdmin = request.headers.get('X-User-Admin') === 'true';
+    
+    if (!sessionUserId || !userName) {
+      return new Response(
+        JSON.stringify({ error: '未授权访问' }),
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    // 检查是否是管理员
+    if (!isAdmin) {
+      return new Response(
+        JSON.stringify({ error: '只有管理员可以删除用户' }),
+        { 
+          status: 403, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    const url = new URL(request.url);
+    const userId = url.pathname.split('/')[4];
+
+    const d1Client = new D1UserClient(env.USERS_DB);
+    
+    // 先获取用户信息
+    const user = await d1Client.getUserById(userId);
+    if (!user) {
+      return new Response(
+        JSON.stringify({ error: '用户不存在' }),
+        { 
+          status: 404, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    // 删除用户权限
+    await d1Client.deleteUserPermissions(userId);
+    
+    // 删除用户
+    const deleted = await d1Client.deleteUser(userId);
+
+    if (!deleted) {
+      return new Response(
+        JSON.stringify({ error: '删除用户失败' }),
+        { 
+          status: 500, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: '用户删除成功',
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          status: user.status
         }
       }),
       { 
