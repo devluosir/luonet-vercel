@@ -322,27 +322,89 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const refreshing = isLoading;
+  // 添加最新权限数据状态
+  const [latestPermissions, setLatestPermissions] = useState<any[]>([]);
 
-  // 简化的权限映射，默认显示所有模块
+  // 动态权限映射，根据session中的权限数据或最新权限数据
   const permissionMap = useMemo(() => {
-    // 默认显示所有模块，不依赖权限检查
-    return {
-      permissions: {
-        quotation: true,
-        packing: true,
-        invoice: true,
-        purchase: true
-      },
-      documentTypePermissions: {
-        quotation: true,
-        confirmation: true,
-        packing: true,
-        invoice: true,
-        purchase: true
-      },
-      accessibleDocumentTypes: ['quotation', 'confirmation', 'packing', 'invoice', 'purchase']
+    // 优先使用最新权限数据，如果没有则使用session中的权限数据
+    const permissions = latestPermissions.length > 0 ? latestPermissions : (session?.user?.permissions || []);
+    
+    if (!permissions || permissions.length === 0) {
+      // 如果没有权限数据，默认显示所有模块
+      return {
+        permissions: {
+          quotation: true,
+          packing: true,
+          invoice: true,
+          purchase: true
+        },
+        documentTypePermissions: {
+          quotation: true,
+          confirmation: true,
+          packing: true,
+          invoice: true,
+          purchase: true
+        },
+        accessibleDocumentTypes: ['quotation', 'confirmation', 'packing', 'invoice', 'purchase']
+      };
+    }
+
+    // 根据权限数据构建权限映射
+    const permissionMap = {
+      quotation: false,
+      packing: false,
+      invoice: false,
+      purchase: false
     };
-  }, []); // 移除所有依赖，避免重新渲染
+
+    const documentTypePermissions = {
+      quotation: false,
+      confirmation: false,
+      packing: false,
+      invoice: false,
+      purchase: false
+    };
+
+    // 遍历权限数据，设置对应的权限
+    permissions.forEach((perm: any) => {
+      if (perm.canAccess) {
+        switch (perm.moduleId) {
+          case 'quotation':
+            permissionMap.quotation = true;
+            documentTypePermissions.quotation = true;
+            documentTypePermissions.confirmation = true; // 销售确认也属于报价模块
+            break;
+          case 'packing':
+            permissionMap.packing = true;
+            documentTypePermissions.packing = true;
+            break;
+          case 'invoice':
+            permissionMap.invoice = true;
+            documentTypePermissions.invoice = true;
+            break;
+          case 'purchase':
+            permissionMap.purchase = true;
+            documentTypePermissions.purchase = true;
+            break;
+        }
+      }
+    });
+
+    // 构建可访问的文档类型列表
+    const accessibleDocumentTypes = [];
+    if (documentTypePermissions.quotation) accessibleDocumentTypes.push('quotation');
+    if (documentTypePermissions.confirmation) accessibleDocumentTypes.push('confirmation');
+    if (documentTypePermissions.packing) accessibleDocumentTypes.push('packing');
+    if (documentTypePermissions.invoice) accessibleDocumentTypes.push('invoice');
+    if (documentTypePermissions.purchase) accessibleDocumentTypes.push('purchase');
+
+    return {
+      permissions: permissionMap,
+      documentTypePermissions,
+      accessibleDocumentTypes
+    };
+  }, [session?.user?.permissions, latestPermissions]); // 依赖session中的权限数据和最新权限数据
 
   // 暂时禁用性能监控启动，避免无限重新渲染
   // useEffect(() => {
@@ -363,7 +425,7 @@ export default function DashboardPage() {
   // 加载指定时间范围内的文档函数
   const loadDocuments = useCallback(async (filter: 'today' | '3days' | 'week' | 'month' = 'today', typeFilter: 'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase' = 'all') => {
     try {
-      // 使用统一的权限映射
+      // 使用动态权限映射
       const allDocuments = [];
       
       // 只加载用户有权限的文档类型
@@ -570,24 +632,64 @@ export default function DashboardPage() {
     await signOut({ redirect: true, callbackUrl: '/' });
   }, []);
 
-  // 简化模块过滤，默认显示所有模块
+  // 动态模块过滤，根据权限显示模块
   const availableQuickCreateModules = useMemo(() => {
-    return QUICK_CREATE_MODULES;
-  }, []);
+    return QUICK_CREATE_MODULES.filter(module => {
+      switch (module.id) {
+        case 'quotation':
+        case 'confirmation':
+          return permissionMap.permissions.quotation;
+        case 'packing':
+          return permissionMap.permissions.packing;
+        case 'invoice':
+          return permissionMap.permissions.invoice;
+        case 'purchase':
+          return permissionMap.permissions.purchase;
+        default:
+          return true;
+      }
+    });
+  }, [permissionMap.permissions]);
 
   const availableToolModules = useMemo(() => {
-    return TOOL_MODULES;
-  }, []);
+    return TOOL_MODULES.filter(module => {
+      switch (module.id) {
+        case 'quotation':
+          return permissionMap.permissions.quotation;
+        case 'packing':
+          return permissionMap.permissions.packing;
+        case 'invoice':
+          return permissionMap.permissions.invoice;
+        case 'purchase':
+          return permissionMap.permissions.purchase;
+        default:
+          return true;
+      }
+    });
+  }, [permissionMap.permissions]);
 
   const availableToolsModules = useMemo(() => {
-    return TOOLS_MODULES;
-  }, []);
+    return TOOLS_MODULES.filter(module => {
+      switch (module.id) {
+        case 'quotation':
+          return permissionMap.permissions.quotation;
+        case 'packing':
+          return permissionMap.permissions.packing;
+        case 'invoice':
+          return permissionMap.permissions.invoice;
+        case 'purchase':
+          return permissionMap.permissions.purchase;
+        default:
+          return true;
+      }
+    });
+  }, [permissionMap.permissions]);
 
   // 根据权限过滤可用的文档类型筛选器
   const availableTypeFilters = useMemo(() => {
     const filters = [];
     
-    // 使用统一的权限映射
+    // 使用动态权限映射
     if (permissionMap.documentTypePermissions.quotation) {
       filters.push({ type: 'quotation', label: 'QTN', color: 'blue' });
     }
@@ -604,23 +706,12 @@ export default function DashboardPage() {
       filters.push({ type: 'purchase', label: 'PO', color: 'orange' });
     }
     
-    // 如果有任何权限，添加ALL选项到PO的右边
-    if (filters.length > 0) {
-      filters.push({ type: 'all', label: 'ALL', color: 'gray' });
-    }
-    
     return filters;
-  }, [permissionMap.documentTypePermissions]); // 移除refreshKey依赖，避免无限循环
+  }, [permissionMap.documentTypePermissions]);
 
-  // 根据显示状态过滤按钮
+  // 根据权限过滤可见的类型筛选器
   const visibleTypeFilters = useMemo(() => {
-    if (showAllFilters) {
-      // 显示所有按钮
-      return availableTypeFilters;
-    } else {
-      // 只显示ALL按钮
-      return availableTypeFilters.filter(filter => filter.type === 'all');
-    }
+    return availableTypeFilters.slice(0, showAllFilters ? availableTypeFilters.length : 3);
   }, [availableTypeFilters, showAllFilters]);
 
   // 检查当前选择的筛选器是否有效，如果无效则重置为第一个可用选项
@@ -653,23 +744,59 @@ export default function DashboardPage() {
   // 权限刷新处理函数
   const handleRefreshPermissions = useCallback(async () => {
     try {
+      setIsLoading(true);
       setSuccessMessage('正在刷新权限信息...');
       setShowSuccessMessage(true);
       
-      // 临时启用自动获取，然后强制刷新权限
-      usePermissionStore.getState().setAutoFetch(true);
-      await usePermissionStore.getState().fetchPermissions(true);
-      usePermissionStore.getState().setAutoFetch(false);
+      // 调用权限刷新API
+      const response = await fetch('/api/auth/update-session-permissions', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-User-ID': session?.user?.id || session?.user?.username || '',
+          'X-User-Name': session?.user?.username || session?.user?.name || '',
+          'X-User-Admin': session?.user?.isAdmin ? 'true' : 'false'
+        },
+        cache: 'no-store'
+      });
+
+      if (!response.ok) {
+        throw new Error('权限刷新失败');
+      }
+
+      const data = await response.json();
       
-      setRefreshKey(prev => prev + 1);
-      setSuccessMessage('权限信息已更新');
-      setTimeout(() => setShowSuccessMessage(false), 2000);
+      if (data.success) {
+        // 更新最新权限数据
+        setLatestPermissions(data.permissions);
+
+        // 触发权限变化事件，通知其他组件
+        window.dispatchEvent(new CustomEvent('permissionChanged', {
+          detail: {
+            message: '权限信息已更新',
+            permissions: data.permissions
+          }
+        }));
+        
+        // 强制重新渲染页面
+        setRefreshKey(prev => prev + 1);
+        setSuccessMessage('权限信息已更新');
+        setTimeout(() => setShowSuccessMessage(false), 2000);
+        
+        // 重新获取session以更新权限数据
+        // 注意：这里我们通过触发页面重新渲染来更新权限显示
+        // 因为NextAuth的session更新需要重新登录，我们通过动态权限映射来处理
+      } else {
+        throw new Error(data.error || '权限刷新失败');
+      }
     } catch (error) {
       console.error('刷新权限失败:', error);
       setSuccessMessage('权限刷新失败，请重试');
       setTimeout(() => setShowSuccessMessage(false), 3000);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [session?.user]);
 
   // 使用 useEffect 处理重定向，避免在渲染过程中调用 router.push
   useEffect(() => {
