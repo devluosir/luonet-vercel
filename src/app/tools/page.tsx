@@ -204,72 +204,72 @@ const MODULES = [
     textColor: 'text-pink-600 dark:text-pink-400',
     hoverColor: 'hover:text-pink-500 dark:hover:text-pink-300'
   },
-  { 
-    id: 'feature5', 
-    name: '库存管理', 
-    description: '产品库存跟踪', 
-    path: '/tools/feature5',
-    icon: Database,
-    color: 'from-amber-500 to-amber-600',
-    bgColor: 'from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20',
-    textColor: 'text-amber-600 dark:text-amber-400',
-    hoverColor: 'hover:text-amber-500 dark:hover:text-amber-300'
-  },
-  { 
-    id: 'feature3', 
-    name: '数据分析', 
-    description: '业务数据分析和报表', 
-    path: '/tools/feature3',
-    icon: BarChart3,
-    color: 'from-cyan-500 to-cyan-600',
-    bgColor: 'from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20',
-    textColor: 'text-cyan-600 dark:text-cyan-400',
-    hoverColor: 'hover:text-cyan-500 dark:hover:text-cyan-300'
-  },
-  { 
-    id: 'feature8', 
-    name: '销售预测', 
-    description: '销售趋势分析', 
-    path: '/tools/feature8',
-    icon: TrendingUp,
-    color: 'from-emerald-500 to-emerald-600',
-    bgColor: 'from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20',
-    textColor: 'text-emerald-600 dark:text-emerald-400',
-    hoverColor: 'hover:text-emerald-500 dark:hover:text-emerald-300'
-  },
-  { 
-    id: 'feature7', 
-    name: '时间管理', 
-    description: '项目时间跟踪', 
-    path: '/tools/feature7',
-    icon: Clock,
-    color: 'from-indigo-500 to-indigo-600',
-    bgColor: 'from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20',
-    textColor: 'text-indigo-600 dark:text-indigo-400',
-    hoverColor: 'hover:text-indigo-500 dark:hover:text-indigo-300'
-  },
-  { 
-    id: 'feature6', 
-    name: '自动化工具', 
-    description: '工作流程自动化', 
-    path: '/tools/feature6',
-    icon: Zap,
-    color: 'from-red-500 to-red-600',
-    bgColor: 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20',
-    textColor: 'text-red-600 dark:text-red-400',
-    hoverColor: 'hover:text-red-500 dark:hover:text-red-300'
-  },
-  { 
-    id: 'feature9', 
-    name: '系统设置', 
-    description: '应用配置管理', 
-    path: '/tools/feature9',
-    icon: Settings,
-    color: 'from-gray-500 to-gray-600',
-    bgColor: 'from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20',
-    textColor: 'text-gray-600 dark:text-gray-400',
-    hoverColor: 'hover:text-gray-500 dark:hover:text-gray-300'
-  },
+  // { 
+  //   id: 'feature5', 
+  //   name: '库存管理', 
+  //   description: '产品库存跟踪', 
+  //   path: '/tools/feature5',
+  //   icon: Database,
+  //   color: 'from-amber-500 to-amber-600',
+  //   bgColor: 'from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20',
+  //   textColor: 'text-amber-600 dark:text-amber-400',
+  //   hoverColor: 'hover:text-amber-500 dark:hover:text-amber-300'
+  // },
+  // { 
+  //   id: 'feature3', 
+  //   name: '数据分析', 
+  //   description: '业务数据分析和报表', 
+  //   path: '/tools/feature3',
+  //   icon: BarChart3,
+  //   color: 'from-cyan-500 to-cyan-600',
+  //   bgColor: 'from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20',
+  //   textColor: 'text-cyan-600 dark:text-cyan-400',
+  //   hoverColor: 'hover:text-cyan-500 dark:hover:text-cyan-300'
+  // },
+  // { 
+  //   id: 'feature8', 
+  //   name: '销售预测', 
+  //   description: '销售趋势分析', 
+  //   path: '/tools/feature8',
+  //   icon: TrendingUp,
+  //   color: 'from-emerald-500 to-emerald-600',
+  //   bgColor: 'from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20',
+  //   textColor: 'text-emerald-600 dark:text-emerald-400',
+  //   hoverColor: 'hover:text-emerald-500 dark:hover:text-emerald-300'
+  // },
+  // { 
+  //   id: 'feature7', 
+  //   name: '时间管理', 
+  //   description: '项目时间跟踪', 
+  //   path: '/tools/feature7',
+  //   icon: Clock,
+  //   color: 'from-indigo-500 to-indigo-600',
+  //   bgColor: 'from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20',
+  //   textColor: 'text-indigo-600 dark:text-indigo-400',
+  //   hoverColor: 'hover:text-indigo-500 dark:hover:text-indigo-300'
+  // },
+  // { 
+  //   id: 'feature6', 
+  //   name: '自动化工具', 
+  //   description: '工作流程自动化', 
+  //   path: '/tools/feature6',
+  //   icon: Zap,
+  //   color: 'from-red-500 to-red-600',
+  //   bgColor: 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20',
+  //   textColor: 'text-red-600 dark:text-red-400',
+  //   hoverColor: 'hover:text-red-500 dark:hover:text-red-300'
+  // },
+  // { 
+  //   id: 'feature9', 
+  //   name: '系统设置', 
+  //   description: '应用配置管理', 
+  //   path: '/tools/feature9',
+  //   icon: Settings,
+  //   color: 'from-gray-500 to-gray-600',
+  //   bgColor: 'from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20',
+  //   textColor: 'text-gray-600 dark:text-gray-400',
+  //   hoverColor: 'hover:text-gray-500 dark:hover:text-gray-300'
+  // },
 ];
 
 // 移除DynamicHeader的dynamic导入
