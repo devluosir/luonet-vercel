@@ -72,7 +72,14 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     const hasAccess = permission?.canAccess || false;
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('权限检查:', { moduleId, hasAccess, permission, allPermissions: user.permissions });
+      console.log('权限检查:', { 
+        moduleId, 
+        hasAccess, 
+        permission, 
+        allPermissions: user.permissions,
+        permissionsCount: user.permissions.length,
+        samplePermission: user.permissions[0]
+      });
     }
     
     return hasAccess;
@@ -199,19 +206,34 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       const data = await response.json();
       
       if (data.success) {
+        // 确保权限数据格式正确
+        let permissions: Permission[] = [];
+        
+        if (data.permissions && Array.isArray(data.permissions)) {
+          permissions = data.permissions.map((perm: any) => ({
+            id: perm.id || `refresh-${perm.moduleId}`,
+            moduleId: perm.moduleId,
+            canAccess: !!perm.canAccess
+          }));
+        }
+        
         // 更新用户信息，但保留其他状态
         set(state => ({ 
           ...state,
           user: {
             ...state.user!,
-            permissions: data.permissions
+            permissions: permissions
           },
           isLoading: false,
           error: null
         }));
         
         if (process.env.NODE_ENV === 'development') {
-          console.log('权限刷新成功');
+          console.log('权限刷新成功:', {
+            permissionsCount: permissions.length,
+            permissions: permissions,
+            samplePermission: permissions[0]
+          });
         }
       } else {
         throw new Error(data.error || '获取权限失败');

@@ -37,6 +37,16 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const permissions: Permission[] = data.permissions || [];
 
+    // 添加调试信息
+    if (process.env.NODE_ENV === 'development') {
+      console.log('API返回的权限数据:', {
+        dataKeys: Object.keys(data),
+        permissionsCount: permissions.length,
+        samplePermission: permissions[0],
+        allPermissions: permissions
+      });
+    }
+
     // 返回最新的用户权限数据
     return NextResponse.json({ 
       success: true, 
