@@ -14,7 +14,7 @@ import ItemsTable from '@/components/invoice/ItemsTable';
 import { addInvoiceHistory, getInvoiceHistory, saveInvoiceHistory } from '@/utils/invoiceHistory';
 import { v4 as uuidv4 } from 'uuid';
 import dynamic from 'next/dynamic';
-import { usePermissionStore, validatePermissions, MODULE_PERMISSIONS } from '@/lib/permissions';
+import { usePermissionStore } from '@/lib/permissions';
 import { useSession } from 'next-auth/react';
 
 // 动态导入PDFPreviewModal
@@ -717,9 +717,8 @@ export default function InvoicePage() {
     const init = async () => {
       if (!mounted) return;
       
-      await validatePermissions.preloadPermissions();
-      
-      const hasAccess = validatePermissions.validateBusiness(MODULE_PERMISSIONS.invoice);
+      // 检查权限
+      const hasAccess = usePermissionStore.getState().hasPermission('invoice');
       if (!hasAccess) {
         router.push('/dashboard');
         return;

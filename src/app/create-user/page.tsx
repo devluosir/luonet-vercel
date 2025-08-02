@@ -193,15 +193,7 @@ export default function CreateUserPage() {
           </div>
         </div>
 
-        {/* 导航链接 */}
-        <div className="mt-6 text-center">
-          <a
-            href="/login-test"
-            className="text-blue-600 hover:text-blue-500 text-sm"
-          >
-            返回登录测试页面
-          </a>
-        </div>
+
       </div>
     </div>
   );
