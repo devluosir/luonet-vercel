@@ -28,9 +28,11 @@ export default function NotFound() {
   const [game2048Score, setGame2048Score] = useState(0);
   const [game2048HighScore, setGame2048HighScore] = useState(0);
 
-  // 触摸手势状态
+  // 触摸和鼠标手势状态
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
+  const [mouseStart, setMouseStart] = useState<{ x: number; y: number } | null>(null);
+  const [mouseEnd, setMouseEnd] = useState<{ x: number; y: number } | null>(null);
 
   // 从localStorage获取最高分
   useEffect(() => {
@@ -315,6 +317,57 @@ export default function NotFound() {
     setTouchEnd(null);
   };
 
+  // 鼠标事件处理
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setMouseStart({
+      x: e.clientX,
+      y: e.clientY
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (mouseStart) {
+      setMouseEnd({
+        x: e.clientX,
+        y: e.clientY
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (!mouseStart || !mouseEnd) return;
+
+    const distanceX = mouseStart.x - mouseEnd.x;
+    const distanceY = mouseStart.y - mouseEnd.y;
+    const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY);
+    const minSwipeDistance = 50; // 鼠标滑动需要更大的距离
+
+    if (Math.abs(distanceX) < minSwipeDistance && Math.abs(distanceY) < minSwipeDistance) {
+      return; // 滑动距离太小，忽略
+    }
+
+    try {
+      if (isHorizontalSwipe) {
+        if (distanceX > 0) {
+          handleSwipe('left');
+        } else {
+          handleSwipe('right');
+        }
+      } else {
+        if (distanceY > 0) {
+          handleSwipe('up');
+        } else {
+          handleSwipe('down');
+        }
+      }
+    } catch (error) {
+      console.error('Mouse swipe error:', error);
+    }
+
+    setMouseStart(null);
+    setMouseEnd(null);
+  };
+
   // 键盘控制2048
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -347,6 +400,34 @@ export default function NotFound() {
     document.addEventListener('keydown', handleKeyPress);
     return () => document.removeEventListener('keydown', handleKeyPress);
   }, [game2048Active, game2048Over, handleSwipe]);
+
+  // 全局鼠标事件监听器，确保鼠标滑动在整个游戏区域都能工作
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (mouseStart) {
+        setMouseEnd({
+          x: e.clientX,
+          y: e.clientY
+        });
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      if (mouseStart) {
+        handleMouseUp();
+      }
+    };
+
+    if (game2048Active && !game2048Over) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+  }, [game2048Active, game2048Over, mouseStart]);
 
   const reset2048Game = () => {
     setGame2048Active(false);
@@ -523,7 +604,11 @@ export default function NotFound() {
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
-                    style={{ touchAction: 'none' }}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    style={{ touchAction: 'none', userSelect: 'none' }}
                   >
                                          <div className="gap-1 sm:gap-2 bg-slate-200 border-0 rounded-xl shadow-inner p-2 sm:p-3 w-full max-w-full h-auto aspect-square" style={{ 
                        display: 'grid',
@@ -576,6 +661,15 @@ export default function NotFound() {
                       )}
                     </div>
                   </div>
+
+                  {/* 2048游戏控制提示 */}
+                  {game2048Active && (
+                    <div className="mt-2 sm:mt-4 text-center">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                        支持键盘方向键、WASD、触摸滑动和鼠标拖拽
+                      </p>
+                    </div>
+                  )}
 
                   {/* 2048游戏控制按钮 - 移动端优化 */}
                   <div className="mt-4 sm:mt-8 flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
