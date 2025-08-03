@@ -48,9 +48,11 @@ export class PreloadManager {
     this.isPreloading = true;
     this.updateProgress(0);
 
-    // 临时禁用控制台警告，避免过多的错误信息
+    // 临时禁用控制台警告和错误，避免过多的错误信息
     const originalWarn = console.warn;
+    const originalError = console.error;
     console.warn = () => {}; // 静默警告
+    console.error = () => {}; // 静默错误
 
     try {
       console.log('开始预加载所有资源...');
@@ -116,8 +118,9 @@ export class PreloadManager {
       console.error('预加载过程中出现错误:', error);
     } finally {
       this.isPreloading = false;
-      // 恢复控制台警告
+      // 恢复控制台警告和错误
       console.warn = originalWarn;
+      console.error = originalError;
     }
   }
 
@@ -144,13 +147,15 @@ export class PreloadManager {
         const link = document.createElement('link');
         link.rel = 'preload';
         link.as = 'font';
-        link.type = url.endsWith('.gz') ? 'font/ttf' : 'font/ttf';
+        link.type = 'font/ttf';
         link.href = url;
         link.crossOrigin = 'anonymous';
         
         // 为压缩字体添加正确的编码信息
         if (url.endsWith('.gz')) {
           link.setAttribute('data-compressed', 'true');
+          // 设置正确的MIME类型
+          link.type = 'font/ttf';
         }
         
         // 设置超时，避免长时间等待
@@ -304,16 +309,20 @@ export class PreloadManager {
 
   // 预加载页面相关的API端点
   private async preloadPageAPIs(path: string): Promise<void> {
+    // 只预加载支持GET请求的API端点，避免HEAD请求错误
     const apiEndpoints = [
-      '/api/auth/get-latest-permissions',
-      '/api/auth/update-session-permissions'
+      '/api/generate' // 只预加载支持GET的API
     ];
     
     const apiPromises = apiEndpoints.map(async (endpoint) => {
       try {
         const response = await fetch(endpoint, {
-          method: 'HEAD',
-          cache: 'force-cache'
+          method: 'GET',
+          cache: 'force-cache',
+          headers: {
+            'Accept': 'application/json',
+            'Cache-Control': 'max-age=3600'
+          }
         });
         
         if (response.ok) {
@@ -382,18 +391,12 @@ export class PreloadManager {
   private async preloadStaticAssets(): Promise<void> {
     console.log('预加载静态资源...');
     
-    // 尝试预加载所有可能的静态资源
+    // 只预加载确定存在的静态资源
     const staticAssets = [
       '/assets/logo/logo.png',
       '/assets/logo/icon.png',
       '/assets/logo/apple-icon.png',
       '/assets/logo/favicon.ico',
-      '/assets/images/header-bilingual.png',
-      '/assets/images/header-english.png',
-      '/assets/images/fallback-logo.png',
-      '/assets/images/stamp-hongkong.png',
-      '/assets/images/stamp-shanghai.png',
-      '/assets/images/logo.svg',
       '/next.svg',
       '/vercel.svg'
     ];
@@ -636,10 +639,9 @@ export class PreloadManager {
   private async preloadScriptsAndStyles(): Promise<void> {
     console.log('预加载CSS和JS资源...');
     
-    // 尝试预加载所有CSS文件
+    // 只预加载确定存在的CSS文件
     const scriptAndStyleUrls = [
-      '/globals.css',
-      '/pdf-fonts.css'
+      '/globals.css'
     ];
 
     const resourcePromises = scriptAndStyleUrls.map(url => {
