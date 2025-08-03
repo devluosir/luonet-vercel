@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     // 从请求头获取用户信息
     const userId = request.headers.get('X-User-ID');
     const userName = request.headers.get('X-User-Name');
-    const isAdmin = request.headers.get('X-User-Admin') === 'true';
+    let isAdmin = request.headers.get('X-User-Admin') === 'true';
 
     if (!userId || !userName) {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 });
@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
     
     try {
       // 从后端API获取最新用户数据（包含权限）
-      const backendResponse = await fetch(`https://udb.luocompany.net/api/admin/users/${userId}`, {
+      // 使用用户名查询，因为userId可能是用户名
+      const backendResponse = await fetch(`https://udb.luocompany.net/api/admin/users?username=${encodeURIComponent(userName)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -42,7 +43,11 @@ export async function POST(request: NextRequest) {
         // 处理不同的响应格式
         let userData;
         if (backendData.users && Array.isArray(backendData.users)) {
-          userData = backendData.users.find((user: any) => user.id === userId);
+          // 通过用户名查找用户
+          userData = backendData.users.find((user: any) => 
+            user.username?.toLowerCase() === userName.toLowerCase() || 
+            user.id === userId
+          );
         } else if (backendData.id) {
           userData = backendData;
         }
@@ -56,6 +61,12 @@ export async function POST(request: NextRequest) {
           }));
           
           userEmail = userData.email || null;
+          
+          // 从后端数据获取真实的管理员状态
+          if (userData.isAdmin !== undefined) {
+            isAdmin = !!userData.isAdmin;
+            console.log('权限API: 从后端获取到真实管理员状态:', isAdmin);
+          }
         }
       }
     } catch (backendError) {
@@ -86,6 +97,11 @@ export async function POST(request: NextRequest) {
         }
         
         userEmail = session?.user?.email || null;
+        
+        // 从session获取真实的管理员状态
+        if (session?.user?.isAdmin !== undefined) {
+          isAdmin = !!session.user.isAdmin;
+        }
       } catch (sessionError) {
         // 无法从session获取权限，使用默认权限
       }

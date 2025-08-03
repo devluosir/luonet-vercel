@@ -25,12 +25,32 @@ export const API_ENDPOINTS = {
   GENERATE: `${API_BASE_URL}/generate`,
 };
 
-// 获取NextAuth session
-export async function getNextAuthSession() {
+// 获取用户信息（优先从localStorage获取）
+export async function getUserInfo() {
   try {
     if (typeof window !== 'undefined') {
+      // 优先从localStorage获取用户信息
+      const username = localStorage.getItem('username');
+      const userId = localStorage.getItem('userId');
+      const isAdmin = localStorage.getItem('isAdmin') === 'true';
+      
+      if (username && userId) {
+        return {
+          id: userId,
+          username: username,
+          isAdmin: isAdmin
+        };
+      }
+      
+      // 如果localStorage没有，尝试从session获取
       const session = await getSession();
-      return session;
+      if (session?.user) {
+        return {
+          id: session.user.id || session.user.username || '',
+          username: session.user.username || session.user.name || '',
+          isAdmin: session.user.isAdmin || false
+        };
+      }
     }
     return null;
   } catch (error) {
@@ -43,8 +63,8 @@ export async function apiRequest(
   url: string, 
   options: RequestInit = {}
 ): Promise<Response> {
-  // 获取NextAuth session
-  const session = await getNextAuthSession();
+  // 获取用户信息
+  const userInfo = await getUserInfo();
 
   const defaultOptions: RequestInit = {
     headers: {
@@ -54,14 +74,14 @@ export async function apiRequest(
     ...options,
   };
 
-  // 如果有session，添加认证头
-  if (session?.user) {
-    // 使用session中的用户信息作为认证
+  // 如果有用户信息，添加认证头
+  if (userInfo) {
+    // 使用用户信息作为认证
     defaultOptions.headers = {
       ...defaultOptions.headers,
-      'X-User-ID': session.user.id || session.user.username || '',
-      'X-User-Name': session.user.username || session.user.name || '',
-      'X-User-Admin': session.user.isAdmin ? 'true' : 'false',
+      'X-User-ID': userInfo.id,
+      'X-User-Name': userInfo.username,
+      'X-User-Admin': userInfo.isAdmin ? 'true' : 'false',
     };
   }
 

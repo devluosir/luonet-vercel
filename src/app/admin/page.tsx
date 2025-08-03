@@ -49,47 +49,74 @@ export default function AdminPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
 
-  // 管理员权限检查 - 简化版本
-  const hasAdminPermission = true; // 中间件已经处理了权限检查
+  // 管理员权限检查 - 使用localStorage，与dashboard保持一致
+  const hasAdminPermission = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('isAdmin') === 'true';
+    }
+    return false;
+  }, []);
 
   // 初始化
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 权限检查和数据加载 - 优化版本
+  // 初始化用户信息
   useEffect(() => {
-    if (!mounted) return;
+    setMounted(true);
+    
+    // 从localStorage恢复用户信息，与dashboard保持一致
+    if (typeof window !== 'undefined') {
+      const username = localStorage.getItem('username');
+      const userId = localStorage.getItem('userId');
+      const isAdmin = localStorage.getItem('isAdmin') === 'true';
+      
+      if (username) {
+        setUser({
+          id: userId || '1',
+          username: username,
+          email: null,
+          status: true,
+          isAdmin: isAdmin,
+          permissions: []
+        });
+        console.log('从localStorage恢复用户信息:', { username, isAdmin, userId });
+      } else {
+        console.log('没有用户信息，重定向到登录页');
+        router.push('/');
+        return;
+      }
+    }
+  }, [router]);
+
+  // 权限检查和数据加载
+  useEffect(() => {
+    if (!mounted || !user) return;
 
     const checkPermissionsAndLoad = async () => {
       try {
-        // 移除登录状态检查，因为中间件已经处理了认证
-        // if (status === 'unauthenticated') {
-        //   router.push('/api/auth/signin');
-        //   return;
-        // }
-
-        // 如果还在加载中，等待session加载完成
-        // if (status === 'loading') {
-        //   console.log('session还在加载中，等待...');
-        //   return;
-        // }
-
-        // 检查session是否存在
-        // if (!session?.user) {
-        //   console.log('没有session数据，重定向到登录页');
-        //   router.push('/api/auth/signin');
-        //   return;
-        // }
+        // 检查用户是否登录
+        if (!user) {
+          console.log('没有用户信息，重定向到登录页');
+          router.push('/');
+          return;
+        }
         
-        // 直接检查session中的管理员权限
-        // const hasAdminPermission = session.user.isAdmin === true;
+        // 检查管理员权限
+        if (!hasAdminPermission) {
+          console.log('用户不是管理员，拒绝访问');
+          setPermissionChecked(true);
+          setError('权限不足，需要管理员权限');
+          return;
+        }
         
-        // if (!hasAdminPermission) {
-        //   setPermissionChecked(true);
-        //   return;
-        // }
+        console.log('管理员权限检查通过:', { 
+          user: user.username, 
+          isAdmin: hasAdminPermission 
+        });
 
         // 标记权限检查完成
         setPermissionChecked(true);
@@ -98,12 +125,17 @@ export default function AdminPage() {
         try {
           setLoading(true);
           setError(null);
-          const data = await apiRequestWithError(API_ENDPOINTS.USERS.LIST);
+          console.log('开始加载用户列表，API地址:', API_ENDPOINTS.USERS.LIST);
           
-          if (data.success && data.users) {
+          const data = await apiRequestWithError(API_ENDPOINTS.USERS.LIST);
+          console.log('用户列表API响应:', data);
+          
+          if (data.users && Array.isArray(data.users)) {
             setUsers(data.users);
             setFilteredUsers(data.users);
+            console.log('成功加载用户列表，用户数量:', data.users.length);
           } else {
+            console.error('用户列表API返回数据格式错误:', data);
             setError('加载用户列表失败');
           }
         } catch (error) {
@@ -120,7 +152,7 @@ export default function AdminPage() {
     };
 
     checkPermissionsAndLoad();
-  }, [mounted]); // 移除session和status依赖
+  }, [mounted, user, hasAdminPermission, router]);
 
   // 过滤用户
   useEffect(() => {

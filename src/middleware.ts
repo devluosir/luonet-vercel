@@ -32,7 +32,7 @@ export default withAuth(
     }
 
     // 2. 公开路由直接通过
-    if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
+    if (PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
       return NextResponse.next();
     }
 
@@ -56,11 +56,13 @@ export default withAuth(
 
         // 3. 没有token的情况 - 拒绝所有其他访问
         if (!token) {
+          console.log('没有token，拒绝访问:', pathname);
           return false;
         }
 
         // 4. 管理员路由需要管理员权限验证
         if (ADMIN_PATHS.some(path => pathname.startsWith(path))) {
+          console.log('管理员路由访问检查:', { pathname, isAdmin: token?.isAdmin, token: !!token });
           return token.isAdmin === true;
         }
 
@@ -69,6 +71,7 @@ export default withAuth(
         if (moduleId) {
           // 特殊处理dashboard页面
           if (moduleId === 'dashboard') {
+            console.log('Dashboard访问检查:', { token: !!token, isAdmin: token?.isAdmin, permissions: token?.permissions });
             return true; // dashboard页面只要有token就可以访问
           }
           

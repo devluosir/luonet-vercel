@@ -38,6 +38,27 @@ export default function LoginPage() {
     // 只在页面初始加载时检查，避免与登录跳转冲突
     if (session && status === 'authenticated' && !loading) {
       console.log('检测到已登录用户，跳转到dashboard');
+      
+              // 保存session中的用户信息到localStorage
+        if (session.user && typeof window !== 'undefined') {
+          localStorage.setItem('username', session.user.username || session.user.name || '');
+          localStorage.setItem('isAdmin', (session.user.isAdmin || false).toString());
+          localStorage.setItem('userId', session.user.id || '1');
+          
+          // 保存权限信息
+          if (session.user.permissions && Array.isArray(session.user.permissions)) {
+            localStorage.setItem('latestPermissions', JSON.stringify(session.user.permissions));
+            localStorage.setItem('permissionsTimestamp', Date.now().toString());
+          }
+          
+          console.log('从session保存用户信息:', {
+            username: session.user.username,
+            isAdmin: session.user.isAdmin,
+            permissions: session.user.permissions,
+            sessionUser: session.user
+          });
+        }
+      
       router.push('/dashboard');
     }
   }, [session, status, router, loading]);
@@ -73,14 +94,93 @@ export default function LoginPage() {
         return;
       }
 
-      // 保存用户名到localStorage，首字母大写
-      const formattedUsername = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('username', formattedUsername);
+      // 登录成功后，立即获取用户权限信息
+      console.log('登录成功，获取用户权限信息...');
+      
+      try {
+        // 获取用户权限信息
+        const formattedUsername = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
+        const isAdmin = username.toLowerCase() === 'roger';
+        // 使用用户名作为临时ID，后续会从后端获取真实ID
+        const userId = username.toLowerCase();
+        
+        // 先尝试从后端 API 获取用户信息
+        let realIsAdmin = isAdmin;
+        let realUserId = userId;
+        
+        try {
+          // 调用后端 API 获取用户信息（使用用户名查找）
+          const userResponse = await fetch(`https://udb.luocompany.net/api/admin/users?username=${encodeURIComponent(username)}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-User-ID': userId,
+              'X-User-Name': formattedUsername,
+              'X-User-Admin': isAdmin ? 'true' : 'false',
+            },
+          });
+          
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            if (userData.isAdmin !== undefined) {
+              realIsAdmin = !!userData.isAdmin;
+            }
+            if (userData.id) {
+              realUserId = userData.id;
+            }
+            console.log('从后端获取到用户信息:', { isAdmin: realIsAdmin, userId: realUserId });
+          }
+        } catch (error) {
+          console.error('获取用户信息失败:', error);
+        }
+        
+        const permissionsResponse = await fetch('/api/auth/get-latest-permissions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-ID': realUserId,
+            'X-User-Name': formattedUsername,
+            'X-User-Admin': realIsAdmin ? 'true' : 'false',
+          },
+        });
+        
+        if (permissionsResponse.ok) {
+          const permissionsData = await permissionsResponse.json();
+          console.log('获取到权限数据:', permissionsData);
+          
+          // 保存权限信息到localStorage
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('latestPermissions', JSON.stringify(permissionsData.permissions || []));
+            localStorage.setItem('permissionsTimestamp', Date.now().toString());
+            
+            // 保存用户基本信息
+            localStorage.setItem('username', formattedUsername);
+            
+            // 从权限数据中获取管理员状态和用户ID
+            const finalIsAdmin = permissionsData.user?.isAdmin || realIsAdmin;
+            const finalUserId = permissionsData.user?.id || realUserId;
+            localStorage.setItem('isAdmin', finalIsAdmin.toString());
+            localStorage.setItem('userId', finalUserId);
+            
+            console.log('保存用户信息和权限:', { 
+              username: formattedUsername, 
+              isAdmin: finalIsAdmin, 
+              userId: finalUserId,
+              permissions: permissionsData.permissions 
+            });
+          }
+        } else {
+          console.error('获取权限数据失败:', permissionsResponse.status);
+        }
+      } catch (error) {
+        console.error('获取权限数据出错:', error);
       }
       
-      // 直接跳转
-      router.push('/dashboard');
+      // 等待session更新后再跳转
+      console.log('登录成功，等待session更新...');
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
     } catch (error) {
       console.error('登录错误:', error);
       setError('登录过程中发生错误，请重试');

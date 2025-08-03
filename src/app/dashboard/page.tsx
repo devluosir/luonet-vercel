@@ -326,6 +326,41 @@ export default function DashboardPage() {
   // 添加最新权限数据状态
   const [latestPermissions, setLatestPermissions] = useState<any[]>([]);
 
+  // 获取权限数据的函数
+  const fetchPermissions = useCallback(async () => {
+    try {
+      // 从localStorage获取用户信息
+      const username = localStorage.getItem('username');
+      const userId = localStorage.getItem('userId');
+      const isAdmin = localStorage.getItem('isAdmin') === 'true';
+      
+      if (!username || !userId) {
+        console.log('用户信息不完整，跳过权限获取');
+        return;
+      }
+      
+      const response = await fetch('/api/auth/get-latest-permissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-ID': userId,
+          'X-User-Name': username,
+          'X-User-Admin': isAdmin ? 'true' : 'false',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('获取到权限数据:', data);
+        setLatestPermissions(data.permissions || []);
+      } else {
+        console.error('获取权限数据失败:', response.status);
+      }
+    } catch (error) {
+      console.error('获取权限数据出错:', error);
+    }
+  }, []);
+
   // 动态权限映射，根据session中的权限数据或最新权限数据
   const permissionMap = useMemo(() => {
     // 优先使用最新权限数据，如果没有则尝试从localStorage恢复
@@ -354,7 +389,7 @@ export default function DashboardPage() {
       }
     }
     
-    // 如果还是没有权限数据，使用session中的权限数据
+    // 如果还是没有权限数据，尝试从localStorage恢复
     if (permissions.length === 0 && typeof window !== 'undefined') {
       // 从localStorage恢复权限数据
       const storedPermissions = localStorage.getItem('latestPermissions');
@@ -367,54 +402,28 @@ export default function DashboardPage() {
 
     
     if (!permissions || permissions.length === 0) {
-      // 如果没有权限数据，根据用户类型决定显示
-      const isAdmin = user?.isAdmin === true;
-      
-      if (isAdmin) {
-        // 管理员用户，显示所有保留的模块
-        return {
-          permissions: {
-            quotation: true,
-            packing: true,
-            invoice: true,
-            purchase: true,
-            history: true,
-            customer: true,
-            'ai-email': true,
-            'date-tools': true
-          },
-          documentTypePermissions: {
-            quotation: true,
-            confirmation: true,
-            packing: true,
-            invoice: true,
-            purchase: true
-          },
-          accessibleDocumentTypes: ['quotation', 'confirmation', 'packing', 'invoice', 'purchase']
-        };
-      } else {
-        // 普通用户，不显示任何模块
-        return {
-          permissions: {
-            quotation: false,
-            packing: false,
-            invoice: false,
-            purchase: false,
-            history: false,
-            customer: false,
-            'ai-email': false,
-            'date-tools': false
-          },
-          documentTypePermissions: {
-            quotation: false,
-            confirmation: false,
-            packing: false,
-            invoice: false,
-            purchase: false
-          },
-          accessibleDocumentTypes: []
-        };
-      }
+      // 如果没有权限数据，不显示任何模块（无论是管理员还是普通用户）
+      console.log('没有权限数据，不显示任何模块');
+      return {
+        permissions: {
+          quotation: false,
+          packing: false,
+          invoice: false,
+          purchase: false,
+          history: false,
+          customer: false,
+          'ai-email': false,
+          'date-tools': false
+        },
+        documentTypePermissions: {
+          quotation: false,
+          confirmation: false,
+          packing: false,
+          invoice: false,
+          purchase: false
+        },
+        accessibleDocumentTypes: []
+      };
     }
 
     // 根据权限数据构建权限映射
@@ -438,41 +447,57 @@ export default function DashboardPage() {
     };
 
     // 遍历权限数据，设置对应的权限
+    console.log('处理权限数据:', permissions);
     permissions.forEach((perm: any) => {
+      console.log('处理权限:', perm);
       if (perm.canAccess) {
         switch (perm.moduleId) {
           case 'quotation':
             permissionMap.quotation = true;
             documentTypePermissions.quotation = true;
             documentTypePermissions.confirmation = true; // 销售确认也属于报价模块
+            console.log('启用 quotation 权限');
             break;
           case 'packing':
             permissionMap.packing = true;
             documentTypePermissions.packing = true;
+            console.log('启用 packing 权限');
             break;
           case 'invoice':
             permissionMap.invoice = true;
             documentTypePermissions.invoice = true;
+            console.log('启用 invoice 权限');
             break;
           case 'purchase':
             permissionMap.purchase = true;
             documentTypePermissions.purchase = true;
+            console.log('启用 purchase 权限');
             break;
           case 'history':
             permissionMap.history = true;
+            console.log('启用 history 权限');
             break;
           case 'customer':
             permissionMap.customer = true;
+            console.log('启用 customer 权限');
             break;
           case 'ai-email':
             permissionMap['ai-email'] = true;
+            console.log('启用 ai-email 权限');
             break;
           case 'date-tools':
             permissionMap['date-tools'] = true;
+            console.log('启用 date-tools 权限');
             break;
+          default:
+            console.log('未知权限模块:', perm.moduleId);
         }
+      } else {
+        console.log('权限被禁用:', perm.moduleId);
       }
     });
+    
+    console.log('最终权限映射:', permissionMap);
 
     // 构建可访问的文档类型列表
     const accessibleDocumentTypes = [];
@@ -690,7 +715,29 @@ export default function DashboardPage() {
   // 简化的初始化逻辑
   useEffect(() => {
     setMounted(true);
-  }, []);
+    
+    // 从localStorage恢复用户信息
+    if (typeof window !== 'undefined') {
+      const username = localStorage.getItem('username');
+      const userId = localStorage.getItem('userId');
+      const isAdmin = localStorage.getItem('isAdmin') === 'true';
+      
+      if (username) {
+        setUser({
+          id: userId || '1',
+          username: username,
+          email: null,
+          status: true,
+          isAdmin: isAdmin,
+          permissions: []
+        });
+        console.log('从localStorage恢复用户信息:', { username, isAdmin, userId });
+        
+        // 获取权限数据
+        fetchPermissions();
+      }
+    }
+  }, [fetchPermissions]);
 
   // 优化的预加载逻辑 - 延迟预加载，避免阻塞初始渲染
   useEffect(() => {
@@ -912,11 +959,12 @@ export default function DashboardPage() {
 
   // 使用 useEffect 处理重定向，避免在渲染过程中调用 router.push
   useEffect(() => {
-    // 只有在session状态明确为unauthenticated时才重定向
-    if (user === null) { // 移除 session 状态判断，直接使用 user
+    // 只有在mounted后且user明确为null时才重定向
+    if (mounted && user === null) {
+      console.log('Dashboard: 用户未登录，重定向到登录页');
       router.push('/');
     }
-  }, [user, router]);
+  }, [user, router, mounted]);
 
   // 所有 hooks 声明完毕后，再做提前 return
   if (!mounted) return null;

@@ -103,7 +103,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.username = user.username;
-        token.isAdmin = user.isAdmin;
+        token.isAdmin = !!user.isAdmin; // 确保是布尔值
         token.permissions = user.permissions;
       }
       return token;
@@ -112,7 +112,7 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.sub || "";
         session.user.username = token.username;
-        session.user.isAdmin = token.isAdmin;
+        session.user.isAdmin = !!token.isAdmin; // 确保是布尔值
         
         // 确保权限数据格式正确
         if (Array.isArray(token.permissions)) {
@@ -132,10 +132,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     }
   },
-  pages: {
-    signIn: "/",
-    error: "/",
-  },
+
   secret: process.env.NEXTAUTH_SECRET
 };
 
