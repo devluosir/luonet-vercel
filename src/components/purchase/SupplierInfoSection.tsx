@@ -93,7 +93,9 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
 
   // 加载保存的供应商信息
   useEffect(() => {
-    loadSupplierData();
+    if (typeof window !== 'undefined') {
+      loadSupplierData();
+    }
   }, []);
 
   // 添加点击外部区域关闭弹窗的功能
@@ -129,46 +131,48 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
     const normalizedSupplierName = normalizeSupplierName(supplierName);
     
     // 保存到历史记录中，这样客户页面就能读取到
-    const purchaseHistory = JSON.parse(localStorage.getItem('purchase_history') || '[]');
-    
-    // 检查是否已经存在相同的供应商信息
-    const existingIndex = purchaseHistory.findIndex((record: any) => {
-      if (!record.supplierName) return false;
-      const recordNormalizedName = normalizeSupplierName(record.supplierName);
-      return recordNormalizedName === normalizedSupplierName;
-    });
-    
-    if (existingIndex !== -1) {
-      // 如果已存在，更新现有记录
-      purchaseHistory[existingIndex] = {
-        ...purchaseHistory[existingIndex],
-        attn: data.attn,
-        updatedAt: new Date().toISOString(),
-        data: {
-          ...purchaseHistory[existingIndex].data,
-          attn: data.attn
-        }
-      };
-    } else {
-      // 如果不存在，创建新的历史记录
-      const newRecord = {
-        id: Date.now().toString(),
-        supplierName: supplierName,
-        attn: data.attn,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        type: 'purchase',
-        data: {
-          attn: data.attn
-          // 只保存供应商基本信息，不保存报价号码和报价日期
-        }
-      };
+    if (typeof window !== 'undefined') {
+      const purchaseHistory = JSON.parse(localStorage.getItem('purchase_history') || '[]');
       
-      // 添加到历史记录
-      purchaseHistory.push(newRecord);
+      // 检查是否已经存在相同的供应商信息
+      const existingIndex = purchaseHistory.findIndex((record: any) => {
+        if (!record.supplierName) return false;
+        const recordNormalizedName = normalizeSupplierName(record.supplierName);
+        return recordNormalizedName === normalizedSupplierName;
+      });
+      
+      if (existingIndex !== -1) {
+        // 如果已存在，更新现有记录
+        purchaseHistory[existingIndex] = {
+          ...purchaseHistory[existingIndex],
+          attn: data.attn,
+          updatedAt: new Date().toISOString(),
+          data: {
+            ...purchaseHistory[existingIndex].data,
+            attn: data.attn
+          }
+        };
+      } else {
+        // 如果不存在，创建新的历史记录
+        const newRecord = {
+          id: Date.now().toString(),
+          supplierName: supplierName,
+          attn: data.attn,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          type: 'purchase',
+          data: {
+            attn: data.attn
+            // 只保存供应商基本信息，不保存报价号码和报价日期
+          }
+        };
+        
+        // 添加到历史记录
+        purchaseHistory.push(newRecord);
+      }
+      
+      localStorage.setItem('purchase_history', JSON.stringify(purchaseHistory));
     }
-    
-    localStorage.setItem('purchase_history', JSON.stringify(purchaseHistory));
     
     // 重新加载供应商数据
     loadSupplierData();

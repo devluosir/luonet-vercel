@@ -725,11 +725,15 @@ export default function DashboardPage() {
   const handleLogout = useCallback(async () => {
     // 清除权限store和当前用户的相关缓存
     usePermissionStore.getState().clearUser();
-    localStorage.removeItem('username');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('username');
+    }
     
     // 清除权限相关的localStorage数据
-    localStorage.removeItem('latestPermissions');
-    localStorage.removeItem('permissionsTimestamp');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('latestPermissions');
+      localStorage.removeItem('permissionsTimestamp');
+    }
     
     // 只调用一次signOut，避免重复退出
     // await signOut({ redirect: true, callbackUrl: '/' }); // 移除signOut导入，避免循环依赖

@@ -264,7 +264,9 @@ export default function ToolsPage() {
   const handleLogout = async () => {
     // 清除权限store
     // usePermissionStore.getState().clearUser(); // 移除此行
-    localStorage.removeItem('username');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('username');
+    }
     // await signOut({ redirect: true, callbackUrl: '/' }); // 移除此行
   };
 
@@ -279,9 +281,9 @@ export default function ToolsPage() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-User-ID': localStorage.getItem('userId') || '', // 移除此行
-          'X-User-Name': localStorage.getItem('username') || '', // 移除此行
-          'X-User-Admin': localStorage.getItem('isAdmin') === 'true' ? 'true' : 'false' // 移除此行
+          'X-User-ID': typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '', // 移除此行
+          'X-User-Name': typeof window !== 'undefined' ? localStorage.getItem('username') || '' : '', // 移除此行
+          'X-User-Admin': typeof window !== 'undefined' ? localStorage.getItem('isAdmin') === 'true' ? 'true' : 'false' : 'false' // 移除此行
         },
         cache: 'no-store'
       });

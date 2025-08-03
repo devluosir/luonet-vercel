@@ -26,6 +26,13 @@ export default function LoginPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // 这里可以安全访问localStorage
+      // 例如：localStorage.setItem('username', ...)
+    }
+  }, []);
+
   // 监听session状态变化
   useEffect(() => {
     if (session && status === 'authenticated') {
@@ -66,7 +73,9 @@ export default function LoginPage() {
 
       // 保存用户名到localStorage，首字母大写
       const formattedUsername = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
-      localStorage.setItem('username', formattedUsername);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('username', formattedUsername);
+      }
       
       // 直接跳转
       router.push('/dashboard');
