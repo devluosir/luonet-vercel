@@ -228,7 +228,7 @@ const ModuleButton = ({ module, onClick, onHover }: {
         hover:border-gray-300/70 dark:hover:border-gray-700/70
         active:shadow-sm
         p-4 h-20 flex items-center space-x-3 w-full
-        bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm`}
+        backdrop-blur-sm ${bgColor}`}
       onClick={() => onClick(module)}
       onMouseEnter={() => onHover?.(module)}
     >
