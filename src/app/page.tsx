@@ -33,12 +33,14 @@ export default function LoginPage() {
     }
   }, []);
 
-  // 监听session状态变化
+  // 监听session状态变化 - 只在页面加载时检查是否已登录
   useEffect(() => {
-    if (session && status === 'authenticated') {
+    // 只在页面初始加载时检查，避免与登录跳转冲突
+    if (session && status === 'authenticated' && !loading) {
+      console.log('检测到已登录用户，跳转到dashboard');
       router.push('/dashboard');
     }
-  }, [session, status, router]);
+  }, [session, status, router, loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
