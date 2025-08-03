@@ -92,6 +92,20 @@ export function Header({
     }
   };
 
+  // 监听预加载完成事件
+  useEffect(() => {
+    const handlePreloadCompleted = (event: CustomEvent) => {
+      console.log('收到预加载完成事件:', event.detail);
+      // 可以在这里更新UI状态
+    };
+
+    window.addEventListener('preloadCompleted', handlePreloadCompleted as EventListener);
+
+    return () => {
+      window.removeEventListener('preloadCompleted', handlePreloadCompleted as EventListener);
+    };
+  }, []);
+
   // 获取当前日期和星期几
   const [currentDate, setCurrentDate] = useState(() => {
     const now = new Date();

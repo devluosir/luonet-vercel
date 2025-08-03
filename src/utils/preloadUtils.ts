@@ -39,6 +39,12 @@ export class PreloadManager {
       return;
     }
 
+    // 检查是否已经预加载过且时间在24小时内
+    if (this.isPreloaded()) {
+      console.log('资源已在24小时内预加载过，跳过预加载');
+      return;
+    }
+
     this.isPreloading = true;
     this.updateProgress(0);
 
@@ -48,9 +54,18 @@ export class PreloadManager {
 
     try {
       console.log('开始预加载所有资源...');
+      
+      // 显示用户权限信息
+      const userPermissions = this.getUserPermissions();
+      if (userPermissions.length > 0) {
+        console.log('用户权限:', userPermissions);
+        this.updateProgress(0, `正在预加载资源 (权限: ${userPermissions.join(', ')})...`);
+      } else {
+        this.updateProgress(0, '正在预加载资源...');
+      }
 
       // 1. 预加载PDF字体 (15%)
-      this.updateProgress(0, '正在预加载PDF字体...');
+      this.updateProgress(5, '正在预加载PDF字体...');
       await this.preloadFonts();
       this.updateProgress(15, 'PDF字体预加载完成');
 
@@ -84,8 +99,18 @@ export class PreloadManager {
       
       // 保存预加载状态到localStorage
       if (typeof window !== 'undefined') {
-        localStorage.setItem('preloadCompleted', Date.now().toString());
+        const timestamp = Date.now().toString();
+        localStorage.setItem('preloadCompleted', timestamp);
         localStorage.setItem('preloadedResourcesCount', this.preloadedResources.size.toString());
+        localStorage.setItem('preloadTimestamp', timestamp);
+        
+        // 触发自定义事件，通知其他组件预加载完成
+        window.dispatchEvent(new CustomEvent('preloadCompleted', {
+          detail: {
+            count: this.preloadedResources.size,
+            timestamp: timestamp
+          }
+        }));
       }
     } catch (error) {
       console.error('预加载过程中出现错误:', error);
@@ -100,10 +125,8 @@ export class PreloadManager {
   private async preloadFonts(): Promise<void> {
     console.log('预加载PDF字体...');
     
-    // 尝试多种字体文件格式
+    // 只预加载压缩的字体文件，避免解码错误
     const fontUrls = [
-      '/fonts/NotoSansSC-Regular.ttf',
-      '/fonts/NotoSansSC-Bold.ttf',
       '/fonts/compressed/NotoSansSC-Regular.ttf.gz',
       '/fonts/compressed/NotoSansSC-Bold.ttf.gz'
     ];
@@ -121,9 +144,14 @@ export class PreloadManager {
         const link = document.createElement('link');
         link.rel = 'preload';
         link.as = 'font';
-        link.type = 'font/ttf';
+        link.type = url.endsWith('.gz') ? 'font/ttf' : 'font/ttf';
         link.href = url;
         link.crossOrigin = 'anonymous';
+        
+        // 为压缩字体添加正确的编码信息
+        if (url.endsWith('.gz')) {
+          link.setAttribute('data-compressed', 'true');
+        }
         
         // 设置超时，避免长时间等待
         const timeout = setTimeout(() => {
@@ -155,16 +183,15 @@ export class PreloadManager {
   private async preloadFormPages(): Promise<void> {
     console.log('预加载表单页面...');
     
-    const formPages = [
-      '/quotation',
-      '/packing',
-      '/invoice',
-      '/purchase',
-      '/history',
-      '/customer',
-      '/mail',
-      '/date-tools'
-    ];
+    // 根据权限动态确定需要预加载的页面
+    const formPages = this.getFormPagesByPermissions();
+    
+    if (formPages.length === 0) {
+      console.log('没有表单页面权限，跳过表单页面预加载');
+      return;
+    }
+
+    console.log(`预加载表单页面: ${formPages.join(', ')}`);
 
     const pagePromises = formPages.map(async (path) => {
       try {
@@ -176,6 +203,58 @@ export class PreloadManager {
     });
 
     await Promise.all(pagePromises);
+  }
+
+  // 根据权限获取需要预加载的表单页面
+  private getFormPagesByPermissions(): string[] {
+    if (typeof window === 'undefined') return [];
+
+    try {
+      const latestPermissions = localStorage.getItem('latestPermissions');
+      if (!latestPermissions) {
+        console.log('没有权限数据，预加载所有表单页面');
+        return ['/quotation', '/packing', '/invoice', '/purchase', '/history', '/customer', '/mail', '/date-tools'];
+      }
+
+      const permissions = JSON.parse(latestPermissions);
+      const formPages: string[] = [];
+
+      permissions.forEach((perm: any) => {
+        if (perm.canAccess) {
+          switch (perm.moduleId) {
+            case 'quotation':
+              formPages.push('/quotation');
+              break;
+            case 'packing':
+              formPages.push('/packing');
+              break;
+            case 'invoice':
+              formPages.push('/invoice');
+              break;
+            case 'purchase':
+              formPages.push('/purchase');
+              break;
+            case 'history':
+              formPages.push('/history');
+              break;
+            case 'customer':
+              formPages.push('/customer');
+              break;
+            case 'ai-email':
+              formPages.push('/mail');
+              break;
+            case 'date-tools':
+              formPages.push('/date-tools');
+              break;
+          }
+        }
+      });
+
+      return formPages;
+    } catch (error) {
+      console.error('解析权限数据失败:', error);
+      return ['/quotation', '/packing', '/invoice', '/purchase', '/history', '/customer', '/mail', '/date-tools'];
+    }
   }
 
   // 使用多种方法预加载页面
@@ -361,12 +440,15 @@ export class PreloadManager {
     
     if (typeof window === 'undefined') return;
 
-    const historyKeys = [
-      'quotation_history',
-      'packing_history', 
-      'invoice_history',
-      'purchase_history'
-    ];
+    // 根据权限动态确定需要预加载的历史数据
+    const historyKeys = this.getHistoryKeysByPermissions();
+    
+    if (historyKeys.length === 0) {
+      console.log('没有历史数据权限，跳过历史数据预加载');
+      return;
+    }
+
+    console.log(`预加载历史数据: ${historyKeys.join(', ')}`);
 
     // 检查并预加载历史数据
     historyKeys.forEach(key => {
@@ -380,14 +462,59 @@ export class PreloadManager {
     });
   }
 
+  // 根据权限获取需要预加载的历史数据键
+  private getHistoryKeysByPermissions(): string[] {
+    if (typeof window === 'undefined') return [];
+
+    try {
+      const latestPermissions = localStorage.getItem('latestPermissions');
+      if (!latestPermissions) {
+        console.log('没有权限数据，预加载所有历史数据');
+        return ['quotation_history', 'packing_history', 'invoice_history', 'purchase_history'];
+      }
+
+      const permissions = JSON.parse(latestPermissions);
+      const historyKeys: string[] = [];
+
+      permissions.forEach((perm: any) => {
+        if (perm.canAccess) {
+          switch (perm.moduleId) {
+            case 'quotation':
+              historyKeys.push('quotation_history');
+              break;
+            case 'packing':
+              historyKeys.push('packing_history');
+              break;
+            case 'invoice':
+              historyKeys.push('invoice_history');
+              break;
+            case 'purchase':
+              historyKeys.push('purchase_history');
+              break;
+          }
+        }
+      });
+
+      return historyKeys;
+    } catch (error) {
+      console.error('解析权限数据失败:', error);
+      return ['quotation_history', 'packing_history', 'invoice_history', 'purchase_history'];
+    }
+  }
+
   // 预加载工具页面
   private async preloadToolPages(): Promise<void> {
     console.log('预加载工具页面...');
     
-    const toolPages = [
-      '/admin',
-      '/tools'
-    ];
+    // 根据权限动态确定需要预加载的工具页面
+    const toolPages = this.getToolPagesByPermissions();
+    
+    if (toolPages.length === 0) {
+      console.log('没有工具页面权限，跳过工具页面预加载');
+      return;
+    }
+
+    console.log(`预加载工具页面: ${toolPages.join(', ')}`);
 
     const toolPromises = toolPages.map(async (path) => {
       try {
@@ -414,6 +541,95 @@ export class PreloadManager {
     });
 
     await Promise.all(toolPromises);
+  }
+
+  // 根据权限获取需要预加载的工具页面
+  private getToolPagesByPermissions(): string[] {
+    if (typeof window === 'undefined') return [];
+
+    try {
+      const latestPermissions = localStorage.getItem('latestPermissions');
+      if (!latestPermissions) {
+        console.log('没有权限数据，预加载所有工具页面');
+        return ['/admin', '/tools'];
+      }
+
+      const permissions = JSON.parse(latestPermissions);
+      const toolPages: string[] = [];
+      let hasAnyPermission = false;
+
+      permissions.forEach((perm: any) => {
+        if (perm.canAccess) {
+          hasAnyPermission = true;
+          // 如果有任何权限，就预加载工具页面
+          if (!toolPages.includes('/tools')) {
+            toolPages.push('/tools');
+          }
+        }
+      });
+
+      // 检查是否有管理员权限
+      const isAdmin = localStorage.getItem('isAdmin') === 'true';
+      if (isAdmin && !toolPages.includes('/admin')) {
+        toolPages.push('/admin');
+      }
+
+      return toolPages;
+    } catch (error) {
+      console.error('解析权限数据失败:', error);
+      return ['/admin', '/tools'];
+    }
+  }
+
+  // 获取用户权限列表
+  private getUserPermissions(): string[] {
+    if (typeof window === 'undefined') return [];
+
+    try {
+      const latestPermissions = localStorage.getItem('latestPermissions');
+      if (!latestPermissions) {
+        return [];
+      }
+
+      const permissions = JSON.parse(latestPermissions);
+      const userPermissions: string[] = [];
+
+      permissions.forEach((perm: any) => {
+        if (perm.canAccess) {
+          switch (perm.moduleId) {
+            case 'quotation':
+              userPermissions.push('报价单');
+              break;
+            case 'packing':
+              userPermissions.push('装箱单');
+              break;
+            case 'invoice':
+              userPermissions.push('发票');
+              break;
+            case 'purchase':
+              userPermissions.push('采购单');
+              break;
+            case 'history':
+              userPermissions.push('历史管理');
+              break;
+            case 'customer':
+              userPermissions.push('客户管理');
+              break;
+            case 'ai-email':
+              userPermissions.push('AI邮件');
+              break;
+            case 'date-tools':
+              userPermissions.push('日期工具');
+              break;
+          }
+        }
+      });
+
+      return userPermissions;
+    } catch (error) {
+      console.error('获取用户权限失败:', error);
+      return [];
+    }
   }
 
   // 预加载CSS和JS资源
