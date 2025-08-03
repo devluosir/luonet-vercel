@@ -347,41 +347,42 @@ export default function NotFound() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-      {/* 游戏容器 */}
-      <div className="max-w-2xl mx-auto w-full mt-8">
-        <div className="container mx-auto px-4 py-4">
-          {/* 主要内容 */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-gray-400 to-gray-500 text-white text-sm font-bold rounded-full shadow-md">
-                404
-              </div>
-              <h1 className="text-lg font-medium text-gray-600">页面丢了~~休息一下吧~~~</h1>
-            </div>
-            
-            {/* 返回按钮 */}
-            <button
-              onClick={() => window.location.href = '/'}
-              className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              <svg className="w-5 h-5 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-              <span className="text-sm">返回</span>
-            </button>
-          </div>
+      {/* 顶部标题栏 */}
+      <div className="absolute top-6 left-6 right-6 flex items-center justify-between">
+        <button
+          onClick={() => window.location.href = '/'}
+          className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 transition-colors"
+        >
+          <svg className="w-5 h-5 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+          <span className="text-sm">返回</span>
+        </button>
 
+        <div className="flex items-center space-x-3">
+          <div className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-gray-400 to-gray-500 text-white text-sm font-bold rounded-full shadow-md">
+            404
+          </div>
+          <h1 className="text-lg font-medium text-gray-600">页面丢了~~休息一下吧~~~</h1>
+        </div>
+
+        <div className="w-20"></div> {/* 占位，保持标题居中 */}
+      </div>
+
+      {/* 游戏容器 */}
+      <div className="max-w-2xl mx-auto w-full mt-20">
+        <div className="container mx-auto px-4 py-4">
           {/* 游戏选项卡 */}
           <div className="max-w-2xl mx-auto">
             <div className="flex justify-center mb-6">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-lg p-1 border border-blue-200">
+              <div className="bg-white rounded-xl shadow-lg p-1 border border-gray-200">
                 <div className="flex space-x-1">
                   <button
                     onClick={() => setActiveTab('gomoku')}
-                    className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
+                    className={`px-8 py-4 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
                       activeTab === 'gomoku'
-                        ? 'bg-gradient-to-r from-slate-500 to-gray-500 text-white shadow-md'
-                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                        ? 'bg-gradient-to-r from-slate-500 to-gray-500 text-white shadow-sm'
+                        : 'bg-transparent text-gray-600 hover:bg-gray-50'
                     }`}
                   >
                     <Square className="w-5 h-5" />
@@ -389,10 +390,10 @@ export default function NotFound() {
                   </button>
                   <button
                     onClick={() => setActiveTab('game2048')}
-                    className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
+                    className={`px-8 py-4 rounded-lg font-semibold transition-all duration-200 flex items-center space-x-2 ${
                       activeTab === 'game2048'
-                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md'
-                        : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-sm'
+                        : 'bg-transparent text-gray-600 hover:bg-gray-50'
                     }`}
                   >
                     <Square className="w-5 h-5" />
@@ -407,8 +408,8 @@ export default function NotFound() {
               {activeTab === 'gomoku' ? (
                 <div className="text-center">
                   {/* 棋盘 */}
-                  <div className="inline-block bg-gradient-to-br from-slate-100 to-gray-100 p-8 rounded-2xl border-0 shadow-xl relative">
-                    <div className="gap-0 bg-gradient-to-br from-slate-200 to-gray-200 p-3 rounded-xl border-0" style={{ 
+                  <div className="inline-block bg-gradient-to-br from-slate-100 to-gray-100 p-6 rounded-2xl border-0 shadow-lg relative">
+                    <div className="gap-0 bg-gradient-to-br from-slate-200 to-gray-200 p-2 rounded-xl border-0" style={{ 
                       width: '400px', 
                       height: '400px',
                       display: 'grid',
@@ -499,13 +500,13 @@ export default function NotFound() {
                 <div className="text-center">
                   {/* 2048游戏区域 */}
                   <div 
-                    className="inline-block bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-8 rounded-2xl border-0 shadow-xl"
+                    className="inline-block bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 rounded-2xl border-0 shadow-lg"
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                     style={{ touchAction: 'none' }}
                   >
-                    <div className="gap-2 bg-slate-200 border-0 rounded-xl shadow-inner p-3" style={{ 
+                    <div className="gap-2 bg-slate-200 border-0 rounded-xl shadow-inner p-2" style={{ 
                       width: '400px', 
                       height: '400px',
                       display: 'grid',
