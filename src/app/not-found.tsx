@@ -20,7 +20,7 @@ export default function NotFound() {
 
   // 2048游戏状态
   const [board, setBoard] = useState<number[][]>(
-    Array(5).fill(null).map(() => Array(5).fill(0))
+    Array(7).fill(null).map(() => Array(7).fill(0))
   );
   const [game2048Active, setGame2048Active] = useState(false);
   const [game2048Over, setGame2048Over] = useState(false);
@@ -68,7 +68,7 @@ export default function NotFound() {
       if (saved2048Game) {
         try {
           const game2048State = JSON.parse(saved2048Game);
-          setBoard(game2048State.board || Array(5).fill(null).map(() => Array(5).fill(0)));
+          setBoard(game2048State.board || Array(7).fill(null).map(() => Array(7).fill(0)));
           setGame2048Active(game2048State.gameActive || false);
           setGame2048Over(game2048State.gameOver || false);
           setGame2048Won(game2048State.gameWon || false);
@@ -200,7 +200,7 @@ export default function NotFound() {
 
   // 初始化2048游戏
   const init2048Game = () => {
-    const newBoard = Array(5).fill(null).map(() => Array(5).fill(0));
+    const newBoard = Array(7).fill(null).map(() => Array(7).fill(0));
     // 添加两个初始数字
     addRandomTile(newBoard);
     addRandomTile(newBoard);
@@ -216,8 +216,8 @@ export default function NotFound() {
   // 添加随机数字
   const addRandomTile = (board: number[][]) => {
     const emptyCells = [];
-    for (let i = 0; i < 5; i++) {
-      for (let j = 0; j < 5; j++) {
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 7; j++) {
         if (board[i][j] === 0) {
           emptyCells.push({ i, j });
         }
@@ -244,14 +244,14 @@ export default function NotFound() {
           filtered.splice(i + 1, 1);
         }
       }
-      while (filtered.length < 5) {
+      while (filtered.length < 7) {
         filtered.push(0);
       }
       return filtered;
     };
 
     if (direction === 'left' || direction === 'right') {
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 7; i++) {
         let row = [...newBoard[i]];
         if (direction === 'right') {
           row = row.reverse();
@@ -266,8 +266,8 @@ export default function NotFound() {
         newBoard[i] = newRow;
       }
     } else {
-      for (let j = 0; j < 5; j++) {
-        let col = [newBoard[0][j], newBoard[1][j], newBoard[2][j], newBoard[3][j], newBoard[4][j]];
+      for (let j = 0; j < 7; j++) {
+        let col = [newBoard[0][j], newBoard[1][j], newBoard[2][j], newBoard[3][j], newBoard[4][j], newBoard[5][j], newBoard[6][j]];
         if (direction === 'down') {
           col = col.reverse();
         }
@@ -275,7 +275,7 @@ export default function NotFound() {
         if (direction === 'down') {
           newCol.reverse();
         }
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 7; i++) {
           if (newBoard[i][j] !== newCol[i]) {
             moved = true;
           }
@@ -298,18 +298,18 @@ export default function NotFound() {
   // 检查游戏是否结束
   const checkGameOver = (board: number[][]) => {
     // 检查是否有空格
-    for (let i = 0; i < 5; i++) {
-      for (let j = 0; j < 5; j++) {
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 7; j++) {
         if (board[i][j] === 0) return false;
       }
     }
     // 检查是否可以合并
-    for (let i = 0; i < 5; i++) {
-      for (let j = 0; j < 5; j++) {
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 7; j++) {
         const current = board[i][j];
         if (
-          (i < 4 && board[i + 1][j] === current) ||
-          (j < 4 && board[i][j + 1] === current)
+          (i < 6 && board[i + 1][j] === current) ||
+          (j < 6 && board[i][j + 1] === current)
         ) {
           return false;
         }
@@ -541,7 +541,7 @@ export default function NotFound() {
     setHasShown2048Message(false);
     setHighestAchievedNumber(0);
     setGame2048Score(0);
-    setBoard(Array(5).fill(null).map(() => Array(5).fill(0)));
+    setBoard(Array(7).fill(null).map(() => Array(7).fill(0)));
     // 清除保存的进度
     if (typeof window !== 'undefined') {
       localStorage.removeItem('2048GameState');
@@ -819,8 +819,8 @@ export default function NotFound() {
                   >
                     <div className="gap-1 sm:gap-2 bg-slate-200 border-0 rounded-xl shadow-inner p-2 sm:p-3 w-full aspect-square" style={{ 
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(5, 1fr)',
-                      gridTemplateRows: 'repeat(5, 1fr)',
+                      gridTemplateColumns: 'repeat(7, 1fr)',
+                      gridTemplateRows: 'repeat(7, 1fr)',
                       maxWidth: 'min(100vw - 2rem, 70vh - 2rem)',
                       maxHeight: 'min(100vw - 2rem, 70vh - 2rem)'
                     }}>
