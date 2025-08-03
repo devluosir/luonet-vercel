@@ -98,6 +98,42 @@ MLuoNet是一个基于Next.js构建的专业报价和订单确认系统，提供
 
 这种架构提供了更安全、更高效、更易维护的权限控制系统。
 
+### localStorage 报错修复 (2024-08-02)
+
+#### 问题描述
+在移除页面级别权限检查后，未登录用户访问 dashboard 页面时出现 `localStorage is not defined` 错误。这是因为 Next.js 的 SSR（服务端渲染）阶段无法访问浏览器特有的 API。
+
+#### 修复方案
+**为所有 localStorage 访问添加 window 判断**
+
+##### 修复原则
+1. **SSR 安全** - 所有 localStorage 访问都必须加 `typeof window !== 'undefined'` 判断
+2. **客户端优先** - localStorage 操作只在浏览器环境中执行
+3. **优雅降级** - 服务端渲染时提供默认值或跳过操作
+
+##### 修复的文件
+1. **`src/app/dashboard/page.tsx`** - 修复 useMemo 中的 localStorage 访问
+2. **`src/app/tools/page.tsx`** - 修复 headers 中的 localStorage 访问
+3. **`src/app/page.tsx`** - 修复登录时的 localStorage 设置
+4. **`src/app/admin/page.tsx`** - 修复 session 引用和 roleFilter 引用
+5. **`src/components/invoice/CustomerSection.tsx`** - 修复客户数据加载
+6. **`src/components/packinglist/ConsigneeSection.tsx`** - 修复收货人数据加载
+7. **`src/components/quotation/CustomerInfoSection.tsx`** - 修复客户信息加载
+8. **`src/components/purchase/SupplierInfoSection.tsx`** - 修复供应商数据加载
+
+##### 修复结果
+- ✅ 构建成功，无错误
+- ✅ 未登录用户访问 dashboard 不再报错
+- ✅ 所有页面在 SSR 阶段安全运行
+- ✅ 客户端功能保持完整
+- ✅ 用户体验无影响
+
+##### 技术要点
+- 使用 `typeof window !== 'undefined'` 判断确保只在客户端执行
+- 在 useEffect 中安全访问 localStorage
+- 为事件监听器添加 window 判断
+- 移除对已删除变量的引用（如 session、roleFilter）
+
 ### 发票页面权限修复 (2024-08-02)
 
 ### 移动端性能优化 (2024-08-02)

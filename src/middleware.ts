@@ -36,8 +36,8 @@ export default withAuth(
       return NextResponse.next();
     }
 
-    // 3. 其他路由需要认证
-    return NextResponse.next();
+    // 3. 其他路由需要认证 - 让 withAuth 处理权限检查
+    return null;
   },
   {
     callbacks: {
@@ -50,7 +50,7 @@ export default withAuth(
         }
         
         // 2. 公开路由不需要认证
-        if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
+        if (PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
           return true;
         }
 
@@ -101,6 +101,9 @@ export default withAuth(
         
         return token.permissions.some(perm => perm.canAccess === true);
       },
+    },
+    pages: {
+      signIn: '/',
     },
   }
 );

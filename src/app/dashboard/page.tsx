@@ -355,7 +355,7 @@ export default function DashboardPage() {
     }
     
     // 如果还是没有权限数据，使用session中的权限数据
-    if (permissions.length === 0) {
+    if (permissions.length === 0 && typeof window !== 'undefined') {
       // 从localStorage恢复权限数据
       const storedPermissions = localStorage.getItem('latestPermissions');
       const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
@@ -512,22 +512,22 @@ export default function DashboardPage() {
       const allDocuments = [];
       
       // 只加载用户有权限的文档类型
-      if (permissionMap.documentTypePermissions.quotation) {
+      if (permissionMap.documentTypePermissions.quotation && typeof window !== 'undefined') {
         const quotationHistory = JSON.parse(localStorage.getItem('quotation_history') || '[]');
         allDocuments.push(...quotationHistory.map((doc: any) => ({ ...doc, type: doc.type || 'quotation' })));
       }
       
-      if (permissionMap.documentTypePermissions.packing) {
+      if (permissionMap.documentTypePermissions.packing && typeof window !== 'undefined') {
         const packingHistory = JSON.parse(localStorage.getItem('packing_history') || '[]');
         allDocuments.push(...packingHistory.map((doc: any) => ({ ...doc, type: 'packing' })));
       }
       
-      if (permissionMap.documentTypePermissions.invoice) {
+      if (permissionMap.documentTypePermissions.invoice && typeof window !== 'undefined') {
         const invoiceHistory = JSON.parse(localStorage.getItem('invoice_history') || '[]');
         allDocuments.push(...invoiceHistory.map((doc: any) => ({ ...doc, type: 'invoice' })));
       }
       
-      if (permissionMap.documentTypePermissions.purchase) {
+      if (permissionMap.documentTypePermissions.purchase && typeof window !== 'undefined') {
         const purchaseHistory = JSON.parse(localStorage.getItem('purchase_history') || '[]');
         allDocuments.push(...purchaseHistory.map((doc: any) => ({ ...doc, type: 'purchase' })));
       }
