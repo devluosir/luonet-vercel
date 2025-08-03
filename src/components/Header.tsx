@@ -3,10 +3,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ChevronDown, LogOut, Settings, User, RefreshCw } from 'lucide-react';
+import { ChevronDown, LogOut, Settings, User, RefreshCw, Download } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { Avatar } from './Avatar';
 import { format } from 'date-fns';
+import { preloadManager } from '@/utils/preloadUtils';
 
 interface HeaderProps {
   user: {
@@ -31,6 +32,8 @@ export function Header({
   showWelcome = false
 }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isPreloading, setIsPreloading] = useState(false);
+  const [preloadProgress, setPreloadProgress] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -55,6 +58,32 @@ export function Header({
   const handleRefreshPermissions = () => {
     if (onRefreshPermissions) {
       onRefreshPermissions();
+      setShowDropdown(false);
+    }
+  };
+
+  // 处理预加载
+  const handlePreload = async () => {
+    if (isPreloading) return;
+    
+    setIsPreloading(true);
+    setPreloadProgress(0);
+    
+    // 监听预加载进度
+    const progressCallback = (progress: number) => {
+      setPreloadProgress(progress);
+    };
+    
+    preloadManager.onProgress(progressCallback);
+    
+    try {
+      await preloadManager.preloadAllResources();
+      console.log('预加载完成！');
+    } catch (error) {
+      console.error('预加载失败:', error);
+    } finally {
+      setIsPreloading(false);
+      preloadManager.offProgress(progressCallback);
       setShowDropdown(false);
     }
   };
@@ -179,6 +208,18 @@ export function Header({
                       {isRefreshing ? '刷新中...' : '刷新权限'}
                     </button>
                   )}
+                  <button
+                    onClick={handlePreload}
+                    disabled={isPreloading}
+                    className={`flex items-center px-4 py-2 text-sm w-full transition-colors duration-200 ${
+                      isPreloading
+                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50'
+                    }`}
+                  >
+                    <Download className={`h-4 w-4 mr-2 ${isPreloading ? 'animate-pulse' : ''}`} />
+                    {isPreloading ? `预加载中 ${preloadProgress}%` : preloadManager.isPreloaded() ? '资源已预加载' : '预加载资源'}
+                  </button>
                   {user.isAdmin && (
                     <button
                       onClick={() => {

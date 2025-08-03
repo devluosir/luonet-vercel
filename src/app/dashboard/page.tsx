@@ -33,6 +33,7 @@ import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance, safeRequestIdleCallback } from '@/utils/performance';
 import { usePermissionStore, hasPermission } from '@/lib/permissions';
 import { Header } from '@/components/Header';
+import { preloadManager } from '@/utils/preloadUtils';
 
 interface Permission {
   id: string;
@@ -700,6 +701,18 @@ export default function DashboardPage() {
         
         // 获取权限数据
         fetchPermissions();
+        
+        // 自动预加载资源（如果还没有预加载过）
+        if (!preloadManager.isPreloaded()) {
+          console.log('检测到首次访问，开始自动预加载资源...');
+          setTimeout(() => {
+            preloadManager.preloadAllResources().catch(error => {
+              console.error('自动预加载失败:', error);
+            });
+          }, 2000); // 延迟2秒开始预加载，避免影响初始加载
+        } else {
+          console.log('资源已预加载，跳过自动预加载');
+        }
       }
     }
   }, [fetchPermissions]);
