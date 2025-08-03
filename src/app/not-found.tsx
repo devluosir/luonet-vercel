@@ -503,7 +503,7 @@ export default function NotFound() {
                     {/* 棋盘 - 保持正方形比例 */}
                     <div className="inline-block bg-gradient-to-br from-slate-100 to-gray-100 p-1 lg:p-6 rounded-2xl border-0 shadow-lg relative w-full max-w-full flex justify-center">
 
-                    <div className="gap-0 bg-gradient-to-br from-slate-200 to-gray-200 p-1 sm:p-2 rounded-xl border-0 w-full aspect-square relative" style={{ 
+                    <div className="gap-0 bg-gradient-to-br from-amber-50 to-yellow-50 p-1 sm:p-2 rounded-xl border-0 w-full aspect-square relative" style={{ 
                       display: 'grid',
                       gridTemplateColumns: 'repeat(15, 1fr)',
                       gridTemplateRows: 'repeat(15, 1fr)',
@@ -517,11 +517,11 @@ export default function NotFound() {
                         {Array.from({ length: 15 }, (_, i) => (
                           <div
                             key={`v-${i}`}
-                            className="absolute bg-gray-400"
+                            className="absolute bg-gray-300"
                             style={{
                               left: `${(i + 0.5) * (100 / 15)}%`,
                               top: '0%',
-                              width: '1px',
+                              width: '2px',
                               height: '100%'
                             }}
                           />
@@ -530,11 +530,11 @@ export default function NotFound() {
                         {Array.from({ length: 15 }, (_, i) => (
                           <div
                             key={`h-${i}`}
-                            className="absolute bg-gray-400"
+                            className="absolute bg-gray-300"
                             style={{
                               top: `${(i + 0.5) * (100 / 15)}%`,
                               left: '0%',
-                              height: '1px',
+                              height: '2px',
                               width: '100%'
                             }}
                           />
@@ -555,8 +555,8 @@ export default function NotFound() {
                               left: `${(colIndex + 0.5) * (100 / 15)}%`,
                               top: `${(rowIndex + 0.5) * (100 / 15)}%`,
                               transform: 'translate(-50%, -50%)',
-                              width: '12px',
-                              height: '12px',
+                              width: '24px',
+                              height: '24px',
                               borderRadius: '50%',
                               zIndex: 1
                             }}
@@ -571,7 +571,7 @@ export default function NotFound() {
                           cell && (
                             <div
                               key={`stone-${rowIndex}-${colIndex}`}
-                              className={`absolute transition-all duration-200 shadow-md ${
+                              className={`absolute transition-all duration-200 shadow-xl ${
                                 cell === 'black' 
                                   ? 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' 
                                   : 'bg-gradient-to-br from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600'
@@ -580,10 +580,11 @@ export default function NotFound() {
                                 left: `${(colIndex + 0.5) * (100 / 15)}%`,
                                 top: `${(rowIndex + 0.5) * (100 / 15)}%`,
                                 transform: 'translate(-50%, -50%)',
-                                width: '20px',
-                                height: '20px',
+                                width: '32px',
+                                height: '32px',
                                 borderRadius: '50%',
-                                zIndex: 2
+                                zIndex: 2,
+                                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
                               }}
                             />
                           )
