@@ -706,8 +706,23 @@ export default function DashboardPage() {
         if (!preloadManager.isPreloaded()) {
           console.log('检测到首次访问，开始自动预加载资源...');
           setTimeout(() => {
+            // 注册进度回调，让Header组件能显示进度
+            const progressCallback = (progress: number, stage?: string) => {
+              console.log('自动预加载进度:', progress, stage);
+              // 触发自定义事件，让Header组件更新进度
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('preloadProgress', {
+                  detail: { progress, stage }
+                }));
+              }
+            };
+            
+            preloadManager.onProgress(progressCallback);
+            
             preloadManager.preloadAllResources().catch(error => {
               console.error('自动预加载失败:', error);
+            }).finally(() => {
+              preloadManager.offProgress(progressCallback);
             });
           }, 2000); // 延迟2秒开始预加载，避免影响初始加载
         } else {

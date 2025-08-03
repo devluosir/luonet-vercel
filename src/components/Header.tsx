@@ -73,6 +73,7 @@ export function Header({
     
     // 监听预加载进度
     const progressCallback = (progress: number, stage?: string) => {
+      console.log('进度回调被调用:', progress, stage);
       setPreloadProgress(progress);
       if (stage) setPreloadStage(stage);
     };
@@ -92,16 +93,28 @@ export function Header({
     }
   };
 
-  // 监听预加载完成事件
+  // 监听预加载进度和完成事件
   useEffect(() => {
+    const handlePreloadProgress = (event: CustomEvent) => {
+      console.log('收到预加载进度事件:', event.detail);
+      const { progress, stage } = event.detail;
+      setPreloadProgress(progress);
+      if (stage) setPreloadStage(stage);
+      if (progress > 0) setIsPreloading(true);
+    };
+
     const handlePreloadCompleted = (event: CustomEvent) => {
       console.log('收到预加载完成事件:', event.detail);
+      setIsPreloading(false);
+      setPreloadStage('');
       // 可以在这里更新UI状态
     };
 
+    window.addEventListener('preloadProgress', handlePreloadProgress as EventListener);
     window.addEventListener('preloadCompleted', handlePreloadCompleted as EventListener);
 
     return () => {
+      window.removeEventListener('preloadProgress', handlePreloadProgress as EventListener);
       window.removeEventListener('preloadCompleted', handlePreloadCompleted as EventListener);
     };
   }, []);
@@ -241,21 +254,21 @@ export function Header({
                           <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/10 dark:to-blue-800/20 transition-all duration-300 ease-out" />
                         )}
                         
-                        {/* 进度条 */}
-                        {isPreloading && (
-                          <div 
-                            className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-300 dark:from-blue-700/40 dark:to-blue-600/50 transition-all duration-1000 ease-out"
-                            style={{ width: `${preloadProgress}%` }}
-                          />
-                        )}
-                        
-                        {/* 进度条边框 */}
-                        {isPreloading && (
-                          <div 
-                            className="absolute inset-0 border-r-2 border-blue-400 dark:border-blue-300 transition-all duration-1000 ease-out"
-                            style={{ width: `${preloadProgress}%` }}
-                          />
-                        )}
+                                   {/* 进度条 */}
+           {isPreloading && (
+             <div 
+               className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-300 dark:from-blue-700/40 dark:to-blue-600/50 transition-all duration-300 ease-out"
+               style={{ width: `${preloadProgress}%` }}
+             />
+           )}
+           
+           {/* 进度条边框 */}
+           {isPreloading && (
+             <div 
+               className="absolute inset-0 border-r-2 border-blue-400 dark:border-blue-300 transition-all duration-300 ease-out"
+               style={{ width: `${preloadProgress}%` }}
+             />
+           )}
                         
                         {/* 内容 */}
                         <div className="relative z-10 flex items-center w-full">
