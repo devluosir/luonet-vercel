@@ -38,7 +38,7 @@ export function Footer() {
                 Design{' '}
                 <a 
                   href="/404"
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors underline"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors no-underline"
                 >
                   by
                 </a>
