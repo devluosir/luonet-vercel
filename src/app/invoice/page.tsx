@@ -723,13 +723,6 @@ export default function InvoicePage() {
   useEffect(() => {
     const init = async () => {
       if (!mounted) return;
-      
-      // 检查权限 - 使用session中的权限信息
-      const hasAccess = session?.user?.permissions?.some(p => p.moduleId === 'invoice' && p.canAccess) || false;
-      if (!hasAccess) {
-        router.push('/dashboard');
-        return;
-      }
 
       if (typeof window !== 'undefined') {
         const customWindow = window as unknown as CustomWindow;
@@ -750,7 +743,7 @@ export default function InvoicePage() {
     };
     
     init();
-  }, [mounted, router, session?.user?.permissions]);
+  }, [mounted]);
 
   useEffect(() => {
     const newPaymentDate = calculatePaymentDate(data.date);
