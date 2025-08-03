@@ -122,8 +122,24 @@ function getModuleIdFromPath(pathname: string): string | null {
     return parts[1] || null;
   }
   
-  // 否则取第一段
-  return path.split('/')[0] || null;
+  // 路径到模块ID的映射
+  const pathToModuleId: { [key: string]: string } = {
+    'mail': 'ai-email',
+    'date-tools': 'date-tools',
+    'quotation': 'quotation',
+    'packing': 'packing',
+    'invoice': 'invoice',
+    'purchase': 'purchase',
+    'history': 'history',
+    'customer': 'customer',
+    'admin': 'admin'
+  };
+  
+  // 取第一段作为路径
+  const pathSegment = path.split('/')[0] || null;
+  
+  // 如果有映射，返回映射的模块ID，否则返回原路径
+  return pathSegment ? (pathToModuleId[pathSegment] || pathSegment) : null;
 }
 
 export const config = {
