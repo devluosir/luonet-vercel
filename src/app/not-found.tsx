@@ -592,13 +592,14 @@ export default function NotFound() {
                     {/* 棋盘 - 保持正方形比例 */}
                     <div className="inline-block bg-gradient-to-br from-slate-100 to-gray-100 p-1 lg:p-6 rounded-2xl border-0 shadow-lg relative w-full max-w-full flex justify-center">
 
-                    <div className="gap-0 bg-gradient-to-br from-amber-50 to-yellow-50 p-1 sm:p-2 rounded-xl border-0 w-full aspect-square relative" style={{ 
+                    <div className="gap-0 bg-gradient-to-br from-amber-50 to-yellow-50 p-0.5 sm:p-1 rounded-xl border-0 w-full aspect-square relative" style={{ 
                       display: 'grid',
                       gridTemplateColumns: 'repeat(15, 1fr)',
                       gridTemplateRows: 'repeat(15, 1fr)',
                       pointerEvents: 'auto',
-                      maxWidth: 'min(100vw - 2rem, 70vh - 2rem)',
-                      maxHeight: 'min(100vw - 2rem, 70vh - 2rem)'
+                      maxWidth: 'min(100vw - 2rem, 80vh - 2rem)',
+                      maxHeight: 'min(100vw - 2rem, 80vh - 2rem)',
+                      overflow: 'visible'
                     }}>
                       {/* 绘制棋盘网格线 */}
                       <div className="absolute inset-0 pointer-events-none">
@@ -685,8 +686,8 @@ export default function NotFound() {
                               left: `${(colIndex + 0.5) * (100 / 15)}%`,
                               top: `${(rowIndex + 0.5) * (100 / 15)}%`,
                               transform: 'translate(-50%, -50%)',
-                              width: '24px',
-                              height: '24px',
+                              width: 'min(4vw, 4vh, 36px)',
+                              height: 'min(4vw, 4vh, 36px)',
                               borderRadius: '50%',
                               zIndex: 1
                             }}
@@ -710,8 +711,8 @@ export default function NotFound() {
                                 left: `${(colIndex + 0.5) * (100 / 15)}%`,
                                 top: `${(rowIndex + 0.5) * (100 / 15)}%`,
                                 transform: 'translate(-50%, -50%)',
-                                width: '32px',
-                                height: '32px',
+                                width: 'min(5vw, 5vh, 50px)',
+                                height: 'min(5vw, 5vh, 50px)',
                                 borderRadius: '50%',
                                 zIndex: 2,
                                 boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)'
