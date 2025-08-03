@@ -313,12 +313,19 @@ export default function DashboardPage() {
           'X-User-Name': username,
           'X-User-Admin': isAdmin ? 'true' : 'false',
         },
+        cache: 'no-store'
       });
       
       if (response.ok) {
         const data = await response.json();
         console.log('获取到权限数据:', data);
         setLatestPermissions(data.permissions || []);
+        
+        // 同时更新localStorage，确保数据一致性
+        if (typeof window !== 'undefined' && data.permissions) {
+          localStorage.setItem('latestPermissions', JSON.stringify(data.permissions));
+          localStorage.setItem('permissionsTimestamp', Date.now().toString());
+        }
       } else {
         console.error('获取权限数据失败:', response.status);
       }
@@ -699,8 +706,31 @@ export default function DashboardPage() {
         });
         console.log('从localStorage恢复用户信息:', { username, isAdmin, userId });
         
-        // 获取权限数据
-        fetchPermissions();
+        // 检查本地是否有最新的权限数据
+        const storedPermissions = localStorage.getItem('latestPermissions');
+        const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
+        
+        if (storedPermissions && permissionsTimestamp) {
+          // 检查权限数据是否在24小时内
+          const isRecent = (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000;
+          
+          if (isRecent) {
+            try {
+              const permissions = JSON.parse(storedPermissions);
+              setLatestPermissions(permissions);
+              console.log('使用本地权限数据:', permissions);
+            } catch (error) {
+              console.error('解析本地权限数据失败:', error);
+              fetchPermissions();
+            }
+          } else {
+            console.log('本地权限数据过期，重新获取');
+            fetchPermissions();
+          }
+        } else {
+          console.log('没有本地权限数据，重新获取');
+          fetchPermissions();
+        }
         
         // 自动预加载资源（如果还没有预加载过）
         if (!preloadManager.isPreloaded()) {
