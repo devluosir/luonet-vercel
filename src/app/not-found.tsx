@@ -513,32 +513,73 @@ export default function NotFound() {
                     }}>
                       {/* 绘制棋盘网格线 */}
                       <div className="absolute inset-0 pointer-events-none">
-                        {/* 垂直线 */}
-                        {Array.from({ length: 15 }, (_, i) => (
+                        {/* 内部网格线 - 延伸到粗边框 */}
+                        {Array.from({ length: 13 }, (_, i) => (
                           <div
-                            key={`v-${i}`}
+                            key={`v-inner-${i}`}
                             className="absolute bg-gray-300"
                             style={{
-                              left: `${(i + 0.5) * (100 / 15)}%`,
-                              top: '0%',
+                              left: `${(i + 1.5) * (100 / 15)}%`,
+                              top: `${50 / 15}%`,
                               width: '2px',
-                              height: '100%'
+                              height: `${(14 / 15) * 100}%`
                             }}
                           />
                         ))}
-                        {/* 水平线 */}
-                        {Array.from({ length: 15 }, (_, i) => (
+                        {Array.from({ length: 13 }, (_, i) => (
                           <div
-                            key={`h-${i}`}
+                            key={`h-inner-${i}`}
                             className="absolute bg-gray-300"
                             style={{
-                              top: `${(i + 0.5) * (100 / 15)}%`,
-                              left: '0%',
+                              top: `${(i + 1.5) * (100 / 15)}%`,
+                              left: `${50 / 15}%`,
                               height: '2px',
-                              width: '100%'
+                              width: `${(14 / 15) * 100}%`
                             }}
                           />
                         ))}
+                        
+                        {/* 边缘线 - 根据棋子位置动态绘制 */}
+                        {/* 上边缘线 - 从最左棋子到最右棋子 */}
+                        <div
+                          className="absolute bg-gray-400"
+                          style={{
+                            left: `${(0.5) * (100 / 15)}%`,
+                            top: `${(0.5) * (100 / 15)}%`,
+                            width: `${(14) * (100 / 15)}%`,
+                            height: '3px'
+                          }}
+                        />
+                        {/* 下边缘线 - 从最左棋子到最右棋子 */}
+                        <div
+                          className="absolute bg-gray-400"
+                          style={{
+                            left: `${(0.5) * (100 / 15)}%`,
+                            top: `${(14.5) * (100 / 15)}%`,
+                            width: `${(14) * (100 / 15)}%`,
+                            height: '3px'
+                          }}
+                        />
+                        {/* 左边缘线 - 从最上棋子到最下棋子 */}
+                        <div
+                          className="absolute bg-gray-400"
+                          style={{
+                            left: `${(0.5) * (100 / 15)}%`,
+                            top: `${(0.5) * (100 / 15)}%`,
+                            width: '3px',
+                            height: `${(14) * (100 / 15)}%`
+                          }}
+                        />
+                        {/* 右边缘线 - 从最上棋子到最下棋子 */}
+                        <div
+                          className="absolute bg-gray-400"
+                          style={{
+                            left: `${(14.5) * (100 / 15)}%`,
+                            top: `${(0.5) * (100 / 15)}%`,
+                            width: '3px',
+                            height: `${(14) * (100 / 15)}%`
+                          }}
+                        />
                       </div>
 
                       {/* 点击区域 - 交叉点 */}
