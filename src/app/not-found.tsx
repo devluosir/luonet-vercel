@@ -227,7 +227,7 @@ export default function NotFound() {
     return true;
   };
 
-  // 检查是否获胜
+  // 检查是否获胜（移除2048限制，改为达到2048时显示祝贺但不结束游戏）
   const check2048Win = (board: number[][]) => {
     for (let i = 0; i < 5; i++) {
       for (let j = 0; j < 5; j++) {
@@ -246,7 +246,7 @@ export default function NotFound() {
     if (moved) {
       // 使用setTimeout确保状态更新后再检查
       setTimeout(() => {
-        // 检查是否获胜
+        // 检查是否达到2048（显示祝贺但不结束游戏）
         if (!game2048Won && check2048Win(board)) {
           setGame2048Won(true);
         }
@@ -546,8 +546,16 @@ export default function NotFound() {
                               cell === 256 ? 'bg-gradient-to-br from-cyan-200 to-cyan-300 text-cyan-900 shadow-md' : 
                               cell === 512 ? 'bg-gradient-to-br from-teal-300 to-teal-400 text-teal-900 shadow-lg' : 
                               cell === 1024 ? 'bg-gradient-to-br from-emerald-300 to-emerald-400 text-emerald-900 shadow-lg' : 
-                              cell === 2048 ? 'bg-gradient-to-br from-yellow-300 to-yellow-400 text-yellow-900 shadow-xl ring-2 ring-yellow-500 animate-pulse' : 'bg-slate-100'
+                              cell === 2048 ? 'bg-gradient-to-br from-yellow-300 to-yellow-400 text-yellow-900 shadow-xl ring-2 ring-yellow-500 animate-pulse' : 
+                              cell === 4096 ? 'bg-gradient-to-br from-red-300 to-red-400 text-red-900 shadow-xl ring-2 ring-red-500 animate-pulse' : 
+                              cell === 8192 ? 'bg-gradient-to-br from-purple-300 to-purple-400 text-purple-900 shadow-xl ring-2 ring-purple-500 animate-pulse' : 
+                              cell === 16384 ? 'bg-gradient-to-br from-indigo-300 to-indigo-400 text-indigo-900 shadow-xl ring-2 ring-indigo-500 animate-pulse' : 
+                              cell === 32768 ? 'bg-gradient-to-br from-blue-300 to-blue-400 text-blue-900 shadow-xl ring-2 ring-blue-500 animate-pulse' : 
+                              cell >= 65536 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-900 shadow-xl ring-2 ring-gray-500 animate-pulse' : 'bg-slate-100'
                             } ${
+                              cell >= 65536 ? 'text-sm sm:text-lg lg:text-xl' : 
+                              cell >= 16384 ? 'text-base sm:text-xl lg:text-2xl' : 
+                              cell >= 4096 ? 'text-lg sm:text-2xl lg:text-3xl' : 
                               cell === 2048 ? 'text-lg sm:text-2xl lg:text-3xl' : 
                               cell === 1024 ? 'text-xl sm:text-3xl lg:text-4xl' : 
                               cell === 512 ? 'text-xl sm:text-3xl lg:text-4xl' : 
@@ -586,6 +594,9 @@ export default function NotFound() {
                         <div className="bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 rounded-xl px-2 sm:px-4 py-1 sm:py-2 shadow-md">
                           <p className="text-indigo-700 font-medium text-xs sm:text-sm">最高分: {game2048HighScore}</p>
                         </div>
+                        <div className="bg-gradient-to-r from-green-100 to-emerald-100 border border-green-200 rounded-xl px-2 sm:px-4 py-1 sm:py-2 shadow-md">
+                          <p className="text-green-700 font-medium text-xs sm:text-sm">最高数字: {Math.max(...board.flat())}</p>
+                        </div>
                         <button
                           onClick={reset2048Game}
                           className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold py-1 sm:py-2 px-2 sm:px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 text-xs sm:text-sm"
@@ -616,13 +627,13 @@ export default function NotFound() {
                   {game2048Won && !game2048Over && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-2xl">
                       <div className="bg-white p-3 sm:p-8 rounded-2xl shadow-2xl text-center mx-4 max-w-[260px] sm:max-w-none">
-                        <h3 className="text-lg sm:text-2xl font-bold text-green-600 mb-2 sm:mb-4">恭喜获胜！</h3>
-                        <p className="text-gray-600 mb-3 sm:mb-6 text-xs sm:text-base">你达到了2048！</p>
+                        <h3 className="text-lg sm:text-2xl font-bold text-green-600 mb-2 sm:mb-4">恭喜！</h3>
+                        <p className="text-gray-600 mb-3 sm:mb-6 text-xs sm:text-base">你达到了2048！游戏继续，挑战更高分数！</p>
                         <button
-                          onClick={reset2048Game}
+                          onClick={() => setGame2048Won(false)}
                           className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-1 sm:py-3 px-3 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 text-xs sm:text-base"
                         >
-                          再来一局
+                          继续游戏
                         </button>
                       </div>
                     </div>
