@@ -34,9 +34,10 @@ export default function NotFound() {
   const [mouseStart, setMouseStart] = useState<{ x: number; y: number } | null>(null);
   const [mouseEnd, setMouseEnd] = useState<{ x: number; y: number } | null>(null);
 
-  // 从localStorage获取最高分
+  // 从localStorage获取最高分和游戏进度
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // 获取最高分
       const saved = localStorage.getItem('404SnakeHighScore');
       if (saved) {
         setHighScore(parseInt(saved));
@@ -45,8 +46,51 @@ export default function NotFound() {
       if (saved2048) {
         setGame2048HighScore(parseInt(saved2048));
       }
+      
+      // 获取五子棋游戏进度
+      const savedGomoku = localStorage.getItem('gomokuGameState');
+      if (savedGomoku) {
+        try {
+          const gomokuState = JSON.parse(savedGomoku);
+          setGomokuBoard(gomokuState.board || Array(15).fill(null).map(() => Array(15).fill(null)));
+          setCurrentPlayer(gomokuState.currentPlayer || 'black');
+          setGameWinner(gomokuState.gameWinner || null);
+          setGameDraw(gomokuState.gameDraw || false);
+        } catch (error) {
+          console.error('加载五子棋进度失败:', error);
+        }
+      }
+      
+      // 获取2048游戏进度
+      const saved2048Game = localStorage.getItem('2048GameState');
+      if (saved2048Game) {
+        try {
+          const game2048State = JSON.parse(saved2048Game);
+          setBoard(game2048State.board || Array(5).fill(null).map(() => Array(5).fill(0)));
+          setGame2048Active(game2048State.gameActive || false);
+          setGame2048Over(game2048State.gameOver || false);
+          setGame2048Won(game2048State.gameWon || false);
+          setGame2048Score(game2048State.score || 0);
+        } catch (error) {
+          console.error('加载2048进度失败:', error);
+        }
+      }
     }
   }, []);
+
+  // 自动保存五子棋游戏进度
+  useEffect(() => {
+    if (typeof window !== 'undefined' && gomokuBoard.some(row => row.some(cell => cell !== null))) {
+      saveGomokuProgress();
+    }
+  }, [gomokuBoard, currentPlayer, gameWinner, gameDraw]);
+
+  // 自动保存2048游戏进度
+  useEffect(() => {
+    if (typeof window !== 'undefined' && game2048Active) {
+      save2048Progress();
+    }
+  }, [board, game2048Active, game2048Over, game2048Won, game2048Score]);
 
   const handleGomokuClick = (row: number, col: number) => {
     if (gomokuBoard[row][col] || gameWinner || gameDraw) {
@@ -60,16 +104,22 @@ export default function NotFound() {
     // 检查胜利条件
     if (checkWin(newBoard, row, col, currentPlayer)) {
       setGameWinner(currentPlayer);
+      // 游戏结束时保存进度
+      setTimeout(() => saveGomokuProgress(), 0);
       return;
     }
 
     // 检查平局
     if (isBoardFull(newBoard)) {
       setGameDraw(true);
+      // 游戏结束时保存进度
+      setTimeout(() => saveGomokuProgress(), 0);
       return;
     }
 
     setCurrentPlayer(currentPlayer === 'black' ? 'white' : 'black');
+    // 每次落子后保存进度
+    setTimeout(() => saveGomokuProgress(), 0);
   };
 
   const checkWin = (board: (null | 'black' | 'white')[][], row: number, col: number, player: 'black' | 'white') => {
@@ -106,11 +156,42 @@ export default function NotFound() {
     return board.every(row => row.every(cell => cell !== null));
   };
 
+  // 保存五子棋游戏进度
+  const saveGomokuProgress = () => {
+    if (typeof window !== 'undefined') {
+      const gomokuState = {
+        board: gomokuBoard,
+        currentPlayer,
+        gameWinner,
+        gameDraw
+      };
+      localStorage.setItem('gomokuGameState', JSON.stringify(gomokuState));
+    }
+  };
+
+  // 保存2048游戏进度
+  const save2048Progress = () => {
+    if (typeof window !== 'undefined') {
+      const game2048State = {
+        board,
+        gameActive: game2048Active,
+        gameOver: game2048Over,
+        gameWon: game2048Won,
+        score: game2048Score
+      };
+      localStorage.setItem('2048GameState', JSON.stringify(game2048State));
+    }
+  };
+
   const resetGomoku = () => {
     setGomokuBoard(Array(15).fill(null).map(() => Array(15).fill(null)));
     setCurrentPlayer('black');
     setGameWinner(null);
     setGameDraw(false);
+    // 清除保存的进度
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('gomokuGameState');
+    }
   };
 
   // 初始化2048游戏
@@ -124,6 +205,8 @@ export default function NotFound() {
     setGame2048Over(false);
     setGame2048Won(false);
     setGame2048Active(true);
+    // 游戏开始时保存进度
+    setTimeout(() => save2048Progress(), 0);
   };
 
   // 添加随机数字
@@ -201,6 +284,8 @@ export default function NotFound() {
       addRandomTile(newBoard);
       setGame2048Score(prev => prev + score);
       setBoard([...newBoard]); // 确保状态更新
+      // 移动后保存进度
+      setTimeout(() => save2048Progress(), 0);
     }
 
     return moved;
@@ -435,6 +520,10 @@ export default function NotFound() {
     setGame2048Won(false);
     setGame2048Score(0);
     setBoard(Array(5).fill(null).map(() => Array(5).fill(0)));
+    // 清除保存的进度
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('2048GameState');
+    }
     // 延迟初始化，确保状态重置完成
     setTimeout(() => {
       init2048Game();
