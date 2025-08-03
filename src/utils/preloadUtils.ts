@@ -66,32 +66,27 @@ export class PreloadManager {
         this.updateProgress(0, '正在预加载资源...');
       }
 
-      // 1. 预加载PDF字体 (15%)
-      this.updateProgress(5, '正在预加载PDF字体...');
-      await this.preloadFonts();
-      this.updateProgress(15, 'PDF字体预加载完成');
-
-      // 2. 预加载表单页面 (30%)
-      this.updateProgress(15, '正在预加载表单页面...');
+      // 1. 预加载表单页面 (30%)
+      this.updateProgress(10, '正在预加载表单页面...');
       await this.preloadFormPages();
       this.updateProgress(30, '表单页面预加载完成');
 
-      // 3. 预加载静态资源 (50%)
+      // 2. 预加载静态资源 (50%)
       this.updateProgress(30, '正在预加载静态资源...');
       await this.preloadStaticAssets();
       this.updateProgress(50, '静态资源预加载完成');
 
-      // 4. 预加载历史数据 (70%)
+      // 3. 预加载历史数据 (70%)
       this.updateProgress(50, '正在预加载历史数据...');
       await this.preloadHistoryData();
       this.updateProgress(70, '历史数据预加载完成');
 
-      // 5. 预加载工具页面 (85%)
+      // 4. 预加载工具页面 (85%)
       this.updateProgress(70, '正在预加载工具页面...');
       await this.preloadToolPages();
       this.updateProgress(85, '工具页面预加载完成');
 
-      // 6. 预加载CSS和JS资源 (100%)
+      // 5. 预加载CSS和JS资源 (100%)
       this.updateProgress(85, '正在预加载样式和脚本...');
       await this.preloadScriptsAndStyles();
       this.updateProgress(100, '所有资源预加载完成！');
@@ -128,60 +123,10 @@ export class PreloadManager {
   private async preloadFonts(): Promise<void> {
     console.log('预加载PDF字体...');
     
-    // 只预加载压缩的字体文件，避免解码错误
-    const fontUrls = [
-      '/fonts/compressed/NotoSansSC-Regular.ttf.gz',
-      '/fonts/compressed/NotoSansSC-Bold.ttf.gz'
-    ];
-
-    const fontPromises = fontUrls.map(url => {
-      return new Promise<void>((resolve) => {
-        // 检查是否已经预加载过
-        if (this.preloadedResources.has(url)) {
-          console.log(`字体已预加载: ${url}`);
-          resolve();
-          return;
-        }
-
-        // 直接尝试预加载，不进行HEAD检查
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.as = 'font';
-        link.type = 'font/ttf';
-        link.href = url;
-        link.crossOrigin = 'anonymous';
-        
-        // 为压缩字体添加正确的编码信息
-        if (url.endsWith('.gz')) {
-          link.setAttribute('data-compressed', 'true');
-          // 设置正确的MIME类型
-          link.type = 'font/ttf';
-        }
-        
-        // 设置超时，避免长时间等待
-        const timeout = setTimeout(() => {
-          console.log(`字体预加载超时: ${url}`);
-          resolve();
-        }, 5000);
-        
-        link.onload = () => {
-          clearTimeout(timeout);
-          console.log(`字体预加载成功: ${url}`);
-          this.preloadedResources.add(url);
-          resolve();
-        };
-        
-        link.onerror = () => {
-          clearTimeout(timeout);
-          console.log(`字体预加载失败: ${url}`);
-          resolve(); // 即使失败也继续
-        };
-        
-        document.head.appendChild(link);
-      });
-    });
-
-    await Promise.all(fontPromises);
+    // 暂时跳过字体预加载，避免浏览器警告
+    // 字体会在需要时自动加载
+    console.log('跳过字体预加载，避免浏览器警告');
+    return;
   }
 
   // 预加载表单页面
@@ -309,32 +254,10 @@ export class PreloadManager {
 
   // 预加载页面相关的API端点
   private async preloadPageAPIs(path: string): Promise<void> {
-    // 只预加载支持GET请求的API端点，避免HEAD请求错误
-    const apiEndpoints = [
-      '/api/generate' // 只预加载支持GET的API
-    ];
-    
-    const apiPromises = apiEndpoints.map(async (endpoint) => {
-      try {
-        const response = await fetch(endpoint, {
-          method: 'GET',
-          cache: 'force-cache',
-          headers: {
-            'Accept': 'application/json',
-            'Cache-Control': 'max-age=3600'
-          }
-        });
-        
-        if (response.ok) {
-          console.log(`API端点预加载成功: ${endpoint}`);
-          this.preloadedResources.add(endpoint);
-        }
-      } catch (error) {
-        console.warn(`API端点预加载失败: ${endpoint}`, error);
-      }
-    });
-    
-    await Promise.all(apiPromises);
+    // 暂时跳过API端点预加载，因为所有API都只支持POST请求
+    // 避免405 Method Not Allowed错误
+    console.log('跳过API端点预加载，避免405错误');
+    return;
   }
 
   // 预加载页面相关的CSS和JS资源
@@ -639,10 +562,8 @@ export class PreloadManager {
   private async preloadScriptsAndStyles(): Promise<void> {
     console.log('预加载CSS和JS资源...');
     
-    // 只预加载确定存在的CSS文件
-    const scriptAndStyleUrls = [
-      '/globals.css'
-    ];
+    // 暂时跳过CSS预加载，避免MIME类型错误
+    const scriptAndStyleUrls: string[] = [];
 
     const resourcePromises = scriptAndStyleUrls.map(url => {
       return new Promise<void>((resolve) => {
