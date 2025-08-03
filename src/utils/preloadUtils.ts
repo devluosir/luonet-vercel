@@ -70,21 +70,33 @@ export class PreloadManager {
       this.updateProgress(10, '正在预加载表单页面...');
       await this.preloadFormPages();
       this.updateProgress(30, '表单页面预加载完成');
+      
+      // 添加延迟让进度条更明显
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // 2. 预加载静态资源 (50%)
       this.updateProgress(30, '正在预加载静态资源...');
       await this.preloadStaticAssets();
       this.updateProgress(50, '静态资源预加载完成');
+      
+      // 添加延迟让进度条更明显
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // 3. 预加载历史数据 (70%)
       this.updateProgress(50, '正在预加载历史数据...');
       await this.preloadHistoryData();
       this.updateProgress(70, '历史数据预加载完成');
+      
+      // 添加延迟让进度条更明显
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // 4. 预加载工具页面 (85%)
       this.updateProgress(70, '正在预加载工具页面...');
       await this.preloadToolPages();
       this.updateProgress(85, '工具页面预加载完成');
+      
+      // 添加延迟让进度条更明显
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // 5. 预加载CSS和JS资源 (100%)
       this.updateProgress(85, '正在预加载样式和脚本...');

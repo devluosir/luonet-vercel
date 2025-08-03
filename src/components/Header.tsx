@@ -244,7 +244,7 @@ export function Header({
                         {/* 进度条 */}
                         {isPreloading && (
                           <div 
-                            className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-300 dark:from-blue-700/40 dark:to-blue-600/50 transition-all duration-500 ease-out"
+                            className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-300 dark:from-blue-700/40 dark:to-blue-600/50 transition-all duration-1000 ease-out"
                             style={{ width: `${preloadProgress}%` }}
                           />
                         )}
@@ -252,7 +252,7 @@ export function Header({
                         {/* 进度条边框 */}
                         {isPreloading && (
                           <div 
-                            className="absolute inset-0 border-r-2 border-blue-400 dark:border-blue-300 transition-all duration-300 ease-out"
+                            className="absolute inset-0 border-r-2 border-blue-400 dark:border-blue-300 transition-all duration-1000 ease-out"
                             style={{ width: `${preloadProgress}%` }}
                           />
                         )}
