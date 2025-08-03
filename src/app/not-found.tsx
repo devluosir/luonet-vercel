@@ -503,7 +503,7 @@ export default function NotFound() {
                     {/* 棋盘 - 保持正方形比例 */}
                     <div className="inline-block bg-gradient-to-br from-slate-100 to-gray-100 p-1 lg:p-6 rounded-2xl border-0 shadow-lg relative w-full max-w-full flex justify-center">
 
-                    <div className="gap-0 bg-gradient-to-br from-slate-200 to-gray-200 p-1 sm:p-2 rounded-xl border-0 w-full aspect-square" style={{ 
+                    <div className="gap-0 bg-gradient-to-br from-slate-200 to-gray-200 p-1 sm:p-2 rounded-xl border-0 w-full aspect-square relative" style={{ 
                       display: 'grid',
                       gridTemplateColumns: 'repeat(15, 1fr)',
                       gridTemplateRows: 'repeat(15, 1fr)',
@@ -511,31 +511,82 @@ export default function NotFound() {
                       maxWidth: 'min(100vw - 2rem, 70vh - 2rem)',
                       maxHeight: 'min(100vw - 2rem, 70vh - 2rem)'
                     }}>
-                      {gomokuBoard.map((row, rowIndex) =>
-                        row.map((cell, colIndex) => (
+                      {/* 绘制棋盘网格线 */}
+                      <div className="absolute inset-0 pointer-events-none">
+                        {/* 垂直线 */}
+                        {Array.from({ length: 15 }, (_, i) => (
+                          <div
+                            key={`v-${i}`}
+                            className="absolute bg-gray-400"
+                            style={{
+                              left: `${(i + 0.5) * (100 / 15)}%`,
+                              top: '0%',
+                              width: '1px',
+                              height: '100%'
+                            }}
+                          />
+                        ))}
+                        {/* 水平线 */}
+                        {Array.from({ length: 15 }, (_, i) => (
+                          <div
+                            key={`h-${i}`}
+                            className="absolute bg-gray-400"
+                            style={{
+                              top: `${(i + 0.5) * (100 / 15)}%`,
+                              left: '0%',
+                              height: '1px',
+                              width: '100%'
+                            }}
+                          />
+                        ))}
+                      </div>
+
+                      {/* 点击区域 - 交叉点 */}
+                      {Array.from({ length: 15 }, (_, rowIndex) =>
+                        Array.from({ length: 15 }, (_, colIndex) => (
                           <button
                             key={`${rowIndex}-${colIndex}`}
                             onClick={() => handleGomokuClick(rowIndex, colIndex)}
-                            disabled={!!cell || !!gameWinner || gameDraw}
-                            className={`w-full h-full border border-slate-200 transition-all duration-200 min-w-[18px] min-h-[18px] ${
-                              cell ? 'cursor-not-allowed' : 'cursor-pointer'
-                            } ${
-                              cell === 'black' 
-                                ? 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-md' 
-                                : cell === 'white' 
-                                  ? 'bg-gradient-to-br from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 shadow-md' 
-                                  : 'bg-gradient-to-br from-slate-50 to-gray-50 hover:from-slate-100 hover:to-gray-100'
+                            disabled={!!gomokuBoard[rowIndex][colIndex] || !!gameWinner || gameDraw}
+                            className={`absolute transition-all duration-200 ${
+                              gomokuBoard[rowIndex][colIndex] ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-200 hover:bg-opacity-50'
                             }`}
                             style={{
-                              borderRadius: cell ? '50%' : '0%',
-                              margin: cell ? '1px' : '0px',
-                              pointerEvents: 'auto',
+                              left: `${(colIndex + 0.5) * (100 / 15)}%`,
+                              top: `${(rowIndex + 0.5) * (100 / 15)}%`,
+                              transform: 'translate(-50%, -50%)',
+                              width: '12px',
+                              height: '12px',
+                              borderRadius: '50%',
                               zIndex: 1
                             }}
-                            title={`${rowIndex},${colIndex} - ${cell || 'empty'}`}
-                          >
-                            {/* 圆形棋子 */}
-                          </button>
+                            title={`${rowIndex},${colIndex} - ${gomokuBoard[rowIndex][colIndex] || 'empty'}`}
+                          />
+                        ))
+                      )}
+
+                      {/* 棋子显示 */}
+                      {gomokuBoard.map((row, rowIndex) =>
+                        row.map((cell, colIndex) => (
+                          cell && (
+                            <div
+                              key={`stone-${rowIndex}-${colIndex}`}
+                              className={`absolute transition-all duration-200 shadow-md ${
+                                cell === 'black' 
+                                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' 
+                                  : 'bg-gradient-to-br from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600'
+                              }`}
+                              style={{
+                                left: `${(colIndex + 0.5) * (100 / 15)}%`,
+                                top: `${(rowIndex + 0.5) * (100 / 15)}%`,
+                                transform: 'translate(-50%, -50%)',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                zIndex: 2
+                              }}
+                            />
+                          )
                         ))
                       )}
                     </div>
