@@ -56,9 +56,9 @@ const QUICK_CREATE_MODULES = [
     name: '新报价单', 
     path: '/quotation',
     icon: FileText,
-    bgColor: 'bg-blue-100 hover:bg-blue-200',
+    bgColor: 'bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/40',
     iconBg: 'bg-blue-500',
-    textColor: 'text-blue-700',
+    textColor: 'text-blue-700 dark:text-blue-300',
     shortcut: 'Q'
   },
   { 
@@ -66,9 +66,9 @@ const QUICK_CREATE_MODULES = [
     name: '销售确认', 
     path: '/quotation',
     icon: FileText,
-    bgColor: 'bg-green-100 hover:bg-green-200',
+    bgColor: 'bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-800/40',
     iconBg: 'bg-green-500',
-    textColor: 'text-green-700',
+    textColor: 'text-green-700 dark:text-green-300',
     shortcut: 'C'
   },
   { 
@@ -76,9 +76,9 @@ const QUICK_CREATE_MODULES = [
     name: '箱单发票', 
     path: '/packing',
     icon: Package,
-    bgColor: 'bg-teal-100 hover:bg-teal-200',
+    bgColor: 'bg-teal-100 hover:bg-teal-200 dark:bg-teal-900/30 dark:hover:bg-teal-800/40',
     iconBg: 'bg-teal-500',
-    textColor: 'text-teal-700',
+    textColor: 'text-teal-700 dark:text-teal-300',
     shortcut: 'B'
   },
   { 
@@ -86,9 +86,9 @@ const QUICK_CREATE_MODULES = [
     name: '财务发票', 
     path: '/invoice',
     icon: Receipt,
-    bgColor: 'bg-purple-100 hover:bg-purple-200',
+    bgColor: 'bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-800/40',
     iconBg: 'bg-purple-500',
-    textColor: 'text-purple-700',
+    textColor: 'text-purple-700 dark:text-purple-300',
     shortcut: 'I'
   },
   { 
@@ -96,9 +96,9 @@ const QUICK_CREATE_MODULES = [
     name: '采购订单', 
     path: '/purchase',
     icon: ShoppingCart,
-    bgColor: 'bg-orange-100 hover:bg-orange-200',
+    bgColor: 'bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-800/40',
     iconBg: 'bg-orange-500',
-    textColor: 'text-orange-700',
+    textColor: 'text-orange-700 dark:text-orange-300',
     shortcut: 'P'
   }
 ];
@@ -110,18 +110,18 @@ const TOOL_MODULES = [
     name: 'AI邮件助手', 
     path: '/mail',
     icon: Mail,
-    bgColor: 'bg-indigo-100 hover:bg-indigo-200',
+    bgColor: 'bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-800/40',
     iconBg: 'bg-indigo-500',
-    textColor: 'text-indigo-700'
+    textColor: 'text-indigo-700 dark:text-indigo-300'
   },
   { 
     id: 'date-tools', 
     name: '日期计算', 
     path: '/date-tools',
     icon: Calendar,
-    bgColor: 'bg-pink-100 hover:bg-pink-200',
+    bgColor: 'bg-pink-100 hover:bg-pink-200 dark:bg-pink-900/30 dark:hover:bg-pink-800/40',
     iconBg: 'bg-pink-500',
-    textColor: 'text-pink-700'
+    textColor: 'text-pink-700 dark:text-pink-300'
   }
 ];
 
@@ -132,18 +132,18 @@ const TOOLS_MODULES = [
     name: '单据管理', 
     path: '/history',
     icon: Archive,
-    bgColor: 'bg-gray-100 hover:bg-gray-200',
+    bgColor: 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800/50 dark:hover:bg-gray-700/60',
     iconBg: 'bg-gray-600',
-    textColor: 'text-gray-700'
+    textColor: 'text-gray-700 dark:text-gray-300'
   },
   { 
     id: 'customer', 
     name: '客户管理', 
     path: '/customer',
     icon: Users,
-    bgColor: 'bg-violet-100 hover:bg-violet-200',
+    bgColor: 'bg-violet-100 hover:bg-violet-200 dark:bg-violet-900/30 dark:hover:bg-violet-800/40',
     iconBg: 'bg-violet-500',
-    textColor: 'text-violet-700'
+    textColor: 'text-violet-700 dark:text-violet-300'
   }
   // 注释掉其他模块
   // { 
@@ -151,54 +151,54 @@ const TOOLS_MODULES = [
   //   name: '库存管理', 
   //   path: '/tools/feature5',
   //   icon: Database,
-  //   bgColor: 'bg-amber-100 hover:bg-amber-200',
+  //   bgColor: 'bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-800/40',
   //   iconBg: 'bg-amber-500',
-  //   textColor: 'text-amber-700'
+  //   textColor: 'text-amber-700 dark:text-amber-300'
   // },
   // { 
   //   id: 'feature3', 
   //   name: '数据分析', 
   //   path: '/tools/feature3',
   //   icon: BarChart3,
-  //   bgColor: 'bg-cyan-100 hover:bg-cyan-200',
+  //   bgColor: 'bg-cyan-100 hover:bg-cyan-200 dark:bg-cyan-900/30 dark:hover:bg-cyan-800/40',
   //   iconBg: 'bg-cyan-500',
-  //   textColor: 'text-cyan-700'
+  //   textColor: 'text-cyan-700 dark:text-cyan-300'
   // },
   // { 
   //   id: 'feature8', 
   //   name: '销售预测', 
   //   path: '/tools/feature8',
   //   icon: TrendingUp,
-  //   bgColor: 'bg-emerald-100 hover:bg-emerald-200',
+  //   bgColor: 'bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:hover:bg-emerald-800/40',
   //   iconBg: 'bg-emerald-500',
-  //   textColor: 'text-emerald-700'
+  //   textColor: 'text-emerald-700 dark:text-emerald-300'
   // },
   // { 
   //   id: 'feature7', 
   //   name: '时间管理', 
   //   path: '/tools/feature7',
   //   icon: Clock,
-  //   bgColor: 'bg-indigo-100 hover:bg-indigo-200',
+  //   bgColor: 'bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-800/40',
   //   iconBg: 'bg-indigo-500',
-  //   textColor: 'text-indigo-700'
+  //   textColor: 'text-indigo-700 dark:text-indigo-300'
   // },
   // { 
   //   id: 'feature6', 
   //   name: '自动化工具', 
   //   path: '/tools/feature6',
   //   icon: Zap,
-  //   bgColor: 'bg-red-100 hover:bg-red-200',
+  //   bgColor: 'bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/40',
   //   iconBg: 'bg-red-500',
-  //   textColor: 'text-red-700'
+  //   textColor: 'text-red-700 dark:text-red-300'
   // },
   // { 
   //   id: 'feature9', 
   //   name: '系统设置', 
   //   path: '/tools/feature9',
   //   icon: Settings,
-  //   bgColor: 'bg-gray-100 hover:bg-gray-200',
+  //   bgColor: 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800/50 dark:hover:bg-gray-700/60',
   //   iconBg: 'bg-gray-500',
-  //   textColor: 'text-gray-700'
+  //   textColor: 'text-gray-700 dark:text-gray-300'
   // }
 ];
 
@@ -211,47 +211,60 @@ const ModuleButton = ({ module, onClick, onHover }: {
   const Icon = module.icon;
   
   // 优先使用模块对象的颜色字段
-  const bgColor = module.bgColor || 'bg-gray-100 hover:bg-gray-200';
+  const bgColor = module.bgColor || 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800/50 dark:hover:bg-gray-700/60';
   const iconBg = module.iconBg || 'bg-gray-500';
-  const titleColor = module.titleColor || module.textColor || 'text-gray-800';
+  const titleColor = module.titleColor || module.textColor || 'text-gray-800 dark:text-gray-200';
   const shortcutBg = module.shortcutBg || iconBg;
   
-  // 将Tailwind类名转换为内联样式，确保不被覆盖
+  // 将Tailwind类名转换为内联样式，确保不被覆盖，并支持黑夜模式
   const getBgStyle = (bgClass: string) => {
-    const colorMap: { [key: string]: string } = {
-      'bg-blue-100': '#dbeafe',
-      'hover:bg-blue-200': '#bfdbfe',
-      'bg-green-100': '#dcfce7',
-      'hover:bg-green-200': '#bbf7d0',
-      'bg-teal-100': '#ccfbf1',
-      'hover:bg-teal-200': '#99f6e4',
-      'bg-purple-100': '#f3e8ff',
-      'hover:bg-purple-200': '#e9d5ff',
-      'bg-orange-100': '#ffedd5',
-      'hover:bg-orange-200': '#fed7aa',
-      'bg-indigo-100': '#e0e7ff',
-      'hover:bg-indigo-200': '#c7d2fe',
-      'bg-pink-100': '#fce7f3',
-      'hover:bg-pink-200': '#fbcfe8',
-      'bg-gray-100': '#f3f4f6',
-      'hover:bg-gray-200': '#e5e7eb',
-      'bg-violet-100': '#ede9fe',
-      'hover:bg-violet-200': '#ddd6fe',
-      'bg-amber-100': '#fef3c7',
-      'hover:bg-amber-200': '#fde68a',
-      'bg-cyan-100': '#cffafe',
-      'hover:bg-cyan-200': '#a5f3fc',
-      'bg-emerald-100': '#d1fae5',
-      'hover:bg-emerald-200': '#a7f3d0',
-      'bg-red-100': '#fee2e2',
-      'hover:bg-red-200': '#fecaca'
+    const colorMap: { [key: string]: { light: string; dark: string } } = {
+      'bg-blue-100': { light: '#dbeafe', dark: '#1e3a8a' },
+      'hover:bg-blue-200': { light: '#bfdbfe', dark: '#1d4ed8' },
+      'bg-green-100': { light: '#dcfce7', dark: '#14532d' },
+      'hover:bg-green-200': { light: '#bbf7d0', dark: '#15803d' },
+      'bg-teal-100': { light: '#ccfbf1', dark: '#134e4a' },
+      'hover:bg-teal-200': { light: '#99f6e4', dark: '#0f766e' },
+      'bg-purple-100': { light: '#f3e8ff', dark: '#581c87' },
+      'hover:bg-purple-200': { light: '#e9d5ff', dark: '#7c3aed' },
+      'bg-orange-100': { light: '#ffedd5', dark: '#7c2d12' },
+      'hover:bg-orange-200': { light: '#fed7aa', dark: '#ea580c' },
+      'bg-indigo-100': { light: '#e0e7ff', dark: '#312e81' },
+      'hover:bg-indigo-200': { light: '#c7d2fe', dark: '#4338ca' },
+      'bg-pink-100': { light: '#fce7f3', dark: '#831843' },
+      'hover:bg-pink-200': { light: '#fbcfe8', dark: '#be185d' },
+      'bg-gray-100': { light: '#f3f4f6', dark: '#374151' },
+      'hover:bg-gray-200': { light: '#e5e7eb', dark: '#4b5563' },
+      'bg-violet-100': { light: '#ede9fe', dark: '#4c1d95' },
+      'hover:bg-violet-200': { light: '#ddd6fe', dark: '#6d28d9' },
+      'bg-amber-100': { light: '#fef3c7', dark: '#78350f' },
+      'hover:bg-amber-200': { light: '#fde68a', dark: '#d97706' },
+      'bg-cyan-100': { light: '#cffafe', dark: '#164e63' },
+      'hover:bg-cyan-200': { light: '#a5f3fc', dark: '#0891b2' },
+      'bg-emerald-100': { light: '#d1fae5', dark: '#064e3b' },
+      'hover:bg-emerald-200': { light: '#a7f3d0', dark: '#047857' },
+      'bg-red-100': { light: '#fee2e2', dark: '#7f1d1d' },
+      'hover:bg-red-200': { light: '#fecaca', dark: '#dc2626' }
     };
     
     const baseColor = bgClass.split(' ')[0];
-    return colorMap[baseColor] || '#f3f4f6';
+    const colorInfo = colorMap[baseColor];
+    
+    if (!colorInfo) {
+      return { backgroundColor: '#f3f4f6' };
+    }
+    
+    // 检查是否为黑夜模式
+    const isDarkMode = typeof window !== 'undefined' && 
+      (document.documentElement.classList.contains('dark') || 
+       window.matchMedia('(prefers-color-scheme: dark)').matches);
+    
+    return { 
+      backgroundColor: isDarkMode ? colorInfo.dark : colorInfo.light 
+    };
   };
   
-  const bgStyle = { backgroundColor: getBgStyle(bgColor) };
+  const bgStyle = getBgStyle(bgColor);
   
   return (
     <button
@@ -262,7 +275,8 @@ const ModuleButton = ({ module, onClick, onHover }: {
         border border-gray-200/50 dark:border-gray-800/50
         hover:border-gray-300/70 dark:hover:border-gray-700/70
         active:shadow-sm
-        p-4 h-20 flex items-center space-x-3 w-full`}
+        p-4 h-20 flex items-center space-x-3 w-full
+        bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm`}
       style={bgStyle}
       onClick={() => onClick(module)}
       onMouseEnter={() => onHover?.(module)}
@@ -274,7 +288,7 @@ const ModuleButton = ({ module, onClick, onHover }: {
       {/* 文本内容 */}
       <div className="flex-1 min-w-0 text-left">
         <h3 className={`text-base font-bold ${titleColor} leading-tight line-clamp-1
-          transition-colors duration-200 group-hover:${titleColor} dark:text-white`}>
+          transition-colors duration-200 group-hover:${titleColor}`}>
           {module.name}
         </h3>
       </div>
@@ -1081,9 +1095,9 @@ export default function DashboardPage() {
                       name: '更多功能',
                       path: '/tools',
                       icon: Settings,
-                      bgColor: 'bg-gray-100 hover:bg-gray-200',
+                      bgColor: 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800/50 dark:hover:bg-gray-700/60',
                       iconBg: 'bg-gray-500',
-                      textColor: 'text-gray-700'
+                      textColor: 'text-gray-700 dark:text-gray-300'
                     }}
                     onClick={handleModuleClickWithLoading}
                     onHover={handleModuleHover}
