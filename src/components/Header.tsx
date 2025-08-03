@@ -93,29 +93,32 @@ export function Header({
     }
   };
 
-  // 监听预加载进度和完成事件
+  // 监听预加载进度
   useEffect(() => {
-    const handlePreloadProgress = (event: CustomEvent) => {
-      console.log('收到预加载进度事件:', event.detail);
-      const { progress, stage } = event.detail;
+    // 直接监听preloadManager的进度
+    const progressCallback = (progress: number, stage?: string) => {
+      console.log('Header收到预加载进度:', progress, stage);
       setPreloadProgress(progress);
       if (stage) setPreloadStage(stage);
       if (progress > 0) setIsPreloading(true);
+      if (progress >= 100) {
+        setIsPreloading(false);
+        setPreloadStage('');
+      }
     };
 
-    const handlePreloadCompleted = (event: CustomEvent) => {
-      console.log('收到预加载完成事件:', event.detail);
-      setIsPreloading(false);
-      setPreloadStage('');
-      // 可以在这里更新UI状态
-    };
+    // 注册进度回调
+    preloadManager.onProgress(progressCallback);
 
-    window.addEventListener('preloadProgress', handlePreloadProgress as EventListener);
-    window.addEventListener('preloadCompleted', handlePreloadCompleted as EventListener);
+    // 初始化当前状态
+    const status = preloadManager.getPreloadStatus();
+    if (status.isPreloading) {
+      setIsPreloading(true);
+      setPreloadProgress(status.progress);
+    }
 
     return () => {
-      window.removeEventListener('preloadProgress', handlePreloadProgress as EventListener);
-      window.removeEventListener('preloadCompleted', handlePreloadCompleted as EventListener);
+      preloadManager.offProgress(progressCallback);
     };
   }, []);
 
