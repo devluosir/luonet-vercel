@@ -34,6 +34,7 @@ export function Header({
   const [showDropdown, setShowDropdown] = useState(false);
   const [isPreloading, setIsPreloading] = useState(false);
   const [preloadProgress, setPreloadProgress] = useState(0);
+  const [preloadStage, setPreloadStage] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -68,10 +69,12 @@ export function Header({
     
     setIsPreloading(true);
     setPreloadProgress(0);
+    setPreloadStage('准备中...');
     
     // 监听预加载进度
-    const progressCallback = (progress: number) => {
+    const progressCallback = (progress: number, stage?: string) => {
       setPreloadProgress(progress);
+      if (stage) setPreloadStage(stage);
     };
     
     preloadManager.onProgress(progressCallback);
@@ -83,6 +86,7 @@ export function Header({
       console.error('预加载失败:', error);
     } finally {
       setIsPreloading(false);
+      setPreloadStage('');
       preloadManager.offProgress(progressCallback);
       setShowDropdown(false);
     }
@@ -208,18 +212,60 @@ export function Header({
                       {isRefreshing ? '刷新中...' : '刷新权限'}
                     </button>
                   )}
-                  <button
-                    onClick={handlePreload}
-                    disabled={isPreloading}
-                    className={`flex items-center px-4 py-2 text-sm w-full transition-colors duration-200 ${
-                      isPreloading
-                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    <Download className={`h-4 w-4 mr-2 ${isPreloading ? 'animate-pulse' : ''}`} />
-                    {isPreloading ? `预加载中 ${preloadProgress}%` : preloadManager.isPreloaded() ? '资源已预加载' : '预加载资源'}
-                  </button>
+                                      <div className="relative">
+                      <button
+                        onClick={handlePreload}
+                        disabled={isPreloading}
+                        className={`flex items-center px-4 py-2 text-sm w-full transition-colors duration-200 relative overflow-hidden ${
+                          isPreloading
+                            ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                            : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50'
+                        }`}
+                      >
+                        {/* 进度条背景 */}
+                        {isPreloading && (
+                          <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/10 dark:to-blue-800/20 transition-all duration-300 ease-out" />
+                        )}
+                        
+                        {/* 进度条 */}
+                        {isPreloading && (
+                          <div 
+                            className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-300 dark:from-blue-700/40 dark:to-blue-600/50 transition-all duration-500 ease-out"
+                            style={{ width: `${preloadProgress}%` }}
+                          />
+                        )}
+                        
+                        {/* 进度条边框 */}
+                        {isPreloading && (
+                          <div 
+                            className="absolute inset-0 border-r-2 border-blue-400 dark:border-blue-300 transition-all duration-300 ease-out"
+                            style={{ width: `${preloadProgress}%` }}
+                          />
+                        )}
+                        
+                        {/* 内容 */}
+                        <div className="relative z-10 flex items-center w-full">
+                          <Download className={`h-4 w-4 mr-2 ${isPreloading ? 'animate-pulse' : ''}`} />
+                          <span className="flex-1 text-left">
+                            {isPreloading 
+                              ? (
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium">预加载中 {preloadProgress}%</span>
+                                  {preloadStage && (
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                      {preloadStage}
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                              : preloadManager.isPreloaded() 
+                                ? `资源已预加载 (${localStorage.getItem('preloadedResourcesCount') || preloadManager.getPreloadStatus().preloadedCount})` 
+                                : '预加载资源'
+                            }
+                          </span>
+                        </div>
+                      </button>
+                    </div>
                   {user.isAdmin && (
                     <button
                       onClick={() => {
