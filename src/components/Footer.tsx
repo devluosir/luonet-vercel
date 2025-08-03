@@ -34,12 +34,16 @@ export function Footer() {
         <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <a 
-                href="mailto:luo@luocompany.com"
-                className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-              >
-                Design by Roger
-              </a>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                Design{' '}
+                <a 
+                  href="/404"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors underline"
+                >
+                  by
+                </a>
+                {' '}Roger
+              </span>
               <span className="text-gray-300 dark:text-gray-700">|</span>
               <span className="text-sm text-gray-500 dark:text-gray-400">2025</span>
             </div>
