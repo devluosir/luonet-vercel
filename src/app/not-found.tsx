@@ -462,52 +462,54 @@ export default function NotFound() {
         </div>
       </div>
 
-      {/* 游戏容器 - 移动端优化 */}
-      <div className="w-full max-w-[100vw] px-[2px] mx-auto mt-16 sm:mt-20">
-        <div className="container mx-auto py-2 sm:py-4">
-          {/* 游戏选项卡 - 移动端优化 */}
+      {/* 游戏容器 - 保持正方形比例，以先到达的边界为基准 */}
+      <div className="w-full h-full flex flex-col justify-center items-center px-2 sm:px-4 py-4 sm:py-8">
+        <div className="w-full h-full flex flex-col justify-center items-center">
+          {/* 游戏选项卡 - 保持正方形比例优化 */}
           <div className="w-full">
-            <div className="flex justify-center mb-3 sm:mb-6">
-              <div className="bg-white rounded-xl shadow-lg p-1 border border-gray-200 w-full max-w-[280px] sm:max-w-none">
+            <div className="flex justify-center mb-3 sm:mb-6 px-2">
+              <div className="bg-white rounded-xl shadow-lg p-1 border border-gray-200 w-full max-w-[320px] sm:max-w-none">
                 <div className="flex space-x-1">
                   <button
                     onClick={() => setActiveTab('gomoku')}
-                    className={`flex-1 px-2 sm:px-8 py-2 sm:py-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 text-xs sm:text-base ${
+                    className={`flex-1 px-3 sm:px-8 py-2.5 sm:py-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-sm sm:text-base ${
                       activeTab === 'gomoku'
                         ? 'bg-gradient-to-r from-slate-500 to-gray-500 text-white shadow-sm'
                         : 'bg-transparent text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    <Square className="w-3 h-3 sm:w-5 sm:h-5" />
+                    <Square className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span>五子棋</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('game2048')}
-                    className={`flex-1 px-2 sm:px-8 py-2 sm:py-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-1 sm:space-x-2 text-xs sm:text-base ${
+                    className={`flex-1 px-3 sm:px-8 py-2.5 sm:py-4 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center space-x-1.5 sm:space-x-2 text-sm sm:text-base ${
                       activeTab === 'game2048'
                         ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-sm'
                         : 'bg-transparent text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    <Square className="w-3 h-3 sm:w-5 sm:h-5" />
+                    <Gamepad2 className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span>2048</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* 游戏区域 - 移动端优化 */}
-            <div className="rounded-xl p-0 lg:p-8 flex justify-center w-full">
-              {activeTab === 'gomoku' ? (
-                <div className="text-center w-full">
-                  {/* 棋盘 - 移动端响应式 */}
-                  <div className="inline-block bg-gradient-to-br from-slate-100 to-gray-100 p-1 lg:p-6 rounded-2xl border-0 shadow-lg relative w-full max-w-full">
+            {/* 游戏区域 - 保持正方形比例，以先到达的边界为基准 */}
+            <div className="rounded-xl p-0 lg:p-8 flex justify-center items-center w-full h-full">
+                              {activeTab === 'gomoku' ? (
+                  <div className="text-center w-full h-full flex flex-col justify-center items-center">
+                    {/* 棋盘 - 保持正方形比例 */}
+                    <div className="inline-block bg-gradient-to-br from-slate-100 to-gray-100 p-1 lg:p-6 rounded-2xl border-0 shadow-lg relative w-full max-w-full flex justify-center">
 
-                    <div className="gap-0 bg-gradient-to-br from-slate-200 to-gray-200 p-1 sm:p-2 rounded-xl border-0 w-full max-w-full h-auto aspect-square" style={{ 
+                    <div className="gap-0 bg-gradient-to-br from-slate-200 to-gray-200 p-1 sm:p-2 rounded-xl border-0 w-full aspect-square" style={{ 
                       display: 'grid',
                       gridTemplateColumns: 'repeat(15, 1fr)',
                       gridTemplateRows: 'repeat(15, 1fr)',
-                      pointerEvents: 'auto'
+                      pointerEvents: 'auto',
+                      maxWidth: 'min(100vw - 2rem, 70vh - 2rem)',
+                      maxHeight: 'min(100vw - 2rem, 70vh - 2rem)'
                     }}>
                       {gomokuBoard.map((row, rowIndex) =>
                         row.map((cell, colIndex) => (
@@ -570,11 +572,11 @@ export default function NotFound() {
                     )}
                   </div>
 
-                  {/* 游戏控制区域 - 移动端优化 */}
-                  <div className="mt-4 sm:mt-8 flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-6">
+                  {/* 游戏控制区域 - 保持正方形比例优化 */}
+                  <div className="mt-2 sm:mt-4 flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-6">
 
                     {!gameWinner && !gameDraw && (
-                      <div className="flex items-center space-x-2 sm:space-x-3 bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 rounded-xl px-2 sm:px-4 py-1 sm:py-3 shadow-md">
+                      <div className="flex items-center space-x-2 sm:space-x-3 bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 rounded-xl px-2 sm:px-4 py-1.5 sm:py-3 shadow-md">
                         <span className="text-gray-600 font-medium text-xs sm:text-sm">当前玩家:</span>
                         <div 
                           className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full shadow-md ${
@@ -589,18 +591,18 @@ export default function NotFound() {
                     
                     <button
                       onClick={resetGomoku}
-                      className="bg-gradient-to-r from-slate-500 to-gray-500 hover:from-slate-600 hover:to-gray-600 text-white font-semibold py-1 sm:py-3 px-3 sm:px-6 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center justify-center space-x-2 text-xs sm:text-base"
+                      className="bg-gradient-to-r from-slate-500 to-gray-500 hover:from-slate-600 hover:to-gray-600 text-white font-semibold py-1.5 sm:py-3 px-3 sm:px-6 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center justify-center space-x-2 text-sm sm:text-base"
                     >
                       <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4" />
                       <span>重新开始</span>
                     </button>
                   </div>
                 </div>
-              ) : (
-                <div className="text-center w-full">
-                  {/* 2048游戏区域 - 移动端响应式 */}
+                            ) : (
+                <div className="text-center w-full h-full flex flex-col justify-center items-center">
+                  {/* 2048游戏区域 - 保持正方形比例 */}
                   <div 
-                    className="inline-block bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-1 lg:p-6 rounded-2xl border-0 shadow-lg w-full max-w-full"
+                    className="inline-block bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-1 lg:p-6 rounded-2xl border-0 shadow-lg w-full max-w-full flex justify-center"
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
@@ -610,11 +612,13 @@ export default function NotFound() {
                     onMouseLeave={handleMouseUp}
                     style={{ touchAction: 'none', userSelect: 'none' }}
                   >
-                                         <div className="gap-1 sm:gap-2 bg-slate-200 border-0 rounded-xl shadow-inner p-2 sm:p-3 w-full max-w-full h-auto aspect-square" style={{ 
-                       display: 'grid',
-                       gridTemplateColumns: 'repeat(5, 1fr)',
-                       gridTemplateRows: 'repeat(5, 1fr)'
-                     }}>
+                    <div className="gap-1 sm:gap-2 bg-slate-200 border-0 rounded-xl shadow-inner p-2 sm:p-3 w-full aspect-square" style={{ 
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(5, 1fr)',
+                      gridTemplateRows: 'repeat(5, 1fr)',
+                      maxWidth: 'min(100vw - 2rem, 70vh - 2rem)',
+                      maxHeight: 'min(100vw - 2rem, 70vh - 2rem)'
+                    }}>
                       {board.map((row, rowIndex) =>
                         row.map((cell, colIndex) => (
                           <div
@@ -662,54 +666,66 @@ export default function NotFound() {
                     </div>
                   </div>
 
-                  {/* 2048游戏控制提示 */}
+                  {/* 2048游戏控制提示 - 保持正方形比例优化 */}
                   {game2048Active && (
-                    <div className="mt-2 sm:mt-4 text-center">
+                    <div className="mt-2 sm:mt-4 text-center hidden sm:block">
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                         支持键盘方向键、WASD、触摸滑动和鼠标拖拽
                       </p>
                     </div>
                   )}
 
-                  {/* 2048游戏控制按钮 - 移动端优化 */}
-                  <div className="mt-4 sm:mt-8 flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
+                  {/* 2048游戏控制按钮 - 保持正方形比例优化 */}
+                  <div className="mt-2 sm:mt-4 w-full">
                     {!game2048Active ? (
-                      <button
-                        onClick={init2048Game}
-                        className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-1 sm:py-3 px-3 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 text-xs sm:text-base"
-                      >
-                        开始游戏
-                      </button>
-                    ) : (
-                      <>
-                        <div className="bg-gradient-to-r from-blue-100 to-indigo-100 border border-blue-200 rounded-xl px-2 sm:px-4 py-1 sm:py-2 shadow-md">
-                          <p className="text-blue-700 font-medium text-xs sm:text-sm">分数: {game2048Score}</p>
-                        </div>
-                        <div className="bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 rounded-xl px-2 sm:px-4 py-1 sm:py-2 shadow-md">
-                          <p className="text-indigo-700 font-medium text-xs sm:text-sm">最高分: {game2048HighScore}</p>
-                        </div>
-                        <div className="bg-gradient-to-r from-green-100 to-emerald-100 border border-green-200 rounded-xl px-2 sm:px-4 py-1 sm:py-2 shadow-md">
-                          <p className="text-green-700 font-medium text-xs sm:text-sm">最高数字: {Math.max(...board.flat())}</p>
-                        </div>
+                      <div className="flex justify-center">
                         <button
-                          onClick={reset2048Game}
-                          className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold py-1 sm:py-2 px-2 sm:px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 text-xs sm:text-sm"
+                          onClick={init2048Game}
+                          className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-2 sm:py-3 px-6 sm:px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 text-sm sm:text-base"
                         >
-                          重新开始
+                          开始游戏
                         </button>
-                      </>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 sm:space-y-0">
+                        {/* 统计信息 - 保持正方形比例优化 */}
+                        <div className="grid grid-cols-3 gap-1 sm:gap-2 sm:flex sm:justify-center sm:space-x-3">
+                          <div className="bg-gradient-to-r from-blue-100 to-indigo-100 border border-blue-200 rounded-lg px-1.5 sm:px-2 py-1 sm:py-1.5 shadow-sm">
+                            <p className="text-blue-700 font-medium text-xs text-center">分数</p>
+                            <p className="text-blue-800 font-bold text-xs text-center">{game2048Score}</p>
+                          </div>
+                          <div className="bg-gradient-to-r from-indigo-100 to-purple-100 border border-indigo-200 rounded-lg px-1.5 sm:px-2 py-1 sm:py-1.5 shadow-sm">
+                            <p className="text-indigo-700 font-medium text-xs text-center">最高分</p>
+                            <p className="text-indigo-800 font-bold text-xs text-center">{game2048HighScore}</p>
+                          </div>
+                          <div className="bg-gradient-to-r from-green-100 to-emerald-100 border border-green-200 rounded-lg px-1.5 sm:px-2 py-1 sm:py-1.5 shadow-sm">
+                            <p className="text-green-700 font-medium text-xs text-center">最高数字</p>
+                            <p className="text-green-800 font-bold text-xs text-center">{Math.max(...board.flat())}</p>
+                          </div>
+                        </div>
+                        
+                        {/* 重新开始按钮 - 保持正方形比例优化 */}
+                        <div className="flex justify-center sm:justify-end pt-1.5 sm:pt-0">
+                          <button
+                            onClick={reset2048Game}
+                            className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 text-sm"
+                          >
+                            重新开始
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
 
-                  {/* 游戏结束提示 - 移动端优化 */}
+                  {/* 游戏结束提示 - 保持正方形比例优化 */}
                   {game2048Over && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-2xl">
-                      <div className="bg-white p-3 sm:p-8 rounded-2xl shadow-2xl text-center mx-4 max-w-[260px] sm:max-w-none">
-                        <h3 className="text-lg sm:text-2xl font-bold text-gray-800 mb-2 sm:mb-4">游戏结束</h3>
-                        <p className="text-gray-600 mb-3 sm:mb-6 text-xs sm:text-base">最终分数: {game2048Score}</p>
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-2xl p-4">
+                      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-2xl text-center w-full max-w-[280px] sm:max-w-[320px]">
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">游戏结束</h3>
+                        <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">最终分数: {game2048Score}</p>
                         <button
                           onClick={reset2048Game}
-                          className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-1 sm:py-3 px-3 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 text-xs sm:text-base"
+                          className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-2.5 sm:py-3 px-6 sm:px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 text-sm sm:text-base w-full"
                         >
                           再来一局
                         </button>
@@ -717,15 +733,15 @@ export default function NotFound() {
                     </div>
                   )}
 
-                  {/* 游戏获胜提示 - 移动端优化 */}
+                  {/* 游戏获胜提示 - 保持正方形比例优化 */}
                   {game2048Won && !game2048Over && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-2xl">
-                      <div className="bg-white p-3 sm:p-8 rounded-2xl shadow-2xl text-center mx-4 max-w-[260px] sm:max-w-none">
-                        <h3 className="text-lg sm:text-2xl font-bold text-green-600 mb-2 sm:mb-4">恭喜！</h3>
-                        <p className="text-gray-600 mb-3 sm:mb-6 text-xs sm:text-base">你达到了2048！游戏继续，挑战更高分数！</p>
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-2xl p-4">
+                      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-2xl text-center w-full max-w-[280px] sm:max-w-[320px]">
+                        <h3 className="text-xl sm:text-2xl font-bold text-green-600 mb-3 sm:mb-4">恭喜！</h3>
+                        <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">你达到了2048！游戏继续，挑战更高分数！</p>
                         <button
                           onClick={() => setGame2048Won(false)}
-                          className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-1 sm:py-3 px-3 sm:px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 text-xs sm:text-base"
+                          className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-2.5 sm:py-3 px-6 sm:px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 text-sm sm:text-base w-full"
                         >
                           继续游戏
                         </button>
