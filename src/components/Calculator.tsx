@@ -36,6 +36,52 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const [previousValue, setPreviousValue] = useState<number | null>(null);
   const [justCalculated, setJustCalculated] = useState(false); // 跟踪是否刚完成计算
 
+  // 从localStorage加载历史记录和位置偏好
+  useEffect(() => {
+    try {
+      // 加载历史记录
+      const savedHistory = localStorage.getItem('calculator-history');
+      if (savedHistory) {
+        const parsedHistory = JSON.parse(savedHistory);
+        if (Array.isArray(parsedHistory)) {
+          setHistory(parsedHistory);
+        }
+      }
+      
+      // 加载位置偏好
+      const savedPosition = localStorage.getItem('calculator-position');
+      if (savedPosition) {
+        const parsedPosition = JSON.parse(savedPosition);
+        if (parsedPosition && typeof parsedPosition.top === 'number' && typeof parsedPosition.left === 'number') {
+          setPopupPosition(parsedPosition);
+          setHasBeenDragged(true); // 标记已经拖动过，避免自动重新定位
+        }
+      }
+    } catch (error) {
+      console.error('加载计算器设置失败:', error);
+      // 如果加载失败，使用默认值
+      setHistory([]);
+    }
+  }, []);
+
+  // 保存历史记录到localStorage
+  const saveHistoryToStorage = (newHistory: HistoryItem[]) => {
+    try {
+      localStorage.setItem('calculator-history', JSON.stringify(newHistory));
+    } catch (error) {
+      console.error('保存历史记录失败:', error);
+    }
+  };
+
+  // 保存位置偏好到localStorage
+  const savePositionToStorage = (position: { top: number; left: number }) => {
+    try {
+      localStorage.setItem('calculator-position', JSON.stringify(position));
+    } catch (error) {
+      console.error('保存位置偏好失败:', error);
+    }
+  };
+
   // 计算器功能
   const inputDigit = (digit: string) => {
     // 如果刚完成计算，开始新算式
@@ -555,11 +601,16 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       result
     };
     
-    setHistory(prev => [newHistoryItem, ...prev.slice(0, 49)]); // 保留最近50条记录，超出时可通过滚动查看
+    setHistory(prev => {
+      const newHistory = [newHistoryItem, ...prev.slice(0, 49)]; // 保留最近50条记录，超出时可通过滚动查看
+      saveHistoryToStorage(newHistory); // 保存新的历史记录到localStorage
+      return newHistory;
+    });
   };
 
   const clearHistory = () => {
     setHistory([]);
+    saveHistoryToStorage([]); // 清空后也保存到localStorage
   };
 
 
@@ -724,10 +775,18 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    // 保存当前位置偏好
+    if (hasBeenDragged) {
+      savePositionToStorage(popupPosition);
+    }
   };
 
   const handleTouchEnd = () => {
     setIsDragging(false);
+    // 保存当前位置偏好
+    if (hasBeenDragged) {
+      savePositionToStorage(popupPosition);
+    }
   };
 
   // 监听鼠标和触摸移动和释放
@@ -891,6 +950,12 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           <button
             onClick={() => {
               setHasBeenDragged(false);
+              // 清除保存的位置偏好
+              try {
+                localStorage.removeItem('calculator-position');
+              } catch (error) {
+                console.error('清除位置偏好失败:', error);
+              }
               setTimeout(calculatePopupPosition, 10);
             }}
             className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

@@ -363,15 +363,6 @@ export default function ToolsPage() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <div className="text-gray-600 dark:text-gray-400 mb-4">暂无权限信息</div>
-        <div className="text-sm text-gray-500 mb-4">请联系管理员分配权限</div>
-        <div className="flex space-x-2 justify-center">
-          <button 
-            onClick={handleRefreshPermissions}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            刷新权限
-          </button>
-        </div>
       </div>
     </div>
   );
