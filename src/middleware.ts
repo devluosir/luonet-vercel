@@ -36,7 +36,33 @@ export default withAuth(
       return NextResponse.next();
     }
 
-    // 3. 其他路由需要认证 - 让 withAuth 处理权限检查
+    // 3. 检查是否是已知的业务路由
+    const knownRoutes = [
+      '/dashboard',
+      '/admin',
+      '/quotation',
+      '/packing',
+      '/invoice',
+      '/purchase',
+      '/history',
+      '/customer',
+      '/date-tools',
+      '/mail',
+      '/tools',
+      '/create-user',
+      '/api'
+    ];
+    
+    const isKnownRoute = knownRoutes.some(route => 
+      pathname === route || pathname.startsWith(route + '/')
+    );
+    
+    // 如果不是已知路由，直接通过让Next.js处理404
+    if (!isKnownRoute) {
+      return NextResponse.next();
+    }
+
+    // 4. 已知路由需要认证 - 让 withAuth 处理权限检查
     return null;
   },
   {
