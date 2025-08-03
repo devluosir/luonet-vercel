@@ -216,55 +216,7 @@ const ModuleButton = ({ module, onClick, onHover }: {
   const titleColor = module.titleColor || module.textColor || 'text-gray-800 dark:text-gray-200';
   const shortcutBg = module.shortcutBg || iconBg;
   
-  // 将Tailwind类名转换为内联样式，确保不被覆盖，并支持黑夜模式
-  const getBgStyle = (bgClass: string) => {
-    const colorMap: { [key: string]: { light: string; dark: string } } = {
-      'bg-blue-100': { light: '#dbeafe', dark: '#1e3a8a' },
-      'hover:bg-blue-200': { light: '#bfdbfe', dark: '#1d4ed8' },
-      'bg-green-100': { light: '#dcfce7', dark: '#14532d' },
-      'hover:bg-green-200': { light: '#bbf7d0', dark: '#15803d' },
-      'bg-teal-100': { light: '#ccfbf1', dark: '#134e4a' },
-      'hover:bg-teal-200': { light: '#99f6e4', dark: '#0f766e' },
-      'bg-purple-100': { light: '#f3e8ff', dark: '#581c87' },
-      'hover:bg-purple-200': { light: '#e9d5ff', dark: '#7c3aed' },
-      'bg-orange-100': { light: '#ffedd5', dark: '#7c2d12' },
-      'hover:bg-orange-200': { light: '#fed7aa', dark: '#ea580c' },
-      'bg-indigo-100': { light: '#e0e7ff', dark: '#312e81' },
-      'hover:bg-indigo-200': { light: '#c7d2fe', dark: '#4338ca' },
-      'bg-pink-100': { light: '#fce7f3', dark: '#831843' },
-      'hover:bg-pink-200': { light: '#fbcfe8', dark: '#be185d' },
-      'bg-gray-100': { light: '#f3f4f6', dark: '#374151' },
-      'hover:bg-gray-200': { light: '#e5e7eb', dark: '#4b5563' },
-      'bg-violet-100': { light: '#ede9fe', dark: '#4c1d95' },
-      'hover:bg-violet-200': { light: '#ddd6fe', dark: '#6d28d9' },
-      'bg-amber-100': { light: '#fef3c7', dark: '#78350f' },
-      'hover:bg-amber-200': { light: '#fde68a', dark: '#d97706' },
-      'bg-cyan-100': { light: '#cffafe', dark: '#164e63' },
-      'hover:bg-cyan-200': { light: '#a5f3fc', dark: '#0891b2' },
-      'bg-emerald-100': { light: '#d1fae5', dark: '#064e3b' },
-      'hover:bg-emerald-200': { light: '#a7f3d0', dark: '#047857' },
-      'bg-red-100': { light: '#fee2e2', dark: '#7f1d1d' },
-      'hover:bg-red-200': { light: '#fecaca', dark: '#dc2626' }
-    };
-    
-    const baseColor = bgClass.split(' ')[0];
-    const colorInfo = colorMap[baseColor];
-    
-    if (!colorInfo) {
-      return { backgroundColor: '#f3f4f6' };
-    }
-    
-    // 检查是否为黑夜模式
-    const isDarkMode = typeof window !== 'undefined' && 
-      (document.documentElement.classList.contains('dark') || 
-       window.matchMedia('(prefers-color-scheme: dark)').matches);
-    
-    return { 
-      backgroundColor: isDarkMode ? colorInfo.dark : colorInfo.light 
-    };
-  };
-  
-  const bgStyle = getBgStyle(bgColor);
+  // 移除内联样式，改用CSS类实现主题切换
   
   return (
     <button
@@ -277,12 +229,11 @@ const ModuleButton = ({ module, onClick, onHover }: {
         active:shadow-sm
         p-4 h-20 flex items-center space-x-3 w-full
         bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm`}
-      style={bgStyle}
       onClick={() => onClick(module)}
       onMouseEnter={() => onHover?.(module)}
     >
       {/* 图标容器 */}
-      <div className={`p-2 rounded-lg ${iconBg} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
+      <div className={`p-2 rounded-lg ${iconBg} flex-shrink-0 shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-110`}>
         <Icon className="w-5 h-5 text-white transition-colors" />
       </div>
       {/* 文本内容 */}
