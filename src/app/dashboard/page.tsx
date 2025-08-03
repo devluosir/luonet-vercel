@@ -283,7 +283,7 @@ const ModuleButton = ({ module, onClick, onHover }: {
     >
       {/* 图标容器 */}
       <div className={`p-2 rounded-lg ${iconBg} flex-shrink-0 shadow-md group-hover:shadow-lg transition-shadow duration-300`}>
-        <Icon className="w-5 h-5 text-white" />
+        <Icon className="w-5 h-5 text-white transition-colors" />
       </div>
       {/* 文本内容 */}
       <div className="flex-1 min-w-0 text-left">
@@ -1213,7 +1213,7 @@ export default function DashboardPage() {
                             hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center space-x-1"
                           title="单据管理"
                         >
-                          <Archive className="w-3 h-3" />
+                          <Archive className="w-3 h-3 transition-colors" />
                           <span className="hidden sm:inline">管理</span>
                         </button>
                       </div>
@@ -1303,7 +1303,7 @@ export default function DashboardPage() {
                         <div className="flex items-center space-x-3">
                           <div className={`w-7 h-7 rounded-lg ${bgColor} flex items-center justify-center flex-shrink-0
                             group-hover:scale-110 transition-transform duration-200`}>
-                            <Icon className={`w-3.5 h-3.5 ${textColor}`} />
+                            <Icon className={`w-3.5 h-3.5 ${textColor} transition-colors`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className={`text-sm font-medium text-gray-900 dark:text-white truncate
@@ -1344,7 +1344,7 @@ export default function DashboardPage() {
                           </div>
                           {/* 添加一个微妙的箭头指示器 */}
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
-                            <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                             </svg>
                           </div>

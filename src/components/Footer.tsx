@@ -59,7 +59,7 @@ export function Footer() {
                 aria-label="打开计算器"
                 title="打开计算器"
               >
-                <Calculator className="h-4 w-4" />
+                <Calculator className="h-4 w-4 transition-colors" />
               </button>
               <button
                 ref={dateCalculatorButtonRef}
@@ -70,7 +70,7 @@ export function Footer() {
                 aria-label="打开日期计算器"
                 title="打开日期计算器"
               >
-                <CalendarDays className="h-4 w-4" />
+                <CalendarDays className="h-4 w-4 transition-colors" />
               </button>
             </div>
 
@@ -82,9 +82,9 @@ export function Footer() {
                 aria-label="切换主题模式"
               >
                 {resolvedTheme === 'dark' ? (
-                  <Sun className="h-4 w-4" />
+                  <Sun className="h-4 w-4 transition-colors" />
                 ) : (
-                  <Moon className="h-4 w-4" />
+                  <Moon className="h-4 w-4 transition-colors" />
                 )}
               </button>
             )}
