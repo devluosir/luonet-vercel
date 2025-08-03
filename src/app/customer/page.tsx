@@ -1,10 +1,30 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Building2, FileText, Package, Receipt, ShoppingCart, ArrowLeft, Edit, ChevronRight, Settings, Trash2, X, Check, Save, User } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Settings, 
+  Users, 
+  Building2, 
+  FileText, 
+  Trash2, 
+  Edit, 
+  Search, 
+  Filter,
+  Download,
+  Upload,
+  MoreHorizontal,
+  Check,
+  X,
+  Package,
+  Receipt,
+  ChevronRight,
+  ShoppingCart,
+  User,
+  Save
+} from 'lucide-react';
 import { format } from 'date-fns';
 
 // 修改客户/供应商信息接口
@@ -33,20 +53,10 @@ interface SupplierInfo {
 }
 
 export default function CustomerPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'customer' | 'supplier'>('customer');
   const [mounted, setMounted] = useState(false);
   const [customers, setCustomers] = useState<CustomerInfo[]>([]);
   const [suppliers, setSuppliers] = useState<SupplierInfo[]>([]);
-
-  // 使用session中的权限信息进行权限检查
-  const hasPermission = useCallback((moduleId: string): boolean => {
-    if (!session?.user?.permissions) return false;
-    
-    const permission = session.user.permissions.find(p => p.moduleId === moduleId);
-    return permission?.canAccess || false;
-  }, [session?.user?.permissions]);
 
   // 设置相关状态
   const [showSettings, setShowSettings] = useState(false);
@@ -478,9 +488,9 @@ export default function CustomerPage() {
   }
 
   // 移除登录检查，因为中间件已经处理了认证
-  if (!session) {
-    return null;
-  }
+  // if (!session) {
+  //   return null;
+  // }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">

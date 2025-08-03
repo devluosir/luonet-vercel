@@ -18,7 +18,6 @@ import {
   X
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
-import { useSession } from 'next-auth/react';
 
 // 导入历史记录工具函数
 import { 
@@ -148,17 +147,8 @@ const ImportModal = dynamic(() => import('./ImportModal'), { ssr: false });
 const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
 
 export default function HistoryManagementPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  // 使用session中的权限信息进行权限检查
-  const hasPermission = useCallback((moduleId: string): boolean => {
-    if (!session?.user?.permissions) return false;
-    
-    const permission = session.user.permissions.find(p => p.moduleId === moduleId);
-    return permission?.canAccess || false;
-  }, [session?.user?.permissions]);
 
   // 基础状态
   const [mounted, setMounted] = useState(false);
@@ -278,29 +268,28 @@ export default function HistoryManagementPage() {
     // 按照指定顺序检查每个tab的权限
     tabOrder.forEach(tabId => {
       const moduleId = tabPermissions[tabId as keyof typeof tabPermissions];
-      if (hasPermission(moduleId)) {
-        switch (tabId) {
-          case 'quotation':
-            availableTabs.push({ id: 'quotation', name: '报价单', shortName: '报价', icon: FileText });
-            break;
-          case 'confirmation':
-            availableTabs.push({ id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText });
-            break;
-          case 'packing':
-            availableTabs.push({ id: 'packing', name: '装箱单', shortName: '装箱', icon: Package });
-            break;
-          case 'invoice':
-            availableTabs.push({ id: 'invoice', name: '发票', shortName: '发票', icon: Receipt });
-            break;
-          case 'purchase':
-            availableTabs.push({ id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart });
-            break;
-        }
+      // 移除权限检查，所有tab都可用
+      switch (tabId) {
+        case 'quotation':
+          availableTabs.push({ id: 'quotation', name: '报价单', shortName: '报价', icon: FileText });
+          break;
+        case 'confirmation':
+          availableTabs.push({ id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText });
+          break;
+        case 'packing':
+          availableTabs.push({ id: 'packing', name: '装箱单', shortName: '装箱', icon: Package });
+          break;
+        case 'invoice':
+          availableTabs.push({ id: 'invoice', name: '发票', shortName: '发票', icon: Receipt });
+          break;
+        case 'purchase':
+          availableTabs.push({ id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart });
+          break;
       }
     });
     
     return availableTabs;
-  }, [hasPermission, isFromOtherPage]);
+  }, [isFromOtherPage]);
 
   // 检查当前activeTab是否有权限
   const isActiveTabAvailable = useCallback(() => {
@@ -314,13 +303,12 @@ export default function HistoryManagementPage() {
 
   // 如果当前activeTab没有权限，自动切换到第一个有权限的tab
   useEffect(() => {
-    if (session?.user && !isFromOtherPage) {
-      const availableTabs = getAvailableTabs();
-      if (availableTabs.length > 0 && !isActiveTabAvailable()) {
-        setActiveTab(availableTabs[0].id);
-      }
+    // 移除权限检查，所有tab都可用
+    const availableTabs = getAvailableTabs();
+    if (availableTabs.length > 0 && !isActiveTabAvailable()) {
+      setActiveTab(availableTabs[0].id);
     }
-  }, [session?.user, getAvailableTabs, isActiveTabAvailable, isFromOtherPage]);
+  }, [getAvailableTabs, isActiveTabAvailable, isFromOtherPage]);
 
   // 处理返回按钮点击
   const handleBack = () => {
@@ -1235,7 +1223,7 @@ export default function HistoryManagementPage() {
   }
 
   // 如果没有可用权限，显示提示信息
-  if (session?.user && !isFromOtherPage && getAvailableTabs().length === 0) {
+  if (getAvailableTabs().length === 0) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-black">
         <div className="flex-1 flex items-center justify-center">

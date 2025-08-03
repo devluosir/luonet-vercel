@@ -54,14 +54,13 @@ export default withAuth(
           return true;
         }
 
-        // 3. 没有token的情况
+        // 3. 没有token的情况 - 拒绝所有其他访问
         if (!token) {
           return false;
         }
 
         // 4. 管理员路由需要管理员权限验证
         if (ADMIN_PATHS.some(path => pathname.startsWith(path))) {
-          // 管理员路由需要明确的isAdmin=true
           return token.isAdmin === true;
         }
 

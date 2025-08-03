@@ -22,7 +22,6 @@ import ItemsTable from '@/components/invoice/ItemsTable';
 import { addInvoiceHistory, getInvoiceHistory, saveInvoiceHistory } from '@/utils/invoiceHistory';
 import { v4 as uuidv4 } from 'uuid';
 import dynamic from 'next/dynamic';
-import { useSession } from 'next-auth/react';
 
 // 动态导入PDFPreviewModal
 const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
@@ -76,7 +75,6 @@ interface ErrorWithMessage {
 export default function InvoicePage() {
   const router = useRouter();
   const pathname = usePathname();
-  const { data: session } = useSession();
 
   // 1. 状态定义
   // 基础状态

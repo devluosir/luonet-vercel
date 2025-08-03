@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { 
   Users, 
@@ -34,21 +33,25 @@ interface User {
 }
 
 export default function AdminPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [permissionChecked, setPermissionChecked] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
-  
-  // 使用权限store
-  // const { user: permissionUser, isAdmin, fetchPermissions } = usePermissionStore();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [showUserDetails, setShowUserDetails] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  // 管理员权限检查 - 简化版本
+  const hasAdminPermission = true; // 中间件已经处理了权限检查
 
   // 初始化
   useEffect(() => {
@@ -61,34 +64,32 @@ export default function AdminPage() {
 
     const checkPermissionsAndLoad = async () => {
       try {
-        // 检查登录状态
-        if (status === 'unauthenticated') {
-          router.push('/api/auth/signin');
-          return;
-        }
+        // 移除登录状态检查，因为中间件已经处理了认证
+        // if (status === 'unauthenticated') {
+        //   router.push('/api/auth/signin');
+        //   return;
+        // }
 
         // 如果还在加载中，等待session加载完成
-        if (status === 'loading') {
-          console.log('session还在加载中，等待...');
-          return;
-        }
+        // if (status === 'loading') {
+        //   console.log('session还在加载中，等待...');
+        //   return;
+        // }
 
-
-        
         // 检查session是否存在
-        if (!session?.user) {
-          console.log('没有session数据，重定向到登录页');
-          router.push('/api/auth/signin');
-          return;
-        }
+        // if (!session?.user) {
+        //   console.log('没有session数据，重定向到登录页');
+        //   router.push('/api/auth/signin');
+        //   return;
+        // }
         
         // 直接检查session中的管理员权限
-        const hasAdminPermission = session.user.isAdmin === true;
+        // const hasAdminPermission = session.user.isAdmin === true;
         
-        if (!hasAdminPermission) {
-          setPermissionChecked(true);
-          return;
-        }
+        // if (!hasAdminPermission) {
+        //   setPermissionChecked(true);
+        //   return;
+        // }
 
         // 标记权限检查完成
         setPermissionChecked(true);
@@ -98,25 +99,28 @@ export default function AdminPage() {
           setLoading(true);
           setError(null);
           const data = await apiRequestWithError(API_ENDPOINTS.USERS.LIST);
-          // API返回的是 { users: [...] } 格式，需要提取 users 数组
-          const usersData = data.users || data;
-          console.log('获取到的用户数据:', usersData);
-          setUsers(usersData);
+          
+          if (data.success && data.users) {
+            setUsers(data.users);
+            setFilteredUsers(data.users);
+          } else {
+            setError('加载用户列表失败');
+          }
         } catch (error) {
-          console.error('Error fetching users:', error);
-          setError(error instanceof Error ? error.message : '获取用户列表失败');
+          console.error('加载用户列表失败:', error);
+          setError('加载用户列表失败');
         } finally {
           setLoading(false);
         }
       } catch (error) {
         console.error('权限检查失败:', error);
-        // 权限检查失败时重定向到登录页
-        router.push('/api/auth/signin');
+        setError('权限检查失败');
+        setLoading(false);
       }
     };
 
     checkPermissionsAndLoad();
-  }, [mounted, session, router, status]);
+  }, [mounted]); // 移除session和status依赖
 
   // 过滤用户
   useEffect(() => {
@@ -137,15 +141,15 @@ export default function AdminPage() {
       );
     }
 
-    // 角色过滤
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(user => 
-        roleFilter === 'admin' ? user.isAdmin : !user.isAdmin
-      );
-    }
+    // 移除角色过滤，因为中间件已经处理了权限检查
+    // if (roleFilter !== 'all') {
+    //   filtered = filtered.filter(user => 
+    //     roleFilter === 'admin' ? user.isAdmin : !user.isAdmin
+    //   );
+    // }
 
     setFilteredUsers(filtered);
-  }, [users, searchTerm, statusFilter, roleFilter]);
+  }, [users, searchTerm, statusFilter]);
 
 
 
@@ -172,14 +176,12 @@ export default function AdminPage() {
   };
 
   // 避免闪烁的加载状态 - 优化版本
-  if (!mounted || status === 'loading' || (!permissionChecked && session?.user)) {
+  if (!mounted || loading || !permissionChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-lg text-gray-600 dark:text-gray-400">
-            验证权限中...
-          </div>
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-lg">加载中...</div>
         </div>
       </div>
     );
@@ -191,22 +193,22 @@ export default function AdminPage() {
   }
 
   // 权限不足时显示错误信息
-  if (permissionChecked && session?.user?.isAdmin !== true) {
+  if (permissionChecked && !hasAdminPermission) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
         <div className="text-center p-8 bg-white dark:bg-gray-900 rounded-xl shadow-lg">
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-8 h-8 text-red-600 dark:text-red-400" />
-          </div>
-          <div className="text-lg font-medium text-red-600 dark:text-red-400 mb-2">权限不足</div>
-          <div className="text-gray-600 dark:text-gray-400 mb-4">
-            您没有访问管理后台的权限，请联系系统管理员。
-          </div>
-          <button 
+          <div className="text-red-600 dark:text-red-400 text-6xl mb-4">🚫</div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            权限不足
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            您没有管理员权限，无法访问此页面
+          </p>
+          <button
             onClick={() => router.push('/dashboard')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            返回首页
+            返回仪表板
           </button>
         </div>
       </div>

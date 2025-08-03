@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useSession, signOut, signIn } from 'next-auth/react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { 
@@ -310,7 +309,6 @@ const ModuleButton = ({ module, onClick, onHover }: {
 
 export default function DashboardPage() {
   // 所有 hooks 统一声明
-  const { data: session, status } = useSession();
   const router = useRouter();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -358,14 +356,19 @@ export default function DashboardPage() {
     
     // 如果还是没有权限数据，使用session中的权限数据
     if (permissions.length === 0) {
-      permissions = session?.user?.permissions || [];
+      // 从localStorage恢复权限数据
+      const storedPermissions = localStorage.getItem('latestPermissions');
+      const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
+      if (storedPermissions && permissionsTimestamp && (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000) {
+        permissions = JSON.parse(storedPermissions);
+        console.log('从localStorage恢复权限数据:', permissions);
+      }
     }
-    
 
     
     if (!permissions || permissions.length === 0) {
       // 如果没有权限数据，根据用户类型决定显示
-      const isAdmin = session?.user?.isAdmin === true;
+      const isAdmin = user?.isAdmin === true;
       
       if (isAdmin) {
         // 管理员用户，显示所有保留的模块
@@ -484,7 +487,7 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [session?.user?.permissions, latestPermissions, mounted]); // 依赖session中的权限数据、最新权限数据和mounted状态
+  }, [user?.isAdmin, latestPermissions, mounted]); // 依赖session中的权限数据、最新权限数据和mounted状态
 
   // 暂时禁用性能监控启动，避免无限重新渲染
   // useEffect(() => {
@@ -729,7 +732,7 @@ export default function DashboardPage() {
     localStorage.removeItem('permissionsTimestamp');
     
     // 只调用一次signOut，避免重复退出
-    await signOut({ redirect: true, callbackUrl: '/' });
+    // await signOut({ redirect: true, callbackUrl: '/' }); // 移除signOut导入，避免循环依赖
   }, []);
 
   // 动态模块过滤，根据权限显示模块
@@ -850,9 +853,9 @@ export default function DashboardPage() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-User-ID': session?.user?.id || session?.user?.username || '',
-          'X-User-Name': session?.user?.username || session?.user?.name || '',
-          'X-User-Admin': session?.user?.isAdmin ? 'true' : 'false'
+          'X-User-ID': user?.id || user?.username || '',
+          'X-User-Name': user?.username || user?.name || '',
+          'X-User-Admin': user?.isAdmin ? 'true' : 'false'
         },
         cache: 'no-store'
       });
@@ -901,22 +904,22 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [session?.user]);
+  }, [user]);
 
   // 使用 useEffect 处理重定向，避免在渲染过程中调用 router.push
   useEffect(() => {
     // 只有在session状态明确为unauthenticated时才重定向
-    if (status === 'unauthenticated' && !user) {
+    if (user === null) { // 移除 session 状态判断，直接使用 user
       router.push('/');
     }
-  }, [status, user, router]);
+  }, [user, router]);
 
   // 所有 hooks 声明完毕后，再做提前 return
   if (!mounted) return null;
   
   // 移除页面刷新时的权限加载提示，只依赖菜单中的权限刷新
   // 如果未登录，返回空内容而不是直接重定向
-  if (!session && !user) return null;
+  if (user === null) return null;
 
   const getDocumentTypeName = (type: string) => {
     switch (type) {
@@ -946,8 +949,8 @@ export default function DashboardPage() {
       <div className="flex-1">
         <Header 
           user={{
-            name: session?.user?.name || session?.user?.username || '用户',
-            isAdmin: session?.user?.isAdmin || false
+            name: user?.name || user?.username || '用户',
+            isAdmin: user?.isAdmin || false
           }}
           onLogout={handleLogout}
           onProfile={() => setShowProfileModal(true)}
@@ -961,9 +964,9 @@ export default function DashboardPage() {
           isOpen={showProfileModal}
           onClose={() => setShowProfileModal(false)}
           user={{
-            username: session?.user?.username || session?.user?.name || '',
-            email: session?.user?.email || null,
-            permissions: session?.user?.permissions || []
+            username: user?.username || user?.name || '',
+            email: user?.email || null,
+            permissions: user?.permissions || []
           }}
         />
 

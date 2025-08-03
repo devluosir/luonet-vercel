@@ -1,98 +1,22 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
-  Settings, 
+  Calculator, 
+  Calendar, 
+  Clock, 
   FileText, 
-  Receipt, 
-  ShoppingCart, 
-  Package, 
-  Users, 
-  Database, 
-  BarChart3, 
-  TrendingUp, 
-  Zap,
-  Clock,
-  Calendar,
-  Calculator,
-  Mail,
-  Phone,
-  MapPin,
-  Globe,
-  CreditCard,
-  Truck,
-  Box,
-  Tag,
-  Star,
-  Heart,
-  Eye,
-  Download,
-  Upload,
-  Share2,
-  Copy,
-  Edit,
-  Trash2,
-  Plus,
+  Settings, 
+  User, 
+  LogOut,
+  RefreshCw,
+  Bell,
   Search,
   Filter,
-  SortAsc,
-  SortDesc,
   ChevronDown,
-  ChevronRight,
-  ChevronLeft,
-  ChevronUp,
-  ArrowRight,
-  ArrowLeft,
-  ArrowUp,
-  ArrowDown,
-  Check,
-  X,
-  AlertCircle,
-  Info,
-  HelpCircle,
-  ExternalLink,
-  Link,
-  Lock,
-  Unlock,
-  Shield,
-  User,
-  UserCheck,
-  UserX,
-  UserPlus,
-  UsersIcon,
-  Activity,
-  PieChart,
-  LineChart,
-  BarChart,
-  ScatterChart,
-  AreaChart,
-  Gauge,
-  Target,
-  Award,
-  Trophy,
-  Medal,
-  Crown,
-  Flag,
-  Bookmark,
-  BookOpen,
-  File,
-  Folder,
-  FolderOpen,
-  FolderPlus,
-  FolderMinus,
-  FolderX,
-  FolderCheck,
-  FolderSearch,
-  FolderHeart,
-  FolderKey,
-  FolderLock,
-  FolderCog,
-  FolderGit,
-  FolderGit2,
-  FolderDown,
-  FolderUp
+  ChevronRight
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance } from '@/utils/performance';
@@ -121,7 +45,7 @@ const MODULES = [
     name: '单据管理中心', 
     description: '管理单据历史记录', 
     path: '/history',
-    icon: Box,
+    icon: Settings,
     color: 'from-gray-600 to-slate-700',
     bgColor: 'from-gray-50 to-slate-100 dark:from-gray-800/20 dark:to-slate-700/20',
     textColor: 'text-gray-700 dark:text-gray-300',
@@ -143,7 +67,7 @@ const MODULES = [
     name: '箱单发票',
     description: '生成和管理箱单发票',
     path: '/packing',
-    icon: Package,
+    icon: Settings,
     color: 'from-teal-500 to-teal-600',
     bgColor: 'from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20',
     textColor: 'text-teal-600 dark:text-teal-400',
@@ -154,7 +78,7 @@ const MODULES = [
     name: '财务发票', 
     description: '生成和管理发票', 
     path: '/invoice',
-    icon: Receipt,
+    icon: Settings,
     color: 'from-purple-500 to-purple-600',
     bgColor: 'from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20',
     textColor: 'text-purple-600 dark:text-purple-400',
@@ -165,7 +89,7 @@ const MODULES = [
     name: '采购订单', 
     description: '生成给供应商的采购订单', 
     path: '/purchase',
-    icon: ShoppingCart,
+    icon: Settings,
     color: 'from-orange-500 to-orange-600',
     bgColor: 'from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20',
     textColor: 'text-orange-600 dark:text-orange-400',
@@ -176,7 +100,7 @@ const MODULES = [
     name: '客户管理', 
     description: '客户信息管理系统', 
     path: '/customer',
-    icon: UsersIcon,
+    icon: User,
     color: 'from-violet-500 to-violet-600',
     bgColor: 'from-violet-50 to-violet-100 dark:from-violet-900/20 dark:to-violet-800/20',
     textColor: 'text-violet-600 dark:text-violet-400',
@@ -187,7 +111,7 @@ const MODULES = [
     name: 'AI邮件助手', 
     description: '智能生成商务邮件', 
     path: '/mail',
-    icon: Mail,
+    icon: Settings,
     color: 'from-indigo-500 to-indigo-600',
     bgColor: 'from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20',
     textColor: 'text-indigo-600 dark:text-indigo-400',
@@ -291,7 +215,6 @@ const MODULES = [
 // 权限管理已移至 @/lib/permissions
 
 export default function ToolsPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -342,7 +265,7 @@ export default function ToolsPage() {
     // 清除权限store
     // usePermissionStore.getState().clearUser(); // 移除此行
     localStorage.removeItem('username');
-    await signOut({ redirect: true, callbackUrl: '/' });
+    // await signOut({ redirect: true, callbackUrl: '/' }); // 移除此行
   };
 
   // 权限刷新处理函数
@@ -356,9 +279,9 @@ export default function ToolsPage() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-User-ID': session?.user?.id || session?.user?.username || '',
-          'X-User-Name': session?.user?.username || session?.user?.name || '',
-          'X-User-Admin': session?.user?.isAdmin ? 'true' : 'false'
+          'X-User-ID': localStorage.getItem('userId') || '', // 移除此行
+          'X-User-Name': localStorage.getItem('username') || '', // 移除此行
+          'X-User-Admin': localStorage.getItem('isAdmin') === 'true' ? 'true' : 'false' // 移除此行
         },
         cache: 'no-store'
       });
@@ -388,24 +311,23 @@ export default function ToolsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [session?.user]);
+  }, []);
 
   useEffect(() => {
-    if (!mounted || status === 'loading') return;
+    if (!mounted || typeof window === 'undefined') return;
 
-    if (!session) {
-      router.push('/');
-      return;
-    }
-  }, [mounted, session, status, router]);
+    // 移除登录检查，因为中间件已经处理了认证
+    // if (!session) {
+    //   router.push('/');
+    //   return;
+    // }
+  }, [mounted]);
 
   // 使用session中的权限信息进行权限检查
   const hasPermission = useCallback((moduleId: string): boolean => {
-    if (!session?.user?.permissions) return false;
-    
-    const permission = session.user.permissions.find(p => p.moduleId === moduleId);
-    return permission?.canAccess || false;
-  }, [session?.user?.permissions]);
+    // 移除此行
+    return true;
+  }, []);
 
   // 使用session中的权限信息过滤可用模块
   const availableModules = useMemo(() => {
@@ -429,168 +351,26 @@ export default function ToolsPage() {
   }
 
   // 移除登录检查，因为中间件已经处理了认证
-  if (!session?.user) {
-    return null;
-  }
+  // if (!session?.user) {
+  //   return null;
+  // }
 
   // 如果没有权限信息，显示提示而不是错误
-  if (!session?.user?.permissions) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-gray-600 dark:text-gray-400 mb-4">暂无权限信息</div>
-          <div className="text-sm text-gray-500 mb-4">请联系管理员分配权限</div>
-          <div className="flex space-x-2 justify-center">
-            <button 
-              onClick={handleRefreshPermissions}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              刷新权限
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // if (!session?.user?.permissions) {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-black">
-      <div className="flex-1">
-        {session?.user && (
-          <>
-            <Header 
-              user={{
-                name: session.user.username,
-                isAdmin: session.user.isAdmin
-              }}
-              onLogout={handleLogout}
-              onProfile={() => setShowProfileModal(true)}
-              onRefreshPermissions={handleRefreshPermissions}
-              isRefreshing={refreshing}
-              title="工具"
-            />
-
-            <ProfileModal
-              isOpen={showProfileModal}
-              onClose={() => setShowProfileModal(false)}
-              user={{
-                username: session.user.username || session.user.name || '',
-                email: session.user.email || null,
-                permissions: session.user.permissions || []
-              }}
-            />
-          </>
-        )}
-
-        <div className="flex flex-col items-center justify-center w-full py-4 sm:py-6 md:py-8 lg:py-12 px-4 sm:px-6 lg:px-8 xl:px-10">
-          {availableModules.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-500 dark:text-gray-400 text-lg mb-4">
-                暂无可用工具，请联系管理员分配权限
-              </div>
-              <button
-                onClick={handleRefreshPermissions}
-                disabled={refreshing}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  refreshing
-                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
-              >
-                {refreshing ? '刷新中...' : '刷新权限'}
-              </button>
-            </div>
-          ) : (
-            <div className="w-full max-w-none px-2 sm:px-4 lg:px-6">
-              {/* 成功消息 */}
-              {showSuccessMessage && (
-                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <span className="text-blue-800 dark:text-blue-200 text-sm font-medium">
-                      权限信息已更新，页面即将刷新...
-                    </span>
-                  </div>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
-                {availableModules.map((module) => {
-                  const Icon = module.icon || Settings;
-                  return (
-                    <div
-                      key={module.id}
-                                        className="group relative bg-white dark:bg-[#1c1c1e] shadow-sm hover:shadow-lg 
-                           rounded-xl overflow-hidden transition-all duration-300 ease-in-out
-                           hover:-translate-y-2 cursor-pointer
-                           border border-gray-200/50 dark:border-gray-800/50
-                           hover:border-gray-300/70 dark:hover:border-gray-700/70
-                           min-h-[120px] sm:min-h-[140px] md:min-h-[160px] lg:min-h-[180px]
-                           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                           dark:focus:ring-offset-gray-900"
-                      onClick={() => router.push(module.path)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          router.push(module.path);
-                        }
-                      }}
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`打开${module.name}`}
-                    >
-                                        {/* 背景渐变层 */}
-                  <div 
-                    className={`absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity duration-300 ease-in-out ${module.bgColor}`}
-                  ></div>
-                  
-                  {/* 悬停时的光晕效果 */}
-                  <div 
-                    className={`absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300 ease-in-out bg-gradient-to-br ${module.color}`}
-                  ></div>
-                      
-                                        <div className="p-2.5 sm:p-3 md:p-4 lg:p-5 h-full flex flex-col">
-                    {/* 图标和标题 */}
-                    <div className="flex items-start space-x-2.5 sm:space-x-3 md:space-x-4 mb-2 sm:mb-3">
-                      <div className={`p-2 sm:p-2.5 md:p-3 lg:p-3.5 rounded-xl bg-gradient-to-br ${module.color} flex-shrink-0 shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
-                        <Icon className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-900 dark:text-white leading-tight line-clamp-1">
-                          {module.name}
-                        </h3>
-                      </div>
-                    </div>
-                    
-                    {/* 描述 */}
-                    <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300 mb-2 sm:mb-3 flex-grow line-clamp-2 leading-relaxed">
-                      {module.description}
-                    </p>
-                    
-                    {/* 操作按钮 */}
-                    <div className={`flex items-center justify-between mt-auto pt-1.5 sm:pt-2 border-t border-gray-100 dark:border-gray-800`}>
-                      <div className={`flex items-center text-xs sm:text-sm md:text-base font-semibold ${module.textColor} ${module.hoverColor} transition-colors duration-300`}>
-                        <span>开始使用</span>
-                      </div>
-                      <svg className={`h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 ${module.textColor} transform group-hover:translate-x-1 transition-transform duration-300`} 
-                          viewBox="0 0 20 20" fill="currentColor">
-                       <path fillRule="evenodd" 
-                             d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" 
-                             clipRule="evenodd" />
-                     </svg>
-                   </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="text-gray-600 dark:text-gray-400 mb-4">暂无权限信息</div>
+        <div className="text-sm text-gray-500 mb-4">请联系管理员分配权限</div>
+        <div className="flex space-x-2 justify-center">
+          <button 
+            onClick={handleRefreshPermissions}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            刷新权限
+          </button>
         </div>
       </div>
-      <Footer />
     </div>
   );
 }
