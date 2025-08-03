@@ -25,6 +25,8 @@ export default function NotFound() {
   const [game2048Active, setGame2048Active] = useState(false);
   const [game2048Over, setGame2048Over] = useState(false);
   const [game2048Won, setGame2048Won] = useState(false);
+  const [hasShown2048Message, setHasShown2048Message] = useState(false);
+  const [highestAchievedNumber, setHighestAchievedNumber] = useState(0);
   const [game2048Score, setGame2048Score] = useState(0);
   const [game2048HighScore, setGame2048HighScore] = useState(0);
 
@@ -71,6 +73,7 @@ export default function NotFound() {
           setGame2048Over(game2048State.gameOver || false);
           setGame2048Won(game2048State.gameWon || false);
           setGame2048Score(game2048State.score || 0);
+          setHighestAchievedNumber(game2048State.highestAchievedNumber || 0);
         } catch (error) {
           console.error('加载2048进度失败:', error);
         }
@@ -177,7 +180,8 @@ export default function NotFound() {
         gameActive: game2048Active,
         gameOver: game2048Over,
         gameWon: game2048Won,
-        score: game2048Score
+        score: game2048Score,
+        highestAchievedNumber
       };
       localStorage.setItem('2048GameState', JSON.stringify(game2048State));
     }
@@ -324,6 +328,19 @@ export default function NotFound() {
     return false;
   };
 
+  // 检查是否达到新的里程碑
+  const checkNewMilestone = (board: number[][]) => {
+    const currentMax = Math.max(...board.flat());
+    const milestones = [2048, 4096, 8192, 16384, 32768, 65536];
+    
+    for (const milestone of milestones) {
+      if (currentMax >= milestone && milestone > highestAchievedNumber) {
+        return milestone;
+      }
+    }
+    return null;
+  };
+
   // 处理手势方向
   const handleSwipe = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
     if (!game2048Active || game2048Over) return;
@@ -333,9 +350,12 @@ export default function NotFound() {
     if (moved) {
       // 使用setTimeout确保状态更新后再检查
       setTimeout(() => {
-        // 检查是否达到2048（显示祝贺但不结束游戏）
-        if (!game2048Won && check2048Win(board)) {
+        // 检查是否达到新的里程碑
+        const newMilestone = checkNewMilestone(board);
+        if (newMilestone) {
+          setHighestAchievedNumber(newMilestone);
           setGame2048Won(true);
+          setHasShown2048Message(true);
         }
         // 检查游戏是否结束
         if (checkGameOver(board)) {
@@ -518,6 +538,8 @@ export default function NotFound() {
     setGame2048Active(false);
     setGame2048Over(false);
     setGame2048Won(false);
+    setHasShown2048Message(false);
+    setHighestAchievedNumber(0);
     setGame2048Score(0);
     setBoard(Array(5).fill(null).map(() => Array(5).fill(0)));
     // 清除保存的进度
@@ -921,9 +943,12 @@ export default function NotFound() {
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-2xl p-4">
                       <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-2xl text-center w-full max-w-[280px] sm:max-w-[320px]">
                         <h3 className="text-xl sm:text-2xl font-bold text-green-600 mb-3 sm:mb-4">恭喜！</h3>
-                        <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">你达到了2048！游戏继续，挑战更高分数！</p>
+                        <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">你达到了{highestAchievedNumber}！游戏继续，挑战更高分数！</p>
                         <button
-                          onClick={() => setGame2048Won(false)}
+                          onClick={() => {
+                            setGame2048Won(false);
+                            // 不重置hasShown2048Message，这样就不会再次显示提示
+                          }}
                           className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold py-2.5 sm:py-3 px-6 sm:px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 text-sm sm:text-base w-full"
                         >
                           继续游戏
