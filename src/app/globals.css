@@ -16,7 +16,19 @@
 
 @media (min-width: 720px) {
   .dashboard-grid {
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* 大屏自适应 */
+    grid-template-columns: repeat(3, 1fr); /* 中屏3列 */
+  }
+}
+
+@media (min-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(4, 1fr); /* 大屏4列 */
+  }
+}
+
+@media (min-width: 1280px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(5, 1fr); /* 超大屏5列 */
   }
 }
 
