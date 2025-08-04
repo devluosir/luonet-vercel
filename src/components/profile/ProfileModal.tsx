@@ -43,6 +43,26 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     newPassword: '',
     confirmPassword: '',
   });
+  const [currentUser, setCurrentUser] = useState(user);
+
+  // 获取最新的用户信息
+  const fetchUserInfo = async () => {
+    try {
+      const userInfo = await apiRequestWithError(API_ENDPOINTS.USERS.ME, {
+        method: 'GET',
+      });
+      setCurrentUser(userInfo);
+    } catch (error) {
+      console.error('获取用户信息失败:', error);
+    }
+  };
+
+  // 当模态框打开时获取最新用户信息
+  useEffect(() => {
+    if (isOpen) {
+      fetchUserInfo();
+    }
+  }, [isOpen]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,8 +80,9 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     setError(null);
 
     try {
-      await apiRequestWithError(API_ENDPOINTS.USERS.CHANGE_PASSWORD, {
-        method: 'POST',
+      // 使用PUT方法更新用户密码
+      await apiRequestWithError(API_ENDPOINTS.USERS.ME, {
+        method: 'PUT',
         body: JSON.stringify({
           currentPassword: passwordForm.currentPassword,
           newPassword: passwordForm.newPassword,
@@ -86,7 +107,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
 
   const handleEditEmail = () => {
     setEditingEmail(true);
-    setEmailValue(user.email || '');
+    setEmailValue(currentUser.email || '');
   };
 
   const handleSaveEmail = async () => {
@@ -107,7 +128,8 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
       setEditingEmail(false);
       setEmailValue('');
       alert('邮箱更新成功');
-      // 这里可以触发父组件重新获取用户信息
+      // 重新获取用户信息
+      await fetchUserInfo();
     } catch (error) {
       setError(error instanceof Error ? error.message : '更新邮箱失败');
     } finally {
@@ -154,7 +176,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
             <div className="flex items-center space-x-3">
               <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">用户名</span>
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">{user.username}</span>
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">{currentUser.username}</span>
             </div>
             
             {/* 邮箱 */}
@@ -187,7 +209,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
                   </div>
                 ) : (
                   <>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">{user.email || '未设置'}</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{currentUser.email || '未设置'}</span>
                     <button
                       onClick={handleEditEmail}
                       className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"

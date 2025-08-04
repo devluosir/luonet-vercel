@@ -277,7 +277,8 @@ export default function AdminPage() {
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
       <div className="flex-1">
         <AdminHeader 
-          username={'Admin'}
+          username={user?.username || '用户'}
+          email={user?.email || null}
           onLogout={handleLogout}
         />
 

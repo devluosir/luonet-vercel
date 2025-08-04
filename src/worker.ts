@@ -49,6 +49,11 @@ export default {
       return handleGetCurrentUser(request, env);
     }
 
+    // 处理当前用户信息更新
+    if (path === '/users/me' && request.method === 'PUT') {
+      return handleUpdateCurrentUser(request, env);
+    }
+
     // 处理用户管理
     if (path === '/api/admin/users' && request.method === 'GET') {
       return handleGetUsers(request, env);
@@ -285,6 +290,133 @@ async function handleGetCurrentUser(request: Request, env: Env): Promise<Respons
   }
 }
 
+async function handleUpdateCurrentUser(request: Request, env: Env): Promise<Response> {
+  try {
+    // 从请求头中获取用户信息
+    const userId = request.headers.get('X-User-ID');
+    const userName = request.headers.get('X-User-Name');
+    const isAdmin = request.headers.get('X-User-Admin') === 'true';
+    
+    if (!userId || !userName) {
+      return new Response(
+        JSON.stringify({ error: '未授权访问' }),
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    const updates = await request.json();
+    
+    const d1Client = new D1UserClient(env.USERS_DB);
+
+    // 检查是否是密码修改请求
+    if (updates.currentPassword && updates.newPassword) {
+      // 验证当前密码
+      const isValidPassword = await d1Client.validatePassword(userId, updates.currentPassword);
+      if (!isValidPassword) {
+        return new Response(
+          JSON.stringify({ error: '当前密码错误' }),
+          { 
+            status: 400, 
+            headers: { 
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            } 
+          }
+        );
+      }
+
+      // 更新密码
+      const passwordUpdated = await d1Client.updatePassword(userId, updates.newPassword);
+      if (!passwordUpdated) {
+        return new Response(
+          JSON.stringify({ error: '密码更新失败' }),
+          { 
+            status: 500, 
+            headers: { 
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            } 
+          }
+        );
+      }
+
+      // 获取更新后的用户信息
+      const updatedUser = await d1Client.getUserById(userId);
+      const permissions = await d1Client.getUserPermissions(userId);
+
+      return new Response(
+        JSON.stringify({
+          ...updatedUser,
+          permissions: permissions.map(p => ({
+            id: p.id,
+            moduleId: p.moduleId,
+            canAccess: p.canAccess
+          }))
+        }),
+        { 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    // 普通用户信息更新
+    const updatedUser = await d1Client.updateUser(userId, updates);
+    
+    if (!updatedUser) {
+      return new Response(
+        JSON.stringify({ error: '用户不存在' }),
+        { 
+          status: 404, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    const permissions = await d1Client.getUserPermissions(userId);
+
+    return new Response(
+      JSON.stringify({
+        ...updatedUser,
+        permissions: permissions.map(p => ({
+          id: p.id,
+          moduleId: p.moduleId,
+          canAccess: p.canAccess
+        }))
+      }),
+      { 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        } 
+      }
+    );
+
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: '服务器错误' }),
+      { 
+        status: 500, 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        } 
+      }
+    );
+  }
+}
+
 async function handleGetUsers(request: Request, env: Env): Promise<Response> {
   try {
     // 检查认证 - 使用session头信息
@@ -444,14 +576,68 @@ async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
         }
       );
     }
-    
-
 
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4];
     const updates = await request.json();
     
     const d1Client = new D1UserClient(env.USERS_DB);
+
+    // 检查是否是密码修改请求
+    if (updates.currentPassword && updates.newPassword) {
+      // 验证当前密码
+      const isValidPassword = await d1Client.validatePassword(userId, updates.currentPassword);
+      if (!isValidPassword) {
+        return new Response(
+          JSON.stringify({ error: '当前密码错误' }),
+          { 
+            status: 400, 
+            headers: { 
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            } 
+          }
+        );
+      }
+
+      // 更新密码
+      const passwordUpdated = await d1Client.updatePassword(userId, updates.newPassword);
+      if (!passwordUpdated) {
+        return new Response(
+          JSON.stringify({ error: '密码更新失败' }),
+          { 
+            status: 500, 
+            headers: { 
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            } 
+          }
+        );
+      }
+
+      // 获取更新后的用户信息
+      const updatedUser = await d1Client.getUserById(userId);
+      const permissions = await d1Client.getUserPermissions(userId);
+
+      return new Response(
+        JSON.stringify({
+          ...updatedUser,
+          permissions: permissions.map(p => ({
+            id: p.id,
+            moduleId: p.moduleId,
+            canAccess: p.canAccess
+          }))
+        }),
+        { 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    // 普通用户信息更新
     const updatedUser = await d1Client.updateUser(userId, updates);
     
     if (!updatedUser) {
