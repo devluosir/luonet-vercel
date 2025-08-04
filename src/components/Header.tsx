@@ -289,7 +289,7 @@ export function Header({
                                 </div>
                               )
                               : preloadManager.isPreloaded() 
-                                ? `资源已预加载 (${localStorage.getItem('preloadedResourcesCount') || preloadManager.getPreloadStatus().preloadedCount})` 
+                                ? '资源已预加载 (100%)' 
                                 : '预加载资源'
                             }
                           </span>

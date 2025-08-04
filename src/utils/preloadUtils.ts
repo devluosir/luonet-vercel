@@ -93,13 +93,13 @@ export class PreloadManager {
       this.updateProgress(100, '所有资源预加载完成！');
 
       console.log('所有资源预加载完成！');
-      console.log(`预加载资源总数: ${this.preloadedResources.size}`);
+      console.log(`预加载完成: 100%`);
       
       // 保存预加载状态到localStorage
       if (typeof window !== 'undefined') {
         const timestamp = Date.now().toString();
         localStorage.setItem('preloadCompleted', timestamp);
-        localStorage.setItem('preloadedResourcesCount', this.preloadedResources.size.toString());
+        localStorage.setItem('preloadedResourcesCount', '100%');
         localStorage.setItem('preloadTimestamp', timestamp);
         
         // 触发自定义事件，通知其他组件预加载完成
@@ -612,7 +612,7 @@ export class PreloadManager {
     return {
       isPreloading: this.isPreloading,
       progress: this.preloadProgress,
-      preloadedCount: this.preloadedResources.size
+      preloadedCount: this.isPreloaded() ? '100%' : '0%'
     };
   }
 
@@ -635,7 +635,7 @@ export class PreloadManager {
     const fontLoaded = document.fonts.check('12px "Noto Sans SC"');
     const logoLoaded = document.querySelector('img[src*="logo.png"]') !== null;
     
-    // 检查预加载资源数量
+    // 检查预加载资源状态
     const hasPreloadedResources = this.preloadedResources.size > 0;
     
     return fontLoaded && logoLoaded && hasPreloadedResources;
@@ -671,7 +671,7 @@ export class PreloadManager {
   // 获取预加载统计信息
   getPreloadStats() {
     return {
-      totalResources: this.preloadedResources.size,
+      totalResources: this.isPreloaded() ? '100%' : '0%',
       isPreloading: this.isPreloading,
       progress: this.preloadProgress,
       isCompleted: this.isPreloaded()
