@@ -320,9 +320,7 @@ export class PreloadManager {
       '/assets/logo/logo.png',
       '/assets/logo/icon.png',
       '/assets/logo/apple-icon.png',
-      '/assets/logo/favicon.ico',
-      '/next.svg',
-      '/vercel.svg'
+      '/assets/logo/favicon.ico'
     ];
 
     const assetPromises = staticAssets.map(url => {
