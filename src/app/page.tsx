@@ -51,13 +51,6 @@ export default function LoginPage() {
             localStorage.setItem('latestPermissions', JSON.stringify(session.user.permissions));
             localStorage.setItem('permissionsTimestamp', Date.now().toString());
           }
-          
-          console.log('从session保存用户信息:', {
-            username: session.user.username,
-            isAdmin: session.user.isAdmin,
-            permissions: session.user.permissions,
-            sessionUser: session.user
-          });
         }
       
       router.push('/dashboard');
@@ -78,8 +71,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      console.log('尝试登录:', { username, password });
-      
       // 强制清除任何可能的缓存
       if (typeof window !== 'undefined') {
         localStorage.removeItem('nextauth.session-token');
@@ -93,24 +84,17 @@ export default function LoginPage() {
         callbackUrl: '/dashboard',
       });
 
-      console.log('signIn 结果:', JSON.stringify(result, null, 2));
-
       if (!result) {
-        console.log('signIn 返回 null，登录请求失败');
         setError('登录请求失败，请重试');
         return;
       }
 
       if (result.error) {
-        console.log('signIn 返回错误:', result.error);
         setError('用户名或密码错误');
         return;
       }
 
-      console.log('signIn 成功，继续获取用户信息');
-
       // 登录成功后，立即获取用户权限信息
-      console.log('登录成功，获取用户权限信息...');
       
       try {
         // 获取用户权限信息
@@ -137,7 +121,6 @@ export default function LoginPage() {
           
           if (userResponse.ok) {
             const userData = await userResponse.json();
-            console.log('登录时获取到的原始用户数据:', userData);
             
             // 处理返回的用户数据
             let user = null;
@@ -160,12 +143,8 @@ export default function LoginPage() {
               // 获取邮箱信息并存储到本地
               if (user.email && typeof window !== 'undefined') {
                 localStorage.setItem('userEmail', user.email);
-                console.log('成功存储邮箱信息到localStorage:', user.email);
-              } else {
-                console.log('用户数据中没有邮箱信息或邮箱为空:', user.email);
               }
               
-              console.log('从后端获取到用户信息:', { isAdmin: realIsAdmin, userId: realUserId, email: user.email });
             } else {
               console.log('未找到对应用户:', username);
             }
@@ -186,7 +165,6 @@ export default function LoginPage() {
         
         if (permissionsResponse.ok) {
           const permissionsData = await permissionsResponse.json();
-          console.log('获取到权限数据:', permissionsData);
           
           // 保存权限信息到localStorage
           if (typeof window !== 'undefined') {
@@ -201,13 +179,6 @@ export default function LoginPage() {
             const finalUserId = permissionsData.user?.id || realUserId;
             localStorage.setItem('isAdmin', finalIsAdmin.toString());
             localStorage.setItem('userId', finalUserId);
-            
-            console.log('保存用户信息和权限:', { 
-              username: formattedUsername, 
-              isAdmin: finalIsAdmin, 
-              userId: finalUserId,
-              permissions: permissionsData.permissions 
-            });
           }
         } else {
           console.error('获取权限数据失败:', permissionsResponse.status);
@@ -217,7 +188,6 @@ export default function LoginPage() {
       }
       
       // 等待session更新后再跳转
-      console.log('登录成功，等待session更新...');
       setTimeout(() => {
         router.push('/dashboard');
       }, 1000);

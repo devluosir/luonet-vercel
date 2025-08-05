@@ -301,7 +301,6 @@ export default function DashboardPage() {
       const isAdmin = localStorage.getItem('isAdmin') === 'true';
       
       if (!username || !userId) {
-        console.log('用户信息不完整，跳过权限获取');
         return;
       }
       
@@ -318,7 +317,6 @@ export default function DashboardPage() {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('获取到权限数据:', data);
         setLatestPermissions(data.permissions || []);
         
         // 同时更新localStorage，确保数据一致性
@@ -349,7 +347,6 @@ export default function DashboardPage() {
         
         if (storedPermissions && isRecent) {
           permissions = JSON.parse(storedPermissions);
-          console.log('从localStorage恢复权限数据:', permissions);
         } else {
           // 清除过期的权限数据
           localStorage.removeItem('latestPermissions');
@@ -369,14 +366,12 @@ export default function DashboardPage() {
       const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
       if (storedPermissions && permissionsTimestamp && (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000) {
         permissions = JSON.parse(storedPermissions);
-        console.log('从localStorage恢复权限数据:', permissions);
       }
     }
 
     
     if (!permissions || permissions.length === 0) {
       // 如果没有权限数据，不显示任何模块（无论是管理员还是普通用户）
-      console.log('没有权限数据，不显示任何模块');
       return {
         permissions: {
           quotation: false,
@@ -420,58 +415,44 @@ export default function DashboardPage() {
     };
 
     // 遍历权限数据，设置对应的权限
-    console.log('处理权限数据:', permissions);
     permissions.forEach((perm: any) => {
-      console.log('处理权限:', perm);
       if (perm.canAccess) {
         switch (perm.moduleId) {
           case 'quotation':
             permissionMap.quotation = true;
             documentTypePermissions.quotation = true;
             documentTypePermissions.confirmation = true; // 销售确认也属于报价模块
-            console.log('启用 quotation 权限');
             break;
           case 'packing':
             permissionMap.packing = true;
             documentTypePermissions.packing = true;
-            console.log('启用 packing 权限');
             break;
           case 'invoice':
             permissionMap.invoice = true;
             documentTypePermissions.invoice = true;
-            console.log('启用 invoice 权限');
             break;
           case 'purchase':
             permissionMap.purchase = true;
             documentTypePermissions.purchase = true;
-            console.log('启用 purchase 权限');
             break;
           case 'history':
             permissionMap.history = true;
-            console.log('启用 history 权限');
             break;
           case 'customer':
             permissionMap.customer = true;
-            console.log('启用 customer 权限');
             break;
           case 'ai-email':
             permissionMap['ai-email'] = true;
-            console.log('启用 ai-email 权限');
             break;
           case 'date-tools':
             permissionMap['date-tools'] = true;
-            console.log('启用 date-tools 权限');
             break;
           default:
-            console.log('未知权限模块:', perm.moduleId);
+            break;
         }
-      } else {
-        console.log('权限被禁用:', perm.moduleId);
       }
     });
     
-    console.log('最终权限映射:', permissionMap);
-
     // 构建可访问的文档类型列表
     const accessibleDocumentTypes = [];
     if (documentTypePermissions.quotation) accessibleDocumentTypes.push('quotation');
@@ -698,13 +679,6 @@ export default function DashboardPage() {
       if (username) {
         // 从本地存储读取邮箱信息
         const userEmail = localStorage.getItem('userEmail');
-        console.log('Dashboard初始化时检查邮箱信息:', { 
-          username, 
-          isAdmin, 
-          userId, 
-          email: userEmail,
-          hasEmail: !!userEmail 
-        });
         
         setUser({
           id: userId || '1',
@@ -714,7 +688,6 @@ export default function DashboardPage() {
           isAdmin: isAdmin,
           permissions: []
         });
-        console.log('从localStorage恢复用户信息:', { username, isAdmin, userId, email: userEmail });
         
         // 检查本地是否有最新的权限数据
         const storedPermissions = localStorage.getItem('latestPermissions');
@@ -728,30 +701,23 @@ export default function DashboardPage() {
             try {
               const permissions = JSON.parse(storedPermissions);
               setLatestPermissions(permissions);
-              console.log('使用本地权限数据:', permissions);
             } catch (error) {
-              console.error('解析本地权限数据失败:', error);
               fetchPermissions();
             }
           } else {
-            console.log('本地权限数据过期，重新获取');
             fetchPermissions();
           }
         } else {
-          console.log('没有本地权限数据，重新获取');
           fetchPermissions();
         }
         
         // 自动预加载资源（如果还没有预加载过）
         if (!preloadManager.isPreloaded()) {
-          console.log('检测到首次访问，开始自动预加载资源...');
           setTimeout(() => {
             preloadManager.preloadAllResources().catch(error => {
               console.error('自动预加载失败:', error);
             });
           }, 2000); // 延迟2秒开始预加载，避免影响初始加载
-        } else {
-          console.log('资源已预加载，跳过自动预加载');
         }
       }
     }
@@ -910,36 +876,32 @@ export default function DashboardPage() {
 
   // 权限刷新处理函数
   const handleRefreshPermissions = useCallback(async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    setSuccessMessage('');
+    
     try {
-      setIsLoading(true);
-      setSuccessMessage('正在刷新权限信息...');
-      setShowSuccessMessage(true);
-      
-      console.log('开始刷新权限...');
-      
-      // 调用权限刷新API
-      const response = await fetch('/api/auth/update-session-permissions', {
+      const response = await fetch('/api/auth/get-latest-permissions', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'X-User-ID': user?.id || user?.username || '',
-          'X-User-Name': user?.username || user?.name || '',
-          'X-User-Admin': user?.isAdmin ? 'true' : 'false'
+          'X-User-ID': user.id,
+          'X-User-Name': user.username,
+          'X-User-Admin': user.isAdmin ? 'true' : 'false',
         },
         cache: 'no-store'
       });
 
       if (!response.ok) {
-        throw new Error('权限刷新失败');
+        throw new Error(`权限刷新失败: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('权限刷新响应:', data);
       
       if (data.success) {
         // 更新最新权限数据
         setLatestPermissions(data.permissions);
-        console.log('更新权限数据:', data.permissions);
 
         // 将最新权限数据保存到localStorage，确保页面刷新时保持最新权限
         if (typeof window !== 'undefined') {
@@ -979,7 +941,6 @@ export default function DashboardPage() {
   useEffect(() => {
     // 只有在mounted后且user明确为null时才重定向
     if (mounted && user === null) {
-      console.log('Dashboard: 用户未登录，重定向到登录页');
       router.push('/');
     }
   }, [user, router, mounted]);

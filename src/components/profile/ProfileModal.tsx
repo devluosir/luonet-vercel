@@ -44,17 +44,10 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     confirmPassword: '',
   });
   const [currentUser, setCurrentUser] = useState(() => {
-    // 初始化时检查邮箱信息
-    console.log('ProfileModal初始化时检查邮箱信息:', { 
-      userEmail: user.email, 
-      hasUserEmail: !!user.email 
-    });
-    
     // 如果传入的用户信息中没有邮箱，尝试从本地存储获取
     if (!user.email && typeof window !== 'undefined') {
       const localEmail = localStorage.getItem('userEmail');
       if (localEmail) {
-        console.log('使用本地存储的邮箱信息:', localEmail);
         return {
           ...user,
           email: localEmail
@@ -62,7 +55,6 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
       }
     }
     
-    console.log('使用传入的用户信息:', user);
     return user;
   });
 
@@ -72,7 +64,6 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
       // 从localStorage获取当前用户ID
       const userId = localStorage.getItem('userId');
       if (!userId) {
-        console.error('无法获取用户ID');
         return;
       }
       
@@ -80,15 +71,12 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
       const userInfo = await apiRequestWithError(API_ENDPOINTS.USERS.GET(userId), {
         method: 'GET',
       });
-      console.log('从服务器获取到用户信息:', userInfo);
       setCurrentUser(userInfo);
     } catch (error) {
-      console.error('获取用户信息失败:', error);
       // 如果从服务器获取失败，尝试从本地存储读取邮箱信息
       if (typeof window !== 'undefined') {
         const localEmail = localStorage.getItem('userEmail');
         if (localEmail) {
-          console.log('从本地存储读取邮箱信息作为备用:', localEmail);
           setCurrentUser(prev => ({
             ...prev,
             email: localEmail
@@ -111,7 +99,6 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     if (isOpen && (!currentUser.email || currentUser.email === null || currentUser.email === '')) {
       const localEmail = getLocalEmail();
       if (localEmail) {
-        console.log('模态框打开时从本地存储获取邮箱信息:', localEmail);
         setCurrentUser(prev => ({
           ...prev,
           email: localEmail
@@ -286,12 +273,6 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
                   <>
                     <span className="text-sm text-gray-600 dark:text-gray-400">
                       {currentUser.email || '未设置'}
-                      {/* 调试信息 */}
-                      {process.env.NODE_ENV === 'development' && (
-                        <span className="text-xs text-gray-400 ml-2">
-                          (Debug: {JSON.stringify({email: currentUser.email, hasEmail: !!currentUser.email})})
-                        </span>
-                      )}
                     </span>
                     <button
                       onClick={handleEditEmail}
