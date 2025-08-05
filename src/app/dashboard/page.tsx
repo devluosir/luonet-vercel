@@ -680,44 +680,25 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!mounted) return;
     
-    // 立即初始化权限store，如果成功则不需要后续获取
-    const initialized = initializeUserFromStorage();
+    // 立即初始化权限store
+    initializeUserFromStorage();
     
-    // 如果本地初始化成功，延迟获取权限以更新数据
-    if (initialized) {
-      const timer = setTimeout(() => {
-        if (session && status === 'authenticated' && session.user && !hasFetchedUserDetails) {
-          console.log('Dashboard: 开始更新权限', {
-            userId: session.user.id,
-            username: session.user.username,
-            isAdmin: session.user.isAdmin,
-            hasPermissions: !!session.user.permissions
-          });
-          
-          fetchPermissions(false); // 非强制刷新，优先使用本地缓存
-          setHasFetchedUserDetails(true);
-        }
-      }, 1000); // 延迟1秒更新权限
-      
-      return () => clearTimeout(timer);
-    } else {
-      // 如果本地初始化失败，立即获取权限
-      const timer = setTimeout(() => {
-        if (session && status === 'authenticated' && session.user && !hasFetchedUserDetails) {
-          console.log('Dashboard: 开始获取权限', {
-            userId: session.user.id,
-            username: session.user.username,
-            isAdmin: session.user.isAdmin,
-            hasPermissions: !!session.user.permissions
-          });
-          
-          fetchPermissions(false); // 非强制刷新，优先使用本地缓存
-          setHasFetchedUserDetails(true);
-        }
-      }, 500); // 减少延迟到500ms
-      
-      return () => clearTimeout(timer);
-    }
+    // 延迟获取权限，让页面先渲染
+    const timer = setTimeout(() => {
+      if (session && status === 'authenticated' && session.user && !hasFetchedUserDetails) {
+        console.log('Dashboard: 开始获取权限', {
+          userId: session.user.id,
+          username: session.user.username,
+          isAdmin: session.user.isAdmin,
+          hasPermissions: !!session.user.permissions
+        });
+        
+        fetchPermissions(false); // 非强制刷新，优先使用本地缓存
+        setHasFetchedUserDetails(true);
+      }
+    }, 500); // 减少延迟到500ms
+    
+    return () => clearTimeout(timer);
   }, [session, status, mounted, fetchPermissions, hasFetchedUserDetails, initializeUserFromStorage]);
 
   // 优化的预加载逻辑 - 延迟预加载，避免阻塞初始渲染
