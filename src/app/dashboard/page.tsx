@@ -239,72 +239,18 @@ export default function DashboardPage() {
   // 添加最新权限数据状态
   const [latestPermissions, setLatestPermissions] = useState<any[]>([]);
 
-  // 优化的权限获取逻辑
-  const fetchPermissions = useCallback(async () => {
-    try {
-      // 首先检查是否有缓存的权限数据
-      if (typeof window !== 'undefined') {
-        const storedPermissions = localStorage.getItem('latestPermissions');
-        const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
-        
-        // 检查权限数据是否在1小时内（减少API调用）
-        const isRecent = permissionsTimestamp && (Date.now() - parseInt(permissionsTimestamp)) < 60 * 60 * 1000;
-        
-        if (storedPermissions && isRecent) {
-          const cachedPermissions = JSON.parse(storedPermissions);
-          setLatestPermissions(cachedPermissions);
-          return; // 如果有有效缓存，直接使用，不调用API
-        }
-      }
-      
-      // 如果没有有效缓存，才调用API
-      const username = localStorage.getItem('username');
-      const userId = localStorage.getItem('userId');
-      const isAdmin = localStorage.getItem('isAdmin') === 'true';
-      
-      if (!username || !userId) {
-        return;
-      }
-      
-      const response = await fetch('/api/auth/get-latest-permissions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-User-ID': userId,
-          'X-User-Name': username,
-          'X-User-Admin': isAdmin ? 'true' : 'false',
-        },
-        cache: 'no-store'
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setLatestPermissions(data.permissions || []);
-        
-        // 同时更新localStorage，确保数据一致性
-        if (typeof window !== 'undefined' && data.permissions) {
-          localStorage.setItem('latestPermissions', JSON.stringify(data.permissions));
-          localStorage.setItem('permissionsTimestamp', Date.now().toString());
-        }
-      } else {
-        console.error('获取权限数据失败:', response.status);
-      }
-    } catch (error) {
-      console.error('获取权限数据出错:', error);
-    }
-  }, []);
-
-  // 动态权限映射，根据session中的权限数据或最新权限数据
+  // 动态权限映射，根据session中的权限数据
   const permissionMap = useMemo(() => {
-    // 优先使用最新权限数据，如果没有则尝试从localStorage恢复
+    // 直接使用session中的权限数据
     let permissions = latestPermissions;
     
+    // 如果session中没有权限数据，尝试从localStorage恢复
     if (permissions.length === 0 && typeof window !== 'undefined') {
       try {
         const storedPermissions = localStorage.getItem('latestPermissions');
         const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
         
-        // 检查权限数据是否在24小时内（避免使用过期的权限数据）
+        // 检查权限数据是否在24小时内
         const isRecent = permissionsTimestamp && (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000;
         
         if (storedPermissions && isRecent) {
@@ -318,16 +264,6 @@ export default function DashboardPage() {
         console.error('恢复权限数据失败:', error);
         localStorage.removeItem('latestPermissions');
         localStorage.removeItem('permissionsTimestamp');
-      }
-    }
-    
-    // 如果还是没有权限数据，尝试从localStorage恢复
-    if (permissions.length === 0 && typeof window !== 'undefined') {
-      // 从localStorage恢复权限数据
-      const storedPermissions = localStorage.getItem('latestPermissions');
-      const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
-      if (storedPermissions && permissionsTimestamp && (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000) {
-        permissions = JSON.parse(storedPermissions);
       }
     }
 
@@ -629,35 +565,19 @@ export default function DashboardPage() {
     router.push(module.path);
   }, [router]);
 
-  // 处理session更新
+  // 直接使用session数据，不需要额外的更新逻辑
   useEffect(() => {
     console.log('Dashboard: Session状态变化', { session: !!session, status, user: !!user });
     
     if (session && status === 'authenticated') {
-      console.log('Dashboard: Session已更新', session);
+      console.log('Dashboard: 使用session数据', {
+        userId: session.user?.id,
+        username: session.user?.username,
+        isAdmin: session.user?.isAdmin,
+        permissionsCount: session.user?.permissions?.length || 0
+      });
       
-      // 保存session中的用户信息到localStorage
-      if (session.user && typeof window !== 'undefined') {
-        localStorage.setItem('username', session.user.username || session.user.name || '');
-        localStorage.setItem('isAdmin', (session.user.isAdmin || false).toString());
-        localStorage.setItem('userId', session.user.id || '1');
-        
-        console.log('Dashboard: 保存用户信息到localStorage', {
-          username: session.user.username || session.user.name,
-          isAdmin: session.user.isAdmin,
-          userId: session.user.id
-        });
-        
-        // 保存权限信息
-        if (session.user.permissions && Array.isArray(session.user.permissions)) {
-          localStorage.setItem('latestPermissions', JSON.stringify(session.user.permissions));
-          localStorage.setItem('permissionsTimestamp', Date.now().toString());
-          setLatestPermissions(session.user.permissions);
-          console.log('Dashboard: 保存权限信息', session.user.permissions);
-        }
-      }
-      
-      // 更新用户状态
+      // 直接使用session中的用户信息
       if (session.user) {
         const newUser = {
           id: session.user.id || '1',
@@ -668,8 +588,13 @@ export default function DashboardPage() {
           permissions: session.user.permissions || []
         };
         setUser(newUser);
-        console.log('Dashboard: 更新用户状态', newUser);
+        setLatestPermissions(session.user.permissions || []);
+        console.log('Dashboard: 设置用户状态', newUser);
       }
+    } else if (status === 'loading') {
+      console.log('Dashboard: Session正在加载中...');
+    } else if (status === 'unauthenticated') {
+      console.log('Dashboard: 用户未认证');
     }
   }, [session, status]);
 
@@ -677,58 +602,53 @@ export default function DashboardPage() {
   useEffect(() => {
     setMounted(true);
     
-    // 从localStorage恢复用户信息（如果session还没有更新）
-    if (typeof window !== 'undefined' && !session) {
+    // 如果session还没有加载，从localStorage恢复基本信息
+    if (typeof window !== 'undefined' && !session && status !== 'loading') {
       const username = localStorage.getItem('username');
       const userId = localStorage.getItem('userId');
       const isAdmin = localStorage.getItem('isAdmin') === 'true';
       
       if (username) {
-        // 从本地存储读取邮箱信息
-        const userEmail = localStorage.getItem('userEmail');
+        console.log('Dashboard: 从localStorage恢复用户信息');
         
         setUser({
           id: userId || '1',
           username: username,
-          email: userEmail,
+          email: null,
           status: true,
           isAdmin: isAdmin,
           permissions: []
         });
         
-        // 检查本地是否有最新的权限数据
+        // 从localStorage恢复权限数据
         const storedPermissions = localStorage.getItem('latestPermissions');
         const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
         
         if (storedPermissions && permissionsTimestamp) {
-          // 检查权限数据是否在24小时内
           const isRecent = (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000;
           
           if (isRecent) {
             try {
               const permissions = JSON.parse(storedPermissions);
               setLatestPermissions(permissions);
+              console.log('Dashboard: 从localStorage恢复权限数据', permissions);
             } catch (error) {
-              fetchPermissions();
+              console.error('恢复权限数据失败:', error);
             }
-          } else {
-            fetchPermissions();
           }
-        } else {
-          fetchPermissions();
-        }
-        
-        // 自动预加载资源（如果还没有预加载过）
-        if (!preloadManager.isPreloaded()) {
-          setTimeout(() => {
-            preloadManager.preloadAllResources().catch(error => {
-              console.error('自动预加载失败:', error);
-            });
-          }, 2000); // 延迟2秒开始预加载，避免影响初始加载
         }
       }
     }
-  }, [fetchPermissions, session]);
+    
+    // 自动预加载资源
+    if (!preloadManager.isPreloaded()) {
+      setTimeout(() => {
+        preloadManager.preloadAllResources().catch(error => {
+          console.error('自动预加载失败:', error);
+        });
+      }, 2000);
+    }
+  }, [session, status]);
 
   // 优化的预加载逻辑 - 延迟预加载，避免阻塞初始渲染
   useEffect(() => {
@@ -973,11 +893,11 @@ export default function DashboardPage() {
   useEffect(() => {
     // 延迟1秒后获取权限，让页面先渲染
     const timer = setTimeout(() => {
-      fetchPermissions();
+      // fetchPermissions(); // 移除此行，因为不再需要单独调用
     }, 1000);
     
     return () => clearTimeout(timer);
-  }, [fetchPermissions]);
+  }, []); // 移除 fetchPermissions 依赖
 
   // 所有 hooks 声明完毕后，再做提前 return
   if (!mounted) return null;

@@ -43,23 +43,47 @@ export default function LoginPage() {
   useEffect(() => {
     // 只在页面初始加载时检查一次，避免频繁的session状态变化
     if (session && status === 'authenticated' && !hasLoggedIn) {
-      console.log('页面初始加载时检测到已登录用户，跳转到dashboard');
+      console.log('页面初始加载时检测到已登录用户，检查session完整性...');
       
-      // 保存session中的用户信息到localStorage
-      if (session.user && typeof window !== 'undefined') {
-        localStorage.setItem('username', session.user.username || session.user.name || '');
-        localStorage.setItem('isAdmin', (session.user.isAdmin || false).toString());
-        localStorage.setItem('userId', session.user.id || '1');
+      // 检查session信息是否完整
+      const hasCompleteSession = session.user && 
+        session.user.id && 
+        session.user.username && 
+        session.user.permissions && 
+        Array.isArray(session.user.permissions);
+      
+      if (hasCompleteSession) {
+        console.log('Session信息完整，跳转到dashboard');
         
-        // 保存权限信息
-        if (session.user.permissions && Array.isArray(session.user.permissions)) {
-          localStorage.setItem('latestPermissions', JSON.stringify(session.user.permissions));
-          localStorage.setItem('permissionsTimestamp', Date.now().toString());
+        // 保存session中的用户信息到localStorage
+        if (session.user && typeof window !== 'undefined') {
+          localStorage.setItem('username', session.user.username || session.user.name || '');
+          localStorage.setItem('isAdmin', (session.user.isAdmin || false).toString());
+          localStorage.setItem('userId', session.user.id || '1');
+          
+          // 保存权限信息
+          if (session.user.permissions && Array.isArray(session.user.permissions)) {
+            localStorage.setItem('latestPermissions', JSON.stringify(session.user.permissions));
+            localStorage.setItem('permissionsTimestamp', Date.now().toString());
+            console.log('已保存完整权限信息:', session.user.permissions);
+          }
         }
+        
+        setHasLoggedIn(true);
+        router.push(callbackUrl);
+      } else {
+        console.log('Session信息不完整，等待更新...', {
+          hasUser: !!session.user,
+          hasId: !!session.user?.id,
+          hasUsername: !!session.user?.username,
+          hasPermissions: !!session.user?.permissions,
+          permissionsLength: session.user?.permissions?.length || 0
+        });
       }
-      
-      setHasLoggedIn(true);
-      router.push(callbackUrl);
+    } else if (status === 'loading') {
+      console.log('Session正在加载中...');
+    } else if (status === 'unauthenticated') {
+      console.log('用户未登录');
     }
   }, [session, status, hasLoggedIn, router, callbackUrl]);
 
@@ -103,17 +127,56 @@ export default function LoginPage() {
         return;
       }
 
-      // 登录成功，立即跳转到dashboard
-      console.log('登录成功，跳转到dashboard');
+      // 登录成功，等待session完全更新后再跳转
+      console.log('登录成功，等待session更新...');
       setHasLoggedIn(true);
       
-      // 立即跳转，让dashboard页面处理session更新
-      router.push(callbackUrl);
+      // 等待session更新完成
+      const waitForSession = () => {
+        if (session && status === 'authenticated') {
+          console.log('Session已完全更新:', {
+            userId: session.user?.id,
+            username: session.user?.username,
+            isAdmin: session.user?.isAdmin,
+            permissions: session.user?.permissions,
+            permissionsCount: session.user?.permissions?.length || 0
+          });
+          
+          // 保存session信息到localStorage
+          if (session.user && typeof window !== 'undefined') {
+            localStorage.setItem('username', session.user.username || session.user.name || '');
+            localStorage.setItem('isAdmin', (session.user.isAdmin || false).toString());
+            localStorage.setItem('userId', session.user.id || '1');
+            
+            // 保存权限信息
+            if (session.user.permissions && Array.isArray(session.user.permissions)) {
+              localStorage.setItem('latestPermissions', JSON.stringify(session.user.permissions));
+              localStorage.setItem('permissionsTimestamp', Date.now().toString());
+              console.log('已保存权限信息到localStorage:', session.user.permissions);
+            }
+          }
+          
+          console.log('Session更新完成，跳转到:', callbackUrl);
+          router.push(callbackUrl);
+        } else if (status === 'loading') {
+          console.log('Session正在加载中...', { status });
+          setTimeout(waitForSession, 100);
+        } else if (status === 'unauthenticated') {
+          console.log('Session认证失败，可能需要重新登录');
+          setError('登录状态异常，请重试');
+          setLoading(false);
+        } else {
+          console.log('等待Session更新...', { status, hasSession: !!session });
+          setTimeout(waitForSession, 100);
+        }
+      };
+      
+      // 开始等待session更新
+      setTimeout(waitForSession, 100);
       
     } catch (error) {
       console.error('登录错误:', error);
       setError('登录过程中发生错误，请重试');
-    } finally {
       setLoading(false);
     }
   };
