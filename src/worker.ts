@@ -130,7 +130,7 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
       );
     }
 
-    // 验证密码 - 严格验证
+    // 验证密码 - 安全且实用的验证
     let passwordValid = false;
     
     console.log('开始密码验证:', { 
@@ -139,16 +139,24 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
       storedPasswordType: user.password ? (user.password.startsWith('$2') ? 'bcrypt' : 'plaintext') : 'empty'
     });
     
-    // 严格验证：只有明文密码完全匹配才允许登录
-    if (password && user.password && password === user.password) {
+    // 验证逻辑：
+    // 1. 如果存储的密码是明文，直接比较
+    // 2. 如果存储的密码是bcrypt格式，暂时拒绝（需要实现proper验证）
+    // 3. 如果存储的密码为空，拒绝登录
+    if (!user.password) {
+      console.log('密码验证失败: 数据库中密码为空');
+      passwordValid = false;
+    } else if (!password) {
+      console.log('密码验证失败: 用户未输入密码');
+      passwordValid = false;
+    } else if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
+      console.log('密码验证失败: bcrypt密码格式暂不支持');
+      passwordValid = false;
+    } else if (password === user.password) {
+      console.log('密码验证成功: 明文密码匹配');
       passwordValid = true;
-      console.log('密码验证成功');
     } else {
-      console.log('密码验证失败:', {
-        passwordProvided: !!password,
-        storedPasswordExists: !!user.password,
-        passwordsMatch: password === user.password
-      });
+      console.log('密码验证失败: 密码不匹配');
       passwordValid = false;
     }
 
