@@ -436,10 +436,54 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
         }
       );
     }
+
+    const url = new URL(request.url);
+    const username = url.searchParams.get('username');
     
-
-
     const d1Client = new D1UserClient(env.USERS_DB);
+    
+    // 如果提供了username参数，则查询单个用户
+    if (username) {
+      const user = await d1Client.getUserByUsername(username);
+      if (!user) {
+        return new Response(
+          JSON.stringify({ error: '用户不存在' }),
+          { 
+            status: 404, 
+            headers: { 
+              'Content-Type': 'application/json',
+              ...corsHeaders
+            } 
+          }
+        );
+      }
+      
+      // 获取用户权限
+      const permissions = await d1Client.getUserPermissions(user.id);
+      
+      return new Response(
+        JSON.stringify({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          status: user.status,
+          permissions: permissions.map(p => ({
+            id: p.id,
+            moduleId: p.moduleId,
+            canAccess: p.canAccess
+          }))
+        }),
+        { 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    // 否则返回所有用户
     const users = await d1Client.getAllUsers();
 
     // 为每个用户获取权限信息
