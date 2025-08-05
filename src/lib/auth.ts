@@ -131,6 +131,22 @@ export const authOptions: NextAuthOptions = {
         }
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      console.log('重定向回调:', { url, baseUrl });
+      
+      // 确保重定向到正确的URL
+      if (url.startsWith('/')) {
+        const fullUrl = `${baseUrl}${url}`;
+        console.log('重定向到:', fullUrl);
+        return fullUrl;
+      } else if (new URL(url).origin === baseUrl) {
+        console.log('重定向到:', url);
+        return url;
+      }
+      
+      console.log('重定向到默认页面:', baseUrl);
+      return baseUrl;
     }
   },
 

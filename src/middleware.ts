@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 const PUBLIC_ROUTES = [
   '/',
   '/api/auth',
+  '/test-login',
 ];
 
 // 定义静态资源路径
@@ -26,13 +27,17 @@ export default withAuth(
   function middleware(req) {
     const { pathname } = req.nextUrl;
     
+    console.log('中间件处理请求:', { pathname, url: req.url });
+    
     // 1. 静态资源直接通过
     if (STATIC_PATHS.some(path => pathname.startsWith(path)) || pathname.includes('.')) {
+      console.log('静态资源，直接通过');
       return NextResponse.next();
     }
 
     // 2. 公开路由直接通过
     if (PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
+      console.log('公开路由，直接通过');
       return NextResponse.next();
     }
 
@@ -59,9 +64,11 @@ export default withAuth(
     
     // 如果不是已知路由，直接通过让Next.js处理404
     if (!isKnownRoute) {
+      console.log('未知路由，直接通过');
       return NextResponse.next();
     }
 
+    console.log('已知路由，需要认证检查');
     // 4. 已知路由需要认证 - 让 withAuth 处理权限检查
     return null;
   },
@@ -69,6 +76,8 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
+        
+        console.log('权限检查:', { pathname, hasToken: !!token, isAdmin: token?.isAdmin });
         
         // 1. 静态资源不需要认证
         if (STATIC_PATHS.some(path => pathname.startsWith(path)) || pathname.includes('.')) {
@@ -108,6 +117,7 @@ export default withAuth(
           
           // 非管理员必须有对应的模块权限
           if (!token.permissions || !Array.isArray(token.permissions)) {
+            console.log('用户没有权限数组:', { pathname, token: !!token });
             return false;
           }
           
@@ -115,6 +125,7 @@ export default withAuth(
             perm.moduleId === moduleId && perm.canAccess === true
           );
           
+          console.log('权限检查:', { pathname, moduleId, hasPermission, permissions: token.permissions });
           return hasPermission;
         }
 
@@ -125,10 +136,13 @@ export default withAuth(
         
         // 普通用户必须有至少一个模块权限
         if (!token.permissions || !Array.isArray(token.permissions)) {
+          console.log('用户没有权限数组:', { pathname, token: !!token });
           return false;
         }
         
-        return token.permissions.some(perm => perm.canAccess === true);
+        const hasAnyPermission = token.permissions.some(perm => perm.canAccess === true);
+        console.log('通用权限检查:', { pathname, hasAnyPermission, permissions: token.permissions });
+        return hasAnyPermission;
       },
     },
     pages: {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { LOGO_CONFIG } from '@/lib/logo-config';
 
@@ -13,7 +13,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [hasLoggedIn, setHasLoggedIn] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
+
+  // 获取callbackUrl参数
+  const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
 
   useEffect(() => {
     // 添加全局错误处理
@@ -55,9 +59,9 @@ export default function LoginPage() {
       }
       
       setHasLoggedIn(true);
-      router.push('/dashboard');
+      router.push(callbackUrl);
     }
-  }, [session, status, hasLoggedIn, router]);
+  }, [session, status, hasLoggedIn, router, callbackUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,12 +83,12 @@ export default function LoginPage() {
         sessionStorage.clear();
       }
       
-      console.log('开始登录...');
+      console.log('开始登录...', { callbackUrl });
       const result = await signIn('credentials', {
         username,
         password,
         redirect: false,
-        callbackUrl: '/dashboard',
+        callbackUrl: callbackUrl,
       });
 
       console.log('登录结果:', result);
@@ -104,7 +108,7 @@ export default function LoginPage() {
       setHasLoggedIn(true);
       
       // 立即跳转，让dashboard页面处理session更新
-      router.push('/dashboard');
+      router.push(callbackUrl);
       
     } catch (error) {
       console.error('登录错误:', error);
