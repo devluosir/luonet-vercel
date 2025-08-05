@@ -101,7 +101,7 @@ export default withAuth(
           return false;
         }
 
-        // 4. 管理员路径检查
+        // 5. 管理员路径检查
         if (ADMIN_PATHS.some(path => pathname.startsWith(path))) {
           console.log('管理员路径检查:', { pathname, isAdmin: token?.isAdmin });
           if (token.isAdmin === true) {
@@ -111,26 +111,6 @@ export default withAuth(
             console.log('非管理员尝试访问管理后台:', pathname);
             return false;
           }
-        }
-
-        // 5. 业务路由需要对应的权限验证
-        const moduleId = getModuleIdFromPath(pathname);
-        if (moduleId) {
-          // 特殊处理dashboard页面
-          if (moduleId === 'dashboard') {
-            console.log('Dashboard访问检查:', { token: !!token, isAdmin: token?.isAdmin, permissions: token?.permissions });
-            return true; // dashboard页面只要有token就可以访问
-          }
-          
-          // 管理员可以访问所有页面
-          if (token.isAdmin === true) {
-            return true;
-          }
-          
-          // 非管理员用户：只要有token就允许访问，具体权限在页面中检查
-          // 这样可以避免权限更新时被踢出系统
-          console.log('业务路由访问检查:', { pathname, moduleId, hasToken: !!token });
-          return true;
         }
 
         // 6. 其他情况，只要有token就允许访问

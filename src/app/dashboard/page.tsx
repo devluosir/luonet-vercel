@@ -579,6 +579,7 @@ export default function DashboardPage() {
       } : null
     });
     
+    // 只在session存在且认证成功时处理
     if (session && status === 'authenticated') {
       console.log('Dashboard: 使用session数据', {
         userId: session.user?.id,
@@ -607,17 +608,10 @@ export default function DashboardPage() {
           fetchUserDetails(session.user.id, session.user.username, session.user.isAdmin);
         }
       }
-    } else if (status === 'loading') {
-      console.log('Dashboard: Session正在加载中...');
-      // 不进行任何操作，等待session加载完成
-    } else if (status === 'unauthenticated') {
-      console.log('Dashboard: 用户未认证，重定向到登录页面');
-      // 只有在明确未认证时才重定向，并且添加延迟避免频繁重定向
-      setTimeout(() => {
-        router.push('/');
-      }, 1000);
     }
-  }, [session, status, router]);
+    // 移除loading和unauthenticated的处理，让页面正常渲染
+    // 只有在真正需要时才重定向
+  }, [session, status]);
 
   // 获取用户详细信息的函数
   const fetchUserDetails = async (userId: string, username: string, isAdmin: boolean) => {
