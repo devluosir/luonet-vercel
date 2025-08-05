@@ -138,12 +138,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 更新session中的权限数据
-    // 注意：NextAuth的session更新需要通过重新登录或token更新来实现
-    // 这里我们返回更新后的权限数据，让前端处理session更新
+    // 由于NextAuth的限制，我们需要通过重新生成token来更新session
+    // 这里我们返回更新后的权限数据，并指示前端需要重新登录
 
     return NextResponse.json({ 
       success: true, 
-      message: '权限数据已更新',
+      message: '权限数据已更新，需要重新登录以应用新权限',
       user: {
         id: userId,
         username: userName,
@@ -152,7 +152,8 @@ export async function POST(request: NextRequest) {
         isAdmin: isAdmin,
         permissions: permissions
       },
-      permissions: permissions
+      permissions: permissions,
+      requiresReauth: true // 指示前端需要重新登录
     });
   } catch (error) {
     console.error('更新session权限API错误:', error);

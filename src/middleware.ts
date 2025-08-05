@@ -101,10 +101,16 @@ export default withAuth(
           return false;
         }
 
-        // 4. 管理员路由需要管理员权限验证
+        // 4. 管理员路径检查
         if (ADMIN_PATHS.some(path => pathname.startsWith(path))) {
-          console.log('管理员路由访问检查:', { pathname, isAdmin: token?.isAdmin, token: !!token });
-          return token.isAdmin === true;
+          console.log('管理员路径检查:', { pathname, isAdmin: token?.isAdmin });
+          if (token.isAdmin === true) {
+            console.log('管理员访问管理后台:', pathname);
+            return true;
+          } else {
+            console.log('非管理员尝试访问管理后台:', pathname);
+            return false;
+          }
         }
 
         // 5. 业务路由需要对应的权限验证
@@ -121,34 +127,15 @@ export default withAuth(
             return true;
           }
           
-          // 非管理员必须有对应的模块权限
-          if (!token.permissions || !Array.isArray(token.permissions)) {
-            console.log('用户没有权限数组:', { pathname, token: !!token });
-            return false;
-          }
-          
-          const hasPermission = token.permissions.some(perm => 
-            perm.moduleId === moduleId && perm.canAccess === true
-          );
-          
-          console.log('权限检查:', { pathname, moduleId, hasPermission, permissions: token.permissions });
-          return hasPermission;
-        }
-
-        // 6. 其他情况，管理员可以访问，普通用户需要至少有一个模块权限
-        if (token.isAdmin === true) {
+          // 非管理员用户：只要有token就允许访问，具体权限在页面中检查
+          // 这样可以避免权限更新时被踢出系统
+          console.log('业务路由访问检查:', { pathname, moduleId, hasToken: !!token });
           return true;
         }
-        
-        // 普通用户必须有至少一个模块权限
-        if (!token.permissions || !Array.isArray(token.permissions)) {
-          console.log('用户没有权限数组:', { pathname, token: !!token });
-          return false;
-        }
-        
-        const hasAnyPermission = token.permissions.some(perm => perm.canAccess === true);
-        console.log('通用权限检查:', { pathname, hasAnyPermission, permissions: token.permissions });
-        return hasAnyPermission;
+
+        // 6. 其他情况，只要有token就允许访问
+        console.log('通用访问检查:', { pathname, hasToken: !!token });
+        return true;
       },
     },
     pages: {

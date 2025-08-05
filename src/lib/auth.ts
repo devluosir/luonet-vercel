@@ -54,31 +54,23 @@ export const authOptions: NextAuthOptions = {
             throw new Error("用户账户已被禁用");
           }
 
-          // 简化权限验证：只检查是否有权限数据，不验证具体权限
-          let permissions = [];
-          if (Array.isArray(data.permissions)) {
-            permissions = data.permissions.map((perm: any) => ({
-              id: `session-${perm.moduleId || perm.id}`,
-              moduleId: perm.moduleId || perm.id,
-              canAccess: !!perm.canAccess
-            }));
-          } else if (typeof data.permissions === 'object' && data.permissions !== null) {
-            permissions = Object.entries(data.permissions).map(([moduleId, canAccess]) => ({
-              id: `session-${moduleId}`,
-              moduleId,
-              canAccess: !!canAccess
-            }));
-          }
-          
-          // 验证用户权限（简化版）
+          // 验证管理员权限
           if (data.user.isAdmin) {
-            // 管理员用户，直接允许登录
+            console.log('管理员用户登录:', data.user.username);
           } else {
-            // 非管理员用户必须有权限数据
+            // 非管理员用户需要验证是否有基本权限
             if (!data.permissions || (Array.isArray(data.permissions) && data.permissions.length === 0)) {
-              throw new Error("用户没有访问权限");
+              console.log('非管理员用户权限检查:', { 
+                username: data.user.username, 
+                hasPermissions: !!data.permissions,
+                permissionsCount: Array.isArray(data.permissions) ? data.permissions.length : 0
+              });
+              // 非管理员用户如果没有权限，仍然允许登录，但会在dashboard中处理权限
             }
           }
+
+          // 简化验证：只验证用户名密码和用户状态，不验证模块权限
+          console.log('用户登录验证成功:', data.user.username);
           
           return {
             id: data.user.id,
@@ -87,7 +79,7 @@ export const authOptions: NextAuthOptions = {
             username: data.user.username,
             isAdmin: !!data.user.isAdmin,
             image: null,
-            permissions: permissions // 返回权限数据，供dashboard使用
+            permissions: [] // 权限在dashboard中获取
           };
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : "用户名或密码错误");

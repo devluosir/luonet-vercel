@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession, signIn } from 'next-auth/react';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { 
   Mail, 
@@ -565,7 +565,7 @@ export default function DashboardPage() {
     router.push(module.path);
   }, [router]);
 
-  // 直接使用session数据，不需要额外的更新逻辑
+  // 直接使用session数据，并在dashboard中获取用户详细信息
   useEffect(() => {
     console.log('Dashboard: Session状态变化', { session: !!session, status, user: !!user });
     
@@ -590,16 +590,66 @@ export default function DashboardPage() {
         setUser(newUser);
         setLatestPermissions(session.user.permissions || []);
         console.log('Dashboard: 设置用户状态', newUser);
+        
+        // 如果session中没有权限数据，从API获取用户详细信息
+        if (!session.user.permissions || session.user.permissions.length === 0) {
+          console.log('Dashboard: 从API获取用户详细信息');
+          fetchUserDetails(session.user.id, session.user.username, session.user.isAdmin);
+        }
       }
     } else if (status === 'loading') {
       console.log('Dashboard: Session正在加载中...');
       // 不进行任何操作，等待session加载完成
     } else if (status === 'unauthenticated') {
       console.log('Dashboard: 用户未认证，重定向到登录页面');
-      // 只有在明确未认证时才重定向
-      router.push('/');
+      // 只有在明确未认证时才重定向，并且添加延迟避免频繁重定向
+      setTimeout(() => {
+        router.push('/');
+      }, 1000);
     }
   }, [session, status, router]);
+
+  // 获取用户详细信息的函数
+  const fetchUserDetails = async (userId: string, username: string, isAdmin: boolean) => {
+    try {
+      console.log('Dashboard: 开始获取用户详细信息');
+      
+      const response = await fetch('/api/auth/get-latest-permissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-ID': userId,
+          'X-User-Name': username,
+          'X-User-Admin': isAdmin ? 'true' : 'false',
+        },
+        cache: 'no-store'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Dashboard: 获取用户详细信息成功', data.permissions);
+        
+        // 更新权限数据
+        setLatestPermissions(data.permissions || []);
+        
+        // 更新用户状态
+        setUser((prev: User | null) => prev ? {
+          ...prev,
+          permissions: data.permissions || []
+        } : null);
+        
+        // 保存到localStorage
+        if (typeof window !== 'undefined' && data.permissions) {
+          localStorage.setItem('latestPermissions', JSON.stringify(data.permissions));
+          localStorage.setItem('permissionsTimestamp', Date.now().toString());
+        }
+      } else {
+        console.error('Dashboard: 获取用户详细信息失败', response.status);
+      }
+    } catch (error) {
+      console.error('Dashboard: 获取用户详细信息出错', error);
+    }
+  };
 
   // 简化的初始化逻辑
   useEffect(() => {
@@ -850,7 +900,7 @@ export default function DashboardPage() {
         // 更新最新权限数据
         setLatestPermissions(data.permissions);
 
-        // 将最新权限数据保存到localStorage，确保页面刷新时保持最新权限
+        // 将最新权限数据保存到localStorage
         if (typeof window !== 'undefined') {
           localStorage.setItem('latestPermissions', JSON.stringify(data.permissions));
           localStorage.setItem('permissionsTimestamp', Date.now().toString());
@@ -868,10 +918,6 @@ export default function DashboardPage() {
         setRefreshKey(prev => prev + 1);
         setSuccessMessage('权限信息已更新');
         setTimeout(() => setShowSuccessMessage(false), 2000);
-        
-        // 重新获取session以更新权限数据
-        // 注意：这里我们通过触发页面重新渲染来更新权限显示
-        // 因为NextAuth的session更新需要重新登录，我们通过动态权限映射来处理
       } else {
         throw new Error(data.error || '权限刷新失败');
       }
