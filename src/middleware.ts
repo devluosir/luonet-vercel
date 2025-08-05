@@ -27,17 +27,13 @@ export default withAuth(
   function middleware(req) {
     const { pathname } = req.nextUrl;
     
-    console.log('中间件处理请求:', { pathname, url: req.url });
-    
     // 1. 静态资源直接通过
     if (STATIC_PATHS.some(path => pathname.startsWith(path)) || pathname.includes('.')) {
-      console.log('静态资源，直接通过');
       return NextResponse.next();
     }
 
     // 2. 公开路由直接通过
     if (PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(route + '/'))) {
-      console.log('公开路由，直接通过');
       return NextResponse.next();
     }
 
@@ -64,11 +60,9 @@ export default withAuth(
     
     // 如果不是已知路由，直接通过让Next.js处理404
     if (!isKnownRoute) {
-      console.log('未知路由，直接通过');
       return NextResponse.next();
     }
 
-    console.log('已知路由，需要认证检查');
     // 4. 已知路由需要认证 - 让 withAuth 处理权限检查
     return null;
   },
@@ -76,8 +70,6 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
-        
-        console.log('权限检查:', { pathname, hasToken: !!token, isAdmin: token?.isAdmin });
         
         // 1. 静态资源不需要认证
         if (STATIC_PATHS.some(path => pathname.startsWith(path)) || pathname.includes('.')) {
@@ -91,30 +83,24 @@ export default withAuth(
 
         // 3. 没有token的情况 - 拒绝所有其他访问
         if (!token) {
-          console.log('没有token，拒绝访问:', pathname);
           return false;
         }
 
         // 4. 检查token是否包含必要的用户信息（简化检查）
         if (!token.username) {
-          console.log('Token信息不完整，拒绝访问:', pathname);
           return false;
         }
 
         // 5. 管理员路径检查
         if (ADMIN_PATHS.some(path => pathname.startsWith(path))) {
-          console.log('管理员路径检查:', { pathname, isAdmin: token?.isAdmin });
           if (token.isAdmin === true) {
-            console.log('管理员访问管理后台:', pathname);
             return true;
           } else {
-            console.log('非管理员尝试访问管理后台:', pathname);
             return false;
           }
         }
 
         // 6. 其他情况，只要有token就允许访问
-        console.log('通用访问检查:', { pathname, hasToken: !!token });
         return true;
       },
     },

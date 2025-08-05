@@ -56,21 +56,15 @@ export const authOptions: NextAuthOptions = {
 
           // 验证管理员权限
           if (data.user.isAdmin) {
-            console.log('管理员用户登录:', data.user.username);
+            // 管理员用户登录
           } else {
             // 非管理员用户需要验证是否有基本权限
             if (!data.permissions || (Array.isArray(data.permissions) && data.permissions.length === 0)) {
-              console.log('非管理员用户权限检查:', { 
-                username: data.user.username, 
-                hasPermissions: !!data.permissions,
-                permissionsCount: Array.isArray(data.permissions) ? data.permissions.length : 0
-              });
               // 非管理员用户如果没有权限，仍然允许登录，但会在dashboard中处理权限
             }
           }
 
           // 简化验证：只验证用户名密码和用户状态，不验证模块权限
-          console.log('用户登录验证成功:', data.user.username);
           
           return {
             id: data.user.id,
@@ -126,28 +120,14 @@ export const authOptions: NextAuthOptions = {
         return url;
       }
       
-      // 只在登录相关的重定向时才记录日志
-      if (url.includes('/api/auth') || url.includes('signin') || url.includes('signout')) {
-        console.log('重定向回调:', { url, baseUrl });
-      }
-      
       // 确保重定向到正确的URL
       if (url.startsWith('/')) {
         const fullUrl = `${baseUrl}${url}`;
-        if (url.includes('/api/auth') || url.includes('signin') || url.includes('signout')) {
-          console.log('重定向到:', fullUrl);
-        }
         return fullUrl;
       } else if (new URL(url).origin === baseUrl) {
-        if (url.includes('/api/auth') || url.includes('signin') || url.includes('signout')) {
-          console.log('重定向到:', url);
-        }
         return url;
       }
       
-      if (url.includes('/api/auth') || url.includes('signin') || url.includes('signout')) {
-        console.log('重定向到默认页面:', baseUrl);
-      }
       return baseUrl;
     }
   },

@@ -570,27 +570,8 @@ export default function DashboardPage() {
     // 只在组件挂载后执行
     if (!mounted) return;
     
-    console.log('Dashboard: Session状态变化', { 
-      session: !!session, 
-      status, 
-      user: !!user,
-      sessionData: session ? {
-        userId: session.user?.id,
-        username: session.user?.username,
-        isAdmin: session.user?.isAdmin,
-        permissionsCount: session.user?.permissions?.length || 0
-      } : null
-    });
-    
     // 只在session存在且认证成功时处理
     if (session && status === 'authenticated') {
-      console.log('Dashboard: 使用session数据', {
-        userId: session.user?.id,
-        username: session.user?.username,
-        isAdmin: session.user?.isAdmin,
-        permissionsCount: session.user?.permissions?.length || 0
-      });
-      
       // 直接使用session中的用户信息
       if (session.user) {
         const newUser = {
@@ -603,11 +584,9 @@ export default function DashboardPage() {
         };
         setUser(newUser);
         setLatestPermissions(session.user.permissions || []);
-        console.log('Dashboard: 设置用户状态', newUser);
         
         // 如果session中没有权限数据，从API获取用户详细信息
         if (!session.user.permissions || session.user.permissions.length === 0) {
-          console.log('Dashboard: 从API获取用户详细信息');
           fetchUserDetails(session.user.id, session.user.username, session.user.isAdmin);
         }
       }
@@ -619,8 +598,6 @@ export default function DashboardPage() {
   // 获取用户详细信息的函数
   const fetchUserDetails = async (userId: string, username: string, isAdmin: boolean) => {
     try {
-      console.log('Dashboard: 开始获取用户详细信息');
-      
       const response = await fetch('/api/auth/get-latest-permissions', {
         method: 'POST',
         headers: {
@@ -634,7 +611,6 @@ export default function DashboardPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Dashboard: 获取用户详细信息成功', data.permissions);
         
         // 检查组件是否仍然挂载
         if (mounted) {
@@ -944,7 +920,6 @@ export default function DashboardPage() {
   useEffect(() => {
     // 只有在mounted后且session状态为unauthenticated时才重定向
     if (mounted && status === 'unauthenticated') {
-      console.log('Dashboard: 用户未认证，重定向到登录页');
       router.push('/');
     }
   }, [status, router, mounted]);

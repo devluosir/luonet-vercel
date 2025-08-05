@@ -74,8 +74,6 @@ export default function LoginPage() {
         // 移除sessionStorage.clear()，避免影响NextAuth的session状态
       }
       
-      console.log('开始登录...', { callbackUrl });
-      
       // 快速登录验证，只验证用户名和密码
       const result = await signIn('credentials', {
         username,
@@ -84,18 +82,12 @@ export default function LoginPage() {
         callbackUrl: callbackUrl,
       });
 
-      console.log('登录结果:', result);
-      
       if (result?.error) {
         setError('用户名或密码错误');
         setLoading(false);
       } else {
-        console.log('登录成功，立即跳转到dashboard');
-        
         // 使用window.location.href强制页面跳转
-        console.log('执行window.location.href跳转:', callbackUrl);
         window.location.href = callbackUrl;
-        console.log('window.location.href执行完成');
       }
       
     } catch (error) {
