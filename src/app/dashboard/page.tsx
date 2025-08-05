@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession, signIn } from 'next-auth/react';
+import { useSession, signIn, getSession } from 'next-auth/react';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { 
   Mail, 
@@ -845,19 +845,23 @@ export default function DashboardPage() {
 
   // 权限刷新处理函数
   const handleRefreshPermissions = useCallback(async () => {
-    if (!user) return;
-    
     setIsLoading(true);
     setSuccessMessage('');
     
     try {
+      // 获取当前session信息
+      const session = await getSession();
+      if (!session?.user) {
+        throw new Error('用户未登录');
+      }
+      
       const response = await fetch('/api/auth/get-latest-permissions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-ID': user.id,
-          'X-User-Name': user.username,
-          'X-User-Admin': user.isAdmin ? 'true' : 'false',
+          'X-User-ID': session.user.id || session.user.username || '',
+          'X-User-Name': session.user.username || session.user.name || '',
+          'X-User-Admin': session.user.isAdmin ? 'true' : 'false',
         },
         cache: 'no-store'
       });
@@ -876,17 +880,29 @@ export default function DashboardPage() {
         if (typeof window !== 'undefined') {
           localStorage.setItem('latestPermissions', JSON.stringify(data.permissions));
           localStorage.setItem('permissionsTimestamp', Date.now().toString());
+          
+          // 保存用户信息到localStorage
+          const userInfo = {
+            id: session.user.id || session.user.username || '',
+            username: session.user.username || session.user.name || '',
+            email: session.user.email || null,
+            status: true,
+            isAdmin: session.user.isAdmin || false,
+            permissions: data.permissions
+          };
+          localStorage.setItem('userInfo', JSON.stringify(userInfo));
         }
 
         // 更新全局权限store
-        if (user) {
-          const updatedUser = {
-            ...user,
-            permissions: data.permissions
-          };
-          // 更新全局权限store
-          usePermissionStore.getState().setUser(updatedUser);
-        }
+        const updatedUser = {
+          id: session.user.id || session.user.username || '',
+          username: session.user.username || session.user.name || '',
+          email: session.user.email || null,
+          status: true,
+          isAdmin: session.user.isAdmin || false,
+          permissions: data.permissions
+        };
+        usePermissionStore.getState().setUser(updatedUser);
 
         // 触发权限变化事件，通知其他组件
         window.dispatchEvent(new CustomEvent('permissionChanged', {
@@ -910,7 +926,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, []);
 
   // 使用 useEffect 处理重定向，避免在渲染过程中调用 router.push
   useEffect(() => {
