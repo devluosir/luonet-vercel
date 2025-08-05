@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import '/pdf-fonts.css'; // 使用public目录的绝对路径
+import '../pdf-fonts.css'; // 使用相对路径导入
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { Download, Settings, ChevronDown, ChevronUp, ArrowLeft, Save, History, Eye } from 'lucide-react';

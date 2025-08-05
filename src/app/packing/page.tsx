@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import '/pdf-fonts.css'; // 使用public目录的绝对路径
+import '../pdf-fonts.css'; // 使用相对路径导入
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Download, Settings, Clipboard, History, Save, Eye, FileSpreadsheet } from 'lucide-react';

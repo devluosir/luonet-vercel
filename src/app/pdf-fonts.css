@@ -1,0 +1,41 @@
+/* PDF字体加载样式 - 仅在PDF生成页面使用 */
+
+/* 预加载字体文件，确保PDF生成时字体可用 */
+@font-face {
+  font-family: 'NotoSansSC';
+  src: url('/fonts/NotoSansSC-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap; /* 优化字体显示策略 */
+  font-preload: true; /* 预加载字体 */
+}
+
+@font-face {
+  font-family: 'NotoSansSC';
+  src: url('/fonts/NotoSansSC-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap; /* 优化字体显示策略 */
+  font-preload: true; /* 预加载字体 */
+}
+
+/* PDF生成页面的字体优化 */
+.pdf-page {
+  font-family: 'NotoSansSC', Arial, Helvetica, sans-serif;
+  font-display: swap; /* 确保字体快速显示 */
+}
+
+/* 确保字体在PDF生成时可用 */
+.pdf-generator {
+  font-family: 'NotoSansSC', Arial, Helvetica, sans-serif;
+  font-display: swap;
+}
+
+/* 移动端字体优化 */
+@media screen and (max-width: 768px) {
+  .pdf-page,
+  .pdf-generator {
+    /* 在移动端优先使用系统字体，减少加载时间 */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+} 
