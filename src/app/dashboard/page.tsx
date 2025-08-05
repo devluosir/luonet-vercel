@@ -238,6 +238,7 @@ export default function DashboardPage() {
   const refreshing = isLoading;
   // 添加最新权限数据状态
   const [latestPermissions, setLatestPermissions] = useState<any[]>([]);
+  const [hasFetchedUserDetails, setHasFetchedUserDetails] = useState(false);
 
   // 动态权限映射，根据session中的权限数据
   const permissionMap = useMemo(() => {
@@ -587,17 +588,24 @@ export default function DashboardPage() {
         
         // 如果session中没有权限数据，从API获取用户详细信息
         if (!session.user.permissions || session.user.permissions.length === 0) {
-          fetchUserDetails(session.user.id, session.user.username, session.user.isAdmin);
+          if (!hasFetchedUserDetails) {
+            fetchUserDetails(session.user.id, session.user.username, session.user.isAdmin);
+          }
         }
       }
     }
     // 移除loading和unauthenticated的处理，让页面正常渲染
     // 只有在真正需要时才重定向
-  }, [session, status, mounted]);
+  }, [session, status, mounted]); // 移除user依赖，避免循环触发
 
   // 获取用户详细信息的函数
   const fetchUserDetails = async (userId: string, username: string, isAdmin: boolean) => {
+    // 防止重复调用
+    if (isLoading) return;
+    
     try {
+      setIsLoading(true);
+      
       const response = await fetch('/api/auth/get-latest-permissions', {
         method: 'POST',
         headers: {
@@ -623,6 +631,9 @@ export default function DashboardPage() {
             permissions: data.permissions || []
           } : null);
           
+          // 标记已获取用户详细信息
+          setHasFetchedUserDetails(true);
+          
           // 保存到localStorage
           if (typeof window !== 'undefined' && data.permissions) {
             localStorage.setItem('latestPermissions', JSON.stringify(data.permissions));
@@ -634,6 +645,8 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Dashboard: 获取用户详细信息出错', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
