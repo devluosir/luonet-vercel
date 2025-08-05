@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import '../pdf-fonts.css';
+import '/pdf-fonts.css'; // 使用public目录的绝对路径
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   FileText, 

@@ -98,7 +98,7 @@ export class PreloadManager {
       if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = '/pdf-fonts.css';
+        link.href = '/pdf-fonts.css'; // 使用public目录的路径
         document.head.appendChild(link);
         
         // 等待CSS加载完成
