@@ -120,19 +120,34 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      console.log('重定向回调:', { url, baseUrl });
+      // 只在真正需要重定向时才执行
+      if (url === baseUrl || url === `${baseUrl}/`) {
+        // 如果URL是首页，不需要重定向
+        return url;
+      }
+      
+      // 只在登录相关的重定向时才记录日志
+      if (url.includes('/api/auth') || url.includes('signin') || url.includes('signout')) {
+        console.log('重定向回调:', { url, baseUrl });
+      }
       
       // 确保重定向到正确的URL
       if (url.startsWith('/')) {
         const fullUrl = `${baseUrl}${url}`;
-        console.log('重定向到:', fullUrl);
+        if (url.includes('/api/auth') || url.includes('signin') || url.includes('signout')) {
+          console.log('重定向到:', fullUrl);
+        }
         return fullUrl;
       } else if (new URL(url).origin === baseUrl) {
-        console.log('重定向到:', url);
+        if (url.includes('/api/auth') || url.includes('signin') || url.includes('signout')) {
+          console.log('重定向到:', url);
+        }
         return url;
       }
       
-      console.log('重定向到默认页面:', baseUrl);
+      if (url.includes('/api/auth') || url.includes('signin') || url.includes('signout')) {
+        console.log('重定向到默认页面:', baseUrl);
+      }
       return baseUrl;
     }
   },
