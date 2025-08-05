@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance, safeRequestIdleCallback } from '@/utils/performance';
-import { usePermissionStore, hasPermission } from '@/lib/permissions';
+import { usePermissionStore } from '@/lib/permissions';
 import { Header } from '@/components/Header';
 import { preloadManager } from '@/utils/preloadUtils';
 
@@ -232,11 +232,12 @@ export default function DashboardPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase'>('all');
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  // 不使用usePermissionStore，避免自动获取权限
-  const [user, setUser] = useState<any>(null);
+  
+  // 使用全局权限store
+  const { user, isLoading: permissionLoading, fetchPermissions } = usePermissionStore();
   const [isLoading, setIsLoading] = useState(false);
   const refreshing = isLoading;
-  // 添加最新权限数据状态
+  // 移除本地用户状态管理，完全使用全局store
   const [latestPermissions, setLatestPermissions] = useState<any[]>([]);
   const [hasFetchedUserDetails, setHasFetchedUserDetails] = useState(false);
 
@@ -573,82 +574,15 @@ export default function DashboardPage() {
     
     // 只在session存在且认证成功时处理
     if (session && status === 'authenticated') {
-      // 直接使用session中的用户信息
-      if (session.user) {
-        const newUser = {
-          id: session.user.id || '1',
-          username: session.user.username || session.user.name || '',
-          email: session.user.email || null,
-          status: true,
-          isAdmin: session.user.isAdmin || false,
-          permissions: session.user.permissions || []
-        };
-        setUser(newUser);
-        setLatestPermissions(session.user.permissions || []);
-        
-        // 如果session中没有权限数据，从API获取用户详细信息
-        if (!session.user.permissions || session.user.permissions.length === 0) {
-          if (!hasFetchedUserDetails) {
-            fetchUserDetails(session.user.id, session.user.username, session.user.isAdmin);
-          }
-        }
-      }
-    }
-    // 移除loading和unauthenticated的处理，让页面正常渲染
-    // 只有在真正需要时才重定向
-  }, [session, status, mounted]); // 移除user依赖，避免循环触发
-
-  // 获取用户详细信息的函数
-  const fetchUserDetails = async (userId: string, username: string, isAdmin: boolean) => {
-    // 防止重复调用
-    if (isLoading) return;
-    
-    try {
-      setIsLoading(true);
-      
-      const response = await fetch('/api/auth/get-latest-permissions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-User-ID': userId,
-          'X-User-Name': username,
-          'X-User-Admin': isAdmin ? 'true' : 'false',
-        },
-        cache: 'no-store'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        // 检查组件是否仍然挂载
-        if (mounted) {
-          // 更新权限数据
-          setLatestPermissions(data.permissions || []);
-          
-          // 更新用户状态
-          setUser((prev: User | null) => prev ? {
-            ...prev,
-            permissions: data.permissions || []
-          } : null);
-          
-          // 标记已获取用户详细信息
+      // 如果session中没有权限数据，从全局store获取
+      if (!session.user.permissions || session.user.permissions.length === 0) {
+        if (!hasFetchedUserDetails) {
+          fetchPermissions(true); // 强制刷新权限
           setHasFetchedUserDetails(true);
-          
-          // 保存到localStorage
-          if (typeof window !== 'undefined' && data.permissions) {
-            localStorage.setItem('latestPermissions', JSON.stringify(data.permissions));
-            localStorage.setItem('permissionsTimestamp', Date.now().toString());
-          }
         }
-      } else {
-        console.error('Dashboard: 获取用户详细信息失败', response.status);
       }
-    } catch (error) {
-      console.error('Dashboard: 获取用户详细信息出错', error);
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [session, status, mounted, fetchPermissions, hasFetchedUserDetails]);
 
   // 简化的初始化逻辑
   useEffect(() => {
@@ -663,14 +597,14 @@ export default function DashboardPage() {
       if (username) {
         console.log('Dashboard: 从localStorage恢复用户信息');
         
-        setUser({
-          id: userId || '1',
-          username: username,
-          email: null,
-          status: true,
-          isAdmin: isAdmin,
-          permissions: []
-        });
+        // setUser({ // 移除此行，因为权限已移至store
+        //   id: userId || '1',
+        //   username: username,
+        //   email: null,
+        //   status: true,
+        //   isAdmin: isAdmin,
+        //   permissions: []
+        // });
         
         // 从localStorage恢复权限数据
         const storedPermissions = localStorage.getItem('latestPermissions');
@@ -993,7 +927,7 @@ export default function DashboardPage() {
       <div className="flex-1">
         <Header 
           user={{
-            name: user?.name || user?.username || '用户',
+            name: user?.username || '用户',
             isAdmin: user?.isAdmin || false
           }}
           onLogout={handleLogout}
@@ -1008,7 +942,7 @@ export default function DashboardPage() {
           isOpen={showProfileModal}
           onClose={() => setShowProfileModal(false)}
           user={{
-            username: user?.username || user?.name || '',
+            username: user?.username || '',
             email: user?.email || null,
             permissions: user?.permissions || []
           }}
