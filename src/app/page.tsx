@@ -86,8 +86,8 @@ export default function LoginPage() {
         setError('用户名或密码错误');
         setLoading(false);
       } else {
-        // 使用window.location.href强制页面跳转
-        window.location.href = callbackUrl;
+        // 使用router.push进行客户端导航，避免页面刷新
+        router.push(callbackUrl);
       }
       
     } catch (error) {

@@ -62,71 +62,71 @@ export default function AdminPage() {
     setMounted(true);
   }, []);
 
+  // 权限检查和数据加载函数
+  const checkPermissionsAndLoad = async () => {
+    try {
+      // 等待session加载完成
+      if (status === 'loading') {
+        console.log('Session正在加载中...');
+        return;
+      }
+
+      // 检查用户是否登录
+      if (status === 'unauthenticated' || !session) {
+        console.log('用户未认证，重定向到登录页');
+        router.push('/');
+        return;
+      }
+      
+      // 检查管理员权限
+      if (!hasAdminPermission) {
+        console.log('用户不是管理员，拒绝访问');
+        setPermissionChecked(true);
+        setError('权限不足，需要管理员权限');
+        return;
+      }
+      
+      console.log('管理员权限检查通过:', { 
+        user: session.user?.username, 
+        isAdmin: hasAdminPermission 
+      });
+
+      // 标记权限检查完成
+      setPermissionChecked(true);
+
+      // 加载用户列表
+      try {
+        setLoading(true);
+        setError(null);
+        console.log('开始加载用户列表，API地址:', API_ENDPOINTS.USERS.LIST);
+        
+        const data = await apiRequestWithError(API_ENDPOINTS.USERS.LIST);
+        console.log('用户列表API响应:', data);
+        
+        if (data.users && Array.isArray(data.users)) {
+          setUsers(data.users);
+          setFilteredUsers(data.users);
+          console.log('成功加载用户列表，用户数量:', data.users.length);
+        } else {
+          console.error('用户列表API返回数据格式错误:', data);
+          setError('加载用户列表失败');
+        }
+      } catch (error) {
+        console.error('加载用户列表失败:', error);
+        setError('加载用户列表失败');
+      } finally {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('权限检查失败:', error);
+      setError('权限检查失败');
+      setLoading(false);
+    }
+  };
+
   // 权限检查和数据加载
   useEffect(() => {
     if (!mounted) return;
-
-    const checkPermissionsAndLoad = async () => {
-      try {
-        // 等待session加载完成
-        if (status === 'loading') {
-          console.log('Session正在加载中...');
-          return;
-        }
-
-        // 检查用户是否登录
-        if (status === 'unauthenticated' || !session) {
-          console.log('用户未认证，重定向到登录页');
-          router.push('/');
-          return;
-        }
-        
-        // 检查管理员权限
-        if (!hasAdminPermission) {
-          console.log('用户不是管理员，拒绝访问');
-          setPermissionChecked(true);
-          setError('权限不足，需要管理员权限');
-          return;
-        }
-        
-        console.log('管理员权限检查通过:', { 
-          user: session.user?.username, 
-          isAdmin: hasAdminPermission 
-        });
-
-        // 标记权限检查完成
-        setPermissionChecked(true);
-
-        // 加载用户列表
-        try {
-          setLoading(true);
-          setError(null);
-          console.log('开始加载用户列表，API地址:', API_ENDPOINTS.USERS.LIST);
-          
-          const data = await apiRequestWithError(API_ENDPOINTS.USERS.LIST);
-          console.log('用户列表API响应:', data);
-          
-          if (data.users && Array.isArray(data.users)) {
-            setUsers(data.users);
-            setFilteredUsers(data.users);
-            console.log('成功加载用户列表，用户数量:', data.users.length);
-          } else {
-            console.error('用户列表API返回数据格式错误:', data);
-            setError('加载用户列表失败');
-          }
-        } catch (error) {
-          console.error('加载用户列表失败:', error);
-          setError('加载用户列表失败');
-        } finally {
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('权限检查失败:', error);
-        setError('权限检查失败');
-        setLoading(false);
-      }
-    };
-
     checkPermissionsAndLoad();
   }, [mounted, session, status, hasAdminPermission, router]);
 
@@ -236,7 +236,7 @@ export default function AdminPage() {
             onClick={() => {
               setError(null);
               // 重新加载用户数据
-              window.location.reload();
+              checkPermissionsAndLoad();
             }}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -480,8 +480,8 @@ export default function AdminPage() {
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
-            // 重新加载用户数据
-            window.location.reload();
+            // 重新加载用户数据，但不刷新页面
+            checkPermissionsAndLoad();
           }}
         />
       </div>

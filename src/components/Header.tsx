@@ -243,7 +243,7 @@ export function Header({
                       {isRefreshing ? '刷新中...' : '刷新权限'}
                     </button>
                   )}
-                                      <div className="relative">
+                  <div className="relative">
                       <button
                         onClick={handlePreload}
                         disabled={isPreloading}
@@ -258,21 +258,21 @@ export function Header({
                           <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/10 dark:to-blue-800/20 transition-all duration-300 ease-out" />
                         )}
                         
-                                   {/* 进度条 */}
-           {isPreloading && (
-             <div 
-               className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-300 dark:from-blue-700/40 dark:to-blue-600/50 transition-all duration-300 ease-out"
-               style={{ width: `${preloadProgress}%` }}
-             />
-           )}
-           
-           {/* 进度条边框 */}
-           {isPreloading && (
-             <div 
-               className="absolute inset-0 border-r-2 border-blue-400 dark:border-blue-300 transition-all duration-300 ease-out"
-               style={{ width: `${preloadProgress}%` }}
-             />
-           )}
+                        {/* 进度条 */}
+                        {isPreloading && (
+                          <div 
+                            className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-300 dark:from-blue-700/40 dark:to-blue-600/50 transition-all duration-300 ease-out"
+                            style={{ width: `${preloadProgress}%` }}
+                          />
+                        )}
+                        
+                        {/* 进度条边框 */}
+                        {isPreloading && (
+                          <div 
+                            className="absolute inset-0 border-r-2 border-blue-400 dark:border-blue-300 transition-all duration-300 ease-out"
+                            style={{ width: `${preloadProgress}%` }}
+                          />
+                        )}
                         
                         {/* 内容 */}
                         <div className="relative z-10 flex items-center w-full">
