@@ -108,22 +108,48 @@ export default function LoginPage() {
       }
       
       console.log('开始登录...', { callbackUrl });
+      
+      // 使用手动重定向模式，更可靠
       const result = await signIn('credentials', {
         username,
         password,
-        redirect: true, // 使用NextAuth的自动重定向
+        redirect: false,
         callbackUrl: callbackUrl,
       });
 
-      // 如果使用redirect，这里不会执行，因为页面会重定向
       console.log('登录结果:', result);
-
+      
       if (result?.error) {
         setError('用户名或密码错误');
         setLoading(false);
       } else {
-        // 使用NextAuth的自动重定向，不需要手动处理
-        console.log('登录成功，NextAuth将自动重定向');
+        console.log('登录成功，等待session更新...');
+        setHasLoggedIn(true);
+        
+        // 简化的session等待逻辑
+        let attempts = 0;
+        const maxAttempts = 10; // 减少到1秒
+        
+        const waitForSession = () => {
+          attempts++;
+          console.log(`Session等待尝试 ${attempts}/${maxAttempts}:`, { 
+            status, 
+            hasSession: !!session, 
+            sessionUser: session?.user?.username 
+          });
+          
+          if (session && status === 'authenticated' && session.user?.id) {
+            console.log('Session已更新，跳转到:', callbackUrl);
+            router.push(callbackUrl);
+          } else if (attempts < maxAttempts) {
+            setTimeout(waitForSession, 100);
+          } else {
+            console.log('Session等待超时，直接跳转');
+            router.push(callbackUrl);
+          }
+        };
+        
+        setTimeout(waitForSession, 100);
       }
       
     } catch (error) {
