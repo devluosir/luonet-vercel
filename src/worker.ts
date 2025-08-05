@@ -73,6 +73,11 @@ export default {
       return handleUpdatePermissions(request, env);
     }
 
+    // 处理权限删除
+    if (path.startsWith('/api/admin/permissions/') && request.method === 'DELETE') {
+      return handleDeletePermission(request, env);
+    }
+
     // 处理用户更新（需要排除权限相关的路径）
     if (path.startsWith('/api/admin/users/') && !path.includes('/permissions') && request.method === 'PUT') {
       return handleUpdateUser(request, env);
@@ -951,6 +956,112 @@ async function handleDeleteUser(request: Request, env: Env): Promise<Response> {
           email: user.email,
           isAdmin: user.isAdmin,
           status: user.status
+        }
+      }),
+      { 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        } 
+      }
+    );
+
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ 
+        error: '服务器错误',
+        details: error instanceof Error ? error.message : '未知错误'
+      }),
+      { 
+        status: 500, 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        } 
+      }
+    );
+  }
+} 
+
+async function handleDeletePermission(request: Request, env: Env): Promise<Response> {
+  try {
+    // 检查认证 - 使用session头信息
+    const sessionUserId = request.headers.get('X-User-ID');
+    const userName = request.headers.get('X-User-Name');
+    const isAdmin = request.headers.get('X-User-Admin') === 'true';
+    
+    if (!sessionUserId || !userName) {
+      return new Response(
+        JSON.stringify({ error: '未授权访问' }),
+        { 
+          status: 401, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    // 检查是否是管理员
+    if (!isAdmin) {
+      return new Response(
+        JSON.stringify({ error: '只有管理员可以删除权限' }),
+        { 
+          status: 403, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    const url = new URL(request.url);
+    const permissionId = url.pathname.split('/')[4]; // 从路径中提取权限ID
+
+    const d1Client = new D1UserClient(env.USERS_DB);
+    
+    // 先获取权限信息
+    const permission = await d1Client.getPermissionById(permissionId);
+    if (!permission) {
+      return new Response(
+        JSON.stringify({ error: '权限不存在' }),
+        { 
+          status: 404, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    // 删除权限
+    const deleted = await d1Client.deletePermission(permissionId);
+
+    if (!deleted) {
+      return new Response(
+        JSON.stringify({ error: '删除权限失败' }),
+        { 
+          status: 500, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: '权限删除成功',
+        permission: {
+          id: permission.id,
+          userId: permission.userId,
+          moduleId: permission.moduleId,
+          canAccess: permission.canAccess
         }
       }),
       { 

@@ -183,6 +183,19 @@ export class D1UserClient {
     }));
   }
 
+  async getPermissionById(id: string): Promise<D1Permission | null> {
+    const result = await this.db.prepare(`
+      SELECT * FROM Permission WHERE id = ?
+    `).bind(id).first<D1Permission>();
+
+    if (!result) return null;
+
+    return {
+      ...result,
+      canAccess: Boolean(result.canAccess)
+    };
+  }
+
   async updatePermission(id: string, canAccess: boolean): Promise<D1Permission | null> {
     await this.db.prepare(`
       UPDATE Permission SET canAccess = ? WHERE id = ?
