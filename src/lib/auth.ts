@@ -3,7 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import NextAuth from "next-auth";
 
 export const authOptions: NextAuthOptions = {
-  debug: true,
+  debug: false, // 关闭调试模式以提高性能
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
@@ -21,19 +21,11 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        console.log('=== NextAuth authorize 被调用 ===');
-        console.log('NextAuth authorize - 开始验证:', { 
-          username: credentials?.username, 
-          password: credentials?.password ? '***' : 'empty' 
-        });
-        
         if (!credentials?.username || !credentials?.password) {
-          console.log('NextAuth authorize - 用户名或密码为空');
           throw new Error("Missing username or password");
         }
 
         try {
-          console.log('NextAuth authorize - 调用认证API');
           // 使用远程 API 进行认证
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/auth/d1-users`, {
             method: 'POST',
@@ -46,23 +38,12 @@ export const authOptions: NextAuthOptions = {
             })
           });
 
-          console.log('NextAuth authorize - API 响应状态:', response.status);
-          console.log('NextAuth authorize - API 响应URL:', response.url);
-
           if (!response.ok) {
             const errorData = await response.json();
-            console.log('NextAuth authorize - API 错误:', errorData);
             throw new Error(errorData.error || '认证失败');
           }
 
           const data = await response.json();
-          console.log('NextAuth authorize - API 成功响应:', data);
-          console.log('NextAuth authorize - 返回用户数据:', {
-            id: data.user.id,
-            email: data.user.email,
-            username: data.user.username,
-            isAdmin: data.user.isAdmin
-          });
           
           // 验证用户状态
           if (!data.user || !data.user.status) {
@@ -114,7 +95,6 @@ export const authOptions: NextAuthOptions = {
             permissions: permissions
           };
         } catch (error) {
-          console.error('登录验证失败:', error);
           throw new Error(error instanceof Error ? error.message : "用户名或密码错误");
         }
       }
@@ -158,15 +138,5 @@ export const authOptions: NextAuthOptions = {
 };
 
 const handler = NextAuth(authOptions);
-
-// 添加调试信息
-console.log('NextAuth 配置已加载，providers:', authOptions.providers.map(p => p.id));
-console.log('NextAuth handler 创建完成');
-console.log('NextAuth 配置详情:', {
-  debug: authOptions.debug,
-  session: authOptions.session,
-  pages: authOptions.pages,
-  providers: authOptions.providers.map(p => ({ id: p.id, name: p.name }))
-});
 
 export { handler as auth, handler as GET, handler as POST }; 

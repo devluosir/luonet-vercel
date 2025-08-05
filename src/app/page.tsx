@@ -94,103 +94,8 @@ export default function LoginPage() {
         return;
       }
 
-      // 登录成功后，立即获取用户权限信息
-      
-      try {
-        // 获取用户权限信息
-        const formattedUsername = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
-        const isAdmin = username.toLowerCase() === 'roger';
-        // 使用用户名作为临时ID，后续会从后端获取真实ID
-        const userId = username.toLowerCase();
-        
-        // 先尝试从后端 API 获取用户信息
-        let realIsAdmin = isAdmin;
-        let realUserId = userId;
-        
-        try {
-          // 先通过用户名查询获取用户信息
-          const userResponse = await fetch(`https://udb.luocompany.net/api/admin/users?username=${encodeURIComponent(username)}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-User-ID': userId,
-              'X-User-Name': formattedUsername,
-              'X-User-Admin': isAdmin ? 'true' : 'false',
-            },
-          });
-          
-          if (userResponse.ok) {
-            const userData = await userResponse.json();
-            
-            // 处理返回的用户数据
-            let user = null;
-            if (userData.users && Array.isArray(userData.users)) {
-              // 如果返回的是用户数组，根据用户名查找对应用户
-              user = userData.users.find((u: any) => u.username === username);
-            } else if (userData.id) {
-              // 如果返回的是单个用户对象
-              user = userData;
-            }
-            
-            if (user) {
-              if (user.isAdmin !== undefined) {
-                realIsAdmin = !!user.isAdmin;
-              }
-              if (user.id) {
-                realUserId = user.id;
-              }
-              
-              // 获取邮箱信息并存储到本地
-              if (user.email && typeof window !== 'undefined') {
-                localStorage.setItem('userEmail', user.email);
-              }
-              
-            } else {
-              console.log('未找到对应用户:', username);
-            }
-          }
-        } catch (error) {
-          console.error('获取用户信息失败:', error);
-        }
-        
-        const permissionsResponse = await fetch('/api/auth/get-latest-permissions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-User-ID': realUserId,
-            'X-User-Name': formattedUsername,
-            'X-User-Admin': realIsAdmin ? 'true' : 'false',
-          },
-        });
-        
-        if (permissionsResponse.ok) {
-          const permissionsData = await permissionsResponse.json();
-          
-          // 保存权限信息到localStorage
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('latestPermissions', JSON.stringify(permissionsData.permissions || []));
-            localStorage.setItem('permissionsTimestamp', Date.now().toString());
-            
-            // 保存用户基本信息
-            localStorage.setItem('username', formattedUsername);
-            
-            // 从权限数据中获取管理员状态和用户ID
-            const finalIsAdmin = permissionsData.user?.isAdmin || realIsAdmin;
-            const finalUserId = permissionsData.user?.id || realUserId;
-            localStorage.setItem('isAdmin', finalIsAdmin.toString());
-            localStorage.setItem('userId', finalUserId);
-          }
-        } else {
-          console.error('获取权限数据失败:', permissionsResponse.status);
-        }
-      } catch (error) {
-        console.error('获取权限数据出错:', error);
-      }
-      
-      // 等待session更新后再跳转
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1000);
+      // 登录成功后，立即跳转到dashboard，权限信息会在dashboard中异步获取
+      router.push('/dashboard');
     } catch (error) {
       console.error('登录错误:', error);
       setError('登录过程中发生错误，请重试');
@@ -280,7 +185,14 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700 transition-colors duration-200"
               >
-                {loading ? '登录中...' : '登录 →'}
+                {loading ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    登录中...
+                  </div>
+                ) : (
+                  '登录 →'
+                )}
               </button>
             </div>
           </form>

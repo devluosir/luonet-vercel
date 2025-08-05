@@ -292,10 +292,25 @@ export default function DashboardPage() {
   // 添加最新权限数据状态
   const [latestPermissions, setLatestPermissions] = useState<any[]>([]);
 
-  // 获取权限数据的函数
+  // 优化的权限获取逻辑
   const fetchPermissions = useCallback(async () => {
     try {
-      // 从localStorage获取用户信息
+      // 首先检查是否有缓存的权限数据
+      if (typeof window !== 'undefined') {
+        const storedPermissions = localStorage.getItem('latestPermissions');
+        const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
+        
+        // 检查权限数据是否在1小时内（减少API调用）
+        const isRecent = permissionsTimestamp && (Date.now() - parseInt(permissionsTimestamp)) < 60 * 60 * 1000;
+        
+        if (storedPermissions && isRecent) {
+          const cachedPermissions = JSON.parse(storedPermissions);
+          setLatestPermissions(cachedPermissions);
+          return; // 如果有有效缓存，直接使用，不调用API
+        }
+      }
+      
+      // 如果没有有效缓存，才调用API
       const username = localStorage.getItem('username');
       const userId = localStorage.getItem('userId');
       const isAdmin = localStorage.getItem('isAdmin') === 'true';
@@ -744,10 +759,10 @@ export default function DashboardPage() {
           coreModules.forEach((module, index) => {
             setTimeout(() => {
               router.prefetch(module.path);
-            }, index * 100); // 每个模块间隔100ms预加载
+            }, index * 200); // 增加间隔到200ms，减少并发
           });
         }
-      }, 1000); // 延迟1秒开始预加载
+      }, 2000); // 延迟2秒开始预加载，让用户先看到界面
     };
     init();
   }, [router]); // 只依赖router，移除session和user依赖
@@ -944,6 +959,16 @@ export default function DashboardPage() {
       router.push('/');
     }
   }, [user, router, mounted]);
+
+  // 延迟获取权限，避免阻塞初始渲染
+  useEffect(() => {
+    // 延迟1秒后获取权限，让页面先渲染
+    const timer = setTimeout(() => {
+      fetchPermissions();
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [fetchPermissions]);
 
   // 所有 hooks 声明完毕后，再做提前 return
   if (!mounted) return null;

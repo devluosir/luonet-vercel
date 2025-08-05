@@ -42,83 +42,54 @@ export class PreloadManager {
       return;
     }
 
-    // 检查是否已经预加载过且时间在24小时内
-    if (this.isPreloaded()) {
-      console.log('资源已在24小时内预加载过，跳过预加载');
-      return;
-    }
-
     this.isPreloading = true;
-    this.updateProgress(0);
-
-    // 临时禁用控制台警告和错误，避免过多的错误信息
-    const originalWarn = console.warn;
-    const originalError = console.error;
-    console.warn = () => {}; // 静默警告
-    console.error = () => {}; // 静默错误
+    this.updateProgress(0, '开始预加载资源...');
 
     try {
-      console.log('开始预加载所有资源...');
-      
-      // 显示用户权限信息
-      const userPermissions = this.getUserPermissions();
-      if (userPermissions.length > 0) {
-        console.log('用户权限:', userPermissions);
-        this.updateProgress(0, `正在预加载资源 (权限: ${userPermissions.join(', ')})...`);
-      } else {
-        this.updateProgress(0, '正在预加载资源...');
-      }
+      // 获取用户权限
+      const permissions = this.getUserPermissions();
+      console.log(`用户权限: ${permissions}`);
 
-      // 1. 预加载表单页面 (30%)
-      this.updateProgress(10, '正在预加载表单页面...');
-      await this.preloadFormPages();
-      this.updateProgress(30, '表单页面预加载完成');
+      this.updateProgress(5, `正在预加载资源 (权限: ${permissions.join(', ')})...`);
 
-      // 2. 预加载静态资源 (50%)
-      this.updateProgress(30, '正在预加载静态资源...');
-      await this.preloadStaticAssets();
-      this.updateProgress(50, '静态资源预加载完成');
+      // 异步预加载，不阻塞用户操作
+      setTimeout(async () => {
+        try {
+          // 预加载字体（轻量级）
+          await this.preloadFonts();
+          this.updateProgress(15);
 
-      // 3. 预加载历史数据 (70%)
-      this.updateProgress(50, '正在预加载历史数据...');
-      await this.preloadHistoryData();
-      this.updateProgress(70, '历史数据预加载完成');
+          // 预加载静态资源（轻量级）
+          await this.preloadStaticAssets();
+          this.updateProgress(25);
 
-      // 4. 预加载工具页面 (85%)
-      this.updateProgress(70, '正在预加载工具页面...');
-      await this.preloadToolPages();
-      this.updateProgress(85, '工具页面预加载完成');
+          // 预加载表单页面（轻量级，只检查状态）
+          await this.preloadFormPages();
+          this.updateProgress(50);
 
-      // 5. 预加载CSS和JS资源 (100%)
-      this.updateProgress(85, '正在预加载样式和脚本...');
-      await this.preloadScriptsAndStyles();
-      this.updateProgress(100, '所有资源预加载完成！');
+          // 预加载工具页面（轻量级）
+          await this.preloadToolPages();
+          this.updateProgress(75);
 
-      console.log('所有资源预加载完成！');
-      console.log(`预加载完成: 100%`);
-      
-      // 保存预加载状态到localStorage
-      if (typeof window !== 'undefined') {
-        const timestamp = Date.now().toString();
-        localStorage.setItem('preloadCompleted', timestamp);
-        localStorage.setItem('preloadedResourcesCount', '100%');
-        localStorage.setItem('preloadTimestamp', timestamp);
-        
-        // 触发自定义事件，通知其他组件预加载完成
-        window.dispatchEvent(new CustomEvent('preloadCompleted', {
-          detail: {
-            count: this.preloadedResources.size,
-            timestamp: timestamp
-          }
-        }));
-      }
+          // 预加载历史数据（轻量级）
+          await this.preloadHistoryData();
+          this.updateProgress(90);
+
+          // 预加载脚本和样式（轻量级）
+          await this.preloadScriptsAndStyles();
+          this.updateProgress(100, '预加载完成');
+
+          console.log('所有资源预加载完成');
+        } catch (error) {
+          console.error('预加载过程中出错:', error);
+        } finally {
+          this.isPreloading = false;
+        }
+      }, 100); // 延迟100ms开始，让用户先看到界面
+
     } catch (error) {
-      console.error('预加载过程中出现错误:', error);
-    } finally {
+      console.error('预加载初始化失败:', error);
       this.isPreloading = false;
-      // 恢复控制台警告和错误
-      console.warn = originalWarn;
-      console.error = originalError;
     }
   }
 
@@ -224,34 +195,13 @@ export class PreloadManager {
       });
       
       if (response.ok) {
-        // 读取响应内容以确保真正预加载
-        const content = await response.text();
-        console.log(`页面预加载成功: ${path} (${content.length} bytes)`);
-        this.preloadedResources.add(path);
-        
-        // 预加载页面相关的CSS和JS资源
-        await this.preloadPageResources(path, content);
+        // 只检查响应状态，不读取完整内容以避免延迟
+        console.log(`页面预加载成功: ${path} (状态: ${response.status})`);
+      } else {
+        console.warn(`页面预加载失败: ${path} (状态: ${response.status})`);
       }
-      
-      // 方法2: 使用Next.js的prefetch功能（如果可用）
-      if (typeof window !== 'undefined' && (window as any).__NEXT_DATA__) {
-        try {
-          // 创建link标签进行预加载
-          const link = document.createElement('link');
-          link.rel = 'prefetch';
-          link.href = path;
-          document.head.appendChild(link);
-          console.log(`Next.js prefetch成功: ${path}`);
-        } catch (error) {
-          console.warn(`Next.js prefetch失败: ${path}`, error);
-        }
-      }
-      
-      // 方法3: 预加载页面相关的API端点
-      await this.preloadPageAPIs(path);
-      
     } catch (error) {
-      console.warn(`页面预加载失败: ${path}`, error);
+      console.warn(`页面预加载出错: ${path}`, error);
     }
   }
 
