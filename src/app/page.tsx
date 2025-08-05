@@ -36,6 +36,8 @@ export default function LoginPage() {
 
   // 监听session状态变化 - 只在页面加载时检查是否已登录
   useEffect(() => {
+    console.log('Session状态变化:', { session: !!session, status, loading });
+    
     // 只在页面初始加载时检查，避免与登录跳转冲突
     if (session && status === 'authenticated') {
       console.log('检测到已登录用户，跳转到dashboard');
@@ -96,6 +98,15 @@ export default function LoginPage() {
 
       // 登录成功，不在这里跳转，让useEffect处理跳转
       console.log('登录成功，等待session更新');
+      
+      // 备用方案：如果session更新延迟，强制跳转
+      setTimeout(() => {
+        console.log('检查session状态:', { session: !!session, status });
+        if (!session || status !== 'authenticated') {
+          console.log('Session更新延迟，强制跳转到dashboard');
+          router.push('/dashboard');
+        }
+      }, 2000);
       
     } catch (error) {
       console.error('登录错误:', error);
