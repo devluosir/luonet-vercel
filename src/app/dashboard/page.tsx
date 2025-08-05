@@ -956,6 +956,56 @@ export default function DashboardPage() {
     }
   };
 
+  const getColorClasses = (docType: string) => {
+    switch (docType) {
+      case 'quotation':
+        return 'group-hover:text-blue-600 dark:group-hover:text-blue-400';
+      case 'confirmation':
+        return 'group-hover:text-green-600 dark:group-hover:text-green-400';
+      case 'packing':
+        return 'group-hover:text-teal-600 dark:group-hover:text-teal-400';
+      case 'invoice':
+        return 'group-hover:text-purple-600 dark:group-hover:text-purple-400';
+      case 'purchase':
+        return 'group-hover:text-orange-600 dark:group-hover:text-orange-400';
+      default:
+        return 'group-hover:text-gray-600 dark:group-hover:text-gray-400';
+    }
+  };
+
+  const getDocumentName = (doc: any) => {
+    let name = '';
+    if (doc.type === 'purchase') {
+      name = doc.supplierName || '未命名供应商';
+    } else if (doc.type === 'packing') {
+      name = doc.consigneeName || '未命名收货人';
+    } else {
+      name = doc.customerName || '未命名客户';
+    }
+    // 只取第一行
+    return name.split('\n')[0]?.trim() || name;
+  };
+
+  const getEmptyStateText = () => {
+    const timeText = {
+      'today': '今天',
+      '3days': '最近三天',
+      'week': '最近一周',
+      'month': '最近一个月'
+    }[timeFilter];
+    
+    const typeText = {
+      'all': '所有类型',
+      'quotation': '报价单',
+      'confirmation': '销售确认',
+      'packing': '装箱单',
+      'invoice': '财务发票',
+      'purchase': '采购订单'
+    }[typeFilter];
+    
+    return `${timeText}还没有创建或修改的${typeText}`;
+  };
+
   // 页面正常 return
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
@@ -1253,39 +1303,12 @@ export default function DashboardPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className={`text-sm font-medium text-gray-900 dark:text-white truncate
-                              transition-colors duration-200 ${(() => {
-                                // 根据文档类型匹配对应的文字颜色
-                                switch (doc.type) {
-                                  case 'quotation':
-                                    return 'group-hover:text-blue-600 dark:group-hover:text-blue-400';
-                                  case 'confirmation':
-                                    return 'group-hover:text-green-600 dark:group-hover:text-green-400';
-                                  case 'packing':
-                                    return 'group-hover:text-teal-600 dark:group-hover:text-teal-400';
-                                  case 'invoice':
-                                    return 'group-hover:text-purple-600 dark:group-hover:text-purple-400';
-                                  case 'purchase':
-                                    return 'group-hover:text-orange-600 dark:group-hover:text-orange-400';
-                                  default:
-                                    return 'group-hover:text-gray-600 dark:group-hover:text-gray-400';
-                                }
-                              })()}`}>
+                              transition-colors duration-200 ${getColorClasses(doc.type)}`}>
                               {getDocumentTypeName(doc.type)} - {getDocumentNumber(doc)}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5
                               group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors duration-200">
-                              {(() => {
-                                let name = '';
-                                if (doc.type === 'purchase') {
-                                  name = doc.supplierName || '未命名供应商';
-                                } else if (doc.type === 'packing') {
-                                  name = doc.consigneeName || '未命名收货人';
-                                } else {
-                                  name = doc.customerName || '未命名客户';
-                                }
-                                // 只取第一行
-                                return name.split('\n')[0]?.trim() || name;
-                              })()}
+                              {getDocumentName(doc)}
                             </div>
                           </div>
                           {/* 添加一个微妙的箭头指示器 */}
@@ -1302,25 +1325,7 @@ export default function DashboardPage() {
               ) : (
                 <div className="bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 p-5 text-center">
                   <div className="text-gray-500 dark:text-gray-400 text-sm mb-2">
-                    {(() => {
-                      const timeText = {
-                        'today': '今天',
-                        '3days': '最近三天',
-                        'week': '最近一周',
-                        'month': '最近一个月'
-                      }[timeFilter];
-                      
-                      const typeText = {
-                        'all': '所有类型',
-                        'quotation': '报价单',
-                        'confirmation': '销售确认',
-                        'packing': '装箱单',
-                        'invoice': '财务发票',
-                        'purchase': '采购订单'
-                      }[typeFilter];
-                      
-                      return `${timeText}还没有创建或修改的${typeText}`;
-                    })()}
+                    {getEmptyStateText()}
                   </div>
                   <div className="text-xs text-gray-400 dark:text-gray-500">
                     开始创建第一个单据吧！
