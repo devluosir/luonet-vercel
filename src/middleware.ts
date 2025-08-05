@@ -95,6 +95,12 @@ export default withAuth(
           return false;
         }
 
+        // 4. 检查token是否包含必要的用户信息（简化检查）
+        if (!token.username) {
+          console.log('Token信息不完整，拒绝访问:', pathname);
+          return false;
+        }
+
         // 4. 管理员路由需要管理员权限验证
         if (ADMIN_PATHS.some(path => pathname.startsWith(path))) {
           console.log('管理员路由访问检查:', { pathname, isAdmin: token?.isAdmin, token: !!token });
