@@ -7,18 +7,21 @@ import { API_ENDPOINTS, apiRequestWithError } from "./api-config";
 const AUTH_CACHE_DURATION = 5 * 60 * 1000; // 5分钟
 
 export const authOptions: NextAuthOptions = {
+  debug: true, // 启用调试模式
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   providers: [
     CredentialsProvider({
+      id: "credentials",
       name: "Credentials",
       credentials: {
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        console.log('=== NextAuth authorize 被调用 ===');
         console.log('NextAuth authorize - 开始验证:', { 
           username: credentials?.username, 
           password: credentials?.password ? '***' : 'empty' 
