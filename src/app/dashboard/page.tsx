@@ -146,61 +146,6 @@ const TOOLS_MODULES = [
     iconBg: 'bg-violet-500',
     textColor: 'text-violet-700 dark:text-violet-300'
   }
-  // 注释掉其他模块
-  // { 
-  //   id: 'feature5', 
-  //   name: '库存管理', 
-  //   path: '/tools/feature5',
-  //   icon: Database,
-  //   bgColor: 'bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-800/40',
-  //   iconBg: 'bg-amber-500',
-  //   textColor: 'text-amber-700 dark:text-amber-300'
-  // },
-  // { 
-  //   id: 'feature3', 
-  //   name: '数据分析', 
-  //   path: '/tools/feature3',
-  //   icon: BarChart3,
-  //   bgColor: 'bg-cyan-100 hover:bg-cyan-200 dark:bg-cyan-900/30 dark:hover:bg-cyan-800/40',
-  //   iconBg: 'bg-cyan-500',
-  //   textColor: 'text-cyan-700 dark:text-cyan-300'
-  // },
-  // { 
-  //   id: 'feature8', 
-  //   name: '销售预测', 
-  //   path: '/tools/feature8',
-  //   icon: TrendingUp,
-  //   bgColor: 'bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:hover:bg-emerald-800/40',
-  //   iconBg: 'bg-emerald-500',
-  //   textColor: 'text-emerald-700 dark:text-emerald-300'
-  // },
-  // { 
-  //   id: 'feature7', 
-  //   name: '时间管理', 
-  //   path: '/tools/feature7',
-  //   icon: Clock,
-  //   bgColor: 'bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-800/40',
-  //   iconBg: 'bg-indigo-500',
-  //   textColor: 'text-indigo-700 dark:text-indigo-300'
-  // },
-  // { 
-  //   id: 'feature6', 
-  //   name: '自动化工具', 
-  //   path: '/tools/feature6',
-  //   icon: Zap,
-  //   bgColor: 'bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-800/40',
-  //   iconBg: 'bg-red-500',
-  //   textColor: 'text-red-700 dark:text-red-300'
-  // },
-  // { 
-  //   id: 'feature9', 
-  //   name: '系统设置', 
-  //   path: '/tools/feature9',
-  //   icon: Settings,
-  //   bgColor: 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800/50 dark:hover:bg-gray-700/60',
-  //   iconBg: 'bg-gray-500',
-  //   textColor: 'text-gray-700 dark:text-gray-300'
-  // }
 ];
 
 // 统一的模块按钮组件

@@ -53,9 +53,8 @@ export async function POST(request: NextRequest) {
         }
         
         if (userData && userData.permissions && Array.isArray(userData.permissions)) {
-          // 转换后端权限格式，并过滤掉feature权限
+          // 转换后端权限格式
           permissions = userData.permissions
-            .filter((perm: any) => !perm.moduleId.startsWith('feature'))
             .map((perm: any) => ({
               id: perm.id || `backend-${perm.moduleId}`,
               moduleId: perm.moduleId,
@@ -82,18 +81,16 @@ export async function POST(request: NextRequest) {
         
         if (session?.user?.permissions) {
           if (Array.isArray(session.user.permissions)) {
-            // 对象数组格式，过滤掉feature权限
+            // 对象数组格式
             permissions = session.user.permissions
-              .filter((perm: any) => !perm.moduleId.startsWith('feature'))
               .map((perm: any) => ({
                 id: perm.id || `session-${perm.moduleId}`,
                 moduleId: perm.moduleId,
                 canAccess: !!perm.canAccess
               }));
           } else if (typeof session.user.permissions === 'object') {
-            // 对象格式，过滤掉feature权限
+            // 对象格式
             permissions = Object.entries(session.user.permissions)
-              .filter(([moduleId]) => !moduleId.startsWith('feature'))
               .map(([moduleId, canAccess]) => ({
                 id: `session-${moduleId}`,
                 moduleId: moduleId,
