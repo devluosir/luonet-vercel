@@ -20,7 +20,6 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       id: "credentials",
       name: "Credentials",
-      type: "credentials",
       credentials: {
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" }
@@ -55,10 +54,12 @@ export const authOptions: NextAuthOptions = {
 
           if (!response.ok) {
             const errorData = await response.json();
+            console.log('NextAuth authorize - API 错误:', errorData);
             throw new Error(errorData.error || '认证失败');
           }
 
           const data = await response.json();
+          console.log('NextAuth authorize - API 成功响应:', data);
           
           // 验证用户状态
           if (!data.user || !data.user.status) {
