@@ -42,6 +42,42 @@ export default function LoginPage() {
   // 移除session检查逻辑，避免循环重定向
   // 现在使用快速登录，不需要等待session更新
 
+  // 添加自动重定向逻辑 - 已登录用户自动跳转到dashboard
+  useEffect(() => {
+    // 如果用户已登录，自动重定向到dashboard
+    if (session && status === 'authenticated') {
+      router.push('/dashboard');
+      return;
+    }
+    
+    // 如果session还在加载中，等待加载完成
+    if (status === 'loading') {
+      return;
+    }
+    
+    // 如果session加载完成但未登录，检查localStorage是否有用户信息
+    if (status === 'unauthenticated' && typeof window !== 'undefined') {
+      try {
+        const userInfo = localStorage.getItem('userInfo');
+        const latestPermissions = localStorage.getItem('latestPermissions');
+        const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
+        
+        if (userInfo && latestPermissions && permissionsTimestamp) {
+          const userData = JSON.parse(userInfo);
+          const isRecent = (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000;
+          
+          // 如果有有效的本地用户数据，认为用户已登录，自动跳转
+          if (userData.username && isRecent) {
+            router.push('/dashboard');
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('检查本地用户信息失败:', error);
+      }
+    }
+  }, [session, status, router]);
+
   // 移除session调试信息，避免在登录后仍然显示
   // useEffect(() => {
   //   if (session && status === 'authenticated') {
