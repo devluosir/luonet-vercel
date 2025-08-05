@@ -903,6 +903,11 @@ export default function DashboardPage() {
           permissions: data.permissions
         };
         usePermissionStore.getState().setUser(updatedUser);
+        
+        // 强制刷新权限store，确保使用最新数据
+        setTimeout(() => {
+          fetchPermissions(true);
+        }, 100);
 
         // 触发权限变化事件，通知其他组件
         window.dispatchEvent(new CustomEvent('permissionChanged', {
