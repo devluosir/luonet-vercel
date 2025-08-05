@@ -79,7 +79,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     return user?.isAdmin || false;
   },
 
-  // 权限获取 - 只在强制刷新时获取
+  // 权限获取 - 支持本地缓存
   fetchPermissions: async (forceRefresh = false) => {
     const state = get();
     
@@ -88,8 +88,45 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       return;
     }
     
-    // 如果不是强制刷新，则不获取权限
+    // 如果不是强制刷新，优先使用本地缓存的权限数据
     if (!forceRefresh) {
+      if (typeof window !== 'undefined') {
+        try {
+          const storedPermissions = localStorage.getItem('latestPermissions');
+          const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
+          
+          // 检查权限数据是否在24小时内
+          const isRecent = permissionsTimestamp && (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000;
+          
+          if (storedPermissions && isRecent) {
+            const permissions = JSON.parse(storedPermissions);
+            const session = await getSession();
+            
+            if (session?.user) {
+              const userData = {
+                id: session.user.id || session.user.username || '',
+                username: session.user.username || session.user.name || '',
+                email: session.user.email || null,
+                status: true,
+                isAdmin: session.user.isAdmin || false,
+                permissions: permissions
+              };
+              
+              set({ user: userData, isLoading: false, error: null, lastFetchTime: Date.now() });
+              console.log('使用本地缓存的权限数据');
+              return;
+            }
+          }
+        } catch (error) {
+          console.warn('本地权限缓存读取失败:', error);
+          // 清除损坏的缓存
+          localStorage.removeItem('latestPermissions');
+          localStorage.removeItem('permissionsTimestamp');
+        }
+      }
+      
+      // 如果没有本地缓存或缓存过期，但不强制刷新，则不获取权限
+      console.log('没有本地权限缓存，需要手动刷新权限');
       return;
     }
     
@@ -158,8 +195,19 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           permissions: permissions
         };
 
-        // 6. 更新store
+        // 6. 更新store并保存到本地存储
         set({ user, isLoading: false, error: null, lastFetchTime: Date.now() });
+        
+        // 保存权限数据到本地存储
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('latestPermissions', JSON.stringify(permissions));
+            localStorage.setItem('permissionsTimestamp', Date.now().toString());
+            console.log('权限数据已保存到本地存储');
+          } catch (error) {
+            console.warn('保存权限数据到本地存储失败:', error);
+          }
+        }
       } else {
         // 如果API返回失败，保留现有用户数据
         console.warn('权限API返回失败，使用现有权限数据');

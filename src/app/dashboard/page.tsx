@@ -595,12 +595,10 @@ export default function DashboardPage() {
     
     // 只在session存在且认证成功时处理
     if (session && status === 'authenticated') {
-      // 如果session中没有权限数据，从全局store获取
-      if (!session.user.permissions || session.user.permissions.length === 0) {
-        if (!hasFetchedUserDetails) {
-          fetchPermissions(true); // 强制刷新权限
-          setHasFetchedUserDetails(true);
-        }
+      // 尝试加载本地权限数据（非强制刷新）
+      if (!hasFetchedUserDetails) {
+        fetchPermissions(false); // 非强制刷新，优先使用本地缓存
+        setHasFetchedUserDetails(true);
       }
     }
   }, [session, status, mounted, fetchPermissions, hasFetchedUserDetails]);
