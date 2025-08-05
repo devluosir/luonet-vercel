@@ -243,10 +243,15 @@ export default function DashboardPage() {
 
   // 动态权限映射，根据session中的权限数据
   const permissionMap = useMemo(() => {
-    // 直接使用session中的权限数据
-    let permissions = latestPermissions;
+    // 优先使用session中的权限数据
+    let permissions = session?.user?.permissions || [];
     
-    // 如果session中没有权限数据，尝试从localStorage恢复
+    // 如果session中没有权限数据，使用latestPermissions
+    if (permissions.length === 0) {
+      permissions = latestPermissions;
+    }
+    
+    // 如果latestPermissions也没有，尝试从localStorage恢复
     if (permissions.length === 0 && typeof window !== 'undefined') {
       try {
         const storedPermissions = localStorage.getItem('latestPermissions');
@@ -352,21 +357,18 @@ export default function DashboardPage() {
         }
       }
     });
-    
+
     // 构建可访问的文档类型列表
-    const accessibleDocumentTypes = [];
-    if (documentTypePermissions.quotation) accessibleDocumentTypes.push('quotation');
-    if (documentTypePermissions.confirmation) accessibleDocumentTypes.push('confirmation');
-    if (documentTypePermissions.packing) accessibleDocumentTypes.push('packing');
-    if (documentTypePermissions.invoice) accessibleDocumentTypes.push('invoice');
-    if (documentTypePermissions.purchase) accessibleDocumentTypes.push('purchase');
+    const accessibleDocumentTypes = Object.entries(documentTypePermissions)
+      .filter(([_, hasAccess]) => hasAccess)
+      .map(([type, _]) => type);
 
     return {
       permissions: permissionMap,
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [user?.isAdmin, latestPermissions, mounted]); // 依赖session中的权限数据、最新权限数据和mounted状态
+  }, [session?.user?.permissions, latestPermissions]); // 添加latestPermissions作为依赖
 
   // 暂时禁用性能监控启动，避免无限重新渲染
   // useEffect(() => {
@@ -560,7 +562,6 @@ export default function DashboardPage() {
     if (typeof window !== 'undefined') {
       // 预加载页面组件
       router.prefetch(module.path);
-      console.log('正在加载模块:', module.name);
     }
     
     // 立即导航
@@ -595,8 +596,6 @@ export default function DashboardPage() {
       const isAdmin = localStorage.getItem('isAdmin') === 'true';
       
       if (username) {
-        console.log('Dashboard: 从localStorage恢复用户信息');
-        
         // setUser({ // 移除此行，因为权限已移至store
         //   id: userId || '1',
         //   username: username,
@@ -617,7 +616,6 @@ export default function DashboardPage() {
             try {
               const permissions = JSON.parse(storedPermissions);
               setLatestPermissions(permissions);
-              console.log('Dashboard: 从localStorage恢复权限数据', permissions);
             } catch (error) {
               console.error('恢复权限数据失败:', error);
             }
@@ -702,7 +700,7 @@ export default function DashboardPage() {
 
   // 动态模块过滤，根据权限显示模块
   const availableQuickCreateModules = useMemo(() => {
-    return QUICK_CREATE_MODULES.filter(module => {
+    const filtered = QUICK_CREATE_MODULES.filter(module => {
       switch (module.id) {
         case 'quotation':
         case 'confirmation':
@@ -717,10 +715,12 @@ export default function DashboardPage() {
           return true;
       }
     });
+    
+    return filtered;
   }, [permissionMap.permissions]);
 
   const availableToolModules = useMemo(() => {
-    return TOOL_MODULES.filter(module => {
+    const filtered = TOOL_MODULES.filter(module => {
       switch (module.id) {
         case 'ai-email':
           return permissionMap.permissions['ai-email'];
@@ -730,10 +730,12 @@ export default function DashboardPage() {
           return true;
       }
     });
+    
+    return filtered;
   }, [permissionMap.permissions]);
 
   const availableToolsModules = useMemo(() => {
-    return TOOLS_MODULES.filter(module => {
+    const filtered = TOOLS_MODULES.filter(module => {
       switch (module.id) {
         case 'history':
           return permissionMap.permissions.history;
@@ -743,7 +745,11 @@ export default function DashboardPage() {
           return true;
       }
     });
+    
+    return filtered;
   }, [permissionMap.permissions]);
+
+  // 移除调试模块渲染状态
 
   // 根据权限过滤可用的文档类型筛选器
   const availableTypeFilters = useMemo(() => {
@@ -837,6 +843,15 @@ export default function DashboardPage() {
         if (typeof window !== 'undefined') {
           localStorage.setItem('latestPermissions', JSON.stringify(data.permissions));
           localStorage.setItem('permissionsTimestamp', Date.now().toString());
+        }
+
+        // 更新全局权限store
+        if (user) {
+          const updatedUser = {
+            ...user,
+            permissions: data.permissions
+          };
+          // 这里可以调用全局store的更新方法，如果有的话
         }
 
         // 触发权限变化事件，通知其他组件
@@ -966,8 +981,7 @@ export default function DashboardPage() {
                     {/* 功能按钮区域 */}
           {(availableQuickCreateModules.length > 0 || availableToolModules.length > 0 || availableToolsModules.length > 0) && (
             <div className="mb-8">
-
-                                          <div className="dashboard-grid gap-3">
+              <div className="dashboard-grid gap-3">
                 {/* 新建单据按钮 */}
                 {availableQuickCreateModules.map((module) => (
                   <ModuleButton 
