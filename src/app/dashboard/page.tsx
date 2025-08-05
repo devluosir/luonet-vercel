@@ -616,9 +616,10 @@ export default function DashboardPage() {
       }
     }
     
-    // 显示加载状态（可选）
+    // 预加载目标页面，减少loading时间
     if (typeof window !== 'undefined') {
-      // 可以在这里添加加载指示器
+      // 预加载页面组件
+      router.prefetch(module.path);
       console.log('正在加载模块:', module.name);
     }
     
@@ -689,28 +690,45 @@ export default function DashboardPage() {
       // 延迟预加载，避免阻塞初始渲染
       setTimeout(() => {
         if (typeof window !== 'undefined') {
-          const coreModules = [
-            { path: '/quotation' },
-            { path: '/packing' },
-            { path: '/invoice' },
-            { path: '/purchase' },
-            { path: '/history' },
-            { path: '/customer' },
-            { path: '/mail' },
-            { path: '/date-tools' }
-          ];
+          // 根据权限预加载页面
+          const modulesToPrefetch = [];
+          
+          if (permissionMap.permissions.quotation) {
+            modulesToPrefetch.push('/quotation');
+          }
+          if (permissionMap.permissions.packing) {
+            modulesToPrefetch.push('/packing');
+          }
+          if (permissionMap.permissions.invoice) {
+            modulesToPrefetch.push('/invoice');
+          }
+          if (permissionMap.permissions.purchase) {
+            modulesToPrefetch.push('/purchase');
+          }
+          if (permissionMap.permissions.history) {
+            modulesToPrefetch.push('/history');
+          }
+          if (permissionMap.permissions.customer) {
+            modulesToPrefetch.push('/customer');
+          }
+          if (permissionMap.permissions['ai-email']) {
+            modulesToPrefetch.push('/mail');
+          }
+          if (permissionMap.permissions['date-tools']) {
+            modulesToPrefetch.push('/date-tools');
+          }
           
           // 分批预加载，避免同时加载所有模块
-          coreModules.forEach((module, index) => {
+          modulesToPrefetch.forEach((path, index) => {
             setTimeout(() => {
-              router.prefetch(module.path);
-            }, index * 200); // 增加间隔到200ms，减少并发
+              router.prefetch(path);
+            }, index * 100); // 减少间隔到100ms，加快预加载
           });
         }
-      }, 2000); // 延迟2秒开始预加载，让用户先看到界面
+      }, 1000); // 减少延迟到1秒，让预加载更早开始
     };
     init();
-  }, [router]); // 只依赖router，移除session和user依赖
+  }, [router, permissionMap.permissions]); // 添加权限依赖
 
   // 优化的退出逻辑 - 避免重复退出
   const handleLogout = useCallback(async () => {

@@ -214,18 +214,7 @@ export default function PackingPage() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // 动态加载字体CSS
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // 检查是否已经加载了字体CSS
-      if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = '/pdf-fonts.css';
-        document.head.appendChild(link);
-      }
-    }
-  }, []);
+  // 移除页面级别的字体加载，因为字体已经在预加载阶段处理了
 
   // 从 window 全局变量获取初始数据
   const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__PACKING_DATA__) : null;
