@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import '../pdf-fonts.css'; // 使用相对路径导入
+// 移除CSS导入，改为动态加载
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -107,6 +107,19 @@ export default function InvoicePage() {
     row: number;
     column: string;
   } | null>(null);
+
+  // 动态加载字体CSS
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // 检查是否已经加载了字体CSS
+      if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = '/pdf-fonts.css';
+        document.head.appendChild(link);
+      }
+    }
+  }, []);
 
   // 从 window 全局变量获取初始数据
   const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__INVOICE_DATA__) : null;

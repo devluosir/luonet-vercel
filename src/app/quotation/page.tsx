@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
-import '../pdf-fonts.css'; // 使用相对路径导入
+// 移除CSS导入，改为动态加载
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -137,17 +137,31 @@ export default function QuotationPage() {
       if (editId !== undefined) {
         setEditId(editId);
       }
+      
       if (type !== undefined) {
         setActiveTab(type);
       }
-
+      
       // 清除注入的数据
       delete customWindow.__QUOTATION_DATA__;
       delete customWindow.__EDIT_MODE__;
       delete customWindow.__EDIT_ID__;
       delete customWindow.__QUOTATION_TYPE__;
     }
-  }, [activeTab]);
+  }, []);
+
+  // 动态加载字体CSS
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // 检查是否已经加载了字体CSS
+      if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = '/pdf-fonts.css';
+        document.head.appendChild(link);
+      }
+    }
+  }, []);
 
   // 初始化notes字段
   useEffect(() => {

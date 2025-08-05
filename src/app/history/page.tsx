@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import '../pdf-fonts.css'; // 使用相对路径导入
+// 移除CSS导入，改为动态加载
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   FileText, 
@@ -149,6 +149,19 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
 export default function HistoryManagementPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // 动态加载字体CSS
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // 检查是否已经加载了字体CSS
+      if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = '/pdf-fonts.css';
+        document.head.appendChild(link);
+      }
+    }
+  }, []);
 
   // 基础状态
   const [mounted, setMounted] = useState(false);

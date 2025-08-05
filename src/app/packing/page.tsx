@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import '../pdf-fonts.css'; // 使用相对路径导入
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Download, Settings, Clipboard, History, Save, Eye, FileSpreadsheet } from 'lucide-react';
@@ -214,6 +213,19 @@ const convertExcelToPackingItems = (rows: string[][]): PackingItem[] => {
 export default function PackingPage() {
   const router = useRouter();
   const pathname = usePathname();
+
+  // 动态加载字体CSS
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // 检查是否已经加载了字体CSS
+      if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = '/pdf-fonts.css';
+        document.head.appendChild(link);
+      }
+    }
+  }, []);
 
   // 从 window 全局变量获取初始数据
   const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__PACKING_DATA__) : null;

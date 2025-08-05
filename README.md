@@ -534,9 +534,8 @@ scripts/
 实现了智能字体预加载机制，确保字体在用户进入表单页面前就已经加载完成。
 
 #### 技术实现
-1. **双重CSS文件策略**：
-   - `src/app/pdf-fonts.css` - 用于页面import导入
-   - `public/pdf-fonts.css` - 用于预加载HTTP访问
+1. **CSS文件策略**：
+   - `public/pdf-fonts.css` - 用于动态加载字体CSS
 
 2. **预加载机制**：
    ```typescript
@@ -549,10 +548,17 @@ scripts/
    }
    ```
 
-3. **页面导入**：
+3. **页面动态加载**：
    ```typescript
-   // 在表单页面中导入字体
-   import '../pdf-fonts.css';
+   // 在表单页面中动态加载字体
+   useEffect(() => {
+     if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
+       const link = document.createElement('link');
+       link.rel = 'stylesheet';
+       link.href = '/pdf-fonts.css';
+       document.head.appendChild(link);
+     }
+   }, []);
    ```
 
 4. **预加载内容**：
@@ -576,18 +582,16 @@ scripts/
 
 #### 文件结构
 ```
-src/app/pdf-fonts.css     # 用于import导入
-public/pdf-fonts.css      # 用于预加载访问
+public/pdf-fonts.css      # 用于动态加载字体CSS
 ```
 
 #### 工作流程
 1. **Dashboard页面** → 预加载 `/pdf-fonts.css` → 浏览器下载字体
-2. **进入表单页面** → import `../pdf-fonts.css` → 浏览器使用已缓存的字体
+2. **进入表单页面** → 动态加载字体CSS → 浏览器使用已缓存的字体
 
 ### 相关文件
 - `src/utils/preloadUtils.ts` - 预加载管理器
-- `src/app/pdf-fonts.css` - 字体样式文件
-- `public/pdf-fonts.css` - 公共字体样式文件
+- `public/pdf-fonts.css` - 字体样式文件
 - 所有表单页面（quotation、invoice、packing、purchase、history）
 
 ## 贡献指南
