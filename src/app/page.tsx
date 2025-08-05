@@ -79,13 +79,21 @@ export default function LoginPage() {
 
     try {
       console.log('尝试登录:', { username, password });
+      
+      // 强制清除任何可能的缓存
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('nextauth.session-token');
+        sessionStorage.clear();
+      }
+      
       const result = await signIn('credentials', {
         username,
         password,
         redirect: false,
+        callbackUrl: '/dashboard',
       });
 
-      console.log('signIn 结果:', result);
+      console.log('signIn 结果:', JSON.stringify(result, null, 2));
 
       if (!result) {
         console.log('signIn 返回 null，登录请求失败');
