@@ -20,9 +20,17 @@ export default function QuotationCopyPage({ params }: { params: { id: string } }
         return;
       }
 
+      // 复制数据，清空Quotation No和Contract No
+      const copiedData = {
+        ...quotation.data,
+        quotationNo: '', // 清空报价单号，让用户重新填写
+        contractNo: '', // 清空合同号，让用户重新填写
+        date: new Date().toISOString().split('T')[0], // 设置为今天
+      };
+
       // 将数据注入到 QuotationPage 组件中（复制模式）
       const customWindow = window as unknown as CustomWindow;
-      customWindow.__QUOTATION_DATA__ = quotation.data;
+      customWindow.__QUOTATION_DATA__ = copiedData;
       customWindow.__EDIT_MODE__ = false; // 复制模式
       customWindow.__EDIT_ID__ = undefined; // 没有编辑ID
       customWindow.__QUOTATION_TYPE__ = quotation.type;

@@ -260,7 +260,11 @@ export default function PurchaseOrderPage() {
         <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
           <Link 
-            href={pathname?.includes('/edit/') || pathname?.includes('/copy/') ? '/history' : '/dashboard'} 
+            href={
+              pathname?.includes('/edit/') ? '/history?tab=purchase' : 
+              pathname?.includes('/copy/') ? '/history?tab=purchase' : 
+              '/dashboard'
+            } 
             className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7] transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

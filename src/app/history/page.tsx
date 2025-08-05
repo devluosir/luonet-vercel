@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 
+// 导入权限store
+import { usePermissionStore } from '@/lib/permissions';
+
 // 导入历史记录工具函数
 import { 
   getQuotationHistory, 
@@ -198,6 +201,7 @@ export default function HistoryManagementPage() {
   const [isFromOtherPage, setIsFromOtherPage] = useState(false);
 
   // 用户信息获取已移至权限store
+  const { user } = usePermissionStore();
 
   // 处理URL参数中的tab参数
   useEffect(() => {
@@ -270,28 +274,34 @@ export default function HistoryManagementPage() {
     // 按照指定顺序检查每个tab的权限
     tabOrder.forEach(tabId => {
       const moduleId = tabPermissions[tabId as keyof typeof tabPermissions];
-      // 移除权限检查，所有tab都可用
-      switch (tabId) {
-        case 'quotation':
-          availableTabs.push({ id: 'quotation', name: '报价单', shortName: '报价', icon: FileText });
-          break;
-        case 'confirmation':
-          availableTabs.push({ id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText });
-          break;
-        case 'packing':
-          availableTabs.push({ id: 'packing', name: '装箱单', shortName: '装箱', icon: Package });
-          break;
-        case 'invoice':
-          availableTabs.push({ id: 'invoice', name: '发票', shortName: '发票', icon: Receipt });
-          break;
-        case 'purchase':
-          availableTabs.push({ id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart });
-          break;
+      // 检查用户是否有对应模块的权限
+      const hasPermission = user?.permissions?.some(perm => 
+        perm.moduleId === moduleId && perm.canAccess
+      ) || false;
+      
+      if (hasPermission) {
+        switch (tabId) {
+          case 'quotation':
+            availableTabs.push({ id: 'quotation', name: '报价单', shortName: '报价', icon: FileText });
+            break;
+          case 'confirmation':
+            availableTabs.push({ id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText });
+            break;
+          case 'packing':
+            availableTabs.push({ id: 'packing', name: '装箱单', shortName: '装箱', icon: Package });
+            break;
+          case 'invoice':
+            availableTabs.push({ id: 'invoice', name: '发票', shortName: '发票', icon: Receipt });
+            break;
+          case 'purchase':
+            availableTabs.push({ id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart });
+            break;
+        }
       }
     });
     
     return availableTabs;
-  }, [isFromOtherPage]);
+  }, [isFromOtherPage, user?.permissions]);
 
   // 检查当前activeTab是否有权限
   const isActiveTabAvailable = useCallback(() => {
