@@ -110,9 +110,8 @@ export default function LoginPage() {
         let realUserId = userId;
         
         try {
-          // 登录成功后，直接使用用户ID获取单个用户信息
-          // 这样可以避免获取所有用户数组，提高效率和安全性
-          const userResponse = await fetch(`https://udb.luocompany.net/api/admin/users/${userId}`, {
+          // 先通过用户名查询获取用户信息
+          const userResponse = await fetch(`https://udb.luocompany.net/api/admin/users?username=${encodeURIComponent(username)}`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',

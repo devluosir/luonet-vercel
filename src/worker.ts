@@ -139,13 +139,11 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
     } else {
       // 检查是否是bcrypt哈希（生产环境）
       try {
-        // 在Cloudflare Worker中，我们需要使用Web Crypto API来验证bcrypt
-        // 这里暂时使用简单的字符串比较，实际应该使用proper bcrypt验证
         if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
-          // 对于bcrypt哈希，我们暂时跳过验证，因为Cloudflare Worker不支持bcrypt
-          // 在实际部署中，应该使用适当的bcrypt验证库
-
-          passwordValid = true; // 临时跳过验证
+          // 对于bcrypt哈希，暂时使用简单的字符串比较
+          // 在生产环境中，应该使用proper的bcrypt验证库
+          console.log('检测到bcrypt密码格式，暂时跳过验证');
+          passwordValid = false; // 暂时禁用bcrypt密码，确保安全性
         }
       } catch (error) {
         passwordValid = false;
