@@ -54,7 +54,7 @@ export const authOptions: NextAuthOptions = {
             throw new Error("用户账户已被禁用");
           }
 
-          // 确保权限数据格式正确（无论是否为管理员都需要处理）
+          // 简化权限验证：只检查是否有权限数据，不验证具体权限
           let permissions = [];
           if (Array.isArray(data.permissions)) {
             permissions = data.permissions.map((perm: any) => ({
@@ -70,22 +70,13 @@ export const authOptions: NextAuthOptions = {
             }));
           }
           
-          // 验证用户权限
+          // 验证用户权限（简化版）
           if (data.user.isAdmin) {
-            // 管理员用户，直接允许登录，但记录权限信息
+            // 管理员用户，直接允许登录
           } else {
-            // 非管理员用户必须有至少一个模块的权限
-            if (permissions.length === 0) {
-              throw new Error("用户没有访问任何模块的权限");
-            }
-            
-            // 检查是否有可访问的模块
-            const hasAccessibleModule = permissions.some((perm: any) => 
-              perm.canAccess === true
-            );
-            
-            if (!hasAccessibleModule) {
-              throw new Error("用户没有访问任何模块的权限");
+            // 非管理员用户必须有权限数据
+            if (!data.permissions || (Array.isArray(data.permissions) && data.permissions.length === 0)) {
+              throw new Error("用户没有访问权限");
             }
           }
           
@@ -96,7 +87,7 @@ export const authOptions: NextAuthOptions = {
             username: data.user.username,
             isAdmin: !!data.user.isAdmin,
             image: null,
-            permissions: permissions
+            permissions: permissions // 返回权限数据，供dashboard使用
           };
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : "用户名或密码错误");

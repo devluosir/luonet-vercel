@@ -115,7 +115,7 @@ export default function LoginPage() {
       
       console.log('开始登录...', { callbackUrl });
       
-      // 使用手动重定向模式，更可靠
+      // 快速登录验证，只验证用户名和密码
       const result = await signIn('credentials', {
         username,
         password,
@@ -129,33 +129,11 @@ export default function LoginPage() {
         setError('用户名或密码错误');
         setLoading(false);
       } else {
-        console.log('登录成功，等待session更新...');
+        console.log('登录成功，立即跳转到dashboard');
         setHasLoggedIn(true);
         
-        // 简化的session等待逻辑
-        let attempts = 0;
-        const maxAttempts = 10; // 减少到1秒
-        
-        const waitForSession = () => {
-          attempts++;
-          console.log(`Session等待尝试 ${attempts}/${maxAttempts}:`, { 
-            status, 
-            hasSession: !!session, 
-            sessionUser: session?.user?.username 
-          });
-          
-          if (session && status === 'authenticated' && session.user?.id) {
-            console.log('Session已更新，跳转到:', callbackUrl);
-            router.push(callbackUrl);
-          } else if (attempts < maxAttempts) {
-            setTimeout(waitForSession, 100);
-          } else {
-            console.log('Session等待超时，直接跳转');
-            router.push(callbackUrl);
-          }
-        };
-        
-        setTimeout(waitForSession, 100);
+        // 立即跳转，不等待session更新
+        router.push(callbackUrl);
       }
       
     } catch (error) {
