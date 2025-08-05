@@ -567,7 +567,17 @@ export default function DashboardPage() {
 
   // 直接使用session数据，并在dashboard中获取用户详细信息
   useEffect(() => {
-    console.log('Dashboard: Session状态变化', { session: !!session, status, user: !!user });
+    console.log('Dashboard: Session状态变化', { 
+      session: !!session, 
+      status, 
+      user: !!user,
+      sessionData: session ? {
+        userId: session.user?.id,
+        username: session.user?.username,
+        isAdmin: session.user?.isAdmin,
+        permissionsCount: session.user?.permissions?.length || 0
+      } : null
+    });
     
     if (session && status === 'authenticated') {
       console.log('Dashboard: 使用session数据', {

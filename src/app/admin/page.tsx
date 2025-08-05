@@ -21,6 +21,7 @@ import { AdminHeader } from '@/components/admin/AdminHeader';
 import { CreateUserModal } from '@/components/admin/CreateUserModal';
 import { Footer } from '@/components/Footer';
 import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
+import { useSession, signOut } from 'next-auth/react';
 
 interface User {
   id: string;
@@ -34,6 +35,7 @@ interface User {
 
 export default function AdminPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,58 +51,32 @@ export default function AdminPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [user, setUser] = useState<any>(null);
 
-  // 管理员权限检查 - 使用localStorage，与dashboard保持一致
+  // 管理员权限检查 - 使用session数据
   const hasAdminPermission = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('isAdmin') === 'true';
-    }
-    return false;
-  }, []);
+    return session?.user?.isAdmin === true;
+  }, [session]);
 
   // 初始化
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 初始化用户信息
-  useEffect(() => {
-    setMounted(true);
-    
-    // 从localStorage恢复用户信息，与dashboard保持一致
-    if (typeof window !== 'undefined') {
-      const username = localStorage.getItem('username');
-      const userId = localStorage.getItem('userId');
-      const isAdmin = localStorage.getItem('isAdmin') === 'true';
-      
-      if (username) {
-        setUser({
-          id: userId || '1',
-          username: username,
-          email: null,
-          status: true,
-          isAdmin: isAdmin,
-          permissions: []
-        });
-        console.log('从localStorage恢复用户信息:', { username, isAdmin, userId });
-      } else {
-        console.log('没有用户信息，重定向到登录页');
-        router.push('/');
-        return;
-      }
-    }
-  }, [router]);
-
   // 权限检查和数据加载
   useEffect(() => {
-    if (!mounted || !user) return;
+    if (!mounted) return;
 
     const checkPermissionsAndLoad = async () => {
       try {
+        // 等待session加载完成
+        if (status === 'loading') {
+          console.log('Session正在加载中...');
+          return;
+        }
+
         // 检查用户是否登录
-        if (!user) {
-          console.log('没有用户信息，重定向到登录页');
+        if (status === 'unauthenticated' || !session) {
+          console.log('用户未认证，重定向到登录页');
           router.push('/');
           return;
         }
@@ -114,7 +90,7 @@ export default function AdminPage() {
         }
         
         console.log('管理员权限检查通过:', { 
-          user: user.username, 
+          user: session.user?.username, 
           isAdmin: hasAdminPermission 
         });
 
@@ -152,7 +128,7 @@ export default function AdminPage() {
     };
 
     checkPermissionsAndLoad();
-  }, [mounted, user, hasAdminPermission, router]);
+  }, [mounted, session, status, hasAdminPermission, router]);
 
   // 过滤用户
   useEffect(() => {
@@ -187,14 +163,12 @@ export default function AdminPage() {
 
   const handleLogout = async () => {
     try {
-      const response = await apiRequestWithError(API_ENDPOINTS.AUTH.SIGNOUT, {
-        method: 'POST',
-      });
-      if (response) {
-        router.push('/auth/signin');
-      }
+      // 使用NextAuth的signOut
+      await signOut({ redirect: true, callbackUrl: '/' });
     } catch (error) {
       console.error('Logout failed:', error);
+      // 如果signOut失败，手动重定向
+      router.push('/');
     }
   };
 
@@ -277,8 +251,8 @@ export default function AdminPage() {
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
       <div className="flex-1">
         <AdminHeader 
-          username={user?.username || '用户'}
-          email={user?.email || null}
+          username={session?.user?.username || '用户'}
+          email={session?.user?.email || null}
           onLogout={handleLogout}
         />
 
