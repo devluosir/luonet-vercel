@@ -15,10 +15,12 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/',
   },
+  useSecureCookies: false, // 开发环境禁用安全cookie
   providers: [
     CredentialsProvider({
       id: "credentials",
       name: "Credentials",
+      type: "credentials",
       credentials: {
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" }
@@ -148,7 +150,7 @@ export const authOptions: NextAuthOptions = {
     }
   },
 
-  secret: process.env.NEXTAUTH_SECRET
+  secret: process.env.NEXTAUTH_SECRET || "your-secret-key-here"
 };
 
 const handler = NextAuth(authOptions);
