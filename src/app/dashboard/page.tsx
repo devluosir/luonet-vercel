@@ -263,10 +263,15 @@ export default function DashboardPage() {
 
   // 动态权限映射，根据session中的权限数据
   const permissionMap = useMemo(() => {
-    // 优先使用session中的权限数据
-    let permissions = session?.user?.permissions || [];
+    // 优先使用全局权限store中的权限数据
+    let permissions = user?.permissions || [];
     
-    // 如果session中没有权限数据，使用latestPermissions
+    // 如果权限store中没有权限数据，使用session中的权限数据
+    if (permissions.length === 0) {
+      permissions = session?.user?.permissions || [];
+    }
+    
+    // 如果session中也没有权限数据，使用latestPermissions
     if (permissions.length === 0) {
       permissions = latestPermissions;
     }
@@ -388,7 +393,7 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [session?.user?.permissions, latestPermissions]); // 添加latestPermissions作为依赖
+  }, [user?.permissions, session?.user?.permissions, latestPermissions]); // 添加user?.permissions作为依赖
 
   // 暂时禁用性能监控启动，避免无限重新渲染
   // useEffect(() => {
@@ -903,11 +908,6 @@ export default function DashboardPage() {
           permissions: data.permissions
         };
         usePermissionStore.getState().setUser(updatedUser);
-        
-        // 强制刷新权限store，确保使用最新数据
-        setTimeout(() => {
-          fetchPermissions(true);
-        }, 100);
 
         // 触发权限变化事件，通知其他组件
         window.dispatchEvent(new CustomEvent('permissionChanged', {
