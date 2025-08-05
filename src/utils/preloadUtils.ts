@@ -205,9 +205,7 @@ export class PreloadManager {
             case 'mail':
               formPages.push('/mail');
               break;
-            case 'date-tools':
-              formPages.push('/date-tools');
-              break;
+
           }
         }
       });
@@ -381,7 +379,7 @@ export class PreloadManager {
             case 'ai-email':
               userPermissions.push('AI邮件');
               break;
-            case 'date-tools':
+    
               userPermissions.push('日期工具');
               break;
           }

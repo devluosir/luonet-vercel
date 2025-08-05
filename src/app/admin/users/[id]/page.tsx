@@ -94,13 +94,7 @@ const MODULES = [
     color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-100 dark:bg-blue-900/20'
   },
-  { 
-    id: 'date-tools', 
-    name: '日期计算',
-    icon: Calendar,
-    color: 'text-purple-600 dark:text-purple-400',
-    bgColor: 'bg-purple-100 dark:bg-purple-900/20'
-  }
+
 ];
 
 export default function UserDetailPage() {

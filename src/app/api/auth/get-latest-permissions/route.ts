@@ -119,8 +119,7 @@ export async function POST(request: NextRequest) {
           { id: 'default-packing', moduleId: 'packing', canAccess: true },
           { id: 'default-invoice', moduleId: 'invoice', canAccess: true },
           { id: 'default-purchase', moduleId: 'purchase', canAccess: true },
-          { id: 'default-history', moduleId: 'history', canAccess: true },
-          { id: 'default-date-tools', moduleId: 'date-tools', canAccess: true }
+          { id: 'default-history', moduleId: 'history', canAccess: true }
         ];
       } else {
         // 为普通用户提供基本权限

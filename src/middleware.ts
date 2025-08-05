@@ -47,7 +47,6 @@ export default withAuth(
       '/purchase',
       '/history',
       '/customer',
-      '/date-tools',
       '/mail',
       '/tools',
       '/create-user',
@@ -124,7 +123,6 @@ function getModuleIdFromPath(pathname: string): string | null {
   // 路径到模块ID的映射
   const pathToModuleId: { [key: string]: string } = {
     'mail': 'ai-email',
-    'date-tools': 'date-tools',
     'quotation': 'quotation',
     'packing': 'packing',
     'invoice': 'invoice',

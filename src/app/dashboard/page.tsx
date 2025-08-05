@@ -116,15 +116,7 @@ const TOOL_MODULES = [
     iconBg: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
     textColor: 'text-indigo-700 dark:text-indigo-300'
   },
-  { 
-    id: 'date-tools', 
-    name: '日期计算', 
-    path: '/date-tools',
-    icon: Calendar,
-    bgColor: 'bg-gradient-to-br from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 dark:from-pink-900/20 dark:to-pink-800/30 dark:hover:from-pink-800/30 dark:hover:to-pink-700/40',
-    iconBg: 'bg-gradient-to-br from-pink-500 to-pink-600',
-    textColor: 'text-pink-700 dark:text-pink-300'
-  }
+
 ];
 
 // Tools功能模块
@@ -134,9 +126,9 @@ const TOOLS_MODULES = [
     name: '单据管理', 
     path: '/history',
     icon: Archive,
-    bgColor: 'bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 dark:from-gray-800/30 dark:to-gray-700/40 dark:hover:from-gray-700/40 dark:hover:to-gray-600/50',
-    iconBg: 'bg-gradient-to-br from-gray-600 to-gray-700',
-    textColor: 'text-gray-700 dark:text-gray-300'
+    bgColor: 'bg-gradient-to-br from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 dark:from-pink-900/20 dark:to-pink-800/30 dark:hover:from-pink-800/30 dark:hover:to-pink-700/40',
+    iconBg: 'bg-gradient-to-br from-pink-500 to-pink-600',
+    textColor: 'text-pink-700 dark:text-pink-300'
   },
   { 
     id: 'customer', 
@@ -308,7 +300,7 @@ export default function DashboardPage() {
             history: true,
             customer: true,
             'ai-email': true,
-            'date-tools': true
+      
           },
           documentTypePermissions: {
             quotation: true,
@@ -329,8 +321,7 @@ export default function DashboardPage() {
             purchase: false,
             history: false,
             customer: false,
-            'ai-email': false,
-            'date-tools': false
+            'ai-email': false
           },
           documentTypePermissions: {
             quotation: false,
@@ -352,8 +343,7 @@ export default function DashboardPage() {
       purchase: false,
       history: false,
       customer: false,
-      'ai-email': false,
-      'date-tools': false
+      'ai-email': false
     };
 
     const documentTypePermissions = {
@@ -394,9 +384,7 @@ export default function DashboardPage() {
           case 'ai-email':
             permissionMap['ai-email'] = true;
             break;
-          case 'date-tools':
-            permissionMap['date-tools'] = true;
-            break;
+
           default:
             break;
         }
@@ -731,9 +719,7 @@ export default function DashboardPage() {
           if (permissionMap.permissions['ai-email']) {
             modulesToPrefetch.push('/mail');
           }
-          if (permissionMap.permissions['date-tools']) {
-            modulesToPrefetch.push('/date-tools');
-          }
+          
           
           // 分批预加载，避免同时加载所有模块
           modulesToPrefetch.forEach((path, index) => {
@@ -791,8 +777,7 @@ export default function DashboardPage() {
       switch (module.id) {
         case 'ai-email':
           return permissionMap.permissions['ai-email'];
-        case 'date-tools':
-          return permissionMap.permissions['date-tools'];
+
         default:
           return true;
       }
