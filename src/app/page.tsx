@@ -132,8 +132,19 @@ export default function LoginPage() {
       setHasLoggedIn(true);
       
       // 等待session更新完成
+      let attempts = 0;
+      const maxAttempts = 100; // 增加到10秒
+      
       const waitForSession = () => {
-        if (session && status === 'authenticated') {
+        attempts++;
+        console.log(`Session等待尝试 ${attempts}/${maxAttempts}:`, { 
+          status, 
+          hasSession: !!session, 
+          sessionUser: session?.user?.username,
+          sessionId: session?.user?.id
+        });
+        
+        if (session && status === 'authenticated' && session.user?.id) {
           console.log('Session已完全更新:', {
             userId: session.user?.id,
             username: session.user?.username,
@@ -160,19 +171,40 @@ export default function LoginPage() {
           router.push(callbackUrl);
         } else if (status === 'loading') {
           console.log('Session正在加载中...', { status });
-          setTimeout(waitForSession, 100);
+          if (attempts < maxAttempts) {
+            setTimeout(waitForSession, 100);
+          } else {
+            console.log('Session加载超时，尝试直接跳转');
+            router.push(callbackUrl);
+          }
         } else if (status === 'unauthenticated') {
-          console.log('Session认证失败，可能需要重新登录');
-          setError('登录状态异常，请重试');
-          setLoading(false);
+          // 即使状态是unauthenticated，也继续等待一段时间
+          console.log('Session状态为unauthenticated，继续等待...', { attempts });
+          if (attempts < maxAttempts) {
+            setTimeout(waitForSession, 100);
+          } else {
+            console.log('Session等待超时，尝试直接跳转');
+            router.push(callbackUrl);
+          }
         } else {
           console.log('等待Session更新...', { status, hasSession: !!session });
-          setTimeout(waitForSession, 100);
+          if (attempts < maxAttempts) {
+            setTimeout(waitForSession, 100);
+          } else {
+            console.log('Session更新超时，尝试直接跳转');
+            router.push(callbackUrl);
+          }
         }
       };
       
       // 开始等待session更新
       setTimeout(waitForSession, 100);
+      
+      // 备用方案：如果10秒后还没有跳转，强制跳转
+      setTimeout(() => {
+        console.log('备用方案：强制跳转到dashboard');
+        router.push(callbackUrl);
+      }, 10000);
       
     } catch (error) {
       console.error('登录错误:', error);
