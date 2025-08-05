@@ -8,6 +8,7 @@ import { signOut } from 'next-auth/react';
 import { Avatar } from './Avatar';
 import { format } from 'date-fns';
 import { preloadManager } from '@/utils/preloadUtils';
+import { LOGO_CONFIG } from '@/lib/logo-config';
 
 interface HeaderProps {
   user: {
@@ -157,7 +158,7 @@ export function Header({
       <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <Image
-            src="/assets/logo/logo.png"
+            src={LOGO_CONFIG.web.logo}
             alt="LC APP Logo"
             width={48}
             height={48}

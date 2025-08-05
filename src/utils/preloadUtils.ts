@@ -1,3 +1,5 @@
+import { getAllLogoPaths } from '@/lib/logo-config';
+
 // 预加载工具函数
 export class PreloadManager {
   private static instance: PreloadManager;
@@ -315,13 +317,8 @@ export class PreloadManager {
   private async preloadStaticAssets(): Promise<void> {
     console.log('预加载静态资源...');
     
-    // 只预加载确定存在的静态资源
-    const staticAssets = [
-      '/assets/logo/logo.png',
-      '/assets/logo/icon.png',
-      '/assets/logo/apple-icon.png',
-      '/assets/logo/favicon.ico'
-    ];
+    // 使用logo配置文件获取所有logo路径
+    const staticAssets = getAllLogoPaths();
 
     const assetPromises = staticAssets.map(url => {
       return new Promise<void>((resolve) => {

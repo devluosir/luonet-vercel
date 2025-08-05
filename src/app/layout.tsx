@@ -1,20 +1,13 @@
 import './globals.css'
 import { Providers } from './providers'
 import type { Metadata } from 'next'
+import { getLayoutIcons } from '@/lib/logo-config'
 
 export const metadata: Metadata = {
   title: 'Luo & Company',
   description: '专业的报价和订单确认系统',
   manifest: '/static/manifest.json',
-  icons: {
-    icon: [
-      { url: '/assets/logo/favicon.ico' },
-      { url: '/assets/logo/icon.png', sizes: '32x32', type: 'image/png' }
-    ],
-    apple: [
-      { url: '/assets/logo/apple-icon.png' }
-    ]
-  }
+  icons: getLayoutIcons()
 }
 
 export default function RootLayout({

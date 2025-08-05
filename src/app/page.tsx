@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { LOGO_CONFIG } from '@/lib/logo-config';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -195,7 +196,7 @@ export default function LoginPage() {
         <div className="flex justify-center">
           <div className="relative">
             <Image
-              src="/assets/logo/logo.png"
+              src={LOGO_CONFIG.web.logo}
               alt="LC APP"
               width={80}
               height={80}
