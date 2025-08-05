@@ -88,7 +88,10 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
   try {
     const { username, password } = await request.json();
     
+    console.log('handleUserAuth - 开始验证:', { username, password: password ? '***' : 'empty' });
+    
     if (!username || !password) {
+      console.log('handleUserAuth - 用户名或密码为空');
       return new Response(
         JSON.stringify({ error: '用户名和密码不能为空' }),
         { 
@@ -161,6 +164,7 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
     }
 
     if (!passwordValid) {
+      console.log('handleUserAuth - 密码验证失败，拒绝登录');
       return new Response(
         JSON.stringify({ error: '密码错误' }),
         { 
@@ -172,6 +176,8 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
         }
       );
     }
+    
+    console.log('handleUserAuth - 密码验证成功，允许登录');
 
     // 更新最后登录时间
     await d1Client.updateUser(user.id, {
