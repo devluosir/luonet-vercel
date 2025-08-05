@@ -525,6 +525,71 @@ scripts/
 - **CLS** (Cumulative Layout Shift): 累积布局偏移
 - **TTFB** (Time to First Byte): 首字节时间
 
+## 字体预加载优化 (2025-08-05)
+
+### 问题背景
+用户反馈在首次访问表单页面（如报价单页面）时会出现字体加载延迟，导致页面渲染时出现"闪烁"现象。
+
+### 解决方案
+实现了智能字体预加载机制，确保字体在用户进入表单页面前就已经加载完成。
+
+#### 技术实现
+1. **双重CSS文件策略**：
+   - `src/app/pdf-fonts.css` - 用于页面import导入
+   - `public/pdf-fonts.css` - 用于预加载HTTP访问
+
+2. **预加载机制**：
+   ```typescript
+   // 在dashboard页面预加载字体
+   if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
+     const link = document.createElement('link');
+     link.rel = 'stylesheet';
+     link.href = '/pdf-fonts.css';
+     document.head.appendChild(link);
+   }
+   ```
+
+3. **页面导入**：
+   ```typescript
+   // 在表单页面中导入字体
+   import '../pdf-fonts.css';
+   ```
+
+4. **预加载内容**：
+   - 静态资源（logo、图标等）
+   - 表单页面（quotation、invoice、packing、purchase）
+   - 脚本和样式文件
+   - PDF字体文件
+
+**注意**：历史数据存储在localStorage中，无需预加载，用户访问时直接读取即可。
+
+#### 防重复机制
+- **预加载检查**：只有当页面上没有pdf-fonts.css的link标签时才加载
+- **浏览器缓存**：字体文件只下载一次，后续使用缓存
+- **CSS去重**：浏览器自动去重相同的CSS文件
+
+#### 优化效果
+- ✅ **无重复下载** - 字体文件只下载一次
+- ✅ **无冲突** - 两个CSS文件内容完全相同
+- ✅ **性能优化** - 字体在需要前就准备好了
+- ✅ **用户体验** - 进入表单页面时字体立即可用
+
+#### 文件结构
+```
+src/app/pdf-fonts.css     # 用于import导入
+public/pdf-fonts.css      # 用于预加载访问
+```
+
+#### 工作流程
+1. **Dashboard页面** → 预加载 `/pdf-fonts.css` → 浏览器下载字体
+2. **进入表单页面** → import `../pdf-fonts.css` → 浏览器使用已缓存的字体
+
+### 相关文件
+- `src/utils/preloadUtils.ts` - 预加载管理器
+- `src/app/pdf-fonts.css` - 字体样式文件
+- `public/pdf-fonts.css` - 公共字体样式文件
+- 所有表单页面（quotation、invoice、packing、purchase、history）
+
 ## 贡献指南
 
 1. Fork项目

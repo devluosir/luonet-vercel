@@ -57,19 +57,15 @@ export class PreloadManager {
         try {
           // 预加载静态资源（轻量级）
           await this.preloadStaticAssets();
-          this.updateProgress(15);
+          this.updateProgress(25);
 
           // 预加载表单页面（轻量级，只检查状态）
           await this.preloadFormPages();
-          this.updateProgress(35);
-
-          // 预加载历史数据（轻量级）
-          await this.preloadHistoryData();
-          this.updateProgress(55);
+          this.updateProgress(45);
 
           // 预加载脚本和样式（轻量级）
           await this.preloadScriptsAndStyles();
-          this.updateProgress(75);
+          this.updateProgress(65);
 
           // 预加载字体（最后执行）
           await this.preloadFonts();
@@ -329,77 +325,6 @@ export class PreloadManager {
 
     await Promise.all(assetPromises);
   }
-
-  // 预加载历史数据
-  private async preloadHistoryData(): Promise<void> {
-    console.log('预加载历史数据...');
-    
-    const historyKeys = this.getHistoryKeysByPermissions();
-    
-    if (historyKeys.length === 0) {
-      console.log('没有历史数据权限，跳过历史数据预加载');
-      return;
-    }
-
-    console.log(`预加载历史数据: ${historyKeys.join(', ')}`);
-
-    const historyPromises = historyKeys.map(async (key) => {
-      try {
-        const historyData = localStorage.getItem(key);
-        if (historyData) {
-          console.log(`历史数据已存在: ${key}`);
-        } else {
-          console.log(`历史数据不存在: ${key}`);
-        }
-      } catch (error) {
-        console.warn(`历史数据预加载失败: ${key}`, error);
-      }
-    });
-
-    await Promise.all(historyPromises);
-  }
-
-  // 根据权限获取需要预加载的历史数据键
-  private getHistoryKeysByPermissions(): string[] {
-    if (typeof window === 'undefined') return [];
-
-    try {
-      const latestPermissions = localStorage.getItem('latestPermissions');
-      if (!latestPermissions) {
-        console.log('没有权限数据，预加载所有历史数据');
-        return ['quotation_history', 'packing_history', 'invoice_history', 'purchase_history'];
-      }
-
-      const permissions = JSON.parse(latestPermissions);
-      const historyKeys: string[] = [];
-
-      permissions.forEach((perm: any) => {
-        if (perm.canAccess) {
-          switch (perm.moduleId) {
-            case 'quotation':
-              historyKeys.push('quotation_history');
-              break;
-            case 'packing':
-              historyKeys.push('packing_history');
-              break;
-            case 'invoice':
-              historyKeys.push('invoice_history');
-              break;
-            case 'purchase':
-              historyKeys.push('purchase_history');
-              break;
-          }
-        }
-      });
-
-      return historyKeys;
-    } catch (error) {
-      console.error('解析权限数据失败:', error);
-      return ['quotation_history', 'packing_history', 'invoice_history', 'purchase_history'];
-    }
-  }
-
-
 
   // 获取用户权限列表
   private getUserPermissions(): string[] {
