@@ -38,6 +38,9 @@ interface PermissionStore {
   
   // 权限获取 - 统一从API获取
   fetchPermissions: (forceRefresh?: boolean) => Promise<void>;
+  
+  // 初始化用户信息 - 从本地存储恢复
+  initializeUserFromStorage: () => void;
 }
 
 export const usePermissionStore = create<PermissionStore>((set, get) => ({
@@ -52,6 +55,38 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   setError: (error: string | null) => set({ error }),
   clearUser: () => set({ user: null, error: null }),
   setAutoFetch: (autoFetch: boolean) => set({ autoFetch }),
+
+  // 初始化用户信息 - 从本地存储恢复
+  initializeUserFromStorage: () => {
+    if (typeof window !== 'undefined') {
+      try {
+        const storedUserInfo = localStorage.getItem('userInfo');
+        const storedPermissions = localStorage.getItem('latestPermissions');
+        const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
+        
+        if (storedUserInfo && storedPermissions && permissionsTimestamp) {
+          const userData = JSON.parse(storedUserInfo);
+          const permissions = JSON.parse(storedPermissions);
+          
+          // 检查权限数据是否在24小时内
+          const isRecent = (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000;
+          
+          if (isRecent) {
+            userData.permissions = permissions;
+            set({ user: userData, isLoading: false, error: null, lastFetchTime: Date.now() });
+            console.log('从本地存储初始化用户信息', {
+              userId: userData.id,
+              username: userData.username,
+              isAdmin: userData.isAdmin,
+              permissionsCount: userData.permissions.length
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('从本地存储初始化用户信息失败:', error);
+      }
+    }
+  },
 
   // 统一的权限检查逻辑
   hasPermission: (moduleId: string) => {
@@ -103,17 +138,44 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
             const session = await getSession();
             
             if (session?.user) {
-              const userData = {
-                id: session.user.id || session.user.username || '',
-                username: session.user.username || session.user.name || '',
-                email: session.user.email || null,
-                status: true,
-                isAdmin: session.user.isAdmin || false,
-                permissions: permissions
-              };
+              // 优先使用本地存储的用户信息，确保用户信息一致性
+              let userData;
+              try {
+                const storedUserInfo = localStorage.getItem('userInfo');
+                if (storedUserInfo) {
+                  userData = JSON.parse(storedUserInfo);
+                  // 更新权限数据，但保持用户基本信息不变
+                  userData.permissions = permissions;
+                } else {
+                  // 如果没有本地用户信息，使用session数据
+                  userData = {
+                    id: session.user.id || session.user.username || '',
+                    username: session.user.username || session.user.name || '',
+                    email: session.user.email || null,
+                    status: true,
+                    isAdmin: session.user.isAdmin || false,
+                    permissions: permissions
+                  };
+                }
+              } catch (error) {
+                console.warn('读取本地用户信息失败，使用session数据:', error);
+                userData = {
+                  id: session.user.id || session.user.username || '',
+                  username: session.user.username || session.user.name || '',
+                  email: session.user.email || null,
+                  status: true,
+                  isAdmin: session.user.isAdmin || false,
+                  permissions: permissions
+                };
+              }
               
               set({ user: userData, isLoading: false, error: null, lastFetchTime: Date.now() });
-              console.log('使用本地缓存的权限数据');
+              console.log('使用本地缓存的权限数据', {
+                userId: userData.id,
+                username: userData.username,
+                isAdmin: userData.isAdmin,
+                permissionsCount: userData.permissions.length
+              });
               return;
             }
           }
@@ -160,6 +222,19 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         });
         
         set({ user: userData, isLoading: false, error: null, lastFetchTime: Date.now() });
+        
+        // 保存到本地存储，确保用户信息持久化
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('userInfo', JSON.stringify(userData));
+            localStorage.setItem('latestPermissions', JSON.stringify(session.user.permissions));
+            localStorage.setItem('permissionsTimestamp', Date.now().toString());
+            console.log('用户信息和权限数据已保存到本地存储');
+          } catch (error) {
+            console.warn('保存用户信息到本地存储失败:', error);
+          }
+        }
+        
         return;
       }
 
@@ -211,13 +286,10 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
             localStorage.setItem('latestPermissions', JSON.stringify(permissions));
             localStorage.setItem('permissionsTimestamp', Date.now().toString());
             // 同时保存用户基本信息
-            localStorage.setItem('username', user.username);
-            localStorage.setItem('userId', user.id);
-            localStorage.setItem('isAdmin', user.isAdmin.toString());
-            localStorage.setItem('userEmail', user.email || '');
+            localStorage.setItem('userInfo', JSON.stringify(user));
             console.log('用户信息和权限数据已保存到本地存储', {
-              username: user.username,
               userId: user.id,
+              username: user.username,
               isAdmin: user.isAdmin,
               permissionsCount: permissions.length
             });
@@ -258,4 +330,9 @@ export const fetchUser = async () => {
 
 export const refreshPermissions = async () => {
   await usePermissionStore.getState().fetchPermissions();
+};
+
+// 导出初始化函数
+export const initializeUserFromStorage = () => {
+  usePermissionStore.getState().initializeUserFromStorage();
 }; 

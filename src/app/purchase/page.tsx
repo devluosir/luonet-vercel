@@ -79,10 +79,32 @@ export default function PurchaseOrderPage() {
   }, [initialData, initialEditId]);
 
   useEffect(() => {
+    // 优先使用session中的用户信息
+    let userName = '';
     if (session?.user?.name) {
+      userName = session.user.name;
+    } else if (session?.user?.username) {
+      userName = session.user.username;
+    } else {
+      // 从本地存储获取用户信息
+      try {
+        const userInfo = localStorage.getItem('userInfo');
+        if (userInfo) {
+          const user = JSON.parse(userInfo);
+          userName = user.username || '';
+        } else {
+          // 兼容旧的存储方式
+          userName = localStorage.getItem('username') || '';
+        }
+      } catch (error) {
+        console.warn('获取用户信息失败:', error);
+      }
+    }
+    
+    if (userName) {
       setData(prevData => ({
         ...prevData,
-        from: prevData.from || session.user.name || '',
+        from: prevData.from || userName,
       }));
     }
   }, [session]);

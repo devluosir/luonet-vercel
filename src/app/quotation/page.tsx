@@ -64,9 +64,24 @@ export default function QuotationPage() {
     quotationNo: '',
     date: format(new Date(), 'yyyy-MM-dd'),
     from: typeof window !== 'undefined' ? 
-      (localStorage.getItem('username') ? 
-        localStorage.getItem('username')!.charAt(0).toUpperCase() + localStorage.getItem('username')!.slice(1).toLowerCase() : 
-        'Roger') : 
+      (() => {
+        try {
+          const userInfo = localStorage.getItem('userInfo');
+          if (userInfo) {
+            const user = JSON.parse(userInfo);
+            return user.username || 'Roger';
+          }
+          // 兼容旧的存储方式
+          const username = localStorage.getItem('username');
+          if (username) {
+            return username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
+          }
+          return 'Roger';
+        } catch (error) {
+          console.warn('获取用户信息失败:', error);
+          return 'Roger';
+        }
+      })() : 
       'Roger',
     currency: 'USD',
     paymentDate: format(new Date(), 'yyyy-MM-dd'),

@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance, safeRequestIdleCallback } from '@/utils/performance';
-import { usePermissionStore } from '@/lib/permissions';
+import { usePermissionStore, initializeUserFromStorage } from '@/lib/permissions';
 import { Header } from '@/components/Header';
 import { preloadManager } from '@/utils/preloadUtils';
 
@@ -593,6 +593,9 @@ export default function DashboardPage() {
     // 只在组件挂载后执行
     if (!mounted) return;
     
+    // 首先尝试从本地存储初始化用户信息
+    initializeUserFromStorage();
+    
     // 只在session存在且认证成功时处理
     if (session && status === 'authenticated' && session.user) {
       console.log('Dashboard: 开始获取权限', {
@@ -613,7 +616,7 @@ export default function DashboardPage() {
         return () => clearTimeout(timer);
       }
     }
-  }, [session, status, mounted, fetchPermissions, hasFetchedUserDetails]);
+  }, [session, status, mounted, fetchPermissions, hasFetchedUserDetails, initializeUserFromStorage]);
 
   // 简化的初始化逻辑
   useEffect(() => {
@@ -1022,8 +1025,8 @@ export default function DashboardPage() {
       <div className="flex-1">
         <Header 
           user={{
-            name: user?.username || '用户',
-            isAdmin: user?.isAdmin || false
+            name: user?.username || session?.user?.username || session?.user?.name || '用户',
+            isAdmin: user?.isAdmin || session?.user?.isAdmin || false
           }}
           onLogout={handleLogout}
           onProfile={() => setShowProfileModal(true)}
@@ -1037,9 +1040,9 @@ export default function DashboardPage() {
           isOpen={showProfileModal}
           onClose={() => setShowProfileModal(false)}
           user={{
-            username: user?.username || '',
-            email: user?.email || null,
-            permissions: user?.permissions || []
+            username: user?.username || session?.user?.username || session?.user?.name || '',
+            email: user?.email || session?.user?.email || null,
+            permissions: user?.permissions || session?.user?.permissions || []
           }}
         />
 
