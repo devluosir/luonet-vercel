@@ -59,6 +59,14 @@ export default function LoginPage() {
     }
   }, [session, status, router]);
 
+  // 添加专门的登录成功监听
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      console.log('登录成功，session已更新，准备跳转');
+      router.push('/dashboard');
+    }
+  }, [status, session, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -107,8 +115,11 @@ export default function LoginPage() {
           console.log('Session已更新，useEffect应该处理跳转');
         } else {
           console.log('Session未更新，等待useEffect处理');
+          // 如果session还没有更新，强制刷新页面来触发session更新
+          console.log('强制刷新页面以更新session');
+          window.location.reload();
         }
-      }, 100);
+      }, 500);
     } catch (error) {
       console.error('登录错误:', error);
       setError('登录过程中发生错误，请重试');
