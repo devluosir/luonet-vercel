@@ -19,11 +19,18 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        console.log('NextAuth authorize - 开始验证:', { 
+          username: credentials?.username, 
+          password: credentials?.password ? '***' : 'empty' 
+        });
+        
         if (!credentials?.username || !credentials?.password) {
+          console.log('NextAuth authorize - 用户名或密码为空');
           throw new Error("Missing username or password");
         }
 
         try {
+          console.log('NextAuth authorize - 调用认证API');
           // 使用远程 API 进行认证
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/auth/d1-users`, {
             method: 'POST',
