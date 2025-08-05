@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 强制刷新session - 这会重新从数据库获取最新的用户权限
-    const response = await fetch(`${process.env.NEXTAUTH_URL}/api/auth/session`, {
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/auth/session`, {
       method: 'GET',
       headers: {
         'Cache-Control': 'no-cache',
