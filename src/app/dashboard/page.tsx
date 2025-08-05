@@ -942,11 +942,12 @@ export default function DashboardPage() {
 
   // 使用 useEffect 处理重定向，避免在渲染过程中调用 router.push
   useEffect(() => {
-    // 只有在mounted后且user明确为null时才重定向
-    if (mounted && user === null) {
+    // 只有在mounted后且session状态为unauthenticated时才重定向
+    if (mounted && status === 'unauthenticated') {
+      console.log('Dashboard: 用户未认证，重定向到登录页');
       router.push('/');
     }
-  }, [user, router, mounted]);
+  }, [status, router, mounted]);
 
   // 延迟获取权限，避免阻塞初始渲染
   useEffect(() => {
@@ -961,9 +962,20 @@ export default function DashboardPage() {
   // 所有 hooks 声明完毕后，再做提前 return
   if (!mounted) return null;
   
-  // 移除页面刷新时的权限加载提示，只依赖菜单中的权限刷新
-  // 如果未登录，返回空内容而不是直接重定向
-  if (user === null) return null;
+  // 如果session正在加载，显示加载状态
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-lg">加载中...</div>
+        </div>
+      </div>
+    );
+  }
+  
+  // 如果未认证，返回空内容而不是直接重定向
+  if (status === 'unauthenticated') return null;
 
   const getDocumentTypeName = (type: string) => {
     switch (type) {

@@ -42,17 +42,17 @@ export default function LoginPage() {
   // 移除session检查逻辑，避免循环重定向
   // 现在使用快速登录，不需要等待session更新
 
-  // 添加session调试信息
-  useEffect(() => {
-    if (session && status === 'authenticated') {
-      console.log('登录页面Session数据:', {
-        userId: session.user?.id,
-        username: session.user?.username,
-        isAdmin: session.user?.isAdmin,
-        permissions: session.user?.permissions
-      });
-    }
-  }, [session, status]);
+  // 移除session调试信息，避免在登录后仍然显示
+  // useEffect(() => {
+  //   if (session && status === 'authenticated') {
+  //     console.log('登录页面Session数据:', {
+  //       userId: session.user?.id,
+  //       username: session.user?.username,
+  //       isAdmin: session.user?.isAdmin,
+  //       permissions: session.user?.permissions
+  //     });
+  //   }
+  // }, [session, status]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,10 +91,11 @@ export default function LoginPage() {
         setLoading(false);
       } else {
         console.log('登录成功，立即跳转到dashboard');
-        setHasLoggedIn(true);
         
-        // 立即跳转，不等待session更新
-        router.push(callbackUrl);
+        // 使用window.location.href强制页面跳转
+        console.log('执行window.location.href跳转:', callbackUrl);
+        window.location.href = callbackUrl;
+        console.log('window.location.href执行完成');
       }
       
     } catch (error) {
