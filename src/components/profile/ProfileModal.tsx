@@ -47,13 +47,16 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     // 初始化时尝试从本地存储读取邮箱信息
     if (typeof window !== 'undefined') {
       const localEmail = localStorage.getItem('userEmail');
-      if (localEmail && !user.email) {
+      // 如果传入的user.email为空或null，且本地存储有邮箱信息，则使用本地存储的邮箱
+      if (localEmail && (!user.email || user.email === null || user.email === '')) {
+        console.log('从本地存储读取邮箱信息:', localEmail);
         return {
           ...user,
           email: localEmail
         };
       }
     }
+    console.log('使用传入的用户信息:', user);
     return user;
   });
 
@@ -63,9 +66,21 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
       const userInfo = await apiRequestWithError(API_ENDPOINTS.USERS.ME, {
         method: 'GET',
       });
+      console.log('从服务器获取到用户信息:', userInfo);
       setCurrentUser(userInfo);
     } catch (error) {
       console.error('获取用户信息失败:', error);
+      // 如果从服务器获取失败，尝试从本地存储读取邮箱信息
+      if (typeof window !== 'undefined') {
+        const localEmail = localStorage.getItem('userEmail');
+        if (localEmail) {
+          console.log('从本地存储读取邮箱信息作为备用:', localEmail);
+          setCurrentUser(prev => ({
+            ...prev,
+            email: localEmail
+          }));
+        }
+      }
     }
   };
 
@@ -225,7 +240,15 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
                   </div>
                 ) : (
                   <>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">{currentUser.email || '未设置'}</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {currentUser.email || '未设置'}
+                      {/* 调试信息 */}
+                      {process.env.NODE_ENV === 'development' && (
+                        <span className="text-xs text-gray-400 ml-2">
+                          (Debug: {JSON.stringify({email: currentUser.email, hasEmail: !!currentUser.email})})
+                        </span>
+                      )}
+                    </span>
                     <button
                       onClick={handleEditEmail}
                       className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"

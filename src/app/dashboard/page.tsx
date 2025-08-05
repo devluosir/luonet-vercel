@@ -706,7 +706,7 @@ export default function DashboardPage() {
           isAdmin: isAdmin,
           permissions: []
         });
-        console.log('从localStorage恢复用户信息:', { username, isAdmin, userId });
+        console.log('从localStorage恢复用户信息:', { username, isAdmin, userId, email: userEmail });
         
         // 检查本地是否有最新的权限数据
         const storedPermissions = localStorage.getItem('latestPermissions');
