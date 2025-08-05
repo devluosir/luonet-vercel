@@ -1,4 +1,5 @@
 import { D1UserClient } from './lib/d1-client';
+import bcrypt from 'bcryptjs';
 
 // 定义D1数据库接口
 interface D1Database {
@@ -108,6 +109,7 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
     const user = await d1Client.getUserByUsername(username);
 
     if (!user) {
+      console.log('handleUserAuth - 用户不存在:', username);
       return new Response(
         JSON.stringify({ error: '用户不存在' }),
         { 
@@ -120,7 +122,16 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
       );
     }
 
+    console.log('handleUserAuth - 找到用户:', {
+      id: user.id,
+      username: user.username,
+      password: user.password ? `${user.password.substring(0, 10)}...` : 'empty',
+      status: user.status,
+      isAdmin: user.isAdmin
+    });
+
     if (!user.status) {
+      console.log('handleUserAuth - 用户已被禁用:', username);
       return new Response(
         JSON.stringify({ error: '用户已被禁用' }),
         { 
@@ -139,12 +150,14 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
     console.log('开始密码验证:', { 
       username, 
       inputPassword: password ? '***' : 'empty',
-      storedPasswordType: user.password ? (user.password.startsWith('$2') ? 'bcrypt' : 'plaintext') : 'empty'
+      storedPasswordType: user.password ? (user.password.startsWith('$2') ? 'bcrypt' : 'plaintext') : 'empty',
+      storedPasswordLength: user.password ? user.password.length : 0,
+      inputPasswordLength: password ? password.length : 0
     });
     
     // 验证逻辑：
     // 1. 如果存储的密码是明文，直接比较
-    // 2. 如果存储的密码是bcrypt格式，暂时拒绝（需要实现proper验证）
+    // 2. 如果存储的密码是bcrypt格式，使用bcrypt.compare验证
     // 3. 如果存储的密码为空，拒绝登录
     if (!user.password) {
       console.log('密码验证失败: 数据库中密码为空');
@@ -153,13 +166,35 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
       console.log('密码验证失败: 用户未输入密码');
       passwordValid = false;
     } else if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
-      console.log('密码验证失败: bcrypt密码格式暂不支持');
-      passwordValid = false;
+      // 使用bcrypt验证密码
+      try {
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (isMatch) {
+          console.log('密码验证成功: bcrypt密码匹配');
+          passwordValid = true;
+        } else {
+          console.log('密码验证失败: bcrypt密码不匹配');
+          passwordValid = false;
+        }
+      } catch (error) {
+        console.log('密码验证失败: bcrypt验证出错:', error);
+        passwordValid = false;
+      }
     } else if (password === user.password) {
       console.log('密码验证成功: 明文密码匹配');
+      console.log('密码匹配详情:', {
+        inputPassword: password,
+        storedPassword: user.password,
+        match: password === user.password
+      });
       passwordValid = true;
     } else {
       console.log('密码验证失败: 密码不匹配');
+      console.log('密码不匹配详情:', {
+        inputPassword: password,
+        storedPassword: user.password,
+        match: password === user.password
+      });
       passwordValid = false;
     }
 
@@ -769,9 +804,14 @@ async function handleCreateUser(request: Request, env: Env): Promise<Response> {
 
     // 创建新用户
     console.log('开始创建新用户...');
+    
+    // 使用bcrypt加密密码
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('密码已加密:', { originalLength: password.length, hashedLength: hashedPassword.length });
+    
     const newUser = await d1Client.createUser({
       username,
-      password,
+      password: hashedPassword, // 使用加密后的密码
       email: email || null,
       status: true,
       isAdmin: newUserIsAdmin || false,
