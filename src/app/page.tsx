@@ -68,11 +68,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // 只清除localStorage中的特定项，不清除sessionStorage
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('nextauth.session-token');
-        // 移除sessionStorage.clear()，避免影响NextAuth的session状态
-      }
+      // 不清除任何存储，让NextAuth正常管理会话
       
       // 快速登录验证，只验证用户名和密码
       const result = await signIn('credentials', {

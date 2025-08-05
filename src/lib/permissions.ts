@@ -152,6 +152,13 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           permissions: session.user.permissions
         };
         
+        console.log('使用session中的权限数据', {
+          userId: userData.id,
+          username: userData.username,
+          isAdmin: userData.isAdmin,
+          permissionsCount: userData.permissions.length
+        });
+        
         set({ user: userData, isLoading: false, error: null, lastFetchTime: Date.now() });
         return;
       }
@@ -203,9 +210,19 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           try {
             localStorage.setItem('latestPermissions', JSON.stringify(permissions));
             localStorage.setItem('permissionsTimestamp', Date.now().toString());
-            console.log('权限数据已保存到本地存储');
+            // 同时保存用户基本信息
+            localStorage.setItem('username', user.username);
+            localStorage.setItem('userId', user.id);
+            localStorage.setItem('isAdmin', user.isAdmin.toString());
+            localStorage.setItem('userEmail', user.email || '');
+            console.log('用户信息和权限数据已保存到本地存储', {
+              username: user.username,
+              userId: user.id,
+              isAdmin: user.isAdmin,
+              permissionsCount: permissions.length
+            });
           } catch (error) {
-            console.warn('保存权限数据到本地存储失败:', error);
+            console.warn('保存用户数据到本地存储失败:', error);
           }
         }
       } else {

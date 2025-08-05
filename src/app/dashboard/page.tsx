@@ -594,11 +594,23 @@ export default function DashboardPage() {
     if (!mounted) return;
     
     // 只在session存在且认证成功时处理
-    if (session && status === 'authenticated') {
+    if (session && status === 'authenticated' && session.user) {
+      console.log('Dashboard: 开始获取权限', {
+        userId: session.user.id,
+        username: session.user.username,
+        isAdmin: session.user.isAdmin,
+        hasPermissions: !!session.user.permissions
+      });
+      
       // 尝试加载本地权限数据（非强制刷新）
       if (!hasFetchedUserDetails) {
-        fetchPermissions(false); // 非强制刷新，优先使用本地缓存
-        setHasFetchedUserDetails(true);
+        // 延迟获取权限，确保session完全稳定
+        const timer = setTimeout(() => {
+          fetchPermissions(false); // 非强制刷新，优先使用本地缓存
+          setHasFetchedUserDetails(true);
+        }, 1000);
+        
+        return () => clearTimeout(timer);
       }
     }
   }, [session, status, mounted, fetchPermissions, hasFetchedUserDetails]);

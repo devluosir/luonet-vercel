@@ -15,7 +15,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/',
   },
-  useSecureCookies: false,
+  useSecureCookies: process.env.NODE_ENV === 'production',
   providers: [
     CredentialsProvider({
       id: "credentials",
@@ -73,7 +73,7 @@ export const authOptions: NextAuthOptions = {
             username: data.user.username,
             isAdmin: !!data.user.isAdmin,
             image: null,
-            permissions: [] // 权限在dashboard中获取
+            permissions: data.permissions || [] // 包含API返回的权限数据
           };
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : "用户名或密码错误");
