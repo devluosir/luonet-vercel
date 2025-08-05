@@ -36,8 +36,6 @@ export default function LoginPage() {
 
   // 监听session状态变化 - 只在页面加载时检查是否已登录
   useEffect(() => {
-    console.log('Session状态变化:', { session: !!session, status, loading });
-    
     // 只在页面初始加载时检查，避免与登录跳转冲突
     if (session && status === 'authenticated') {
       console.log('检测到已登录用户，跳转到dashboard');
@@ -58,14 +56,6 @@ export default function LoginPage() {
       router.push('/dashboard');
     }
   }, [session, status, router]);
-
-  // 添加专门的登录成功监听
-  useEffect(() => {
-    if (status === 'authenticated' && session) {
-      console.log('登录成功，session已更新，准备跳转');
-      router.push('/dashboard');
-    }
-  }, [status, session, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,20 +96,7 @@ export default function LoginPage() {
 
       // 登录成功，不在这里跳转，让useEffect处理跳转
       console.log('登录成功，等待session更新');
-      console.log('登录结果:', result);
       
-      // 添加调试信息，但不在这里跳转
-      setTimeout(() => {
-        console.log('检查session状态:', { session: !!session, status });
-        if (session && status === 'authenticated') {
-          console.log('Session已更新，useEffect应该处理跳转');
-        } else {
-          console.log('Session未更新，等待useEffect处理');
-          // 如果session还没有更新，强制刷新页面来触发session更新
-          console.log('强制刷新页面以更新session');
-          window.location.reload();
-        }
-      }, 500);
     } catch (error) {
       console.error('登录错误:', error);
       setError('登录过程中发生错误，请重试');
