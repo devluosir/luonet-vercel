@@ -22,6 +22,8 @@ import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance } from '@/utils/performance';
 import { Header } from '@/components/Header';
 import { ProfileModal } from '@/components/profile/ProfileModal';
+import { getSession } from 'next-auth/react';
+import { usePermissionStore } from '@/lib/permissions';
 
 interface Permission {
   id: string;
@@ -208,27 +210,53 @@ export default function ToolsPage() {
   const handleRefreshPermissions = useCallback(async () => {
     try {
       setIsLoading(true);
-      setShowSuccessMessage(true);
+      setShowSuccessMessage(false);
       
-      // 调用权限刷新API
-      const response = await fetch('/api/auth/update-session-permissions', {
+      // 获取当前session信息
+      const session = await getSession();
+      if (!session?.user) {
+        throw new Error('用户未登录');
+      }
+      
+      // 调用权限刷新API - 使用与dashboard相同的API
+      const response = await fetch('/api/auth/get-latest-permissions', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'X-User-ID': typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '', // 移除此行
-          'X-User-Name': typeof window !== 'undefined' ? localStorage.getItem('username') || '' : '', // 移除此行
-          'X-User-Admin': typeof window !== 'undefined' ? localStorage.getItem('isAdmin') === 'true' ? 'true' : 'false' : 'false' // 移除此行
+          'X-User-ID': session.user.id || session.user.username || '',
+          'X-User-Name': session.user.username || session.user.name || '',
+          'X-User-Admin': session.user.isAdmin ? 'true' : 'false',
         },
         cache: 'no-store'
       });
 
       if (!response.ok) {
-        throw new Error('权限刷新失败');
+        throw new Error(`权限刷新失败: ${response.status}`);
       }
 
       const data = await response.json();
       
       if (data.success) {
+        // 更新全局权限store
+        const updatedUser = {
+          id: session.user.id || session.user.username || '',
+          username: session.user.username || session.user.name || '',
+          email: session.user.email || null,
+          status: true,
+          isAdmin: session.user.isAdmin || false,
+          permissions: data.permissions
+        };
+        
+        // 更新全局权限store
+        usePermissionStore.getState().setUser(updatedUser);
+        
+        // 保存到本地存储
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('latestPermissions', JSON.stringify(data.permissions));
+          localStorage.setItem('permissionsTimestamp', Date.now().toString());
+          localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+        }
+
         // 触发权限变化事件，通知其他组件
         window.dispatchEvent(new CustomEvent('permissionChanged', {
           detail: {
@@ -244,6 +272,7 @@ export default function ToolsPage() {
       }
     } catch (error) {
       console.error('刷新权限失败:', error);
+      setShowSuccessMessage(false);
     } finally {
       setIsLoading(false);
     }

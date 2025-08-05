@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      message: '权限数据已更新，需要重新登录以应用新权限',
+      message: '权限数据已更新',
       user: {
         id: userId,
         username: userName,
@@ -152,8 +152,7 @@ export async function POST(request: NextRequest) {
         isAdmin: isAdmin,
         permissions: permissions
       },
-      permissions: permissions,
-      requiresReauth: true // 指示前端需要重新登录
+      permissions: permissions
     });
   } catch (error) {
     console.error('更新session权限API错误:', error);

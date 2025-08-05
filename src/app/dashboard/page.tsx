@@ -884,7 +884,8 @@ export default function DashboardPage() {
             ...user,
             permissions: data.permissions
           };
-          // 这里可以调用全局store的更新方法，如果有的话
+          // 更新全局权限store
+          usePermissionStore.getState().setUser(updatedUser);
         }
 
         // 触发权限变化事件，通知其他组件
