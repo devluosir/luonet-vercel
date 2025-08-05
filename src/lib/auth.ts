@@ -1,21 +1,17 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import NextAuth from "next-auth";
-import { API_ENDPOINTS, apiRequestWithError } from "./api-config";
-
-// 缓存时间（毫秒）
-const AUTH_CACHE_DURATION = 5 * 60 * 1000; // 5分钟
 
 export const authOptions: NextAuthOptions = {
-  debug: true, // 启用调试模式
+  debug: true,
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
   pages: {
     signIn: '/',
   },
-  useSecureCookies: false, // 开发环境禁用安全cookie
+  useSecureCookies: false,
   providers: [
     CredentialsProvider({
       id: "credentials",
