@@ -130,24 +130,26 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
       );
     }
 
-    // 验证密码 - 支持明文密码和bcrypt哈希
+    // 验证密码 - 严格验证
     let passwordValid = false;
     
-    // 检查是否是明文密码（用于开发环境）
-    if (password === user.password) {
+    console.log('开始密码验证:', { 
+      username, 
+      inputPassword: password ? '***' : 'empty',
+      storedPasswordType: user.password ? (user.password.startsWith('$2') ? 'bcrypt' : 'plaintext') : 'empty'
+    });
+    
+    // 严格验证：只有明文密码完全匹配才允许登录
+    if (password && user.password && password === user.password) {
       passwordValid = true;
+      console.log('密码验证成功');
     } else {
-      // 检查是否是bcrypt哈希（生产环境）
-      try {
-        if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
-          // 对于bcrypt哈希，暂时使用简单的字符串比较
-          // 在生产环境中，应该使用proper的bcrypt验证库
-          console.log('检测到bcrypt密码格式，暂时跳过验证');
-          passwordValid = false; // 暂时禁用bcrypt密码，确保安全性
-        }
-      } catch (error) {
-        passwordValid = false;
-      }
+      console.log('密码验证失败:', {
+        passwordProvided: !!password,
+        storedPasswordExists: !!user.password,
+        passwordsMatch: password === user.password
+      });
+      passwordValid = false;
     }
 
     if (!passwordValid) {
