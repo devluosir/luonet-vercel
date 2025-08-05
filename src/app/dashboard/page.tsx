@@ -1043,7 +1043,7 @@ export default function DashboardPage() {
         <Header 
           user={{
             name: user?.username || session?.user?.username || session?.user?.name || '用户',
-            isAdmin: user?.isAdmin || session?.user?.isAdmin || false
+            isAdmin: user?.isAdmin ?? session?.user?.isAdmin ?? (session?.user?.isAdmin !== undefined ? session.user.isAdmin : false)
           }}
           onLogout={handleLogout}
           onProfile={() => setShowProfileModal(true)}
