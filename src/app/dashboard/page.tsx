@@ -696,10 +696,12 @@ export default function DashboardPage() {
       const isAdmin = localStorage.getItem('isAdmin') === 'true';
       
       if (username) {
+        // 从本地存储读取邮箱信息
+        const userEmail = localStorage.getItem('userEmail');
         setUser({
           id: userId || '1',
           username: username,
-          email: null,
+          email: userEmail,
           status: true,
           isAdmin: isAdmin,
           permissions: []
