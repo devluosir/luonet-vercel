@@ -89,17 +89,25 @@ export class D1UserClient {
   }
 
   async getUserByUsername(username: string): Promise<D1User | null> {
+    console.log('D1UserClient.getUserByUsername - 查询用户名:', username);
+    
     const result = await this.db.prepare(`
       SELECT * FROM User WHERE username = ?
     `).bind(username).first<D1User>();
 
+    console.log('D1UserClient.getUserByUsername - 数据库查询结果:', result);
+
     if (!result) return null;
 
-    return {
+    const user = {
       ...result,
       status: Boolean(result.status),
       isAdmin: Boolean(result.isAdmin)
     };
+    
+    console.log('D1UserClient.getUserByUsername - 返回用户对象:', user);
+    
+    return user;
   }
 
   async updateUser(id: string, updates: Partial<D1User>): Promise<D1User | null> {

@@ -110,8 +110,9 @@ export default function LoginPage() {
         let realUserId = userId;
         
         try {
-          // 调用后端 API 获取用户信息（使用用户名查找）
-          const userResponse = await fetch(`https://udb.luocompany.net/api/admin/users?username=${encodeURIComponent(username)}`, {
+          // 登录成功后，直接使用用户ID获取单个用户信息
+          // 这样可以避免获取所有用户数组，提高效率和安全性
+          const userResponse = await fetch(`https://udb.luocompany.net/api/admin/users/${userId}`, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -125,22 +126,36 @@ export default function LoginPage() {
             const userData = await userResponse.json();
             console.log('登录时获取到的原始用户数据:', userData);
             
-            if (userData.isAdmin !== undefined) {
-              realIsAdmin = !!userData.isAdmin;
-            }
-            if (userData.id) {
-              realUserId = userData.id;
+            // 处理返回的用户数据
+            let user = null;
+            if (userData.users && Array.isArray(userData.users)) {
+              // 如果返回的是用户数组，根据用户名查找对应用户
+              user = userData.users.find((u: any) => u.username === username);
+            } else if (userData.id) {
+              // 如果返回的是单个用户对象
+              user = userData;
             }
             
-            // 获取邮箱信息并存储到本地
-            if (userData.email && typeof window !== 'undefined') {
-              localStorage.setItem('userEmail', userData.email);
-              console.log('成功存储邮箱信息到localStorage:', userData.email);
+            if (user) {
+              if (user.isAdmin !== undefined) {
+                realIsAdmin = !!user.isAdmin;
+              }
+              if (user.id) {
+                realUserId = user.id;
+              }
+              
+              // 获取邮箱信息并存储到本地
+              if (user.email && typeof window !== 'undefined') {
+                localStorage.setItem('userEmail', user.email);
+                console.log('成功存储邮箱信息到localStorage:', user.email);
+              } else {
+                console.log('用户数据中没有邮箱信息或邮箱为空:', user.email);
+              }
+              
+              console.log('从后端获取到用户信息:', { isAdmin: realIsAdmin, userId: realUserId, email: user.email });
             } else {
-              console.log('用户数据中没有邮箱信息或邮箱为空:', userData.email);
+              console.log('未找到对应用户:', username);
             }
-            
-            console.log('从后端获取到用户信息:', { isAdmin: realIsAdmin, userId: realUserId, email: userData.email });
           }
         } catch (error) {
           console.error('获取用户信息失败:', error);

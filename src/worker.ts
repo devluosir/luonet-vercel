@@ -237,7 +237,10 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
     
     // 如果提供了username参数，则查询单个用户
     if (username) {
+      console.log('handleGetUsers - 查询用户:', username);
       const user = await d1Client.getUserByUsername(username);
+      console.log('handleGetUsers - 查询结果:', user);
+      
       if (!user) {
         return new Response(
           JSON.stringify({ error: '用户不存在' }),
@@ -253,20 +256,25 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
       
       // 获取用户权限
       const permissions = await d1Client.getUserPermissions(user.id);
+      console.log('handleGetUsers - 用户权限:', permissions);
+      
+      const responseData = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        status: user.status,
+        permissions: permissions.map(p => ({
+          id: p.id,
+          moduleId: p.moduleId,
+          canAccess: p.canAccess
+        }))
+      };
+      
+      console.log('handleGetUsers - 返回数据:', responseData);
       
       return new Response(
-        JSON.stringify({
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          isAdmin: user.isAdmin,
-          status: user.status,
-          permissions: permissions.map(p => ({
-            id: p.id,
-            moduleId: p.moduleId,
-            canAccess: p.canAccess
-          }))
-        }),
+        JSON.stringify(responseData),
         { 
           headers: { 
             'Content-Type': 'application/json',
