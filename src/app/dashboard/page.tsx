@@ -567,6 +567,9 @@ export default function DashboardPage() {
 
   // 直接使用session数据，并在dashboard中获取用户详细信息
   useEffect(() => {
+    // 只在组件挂载后执行
+    if (!mounted) return;
+    
     console.log('Dashboard: Session状态变化', { 
       session: !!session, 
       status, 
@@ -611,7 +614,7 @@ export default function DashboardPage() {
     }
     // 移除loading和unauthenticated的处理，让页面正常渲染
     // 只有在真正需要时才重定向
-  }, [session, status]);
+  }, [session, status, mounted]);
 
   // 获取用户详细信息的函数
   const fetchUserDetails = async (userId: string, username: string, isAdmin: boolean) => {
@@ -633,19 +636,22 @@ export default function DashboardPage() {
         const data = await response.json();
         console.log('Dashboard: 获取用户详细信息成功', data.permissions);
         
-        // 更新权限数据
-        setLatestPermissions(data.permissions || []);
-        
-        // 更新用户状态
-        setUser((prev: User | null) => prev ? {
-          ...prev,
-          permissions: data.permissions || []
-        } : null);
-        
-        // 保存到localStorage
-        if (typeof window !== 'undefined' && data.permissions) {
-          localStorage.setItem('latestPermissions', JSON.stringify(data.permissions));
-          localStorage.setItem('permissionsTimestamp', Date.now().toString());
+        // 检查组件是否仍然挂载
+        if (mounted) {
+          // 更新权限数据
+          setLatestPermissions(data.permissions || []);
+          
+          // 更新用户状态
+          setUser((prev: User | null) => prev ? {
+            ...prev,
+            permissions: data.permissions || []
+          } : null);
+          
+          // 保存到localStorage
+          if (typeof window !== 'undefined' && data.permissions) {
+            localStorage.setItem('latestPermissions', JSON.stringify(data.permissions));
+            localStorage.setItem('permissionsTimestamp', Date.now().toString());
+          }
         }
       } else {
         console.error('Dashboard: 获取用户详细信息失败', response.status);

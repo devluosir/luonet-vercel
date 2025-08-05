@@ -68,10 +68,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // 强制清除任何可能的缓存
+      // 只清除localStorage中的特定项，不清除sessionStorage
       if (typeof window !== 'undefined') {
         localStorage.removeItem('nextauth.session-token');
-        sessionStorage.clear();
+        // 移除sessionStorage.clear()，避免影响NextAuth的session状态
       }
       
       console.log('开始登录...', { callbackUrl });
