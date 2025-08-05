@@ -51,6 +51,7 @@ export const authOptions: NextAuthOptions = {
           });
 
           console.log('NextAuth authorize - API 响应状态:', response.status);
+          console.log('NextAuth authorize - API 响应URL:', response.url);
 
           if (!response.ok) {
             const errorData = await response.json();
@@ -60,6 +61,12 @@ export const authOptions: NextAuthOptions = {
 
           const data = await response.json();
           console.log('NextAuth authorize - API 成功响应:', data);
+          console.log('NextAuth authorize - 返回用户数据:', {
+            id: data.user.id,
+            email: data.user.email,
+            username: data.user.username,
+            isAdmin: data.user.isAdmin
+          });
           
           // 验证用户状态
           if (!data.user || !data.user.status) {
@@ -158,5 +165,12 @@ const handler = NextAuth(authOptions);
 
 // 添加调试信息
 console.log('NextAuth 配置已加载，providers:', authOptions.providers.map(p => p.id));
+console.log('NextAuth handler 创建完成');
+console.log('NextAuth 配置详情:', {
+  debug: authOptions.debug,
+  session: authOptions.session,
+  pages: authOptions.pages,
+  providers: authOptions.providers.map(p => ({ id: p.id, name: p.name }))
+});
 
 export { handler as auth, handler as GET, handler as POST }; 
