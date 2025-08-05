@@ -12,6 +12,9 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  pages: {
+    signIn: '/',
+  },
   providers: [
     CredentialsProvider({
       id: "credentials",
@@ -45,6 +48,8 @@ export const authOptions: NextAuthOptions = {
               password: credentials.password
             })
           });
+
+          console.log('NextAuth authorize - API 响应状态:', response.status);
 
           if (!response.ok) {
             const errorData = await response.json();
@@ -147,5 +152,8 @@ export const authOptions: NextAuthOptions = {
 };
 
 const handler = NextAuth(authOptions);
+
+// 添加调试信息
+console.log('NextAuth 配置已加载，providers:', authOptions.providers.map(p => p.id));
 
 export { handler as auth, handler as GET, handler as POST }; 
