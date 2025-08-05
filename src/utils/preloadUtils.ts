@@ -100,6 +100,13 @@ export class PreloadManager {
   private async preloadFonts(): Promise<void> {
     console.log('预加载PDF字体（最后一步）...');
     
+    // 检查是否有权限使用PDF功能
+    const formPages = this.getFormPagesByPermissions();
+    if (formPages.length === 0) {
+      console.log('没有PDF功能权限，跳过字体预加载');
+      return;
+    }
+    
     try {
       // 确保字体CSS已加载，浏览器会自动处理字体加载
       if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
@@ -167,8 +174,8 @@ export class PreloadManager {
     try {
       const latestPermissions = localStorage.getItem('latestPermissions');
       if (!latestPermissions) {
-        console.log('没有权限数据，预加载所有表单页面');
-        return ['/quotation', '/packing', '/invoice', '/purchase', '/history', '/customer', '/mail', '/date-tools'];
+        console.log('没有权限数据，跳过表单页面预加载');
+        return [];
       }
 
       const permissions = JSON.parse(latestPermissions);
@@ -195,7 +202,7 @@ export class PreloadManager {
             case 'customer':
               formPages.push('/customer');
               break;
-            case 'ai-email':
+            case 'mail':
               formPages.push('/mail');
               break;
             case 'date-tools':
@@ -208,7 +215,7 @@ export class PreloadManager {
       return formPages;
     } catch (error) {
       console.error('解析权限数据失败:', error);
-      return ['/quotation', '/packing', '/invoice', '/purchase', '/history', '/customer', '/mail', '/date-tools'];
+      return [];
     }
   }
 
