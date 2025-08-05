@@ -85,15 +85,21 @@ export default function LoginPage() {
         redirect: false,
       });
 
+      console.log('signIn 结果:', result);
+
       if (!result) {
+        console.log('signIn 返回 null，登录请求失败');
         setError('登录请求失败，请重试');
         return;
       }
 
       if (result.error) {
+        console.log('signIn 返回错误:', result.error);
         setError('用户名或密码错误');
         return;
       }
+
+      console.log('signIn 成功，继续获取用户信息');
 
       // 登录成功后，立即获取用户权限信息
       console.log('登录成功，获取用户权限信息...');
