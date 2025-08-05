@@ -40,18 +40,18 @@ export default function LoginPage() {
     if (session && status === 'authenticated' && !loading) {
       console.log('检测到已登录用户，跳转到dashboard');
       
-              // 保存session中的用户信息到localStorage
-        if (session.user && typeof window !== 'undefined') {
-          localStorage.setItem('username', session.user.username || session.user.name || '');
-          localStorage.setItem('isAdmin', (session.user.isAdmin || false).toString());
-          localStorage.setItem('userId', session.user.id || '1');
-          
-          // 保存权限信息
-          if (session.user.permissions && Array.isArray(session.user.permissions)) {
-            localStorage.setItem('latestPermissions', JSON.stringify(session.user.permissions));
-            localStorage.setItem('permissionsTimestamp', Date.now().toString());
-          }
+      // 保存session中的用户信息到localStorage
+      if (session.user && typeof window !== 'undefined') {
+        localStorage.setItem('username', session.user.username || session.user.name || '');
+        localStorage.setItem('isAdmin', (session.user.isAdmin || false).toString());
+        localStorage.setItem('userId', session.user.id || '1');
+        
+        // 保存权限信息
+        if (session.user.permissions && Array.isArray(session.user.permissions)) {
+          localStorage.setItem('latestPermissions', JSON.stringify(session.user.permissions));
+          localStorage.setItem('permissionsTimestamp', Date.now().toString());
         }
+      }
       
       router.push('/dashboard');
     }
@@ -94,8 +94,8 @@ export default function LoginPage() {
         return;
       }
 
-      // 登录成功后，立即跳转到dashboard，权限信息会在dashboard中异步获取
-      router.push('/dashboard');
+      // 登录成功，不在这里跳转，让useEffect处理跳转
+      console.log('登录成功，等待session更新');
     } catch (error) {
       console.error('登录错误:', error);
       setError('登录过程中发生错误，请重试');
