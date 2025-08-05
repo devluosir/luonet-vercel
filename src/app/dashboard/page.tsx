@@ -58,8 +58,8 @@ const QUICK_CREATE_MODULES = [
     name: '新报价单', 
     path: '/quotation',
     icon: FileText,
-    bgColor: 'bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/40',
-    iconBg: 'bg-blue-500',
+    bgColor: 'bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 dark:from-blue-900/20 dark:to-blue-800/30 dark:hover:from-blue-800/30 dark:hover:to-blue-700/40',
+    iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
     textColor: 'text-blue-700 dark:text-blue-300',
     shortcut: 'Q'
   },
@@ -68,8 +68,8 @@ const QUICK_CREATE_MODULES = [
     name: '销售确认', 
     path: '/quotation',
     icon: FileText,
-    bgColor: 'bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-800/40',
-    iconBg: 'bg-green-500',
+    bgColor: 'bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 dark:from-green-900/20 dark:to-green-800/30 dark:hover:from-green-800/30 dark:hover:to-green-700/40',
+    iconBg: 'bg-gradient-to-br from-green-500 to-green-600',
     textColor: 'text-green-700 dark:text-green-300',
     shortcut: 'C'
   },
@@ -78,8 +78,8 @@ const QUICK_CREATE_MODULES = [
     name: '箱单发票', 
     path: '/packing',
     icon: Package,
-    bgColor: 'bg-teal-100 hover:bg-teal-200 dark:bg-teal-900/30 dark:hover:bg-teal-800/40',
-    iconBg: 'bg-teal-500',
+    bgColor: 'bg-gradient-to-br from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200 dark:from-teal-900/20 dark:to-teal-800/30 dark:hover:from-teal-800/30 dark:hover:to-teal-700/40',
+    iconBg: 'bg-gradient-to-br from-teal-500 to-teal-600',
     textColor: 'text-teal-700 dark:text-teal-300',
     shortcut: 'B'
   },
@@ -88,8 +88,8 @@ const QUICK_CREATE_MODULES = [
     name: '财务发票', 
     path: '/invoice',
     icon: Receipt,
-    bgColor: 'bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-800/40',
-    iconBg: 'bg-purple-500',
+    bgColor: 'bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 dark:from-purple-900/20 dark:to-purple-800/30 dark:hover:from-purple-800/30 dark:hover:to-purple-700/40',
+    iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600',
     textColor: 'text-purple-700 dark:text-purple-300',
     shortcut: 'I'
   },
@@ -98,8 +98,8 @@ const QUICK_CREATE_MODULES = [
     name: '采购订单', 
     path: '/purchase',
     icon: ShoppingCart,
-    bgColor: 'bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-800/40',
-    iconBg: 'bg-orange-500',
+    bgColor: 'bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 dark:from-orange-900/20 dark:to-orange-800/30 dark:hover:from-orange-800/30 dark:hover:to-orange-700/40',
+    iconBg: 'bg-gradient-to-br from-orange-500 to-orange-600',
     textColor: 'text-orange-700 dark:text-orange-300',
     shortcut: 'P'
   }
@@ -112,8 +112,8 @@ const TOOL_MODULES = [
     name: 'AI邮件助手', 
     path: '/mail',
     icon: Mail,
-    bgColor: 'bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-800/40',
-    iconBg: 'bg-indigo-500',
+    bgColor: 'bg-gradient-to-br from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 dark:from-indigo-900/20 dark:to-indigo-800/30 dark:hover:from-indigo-800/30 dark:hover:to-indigo-700/40',
+    iconBg: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
     textColor: 'text-indigo-700 dark:text-indigo-300'
   },
   { 
@@ -121,8 +121,8 @@ const TOOL_MODULES = [
     name: '日期计算', 
     path: '/date-tools',
     icon: Calendar,
-    bgColor: 'bg-pink-100 hover:bg-pink-200 dark:bg-pink-900/30 dark:hover:bg-pink-800/40',
-    iconBg: 'bg-pink-500',
+    bgColor: 'bg-gradient-to-br from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 dark:from-pink-900/20 dark:to-pink-800/30 dark:hover:from-pink-800/30 dark:hover:to-pink-700/40',
+    iconBg: 'bg-gradient-to-br from-pink-500 to-pink-600',
     textColor: 'text-pink-700 dark:text-pink-300'
   }
 ];
@@ -134,8 +134,8 @@ const TOOLS_MODULES = [
     name: '单据管理', 
     path: '/history',
     icon: Archive,
-    bgColor: 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800/50 dark:hover:bg-gray-700/60',
-    iconBg: 'bg-gray-600',
+    bgColor: 'bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 dark:from-gray-800/30 dark:to-gray-700/40 dark:hover:from-gray-700/40 dark:hover:to-gray-600/50',
+    iconBg: 'bg-gradient-to-br from-gray-600 to-gray-700',
     textColor: 'text-gray-700 dark:text-gray-300'
   },
   { 
@@ -143,8 +143,8 @@ const TOOLS_MODULES = [
     name: '客户管理', 
     path: '/customer',
     icon: Users,
-    bgColor: 'bg-violet-100 hover:bg-violet-200 dark:bg-violet-900/30 dark:hover:bg-violet-800/40',
-    iconBg: 'bg-violet-500',
+    bgColor: 'bg-gradient-to-br from-violet-50 to-violet-100 hover:from-violet-100 hover:to-violet-200 dark:from-violet-900/20 dark:to-violet-800/30 dark:hover:from-violet-800/30 dark:hover:to-violet-700/40',
+    iconBg: 'bg-gradient-to-br from-violet-500 to-violet-600',
     textColor: 'text-violet-700 dark:text-violet-300'
   }
 ];
@@ -158,45 +158,65 @@ const ModuleButton = ({ module, onClick, onHover }: {
   const Icon = module.icon;
   
   // 优先使用模块对象的颜色字段
-  const bgColor = module.bgColor || 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800/50 dark:hover:bg-gray-700/60';
-  const iconBg = module.iconBg || 'bg-gray-500';
+  const bgColor = module.bgColor || 'bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 dark:from-gray-800/30 dark:to-gray-700/40 dark:hover:from-gray-700/40 dark:hover:to-gray-600/50';
+  const iconBg = module.iconBg || 'bg-gradient-to-br from-gray-500 to-gray-600';
   const titleColor = module.titleColor || module.textColor || 'text-gray-800 dark:text-gray-200';
   const shortcutBg = module.shortcutBg || iconBg;
-  
-  // 移除内联样式，改用CSS类实现主题切换
   
   return (
     <button
       key={module.id}
-      className={`group relative shadow-md hover:shadow-lg 
+      className={`group relative shadow-lg hover:shadow-xl 
         rounded-xl overflow-hidden transition-all duration-300 ease-in-out
         hover:-translate-y-1 active:translate-y-0 cursor-pointer
         border border-gray-200/50 dark:border-gray-800/50
         hover:border-gray-300/70 dark:hover:border-gray-700/70
-        active:shadow-sm
+        active:shadow-md
         p-4 h-20 flex items-center space-x-3 w-full
         backdrop-blur-sm ${bgColor}`}
       onClick={() => onClick(module)}
       onMouseEnter={() => onHover?.(module)}
     >
-      {/* 图标容器 */}
-      <div className={`p-2 rounded-lg ${iconBg} flex-shrink-0 shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-110`}>
-        <Icon className="w-5 h-5 text-white transition-colors" />
+      {/* 图标容器 - 增强彩色效果 */}
+      <div className={`p-2.5 rounded-xl ${iconBg} flex-shrink-0 shadow-xl group-hover:shadow-2xl 
+        transition-all duration-300 group-hover:scale-110
+        relative overflow-hidden`}>
+        {/* 图标背景渐变效果 */}
+        <div className={`absolute inset-0 bg-gradient-to-br from-white/30 via-white/10 to-transparent 
+          group-hover:from-white/40 group-hover:via-white/20 transition-all duration-300`}></div>
+        {/* 图标本身 */}
+        <Icon className="w-5 h-5 text-white relative z-10 transition-all duration-300 
+          group-hover:scale-110 group-hover:drop-shadow-lg" />
+        {/* 图标光晕效果 */}
+        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent 
+          opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       </div>
+      
       {/* 文本内容 */}
       <div className="flex-1 min-w-0 text-left">
         <h3 className={`text-base font-bold ${titleColor} leading-tight line-clamp-1
-          transition-colors duration-200 group-hover:${titleColor}`}>
+          transition-all duration-200 group-hover:scale-105 transform group-hover:drop-shadow-sm`}>
           {module.name}
         </h3>
       </div>
-      {/* 快捷键标识 */}
+      
+      {/* 快捷键标识 - 增强效果 */}
       {module.shortcut && (
-        <div className={`absolute top-2 right-2 w-5 h-5 ${shortcutBg} rounded text-white 
-          flex items-center justify-center text-xs font-bold shadow-sm`}>
+        <div className={`absolute top-2 right-2 w-6 h-6 ${shortcutBg} rounded-lg text-white 
+          flex items-center justify-center text-xs font-bold shadow-lg
+          group-hover:scale-110 group-hover:shadow-xl transition-all duration-300
+          group-hover:rotate-6 group-hover:animate-pulse`}>
           {module.shortcut}
         </div>
       )}
+      
+      {/* 悬停时的光晕效果 */}
+      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/10 to-transparent 
+        opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+      
+      {/* 边框光晕效果 */}
+      <div className="absolute inset-0 rounded-xl border-2 border-transparent 
+        group-hover:border-white/20 transition-all duration-300 pointer-events-none"></div>
     </button>
   );
 };
