@@ -141,11 +141,68 @@ const TOOLS_MODULES = [
   }
 ];
 
+// 获取各类单据数量 - 使用已有的历史记录函数（不应用过滤条件）
+const getQuotationCount = () => {
+  try {
+    const { getQuotationHistory } = require('@/utils/quotationHistory');
+    // 只获取type为'quotation'的记录
+    return getQuotationHistory().filter((item: any) => 
+      'type' in item && item.type === 'quotation'
+    ).length;
+  } catch (error) {
+    return 0;
+  }
+};
+
+const getConfirmationCount = () => {
+  try {
+    const { getQuotationHistory } = require('@/utils/quotationHistory');
+    // 只获取type为'confirmation'的记录
+    return getQuotationHistory().filter((item: any) => 
+      'type' in item && item.type === 'confirmation'
+    ).length;
+  } catch (error) {
+    return 0;
+  }
+};
+
+const getInvoiceCount = () => {
+  try {
+    const { getInvoiceHistory } = require('@/utils/invoiceHistory');
+    return getInvoiceHistory().length;
+  } catch (error) {
+    return 0;
+  }
+};
+
+const getPackingCount = () => {
+  try {
+    const { getPackingHistory } = require('@/utils/packingHistory');
+    return getPackingHistory().length;
+  } catch (error) {
+    return 0;
+  }
+};
+
+const getPurchaseCount = () => {
+  try {
+    const { getPurchaseHistory } = require('@/utils/purchaseHistory');
+    return getPurchaseHistory().length;
+  } catch (error) {
+    return 0;
+  }
+};
+
 // 统一的模块按钮组件
-const ModuleButton = ({ module, onClick, onHover }: { 
+const ModuleButton = ({ module, onClick, onHover, quotationCount, confirmationCount, invoiceCount, packingCount, purchaseCount }: { 
   module: any; 
   onClick: (module: any) => void; 
   onHover?: (module: any) => void;
+  quotationCount?: number;
+  confirmationCount?: number;
+  invoiceCount?: number;
+  packingCount?: number;
+  purchaseCount?: number;
 }) => {
   const Icon = module.icon;
   
@@ -192,15 +249,58 @@ const ModuleButton = ({ module, onClick, onHover }: {
         </h3>
       </div>
       
-      {/* 快捷键标识 - 增强效果 */}
-      {module.shortcut && (
-        <div className={`absolute top-2 right-2 w-6 h-6 ${shortcutBg} rounded-lg text-white 
-          flex items-center justify-center text-xs font-bold shadow-lg
-          group-hover:scale-110 group-hover:shadow-xl transition-all duration-300
-          group-hover:rotate-6 group-hover:animate-pulse`}>
-          {module.shortcut}
-        </div>
-      )}
+      {/* 各模块的数量徽章 */}
+      {(() => {
+        let count = 0;
+        let showBadge = false;
+        
+        // 根据模块ID获取对应的数量
+        switch (module.id) {
+          case 'quotation':
+            count = quotationCount || 0;
+            showBadge = count > 0;
+            break;
+          case 'confirmation':
+            count = confirmationCount || 0;
+            showBadge = count > 0;
+            break;
+          case 'invoice':
+            count = invoiceCount || 0;
+            showBadge = count > 0;
+            break;
+          case 'packing':
+            count = packingCount || 0;
+            showBadge = count > 0;
+            break;
+          case 'purchase':
+            count = purchaseCount || 0;
+            showBadge = count > 0;
+            break;
+          default:
+            // 其他模块显示快捷键
+            if (module.shortcut) {
+              return (
+                <div className={`absolute top-2 right-2 w-6 h-6 ${shortcutBg} rounded-lg text-white 
+                  flex items-center justify-center text-xs font-bold shadow-lg
+                  group-hover:scale-110 group-hover:shadow-xl transition-all duration-300
+                  group-hover:rotate-6 group-hover:animate-pulse`}>
+                  {module.shortcut}
+                </div>
+              );
+            }
+            return null;
+        }
+        
+        // 显示数量徽章
+        return showBadge ? (
+          <div className={`absolute top-2 right-2 min-w-[20px] h-5 px-1.5 ${iconBg} rounded-full text-white 
+            flex items-center justify-center text-xs font-bold shadow-lg
+            group-hover:scale-110 group-hover:shadow-xl transition-all duration-300
+            group-hover:rotate-6 group-hover:animate-pulse`}>
+            {count > 9999 ? '9999+' : count}
+          </div>
+        ) : null;
+      })()}
       
       {/* 悬停时的光晕效果 */}
       <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/10 to-transparent 
@@ -244,9 +344,37 @@ export default function DashboardPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase'>('all');
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [quotationCount, setQuotationCount] = useState(0);
+  const [confirmationCount, setConfirmationCount] = useState(0);
+  const [invoiceCount, setInvoiceCount] = useState(0);
+  const [packingCount, setPackingCount] = useState(0);
+  const [purchaseCount, setPurchaseCount] = useState(0);
   
   // 使用全局权限store
   const { user, isLoading: permissionLoading, fetchPermissions } = usePermissionStore();
+  
+  // 更新各类单据数量
+  const updateDocumentCounts = useCallback(() => {
+    const quotation = getQuotationCount();
+    const confirmation = getConfirmationCount();
+    const invoice = getInvoiceCount();
+    const packing = getPackingCount();
+    const purchase = getPurchaseCount();
+    
+    setQuotationCount(quotation);
+    setConfirmationCount(confirmation);
+    setInvoiceCount(invoice);
+    setPackingCount(packing);
+    setPurchaseCount(purchase);
+  }, []);
+  
+  // 初始化单据数量
+  useEffect(() => {
+    if (mounted) {
+      updateDocumentCounts();
+    }
+  }, [mounted, updateDocumentCounts]);
+  
   const [isLoading, setIsLoading] = useState(false);
   const refreshing = isLoading;
   // 移除本地用户状态管理，完全使用全局store
@@ -513,12 +641,14 @@ export default function DashboardPage() {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key && (e.key.includes('_history') || e.key.includes('History'))) {
         loadDocuments(timeFilter, typeFilter);
+        updateDocumentCounts(); // 更新单据数量
       }
     };
 
     const handleCustomStorageChange = (e: CustomEvent) => {
       if (e.detail && (e.detail.key.includes('_history') || e.detail.key.includes('History'))) {
         loadDocuments(timeFilter, typeFilter);
+        updateDocumentCounts(); // 更新单据数量
       }
     };
 
@@ -1108,6 +1238,11 @@ export default function DashboardPage() {
                     module={module}
                     onClick={handleModuleClickWithLoading}
                     onHover={handleModuleHover}
+                    quotationCount={quotationCount}
+                    confirmationCount={confirmationCount}
+                    invoiceCount={invoiceCount}
+                    packingCount={packingCount}
+                    purchaseCount={purchaseCount}
                   />
                 ))}
                 
@@ -1118,6 +1253,11 @@ export default function DashboardPage() {
                     module={module}
                     onClick={handleModuleClickWithLoading}
                     onHover={handleModuleHover}
+                    quotationCount={quotationCount}
+                    confirmationCount={confirmationCount}
+                    invoiceCount={invoiceCount}
+                    packingCount={packingCount}
+                    purchaseCount={purchaseCount}
                   />
                 ))}
                 
@@ -1128,6 +1268,11 @@ export default function DashboardPage() {
                     module={module}
                     onClick={handleModuleClickWithLoading}
                     onHover={handleModuleHover}
+                    quotationCount={quotationCount}
+                    confirmationCount={confirmationCount}
+                    invoiceCount={invoiceCount}
+                    packingCount={packingCount}
+                    purchaseCount={purchaseCount}
                   />
                 ))}
                 
@@ -1146,6 +1291,11 @@ export default function DashboardPage() {
                     }}
                     onClick={handleModuleClickWithLoading}
                     onHover={handleModuleHover}
+                    quotationCount={quotationCount}
+                    confirmationCount={confirmationCount}
+                    invoiceCount={invoiceCount}
+                    packingCount={packingCount}
+                    purchaseCount={purchaseCount}
                   />
                 )}
               </div>
