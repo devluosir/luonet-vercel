@@ -43,7 +43,19 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     newPassword: '',
     confirmPassword: '',
   });
-  const [currentUser, setCurrentUser] = useState(user);
+  const [currentUser, setCurrentUser] = useState(() => {
+    // 初始化时尝试从本地存储读取邮箱信息
+    if (typeof window !== 'undefined') {
+      const localEmail = localStorage.getItem('userEmail');
+      if (localEmail && !user.email) {
+        return {
+          ...user,
+          email: localEmail
+        };
+      }
+    }
+    return user;
+  });
 
   // 获取最新的用户信息
   const fetchUserInfo = async () => {
@@ -128,6 +140,10 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
       setEditingEmail(false);
       setEmailValue('');
       alert('邮箱更新成功');
+      // 更新本地存储中的邮箱信息
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('userEmail', emailValue);
+      }
       // 重新获取用户信息
       await fetchUserInfo();
     } catch (error) {

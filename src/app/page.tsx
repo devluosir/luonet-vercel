@@ -129,7 +129,11 @@ export default function LoginPage() {
             if (userData.id) {
               realUserId = userData.id;
             }
-            console.log('从后端获取到用户信息:', { isAdmin: realIsAdmin, userId: realUserId });
+            // 获取邮箱信息并存储到本地
+            if (userData.email && typeof window !== 'undefined') {
+              localStorage.setItem('userEmail', userData.email);
+            }
+            console.log('从后端获取到用户信息:', { isAdmin: realIsAdmin, userId: realUserId, email: userData.email });
           }
         } catch (error) {
           console.error('获取用户信息失败:', error);
