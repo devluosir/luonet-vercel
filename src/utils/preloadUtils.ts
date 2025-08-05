@@ -42,6 +42,12 @@ export class PreloadManager {
       return;
     }
 
+    // 检查是否已经预加载过
+    if (this.isPreloaded()) {
+      console.log('资源已预加载，跳过重复预加载');
+      return;
+    }
+
     this.isPreloading = true;
     this.updateProgress(0, '开始预加载资源...');
 
@@ -70,6 +76,11 @@ export class PreloadManager {
           // 预加载字体（最后执行）
           await this.preloadFonts();
           this.updateProgress(100, '预加载完成');
+
+          // 标记预加载完成
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('preloadCompleted', Date.now().toString());
+          }
 
           console.log('所有资源预加载完成');
         } catch (error) {
