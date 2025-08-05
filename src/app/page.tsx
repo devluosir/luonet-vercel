@@ -35,13 +35,11 @@ export default function LoginPage() {
     }
   }, []);
 
-  // 监听session状态变化 - 只在页面初始加载时检查是否已登录
+  // 只在页面初始加载时检查是否已登录
   useEffect(() => {
-    console.log('Session状态变化:', { session: !!session, status, loading, hasLoggedIn });
-    
-    // 只在页面初始加载时检查，避免与登录跳转冲突
-    if (session && status === 'authenticated' && !loading && !hasLoggedIn) {
-      console.log('检测到已登录用户，跳转到dashboard');
+    // 只在页面初始加载时检查一次，避免频繁的session状态变化
+    if (session && status === 'authenticated' && !hasLoggedIn) {
+      console.log('页面初始加载时检测到已登录用户，跳转到dashboard');
       
       // 保存session中的用户信息到localStorage
       if (session.user && typeof window !== 'undefined') {
@@ -59,7 +57,7 @@ export default function LoginPage() {
       setHasLoggedIn(true);
       router.push('/dashboard');
     }
-  }, [session, status, router, loading, hasLoggedIn]);
+  }, [session, status, hasLoggedIn, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +97,6 @@ export default function LoginPage() {
       }
 
       // 登录成功，立即跳转到dashboard
-      console.log('登录成功，立即跳转到dashboard');
       setHasLoggedIn(true);
       router.push('/dashboard');
       
