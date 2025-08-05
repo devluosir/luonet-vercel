@@ -111,7 +111,7 @@ export default function TestLoginPage() {
               <div className="text-xs text-gray-600 space-y-1">
                 <p><strong>API基础URL:</strong> {process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}</p>
                 <p><strong>NODE_ENV:</strong> {process.env.NODE_ENV}</p>
-                <p><strong>当前时间:</strong> {new Date().toISOString()}</p>
+                <p><strong>当前时间:</strong> <span suppressHydrationWarning>{new Date().toISOString()}</span></p>
               </div>
             </div>
 
