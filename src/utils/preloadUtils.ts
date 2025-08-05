@@ -102,6 +102,7 @@ export class PreloadManager {
       
       const fontPromises = fontUrls.map(async (url) => {
         try {
+          // 尝试多种方式加载字体
           const response = await fetch(url, {
             method: 'GET',
             cache: 'force-cache',
@@ -116,9 +117,13 @@ export class PreloadManager {
             this.preloadedResources.add(url);
           } else {
             console.warn(`字体预加载失败: ${url} (状态: ${response.status})`);
+            // 尝试使用备用方法
+            await this.preloadFontWithLinkTag(url);
           }
         } catch (error) {
           console.warn(`字体预加载失败: ${url}`, error);
+          // 尝试使用备用方法
+          await this.preloadFontWithLinkTag(url);
         }
       });
       
@@ -127,6 +132,36 @@ export class PreloadManager {
     } catch (error) {
       console.error('字体预加载过程中出错:', error);
     }
+  }
+
+  // 使用link标签预加载字体的备用方法
+  private async preloadFontWithLinkTag(url: string): Promise<void> {
+    return new Promise((resolve) => {
+      try {
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'font';
+        link.type = 'font/ttf';
+        link.crossOrigin = 'anonymous';
+        link.href = url;
+        
+        link.onload = () => {
+          console.log(`字体预加载成功 (link方式): ${url}`);
+          this.preloadedResources.add(url);
+          resolve();
+        };
+        
+        link.onerror = () => {
+          console.warn(`字体预加载失败 (link方式): ${url}`);
+          resolve(); // 即使失败也继续
+        };
+        
+        document.head.appendChild(link);
+      } catch (error) {
+        console.warn(`字体预加载失败 (link方式): ${url}`, error);
+        resolve();
+      }
+    });
   }
 
   // 预加载表单页面
