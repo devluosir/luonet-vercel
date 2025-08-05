@@ -41,50 +41,56 @@ export default function LoginPage() {
 
   // 只在页面初始加载时检查是否已登录
   useEffect(() => {
-    // 只在页面初始加载时检查一次，避免频繁的session状态变化
-    if (session && status === 'authenticated' && !hasLoggedIn) {
-      console.log('页面初始加载时检测到已登录用户，检查session完整性...');
-      
-      // 检查session信息是否完整
-      const hasCompleteSession = session.user && 
-        session.user.id && 
-        session.user.username && 
-        session.user.permissions && 
-        Array.isArray(session.user.permissions);
-      
-      if (hasCompleteSession) {
-        console.log('Session信息完整，跳转到dashboard');
+    // 添加防抖，避免频繁检查
+    const timeoutId = setTimeout(() => {
+      // 只在页面初始加载时检查一次，避免频繁的session状态变化
+      if (session && status === 'authenticated' && !hasLoggedIn) {
+        console.log('页面初始加载时检测到已登录用户，检查session完整性...');
         
-        // 保存session中的用户信息到localStorage
-        if (session.user && typeof window !== 'undefined') {
-          localStorage.setItem('username', session.user.username || session.user.name || '');
-          localStorage.setItem('isAdmin', (session.user.isAdmin || false).toString());
-          localStorage.setItem('userId', session.user.id || '1');
+        // 检查session信息是否完整
+        const hasCompleteSession = session.user && 
+          session.user.id && 
+          session.user.username && 
+          session.user.permissions && 
+          Array.isArray(session.user.permissions) &&
+          session.user.permissions.length > 0; // 确保有权限数据
+        
+        if (hasCompleteSession) {
+          console.log('Session信息完整，跳转到dashboard');
           
-          // 保存权限信息
-          if (session.user.permissions && Array.isArray(session.user.permissions)) {
-            localStorage.setItem('latestPermissions', JSON.stringify(session.user.permissions));
-            localStorage.setItem('permissionsTimestamp', Date.now().toString());
-            console.log('已保存完整权限信息:', session.user.permissions);
+          // 保存session中的用户信息到localStorage
+          if (session.user && typeof window !== 'undefined') {
+            localStorage.setItem('username', session.user.username || session.user.name || '');
+            localStorage.setItem('isAdmin', (session.user.isAdmin || false).toString());
+            localStorage.setItem('userId', session.user.id || '1');
+            
+            // 保存权限信息
+            if (session.user.permissions && Array.isArray(session.user.permissions)) {
+              localStorage.setItem('latestPermissions', JSON.stringify(session.user.permissions));
+              localStorage.setItem('permissionsTimestamp', Date.now().toString());
+              console.log('已保存完整权限信息:', session.user.permissions);
+            }
           }
+          
+          setHasLoggedIn(true);
+          router.push(callbackUrl);
+        } else {
+          console.log('Session信息不完整，等待更新...', {
+            hasUser: !!session.user,
+            hasId: !!session.user?.id,
+            hasUsername: !!session.user?.username,
+            hasPermissions: !!session.user?.permissions,
+            permissionsLength: session.user?.permissions?.length || 0
+          });
         }
-        
-        setHasLoggedIn(true);
-        router.push(callbackUrl);
-      } else {
-        console.log('Session信息不完整，等待更新...', {
-          hasUser: !!session.user,
-          hasId: !!session.user?.id,
-          hasUsername: !!session.user?.username,
-          hasPermissions: !!session.user?.permissions,
-          permissionsLength: session.user?.permissions?.length || 0
-        });
+      } else if (status === 'loading') {
+        console.log('Session正在加载中...');
+      } else if (status === 'unauthenticated') {
+        console.log('用户未登录');
       }
-    } else if (status === 'loading') {
-      console.log('Session正在加载中...');
-    } else if (status === 'unauthenticated') {
-      console.log('用户未登录');
-    }
+    }, 500); // 延迟500ms检查，避免频繁触发
+    
+    return () => clearTimeout(timeoutId);
   }, [session, status, hasLoggedIn, router, callbackUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -593,10 +593,13 @@ export default function DashboardPage() {
       }
     } else if (status === 'loading') {
       console.log('Dashboard: Session正在加载中...');
+      // 不进行任何操作，等待session加载完成
     } else if (status === 'unauthenticated') {
-      console.log('Dashboard: 用户未认证');
+      console.log('Dashboard: 用户未认证，重定向到登录页面');
+      // 只有在明确未认证时才重定向
+      router.push('/');
     }
-  }, [session, status]);
+  }, [session, status, router]);
 
   // 简化的初始化逻辑
   useEffect(() => {
