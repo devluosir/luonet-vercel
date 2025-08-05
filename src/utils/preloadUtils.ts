@@ -94,47 +94,31 @@ export class PreloadManager {
     console.log('预加载PDF字体（最后一步）...');
     
     try {
-      // 使用link标签预加载字体，避免页面首次访问时的延迟
-      const fontUrls = [
-        '/fonts/NotoSansSC-Regular.ttf',
-        '/fonts/NotoSansSC-Bold.ttf'
-      ];
-      
-      const fontPromises = fontUrls.map(async (url) => {
-        return new Promise<void>((resolve) => {
-          try {
-            const link = document.createElement('link');
-            link.rel = 'preload';
-            link.as = 'font';
-            link.type = 'font/ttf';
-            link.crossOrigin = 'anonymous';
-            link.href = url;
-            
-            link.onload = () => {
-              console.log(`字体预加载成功: ${url}`);
-              this.preloadedResources.add(url);
-              resolve();
-            };
-            
-            link.onerror = () => {
-              console.warn(`字体预加载失败: ${url}`);
-              // 即使失败也标记为已加载，避免阻塞
-              this.preloadedResources.add(url);
-              resolve();
-            };
-            
-            document.head.appendChild(link);
-          } catch (error) {
-            console.warn(`字体预加载失败: ${url}`, error);
-            // 即使失败也标记为已加载，避免阻塞
-            this.preloadedResources.add(url);
+      // 确保字体CSS已加载，浏览器会自动处理字体加载
+      if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = '/pdf-fonts.css';
+        document.head.appendChild(link);
+        
+        // 等待CSS加载完成
+        await new Promise<void>((resolve) => {
+          link.onload = () => {
+            console.log('字体CSS加载成功');
             resolve();
-          }
+          };
+          link.onerror = () => {
+            console.warn('字体CSS加载失败，但继续执行');
+            resolve(); // 即使失败也继续
+          };
         });
-      });
+      }
       
-      await Promise.all(fontPromises);
-      console.log('PDF字体预加载完成');
+      // 标记字体为已预加载
+      this.preloadedResources.add('/fonts/NotoSansSC-Regular.ttf');
+      this.preloadedResources.add('/fonts/NotoSansSC-Bold.ttf');
+      
+      console.log('PDF字体预加载完成（通过CSS自动加载）');
     } catch (error) {
       console.error('字体预加载过程中出错:', error);
       // 即使出错也标记字体为已加载
