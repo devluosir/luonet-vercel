@@ -698,6 +698,14 @@ export default function DashboardPage() {
       if (username) {
         // 从本地存储读取邮箱信息
         const userEmail = localStorage.getItem('userEmail');
+        console.log('Dashboard初始化时检查邮箱信息:', { 
+          username, 
+          isAdmin, 
+          userId, 
+          email: userEmail,
+          hasEmail: !!userEmail 
+        });
+        
         setUser({
           id: userId || '1',
           username: username,

@@ -123,16 +123,23 @@ export default function LoginPage() {
           
           if (userResponse.ok) {
             const userData = await userResponse.json();
+            console.log('登录时获取到的原始用户数据:', userData);
+            
             if (userData.isAdmin !== undefined) {
               realIsAdmin = !!userData.isAdmin;
             }
             if (userData.id) {
               realUserId = userData.id;
             }
+            
             // 获取邮箱信息并存储到本地
             if (userData.email && typeof window !== 'undefined') {
               localStorage.setItem('userEmail', userData.email);
+              console.log('成功存储邮箱信息到localStorage:', userData.email);
+            } else {
+              console.log('用户数据中没有邮箱信息或邮箱为空:', userData.email);
             }
+            
             console.log('从后端获取到用户信息:', { isAdmin: realIsAdmin, userId: realUserId, email: userData.email });
           }
         } catch (error) {

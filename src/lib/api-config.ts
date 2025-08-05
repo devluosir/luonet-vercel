@@ -6,7 +6,6 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb
 // API端点配置
 export const API_ENDPOINTS = {
   USERS: {
-    ME: `${API_BASE_URL}/users/me`,
     CHANGE_PASSWORD: `${API_BASE_URL}/users/change-password`,
     LIST: `${API_BASE_URL}/api/admin/users`,
     CREATE: `${API_BASE_URL}/api/admin/users`,

@@ -44,16 +44,15 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     confirmPassword: '',
   });
   const [currentUser, setCurrentUser] = useState(() => {
-    // 初始化时优先从本地存储读取邮箱信息
-    if (typeof window !== 'undefined') {
+    // 初始化时检查邮箱信息
+    console.log('ProfileModal初始化时检查邮箱信息:', { 
+      userEmail: user.email, 
+      hasUserEmail: !!user.email 
+    });
+    
+    // 如果传入的用户信息中没有邮箱，尝试从本地存储获取
+    if (!user.email && typeof window !== 'undefined') {
       const localEmail = localStorage.getItem('userEmail');
-      console.log('初始化时检查邮箱信息:', { 
-        localEmail, 
-        userEmail: user.email, 
-        hasLocalEmail: !!localEmail 
-      });
-      
-      // 如果本地存储有邮箱信息，优先使用本地存储的邮箱
       if (localEmail) {
         console.log('使用本地存储的邮箱信息:', localEmail);
         return {
@@ -62,6 +61,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
         };
       }
     }
+    
     console.log('使用传入的用户信息:', user);
     return user;
   });
@@ -69,7 +69,15 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
   // 获取最新的用户信息
   const fetchUserInfo = async () => {
     try {
-      const userInfo = await apiRequestWithError(API_ENDPOINTS.USERS.ME, {
+      // 从localStorage获取当前用户ID
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        console.error('无法获取用户ID');
+        return;
+      }
+      
+      // 使用与用户管理页面相同的API端点
+      const userInfo = await apiRequestWithError(API_ENDPOINTS.USERS.GET(userId), {
         method: 'GET',
       });
       console.log('从服务器获取到用户信息:', userInfo);
@@ -98,23 +106,19 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     return null;
   };
 
-  // 当模态框打开时获取最新用户信息
+  // 当模态框打开时，如果传入的用户信息中没有邮箱，尝试从本地存储获取
   useEffect(() => {
-    if (isOpen) {
-      // 先尝试从本地存储更新邮箱信息
+    if (isOpen && (!currentUser.email || currentUser.email === null || currentUser.email === '')) {
       const localEmail = getLocalEmail();
-      if (localEmail && localEmail !== currentUser.email) {
-        console.log('模态框打开时更新邮箱信息:', localEmail);
+      if (localEmail) {
+        console.log('模态框打开时从本地存储获取邮箱信息:', localEmail);
         setCurrentUser(prev => ({
           ...prev,
           email: localEmail
         }));
       }
-      
-      // 然后尝试从服务器获取最新信息
-      fetchUserInfo();
     }
-  }, [isOpen]);
+  }, [isOpen, currentUser.email]);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,8 +136,15 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     setError(null);
 
     try {
-      // 使用PUT方法更新用户密码
-      await apiRequestWithError(API_ENDPOINTS.USERS.ME, {
+      // 从localStorage获取当前用户ID
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        setError('无法获取用户ID');
+        return;
+      }
+      
+      // 使用与用户管理页面相同的API端点
+      await apiRequestWithError(API_ENDPOINTS.USERS.UPDATE(userId), {
         method: 'PUT',
         body: JSON.stringify({
           currentPassword: passwordForm.currentPassword,
@@ -172,7 +183,15 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     setError(null);
 
     try {
-      await apiRequestWithError(API_ENDPOINTS.USERS.ME, {
+      // 从localStorage获取当前用户ID
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        setError('无法获取用户ID');
+        return;
+      }
+      
+      // 使用与用户管理页面相同的API端点
+      await apiRequestWithError(API_ENDPOINTS.USERS.UPDATE(userId), {
         method: 'PUT',
         body: JSON.stringify({ email: emailValue }),
       });
