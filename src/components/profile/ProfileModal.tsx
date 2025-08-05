@@ -44,12 +44,18 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     confirmPassword: '',
   });
   const [currentUser, setCurrentUser] = useState(() => {
-    // 初始化时尝试从本地存储读取邮箱信息
+    // 初始化时优先从本地存储读取邮箱信息
     if (typeof window !== 'undefined') {
       const localEmail = localStorage.getItem('userEmail');
-      // 如果传入的user.email为空或null，且本地存储有邮箱信息，则使用本地存储的邮箱
-      if (localEmail && (!user.email || user.email === null || user.email === '')) {
-        console.log('从本地存储读取邮箱信息:', localEmail);
+      console.log('初始化时检查邮箱信息:', { 
+        localEmail, 
+        userEmail: user.email, 
+        hasLocalEmail: !!localEmail 
+      });
+      
+      // 如果本地存储有邮箱信息，优先使用本地存储的邮箱
+      if (localEmail) {
+        console.log('使用本地存储的邮箱信息:', localEmail);
         return {
           ...user,
           email: localEmail
@@ -84,9 +90,28 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     }
   };
 
+  // 从本地存储获取邮箱信息的函数
+  const getLocalEmail = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('userEmail');
+    }
+    return null;
+  };
+
   // 当模态框打开时获取最新用户信息
   useEffect(() => {
     if (isOpen) {
+      // 先尝试从本地存储更新邮箱信息
+      const localEmail = getLocalEmail();
+      if (localEmail && localEmail !== currentUser.email) {
+        console.log('模态框打开时更新邮箱信息:', localEmail);
+        setCurrentUser(prev => ({
+          ...prev,
+          email: localEmail
+        }));
+      }
+      
+      // 然后尝试从服务器获取最新信息
       fetchUserInfo();
     }
   }, [isOpen]);
