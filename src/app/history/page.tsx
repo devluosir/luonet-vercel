@@ -247,31 +247,7 @@ export default function HistoryManagementPage() {
     // 定义tab的顺序：报价单、合同确认、装箱单、发票、采购单
     const tabOrder = ['quotation', 'confirmation', 'packing', 'invoice', 'purchase'];
     
-    // 如果是从其他页面跳转过来的，跳过权限验证
-    if (isFromOtherPage) {
-      tabOrder.forEach(tabId => {
-        switch (tabId) {
-          case 'quotation':
-            availableTabs.push({ id: 'quotation', name: '报价单', shortName: '报价', icon: FileText });
-            break;
-          case 'confirmation':
-            availableTabs.push({ id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText });
-            break;
-          case 'packing':
-            availableTabs.push({ id: 'packing', name: '装箱单', shortName: '装箱', icon: Package });
-            break;
-          case 'invoice':
-            availableTabs.push({ id: 'invoice', name: '发票', shortName: '发票', icon: Receipt });
-            break;
-          case 'purchase':
-            availableTabs.push({ id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart });
-            break;
-        }
-      });
-      return availableTabs;
-    }
-    
-    // 按照指定顺序检查每个tab的权限
+    // 始终进行权限检查，不管是否从其他页面跳转过来
     tabOrder.forEach(tabId => {
       const moduleId = tabPermissions[tabId as keyof typeof tabPermissions];
       // 检查用户是否有对应模块的权限
@@ -301,26 +277,22 @@ export default function HistoryManagementPage() {
     });
     
     return availableTabs;
-  }, [isFromOtherPage, user?.permissions]);
+  }, [user?.permissions]);
 
   // 检查当前activeTab是否有权限
   const isActiveTabAvailable = useCallback(() => {
-    // 如果是从其他页面跳转过来的，跳过权限验证
-    if (isFromOtherPage) {
-      return true;
-    }
+    // 始终进行权限验证，不管是否从其他页面跳转过来
     const availableTabs = getAvailableTabs();
     return availableTabs.some(tab => tab.id === activeTab);
-  }, [activeTab, getAvailableTabs, isFromOtherPage]);
+  }, [activeTab, getAvailableTabs]);
 
   // 如果当前activeTab没有权限，自动切换到第一个有权限的tab
   useEffect(() => {
-    // 移除权限检查，所有tab都可用
     const availableTabs = getAvailableTabs();
     if (availableTabs.length > 0 && !isActiveTabAvailable()) {
       setActiveTab(availableTabs[0].id);
     }
-  }, [getAvailableTabs, isActiveTabAvailable, isFromOtherPage]);
+  }, [getAvailableTabs, isActiveTabAvailable]);
 
   // 处理返回按钮点击
   const handleBack = () => {
@@ -438,14 +410,10 @@ export default function HistoryManagementPage() {
   // 加载历史记录
   const loadHistory = useCallback(() => {
     try {
-      // 如果是从其他页面跳转过来的，跳过权限验证
-      if (!isFromOtherPage) {
-        // 检查用户是否有权限访问当前activeTab
-        const availableTabs = getAvailableTabs();
-        if (!availableTabs.some(tab => tab.id === activeTab)) {
-          // setHistory([]); // This line is removed
-          return;
-        }
+      // 始终检查用户是否有权限访问当前activeTab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === activeTab)) {
+        return;
       }
       
       let results: HistoryItem[] = [];
@@ -470,11 +438,10 @@ export default function HistoryManagementPage() {
 
       const filteredResults = getFilteredHistory(results);
       const sortedResults = getSortedHistory(filteredResults);
-      // setHistory(sortedResults); // This line is removed
     } catch (error) {
       // 静默处理错误
     }
-  }, [activeTab, getFilteredHistory, getSortedHistory, getAvailableTabs, isFromOtherPage]);
+  }, [activeTab, getFilteredHistory, getSortedHistory, getAvailableTabs]);
 
   useEffect(() => {
     if (mounted) {
@@ -493,13 +460,10 @@ export default function HistoryManagementPage() {
   // 处理删除
   const handleDelete = async (id: string) => {
     try {
-      // 如果是从其他页面跳转过来的，跳过权限验证
-      if (!isFromOtherPage) {
-        // 检查用户是否有权限访问当前activeTab
-        const availableTabs = getAvailableTabs();
-        if (!availableTabs.some(tab => tab.id === activeTab)) {
-          return;
-        }
+      // 始终检查用户是否有权限访问当前activeTab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === activeTab)) {
+        return;
       }
       
       setIsDeleting(true);
@@ -542,13 +506,10 @@ export default function HistoryManagementPage() {
   // 批量删除
   const handleBatchDelete = async () => {
     try {
-      // 如果是从其他页面跳转过来的，跳过权限验证
-      if (!isFromOtherPage) {
-        // 检查用户是否有权限访问当前activeTab
-        const availableTabs = getAvailableTabs();
-        if (!availableTabs.some(tab => tab.id === activeTab)) {
-          return;
-        }
+      // 始终检查用户是否有权限访问当前activeTab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === activeTab)) {
+        return;
       }
       
       setIsDeleting(true);
@@ -596,13 +557,10 @@ export default function HistoryManagementPage() {
   // 处理编辑
   const handleEdit = (id: string) => {
     try {
-      // 如果是从其他页面跳转过来的，跳过权限验证
-      if (!isFromOtherPage) {
-        // 检查用户是否有权限访问当前activeTab
-        const availableTabs = getAvailableTabs();
-        if (!availableTabs.some(tab => tab.id === activeTab)) {
-          return;
-        }
+      // 始终检查用户是否有权限访问当前activeTab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === activeTab)) {
+        return;
       }
       
       let item;
@@ -642,13 +600,10 @@ export default function HistoryManagementPage() {
   // 处理复制
   const handleCopy = (id: string) => {
     try {
-      // 如果是从其他页面跳转过来的，跳过权限验证
-      if (!isFromOtherPage) {
-        // 检查用户是否有权限访问当前activeTab
-        const availableTabs = getAvailableTabs();
-        if (!availableTabs.some(tab => tab.id === activeTab)) {
-          return;
-        }
+      // 始终检查用户是否有权限访问当前activeTab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === activeTab)) {
+        return;
       }
       
       switch (activeTab) {
@@ -674,13 +629,10 @@ export default function HistoryManagementPage() {
   // 处理转换（从订单确认转到装箱单）
   const handleConvert = (id: string) => {
     try {
-      // 如果是从其他页面跳转过来的，跳过权限验证
-      if (!isFromOtherPage) {
-        // 检查用户是否有权限访问装箱单功能
-        const availableTabs = getAvailableTabs();
-        if (!availableTabs.some(tab => tab.id === 'packing')) {
-          return;
-        }
+      // 始终检查用户是否有权限访问装箱单功能
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === 'packing')) {
+        return;
       }
       
       if (activeTab === 'confirmation') {
@@ -945,13 +897,10 @@ export default function HistoryManagementPage() {
   // 处理预览
   const handlePreview = (id: string) => {
     try {
-      // 如果是从其他页面跳转过来的，跳过权限验证
-      if (!isFromOtherPage) {
-        // 检查用户是否有权限访问当前activeTab
-        const availableTabs = getAvailableTabs();
-        if (!availableTabs.some(tab => tab.id === activeTab)) {
-          return;
-        }
+      // 始终检查用户是否有权限访问当前activeTab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === activeTab)) {
+        return;
       }
       
       let item;
@@ -984,13 +933,10 @@ export default function HistoryManagementPage() {
   // 获取选项卡数量
   const getTabCount = useCallback((tabType: HistoryType) => {
     try {
-      // 如果是从其他页面跳转过来的，跳过权限验证
-      if (!isFromOtherPage) {
-        // 检查用户是否有权限访问此tab
-        const availableTabs = getAvailableTabs();
-        if (!availableTabs.some(tab => tab.id === tabType)) {
-          return 0;
-        }
+      // 始终检查用户是否有权限访问此tab
+      const availableTabs = getAvailableTabs();
+      if (!availableTabs.some(tab => tab.id === tabType)) {
+        return 0;
       }
       
       let results: HistoryItem[] = [];
@@ -1134,17 +1080,14 @@ export default function HistoryManagementPage() {
     } catch (error) {
       return 0;
     }
-  }, [filters, getAvailableTabs, isFromOtherPage]);
+  }, [filters, getAvailableTabs]);
 
   // 获取搜索结果的徽章样式
   const getSearchResultBadge = useCallback((tabType: HistoryType) => {
-    // 如果是从其他页面跳转过来的，跳过权限验证
-    if (!isFromOtherPage) {
-      // 检查用户是否有权限访问此tab
-      const availableTabs = getAvailableTabs();
-      if (!availableTabs.some(tab => tab.id === tabType)) {
-        return 'text-gray-400 border-gray-300 bg-gray-50 dark:text-gray-500 dark:border-gray-600 dark:bg-gray-800/50';
-      }
+    // 始终检查用户是否有权限访问此tab
+    const availableTabs = getAvailableTabs();
+    if (!availableTabs.some(tab => tab.id === tabType)) {
+      return 'text-gray-400 border-gray-300 bg-gray-50 dark:text-gray-500 dark:border-gray-600 dark:bg-gray-800/50';
     }
     
     // 检查是否有任何过滤条件被应用
@@ -1173,7 +1116,7 @@ export default function HistoryManagementPage() {
       // 有过滤时，返回红色徽章
       return 'text-red-700 border-red-400 bg-red-50 dark:text-red-300 dark:border-red-500 dark:bg-red-900/50';
     }
-  }, [filters, getAvailableTabs, isFromOtherPage]);
+  }, [filters, getAvailableTabs]);
 
   // 主色调映射 - 按照新的tab顺序：报价单、合同确认、装箱单、发票、采购单
   const tabColorMap = {
