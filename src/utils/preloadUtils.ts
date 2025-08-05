@@ -61,19 +61,15 @@ export class PreloadManager {
 
           // 预加载表单页面（轻量级，只检查状态）
           await this.preloadFormPages();
-          this.updateProgress(25);
-
-          // 预加载工具页面（轻量级）
-          await this.preloadToolPages();
-          this.updateProgress(50);
+          this.updateProgress(35);
 
           // 预加载历史数据（轻量级）
           await this.preloadHistoryData();
-          this.updateProgress(75);
+          this.updateProgress(55);
 
           // 预加载脚本和样式（轻量级）
           await this.preloadScriptsAndStyles();
-          this.updateProgress(90);
+          this.updateProgress(75);
 
           // 预加载字体（最后执行）
           await this.preloadFonts();
@@ -97,10 +93,40 @@ export class PreloadManager {
   private async preloadFonts(): Promise<void> {
     console.log('预加载PDF字体（最后一步）...');
     
-    // 暂时跳过字体预加载，避免浏览器警告
-    // 字体会在需要时自动加载
-    console.log('跳过字体预加载，避免浏览器警告');
-    return;
+    try {
+      // 预加载字体文件
+      const fontUrls = [
+        '/fonts/NotoSansSC-Regular.ttf',
+        '/fonts/NotoSansSC-Bold.ttf'
+      ];
+      
+      const fontPromises = fontUrls.map(async (url) => {
+        try {
+          const response = await fetch(url, {
+            method: 'GET',
+            cache: 'force-cache',
+            headers: {
+              'Accept': 'font/ttf,font/woff,font/woff2,*/*;q=0.8',
+              'Cache-Control': 'max-age=86400' // 缓存24小时
+            }
+          });
+          
+          if (response.ok) {
+            console.log(`字体预加载成功: ${url}`);
+            this.preloadedResources.add(url);
+          } else {
+            console.warn(`字体预加载失败: ${url} (状态: ${response.status})`);
+          }
+        } catch (error) {
+          console.warn(`字体预加载失败: ${url}`, error);
+        }
+      });
+      
+      await Promise.all(fontPromises);
+      console.log('PDF字体预加载完成');
+    } catch (error) {
+      console.error('字体预加载过程中出错:', error);
+    }
   }
 
   // 预加载表单页面
@@ -310,9 +336,6 @@ export class PreloadManager {
   private async preloadHistoryData(): Promise<void> {
     console.log('预加载历史数据...');
     
-    if (typeof window === 'undefined') return;
-
-    // 根据权限动态确定需要预加载的历史数据
     const historyKeys = this.getHistoryKeysByPermissions();
     
     if (historyKeys.length === 0) {
@@ -322,16 +345,20 @@ export class PreloadManager {
 
     console.log(`预加载历史数据: ${historyKeys.join(', ')}`);
 
-    // 检查并预加载历史数据
-    historyKeys.forEach(key => {
-      const data = localStorage.getItem(key);
-      if (data) {
-        console.log(`历史数据已存在: ${key}`);
-        this.preloadedResources.add(key);
-      } else {
-        console.log(`历史数据不存在: ${key}`);
+    const historyPromises = historyKeys.map(async (key) => {
+      try {
+        const historyData = localStorage.getItem(key);
+        if (historyData) {
+          console.log(`历史数据已存在: ${key}`);
+        } else {
+          console.log(`历史数据不存在: ${key}`);
+        }
+      } catch (error) {
+        console.warn(`历史数据预加载失败: ${key}`, error);
       }
     });
+
+    await Promise.all(historyPromises);
   }
 
   // 根据权限获取需要预加载的历史数据键
@@ -374,84 +401,7 @@ export class PreloadManager {
     }
   }
 
-  // 预加载工具页面
-  private async preloadToolPages(): Promise<void> {
-    console.log('预加载工具页面...');
-    
-    // 根据权限动态确定需要预加载的工具页面
-    const toolPages = this.getToolPagesByPermissions();
-    
-    if (toolPages.length === 0) {
-      console.log('没有工具页面权限，跳过工具页面预加载');
-      return;
-    }
 
-    console.log(`预加载工具页面: ${toolPages.join(', ')}`);
-
-    const toolPromises = toolPages.map(async (path) => {
-      try {
-        const response = await fetch(path, {
-          method: 'GET',
-          cache: 'force-cache',
-          headers: {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Cache-Control': 'max-age=3600'
-          }
-        });
-        
-        if (response.ok) {
-          const content = await response.text();
-          console.log(`工具页面预加载成功: ${path} (${content.length} bytes)`);
-          this.preloadedResources.add(path);
-          
-          // 预加载页面相关的CSS和JS资源
-          await this.preloadPageResources(path, content);
-        }
-      } catch (error) {
-        console.warn(`工具页面预加载失败: ${path}`, error);
-      }
-    });
-
-    await Promise.all(toolPromises);
-  }
-
-  // 根据权限获取需要预加载的工具页面
-  private getToolPagesByPermissions(): string[] {
-    if (typeof window === 'undefined') return [];
-
-    try {
-      const latestPermissions = localStorage.getItem('latestPermissions');
-      if (!latestPermissions) {
-        console.log('没有权限数据，预加载所有工具页面');
-        return ['/admin', '/tools'];
-      }
-
-      const permissions = JSON.parse(latestPermissions);
-      const toolPages: string[] = [];
-      let hasAnyPermission = false;
-
-      permissions.forEach((perm: any) => {
-        if (perm.canAccess) {
-          hasAnyPermission = true;
-          // 如果有任何权限，就预加载工具页面
-          if (!toolPages.includes('/tools')) {
-            toolPages.push('/tools');
-          }
-        }
-      });
-
-      // 检查是否有管理员权限
-      const isAdmin = localStorage.getItem('isAdmin') === 'true';
-      if (isAdmin && !toolPages.includes('/admin')) {
-        toolPages.push('/admin');
-      }
-
-      return toolPages;
-    } catch (error) {
-      console.error('解析权限数据失败:', error);
-      return ['/admin', '/tools'];
-    }
-  }
 
   // 获取用户权限列表
   private getUserPermissions(): string[] {
@@ -482,7 +432,7 @@ export class PreloadManager {
               userPermissions.push('采购单');
               break;
             case 'history':
-              userPermissions.push('历史管理');
+              userPermissions.push('历史记录');
               break;
             case 'customer':
               userPermissions.push('客户管理');
@@ -499,7 +449,7 @@ export class PreloadManager {
 
       return userPermissions;
     } catch (error) {
-      console.error('获取用户权限失败:', error);
+      console.error('解析权限数据失败:', error);
       return [];
     }
   }
