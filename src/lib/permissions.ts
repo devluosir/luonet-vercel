@@ -40,7 +40,7 @@ interface PermissionStore {
   fetchPermissions: (forceRefresh?: boolean) => Promise<void>;
   
   // 初始化用户信息 - 从本地存储恢复
-  initializeUserFromStorage: () => void;
+  initializeUserFromStorage: () => boolean;
 }
 
 export const usePermissionStore = create<PermissionStore>((set, get) => ({
@@ -80,12 +80,14 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
               isAdmin: userData.isAdmin,
               permissionsCount: userData.permissions.length
             });
+            return true; // 返回true表示成功初始化
           }
         }
       } catch (error) {
         console.warn('从本地存储初始化用户信息失败:', error);
       }
     }
+    return false; // 返回false表示初始化失败
   },
 
   // 统一的权限检查逻辑

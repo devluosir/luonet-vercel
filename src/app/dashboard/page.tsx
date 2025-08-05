@@ -158,7 +158,7 @@ const ModuleButton = ({ module, onClick, onHover }: {
   const Icon = module.icon;
   
   // 优先使用模块对象的颜色字段
-  const bgColor = module.bgColor || 'bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 dark:from-gray-800/30 dark:to-gray-700/40 dark:hover:from-gray-700/40 dark:hover:to-gray-600/50';
+  const bgColor = module.bgColor || 'bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 dark:from-gray-800/50 dark:to-gray-700/40 dark:hover:from-gray-700/40 dark:hover:to-gray-600/50';
   const iconBg = module.iconBg || 'bg-gradient-to-br from-gray-500 to-gray-600';
   const titleColor = module.titleColor || module.textColor || 'text-gray-800 dark:text-gray-200';
   const shortcutBg = module.shortcutBg || iconBg;
@@ -261,22 +261,12 @@ export default function DashboardPage() {
   const [latestPermissions, setLatestPermissions] = useState<any[]>([]);
   const [hasFetchedUserDetails, setHasFetchedUserDetails] = useState(false);
 
-  // 动态权限映射，根据session中的权限数据
+  // 优化的权限映射 - 减少依赖项，优先使用本地数据
   const permissionMap = useMemo(() => {
-    // 优先使用全局权限store中的权限数据
+    // 优先级1: 全局权限store（最新）
     let permissions = user?.permissions || [];
     
-    // 如果权限store中没有权限数据，使用session中的权限数据
-    if (permissions.length === 0) {
-      permissions = session?.user?.permissions || [];
-    }
-    
-    // 如果session中也没有权限数据，使用latestPermissions
-    if (permissions.length === 0) {
-      permissions = latestPermissions;
-    }
-    
-    // 如果latestPermissions也没有，尝试从localStorage恢复
+    // 优先级2: 本地缓存权限（快速）
     if (permissions.length === 0 && typeof window !== 'undefined') {
       try {
         const storedPermissions = localStorage.getItem('latestPermissions');
@@ -287,41 +277,71 @@ export default function DashboardPage() {
         
         if (storedPermissions && isRecent) {
           permissions = JSON.parse(storedPermissions);
-        } else {
-          // 清除过期的权限数据
-          localStorage.removeItem('latestPermissions');
-          localStorage.removeItem('permissionsTimestamp');
         }
       } catch (error) {
         console.error('恢复权限数据失败:', error);
-        localStorage.removeItem('latestPermissions');
-        localStorage.removeItem('permissionsTimestamp');
       }
     }
-
     
+    // 优先级3: Session权限数据（备用）
+    if (permissions.length === 0) {
+      permissions = session?.user?.permissions || [];
+    }
+    
+    // 优先级4: latestPermissions（最后备用）
+    if (permissions.length === 0) {
+      permissions = latestPermissions;
+    }
+
+    // 如果没有权限数据，根据用户是否为管理员显示默认权限
     if (!permissions || permissions.length === 0) {
-      // 如果没有权限数据，不显示任何模块（无论是管理员还是普通用户）
-      return {
-        permissions: {
-          quotation: false,
-          packing: false,
-          invoice: false,
-          purchase: false,
-          history: false,
-          customer: false,
-          'ai-email': false,
-          'date-tools': false
-        },
-        documentTypePermissions: {
-          quotation: false,
-          confirmation: false,
-          packing: false,
-          invoice: false,
-          purchase: false
-        },
-        accessibleDocumentTypes: []
-      };
+      const isAdmin = user?.isAdmin ?? session?.user?.isAdmin ?? false;
+      
+      if (isAdmin) {
+        // 管理员显示所有模块
+        return {
+          permissions: {
+            quotation: true,
+            packing: true,
+            invoice: true,
+            purchase: true,
+            history: true,
+            customer: true,
+            'ai-email': true,
+            'date-tools': true
+          },
+          documentTypePermissions: {
+            quotation: true,
+            confirmation: true,
+            packing: true,
+            invoice: true,
+            purchase: true
+          },
+          accessibleDocumentTypes: ['quotation', 'confirmation', 'packing', 'invoice', 'purchase']
+        };
+      } else {
+        // 普通用户不显示任何模块
+        return {
+          permissions: {
+            quotation: false,
+            packing: false,
+            invoice: false,
+            purchase: false,
+            history: false,
+            customer: false,
+            'ai-email': false,
+            'date-tools': false
+          },
+          documentTypePermissions: {
+            quotation: false,
+            confirmation: false,
+            packing: false,
+            invoice: false,
+            purchase: false
+          },
+          accessibleDocumentTypes: []
+        };
+      }
     }
 
     // 根据权限数据构建权限映射
@@ -393,7 +413,7 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [user?.permissions, session?.user?.permissions, latestPermissions]); // 添加user?.permissions作为依赖
+  }, [user?.permissions, user?.isAdmin, session?.user?.permissions, session?.user?.isAdmin, latestPermissions]); // 添加isAdmin依赖
 
   // 暂时禁用性能监控启动，避免无限重新渲染
   // useEffect(() => {
@@ -623,27 +643,13 @@ export default function DashboardPage() {
     }
   }, [session, status, mounted, fetchPermissions, hasFetchedUserDetails, initializeUserFromStorage]);
 
-  // 简化的初始化逻辑
+  // 优化的初始化逻辑 - 立即显示内容，异步加载权限
   useEffect(() => {
     setMounted(true);
     
-    // 如果session还没有加载，从localStorage恢复基本信息
-    if (typeof window !== 'undefined' && !session && status !== 'loading') {
-      const username = localStorage.getItem('username');
-      const userId = localStorage.getItem('userId');
-      const isAdmin = localStorage.getItem('isAdmin') === 'true';
-      
-      if (username) {
-        // setUser({ // 移除此行，因为权限已移至store
-        //   id: userId || '1',
-        //   username: username,
-        //   email: null,
-        //   status: true,
-        //   isAdmin: isAdmin,
-        //   permissions: []
-        // });
-        
-        // 从localStorage恢复权限数据
+    // 立即从localStorage恢复权限数据，不等待session
+    if (typeof window !== 'undefined') {
+      try {
         const storedPermissions = localStorage.getItem('latestPermissions');
         const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
         
@@ -651,26 +657,68 @@ export default function DashboardPage() {
           const isRecent = (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000;
           
           if (isRecent) {
-            try {
-              const permissions = JSON.parse(storedPermissions);
-              setLatestPermissions(permissions);
-            } catch (error) {
-              console.error('恢复权限数据失败:', error);
-            }
+            const permissions = JSON.parse(storedPermissions);
+            setLatestPermissions(permissions);
           }
         }
+      } catch (error) {
+        console.error('恢复权限数据失败:', error);
       }
     }
     
-    // 自动预加载资源
-    if (!preloadManager.isPreloaded()) {
-      setTimeout(() => {
+    // 延迟预加载，避免阻塞初始渲染
+    setTimeout(() => {
+      if (!preloadManager.isPreloaded()) {
         preloadManager.preloadAllResources().catch(error => {
           console.error('自动预加载失败:', error);
         });
-      }, 2000);
+      }
+    }, 1000);
+  }, []); // 移除session和status依赖，实现真正的本地化
+
+  // 异步权限初始化 - 不阻塞页面渲染
+  useEffect(() => {
+    if (!mounted) return;
+    
+    // 立即初始化权限store，如果成功则不需要后续获取
+    const initialized = initializeUserFromStorage();
+    
+    // 如果本地初始化成功，延迟获取权限以更新数据
+    if (initialized) {
+      const timer = setTimeout(() => {
+        if (session && status === 'authenticated' && session.user && !hasFetchedUserDetails) {
+          console.log('Dashboard: 开始更新权限', {
+            userId: session.user.id,
+            username: session.user.username,
+            isAdmin: session.user.isAdmin,
+            hasPermissions: !!session.user.permissions
+          });
+          
+          fetchPermissions(false); // 非强制刷新，优先使用本地缓存
+          setHasFetchedUserDetails(true);
+        }
+      }, 1000); // 延迟1秒更新权限
+      
+      return () => clearTimeout(timer);
+    } else {
+      // 如果本地初始化失败，立即获取权限
+      const timer = setTimeout(() => {
+        if (session && status === 'authenticated' && session.user && !hasFetchedUserDetails) {
+          console.log('Dashboard: 开始获取权限', {
+            userId: session.user.id,
+            username: session.user.username,
+            isAdmin: session.user.isAdmin,
+            hasPermissions: !!session.user.permissions
+          });
+          
+          fetchPermissions(false); // 非强制刷新，优先使用本地缓存
+          setHasFetchedUserDetails(true);
+        }
+      }, 500); // 减少延迟到500ms
+      
+      return () => clearTimeout(timer);
     }
-  }, [session, status]);
+  }, [session, status, mounted, fetchPermissions, hasFetchedUserDetails, initializeUserFromStorage]);
 
   // 优化的预加载逻辑 - 延迟预加载，避免阻塞初始渲染
   useEffect(() => {
@@ -954,17 +1002,17 @@ export default function DashboardPage() {
   // 所有 hooks 声明完毕后，再做提前 return
   if (!mounted) return null;
   
-  // 如果session正在加载，显示加载状态
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-lg">加载中...</div>
-        </div>
-      </div>
-    );
-  }
+  // 移除session loading状态检查，直接显示内容
+  // if (status === 'loading') {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-black">
+  //       <div className="text-center">
+  //         <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+  //         <div className="text-lg">加载中...</div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
   
   // 如果未认证，返回空内容而不是直接重定向
   if (status === 'unauthenticated') return null;

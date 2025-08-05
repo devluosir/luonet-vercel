@@ -1,610 +1,209 @@
-# MLuoNet - 专业的报价和订单确认系统
+# Luo & Company - 专业报价和订单确认系统
 
 ## 项目概述
 
-MLuoNet是一个基于Next.js构建的专业报价和订单确认系统，提供完整的业务流程管理功能。
+这是一个基于Next.js 14构建的专业报价和订单确认系统，采用现代化的技术栈和架构设计。
 
-## 最新更新
+## 最新优化 - Dashboard本地化
 
-### 管理后台用户信息显示修复 (2024-08-04)
+### 问题背景
+用户反馈从各个模块返回Dashboard时仍有加载过程，影响了用户体验。
 
-#### 问题描述
-用户反馈管理后台页面右上角显示"Admin"而不是当前登录用户的真实信息，这不符合用户体验预期。
+### 优化方案
 
-#### 根本原因分析
-1. **硬编码问题**：AdminHeader组件被硬编码为显示"Admin"作为用户名
-2. **信息传递缺失**：管理后台页面没有传递当前登录用户的真实信息
-3. **用户体验问题**：用户无法看到自己的身份信息，缺乏个性化体验
-
-#### 修复措施
-
-**1. 用户信息传递修复**
-- 修改管理后台页面，从localStorage获取当前登录用户信息
-- 将真实的用户名和邮箱信息传递给AdminHeader组件
-- 移除硬编码的"Admin"显示
-
-**2. AdminHeader组件改进**
-- 添加email属性支持，显示用户邮箱
-- 改进用户信息展示，包括用户名和邮箱
-- 优化下拉菜单，显示完整的用户信息
-- 添加"管理员"标识，明确用户角色
-
-**3. 用户体验优化**
-- 在头部显示用户名和邮箱（如果有）
-- 在下拉菜单中显示完整的用户信息
-- 添加平滑的动画效果和过渡
-
-#### 修复文件
-- `src/app/admin/page.tsx`: 修改AdminHeader调用，传递真实用户信息
-- `src/components/admin/AdminHeader.tsx`: 改进组件，支持邮箱显示和更好的用户信息展示
-
-#### 功能验证
-- ✅ 管理后台右上角显示当前登录用户的真实用户名
-- ✅ 支持显示用户邮箱信息
-- ✅ 下拉菜单显示完整的用户信息
-- ✅ 用户体验更加个性化
-- ✅ 保持管理员标识显示
-
-#### 技术实现
-**前端改进**：
-- 从localStorage获取用户信息，与dashboard保持一致
-- 传递用户名和邮箱给AdminHeader组件
-- 改进组件接口，支持可选的email属性
-
-**UI优化**：
-- 在头部显示用户名和邮箱（如果有）
-- 下拉菜单中显示完整的用户信息卡片
-- 添加"管理员"标识
-- 优化动画和过渡效果
-
-### 个人资料功能修复 (2024-08-04)
-
-#### 问题描述
-用户反馈个人资料页面存在两个问题：
-1. **邮箱显示问题** - 个人资料中无法正确显示用户邮箱
-2. **密码修改问题** - 密码修改功能无法正常工作
-
-#### 根本原因分析
-1. **邮箱显示问题**：
-   - ProfileModal组件依赖从dashboard传递的用户信息
-   - 但用户信息中的email字段为null
-   - 缺少从服务器获取最新用户信息的机制
-
-2. **密码修改问题**：
-   - 密码修改API端点`/users/change-password`不存在
-   - 缺少密码验证和更新的后端逻辑
-
-#### 修复措施
-
-**1. 邮箱显示修复**
-- 在ProfileModal中添加`fetchUserInfo`函数，从服务器获取最新用户信息
-- 当模态框打开时自动获取最新用户信息
-- 使用`currentUser`状态来显示正确的邮箱信息
-- 邮箱更新后自动刷新用户信息
-
-**2. 密码修改功能实现**
-- 在D1UserClient中添加`validatePassword`和`updatePassword`方法
-- 在worker.ts中添加`handleUpdateCurrentUser`函数处理`/users/me`的PUT请求
-- 支持密码验证和更新逻辑
-- 修改ProfileModal使用正确的API端点
-
-**3. API端点完善**
-- 添加`/users/me`的PUT请求处理
-- 支持用户信息更新和密码修改
-- 完善错误处理和响应格式
-
-#### 修复文件
-- `src/components/profile/ProfileModal.tsx`: 添加用户信息获取和密码修改逻辑
-- `src/lib/d1-client.ts`: 添加密码验证和更新方法
-- `src/worker.ts`: 添加用户信息更新API端点
-
-#### 功能验证
-- ✅ 邮箱信息正确显示
-- ✅ 邮箱编辑功能正常
-- ✅ 密码修改功能正常
-- ✅ 密码验证逻辑正确
-- ✅ 错误处理完善
-
-#### 技术实现
-**前端改进**：
-- 使用`useEffect`在模态框打开时获取最新用户信息
-- 添加`currentUser`状态管理用户信息
-- 完善错误处理和用户反馈
-
-**后端改进**：
-- 添加密码验证逻辑，支持明文和bcrypt哈希
-- 添加密码更新功能
-- 完善API响应格式和错误处理
-
-**API设计**：
-- 使用`/users/me`端点统一处理用户信息更新
-- 支持邮箱更新和密码修改
-- 返回完整的用户信息和权限数据
-
-### 计算器历史记录持久化 (2024-08-02)
-
-#### 功能增强
-为计算器组件添加了完整的localStorage持久化存储功能，确保用户的计算历史记录和位置偏好不会在页面刷新时丢失。
-
-#### 新增功能
-
-**1. 历史记录持久化**
-- 自动保存计算历史到localStorage
-- 页面刷新后自动恢复历史记录
-- 最多保存50条历史记录
-- 支持清空历史记录功能
-
-**2. 位置偏好记忆**
-- 记住用户拖动的计算器位置
-- 页面刷新后自动恢复到上次位置
-- 支持重置位置功能
-
-**3. 错误处理**
-- 完善的错误处理机制
-- 存储失败时不影响计算器正常使用
-- 数据损坏时自动恢复默认状态
-
-#### 技术实现
-
-**存储键值**
-- `calculator-history`: 存储计算历史记录
-- `calculator-position`: 存储位置偏好
-
-**数据结构**
-```typescript
-interface HistoryItem {
-  expression: string;  // 完整算式
-  result: string;      // 计算结果
-}
+#### 1. 权限数据优先级优化
+```
+优先级从高到低：
+1. 全局权限store (user?.permissions) - 最新、最可靠
+2. 本地缓存权限 (localStorage) - 快速、持久化
+3. Session权限数据 (session?.user?.permissions) - NextAuth管理
+4. 本地状态权限 (latestPermissions) - 备用数据
 ```
 
-**核心功能**
-- `saveHistoryToStorage()`: 保存历史记录
-- `savePositionToStorage()`: 保存位置偏好
-- 组件加载时自动恢复数据
-- 拖动结束时自动保存位置
+#### 2. 初始化逻辑优化
+- **移除session loading检查**：不再等待session加载完成
+- **立即显示内容**：页面挂载后立即显示，权限异步加载
+- **本地数据优先**：优先使用localStorage中的权限数据
+- **管理员默认权限**：管理员用户即使没有权限数据也能看到所有模块
 
-#### 用户体验提升
-- ✅ 历史记录不会丢失
-- ✅ 位置偏好自动记忆
-- ✅ 支持手动重置位置
-- ✅ 响应式设计保持不变
-- ✅ 移动端和桌面端都支持
+#### 3. 权限映射优化
+```typescript
+// 优化的权限映射逻辑
+const permissionMap = useMemo(() => {
+  // 优先级1: 全局权限store（最新）
+  let permissions = user?.permissions || [];
+  
+  // 优先级2: 本地缓存权限（快速）
+  if (permissions.length === 0 && typeof window !== 'undefined') {
+    // 从localStorage读取权限数据
+  }
+  
+  // 优先级3: Session权限数据（备用）
+  if (permissions.length === 0) {
+    permissions = session?.user?.permissions || [];
+  }
+  
+  // 如果没有权限数据，根据用户是否为管理员显示默认权限
+  if (!permissions || permissions.length === 0) {
+    const isAdmin = user?.isAdmin ?? session?.user?.isAdmin ?? false;
+    if (isAdmin) {
+      // 管理员显示所有模块
+      return { permissions: { quotation: true, packing: true, ... } };
+    } else {
+      // 普通用户不显示任何模块
+      return { permissions: { quotation: false, packing: false, ... } };
+    }
+  }
+}, [user?.permissions, user?.isAdmin, session?.user?.permissions, session?.user?.isAdmin, latestPermissions]);
+```
 
-#### 功能验证
-计算器localStorage功能已通过以下验证：
-- 历史记录存储功能正常
-- 位置偏好存储功能正常
-- 数据完整性验证通过
+#### 4. 异步权限初始化
+```typescript
+// 异步权限初始化 - 不阻塞页面渲染
+useEffect(() => {
+  if (!mounted) return;
+  
+  // 立即初始化权限store，如果成功则不需要后续获取
+  const initialized = initializeUserFromStorage();
+  
+  if (initialized) {
+    // 如果本地初始化成功，延迟获取权限以更新数据
+    setTimeout(() => {
+      fetchPermissions(false); // 非强制刷新，优先使用本地缓存
+    }, 1000);
+  } else {
+    // 如果本地初始化失败，立即获取权限
+    setTimeout(() => {
+      fetchPermissions(false);
+    }, 500);
+  }
+}, [session, status, mounted, fetchPermissions, hasFetchedUserDetails, initializeUserFromStorage]);
+```
 
-### 安全漏洞修复 (2024-08-02)
+### 优化效果
 
-### 安全漏洞修复 (2024-08-02)
+1. **即时显示**：Dashboard页面挂载后立即显示内容，不再等待session加载
+2. **本地优先**：优先使用localStorage中的权限数据，减少网络请求
+3. **管理员友好**：管理员用户即使没有权限数据也能看到所有功能模块
+4. **异步更新**：权限数据在后台异步更新，不影响用户体验
+5. **减少依赖**：减少了对session状态的依赖，提高了页面响应速度
 
-#### 问题发现
-用户发现了一个严重的安全漏洞：
-- **quotation, invoice页面** - 未登录访问返回404 ✅ (正确行为)
-- **packing, purchase页面** - 未登录访问可以直接打开 ❌ (安全漏洞)
+### 技术实现
 
-#### 根本原因分析
-经过详细分析，发现问题在于**页面级别的权限检查不一致**：
+#### 权限Store优化
+- `initializeUserFromStorage()` 返回boolean值，表示初始化是否成功
+- 优化了权限数据的优先级逻辑
+- 添加了管理员默认权限处理
 
-1. **invoice页面** - 有`useSession`和`return null`逻辑，未登录时返回null导致404
-2. **packing页面** - 没有`useSession`，也没有`return null`，所以可以直接访问
-3. **purchase页面** - 有`useSession`但没有`return null`，所以可以直接访问
-4. **quotation页面** - 没有`useSession`，所以可以直接访问 ❌
+#### Dashboard组件优化
+- 移除了session loading状态检查
+- 优化了权限映射的依赖项
+- 实现了真正的本地化渲染
 
-#### 修复措施
-
-**1. 为packing页面添加权限检查**
-- 添加`useSession`导入
-- 添加权限检查逻辑：未登录用户重定向到登录页面
-
-**2. 为purchase页面添加权限检查**
-- 添加权限检查逻辑：未登录用户重定向到登录页面
-
-**3. 为quotation页面添加权限检查**
-- 添加`useSession`导入
-- 添加权限检查逻辑：未登录用户重定向到登录页面
-
-**4. 统一权限检查标准**
-- 所有业务页面现在都有页面级别的权限检查
-- 确保未登录用户无法访问任何业务页面
-
-#### 修复文件
-- `src/app/packing/page.tsx`: 添加useSession和权限检查
-- `src/app/purchase/page.tsx`: 添加权限检查逻辑
-- `src/app/quotation/page.tsx`: 添加useSession和权限检查
-
-#### 安全验证
-- 中间件逻辑测试通过：未登录用户应该被拒绝
-- 页面级别权限检查：确保双重保护
-- 构建测试通过：所有修改都正确编译
-
-#### 安全结论
-✅ **现在所有业务页面都是安全的**：
-- 未登录用户无法访问任何业务页面
-- 双重保护：中间件 + 页面级别权限检查
-- 统一的安全标准
-
-### 权限检查优化 (2024-08-02)
-
-#### 优化目标
-移除页面级别的权限检查代码，仅使用中间件进行权限控制，提高代码简洁性和维护性。
-
-#### 优化方案
-**仅使用中间件进行权限检查** - 完全可行且推荐
-
-##### 优势
-1. **集中管理** - 所有权限检查逻辑在一个地方
-2. **性能更好** - 避免页面级别的重复检查
-3. **代码更简洁** - 页面组件不需要权限检查代码
-4. **维护更容易** - 权限逻辑修改只需要改一个地方
-5. **更安全** - 中间件在页面渲染前就拦截了未授权访问
-
-##### 中间件能力分析
-当前的中间件逻辑已经非常完善：
-- **未登录用户** - `if (!token) { return false; }` 直接拒绝
-- **管理员用户** - 可以访问所有页面
-- **普通用户** - 需要对应模块权限
-- **业务路由检查** - 通过`getModuleIdFromPath`检查具体权限
-
-##### 已移除的页面级别权限检查
-1. **`src/app/packing/page.tsx`** - 移除`useSession`导入和权限检查
-2. **`src/app/purchase/page.tsx`** - 移除权限检查逻辑
-3. **`src/app/quotation/page.tsx`** - 移除`useSession`导入和权限检查
-4. **`src/app/invoice/page.tsx`** - 移除`useSession`导入
-
-##### 优化结果
-- ✅ 构建成功，无错误
-- ✅ 代码更简洁，移除了冗余的权限检查
-- ✅ 性能提升，减少了客户端权限检查开销
-- ✅ 维护性更好，权限逻辑集中管理
-- ✅ 安全性保持，中间件提供完整的权限保护
-
-##### 技术实现
-中间件在请求到达页面组件之前就进行权限检查，确保：
-1. 未登录用户无法访问任何业务页面
-2. 已登录用户只能访问有权限的页面
-3. 管理员用户可以访问所有页面
-4. 静态资源和公开路由正常访问
-
-这种架构提供了更安全、更高效、更易维护的权限控制系统。
-
-### 预加载功能 (2024-08-02)
-
-#### 功能概述
-新增智能预加载功能，可以提前将系统中的所有重要资源（表单页面、PDF字体、静态资源等）下载到本地缓存，大幅提升用户体验和页面加载速度。
-
-#### 主要特性
-1. **智能预加载** - 预加载PDF字体、表单页面、静态资源等
-2. **进度显示** - 实时显示预加载进度（0-100%）
-3. **缓存管理** - 自动检查已预加载资源，避免重复加载
-4. **自动预加载** - 首次访问dashboard时自动开始预加载
-
-#### 使用方法
-- **手动预加载**: 点击右上角用户头像 → "预加载资源"
-- **自动预加载**: 首次访问dashboard时自动开始
-- **状态查看**: 预加载完成后按钮显示"资源已预加载"
-
-#### 技术实现
-- **PreloadManager类**: 单例模式，全局预加载管理器
-- **分阶段预加载**: 6个阶段，每阶段15-30%进度
-- **错误处理**: 单个资源失败不影响整体预加载
-- **缓存策略**: localStorage保存预加载状态，24小时内有效
-
-#### 预加载资源
-1. **PDF字体** (15%): Noto Sans SC字体文件
-2. **表单页面** (30%): 所有表单页面
-3. **静态资源** (50%): logo、图片等
-4. **历史数据** (70%): 历史数据状态检查
-5. **工具页面** (85%): 管理后台等
-6. **CSS/JS资源** (100%): 样式文件
-
-#### 性能提升
-- ✅ 页面加载速度提升50%+
-- ✅ PDF生成时字体立即可用
-- ✅ 表单页面切换更流畅
-- ✅ 减少网络请求次数
-- ✅ 提升离线使用体验
-
-详细说明请参考：[PRELOAD_FEATURE.md](./PRELOAD_FEATURE.md)
-
-### localStorage 报错修复 (2024-08-02)
-
-#### 问题描述
-在移除页面级别权限检查后，未登录用户访问 dashboard 页面时出现 `localStorage is not defined` 错误。这是因为 Next.js 的 SSR（服务端渲染）阶段无法访问浏览器特有的 API。
-
-#### 修复方案
-**为所有 localStorage 访问添加 window 判断**
-
-##### 修复原则
-1. **SSR 安全** - 所有 localStorage 访问都必须加 `typeof window !== 'undefined'` 判断
-2. **客户端优先** - localStorage 操作只在浏览器环境中执行
-3. **优雅降级** - 服务端渲染时提供默认值或跳过操作
-
-##### 修复的文件
-1. **`src/app/dashboard/page.tsx`** - 修复 useMemo 中的 localStorage 访问
-2. **`src/app/tools/page.tsx`** - 修复 headers 中的 localStorage 访问
-3. **`src/app/page.tsx`** - 修复登录时的 localStorage 设置
-4. **`src/app/admin/page.tsx`** - 修复 session 引用和 roleFilter 引用
-5. **`src/components/invoice/CustomerSection.tsx`** - 修复客户数据加载
-6. **`src/components/packinglist/ConsigneeSection.tsx`** - 修复收货人数据加载
-7. **`src/components/quotation/CustomerInfoSection.tsx`** - 修复客户信息加载
-8. **`src/components/purchase/SupplierInfoSection.tsx`** - 修复供应商数据加载
-
-##### 修复结果
-- ✅ 构建成功，无错误
-- ✅ 未登录用户访问 dashboard 不再报错
-- ✅ 所有页面在 SSR 阶段安全运行
-- ✅ 客户端功能保持完整
-- ✅ 用户体验无影响
-
-##### 技术要点
-- 使用 `typeof window !== 'undefined'` 判断确保只在客户端执行
-- 在 useEffect 中安全访问 localStorage
-- 为事件监听器添加 window 判断
-- 移除对已删除变量的引用（如 session、roleFilter）
-
-### 发票页面权限修复 (2024-08-02)
-
-### 移动端性能优化 (2024-08-02)
-
-#### 问题诊断
-通过性能分析发现手机端页面加载慢的主要原因：
-1. **字体文件过大**: NotoSansSC字体文件总计20MB
-2. **PDF页面代码过大**: 单个页面达到15.4MB
-3. **缺乏代码分割**: 所有PDF相关代码一次性加载
-
-#### 优化方案实施
-
-**1. 字体文件压缩**
-- 原始字体文件: 20MB → 压缩后: 12MB (节省40%)
-- 创建字体压缩脚本: `scripts/compress-fonts.js`
-- 优化字体加载策略: 添加 `font-display: swap`
-
-**2. 代码分割优化**
-- PDF生成器懒加载: 创建 `LazyPDFGenerator` 组件
-- 更激进的代码分割: 分离PDF相关代码到独立chunk
-- 优化webpack配置: 添加字体和组件分割
-
-**3. 移动端专项优化**
-- 优化字体CSS: 移动端优先使用系统字体
-- 添加性能监控: 实时跟踪关键性能指标
-- 简化主页面: 移除不必要的性能监控代码
-
-**4. 缓存策略优化**
-- 字体文件长期缓存: 1年缓存期
-- 静态资源缓存: 图片和图标优化缓存
-- 启用gzip压缩: 减少传输大小
-
-#### 性能提升效果
-- **字体加载**: 20MB → 12MB (节省40%)
-- **PDF页面**: 15.4MB → 按需加载
-- **预计整体提升**: 移动端加载时间减少60-70%
-
-#### 技术实现
-- 创建字体压缩工具: `scripts/compress-fonts.js`
-- 创建性能分析工具: `scripts/performance-optimizer.js`
-- 优化Next.js配置: 添加代码分割和缓存策略
-- 创建懒加载组件: `LazyPDFGenerator.tsx`
-- 添加性能监控: `PerformanceMonitor.tsx`
-
-### 字体加载优化 (2024-01-XX)
-
-#### 性能优化
-1. **按需字体加载**：
-   - 将中文字体从全局加载中提取出来
-   - 创建专门的字体加载工具 `src/utils/fontLoader.ts`
-   - 仅在PDF生成页面加载字体文件
-
-2. **PDF页面优化**：
-   - 为所有PDF生成页面添加专门的字体CSS文件
-   - 包括：quotation、invoice、packing、purchase、history页面
-   - 字体文件仅在需要时加载，提高页面加载速度
-
-3. **代码重构**：
-   - 统一所有PDF生成器的字体加载逻辑
-   - 创建可复用的字体加载函数
-   - 减少代码重复，提高维护性
-
-#### 技术实现
-- 创建 `src/utils/fontLoader.ts` 字体加载工具
-- 创建 `src/app/pdf-fonts.css` 字体样式文件
-- 修改所有PDF生成器使用统一的字体加载方法
-- 在相关页面中导入字体CSS文件
-
-### 用户管理页面布局优化 (2024-01-XX)
-
-#### 功能改进
-1. **布局重新设计**：
-   - 将编辑按钮移至用户头像和基本信息的右侧
-   - 注册时间和最后登录时间显示在同一行
-   - 在状态行增加已开通模块的小图标显示
-
-2. **模块权限可视化**：
-   - 在用户状态旁边显示已开通的模块图标
-   - 支持报价、箱单、发票、采购、日期等模块的权限显示
-   - 图标采用不同颜色区分不同模块
-
-3. **响应式设计优化**：
-   - 在小屏幕上注册时间和登录时间自动换行
-   - 保持卡片布局的紧凑性和可读性
-
-#### 技术实现
-- 更新了User接口以包含权限信息
-- 修改了API端点以返回用户权限数据
-- 添加了模块定义和图标映射
-- 优化了CSS布局和响应式设计
-
-## 主要功能
-
-### 用户管理
-- 用户创建、编辑、删除
-- 权限管理和模块分配
-- 用户状态监控
-- 登录历史记录
-
-### 业务模块
-- **报价管理**：创建和管理客户报价
-- **箱单发票**：生成装箱单和发票
-- **财务发票**：财务发票管理
-- **采购订单**：采购订单处理
-- **日期工具**：日期计算工具
-
-### 系统特性
-- 响应式设计，支持移动端
-- 深色模式支持
-- 权限控制系统
-- 实时数据同步
+#### 数据流向
+```
+页面挂载 → 立即显示内容 → 本地权限初始化 → 异步权限更新 → 页面重新渲染
+```
 
 ## 技术栈
 
-- **前端框架**：Next.js 14 (App Router)
-- **样式**：Tailwind CSS
-- **认证**：NextAuth.js
-- **数据库**：Cloudflare D1
-- **部署**：Vercel
+- **前端框架**: Next.js 14 (App Router)
+- **UI组件**: 自定义组件 + Tailwind CSS
+- **状态管理**: Zustand (权限管理)
+- **认证系统**: NextAuth.js
+- **数据库**: Cloudflare D1 (SQLite)
+- **部署平台**: Vercel
 
-## 开发环境设置
+## 核心功能
 
-```bash
-# 安装依赖
-npm install
+### 1. 权限管理系统
+- 基于角色的权限控制
+- 多层级权限数据源
+- 本地缓存优化
+- 实时权限更新
 
-# 启动开发服务器
-npm run dev
+### 2. 单据管理
+- 报价单 (Quotation)
+- 销售确认 (Sales Confirmation)
+- 装箱单 (Packing List)
+- 财务发票 (Invoice)
+- 采购订单 (Purchase Order)
 
-# 构建生产版本
-npm run build
-```
-
-## 性能优化工具
-
-```bash
-# 压缩字体文件
-node scripts/compress-fonts.js
-
-# 性能分析
-node scripts/performance-optimizer.js
-```
+### 3. 工具模块
+- AI邮件助手
+- 日期计算工具
+- 单据历史管理
+- 客户管理
 
 ## 项目结构
 
 ```
 src/
 ├── app/                    # Next.js App Router页面
-│   ├── admin/             # 管理员页面
-│   ├── dashboard/         # 仪表板
-│   └── api/              # API路由
-├── components/            # React组件
-│   ├── LazyPDFGenerator.tsx  # 懒加载PDF生成器
-│   └── PerformanceMonitor.tsx # 性能监控组件
+│   ├── dashboard/         # 主控制台
+│   ├── quotation/         # 报价单模块
+│   ├── packing/          # 装箱单模块
+│   ├── invoice/          # 发票模块
+│   ├── purchase/         # 采购模块
+│   └── history/          # 历史记录
+├── components/            # 可复用组件
 ├── lib/                  # 工具库和配置
 ├── types/                # TypeScript类型定义
 └── utils/                # 工具函数
-scripts/
-├── compress-fonts.js     # 字体压缩工具
-└── performance-optimizer.js # 性能分析工具
 ```
 
-## 部署
+## 开发指南
 
-项目已配置为在Vercel上自动部署。主要配置包括：
+### 环境设置
+1. 克隆项目
+2. 安装依赖: `npm install`
+3. 配置环境变量
+4. 启动开发服务器: `npm run dev`
 
-- `vercel.json`：Vercel部署配置
-- `wrangler.toml`：Cloudflare Workers配置
-- 环境变量配置
+### 权限系统使用
+```typescript
+import { usePermissionStore } from '@/lib/permissions';
 
-## 性能监控
+// 在组件中使用
+const { user, hasPermission, fetchPermissions } = usePermissionStore();
 
-项目集成了性能监控功能，在开发环境下会显示关键性能指标：
-- **FCP** (First Contentful Paint): 首次内容绘制时间
-- **LCP** (Largest Contentful Paint): 最大内容绘制时间
-- **FID** (First Input Delay): 首次输入延迟
-- **CLS** (Cumulative Layout Shift): 累积布局偏移
-- **TTFB** (Time to First Byte): 首字节时间
-
-## 字体预加载优化 (2025-08-05)
-
-### 问题背景
-用户反馈在首次访问表单页面（如报价单页面）时会出现字体加载延迟，导致页面渲染时出现"闪烁"现象。
-
-### 解决方案
-实现了智能字体预加载机制，确保字体在用户进入表单页面前就已经加载完成。
-
-#### 技术实现
-1. **CSS文件策略**：
-   - `public/pdf-fonts.css` - 用于动态加载字体CSS
-
-2. **预加载机制**：
-   ```typescript
-   // 在dashboard页面预加载字体
-   if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
-     const link = document.createElement('link');
-     link.rel = 'stylesheet';
-     link.href = '/pdf-fonts.css';
-     document.head.appendChild(link);
-   }
-   ```
-
-3. **页面动态加载**：
-   ```typescript
-   // 在表单页面中动态加载字体
-   useEffect(() => {
-     if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
-       const link = document.createElement('link');
-       link.rel = 'stylesheet';
-       link.href = '/pdf-fonts.css';
-       document.head.appendChild(link);
-     }
-   }, []);
-   ```
-
-4. **预加载内容**：
-   - 静态资源（logo、图标等）
-   - 表单页面（quotation、invoice、packing、purchase）
-   - 脚本和样式文件
-   - PDF字体文件
-
-**注意**：历史数据存储在localStorage中，无需预加载，用户访问时直接读取即可。
-
-#### 防重复机制
-- **预加载检查**：只有当页面上没有pdf-fonts.css的link标签时才加载
-- **浏览器缓存**：字体文件只下载一次，后续使用缓存
-- **CSS去重**：浏览器自动去重相同的CSS文件
-
-#### 优化效果
-- ✅ **无重复下载** - 字体文件只下载一次
-- ✅ **无冲突** - 两个CSS文件内容完全相同
-- ✅ **性能优化** - 字体在需要前就准备好了
-- ✅ **用户体验** - 进入表单页面时字体立即可用
-
-#### 文件结构
-```
-public/pdf-fonts.css      # 用于动态加载字体CSS
+// 检查权限
+if (hasPermission('quotation')) {
+  // 显示报价单功能
+}
 ```
 
-#### 工作流程
-1. **Dashboard页面** → 预加载 `/pdf-fonts.css` → 浏览器下载字体
-2. **进入表单页面** → 动态加载字体CSS → 浏览器使用已缓存的字体
+### 性能优化
+- 使用React.memo优化组件渲染
+- 实现权限数据的本地缓存
+- 异步加载非关键资源
+- 预加载常用页面
 
-### 相关文件
-- `src/utils/preloadUtils.ts` - 预加载管理器
-- `public/pdf-fonts.css` - 字体样式文件
-- 所有表单页面（quotation、invoice、packing、purchase、history）
+## 部署说明
 
-## 贡献指南
+项目已配置为在Vercel上部署，支持：
+- 自动构建和部署
+- 环境变量管理
+- 数据库连接
+- 静态资源优化
 
-1. Fork项目
-2. 创建功能分支
-3. 提交更改
-4. 推送到分支
-5. 创建Pull Request
+## 更新日志
 
-## 许可证
+### v1.2.0 - Dashboard本地化优化
+- ✅ 优化Dashboard加载逻辑，实现真正的本地化
+- ✅ 移除session loading状态检查
+- ✅ 优化权限数据优先级
+- ✅ 添加管理员默认权限处理
+- ✅ 实现异步权限更新
 
-本项目采用MIT许可证。
+### v1.1.0 - 权限系统重构
+- ✅ 实现基于Zustand的权限管理
+- ✅ 添加多层级权限数据源
+- ✅ 优化权限缓存机制
+- ✅ 实现实时权限更新
 
-
-2025.8.4 V1.0.0
+### v1.0.0 - 基础功能
+- ✅ 完整的单据管理系统
+- ✅ 用户认证和权限控制
+- ✅ 响应式UI设计
+- ✅ 数据持久化存储
