@@ -79,12 +79,15 @@ export default function LoginPage() {
         sessionStorage.clear();
       }
       
+      console.log('开始登录...');
       const result = await signIn('credentials', {
         username,
         password,
         redirect: false,
         callbackUrl: '/dashboard',
       });
+
+      console.log('登录结果:', result);
 
       if (!result) {
         setError('登录请求失败，请重试');
@@ -97,7 +100,10 @@ export default function LoginPage() {
       }
 
       // 登录成功，立即跳转到dashboard
+      console.log('登录成功，跳转到dashboard');
       setHasLoggedIn(true);
+      
+      // 立即跳转，让dashboard页面处理session更新
       router.push('/dashboard');
       
     } catch (error) {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { 
   Mail, 
@@ -221,6 +222,7 @@ const ModuleButton = ({ module, onClick, onHover }: {
 export default function DashboardPage() {
   // 所有 hooks 统一声明
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -627,12 +629,56 @@ export default function DashboardPage() {
     router.push(module.path);
   }, [router]);
 
+  // 处理session更新
+  useEffect(() => {
+    console.log('Dashboard: Session状态变化', { session: !!session, status, user: !!user });
+    
+    if (session && status === 'authenticated') {
+      console.log('Dashboard: Session已更新', session);
+      
+      // 保存session中的用户信息到localStorage
+      if (session.user && typeof window !== 'undefined') {
+        localStorage.setItem('username', session.user.username || session.user.name || '');
+        localStorage.setItem('isAdmin', (session.user.isAdmin || false).toString());
+        localStorage.setItem('userId', session.user.id || '1');
+        
+        console.log('Dashboard: 保存用户信息到localStorage', {
+          username: session.user.username || session.user.name,
+          isAdmin: session.user.isAdmin,
+          userId: session.user.id
+        });
+        
+        // 保存权限信息
+        if (session.user.permissions && Array.isArray(session.user.permissions)) {
+          localStorage.setItem('latestPermissions', JSON.stringify(session.user.permissions));
+          localStorage.setItem('permissionsTimestamp', Date.now().toString());
+          setLatestPermissions(session.user.permissions);
+          console.log('Dashboard: 保存权限信息', session.user.permissions);
+        }
+      }
+      
+      // 更新用户状态
+      if (session.user) {
+        const newUser = {
+          id: session.user.id || '1',
+          username: session.user.username || session.user.name || '',
+          email: session.user.email || null,
+          status: true,
+          isAdmin: session.user.isAdmin || false,
+          permissions: session.user.permissions || []
+        };
+        setUser(newUser);
+        console.log('Dashboard: 更新用户状态', newUser);
+      }
+    }
+  }, [session, status]);
+
   // 简化的初始化逻辑
   useEffect(() => {
     setMounted(true);
     
-    // 从localStorage恢复用户信息
-    if (typeof window !== 'undefined') {
+    // 从localStorage恢复用户信息（如果session还没有更新）
+    if (typeof window !== 'undefined' && !session) {
       const username = localStorage.getItem('username');
       const userId = localStorage.getItem('userId');
       const isAdmin = localStorage.getItem('isAdmin') === 'true';
@@ -682,7 +728,7 @@ export default function DashboardPage() {
         }
       }
     }
-  }, [fetchPermissions]);
+  }, [fetchPermissions, session]);
 
   // 优化的预加载逻辑 - 延迟预加载，避免阻塞初始渲染
   useEffect(() => {
