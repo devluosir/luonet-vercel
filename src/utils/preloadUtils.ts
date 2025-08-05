@@ -55,28 +55,28 @@ export class PreloadManager {
       // 异步预加载，不阻塞用户操作
       setTimeout(async () => {
         try {
-          // 预加载字体（轻量级）
-          await this.preloadFonts();
-          this.updateProgress(15);
-
           // 预加载静态资源（轻量级）
           await this.preloadStaticAssets();
-          this.updateProgress(25);
+          this.updateProgress(15);
 
           // 预加载表单页面（轻量级，只检查状态）
           await this.preloadFormPages();
-          this.updateProgress(50);
+          this.updateProgress(25);
 
           // 预加载工具页面（轻量级）
           await this.preloadToolPages();
-          this.updateProgress(75);
+          this.updateProgress(50);
 
           // 预加载历史数据（轻量级）
           await this.preloadHistoryData();
-          this.updateProgress(90);
+          this.updateProgress(75);
 
           // 预加载脚本和样式（轻量级）
           await this.preloadScriptsAndStyles();
+          this.updateProgress(90);
+
+          // 预加载字体（最后执行）
+          await this.preloadFonts();
           this.updateProgress(100, '预加载完成');
 
           console.log('所有资源预加载完成');
@@ -95,7 +95,7 @@ export class PreloadManager {
 
   // 预加载PDF字体
   private async preloadFonts(): Promise<void> {
-    console.log('预加载PDF字体...');
+    console.log('预加载PDF字体（最后一步）...');
     
     // 暂时跳过字体预加载，避免浏览器警告
     // 字体会在需要时自动加载
