@@ -38,25 +38,28 @@ export class PreloadManager {
     this.preloadCallbacks.forEach(callback => callback(progress, stage));
   }
 
-  // ✅ 新增：检查权限是否发生变化
+  // ✅ 优化：检查权限是否发生变化
   private checkPermissionsChanged(): boolean {
     try {
       const formPages = this.getFormPagesByPermissions();
       const currentHash = JSON.stringify(formPages.sort());
       
       if (this.lastPermissionsHash === currentHash) {
-        // ✅ 优化：减少重复日志，只在开发环境下输出
-        if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+        // ✅ 优化：进一步减少重复日志
+        if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
           console.log('权限未发生变化，跳过预加载');
         }
         return false;
       }
       
-      console.log('检测到权限变化，需要重新预加载', {
-        oldHash: this.lastPermissionsHash,
-        newHash: currentHash,
-        formPages
-      });
+      // ✅ 优化：只在真正变化时输出日志
+      if (process.env.NODE_ENV === 'development') {
+        console.log('检测到权限变化，需要重新预加载', {
+          oldHash: this.lastPermissionsHash,
+          newHash: currentHash,
+          formPages
+        });
+      }
       
       this.lastPermissionsHash = currentHash;
       return true;
@@ -284,8 +287,8 @@ export class PreloadManager {
             const cacheData = JSON.parse(userCache);
             if (cacheData.permissions && Array.isArray(cacheData.permissions)) {
               permissions = cacheData.permissions;
-              // ✅ 优化：减少重复日志
-              if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+              // ✅ 优化：进一步减少重复日志
+              if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
                 console.log('从userCache获取权限数据进行预加载');
               }
             }
@@ -301,8 +304,8 @@ export class PreloadManager {
           const latestPermissions = localStorage.getItem('latestPermissions');
           if (latestPermissions) {
             permissions = JSON.parse(latestPermissions);
-            // ✅ 优化：减少重复日志
-            if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+            // ✅ 优化：进一步减少重复日志
+            if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
               console.log('从latestPermissions获取权限数据进行预加载');
             }
           }
@@ -316,8 +319,8 @@ export class PreloadManager {
         const globalPermissions = (window as any).__SESSION_PERMISSIONS__;
         if (globalPermissions && Array.isArray(globalPermissions)) {
           permissions = globalPermissions;
-          // ✅ 优化：减少重复日志
-          if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+          // ✅ 优化：进一步减少重复日志
+          if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
             console.log('从全局变量获取权限数据进行预加载');
           }
         }
@@ -330,8 +333,8 @@ export class PreloadManager {
           const store = usePermissionStore.getState();
           if (store.user?.permissions) {
             permissions = store.user.permissions;
-            // ✅ 优化：减少重复日志
-            if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+            // ✅ 优化：进一步减少重复日志
+            if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
               console.log('从Store获取权限数据进行预加载');
             }
           }

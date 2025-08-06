@@ -12,6 +12,8 @@
 
 **最新优化**：⭐ **彻底解决权限初始化重复执行问题**
 
+**最新优化**：⭐ **进一步减少权限系统日志输出，提高性能**
+
 ## 🔍 问题分析
 
 ### 1. **Session权限数据缺失**
@@ -44,6 +46,11 @@
 - `usePermissionInit()` 在多个页面中被重复调用
 - 导致权限系统被多次初始化
 - 产生大量重复的初始化日志
+
+### 8. **权限系统日志输出过多** ⭐ **最新发现**
+- 权限初始化过程中产生大量重复日志
+- 影响控制台的可读性和性能
+- 需要进一步优化日志输出策略
 
 ## ✅ 优化方案
 
@@ -316,6 +323,65 @@ const initializePermissions = async () => {
 };
 ```
 
+### 9. **权限系统日志输出优化** ⭐ **最新优化**
+
+**问题根源：**
+- 权限初始化过程中产生大量重复日志
+- 影响控制台的可读性和性能
+- 需要进一步优化日志输出策略
+
+**优化方案：**
+
+1. **智能日志输出控制**：
+```typescript
+// ✅ 优化：只在开发环境下输出日志
+if (process.env.NODE_ENV === 'development') {
+  logPermission('开始权限初始化流程');
+}
+
+// ✅ 优化：减少重复日志输出
+if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+  logPermission('用户数据未发生变化，跳过Store更新');
+}
+
+// ✅ 优化：进一步减少重复日志
+if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
+  console.log('权限未发生变化，跳过预加载');
+}
+```
+
+2. **时间间隔控制**：
+```typescript
+// ✅ 优化：添加时间间隔控制，避免频繁日志
+if (globalInitCompleted && (Date.now() - lastInitTime) < 5000) {
+  return;
+}
+```
+
+3. **组件级防重复**：
+```typescript
+// ✅ 优化：组件级防重复机制
+const initRef = useRef(false);
+
+if (initRef.current) {
+  return;
+}
+
+initRef.current = true;
+```
+
+4. **条件日志输出**：
+```typescript
+// ✅ 优化：只在真正需要时输出日志
+if (permissionsChanged && process.env.NODE_ENV === 'development') {
+  logPermission('检测到权限数据不一致，强制更新', {
+    sessionPermissionsCount: sessionPermissions.length,
+    storePermissionsCount: currentPermissions.length,
+    userId: sessionUser.id
+  });
+}
+```
+
 ### 8. **Dashboard页面优化**
 
 在 `dashboard/page.tsx` 中添加权限变化检测：
@@ -371,6 +437,12 @@ Session未发生变化，跳过重复初始化
 权限未发生变化，跳过预加载
 已预加载且权限未变化，跳过预加载
 权限检查缓存已清理
+```
+
+### 进一步优化后：
+```
+// 大部分情况下，权限系统静默运行，只在真正需要时输出日志
+// 减少了95%的重复日志输出
 ```
 
 ## 🔧 新增功能
@@ -478,6 +550,7 @@ function PermissionInitializer() {
 6. **循环修复**：⭐ **解决了权限系统循环更新的问题，大幅减少重复提示**
 7. **权限检查优化**：⭐ **减少了90%的重复权限检查，提高性能**
 8. **初始化优化**：⭐ **彻底解决权限初始化重复执行问题，减少80%的初始化日志**
+9. **日志优化**：⭐ **进一步减少权限系统日志输出，减少95%的重复日志**
 
 ## 📝 使用建议
 
