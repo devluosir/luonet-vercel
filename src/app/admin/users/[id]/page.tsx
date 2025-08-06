@@ -8,7 +8,6 @@ import {
   ArrowLeft, 
   User, 
   Mail, 
-  Calendar, 
   Shield, 
   Settings, 
   Trash2, 
@@ -19,11 +18,7 @@ import {
   FileText,
   ShoppingCart,
   Receipt,
-  Users,
-  Database,
-  BarChart3,
-  TrendingUp,
-  Zap
+  Users
 } from 'lucide-react';
 
 interface Permission {

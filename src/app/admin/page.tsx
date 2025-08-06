@@ -1,20 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Users, 
   UserPlus, 
   Search, 
-  Filter, 
-  MoreHorizontal, 
   Edit, 
-  Trash2, 
   UserCheck, 
   UserX, 
   Shield, 
   User,
-  Mail,
   Clock
 } from 'lucide-react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
@@ -45,12 +41,6 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [showUserDetails, setShowUserDetails] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // 管理员权限检查 - 使用session数据
   const hasAdminPermission = useMemo(() => {
@@ -63,7 +53,7 @@ export default function AdminPage() {
   }, []);
 
   // 权限检查和数据加载函数
-  const checkPermissionsAndLoad = async () => {
+  const checkPermissionsAndLoad = useCallback(async () => {
     try {
       // 等待session加载完成
       if (status === 'loading') {
@@ -122,13 +112,13 @@ export default function AdminPage() {
       setError('权限检查失败');
       setLoading(false);
     }
-  };
+  }, [session, status, hasAdminPermission, router]);
 
   // 权限检查和数据加载
   useEffect(() => {
     if (!mounted) return;
     checkPermissionsAndLoad();
-  }, [mounted, session, status, hasAdminPermission, router]);
+  }, [mounted, session, status, hasAdminPermission, router, checkPermissionsAndLoad]);
 
   // 过滤用户
   useEffect(() => {
@@ -149,25 +139,14 @@ export default function AdminPage() {
       );
     }
 
-    // 移除角色过滤，因为中间件已经处理了权限检查
-    // if (roleFilter !== 'all') {
-    //   filtered = filtered.filter(user => 
-    //     roleFilter === 'admin' ? user.isAdmin : !user.isAdmin
-    //   );
-    // }
-
     setFilteredUsers(filtered);
   }, [users, searchTerm, statusFilter]);
 
-
-
   const handleLogout = async () => {
     try {
-      // 使用NextAuth的signOut
       await signOut({ redirect: true, callbackUrl: '/' });
     } catch (error) {
       console.error('Logout failed:', error);
-      // 如果signOut失败，手动重定向
       router.push('/');
     }
   };
@@ -355,9 +334,10 @@ export default function AdminPage() {
                   <option value="inactive">非活跃用户</option>
                 </select>
 
+                {/* 角色筛选占位（保持UI不变，功能暂未开放） */}
                 <select
                   value="all"
-                  onChange={(e) => {}}
+                  onChange={() => {}}
                   className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg 
                            bg-white dark:bg-[#2c2c2e] text-gray-900 dark:text-white 
                            focus:ring-2 focus:ring-blue-500 focus:border-transparent"
