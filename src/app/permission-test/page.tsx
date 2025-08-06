@@ -2,14 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import { useSession, getSession } from 'next-auth/react';
-import { usePermissionStore, initializeUserFromStorage } from '@/lib/permissions';
+import { usePermissionStore } from '@/lib/permissions';
+import { usePermissionInit } from '@/hooks/usePermissionInit';
+import { logPermission } from '@/utils/permissionLogger';
 
 export default function PermissionTestPage() {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [localStorageData, setLocalStorageData] = useState<any>(null);
   const { data: session, status } = useSession();
-  const { user, setUser } = usePermissionStore();
+  const { user, setUser, clearExpiredCache } = usePermissionStore();
+  
+  // 使用统一的权限初始化Hook
+  usePermissionInit();
 
   // 获取localStorage数据
   const getLocalStorageData = () => {
@@ -28,8 +33,6 @@ export default function PermissionTestPage() {
 
   useEffect(() => {
     getLocalStorageData();
-    // 初始化权限store
-    initializeUserFromStorage();
   }, []);
 
   const testGetLatestPermissions = async () => {
@@ -40,6 +43,12 @@ export default function PermissionTestPage() {
         setResult({ error: '用户未登录' });
         return;
       }
+
+      logPermission('开始测试权限刷新', {
+        userId: session.user.id,
+        username: session.user.username,
+        isAdmin: session.user.isAdmin
+      });
 
       const response = await fetch('/api/auth/get-latest-permissions', {
         method: 'POST',
@@ -96,6 +105,11 @@ export default function PermissionTestPage() {
     }
   };
 
+  const testCacheCleanup = () => {
+    clearExpiredCache();
+    getLocalStorageData();
+  };
+
   const refreshLocalStorageData = () => {
     getLocalStorageData();
   };
@@ -103,7 +117,7 @@ export default function PermissionTestPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black p-8">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">权限刷新测试页面</h1>
+        <h1 className="text-3xl font-bold mb-8">权限系统优化测试页面</h1>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Session信息 */}
@@ -168,6 +182,13 @@ export default function PermissionTestPage() {
               className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
             >
               刷新localStorage数据
+            </button>
+            
+            <button
+              onClick={testCacheCleanup}
+              className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+            >
+              测试缓存清理
             </button>
             
             <button

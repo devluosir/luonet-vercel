@@ -7,8 +7,15 @@ import Link from 'next/link';
 import { Footer } from '@/components/Footer';
 import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
 import { performanceMonitor, optimizePerformance } from '@/utils/performance';
+import { usePermissionStore } from '@/lib/permissions';
+import { usePermissionInit } from '@/hooks/usePermissionInit';
+import { PermissionGuard } from '@/components/PermissionGuard';
 
 export default function MailPage() {
+  // 权限初始化
+  usePermissionInit();
+  const { hasPermission } = usePermissionStore();
+  
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('mail');
   const [mailType, setMailType] = useState('formal');
@@ -112,7 +119,18 @@ export default function MailPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col">
+    <PermissionGuard requiredPermissions={['ai-email']} fallback={
+      <div className="min-h-screen bg-gray-50 dark:bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-lg text-gray-600 dark:text-gray-400">您没有访问邮件助手模块的权限</div>
+          <Link href="/dashboard" className="mt-4 inline-block px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+            返回首页
+          </Link>
+        </div>
+      </div>
+    }>
+      <div className="min-h-screen bg-gray-50 dark:bg-black flex flex-col">
       <main className="flex-1">
         <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
           <Link 
@@ -373,5 +391,6 @@ export default function MailPage() {
       `}</style>
       <Footer />
     </div>
+    </PermissionGuard>
   );
 }

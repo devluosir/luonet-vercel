@@ -32,7 +32,8 @@ import {
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance, safeRequestIdleCallback } from '@/utils/performance';
-import { usePermissionStore, initializeUserFromStorage } from '@/lib/permissions';
+import { usePermissionStore } from '@/lib/permissions';
+import { usePermissionInit } from '@/hooks/usePermissionInit';
 import { Header } from '@/components/Header';
 import { preloadManager } from '@/utils/preloadUtils';
 
@@ -351,7 +352,10 @@ export default function DashboardPage() {
   const [purchaseCount, setPurchaseCount] = useState(0);
   
   // 使用全局权限store
-  const { user, isLoading: permissionLoading, fetchPermissions } = usePermissionStore();
+  const { user, isLoading: permissionLoading } = usePermissionStore();
+  
+  // 使用统一的权限初始化Hook
+  usePermissionInit();
   
   // 更新各类单据数量
   const updateDocumentCounts = useCallback(() => {
@@ -377,9 +381,6 @@ export default function DashboardPage() {
   
   const [isLoading, setIsLoading] = useState(false);
   const refreshing = isLoading;
-  // 移除本地用户状态管理，完全使用全局store
-  const [latestPermissions, setLatestPermissions] = useState<any[]>([]);
-  const [hasFetchedUserDetails, setHasFetchedUserDetails] = useState(false);
 
   // 优化的权限映射 - 减少依赖项，优先使用本地数据
   const permissionMap = useMemo(() => {
@@ -406,11 +407,6 @@ export default function DashboardPage() {
     // 优先级3: Session权限数据（备用）
     if (permissions.length === 0) {
       permissions = session?.user?.permissions || [];
-    }
-    
-    // 优先级4: latestPermissions（最后备用）
-    if (permissions.length === 0) {
-      permissions = latestPermissions;
     }
 
     // 如果没有权限数据，根据用户是否为管理员显示默认权限
@@ -529,7 +525,7 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [user?.permissions, user?.isAdmin, session?.user?.permissions, session?.user?.isAdmin, latestPermissions]); // 添加isAdmin依赖
+  }, [user?.permissions, user?.isAdmin, session?.user?.permissions, session?.user?.isAdmin]); // 添加isAdmin依赖
 
   // 暂时禁用性能监控启动，避免无限重新渲染
   // useEffect(() => {
@@ -731,35 +727,7 @@ export default function DashboardPage() {
     router.push(module.path);
   }, [router]);
 
-  // 直接使用session数据，并在dashboard中获取用户详细信息
-  useEffect(() => {
-    // 只在组件挂载后执行
-    if (!mounted) return;
-    
-    // 首先尝试从本地存储初始化用户信息
-    initializeUserFromStorage();
-    
-    // 只在session存在且认证成功时处理
-    if (session && status === 'authenticated' && session.user) {
-      console.log('Dashboard: 开始获取权限', {
-        userId: session.user.id,
-        username: session.user.username,
-        isAdmin: session.user.isAdmin,
-        hasPermissions: !!session.user.permissions
-      });
-      
-      // 尝试加载本地权限数据（非强制刷新）
-      if (!hasFetchedUserDetails) {
-        // 延迟获取权限，确保session完全稳定
-        const timer = setTimeout(() => {
-          fetchPermissions(false); // 非强制刷新，优先使用本地缓存
-          setHasFetchedUserDetails(true);
-        }, 1000);
-        
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [session, status, mounted, fetchPermissions, hasFetchedUserDetails, initializeUserFromStorage]);
+  // 权限初始化已移至 usePermissionInit Hook
 
   // 优化的初始化逻辑 - 立即显示内容，异步加载权限
   useEffect(() => {
@@ -775,8 +743,7 @@ export default function DashboardPage() {
           const isRecent = (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000;
           
           if (isRecent) {
-            const permissions = JSON.parse(storedPermissions);
-            setLatestPermissions(permissions);
+            // 权限数据已通过 usePermissionInit Hook 处理
           }
         }
       } catch (error) {
@@ -794,30 +761,7 @@ export default function DashboardPage() {
     }, 1000);
   }, []); // 移除session和status依赖，实现真正的本地化
 
-  // 异步权限初始化 - 不阻塞页面渲染
-  useEffect(() => {
-    if (!mounted) return;
-    
-    // 立即初始化权限store
-    initializeUserFromStorage();
-    
-    // 延迟获取权限，让页面先渲染
-    const timer = setTimeout(() => {
-      if (session && status === 'authenticated' && session.user && !hasFetchedUserDetails) {
-        console.log('Dashboard: 开始获取权限', {
-          userId: session.user.id,
-          username: session.user.username,
-          isAdmin: session.user.isAdmin,
-          hasPermissions: !!session.user.permissions
-        });
-        
-        fetchPermissions(false); // 非强制刷新，优先使用本地缓存
-        setHasFetchedUserDetails(true);
-      }
-    }, 500); // 减少延迟到500ms
-    
-    return () => clearTimeout(timer);
-  }, [session, status, mounted, fetchPermissions, hasFetchedUserDetails, initializeUserFromStorage]);
+  // 权限初始化已移至 usePermissionInit Hook
 
   // 优化的预加载逻辑 - 延迟预加载，避免阻塞初始渲染
   useEffect(() => {
@@ -1022,8 +966,7 @@ export default function DashboardPage() {
       const data = await response.json();
       
       if (data.success) {
-        // 更新最新权限数据
-        setLatestPermissions(data.permissions);
+        // 权限数据已通过 usePermissionInit Hook 处理
 
         // 将最新权限数据保存到localStorage
         if (typeof window !== 'undefined') {

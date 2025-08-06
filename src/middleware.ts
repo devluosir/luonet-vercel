@@ -1,5 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { getModuleIdFromPath } from "@/constants/permissions";
 
 // 定义公开路由
 const PUBLIC_ROUTES = [
@@ -109,35 +110,8 @@ export default withAuth(
   }
 );
 
-// 从路径获取模块ID
-function getModuleIdFromPath(pathname: string): string | null {
-  // 移除开头的斜杠和结尾的斜杠
-  const path = pathname.replace(/^\/+|\/+$/g, '');
-  
-  // 如果是API路由，取第二段
-  if (path.startsWith('api/')) {
-    const parts = path.split('/');
-    return parts[1] || null;
-  }
-  
-  // 路径到模块ID的映射
-  const pathToModuleId: { [key: string]: string } = {
-    'mail': 'ai-email',
-    'quotation': 'quotation',
-    'packing': 'packing',
-    'invoice': 'invoice',
-    'purchase': 'purchase',
-    'history': 'history',
-    'customer': 'customer',
-    'admin': 'admin'
-  };
-  
-  // 取第一段作为路径
-  const pathSegment = path.split('/')[0] || null;
-  
-  // 如果有映射，返回映射的模块ID，否则返回原路径
-  return pathSegment ? (pathToModuleId[pathSegment] || pathSegment) : null;
-}
+// 使用统一的权限模块映射函数
+// 从 @/constants/permissions 导入的 getModuleIdFromPath 函数
 
 export const config = {
   matcher: [

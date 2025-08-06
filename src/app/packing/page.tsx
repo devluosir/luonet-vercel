@@ -14,6 +14,9 @@ import { ShippingMarksModal } from '@/components/packinglist/ShippingMarksModal'
 import { ConsigneeSection } from '@/components/packinglist/ConsigneeSection';
 import { savePackingHistory, getPackingHistoryById } from '@/utils/packingHistory';
 import dynamic from 'next/dynamic';
+import { usePermissionStore } from '@/lib/permissions';
+import { usePermissionInit } from '@/hooks/usePermissionInit';
+import { PermissionGuard } from '@/components/PermissionGuard';
 
 // 动态导入PDFPreviewModal
 const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
@@ -211,6 +214,9 @@ const convertExcelToPackingItems = (rows: string[][]): PackingItem[] => {
 };
 
 export default function PackingPage() {
+  // 权限初始化
+  usePermissionInit();
+  const { hasPermission } = usePermissionStore();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -715,7 +721,18 @@ export default function PackingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
+    <PermissionGuard requiredPermissions={['packing']} fallback={
+      <div className="min-h-screen bg-gray-50 dark:bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-lg text-gray-600 dark:text-gray-400">您没有访问箱单模块的权限</div>
+          <Link href="/dashboard" className="mt-4 inline-block px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+            返回首页
+          </Link>
+        </div>
+      </div>
+    }>
+      <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
       <main className="flex-1">
         <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
@@ -1215,5 +1232,6 @@ export default function PackingPage() {
         onChange={(value) => setData(prev => ({ ...prev, markingNo: value }))}
       />
     </div>
+    </PermissionGuard>
   );
 }

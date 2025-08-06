@@ -22,29 +22,22 @@ export function PermissionGuard({
 }: PermissionGuardProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { user, isLoading, hasPermission, fetchPermissions } = usePermissionStore();
+  const { user, isLoading, hasPermission } = usePermissionStore();
 
   useEffect(() => {
-    // 移除登录状态检查，因为中间件已经处理了认证
     if (isLoading) return;
-
+    
     // 快速验证模式：直接使用store中的权限数据
     if (fastCheck && user) {
       return;
     }
-
-    // 如果没有用户信息，获取用户信息
-    if (!user) {
-      fetchPermissions();
-      return;
-    }
-
+    
     // 完整验证模式：检查权限
     if (!fastCheck && requiredPermissions.length > 0) {
       const hasRequiredPermissions = requiredPermissions.every(permission => 
         hasPermission(permission)
       );
-
+      
       if (!hasRequiredPermissions) {
         if (redirectTo) {
           router.push(redirectTo);
@@ -68,7 +61,7 @@ export function PermissionGuard({
     return <>{children}</>;
   }
 
-  // 只在权限加载时显示加载状态，移除登录验证
+  // 只在权限加载时显示加载状态
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

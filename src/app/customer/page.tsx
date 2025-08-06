@@ -26,6 +26,9 @@ import {
   Save
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { usePermissionStore } from '@/lib/permissions';
+import { usePermissionInit } from '@/hooks/usePermissionInit';
+import { PermissionGuard } from '@/components/PermissionGuard';
 
 // 修改客户/供应商信息接口
 interface DocumentInfo {
@@ -53,6 +56,10 @@ interface SupplierInfo {
 }
 
 export default function CustomerPage() {
+  // 权限初始化
+  usePermissionInit();
+  const { hasPermission } = usePermissionStore();
+  
   const [activeTab, setActiveTab] = useState<'customer' | 'supplier'>('customer');
   const [mounted, setMounted] = useState(false);
   const [customers, setCustomers] = useState<CustomerInfo[]>([]);
@@ -493,7 +500,18 @@ export default function CustomerPage() {
   // }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
+    <PermissionGuard requiredPermissions={['customer']} fallback={
+      <div className="min-h-screen bg-gray-50 dark:bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-lg text-gray-600 dark:text-gray-400">您没有访问客户管理模块的权限</div>
+          <Link href="/dashboard" className="mt-4 inline-block px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+            返回首页
+          </Link>
+        </div>
+      </div>
+    }>
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
       <main className="flex-1">
         <div className="w-full max-w-none px-2 sm:px-3 lg:px-4 py-3 sm:py-4 lg:py-6">
           {/* 返回按钮和设置按钮 */}
@@ -1331,5 +1349,6 @@ export default function CustomerPage() {
         </div>
       )}
     </div>
+    </PermissionGuard>
   );
 }
