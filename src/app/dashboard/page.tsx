@@ -408,6 +408,16 @@ export default function DashboardPage() {
         console.error('恢复权限数据失败:', error);
       }
     }
+    
+    // 添加调试日志，帮助排查权限刷新问题
+    console.log('权限映射更新:', {
+      storePermissions: user?.permissions?.length || 0,
+      sessionPermissions: session?.user?.permissions?.length || 0,
+      finalPermissions: permissions.length,
+      refreshKey,
+      userExists: !!user,
+      sessionExists: !!session?.user
+    });
 
     // 如果没有权限数据，根据用户是否为管理员显示默认权限
     if (!permissions || permissions.length === 0) {
@@ -523,7 +533,7 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [user?.permissions, user?.isAdmin, session?.user?.permissions, session?.user?.isAdmin]);
+  }, [user?.permissions, user?.isAdmin, session?.user?.permissions, session?.user?.isAdmin, refreshKey]);
 
   // ✅ 优化的初始化逻辑 - 立即显示内容，异步加载权限
   useEffect(() => {
@@ -677,6 +687,18 @@ export default function DashboardPage() {
       window.removeEventListener('permissionChanged', handlePermissionChange as EventListener);
     };
   }, [mounted, showSuccessMessage]);
+  
+  // 监听权限Store变化，确保UI及时更新
+  useEffect(() => {
+    const unsubscribe = usePermissionStore.subscribe((state) => {
+      if (state.user && state.user.permissions) {
+        console.log('权限Store更新，触发重新渲染');
+        setRefreshKey(prev => prev + 1);
+      }
+    });
+    
+    return unsubscribe;
+  }, []);
 
   // 优化的模块点击处理 - 即点即开
   const handleModuleClick = useCallback((module: any) => {
@@ -813,14 +835,20 @@ export default function DashboardPage() {
     setSuccessMessage('');
     
     try {
+      console.log('开始刷新权限...');
+      
       // 使用权限Store的刷新方法
       await usePermissionStore.getState().fetchPermissions(true);
+      
+      // 获取最新的用户信息
+      const updatedUser = usePermissionStore.getState().user;
+      console.log('权限刷新完成，最新权限:', updatedUser?.permissions);
       
       // 触发权限变化事件，通知其他组件
       window.dispatchEvent(new CustomEvent('permissionChanged', {
         detail: {
           message: '权限信息已更新',
-          permissions: user?.permissions
+          permissions: updatedUser?.permissions
         }
       }));
       
@@ -835,7 +863,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.permissions]);
+  }, []);
 
   // 优化的退出逻辑 - 避免重复退出
   const handleLogout = useCallback(async () => {
@@ -857,11 +885,26 @@ export default function DashboardPage() {
     }
   }, [status, router, mounted]);
 
+  // 权限加载状态检查
+  const isPermissionLoading = !user && status === 'loading';
+  
   // 所有 hooks 声明完毕后，再做提前 return
   if (!mounted) return null;
   
   // 如果未认证，返回空内容而不是直接重定向
   if (status === 'unauthenticated') return null;
+  
+  // 如果权限正在加载，显示加载状态
+  if (isPermissionLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-lg">加载权限信息中...</div>
+        </div>
+      </div>
+    );
+  }
 
   const getDocumentTypeName = (type: string) => {
     switch (type) {

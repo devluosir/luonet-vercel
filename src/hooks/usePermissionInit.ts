@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePermissionStore } from '@/lib/permissions';
+import { logPermission } from '@/utils/permissionLogger';
 
 /**
  * 权限初始化Hook
@@ -61,5 +62,4 @@ export const usePermissionInit = () => {
   }, [session, status]);
 };
 
-// 导入日志函数
-import { logPermission } from '@/utils/permissionLogger'; 
+ 

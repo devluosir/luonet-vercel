@@ -34,11 +34,14 @@ export async function POST(request: NextRequest) {
           'X-User-Name': userName,
           'X-User-Admin': isAdmin ? 'true' : 'false',
         },
-        cache: 'no-store'
+        cache: 'no-store',
+        next: { revalidate: 0 } // 强制不缓存
       });
 
       if (backendResponse.ok) {
         const backendData = await backendResponse.json();
+        
+        console.log('权限API: 后端响应数据:', backendData);
         
         // 处理不同的响应格式
         let userData;
@@ -68,7 +71,13 @@ export async function POST(request: NextRequest) {
             isAdmin = !!userData.isAdmin;
             console.log('权限API: 从后端获取到真实管理员状态:', isAdmin);
           }
+          
+          console.log('权限API: 从后端获取到权限数据:', permissions);
+        } else {
+          console.log('权限API: 后端数据中没有找到权限信息');
         }
+      } else {
+        console.log('权限API: 后端请求失败:', backendResponse.status, backendResponse.statusText);
       }
     } catch (backendError) {
       // 后端API调用失败，继续尝试从session获取

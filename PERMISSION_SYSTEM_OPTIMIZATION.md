@@ -270,9 +270,9 @@ if (hasPermission('quotation')) {
 // 使用权限守卫组件
 import { PermissionGuard } from '@/components/PermissionGuard';
 
-<PermissionGuard requiredPermissions={['quotation']}>
+    <PermissionGuard requiredPermissions={['quotation']}>
   <QuotationPage />
-</PermissionGuard>
+    </PermissionGuard>
 ```
 
 ## 🔄 后续优化建议

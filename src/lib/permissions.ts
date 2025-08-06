@@ -281,8 +281,8 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         isAdmin: session.user.isAdmin
       });
 
-      // 2. 优先使用session中的权限数据
-      if (session.user.permissions && Array.isArray(session.user.permissions)) {
+      // 2. 优先使用session中的权限数据（仅在非强制刷新时）
+      if (!forceRefresh && session.user.permissions && Array.isArray(session.user.permissions)) {
         const userData = {
           id: session.user.id || session.user.username || '',
           username: session.user.username || session.user.name || '',
