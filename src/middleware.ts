@@ -100,7 +100,22 @@ export default withAuth(
           }
         }
 
-        // 6. 其他情况，只要有token就允许访问
+        // 6. 模块权限检查
+        const moduleId = getModuleIdFromPath(pathname);
+        if (moduleId) {
+          // 检查具体模块权限（管理员和普通用户使用相同的权限检查逻辑）
+          if (token.permissions && Array.isArray(token.permissions)) {
+            const permission = token.permissions.find((p: any) => p.moduleId === moduleId);
+            if (permission && permission.canAccess) {
+              return true;
+            }
+          }
+          
+          // 没有权限，重定向到登录页
+          return false;
+        }
+        
+        // 7. 其他情况，只要有token就允许访问
         return true;
       },
     },

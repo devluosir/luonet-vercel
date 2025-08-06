@@ -174,12 +174,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     if (!user) return false;
     
     try {
-      // ✅ 管理员拥有所有权限
-      if (user.isAdmin) {
-        return true;
-      }
-      
-      // 检查具体权限
+      // 检查具体权限（管理员和普通用户使用相同的权限检查逻辑）
       if (!user.permissions) return false;
       const permission = user.permissions.find(p => p.moduleId === moduleId);
       const hasAccess = permission?.canAccess || false;
@@ -207,12 +202,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     if (!user) return false;
     
     try {
-      // ✅ 管理员拥有所有权限
-      if (user.isAdmin) {
-        return true;
-      }
-      
-      // 检查具体权限
+      // 检查具体权限（管理员和普通用户使用相同的权限检查逻辑）
       if (!user.permissions) return false;
       return moduleIds.some(moduleId => {
         const permission = user.permissions.find(p => p.moduleId === moduleId);
