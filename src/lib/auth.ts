@@ -54,18 +54,7 @@ export const authOptions: NextAuthOptions = {
             throw new Error("用户账户已被禁用");
           }
 
-          // 验证管理员权限
-          if (data.user.isAdmin) {
-            // 管理员用户登录
-          } else {
-            // 非管理员用户需要验证是否有基本权限
-            if (!data.permissions || (Array.isArray(data.permissions) && data.permissions.length === 0)) {
-              // 非管理员用户如果没有权限，仍然允许登录，但会在dashboard中处理权限
-            }
-          }
-
-          // 简化验证：只验证用户名密码和用户状态，不验证模块权限
-          
+          // ✅ 登录时直接返回完整的用户信息，包括权限
           return {
             id: data.user.id,
             email: data.user.email || "",
@@ -73,7 +62,8 @@ export const authOptions: NextAuthOptions = {
             username: data.user.username,
             isAdmin: !!data.user.isAdmin,
             image: null,
-            permissions: data.permissions || [] // 包含API返回的权限数据
+            permissions: data.permissions || [], // ✅ 包含完整的权限数据
+            status: data.user.status
           };
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : "用户名或密码错误");
@@ -84,19 +74,25 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        // ✅ 确保所有用户信息都保存到token中
         token.username = user.username;
-        token.isAdmin = !!user.isAdmin; // 确保是布尔值
+        token.isAdmin = !!user.isAdmin;
         token.permissions = user.permissions;
+        token.status = user.status;
+        token.email = user.email;
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
+        // ✅ 确保session中包含完整的用户信息
         session.user.id = token.sub || "";
         session.user.username = token.username;
-        session.user.isAdmin = !!token.isAdmin; // 确保是布尔值
+        session.user.isAdmin = !!token.isAdmin;
+        session.user.email = token.email;
+        session.user.status = token.status;
         
-        // 确保权限数据格式正确
+        // ✅ 确保权限数据格式正确
         if (Array.isArray(token.permissions)) {
           session.user.permissions = token.permissions;
         } else if (typeof token.permissions === 'object' && token.permissions !== null) {

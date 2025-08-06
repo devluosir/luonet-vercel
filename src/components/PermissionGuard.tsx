@@ -11,6 +11,7 @@ interface PermissionGuardProps {
   fallback?: React.ReactNode;
   redirectTo?: string;
   fastCheck?: boolean; // 新增快速验证模式参数
+  showLoading?: boolean; // ✅ 新增：是否显示加载状态
 }
 
 export function PermissionGuard({ 
@@ -18,7 +19,8 @@ export function PermissionGuard({
   requiredPermissions = [], 
   fallback = null,
   redirectTo = '/dashboard',
-  fastCheck = true // 默认使用快速验证
+  fastCheck = true, // 默认使用快速验证
+  showLoading = true // ✅ 默认显示加载状态
 }: PermissionGuardProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -47,8 +49,12 @@ export function PermissionGuard({
     }
   }, [user, isLoading, requiredPermissions, hasPermission, router, redirectTo, fastCheck]);
 
+  // ✅ 优化：检查用户信息是否已加载
+  const isUserInfoReady = user && !isLoading;
+  const isSessionReady = status !== 'loading';
+
   // 快速验证模式：直接检查权限
-  if (fastCheck && user) {
+  if (fastCheck && isUserInfoReady) {
     if (requiredPermissions.length > 0) {
       const hasRequiredPermissions = requiredPermissions.every(permission => 
         hasPermission(permission)
@@ -61,13 +67,20 @@ export function PermissionGuard({
     return <>{children}</>;
   }
 
-  // 只在权限加载时显示加载状态
-  if (isLoading) {
+  // ✅ 优化：只在需要时显示加载状态
+  if (showLoading && (isLoading || !isUserInfoReady || !isSessionReady)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-lg">加载权限中...</div>
+          <div className="text-lg">
+            {isLoading ? '加载权限中...' : '初始化用户信息...'}
+          </div>
+          {user && (
+            <div className="text-sm text-gray-500 mt-2">
+              用户: {user.username} {user.isAdmin ? '(管理员)' : ''}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -89,7 +102,7 @@ export function PermissionGuard({
 
 // 便捷的权限检查Hook
 export function usePermissionGuard(requiredPermissions: string[] = []) {
-  const { user, hasPermission } = usePermissionStore();
+  const { user, hasPermission, isLoading } = usePermissionStore();
   
   const hasRequiredPermissions = requiredPermissions.length === 0 || 
     requiredPermissions.every(permission => hasPermission(permission));
@@ -97,6 +110,8 @@ export function usePermissionGuard(requiredPermissions: string[] = []) {
   return {
     hasRequiredPermissions,
     user,
-    isAdmin: user?.isAdmin || false
+    isAdmin: user?.isAdmin || false,
+    isLoading,
+    isReady: user && !isLoading // ✅ 新增：用户信息是否已准备就绪
   };
 } 
