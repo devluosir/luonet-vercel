@@ -32,6 +32,4 @@ declare module "next-auth/jwt" {
   }
 } 
 
-declare module "next-auth/react" {
-  export function update(data: Record<string, unknown>): Promise<void>;
-} 
+ 

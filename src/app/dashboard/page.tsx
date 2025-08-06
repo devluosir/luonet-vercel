@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession, signIn, getSession, signOut, update } from 'next-auth/react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { 
   Mail, 
@@ -681,10 +681,14 @@ export default function DashboardPage() {
       
       if (event.detail?.permissions) {
         try {
-          console.log('调用 NextAuth update() 更新 Session 权限');
+          console.log('调用 NextAuth signIn() 进行 silent refresh 更新 Session 权限');
           
-          // 🔄 使用 NextAuth 的 update() 触发 Session 权限更新
-          await update({ permissions: event.detail.permissions });
+          // 🔄 使用 NextAuth 的 signIn() 进行 silent refresh 更新 Session 权限
+          await signIn('credentials', {
+            redirect: false,
+            username: session?.user?.name || '',
+            password: 'silent-refresh',
+          });
           
           console.log('Session 权限更新成功');
           
@@ -693,9 +697,9 @@ export default function DashboardPage() {
           setTimeout(() => setShowSuccessMessage(false), 3000);
           
         } catch (updateError) {
-          console.error('使用 NextAuth update() 更新权限失败:', updateError);
+          console.error('使用 NextAuth signIn() 更新权限失败:', updateError);
           
-          // 如果 update 失败，提示用户重新登录
+          // 如果 signIn 失败，提示用户重新登录
           setSuccessMessage('权限已更新，但 Session 更新失败，建议重新登录');
           setTimeout(() => setShowSuccessMessage(false), 5000);
         }
