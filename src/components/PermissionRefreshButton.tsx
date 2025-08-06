@@ -24,7 +24,7 @@ export function PermissionRefreshButton({
   }
 
   const handleRefresh = async () => {
-    if (isRefreshing) return;
+    if (isRefreshing || !session?.user?.name) return;
     
     setIsRefreshing(true);
     try {
