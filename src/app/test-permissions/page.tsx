@@ -78,7 +78,7 @@ export default function TestPermissionsPage() {
         }
         return null;
       } catch (error) {
-        return { error: error.message };
+        return { error: error instanceof Error ? error.message : '未知错误' };
       }
     })());
     
