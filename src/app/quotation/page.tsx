@@ -24,9 +24,9 @@ import { PaymentTermsSection } from '@/components/quotation/PaymentTermsSection'
 import { saveQuotationHistory } from '@/utils/quotationHistory';
 import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
-import { usePermissionStore } from '@/lib/permissions';
+
 // import { usePermissionInit } from '@/hooks/usePermissionInit'; // ✅ 移除：权限初始化已在全局处理
-import { PermissionGuard } from '@/components/PermissionGuard';
+
 
 // 标题样式
 const titleClassName = `text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]`;
@@ -51,7 +51,7 @@ export default function QuotationPage() {
   
   // 权限初始化
   // usePermissionInit(); // 移除：权限初始化已在全局处理
-  const { hasPermission } = usePermissionStore();
+
 
   // 从 window 全局变量获取初始数据，添加下划线前缀表示有意未使用
   const _initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__QUOTATION_DATA__) : null;
@@ -521,18 +521,7 @@ export default function QuotationPage() {
   }, [activeTab, data, editId, pathname]);
 
   return (
-    <PermissionGuard requiredPermissions={['quotation']} fallback={
-      <div className="min-h-screen bg-gray-50 dark:bg-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-red-200 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-lg text-gray-600 dark:text-gray-400">您没有访问报价单模块的权限</div>
-          <Link href="/dashboard" className="mt-4 inline-block px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-            返回首页
-          </Link>
-        </div>
-      </div>
-    }>
-      <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
       <main className="flex-1">
         <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
           {/* 返回按钮 */}
@@ -867,6 +856,5 @@ export default function QuotationPage() {
 
       <Footer />
     </div>
-    </PermissionGuard>
   );
 }

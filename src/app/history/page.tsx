@@ -20,7 +20,7 @@ import {
 import { Footer } from '@/components/Footer';
 
 // 导入权限store
-import { usePermissionStore } from '@/lib/permissions';
+
 
 // 导入历史记录工具函数
 import { 
@@ -200,8 +200,7 @@ export default function HistoryManagementPage() {
   // 标记是否是从其他页面跳转过来的（不进行权限验证）
   const [isFromOtherPage, setIsFromOtherPage] = useState(false);
 
-  // 用户信息获取已移至权限store
-  const { user } = usePermissionStore();
+
 
   // 处理URL参数中的tab参数
   useEffect(() => {
@@ -232,61 +231,43 @@ export default function HistoryManagementPage() {
     };
   }, []);
 
-  // 根据用户权限获取可用的tab
+  // 获取可用的标签页
   const getAvailableTabs = useCallback(() => {
-    const tabPermissions = {
-      quotation: 'quotation',
-      confirmation: 'quotation', // 确认书也使用quotation权限
-      invoice: 'invoice',
-      purchase: 'purchase',
-      packing: 'packing'
-    };
+    const availableTabs: { id: string; name: string; shortName: string; icon: any }[] = [];
     
-    const availableTabs: { id: HistoryType; name: string; shortName: string; icon: any }[] = [];
-    
-    // 定义tab的顺序：报价单、合同确认、装箱单、发票、采购单
+    // 直接添加所有标签页，不再进行权限检查
     const tabOrder = ['quotation', 'confirmation', 'packing', 'invoice', 'purchase'];
     
-    // 始终进行权限检查，不管是否从其他页面跳转过来
     tabOrder.forEach(tabId => {
-      const moduleId = tabPermissions[tabId as keyof typeof tabPermissions];
-      // 检查用户是否有对应模块的权限
-      const hasPermission = user?.permissions?.some(perm => 
-        perm.moduleId === moduleId && perm.canAccess
-      ) || false;
-      
-      if (hasPermission) {
-        switch (tabId) {
-          case 'quotation':
-            availableTabs.push({ id: 'quotation', name: '报价单', shortName: '报价', icon: FileText });
-            break;
-          case 'confirmation':
-            availableTabs.push({ id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText });
-            break;
-          case 'packing':
-            availableTabs.push({ id: 'packing', name: '装箱单', shortName: '装箱', icon: Package });
-            break;
-          case 'invoice':
-            availableTabs.push({ id: 'invoice', name: '发票', shortName: '发票', icon: Receipt });
-            break;
-          case 'purchase':
-            availableTabs.push({ id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart });
-            break;
-        }
+      switch (tabId) {
+        case 'quotation':
+          availableTabs.push({ id: 'quotation', name: '报价单', shortName: '报价', icon: FileText });
+          break;
+        case 'confirmation':
+          availableTabs.push({ id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText });
+          break;
+        case 'packing':
+          availableTabs.push({ id: 'packing', name: '装箱单', shortName: '装箱', icon: Package });
+          break;
+        case 'invoice':
+          availableTabs.push({ id: 'invoice', name: '发票', shortName: '发票', icon: Receipt });
+          break;
+        case 'purchase':
+          availableTabs.push({ id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart });
+          break;
       }
     });
     
     return availableTabs;
-  }, [user?.permissions]);
+  }, []);
 
-  // 检查当前activeTab是否有权限
+  // 检查当前activeTab是否可用（简化逻辑）
   const isActiveTabAvailable = useCallback(() => {
-    // 始终进行权限验证，不管是否从其他页面跳转过来
     const availableTabs = getAvailableTabs();
     return availableTabs.some(tab => tab.id === activeTab);
   }, [activeTab, getAvailableTabs]);
 
-  // 如果当前activeTab没有权限，自动切换到第一个有权限的tab
+  // 如果当前activeTab不可用，自动切换到第一个可用的tab
   useEffect(() => {
     const availableTabs = getAvailableTabs();
     if (availableTabs.length > 0 && !isActiveTabAvailable()) {
