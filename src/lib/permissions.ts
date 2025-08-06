@@ -96,49 +96,40 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
 
   // ✅ 新增：从Session初始化用户信息（登录时调用）
   setUserFromSession: (sessionUser: any) => {
-    if (!sessionUser) return;
-    
-    // 防重复初始化：检查是否已经初始化过相同的用户
-    const currentUser = get().user;
-    if (currentUser && currentUser.id === (sessionUser.id || sessionUser.username)) {
-      // ✅ 优化：更精确的权限数据比较
-      const sessionPermissions = sessionUser.permissions || [];
-      const currentPermissions = currentUser.permissions || [];
-      
-      // 深度比较权限数据，避免不必要的更新
-      const permissionsChanged = sessionPermissions.length !== currentPermissions.length || 
-        JSON.stringify(sessionPermissions.map((p: any) => ({ moduleId: p.moduleId, canAccess: p.canAccess }))) !== 
-        JSON.stringify(currentPermissions.map((p: any) => ({ moduleId: p.moduleId, canAccess: p.canAccess })));
-      
-      if (permissionsChanged) {
-        logPermission('检测到权限数据不一致，强制更新', {
-          sessionPermissionsCount: sessionPermissions.length,
-          storePermissionsCount: currentPermissions.length,
-          userId: sessionUser.id || sessionUser.username
-        });
-      } else {
-        logPermission('用户已初始化且权限数据一致，跳过重复初始化', {
-          userId: currentUser.id,
-          username: currentUser.username,
-          permissionsCount: currentPermissions.length
-        });
-        return;
-      }
+    if (!sessionUser?.id) {
+      logPermission('Session用户数据无效，跳过初始化');
+      return;
     }
+
+    // 构建用户对象
+    const user: User = {
+      id: sessionUser.id,
+      username: sessionUser.username || sessionUser.name || '',
+      email: sessionUser.email || null,
+      status: sessionUser.status !== false,
+      isAdmin: sessionUser.isAdmin || false,
+      permissions: sessionUser.permissions || []
+    };
+
+    // ✅ 优化：检查权限数据不一致的情况
+    const store = get();
+    const sessionPermissions = sessionUser.permissions || [];
+    const currentPermissions = store.user?.permissions || [];
     
-    try {
-      // 构建用户对象
-      const user: User = {
-        id: sessionUser.id || sessionUser.username || '',
-        username: sessionUser.username || sessionUser.name || '',
-        email: sessionUser.email || null,
-        status: sessionUser.status !== false, // 默认为true
-        isAdmin: !!sessionUser.isAdmin,
-        permissions: Array.isArray(sessionUser.permissions) ? sessionUser.permissions : []
-      };
-      
-      // ✅ 修复：如果Session中没有权限数据，尝试从缓存获取
-      if (user.permissions.length === 0 && typeof window !== 'undefined') {
+    const permissionsChanged = sessionPermissions.length !== currentPermissions.length || 
+      JSON.stringify(sessionPermissions.map((p: any) => ({ moduleId: p.moduleId, canAccess: p.canAccess }))) !== 
+      JSON.stringify(currentPermissions.map((p: any) => ({ moduleId: p.moduleId, canAccess: p.canAccess })));
+
+    // ✅ 优化：只有在权限数据真正变化时才输出详细日志
+    if (permissionsChanged) {
+      logPermission('检测到权限数据不一致，强制更新', {
+        sessionPermissionsCount: sessionPermissions.length,
+        storePermissionsCount: currentPermissions.length,
+        userId: sessionUser.id
+      });
+
+      // ✅ 优化：如果session中没有权限数据，尝试从缓存恢复
+      if (sessionPermissions.length === 0 && typeof window !== 'undefined') {
         try {
           const userCache = localStorage.getItem('userCache');
           if (userCache) {
@@ -146,9 +137,11 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
             const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
             
             if (isRecent && cacheData.permissions && Array.isArray(cacheData.permissions)) {
+              // 使用缓存数据更新用户信息
               user.permissions = cacheData.permissions;
+              
               logPermission('Session无权限数据，从缓存恢复权限', {
-                permissionsCount: user.permissions.length
+                permissionsCount: cacheData.permissions.length
               });
             }
           }
@@ -156,45 +149,43 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           logPermissionError('从缓存恢复权限失败', error);
         }
       }
+    }
+
+    // ✅ 优化：只有在用户数据真正变化时才更新Store
+    const currentUser = get().user;
+    const shouldUpdate = !currentUser || 
+      currentUser.id !== user.id ||
+      JSON.stringify(currentUser.permissions) !== JSON.stringify(user.permissions);
+    
+    if (shouldUpdate) {
+      // 清理权限检查缓存
+      const state = get();
+      state.permissionCache.clear();
       
-      // ✅ 优化：只有在权限数据真正变化时才更新Store
-      const currentUser = get().user;
-      const shouldUpdate = !currentUser || 
-        currentUser.id !== user.id ||
-        JSON.stringify(currentUser.permissions) !== JSON.stringify(user.permissions);
+      // 更新Store
+      set({ user, isLoading: false, error: null, lastFetchTime: Date.now() });
       
-      if (shouldUpdate) {
-        // 清理权限检查缓存
-        const state = get();
-        state.permissionCache.clear();
-        
-        // 更新Store
-        set({ user, isLoading: false, error: null, lastFetchTime: Date.now() });
-        
-        // ✅ 立即保存到本地缓存
-        if (typeof window !== 'undefined') {
-          try {
-            const cacheData = {
-              ...user,
-              timestamp: Date.now()
-            };
-            localStorage.setItem('userCache', JSON.stringify(cacheData));
-            logPermission('登录时初始化用户信息并缓存', {
-              userId: user.id,
-              username: user.username,
-              email: user.email,
-              isAdmin: user.isAdmin,
-              permissionsCount: user.permissions.length
-            });
-          } catch (error) {
-            logPermissionError('保存用户信息到本地缓存失败', error);
-          }
+      // ✅ 立即保存到本地缓存
+      if (typeof window !== 'undefined') {
+        try {
+          const cacheData = {
+            ...user,
+            timestamp: Date.now()
+          };
+          localStorage.setItem('userCache', JSON.stringify(cacheData));
+          logPermission('登录时初始化用户信息并缓存', {
+            userId: user.id,
+            username: user.username,
+            email: user.email,
+            isAdmin: user.isAdmin,
+            permissionsCount: user.permissions.length
+          });
+        } catch (error) {
+          logPermissionError('保存用户信息到本地缓存失败', error);
         }
-      } else {
-        logPermission('用户数据未发生变化，跳过Store更新');
       }
-    } catch (error) {
-      logPermissionError('从Session初始化用户信息失败', error);
+    } else {
+      logPermission('用户数据未发生变化，跳过Store更新');
     }
   },
 

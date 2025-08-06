@@ -25,7 +25,7 @@ import { saveQuotationHistory } from '@/utils/quotationHistory';
 import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
 import { usePermissionStore } from '@/lib/permissions';
-import { usePermissionInit } from '@/hooks/usePermissionInit';
+// import { usePermissionInit } from '@/hooks/usePermissionInit'; // ✅ 移除：权限初始化已在全局处理
 import { PermissionGuard } from '@/components/PermissionGuard';
 
 // 标题样式
@@ -50,7 +50,7 @@ export default function QuotationPage() {
   const pathname = usePathname();
   
   // 权限初始化
-  usePermissionInit();
+  // usePermissionInit(); // 移除：权限初始化已在全局处理
   const { hasPermission } = usePermissionStore();
 
   // 从 window 全局变量获取初始数据，添加下划线前缀表示有意未使用

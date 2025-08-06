@@ -8,12 +8,12 @@ import { Footer } from '@/components/Footer';
 import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
 import { performanceMonitor, optimizePerformance } from '@/utils/performance';
 import { usePermissionStore } from '@/lib/permissions';
-import { usePermissionInit } from '@/hooks/usePermissionInit';
+// import { usePermissionInit } from '@/hooks/usePermissionInit'; // ✅ 移除：权限初始化已在全局处理
 import { PermissionGuard } from '@/components/PermissionGuard';
 
 export default function MailPage() {
   // 权限初始化
-  usePermissionInit();
+  // usePermissionInit(); // 移除：权限初始化已在全局处理
   const { hasPermission } = usePermissionStore();
   
   const router = useRouter();

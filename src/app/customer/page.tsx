@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { usePermissionStore } from '@/lib/permissions';
-import { usePermissionInit } from '@/hooks/usePermissionInit';
+// import { usePermissionInit } from '@/hooks/usePermissionInit'; // ✅ 移除：权限初始化已在全局处理
 import { PermissionGuard } from '@/components/PermissionGuard';
 
 // 修改客户/供应商信息接口
@@ -57,7 +57,7 @@ interface SupplierInfo {
 
 export default function CustomerPage() {
   // 权限初始化
-  usePermissionInit();
+  // usePermissionInit(); // 移除：权限初始化已在全局处理
   const { hasPermission } = usePermissionStore();
   
   const [activeTab, setActiveTab] = useState<'customer' | 'supplier'>('customer');

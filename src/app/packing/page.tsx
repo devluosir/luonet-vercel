@@ -15,7 +15,7 @@ import { ConsigneeSection } from '@/components/packinglist/ConsigneeSection';
 import { savePackingHistory, getPackingHistoryById } from '@/utils/packingHistory';
 import dynamic from 'next/dynamic';
 import { usePermissionStore } from '@/lib/permissions';
-import { usePermissionInit } from '@/hooks/usePermissionInit';
+// import { usePermissionInit } from '@/hooks/usePermissionInit'; // ✅ 移除：权限初始化已在全局处理
 import { PermissionGuard } from '@/components/PermissionGuard';
 
 // 动态导入PDFPreviewModal
@@ -215,7 +215,7 @@ const convertExcelToPackingItems = (rows: string[][]): PackingItem[] => {
 
 export default function PackingPage() {
   // 权限初始化
-  usePermissionInit();
+  // usePermissionInit(); // 移除：权限初始化已在全局处理
   const { hasPermission } = usePermissionStore();
   const router = useRouter();
   const pathname = usePathname();

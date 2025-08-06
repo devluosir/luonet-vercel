@@ -45,7 +45,10 @@ export class PreloadManager {
       const currentHash = JSON.stringify(formPages.sort());
       
       if (this.lastPermissionsHash === currentHash) {
-        console.log('权限未发生变化，跳过预加载');
+        // ✅ 优化：减少重复日志，只在开发环境下输出
+        if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+          console.log('权限未发生变化，跳过预加载');
+        }
         return false;
       }
       
@@ -267,82 +270,99 @@ export class PreloadManager {
     await Promise.all(pagePromises);
   }
 
-  // 根据权限获取需要预加载的表单页面
+  // ✅ 优化：根据权限获取表单页面
   private getFormPagesByPermissions(): string[] {
-    if (typeof window === 'undefined') return [];
-
     try {
-      // ✅ 修复：使用正确的权限数据源
-      // 优先级1: 从userCache获取权限数据
-      const userCache = localStorage.getItem('userCache');
-      if (userCache) {
-        const cacheData = JSON.parse(userCache);
-        if (cacheData.permissions && Array.isArray(cacheData.permissions)) {
-          console.log('从userCache获取权限数据进行预加载');
-          return this.getFormPagesFromPermissions(cacheData.permissions);
+      // ✅ 优化：从多个来源获取权限数据，确保获取最新数据
+      let permissions: any[] = [];
+      
+      // 1. 尝试从userCache获取
+      if (typeof window !== 'undefined') {
+        try {
+          const userCache = localStorage.getItem('userCache');
+          if (userCache) {
+            const cacheData = JSON.parse(userCache);
+            if (cacheData.permissions && Array.isArray(cacheData.permissions)) {
+              permissions = cacheData.permissions;
+              // ✅ 优化：减少重复日志
+              if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+                console.log('从userCache获取权限数据进行预加载');
+              }
+            }
+          }
+        } catch (error) {
+          console.error('从userCache获取权限数据失败:', error);
         }
       }
-
-      // 优先级2: 从latestPermissions获取权限数据
-      const latestPermissions = localStorage.getItem('latestPermissions');
-      if (latestPermissions) {
-        const permissions = JSON.parse(latestPermissions);
-        console.log('从latestPermissions获取权限数据进行预加载');
-        return this.getFormPagesFromPermissions(permissions);
+      
+      // 2. 如果userCache中没有，尝试从latestPermissions获取
+      if (permissions.length === 0 && typeof window !== 'undefined') {
+        try {
+          const latestPermissions = localStorage.getItem('latestPermissions');
+          if (latestPermissions) {
+            permissions = JSON.parse(latestPermissions);
+            // ✅ 优化：减少重复日志
+            if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+              console.log('从latestPermissions获取权限数据进行预加载');
+            }
+          }
+        } catch (error) {
+          console.error('从latestPermissions获取权限数据失败:', error);
+        }
       }
-
-      // 优先级3: 从session获取权限数据（通过全局变量）
-      if (typeof window !== 'undefined' && (window as any).__SESSION_PERMISSIONS__) {
-        const sessionPermissions = (window as any).__SESSION_PERMISSIONS__;
-        console.log('从session获取权限数据进行预加载');
-        return this.getFormPagesFromPermissions(sessionPermissions);
+      
+      // 3. 如果还是没有，尝试从全局变量获取
+      if (permissions.length === 0 && typeof window !== 'undefined') {
+        const globalPermissions = (window as any).__SESSION_PERMISSIONS__;
+        if (globalPermissions && Array.isArray(globalPermissions)) {
+          permissions = globalPermissions;
+          // ✅ 优化：减少重复日志
+          if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+            console.log('从全局变量获取权限数据进行预加载');
+          }
+        }
       }
-
-      console.log('没有找到权限数据，使用默认权限进行预加载');
-      // 默认权限：允许所有表单页面预加载
-      return ['/quotation', '/packing', '/invoice', '/purchase'];
+      
+      // 4. 最后尝试从Store获取
+      if (permissions.length === 0) {
+        try {
+          const { usePermissionStore } = require('@/lib/permissions');
+          const store = usePermissionStore.getState();
+          if (store.user?.permissions) {
+            permissions = store.user.permissions;
+            // ✅ 优化：减少重复日志
+            if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+              console.log('从Store获取权限数据进行预加载');
+            }
+          }
+        } catch (error) {
+          console.error('从Store获取权限数据失败:', error);
+        }
+      }
+      
+      // 过滤出有访问权限的模块
+      const accessibleModules = permissions
+        .filter((p: any) => p.canAccess)
+        .map((p: any) => p.moduleId);
+      
+      // 映射到对应的页面路径
+      const formPages = accessibleModules
+        .map((moduleId: string) => {
+          switch (moduleId) {
+            case 'quotation': return '/quotation';
+            case 'packing': return '/packing';
+            case 'invoice': return '/invoice';
+            case 'purchase': return '/purchase';
+            default: return null;
+          }
+        })
+        .filter(Boolean) as string[];
+      
+      return formPages;
     } catch (error) {
-      console.error('获取权限数据失败:', error);
-      // 出错时使用默认权限
-      return ['/quotation', '/packing', '/invoice', '/purchase'];
+      console.error('获取表单页面失败:', error);
+      return [];
     }
-  }
-
-  // ✅ 新增：从权限数组获取表单页面
-  private getFormPagesFromPermissions(permissions: any[]): string[] {
-    const formPages: string[] = [];
-
-    permissions.forEach((perm: any) => {
-      if (perm.canAccess) {
-        switch (perm.moduleId) {
-          case 'quotation':
-            formPages.push('/quotation');
-            break;
-          case 'packing':
-            formPages.push('/packing');
-            break;
-          case 'invoice':
-            formPages.push('/invoice');
-            break;
-          case 'purchase':
-            formPages.push('/purchase');
-            break;
-          case 'history':
-            formPages.push('/history');
-            break;
-          case 'customer':
-            formPages.push('/customer');
-            break;
-          case 'ai-email':
-            formPages.push('/mail');
-            break;
-          default:
-            break;
-        }
-      }
-    });
-
-    return formPages;
   }
 
   // 使用多种方法预加载页面

@@ -17,7 +17,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
 import { usePermissionStore } from '@/lib/permissions';
-import { usePermissionInit } from '@/hooks/usePermissionInit';
 import { PermissionGuard } from '@/components/PermissionGuard';
 
 // 动态导入PDFPreviewModal
@@ -45,7 +44,6 @@ const defaultData: PurchaseOrderData = {
 
 export default function PurchaseOrderPage() {
   // 权限初始化
-  usePermissionInit();
   const { hasPermission } = usePermissionStore();
   
   const [data, setData] = useState<PurchaseOrderData>(defaultData);

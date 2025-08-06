@@ -33,7 +33,7 @@ import {
 import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance, safeRequestIdleCallback } from '@/utils/performance';
 import { usePermissionStore } from '@/lib/permissions';
-import { usePermissionInit } from '@/hooks/usePermissionInit';
+// import { usePermissionInit } from '@/hooks/usePermissionInit'; // ✅ 移除：权限初始化已在全局处理
 import { usePermissionRefresh } from '@/hooks/usePermissionRefresh';
 import { Header } from '@/components/Header';
 import { preloadManager } from '@/utils/preloadUtils';
@@ -353,7 +353,7 @@ export default function DashboardPage() {
   const [purchaseCount, setPurchaseCount] = useState(0);
   
   // ✅ 使用优化的权限初始化Hook
-  usePermissionInit();
+  // usePermissionInit(); // ✅ 移除：权限初始化已在全局处理
   
   // ✅ 使用新的权限刷新Hook
   const { refresh: refreshPermissions, isRefreshing: permissionRefreshing } = usePermissionRefresh();
