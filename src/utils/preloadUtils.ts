@@ -110,6 +110,12 @@ export class PreloadManager {
 
       // ✅ 新增：标记为已预加载
       this.hasPreloaded = true;
+      
+      // ✅ 新增：设置localStorage标记
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('preloadCompleted', Date.now().toString());
+      }
+      
       console.log('所有资源预加载完成');
     } catch (error) {
       console.error('预加载过程中出错:', error);
@@ -384,6 +390,8 @@ export class PreloadManager {
       if (response.ok) {
         // 只检查响应状态，不读取完整内容以避免延迟
         console.log(`页面预加载成功: ${path} (状态: ${response.status})`);
+        // ✅ 新增：将页面路径添加到预加载资源集合
+        this.preloadedResources.add(path);
       } else {
         console.warn(`页面预加载失败: ${path} (状态: ${response.status})`);
       }
@@ -609,6 +617,11 @@ export class PreloadManager {
   isPreloaded(): boolean {
     if (typeof window === 'undefined') return false;
     
+    // 首先检查内存中的标记
+    if (this.hasPreloaded) {
+      return true;
+    }
+    
     // 检查localStorage中的预加载标记
     const preloadCompleted = localStorage.getItem('preloadCompleted');
     if (preloadCompleted) {
@@ -616,18 +629,38 @@ export class PreloadManager {
       const now = Date.now();
       // 如果预加载完成时间在24小时内，认为有效
       if (now - completedTime < 24 * 60 * 60 * 1000) {
+        // 同步内存状态
+        this.hasPreloaded = true;
         return true;
       }
     }
     
-    // 检查关键资源是否已加载
+    // 检查关键资源是否已加载（作为备用检查）
     const fontLoaded = document.fonts.check('12px "Noto Sans SC"');
     const logoLoaded = document.querySelector('img[src*="logo.png"]') !== null;
     
-    // 检查预加载资源状态
+    // 检查预加载资源状态 - 只要有预加载的资源就认为有效
     const hasPreloadedResources = this.preloadedResources.size > 0;
     
-    return fontLoaded && logoLoaded && hasPreloadedResources;
+    // 检查是否有任何页面被预加载
+    const hasPreloadedPages = Array.from(this.preloadedResources).some(resource => 
+      resource.startsWith('/quotation') || 
+      resource.startsWith('/invoice') || 
+      resource.startsWith('/packing') || 
+      resource.startsWith('/purchase') || 
+      resource.startsWith('/customer')
+    );
+    
+    // 如果字体已加载或有预加载的资源，认为已预加载
+    const isPreloaded = fontLoaded || hasPreloadedResources || hasPreloadedPages;
+    
+    // 如果检测到已预加载，同步状态
+    if (isPreloaded && !this.hasPreloaded) {
+      this.hasPreloaded = true;
+      localStorage.setItem('preloadCompleted', Date.now().toString());
+    }
+    
+    return isPreloaded;
   }
 
   // 检查特定页面是否已预加载

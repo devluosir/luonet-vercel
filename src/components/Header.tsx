@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ChevronDown, LogOut, Settings, User, RefreshCw, Download, CheckCircle } from 'lucide-react';
@@ -33,8 +33,17 @@ export function Header({
   const [isPreloading, setIsPreloading] = useState(false);
   const [preloadProgress, setPreloadProgress] = useState(0);
   const [preloadStage, setPreloadStage] = useState('');
+  const [isPreloaded, setIsPreloaded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // 检查预加载状态
+  const checkPreloadStatus = useCallback(() => {
+    const status = preloadManager.getPreloadStatus();
+    setIsPreloading(status.isPreloading);
+    setPreloadProgress(status.progress);
+    setIsPreloaded(preloadManager.isPreloaded());
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -46,6 +55,20 @@ export function Header({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // 初始化预加载状态
+  useEffect(() => {
+    checkPreloadStatus();
+  }, [checkPreloadStatus]);
+
+  // 定期检查预加载状态
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkPreloadStatus();
+    }, 1000); // 每秒检查一次
+
+    return () => clearInterval(interval);
+  }, [checkPreloadStatus]);
 
   const handleLogout = async () => {
     // 先调用onLogout回调，让dashboard清理权限store
@@ -74,6 +97,8 @@ export function Header({
     try {
       await preloadManager.preloadAllResources();
       console.log('预加载完成！');
+      // ✅ 新增：更新本地预加载状态
+      setIsPreloaded(true);
     } catch (error) {
       console.error('预加载失败:', error);
     } finally {
@@ -266,7 +291,7 @@ export function Header({
                                   )}
                                 </div>
                               )
-                              : preloadManager.isPreloaded() 
+                              : isPreloaded 
                                 ? '资源已预加载 (100%)' 
                                 : '预加载资源'
                             }
