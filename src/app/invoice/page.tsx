@@ -567,7 +567,7 @@ export default function InvoicePage() {
           } else if (cells.length === 4) {
             // 4列有两种情况：智能识别
             // 判断逻辑：第2列是数字（数量），第4列是数字或空（单价）
-            if (!isNaN(Number(cells[1])) && (!isNaN(Number(cells[3])) || cells[3]?.trim() === '' || cells[3]?.trim() === '0') {
+            if (!isNaN(Number(cells[1])) && !isNaN(Number(cells[3])) || cells[3]?.trim() === '' || cells[3]?.trim() === '0') {
               // 4列格式：名称 tab 数量 tab 单位 tab 单价
               [partname, quantity, unit, unitPrice] = cells;
             } else {
