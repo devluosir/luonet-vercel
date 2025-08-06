@@ -51,15 +51,7 @@ export const usePermissionInit = () => {
     if (status === 'authenticated' && !session?.user) {
       fetchPermissions(false); // 非强制刷新
     }
-  }, [session, status]); // ✅ 监听session状态变化
-  
-  // ✅ 新增：session变化时的处理
-  useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
-      // 每次session更新时，同步更新用户信息
-      setUserFromSession(session.user);
-    }
-  }, [session, status]);
+  }, [session, status, clearExpiredCache, setUserFromSession, initializeUserFromStorage, fetchPermissions]);
 };
 
  

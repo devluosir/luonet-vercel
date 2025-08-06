@@ -171,11 +171,31 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   // 统一的权限检查逻辑（增强错误处理）
   hasPermission: (moduleId: string) => {
     const { user } = get();
-    if (!user?.permissions) return false;
+    if (!user) return false;
     
     try {
+      // ✅ 管理员拥有所有权限
+      if (user.isAdmin) {
+        return true;
+      }
+      
+      // 检查具体权限
+      if (!user.permissions) return false;
       const permission = user.permissions.find(p => p.moduleId === moduleId);
-      return permission?.canAccess || false;
+      const hasAccess = permission?.canAccess || false;
+      
+      // ✅ 添加调试日志：权限检查详情
+      console.log(`权限检查 [${moduleId}]:`, {
+        userId: user.id,
+        username: user.username,
+        isAdmin: user.isAdmin,
+        permissionsCount: user.permissions.length,
+        foundPermission: permission,
+        hasAccess: hasAccess,
+        allPermissions: user.permissions.map(p => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
+      });
+      
+      return hasAccess;
     } catch (error) {
       logPermissionError('权限检查失败', error, { moduleId });
       return false;
@@ -184,9 +204,16 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
 
   hasAnyPermission: (moduleIds: string[]) => {
     const { user } = get();
-    if (!user?.permissions) return false;
+    if (!user) return false;
     
     try {
+      // ✅ 管理员拥有所有权限
+      if (user.isAdmin) {
+        return true;
+      }
+      
+      // 检查具体权限
+      if (!user.permissions) return false;
       return moduleIds.some(moduleId => {
         const permission = user.permissions.find(p => p.moduleId === moduleId);
         return permission?.canAccess || false;
@@ -222,7 +249,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       return;
     }
     
-    // 如果不是强制刷新，优先使用本地缓存的权限数据
+    // ✅ 修复：强制刷新时跳过本地缓存检查
     if (!forceRefresh) {
       if (typeof window !== 'undefined') {
         try {
@@ -262,6 +289,16 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       // 如果没有本地缓存或缓存过期，但不强制刷新，则不获取权限
       logPermission('没有本地权限缓存，需要手动刷新权限', { forceRefresh });
       return;
+    }
+    
+    // ✅ 强制刷新时，清除旧的缓存数据
+    if (forceRefresh && typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('userCache');
+        logPermission('强制刷新：清除旧的本地缓存', { forceRefresh });
+      } catch (error) {
+        logPermissionError('清除本地缓存失败', error);
+      }
     }
     
     set({ isLoading: true, error: null });
@@ -357,10 +394,10 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           permissions: permissions
         };
 
-        // 6. 更新store并保存到本地存储
+        // 6. 更新store并立即保存到本地存储
         set({ user, isLoading: false, error: null, lastFetchTime: Date.now() });
         
-        // 保存权限数据到本地存储
+        // ✅ 立即保存权限数据到本地存储
         if (typeof window !== 'undefined') {
           try {
             const cacheData = {
@@ -368,11 +405,22 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
               timestamp: Date.now()
             };
             localStorage.setItem('userCache', JSON.stringify(cacheData));
-            logPermission('用户信息和权限数据已保存到本地存储', {
+            logPermission('用户信息和权限数据已立即保存到本地存储', {
               userId: user.id,
               username: user.username,
               isAdmin: user.isAdmin,
-              permissionsCount: permissions.length
+              permissionsCount: permissions.length,
+              forceRefresh: forceRefresh || false,
+              permissions: permissions.map(p => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
+            });
+            
+            // ✅ 添加调试日志：检查权限数据是否正确
+            console.log('权限刷新完成，最新权限数据:', {
+              userId: user.id,
+              username: user.username,
+              isAdmin: user.isAdmin,
+              permissions: permissions.map(p => ({ moduleId: p.moduleId, canAccess: p.canAccess })),
+              quotationPermission: permissions.find(p => p.moduleId === 'quotation')?.canAccess
             });
           } catch (error) {
             logPermissionError('保存用户数据到本地存储失败', error);

@@ -533,7 +533,7 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [user?.permissions, user?.isAdmin, session?.user?.permissions, session?.user?.isAdmin, refreshKey]);
+  }, [user?.permissions, user?.isAdmin, session?.user?.permissions, session?.user?.isAdmin, refreshKey, user?.id]);
 
   // ✅ 优化的初始化逻辑 - 立即显示内容，异步加载权限
   useEffect(() => {
@@ -843,6 +843,26 @@ export default function DashboardPage() {
       // 获取最新的用户信息
       const updatedUser = usePermissionStore.getState().user;
       console.log('权限刷新完成，最新权限:', updatedUser?.permissions);
+      
+      // ✅ 强制更新Store状态，确保UI重新渲染
+      if (updatedUser) {
+        usePermissionStore.getState().setUser(updatedUser);
+        console.log('强制更新Store用户状态:', updatedUser);
+      }
+      
+      // ✅ 确保权限数据立即保存到本地存储
+      if (updatedUser && typeof window !== 'undefined') {
+        try {
+          const cacheData = {
+            ...updatedUser,
+            timestamp: Date.now()
+          };
+          localStorage.setItem('userCache', JSON.stringify(cacheData));
+          console.log('权限数据已立即保存到本地存储:', cacheData);
+        } catch (error) {
+          console.error('保存权限数据到本地存储失败:', error);
+        }
+      }
       
       // 触发权限变化事件，通知其他组件
       window.dispatchEvent(new CustomEvent('permissionChanged', {
