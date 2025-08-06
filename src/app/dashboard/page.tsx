@@ -419,53 +419,27 @@ export default function DashboardPage() {
       sessionExists: !!session?.user
     });
 
-    // 如果没有权限数据，根据用户是否为管理员显示默认权限
+    // 如果没有权限数据，不显示任何模块（等待权限加载完成）
     if (!permissions || permissions.length === 0) {
-      const isAdmin = user?.isAdmin ?? session?.user?.isAdmin ?? false;
-      
-      if (isAdmin) {
-        // 管理员显示所有模块
-        return {
-          permissions: {
-            quotation: true,
-            packing: true,
-            invoice: true,
-            purchase: true,
-            history: true,
-            customer: true,
-            'ai-email': true,
-          },
-          documentTypePermissions: {
-            quotation: true,
-            confirmation: true,
-            packing: true,
-            invoice: true,
-            purchase: true
-          },
-          accessibleDocumentTypes: ['quotation', 'confirmation', 'packing', 'invoice', 'purchase']
-        };
-      } else {
-        // 普通用户不显示任何模块
-        return {
-          permissions: {
-            quotation: false,
-            packing: false,
-            invoice: false,
-            purchase: false,
-            history: false,
-            customer: false,
-            'ai-email': false
-          },
-          documentTypePermissions: {
-            quotation: false,
-            confirmation: false,
-            packing: false,
-            invoice: false,
-            purchase: false
-          },
-          accessibleDocumentTypes: []
-        };
-      }
+      return {
+        permissions: {
+          quotation: false,
+          packing: false,
+          invoice: false,
+          purchase: false,
+          history: false,
+          customer: false,
+          'ai-email': false
+        },
+        documentTypePermissions: {
+          quotation: false,
+          confirmation: false,
+          packing: false,
+          invoice: false,
+          purchase: false
+        },
+        accessibleDocumentTypes: []
+      };
     }
 
     // 根据权限数据构建权限映射
@@ -533,7 +507,7 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [user?.permissions, user?.isAdmin, session?.user?.permissions, session?.user?.isAdmin, refreshKey, user?.id]);
+  }, [user?.permissions, user?.isAdmin, session?.user?.permissions, session?.user?.isAdmin, refreshKey]);
 
   // ✅ 优化的初始化逻辑 - 立即显示内容，异步加载权限
   useEffect(() => {
