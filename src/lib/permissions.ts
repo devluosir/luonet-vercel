@@ -60,7 +60,23 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   setUser: (user: User) => set({ user }),
   setLoading: (loading: boolean) => set({ isLoading: loading }),
   setError: (error: string | null) => set({ error }),
-  clearUser: () => set({ user: null, error: null }),
+  clearUser: () => {
+    // ✅ 清理Store状态
+    set({ user: null, error: null, isLoading: false, lastFetchTime: null });
+    
+    // ✅ 清理本地缓存
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('userCache');
+        localStorage.removeItem('user_permissions');
+        localStorage.removeItem('latestPermissions');
+        localStorage.removeItem('permissionsTimestamp');
+        console.log('已清理所有权限相关缓存');
+      } catch (error) {
+        console.error('清理缓存失败:', error);
+      }
+    }
+  },
   setAutoFetch: (autoFetch: boolean) => set({ autoFetch }),
 
   // ✅ 新增：从Session初始化用户信息（登录时调用）
@@ -453,41 +469,74 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
             const sessionUpdateResponse = await fetch('/api/auth/force-refresh-session', {
               method: 'POST',
               headers: { 
-                'Content-Type': 'application/json',
-                'X-User-ID': session.user.id || session.user.username || '',
-                'X-User-Name': session.user.username || session.user.name || '',
-                'X-User-Admin': session.user.isAdmin ? 'true' : 'false'
+                'Content-Type': 'application/json'
               },
+              body: JSON.stringify({
+                username: session.user.username || session.user.name || ''
+              }),
               cache: 'no-store'
             });
 
             if (sessionUpdateResponse.ok) {
               const sessionUpdateData = await sessionUpdateResponse.json();
-              logPermission('Session强制刷新成功', {
+              logPermission('权限刷新API响应', {
                 success: sessionUpdateData.success,
                 message: sessionUpdateData.message,
-                forceRefresh: sessionUpdateData.forceRefresh
+                tokenNeedsRefresh: sessionUpdateData.tokenNeedsRefresh,
+                permissionsChanged: sessionUpdateData.debug?.permissionsChanged
               });
               
-              // ✅ 触发自定义事件，通知前端Session需要强制刷新
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('sessionForceRefresh', {
-                  detail: {
-                    message: 'Session需要强制刷新，请重新登录',
-                    requiresRelogin: true,
-                    permissions: permissions,
-                    forceRefresh: true
+              // ✅ 如果权限有变化，执行silent-refresh
+              if (sessionUpdateData.tokenNeedsRefresh) {
+                logPermission('权限已变化，执行silent-refresh');
+                
+                // ✅ 清理所有缓存
+                if (typeof window !== 'undefined') {
+                  try {
+                    localStorage.removeItem('userCache');
+                    localStorage.removeItem('user_permissions');
+                    localStorage.removeItem('latestPermissions');
+                    localStorage.removeItem('permissionsTimestamp');
+                    console.log('已清理所有权限相关缓存');
+                  } catch (error) {
+                    console.error('清理缓存失败:', error);
                   }
-                }));
+                }
+                
+                // ✅ 触发silent-refresh事件
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('silentRefreshPermissions', {
+                    detail: {
+                      message: '权限已更新，执行silent-refresh',
+                      requiresRelogin: false,
+                      permissions: permissions,
+                      silentRefresh: true,
+                      username: session.user.username || session.user.name
+                    }
+                  }));
+                }
+              } else {
+                logPermission('权限无变化，跳过silent-refresh');
+                
+                // ✅ 即使权限无变化，也要更新Store中的权限数据
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('permissionsUpdated', {
+                    detail: {
+                      message: '权限数据已同步',
+                      requiresRelogin: false,
+                      permissions: permissions
+                    }
+                  }));
+                }
               }
             } else {
-              logPermission('Session强制刷新失败', { 
+              logPermission('权限刷新API失败', { 
                 status: sessionUpdateResponse.status,
                 statusText: sessionUpdateResponse.statusText
               });
             }
           } catch (sessionUpdateError) {
-            logPermissionError('Session强制刷新请求失败', sessionUpdateError);
+            logPermissionError('权限刷新API请求失败', sessionUpdateError);
           }
           
           // 触发自定义事件，通知前端权限已更新

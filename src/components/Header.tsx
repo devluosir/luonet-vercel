@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { ChevronDown, LogOut, Settings, User, RefreshCw, Download, CheckCircle } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { Avatar } from './Avatar';
+import { PermissionRefreshButton } from './PermissionRefreshButton';
 import { format } from 'date-fns';
 import { preloadManager } from '@/utils/preloadUtils';
 import { LOGO_CONFIG } from '@/lib/logo-config';
@@ -17,8 +18,6 @@ interface HeaderProps {
   };
   onLogout: () => void;
   onProfile: () => void;
-  onRefreshPermissions?: () => void;
-  isRefreshing?: boolean;
   title?: string;
   showWelcome?: boolean;
 }
@@ -27,8 +26,6 @@ export function Header({
   user, 
   onLogout, 
   onProfile, 
-  onRefreshPermissions,
-  isRefreshing = false,
   title = 'LC App',
   showWelcome = false
 }: HeaderProps) {
@@ -36,7 +33,6 @@ export function Header({
   const [isPreloading, setIsPreloading] = useState(false);
   const [preloadProgress, setPreloadProgress] = useState(0);
   const [preloadStage, setPreloadStage] = useState('');
-  const [refreshSuccess, setRefreshSuccess] = useState(false); // ✅ 新增：刷新成功状态
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -56,22 +52,6 @@ export function Header({
     onLogout();
     // 然后调用signOut，避免重复退出
     await signOut();
-  };
-
-  // ✅ 优化：手动刷新权限功能
-  const handleRefreshPermissions = async () => {
-    if (onRefreshPermissions && !isRefreshing) {
-      try {
-        setRefreshSuccess(false);
-        await onRefreshPermissions();
-        // ✅ 显示成功提示
-        setRefreshSuccess(true);
-        setTimeout(() => setRefreshSuccess(false), 3000); // 3秒后隐藏成功提示
-        setShowDropdown(false);
-      } catch (error) {
-        console.error('刷新权限失败:', error);
-      }
-    }
   };
 
   // 处理预加载
@@ -230,40 +210,16 @@ export function Header({
               <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-[#2c2c2e] ring-1 ring-black ring-opacity-5 dark:ring-white/10 z-[9999] animate-in fade-in-0 zoom-in-95">
                 <div className="py-1">
                   <button
-                    onClick={() => {
-                      onProfile();
-                      setShowDropdown(false);
-                    }}
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50 w-full transition-colors duration-200"
+                    onClick={onProfile}
+                    className="flex items-center px-4 py-2 text-sm w-full text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors duration-200"
                   >
                     <User className="h-4 w-4 mr-2" />
                     个人信息
                   </button>
-                  {onRefreshPermissions && (
-                    <button
-                      onClick={handleRefreshPermissions}
-                      disabled={isRefreshing}
-                      className={`flex items-center px-4 py-2 text-sm w-full transition-colors duration-200 ${
-                        isRefreshing
-                          ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                          : refreshSuccess
-                          ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20'
-                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50'
-                      }`}
-                    >
-                      {refreshSuccess ? (
-                        <CheckCircle className="h-4 w-4 mr-2 text-green-600 dark:text-green-400" />
-                      ) : (
-                        <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                      )}
-                      {refreshSuccess 
-                        ? '权限已刷新 ✓' 
-                        : isRefreshing 
-                        ? '刷新中...' 
-                        : '刷新权限'
-                      }
-                    </button>
-                  )}
+                  
+                  {/* ✅ 使用新的权限刷新按钮 */}
+                  <PermissionRefreshButton />
+                  
                   <div className="relative">
                       <button
                         onClick={handlePreload}

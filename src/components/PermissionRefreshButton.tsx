@@ -1,75 +1,77 @@
 'use client';
 
-import { useState } from 'react';
+import { RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import { handlePermissionRefresh } from '@/lib/refresh';
-import { RefreshCw } from 'lucide-react';
+import { usePermissionRefresh } from '@/hooks/usePermissionRefresh';
+import { useEffect, useState } from 'react';
 
-interface PermissionRefreshButtonProps {
-  className?: string;
-  showText?: boolean;
-  size?: 'sm' | 'md' | 'lg';
-}
-
-export function PermissionRefreshButton({ 
-  className = '', 
-  showText = true,
-  size = 'md'
-}: PermissionRefreshButtonProps) {
+export function PermissionRefreshButton() {
   const { data: session } = useSession();
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { refresh, isRefreshing, refreshSuccess, refreshError } = usePermissionRefresh();
+  const [showMessage, setShowMessage] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState<'success' | 'error'>('success');
 
-  if (!session?.user?.name) {
-    return null;
-  }
+  const username = session?.user?.username || session?.user?.name;
 
-  const handleRefresh = async () => {
-    if (isRefreshing || !session?.user?.name) return;
-    
-    setIsRefreshing(true);
-    try {
-      await handlePermissionRefresh(session.user.name);
-      // 可以添加成功提示
-      console.log('权限刷新成功');
-    } catch (error) {
-      console.error('权限刷新失败:', error);
-      // 可以添加错误提示
-    } finally {
-      setIsRefreshing(false);
+  const handleClick = async () => {
+    if (username) {
+      await refresh(username);
     }
   };
 
-  const sizeClasses = {
-    sm: 'px-2 py-1 text-xs',
-    md: 'px-3 py-2 text-sm',
-    lg: 'px-4 py-2 text-base'
-  };
+  // 处理消息显示
+  useEffect(() => {
+    if (refreshSuccess) {
+      setMessage('权限刷新成功，页面即将重载...');
+      setMessageType('success');
+      setShowMessage(true);
+      setTimeout(() => setShowMessage(false), 3000);
+    }
+  }, [refreshSuccess]);
 
-  const iconSizes = {
-    sm: 'w-3 h-3',
-    md: 'w-4 h-4',
-    lg: 'w-5 h-5'
-  };
+  useEffect(() => {
+    if (refreshError) {
+      setMessage(refreshError);
+      setMessageType('error');
+      setShowMessage(true);
+      setTimeout(() => setShowMessage(false), 5000);
+    }
+  }, [refreshError]);
+
+  if (!username) {
+    return null;
+  }
 
   return (
-    <button
-      onClick={handleRefresh}
-      disabled={isRefreshing}
-      className={`
-        inline-flex items-center gap-2 
-        bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400
-        text-white font-medium rounded-md transition-colors
-        ${sizeClasses[size]}
-        ${className}
-      `}
-      title="刷新权限"
-    >
-      <RefreshCw 
-        className={`${iconSizes[size]} ${isRefreshing ? 'animate-spin' : ''}`} 
-      />
-      {showText && (
-        <span>{isRefreshing ? '刷新中...' : '刷新权限'}</span>
+    <div className="relative">
+      <button
+        onClick={handleClick}
+        disabled={isRefreshing}
+        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+        title="刷新用户权限"
+      >
+        <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        {isRefreshing ? '刷新中...' : '刷新权限'}
+      </button>
+
+      {/* 消息提示 */}
+      {showMessage && (
+        <div className="absolute top-full mt-2 left-0 z-50">
+          <div className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg shadow-lg ${
+            messageType === 'success' 
+              ? 'bg-green-50 text-green-800 border border-green-200' 
+              : 'bg-red-50 text-red-800 border border-red-200'
+          }`}>
+            {messageType === 'success' ? (
+              <CheckCircle className="w-4 h-4" />
+            ) : (
+              <AlertCircle className="w-4 h-4" />
+            )}
+            {message}
+          </div>
+        </div>
       )}
-    </button>
+    </div>
   );
 } 

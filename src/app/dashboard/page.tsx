@@ -34,6 +34,7 @@ import { Footer } from '@/components/Footer';
 import { performanceMonitor, optimizePerformance, safeRequestIdleCallback } from '@/utils/performance';
 import { usePermissionStore } from '@/lib/permissions';
 import { usePermissionInit } from '@/hooks/usePermissionInit';
+import { usePermissionRefresh } from '@/hooks/usePermissionRefresh';
 import { Header } from '@/components/Header';
 import { preloadManager } from '@/utils/preloadUtils';
 
@@ -353,6 +354,9 @@ export default function DashboardPage() {
   
   // ✅ 使用优化的权限初始化Hook
   usePermissionInit();
+  
+  // ✅ 使用新的权限刷新Hook
+  const { refresh: refreshPermissions, isRefreshing: permissionRefreshing } = usePermissionRefresh();
   
   // 使用全局权限store
   const { user, isLoading: permissionLoading } = usePermissionStore();
@@ -724,76 +728,10 @@ export default function DashboardPage() {
       }
     };
 
-    // ✅ 新增：监听Session权限更新事件
-    const handleSessionPermissionsUpdated = async (event: CustomEvent) => {
-      console.log('收到Session权限更新事件:', event.detail);
-      
-      if (event.detail?.permissions) {
-        try {
-          console.log('Session权限已更新，准备重新获取Session');
-          
-          // 显示成功消息
-          setSuccessMessage('Session权限已更新，正在同步...');
-          
-          // ✅ 修复：使用页面刷新来更新Session，而不是update方法
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
-          
-        } catch (updateError) {
-          console.error('Session权限更新处理失败:', updateError);
-          
-          // 显示错误消息
-          setSuccessMessage('Session权限同步失败，请重试');
-          setTimeout(() => setShowSuccessMessage(false), 3000);
-        }
-      }
-    };
-
-    // ✅ 新增：监听Session强制刷新事件
-    const handleSessionForceRefresh = async (event: CustomEvent) => {
-      console.log('收到Session强制刷新事件:', event.detail);
-      
-      if (event.detail?.forceRefresh) {
-        try {
-          console.log('Session需要强制刷新，准备重新登录');
-          
-          // 显示成功消息
-          setSuccessMessage('权限已更新，需要重新登录以应用新权限...');
-          
-          // 清除本地缓存
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('userCache');
-          }
-          
-          // 延迟重新登录
-          setTimeout(() => {
-            // 重定向到登录页面
-            router.push('/');
-          }, 2000);
-          
-        } catch (updateError) {
-          console.error('Session强制刷新处理失败:', updateError);
-          
-          // 显示错误消息
-          setSuccessMessage('Session刷新失败，请手动重新登录');
-          setTimeout(() => setShowSuccessMessage(false), 3000);
-        }
-      }
-    };
-
     window.addEventListener('permissionsUpdated', handlePermissionsUpdated as unknown as EventListener);
-    // ✅ 新增：监听Session权限更新事件
-    window.addEventListener('sessionPermissionsUpdated', handleSessionPermissionsUpdated as unknown as EventListener);
-    // ✅ 新增：监听Session强制刷新事件
-    window.addEventListener('sessionForceRefresh', handleSessionForceRefresh as unknown as EventListener);
     
     return () => {
       window.removeEventListener('permissionsUpdated', handlePermissionsUpdated as unknown as EventListener);
-      // ✅ 新增：移除Session权限更新事件监听
-      window.removeEventListener('sessionPermissionsUpdated', handleSessionPermissionsUpdated as unknown as EventListener);
-      // ✅ 新增：移除Session强制刷新事件监听
-      window.removeEventListener('sessionForceRefresh', handleSessionForceRefresh as unknown as EventListener);
     };
   }, []);
 
@@ -926,61 +864,13 @@ export default function DashboardPage() {
     }
   }, [visibleTypeFilters]); // 移除 typeFilter 依赖，避免无限循环
 
-  // 权限刷新处理函数 - 优化版本
+  // 权限刷新处理函数 - 使用新的Hook
   const handleRefreshPermissions = useCallback(async () => {
-    setIsLoading(true);
-    setSuccessMessage('');
-    
-    try {
-      console.log('开始刷新权限...');
-      
-      // 使用权限Store的刷新方法
-      await usePermissionStore.getState().fetchPermissions(true);
-      
-      // 获取最新的用户信息
-      const updatedUser = usePermissionStore.getState().user;
-      console.log('权限刷新完成，最新权限:', updatedUser?.permissions);
-      
-      // ✅ 强制更新Store状态，确保UI重新渲染
-      if (updatedUser) {
-        usePermissionStore.getState().setUser(updatedUser);
-        console.log('强制更新Store用户状态:', updatedUser);
-      }
-      
-      // ✅ 确保权限数据立即保存到本地存储
-      if (updatedUser && typeof window !== 'undefined') {
-        try {
-          const cacheData = {
-            ...updatedUser,
-            timestamp: Date.now()
-          };
-          localStorage.setItem('userCache', JSON.stringify(cacheData));
-          console.log('权限数据已立即保存到本地存储:', cacheData);
-        } catch (error) {
-          console.error('保存权限数据到本地存储失败:', error);
-        }
-      }
-      
-      // 触发权限变化事件，通知其他组件
-      window.dispatchEvent(new CustomEvent('permissionChanged', {
-        detail: {
-          message: '权限信息已更新',
-          permissions: updatedUser?.permissions
-        }
-      }));
-      
-      // 强制重新渲染页面
-      setRefreshKey(prev => prev + 1);
-      setSuccessMessage('权限信息已更新');
-      setTimeout(() => setShowSuccessMessage(false), 2000);
-    } catch (error) {
-      console.error('刷新权限失败:', error);
-      setSuccessMessage('权限刷新失败，请重试');
-      setTimeout(() => setShowSuccessMessage(false), 3000);
-    } finally {
-      setIsLoading(false);
+    const username = session?.user?.username || session?.user?.name;
+    if (username) {
+      await refreshPermissions(username);
     }
-  }, []);
+  }, [session?.user?.username, session?.user?.name, refreshPermissions]);
 
   // 优化的退出逻辑 - 避免重复退出
   const handleLogout = useCallback(async () => {
@@ -1106,8 +996,6 @@ export default function DashboardPage() {
           }}
           onLogout={handleLogout}
           onProfile={() => setShowProfileModal(true)}
-          onRefreshPermissions={handleRefreshPermissions}
-          isRefreshing={refreshing}
           title="Dashboard"
           showWelcome={true}
         />

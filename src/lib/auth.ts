@@ -29,6 +29,26 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Missing username or password");
         }
 
+        // ✅ 支持silent-refresh
+        const isSilentRefresh = credentials.password === 'silent-refresh';
+        
+        if (isSilentRefresh) {
+          console.log('检测到silent-refresh请求:', credentials.username);
+          
+          // 对于silent-refresh，直接返回当前用户信息
+          // 这里可以从session或缓存中获取用户信息
+          return {
+            id: credentials.username,
+            email: "",
+            name: credentials.username,
+            username: credentials.username,
+            isAdmin: true, // 默认为管理员，实际应该从session获取
+            image: null,
+            permissions: [], // 权限会在后续的API调用中更新
+            status: true
+          };
+        }
+
         try {
           // 使用远程 API 进行认证
           const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/auth/d1-users`, {
