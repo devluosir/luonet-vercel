@@ -1,6 +1,5 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import { getModuleIdFromPath } from "@/constants/permissions";
 
 // 定义公开路由
 const PUBLIC_ROUTES = [
@@ -104,55 +103,8 @@ export default withAuth(
           }
         }
 
-        // 6. 模块权限检查
-        const moduleId = getModuleIdFromPath(pathname);
-        if (moduleId && moduleId !== 'dashboard') { // dashboard不需要权限检查
-          // 添加详细的调试日志
-          console.log('[中间件] 权限检查详情:', {
-            pathname,
-            moduleId,
-            tokenUsername: token.username,
-            tokenIsAdmin: token.isAdmin,
-            tokenPermissions: token.permissions,
-            tokenPermissionsCount: token.permissions?.length || 0,
-            tokenPermissionsType: typeof token.permissions,
-            tokenKeys: Object.keys(token || {})
-          });
-
-          // 检查具体模块权限（管理员和普通用户使用相同的权限检查逻辑）
-          if (token.permissions && Array.isArray(token.permissions)) {
-            const permission = token.permissions.find((p: any) => p.moduleId === moduleId);
-            console.log('[中间件] 找到的权限:', permission);
-            
-            if (permission && permission.canAccess) {
-              console.log('[中间件] 权限检查通过:', { moduleId, permission });
-              return true;
-            } else {
-              console.log('[中间件] 权限检查失败 - 权限不存在或不可访问:', { 
-                moduleId, 
-                permission, 
-                allPermissions: token.permissions 
-              });
-            }
-          } else {
-            console.log('[中间件] token中没有有效的权限数组:', {
-              moduleId,
-              permissions: token.permissions,
-              permissionsType: typeof token.permissions
-            });
-          }
-
-          // 没有权限，重定向到登录页
-          console.log('[中间件] 权限检查失败，拒绝访问:', { 
-            pathname, 
-            moduleId, 
-            tokenPermissions: token.permissions 
-          });
-          return false;
-        }
-        
-        // 7. 对于dashboard等没有明确模块映射的路径，只要有token就允许访问
-        console.log('[中间件] 允许访问非模块路径:', pathname);
+        // 6. 对于所有其他路径，只要有token就允许访问（移除模块权限检查）
+        console.log('[中间件] 允许访问路径:', pathname);
         return true;
       },
     },
@@ -161,9 +113,6 @@ export default withAuth(
     },
   }
 );
-
-// 使用统一的权限模块映射函数
-// 从 @/constants/permissions 导入的 getModuleIdFromPath 函数
 
 export const config = {
   matcher: [

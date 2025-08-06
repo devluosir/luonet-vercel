@@ -143,6 +143,7 @@ const { hasPermission } = usePermissionStore();
 - [x] 所有模块页面移除hasPermission变量
 - [x] 所有模块页面移除usePermissionStore导入
 - [x] 历史页面简化权限检查逻辑
+- [x] 修复历史页面类型错误 (HistoryType vs string)
 - [x] 代码编译无错误
 - [x] 页面功能正常
 - [x] 权限控制仍有效（通过中间件）
