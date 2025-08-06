@@ -10,6 +10,9 @@ export class PreloadManager {
   private hasPreloaded = false; // ✅ 新增：标记是否已经预加载过
   private preloadTriggered = false; // ✅ 新增：标记是否已触发预加载
   private lastPermissionsHash = ''; // ✅ 新增：记录上次权限的哈希值
+  private lastCheckTime = 0; // ✅ 新增：记录上次检查时间，用于防抖
+  private checkDebounceMs = 1000; // ✅ 新增：检查防抖时间（1秒）
+  private permissionCheckCache = new Map<string, { result: boolean | string[]; timestamp: number }>(); // ✅ 新增：权限检查缓存
 
   static getInstance(): PreloadManager {
     if (!PreloadManager.instance) {
@@ -38,17 +41,36 @@ export class PreloadManager {
     this.preloadCallbacks.forEach(callback => callback(progress, stage));
   }
 
-  // ✅ 优化：检查权限是否发生变化
+  // ✅ 优化：检查权限是否发生变化（添加防抖和缓存）
   private checkPermissionsChanged(): boolean {
+    const now = Date.now();
+    
+    // 防抖：1秒内不重复检查
+    if (now - this.lastCheckTime < this.checkDebounceMs) {
+      return false;
+    }
+    
+    this.lastCheckTime = now;
+    
     try {
       const formPages = this.getFormPagesByPermissions();
       const currentHash = JSON.stringify(formPages.sort());
       
+      // 检查缓存
+      const cacheKey = `permissions_${currentHash}`;
+      const cached = this.permissionCheckCache.get(cacheKey);
+      if (cached && (now - cached.timestamp) < 5000) { // 5秒缓存
+        return cached.result as boolean;
+      }
+      
       if (this.lastPermissionsHash === currentHash) {
         // ✅ 优化：进一步减少重复日志
-        if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
+        if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) { // 降低到1%
           console.log('权限未发生变化，跳过预加载');
         }
+        
+        // 缓存结果
+        this.permissionCheckCache.set(cacheKey, { result: false, timestamp: now });
         return false;
       }
       
@@ -62,6 +84,9 @@ export class PreloadManager {
       }
       
       this.lastPermissionsHash = currentHash;
+      
+      // 缓存结果
+      this.permissionCheckCache.set(cacheKey, { result: true, timestamp: now });
       return true;
     } catch (error) {
       console.error('检查权限变化失败:', error);
@@ -162,6 +187,8 @@ export class PreloadManager {
     this.preloadProgress = 0;
     this.preloadTriggered = false;
     this.lastPermissionsHash = ''; // ✅ 重置权限哈希
+    this.lastCheckTime = 0; // ✅ 重置检查时间
+    this.permissionCheckCache.clear(); // ✅ 清理权限检查缓存
     console.log('预加载状态已重置');
   }
 
@@ -170,17 +197,30 @@ export class PreloadManager {
     return !this.hasPreloaded && !this.isPreloading && !this.preloadTriggered;
   }
 
-  // ✅ 新增：检查是否需要重新预加载（基于权限变化）
+  // ✅ 优化：检查是否需要重新预加载（基于权限变化，添加防抖）
   shouldPreloadBasedOnPermissions(): boolean {
+    const now = Date.now();
+    
+    // 防抖：1秒内不重复检查
+    if (now - this.lastCheckTime < this.checkDebounceMs) {
+      return false;
+    }
+    
     // 如果已经预加载过且权限未变化，不需要重新预加载
     if (this.hasPreloaded && !this.checkPermissionsChanged()) {
-      console.log('已预加载且权限未变化，跳过预加载');
+      // ✅ 优化：减少日志频率
+      if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
+        console.log('已预加载且权限未变化，跳过预加载');
+      }
       return false;
     }
     
     // 如果正在预加载，不需要重新预加载
     if (this.isPreloading) {
-      console.log('正在预加载中，跳过重复请求');
+      // ✅ 优化：减少日志频率
+      if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
+        console.log('正在预加载中，跳过重复请求');
+      }
       return false;
     }
     
@@ -193,7 +233,10 @@ export class PreloadManager {
           const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
           
           if (isRecent && cacheData.permissions && Array.isArray(cacheData.permissions)) {
-            console.log('本地缓存有效，检查权限变化');
+            // ✅ 优化：减少日志频率
+            if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
+              console.log('本地缓存有效，检查权限变化');
+            }
             return this.checkPermissionsChanged();
           }
         }
@@ -279,8 +322,19 @@ export class PreloadManager {
     await Promise.all(pagePromises);
   }
 
-  // ✅ 优化：根据权限获取表单页面
+  // ✅ 优化：根据权限获取表单页面（添加缓存）
   private getFormPagesByPermissions(): string[] {
+    const now = Date.now();
+    const cacheKey = 'formPagesCache';
+    
+    // 检查缓存（5秒有效期）
+    if (this.permissionCheckCache.has(cacheKey)) {
+      const cached = this.permissionCheckCache.get(cacheKey);
+      if (cached && (now - cached.timestamp) < 5000) {
+        return cached.result as string[];
+      }
+    }
+    
     try {
       // ✅ 优化：从多个来源获取权限数据，确保获取最新数据
       let permissions: Array<{ moduleId: string; canAccess: boolean }> = [];
@@ -294,7 +348,7 @@ export class PreloadManager {
             if (cacheData.permissions && Array.isArray(cacheData.permissions)) {
               permissions = cacheData.permissions;
               // ✅ 优化：进一步减少重复日志
-              if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
+              if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
                 console.log('从userCache获取权限数据进行预加载');
               }
             }
@@ -311,7 +365,7 @@ export class PreloadManager {
           if (latestPermissions) {
             permissions = JSON.parse(latestPermissions);
             // ✅ 优化：进一步减少重复日志
-            if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
+            if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
               console.log('从latestPermissions获取权限数据进行预加载');
             }
           }
@@ -326,7 +380,7 @@ export class PreloadManager {
         if (globalPermissions && Array.isArray(globalPermissions)) {
           permissions = globalPermissions;
           // ✅ 优化：进一步减少重复日志
-          if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
+          if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
             console.log('从全局变量获取权限数据进行预加载');
           }
         }
@@ -340,7 +394,7 @@ export class PreloadManager {
           if (store.user?.permissions) {
             permissions = store.user.permissions;
             // ✅ 优化：进一步减少重复日志
-            if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
+            if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
               console.log('从Store获取权限数据进行预加载');
             }
           }
@@ -366,6 +420,9 @@ export class PreloadManager {
           }
         })
         .filter(Boolean) as string[];
+      
+      // 缓存结果
+      this.permissionCheckCache.set(cacheKey, { result: formPages, timestamp: now });
       
       return formPages;
     } catch (error) {

@@ -661,10 +661,25 @@ export default function DashboardPage() {
     let timeoutId: NodeJS.Timeout;
     let hasTriggeredPreload = false; // ✅ 新增：标记是否已触发预加载
     let lastPermissionsHash = ''; // ✅ 新增：记录上次权限的哈希值
+    let lastCheckTime = 0; // ✅ 新增：防抖时间记录
+    const debounceMs = 2000; // ✅ 新增：防抖时间（2秒）
     
     const unsubscribe = usePermissionStore.subscribe((state) => {
       if (state.user && state.user.permissions && state.user.permissions.length > 0) {
-        console.log('权限Store更新，触发重新渲染');
+        const now = Date.now();
+        
+        // 防抖：2秒内不重复处理
+        if (now - lastCheckTime < debounceMs) {
+          return;
+        }
+        
+        lastCheckTime = now;
+        
+        // ✅ 优化：减少日志频率
+        if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+          console.log('权限Store更新，触发重新渲染');
+        }
+        
         setRefreshKey(prev => prev + 1);
         
         // ✅ 优化：检查权限是否真正发生变化
@@ -686,7 +701,7 @@ export default function DashboardPage() {
           
           lastPermissionsHash = currentPermissionsHash;
           
-          // ✅ 优化：使用新的权限检查方法
+          // ✅ 优化：使用新的权限检查方法，增加延迟
           if (!hasTriggeredPreload && preloadManager.shouldPreloadBasedOnPermissions()) {
             clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
@@ -694,12 +709,18 @@ export default function DashboardPage() {
                 console.error('延迟预加载失败:', error);
               });
               hasTriggeredPreload = true; // 标记已触发预加载
-            }, 2000); // 增加延迟时间，避免频繁触发
+            }, 3000); // 增加延迟时间到3秒，避免频繁触发
           } else {
-            console.log('权限未变化或不需要预加载，跳过');
+            // ✅ 优化：减少日志频率
+            if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+              console.log('权限未变化或不需要预加载，跳过');
+            }
           }
         } else {
-          console.log('权限未发生变化，跳过预加载');
+          // ✅ 优化：减少日志频率
+          if (process.env.NODE_ENV === 'development' && Math.random() < 0.05) {
+            console.log('权限未发生变化，跳过预加载');
+          }
         }
       }
     });
