@@ -72,20 +72,27 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // 登录时初始化
       if (user) {
-        // ✅ 确保所有用户信息都保存到token中
         token.username = user.username;
         token.isAdmin = !!user.isAdmin;
-        token.permissions = user.permissions;
+        token.permissions = user.permissions || [];
         token.status = (user as any).status;
         token.email = user.email;
       }
+
+      // 🔁 update() 被调用时更新 token.permissions
+      if (trigger === 'update' && session?.permissions) {
+        console.log('JWT更新: 收到新的权限数据', session.permissions);
+        token.permissions = session.permissions;
+      }
+
       return token;
     },
+
     async session({ session, token }) {
       if (token && session.user) {
-        // ✅ 确保session中包含完整的用户信息
         session.user.id = token.sub || "";
         session.user.username = token.username;
         session.user.isAdmin = !!token.isAdmin;

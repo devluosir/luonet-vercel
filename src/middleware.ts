@@ -103,15 +103,26 @@ export default withAuth(
         // 6. 模块权限检查
         const moduleId = getModuleIdFromPath(pathname);
         if (moduleId && moduleId !== 'dashboard') { // dashboard不需要权限检查
+          // 添加调试日志，查看 JWT token 中的权限
+          console.log('中间件权限检查:', {
+            pathname,
+            moduleId,
+            tokenPermissions: token.permissions,
+            tokenPermissionsCount: token.permissions?.length || 0,
+            isAdmin: token.isAdmin
+          });
+          
           // 检查具体模块权限（管理员和普通用户使用相同的权限检查逻辑）
           if (token.permissions && Array.isArray(token.permissions)) {
             const permission = token.permissions.find((p: any) => p.moduleId === moduleId);
             if (permission && permission.canAccess) {
+              console.log('权限检查通过:', { moduleId, permission });
               return true;
             }
           }
           
           // 没有权限，重定向到登录页
+          console.log('权限检查失败，重定向到登录页:', { moduleId, tokenPermissions: token.permissions });
           return false;
         }
         

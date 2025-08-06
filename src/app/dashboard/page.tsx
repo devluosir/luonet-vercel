@@ -674,6 +674,27 @@ export default function DashboardPage() {
     return unsubscribe;
   }, []);
 
+  // 监听权限更新事件，提示用户重新登录
+  useEffect(() => {
+    const handlePermissionsUpdated = (event: CustomEvent) => {
+      console.log('收到权限更新事件:', event.detail);
+      
+      if (event.detail?.permissions) {
+        console.log('权限已更新，建议重新登录以确保 JWT token 同步');
+        
+        // 显示成功消息
+        setSuccessMessage('权限已更新，建议重新登录以确保所有功能正常');
+        setTimeout(() => setShowSuccessMessage(false), 5000);
+      }
+    };
+
+    window.addEventListener('permissionsUpdated', handlePermissionsUpdated as EventListener);
+    
+    return () => {
+      window.removeEventListener('permissionsUpdated', handlePermissionsUpdated as EventListener);
+    };
+  }, []);
+
   // 优化的模块点击处理 - 即点即开
   const handleModuleClick = useCallback((module: any) => {
     // 特殊处理销售确认

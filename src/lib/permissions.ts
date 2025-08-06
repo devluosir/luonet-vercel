@@ -416,6 +416,25 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
             logPermissionError('保存用户数据到本地存储失败', error);
           }
         }
+
+        // ✅ 强制刷新时，触发权限更新事件
+        if (forceRefresh) {
+          logPermission('权限刷新完成，触发更新事件', {
+            permissionsCount: permissions.length,
+            permissions: permissions.map(p => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
+          });
+          
+          // 触发自定义事件，通知前端权限已更新
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('permissionsUpdated', {
+              detail: {
+                message: '权限已更新，需要调用 update() 同步 JWT token',
+                requiresRelogin: false,
+                permissions: permissions
+              }
+            }));
+          }
+        }
       } else {
         // 如果API返回失败，保留现有用户数据
         logPermission('权限API返回失败，使用现有权限数据', { data });
