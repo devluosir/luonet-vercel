@@ -565,8 +565,14 @@ export default function InvoicePage() {
             // 5列或更多：名称 tab 描述 tab 数量 tab 单位 tab 单价
             [partname, description, quantity, unit, unitPrice] = cells;
           } else if (cells.length === 4) {
-            // 4列：名称 tab tab 数量 tab 单位 tab 单价
-            [partname,, quantity, unit, unitPrice] = cells;
+            // 4列有两种情况：智能识别
+            if (!isNaN(Number(cells[1])) && !isNaN(Number(cells[3]))) {
+              // 4列格式：名称 tab 数量 tab 单位 tab 单价
+              [partname, quantity, unit, unitPrice] = cells;
+            } else {
+              // 4列格式：名称 tab 描述 tab 数量 tab 单位
+              [partname, description, quantity, unit] = cells;
+            }
           } else if (cells.length === 3) {
             // 3列有多种情况
             if (cells[1] && !isNaN(Number(cells[1]))) {

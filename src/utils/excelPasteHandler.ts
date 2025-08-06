@@ -123,26 +123,73 @@ export const convertExcelToLineItems = (rows: string[][], existingItems: ExcelLi
       partName = row[0].trim();
       quantity = parseInt(row[1]) || 0;
     } else if (row.length >= 4) {
-      // 4列或更多：名称 描述 数量 单位 [单价]
-      partName = row[0].trim();
-      description = row[1].trim();
-      quantity = parseInt(row[2]) || 0;
-      const copiedUnit = row[3]?.trim() || '';
-      if (copiedUnit) {
-        // 转换为小写并移除前后空格
-        const normalizedUnit = copiedUnit.toLowerCase();
-        // 处理复数形式
-        const singularUnit = normalizedUnit.endsWith('s') ? normalizedUnit.slice(0, -1) : normalizedUnit;
-        // 特殊处理 'pcs'
-        if (normalizedUnit === 'pcs') {
-          unit = 'pc';
-        } else if (defaultUnits.includes(singularUnit)) {
-          unit = singularUnit;
+      // 智能识别4列格式
+      if (row.length === 4) {
+        // 检查是否是 "名称 数量 单位 单价" 格式
+        if (isNumeric(row[1]) && isNumeric(row[3])) {
+          // 4列格式：名称 数量 单位 单价
+          partName = row[0].trim();
+          quantity = parseInt(row[1]) || 0;
+          const copiedUnit = row[2]?.trim() || '';
+          if (copiedUnit) {
+            // 转换为小写并移除前后空格
+            const normalizedUnit = copiedUnit.toLowerCase();
+            // 处理复数形式
+            const singularUnit = normalizedUnit.endsWith('s') ? normalizedUnit.slice(0, -1) : normalizedUnit;
+            // 特殊处理 'pcs'
+            if (normalizedUnit === 'pcs') {
+              unit = 'pc';
+            } else if (defaultUnits.includes(singularUnit)) {
+              unit = singularUnit;
+            } else {
+              unit = copiedUnit; // 如果不是默认单位，保持原样
+            }
+          }
+          unitPrice = parseFloat(row[3]) || 0;
         } else {
-          unit = copiedUnit; // 如果不是默认单位，保持原样
+          // 4列格式：名称 描述 数量 单位 [单价]
+          partName = row[0].trim();
+          description = row[1].trim();
+          quantity = parseInt(row[2]) || 0;
+          const copiedUnit = row[3]?.trim() || '';
+          if (copiedUnit) {
+            // 转换为小写并移除前后空格
+            const normalizedUnit = copiedUnit.toLowerCase();
+            // 处理复数形式
+            const singularUnit = normalizedUnit.endsWith('s') ? normalizedUnit.slice(0, -1) : normalizedUnit;
+            // 特殊处理 'pcs'
+            if (normalizedUnit === 'pcs') {
+              unit = 'pc';
+            } else if (defaultUnits.includes(singularUnit)) {
+              unit = singularUnit;
+            } else {
+              unit = copiedUnit; // 如果不是默认单位，保持原样
+            }
+          }
+          unitPrice = parseFloat(row[4]) || 0;
         }
+      } else {
+        // 5列或更多：名称 描述 数量 单位 [单价]
+        partName = row[0].trim();
+        description = row[1].trim();
+        quantity = parseInt(row[2]) || 0;
+        const copiedUnit = row[3]?.trim() || '';
+        if (copiedUnit) {
+          // 转换为小写并移除前后空格
+          const normalizedUnit = copiedUnit.toLowerCase();
+          // 处理复数形式
+          const singularUnit = normalizedUnit.endsWith('s') ? normalizedUnit.slice(0, -1) : normalizedUnit;
+          // 特殊处理 'pcs'
+          if (normalizedUnit === 'pcs') {
+            unit = 'pc';
+          } else if (defaultUnits.includes(singularUnit)) {
+            unit = singularUnit;
+          } else {
+            unit = copiedUnit; // 如果不是默认单位，保持原样
+          }
+        }
+        unitPrice = parseFloat(row[4]) || 0;
       }
-      unitPrice = parseFloat(row[4]) || 0;
     } else {
       // 单列：只有名称
       partName = row[0].trim();
