@@ -102,7 +102,7 @@ export default withAuth(
 
         // 6. 模块权限检查
         const moduleId = getModuleIdFromPath(pathname);
-        if (moduleId) {
+        if (moduleId && moduleId !== 'dashboard') { // dashboard不需要权限检查
           // 检查具体模块权限（管理员和普通用户使用相同的权限检查逻辑）
           if (token.permissions && Array.isArray(token.permissions)) {
             const permission = token.permissions.find((p: any) => p.moduleId === moduleId);
@@ -115,7 +115,7 @@ export default withAuth(
           return false;
         }
         
-        // 7. 其他情况，只要有token就允许访问
+        // 7. 对于dashboard等没有明确模块映射的路径，只要有token就允许访问
         return true;
       },
     },
