@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession, signIn, getSession, signOut } from 'next-auth/react';
+import { useSession, signIn, getSession, signOut, update } from 'next-auth/react';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { 
   Mail, 
@@ -674,24 +674,38 @@ export default function DashboardPage() {
     return unsubscribe;
   }, []);
 
-  // 监听权限更新事件，提示用户重新登录
+  // 监听权限更新事件，调用 NextAuth update() 更新 Session
   useEffect(() => {
-    const handlePermissionsUpdated = (event: CustomEvent) => {
+    const handlePermissionsUpdated = async (event: CustomEvent) => {
       console.log('收到权限更新事件:', event.detail);
       
       if (event.detail?.permissions) {
-        console.log('权限已更新，建议重新登录以确保 JWT token 同步');
-        
-        // 显示成功消息
-        setSuccessMessage('权限已更新，建议重新登录以确保所有功能正常');
-        setTimeout(() => setShowSuccessMessage(false), 5000);
+        try {
+          console.log('调用 NextAuth update() 更新 Session 权限');
+          
+          // 🔄 使用 NextAuth 的 update() 触发 Session 权限更新
+          await update({ permissions: event.detail.permissions });
+          
+          console.log('Session 权限更新成功');
+          
+          // 显示成功消息
+          setSuccessMessage('权限已更新，Session 已同步');
+          setTimeout(() => setShowSuccessMessage(false), 3000);
+          
+        } catch (updateError) {
+          console.error('使用 NextAuth update() 更新权限失败:', updateError);
+          
+          // 如果 update 失败，提示用户重新登录
+          setSuccessMessage('权限已更新，但 Session 更新失败，建议重新登录');
+          setTimeout(() => setShowSuccessMessage(false), 5000);
+        }
       }
     };
 
-    window.addEventListener('permissionsUpdated', handlePermissionsUpdated as EventListener);
+    window.addEventListener('permissionsUpdated', handlePermissionsUpdated as unknown as EventListener);
     
     return () => {
-      window.removeEventListener('permissionsUpdated', handlePermissionsUpdated as EventListener);
+      window.removeEventListener('permissionsUpdated', handlePermissionsUpdated as unknown as EventListener);
     };
   }, []);
 

@@ -428,7 +428,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('permissionsUpdated', {
               detail: {
-                message: '权限已更新，需要调用 update() 同步 JWT token',
+                message: '权限已更新，需要调用 update() 同步 Session',
                 requiresRelogin: false,
                 permissions: permissions
               }

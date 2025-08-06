@@ -72,8 +72,9 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
+    // JWT 回调：用于初始化和更新 JWT
     async jwt({ token, user, trigger, session }) {
-      // 登录时初始化
+      // 登录阶段：写入初始权限
       if (user) {
         token.username = user.username;
         token.isAdmin = !!user.isAdmin;
@@ -82,7 +83,7 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
       }
 
-      // 🔁 update() 被调用时更新 token.permissions
+      // update() 被调用时：更新权限
       if (trigger === 'update' && session?.permissions) {
         console.log('JWT更新: 收到新的权限数据', session.permissions);
         token.permissions = session.permissions;
@@ -91,6 +92,7 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
 
+    // Session 回调：将 token 权限数据暴露到 session.user
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.sub || "";
