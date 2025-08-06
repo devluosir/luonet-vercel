@@ -233,10 +233,10 @@ export default function HistoryManagementPage() {
 
   // 获取可用的标签页
   const getAvailableTabs = useCallback(() => {
-    const availableTabs: { id: string; name: string; shortName: string; icon: any }[] = [];
+    const availableTabs: { id: HistoryType; name: string; shortName: string; icon: any }[] = [];
     
     // 直接添加所有标签页，不再进行权限检查
-    const tabOrder = ['quotation', 'confirmation', 'packing', 'invoice', 'purchase'];
+    const tabOrder: HistoryType[] = ['quotation', 'confirmation', 'packing', 'invoice', 'purchase'];
     
     tabOrder.forEach(tabId => {
       switch (tabId) {
