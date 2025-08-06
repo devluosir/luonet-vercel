@@ -28,11 +28,12 @@ export async function POST(request: NextRequest) {
     
     try {
       // 从后端API获取最新用户数据（包含权限）
-      // 先通过用户名获取用户列表，找到正确的用户ID
-      const usersUrl = `https://udb.luocompany.net/api/admin/users?username=${encodeURIComponent(userName)}`;
-      console.log('权限刷新API: 调用用户列表API:', usersUrl);
+
+      // 尝试直接通过用户名获取用户详情
+      let userUrl = `https://udb.luocompany.net/api/admin/users/by-username/${encodeURIComponent(userName)}`;
+      console.log('权限刷新API: 尝试直接获取用户详情:', userUrl);
       
-      const usersResponse = await fetch(usersUrl, {
+      let userResponse = await fetch(userUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -43,65 +44,72 @@ export async function POST(request: NextRequest) {
         cache: 'no-store'
       });
 
-      console.log('权限刷新API: 用户列表响应状态:', usersResponse.status);
-
-      if (usersResponse.ok) {
-        const usersData = await usersResponse.json();
-        console.log('权限刷新API: 用户列表数据:', usersData);
+      // 如果直接获取失败，回退到用户列表方式
+      if (!userResponse.ok) {
+        console.log('权限刷新API: 直接获取用户详情失败，回退到用户列表方式');
         
-        // 找到正确的用户
-        let correctUser = null;
-        if (usersData.users && Array.isArray(usersData.users)) {
-          correctUser = usersData.users.find((user: any) => 
+        const usersUrl = `https://udb.luocompany.net/api/admin/users?username=${encodeURIComponent(userName)}`;
+        console.log('权限刷新API: 调用用户列表API:', usersUrl);
+        
+        const usersResponse = await fetch(usersUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-User-ID': userId,
+            'X-User-Name': userName,
+            'X-User-Admin': isAdmin ? 'true' : 'false',
+          },
+          cache: 'no-store'
+        });
+
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json();
+          
+          // 找到正确的用户
+          const correctUser = usersData.users?.find((user: any) => 
             user.username?.toLowerCase() === userName.toLowerCase()
           );
-        }
-        
-        if (correctUser) {
-          console.log('权限刷新API: 找到正确用户:', correctUser);
           
-          // 使用正确的用户ID调用单个用户API
-          const userUrl = `https://udb.luocompany.net/api/admin/users/${correctUser.id}`;
-          console.log('权限刷新API: 调用单个用户API:', userUrl);
-          
-          const userResponse = await fetch(userUrl, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-User-ID': correctUser.id,
-              'X-User-Name': userName,
-              'X-User-Admin': isAdmin ? 'true' : 'false',
-            },
-            cache: 'no-store'
-          });
-
-          console.log('权限刷新API: 单个用户响应状态:', userResponse.status);
-
-          if (userResponse.ok) {
-            const userData = await userResponse.json();
-            console.log('权限刷新API: 单个用户数据:', userData);
+          if (correctUser) {
+            // 使用正确的用户ID调用单个用户API
+            userUrl = `https://udb.luocompany.net/api/admin/users/${correctUser.id}`;
+            console.log('权限刷新API: 调用单个用户API:', userUrl);
             
-            if (userData && userData.permissions && Array.isArray(userData.permissions)) {
-              // 转换后端权限格式
-              permissions = userData.permissions.map((perm: any) => ({
-                id: perm.id || `backend-${perm.moduleId}`,
-                moduleId: perm.moduleId,
-                canAccess: !!perm.canAccess
-              }));
-              
-              userEmail = userData.email || null;
-              console.log('权限刷新API: 获取到权限数据:', permissions);
-            } else {
-              console.log('权限刷新API: 用户数据中没有权限信息');
-            }
-          } else {
-            console.log('权限刷新API: 单个用户API调用失败，状态码:', userResponse.status);
+            userResponse = await fetch(userUrl, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-User-ID': correctUser.id,
+                'X-User-Name': userName,
+                'X-User-Admin': isAdmin ? 'true' : 'false',
+              },
+              cache: 'no-store'
+            });
           }
+        }
+      }
+
+      console.log('权限刷新API: 单个用户响应状态:', userResponse.status);
+
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        console.log('权限刷新API: 单个用户数据:', userData);
+        
+        if (userData && userData.permissions && Array.isArray(userData.permissions)) {
+          // 转换后端权限格式
+          permissions = userData.permissions.map((perm: any) => ({
+            id: perm.id || `backend-${perm.moduleId}`,
+            moduleId: perm.moduleId,
+            canAccess: !!perm.canAccess
+          }));
+          
+          userEmail = userData.email || null;
+          console.log('权限刷新API: 获取到权限数据:', permissions);
         } else {
-          console.log('权限刷新API: 未找到匹配的用户');
+          console.log('权限刷新API: 用户数据中没有权限信息');
         }
       } else {
-        console.log('权限刷新API: 用户列表API调用失败，状态码:', usersResponse.status);
+        console.log('权限刷新API: 单个用户API调用失败，状态码:', userResponse.status);
       }
     } catch (backendError) {
       console.error('权限刷新API: 后端API调用失败:', backendError);

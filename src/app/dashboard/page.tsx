@@ -416,11 +416,34 @@ export default function DashboardPage() {
       finalPermissions: permissions.length,
       refreshKey,
       userExists: !!user,
-      sessionExists: !!session?.user
+      sessionExists: !!session?.user,
+      // ✅ 新增：详细权限数据调试
+      storeUser: user ? {
+        id: user.id,
+        username: user.username,
+        isAdmin: user.isAdmin,
+        permissionsCount: user.permissions?.length || 0
+      } : null,
+      sessionUser: session?.user ? {
+        id: session.user.id,
+        username: session.user.username,
+        isAdmin: session.user.isAdmin,
+        permissionsCount: session.user.permissions?.length || 0
+      } : null
     });
 
-    // 如果没有权限数据，不显示任何模块（等待权限加载完成）
+    // ✅ 修复：如果权限数据为空，尝试强制刷新
     if (!permissions || permissions.length === 0) {
+      // 如果Session中有用户信息但没有权限数据，尝试获取权限
+      if (session?.user && status === 'authenticated') {
+        console.log('检测到Session有用户但无权限数据，尝试获取权限');
+        // 延迟执行，避免在渲染期间调用
+        setTimeout(() => {
+          const { fetchPermissions } = usePermissionStore.getState();
+          fetchPermissions(true); // 强制刷新
+        }, 100);
+      }
+      
       return {
         permissions: {
           quotation: false,
@@ -681,35 +704,96 @@ export default function DashboardPage() {
       
       if (event.detail?.permissions) {
         try {
-          console.log('调用 NextAuth signIn() 进行 silent refresh 更新 Session 权限');
-          
-          // 🔄 使用 NextAuth 的 signIn() 进行 silent refresh 更新 Session 权限
-          await signIn('credentials', {
-            redirect: false,
-            username: session?.user?.name || '',
-            password: 'silent-refresh',
-          });
-          
-          console.log('Session 权限更新成功');
+          console.log('权限已更新，准备刷新页面以应用新权限');
           
           // 显示成功消息
-          setSuccessMessage('权限已更新，Session 已同步');
-          setTimeout(() => setShowSuccessMessage(false), 3000);
+          setSuccessMessage('权限已更新，正在刷新页面...');
+          
+          // 延迟刷新页面，让用户看到成功消息
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
           
         } catch (updateError) {
-          console.error('使用 NextAuth signIn() 更新权限失败:', updateError);
+          console.error('权限更新处理失败:', updateError);
           
-          // 如果 signIn 失败，提示用户重新登录
-          setSuccessMessage('权限已更新，但 Session 更新失败，建议重新登录');
-          setTimeout(() => setShowSuccessMessage(false), 5000);
+          // 显示错误消息
+          setSuccessMessage('权限更新失败，请重试');
+          setTimeout(() => setShowSuccessMessage(false), 3000);
+        }
+      }
+    };
+
+    // ✅ 新增：监听Session权限更新事件
+    const handleSessionPermissionsUpdated = async (event: CustomEvent) => {
+      console.log('收到Session权限更新事件:', event.detail);
+      
+      if (event.detail?.permissions) {
+        try {
+          console.log('Session权限已更新，准备重新获取Session');
+          
+          // 显示成功消息
+          setSuccessMessage('Session权限已更新，正在同步...');
+          
+          // ✅ 修复：使用页面刷新来更新Session，而不是update方法
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+          
+        } catch (updateError) {
+          console.error('Session权限更新处理失败:', updateError);
+          
+          // 显示错误消息
+          setSuccessMessage('Session权限同步失败，请重试');
+          setTimeout(() => setShowSuccessMessage(false), 3000);
+        }
+      }
+    };
+
+    // ✅ 新增：监听Session强制刷新事件
+    const handleSessionForceRefresh = async (event: CustomEvent) => {
+      console.log('收到Session强制刷新事件:', event.detail);
+      
+      if (event.detail?.forceRefresh) {
+        try {
+          console.log('Session需要强制刷新，准备重新登录');
+          
+          // 显示成功消息
+          setSuccessMessage('权限已更新，需要重新登录以应用新权限...');
+          
+          // 清除本地缓存
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('userCache');
+          }
+          
+          // 延迟重新登录
+          setTimeout(() => {
+            // 重定向到登录页面
+            router.push('/');
+          }, 2000);
+          
+        } catch (updateError) {
+          console.error('Session强制刷新处理失败:', updateError);
+          
+          // 显示错误消息
+          setSuccessMessage('Session刷新失败，请手动重新登录');
+          setTimeout(() => setShowSuccessMessage(false), 3000);
         }
       }
     };
 
     window.addEventListener('permissionsUpdated', handlePermissionsUpdated as unknown as EventListener);
+    // ✅ 新增：监听Session权限更新事件
+    window.addEventListener('sessionPermissionsUpdated', handleSessionPermissionsUpdated as unknown as EventListener);
+    // ✅ 新增：监听Session强制刷新事件
+    window.addEventListener('sessionForceRefresh', handleSessionForceRefresh as unknown as EventListener);
     
     return () => {
       window.removeEventListener('permissionsUpdated', handlePermissionsUpdated as unknown as EventListener);
+      // ✅ 新增：移除Session权限更新事件监听
+      window.removeEventListener('sessionPermissionsUpdated', handleSessionPermissionsUpdated as unknown as EventListener);
+      // ✅ 新增：移除Session强制刷新事件监听
+      window.removeEventListener('sessionForceRefresh', handleSessionForceRefresh as unknown as EventListener);
     };
   }, []);
 

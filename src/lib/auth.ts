@@ -76,6 +76,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger, session }) {
       // 登录阶段：写入初始权限
       if (user) {
+        console.log('JWT初始化: 用户登录，设置初始权限', user.permissions);
         token.username = user.username;
         token.isAdmin = !!user.isAdmin;
         token.permissions = user.permissions || [];
@@ -87,6 +88,14 @@ export const authOptions: NextAuthOptions = {
       if (trigger === 'update' && session?.permissions) {
         console.log('JWT更新: 收到新的权限数据', session.permissions);
         token.permissions = session.permissions;
+      }
+
+      // ✅ 修复：检查是否有权限更新请求
+      if (trigger === 'update' && session?.forceUpdatePermissions) {
+        console.log('JWT强制更新: 权限数据已更新，刷新token');
+        // 这里可以触发token重新生成
+        token.iat = Math.floor(Date.now() / 1000);
+        token.exp = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60); // 30天
       }
 
       return token;

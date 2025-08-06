@@ -67,6 +67,30 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   setUserFromSession: (sessionUser: any) => {
     if (!sessionUser) return;
     
+    // 防重复初始化：检查是否已经初始化过相同的用户
+    const currentUser = get().user;
+    if (currentUser && currentUser.id === (sessionUser.id || sessionUser.username)) {
+      // ✅ 修复：即使用户已存在，也要检查权限数据是否需要更新
+      const sessionPermissions = sessionUser.permissions || [];
+      const currentPermissions = currentUser.permissions || [];
+      
+      // 如果Session中的权限数据与Store中的不一致，强制更新
+      if (sessionPermissions.length !== currentPermissions.length || 
+          JSON.stringify(sessionPermissions) !== JSON.stringify(currentPermissions)) {
+        logPermission('检测到权限数据不一致，强制更新', {
+          sessionPermissionsCount: sessionPermissions.length,
+          storePermissionsCount: currentPermissions.length,
+          userId: sessionUser.id || sessionUser.username
+        });
+      } else {
+        logPermission('用户已初始化，跳过重复初始化', {
+          userId: currentUser.id,
+          username: currentUser.username
+        });
+        return;
+      }
+    }
+    
     try {
       // 构建用户对象
       const user: User = {
@@ -423,6 +447,48 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
             permissionsCount: permissions.length,
             permissions: permissions.map(p => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
           });
+          
+          // ✅ 修复：强制刷新后，需要同步更新Session
+          try {
+            const sessionUpdateResponse = await fetch('/api/auth/force-refresh-session', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'X-User-ID': session.user.id || session.user.username || '',
+                'X-User-Name': session.user.username || session.user.name || '',
+                'X-User-Admin': session.user.isAdmin ? 'true' : 'false'
+              },
+              cache: 'no-store'
+            });
+
+            if (sessionUpdateResponse.ok) {
+              const sessionUpdateData = await sessionUpdateResponse.json();
+              logPermission('Session强制刷新成功', {
+                success: sessionUpdateData.success,
+                message: sessionUpdateData.message,
+                forceRefresh: sessionUpdateData.forceRefresh
+              });
+              
+              // ✅ 触发自定义事件，通知前端Session需要强制刷新
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('sessionForceRefresh', {
+                  detail: {
+                    message: 'Session需要强制刷新，请重新登录',
+                    requiresRelogin: true,
+                    permissions: permissions,
+                    forceRefresh: true
+                  }
+                }));
+              }
+            } else {
+              logPermission('Session强制刷新失败', { 
+                status: sessionUpdateResponse.status,
+                statusText: sessionUpdateResponse.statusText
+              });
+            }
+          } catch (sessionUpdateError) {
+            logPermissionError('Session强制刷新请求失败', sessionUpdateError);
+          }
           
           // 触发自定义事件，通知前端权限已更新
           if (typeof window !== 'undefined') {

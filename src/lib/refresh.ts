@@ -32,26 +32,14 @@ export async function refreshPermissionsAndSession(username: string): Promise<bo
     
     console.log('[权限刷新] 获取到新权限:', data.permissions);
     
-    // 2. 使用 signIn() 进行 silent refresh 更新 session 中的权限
-    const result = await signIn('credentials', {
-      redirect: false,
-      username,
-      password: 'silent-refresh', // credentials provider 识别用
-    });
+    console.log('[权限刷新] 权限数据已更新，准备刷新页面');
     
-    if (result?.error) {
-      console.error('[权限刷新] silent refresh 失败:', result.error);
-      return false;
-    }
-    
-    console.log('[权限刷新] 使用 signIn() 更新权限成功');
-    
-    console.log('[权限刷新] 权限刷新成功');
-    
-    // 4. 强制刷新页面以确保中间件重新检查权限
+    // 3. 直接刷新页面以应用新权限
     setTimeout(() => {
       window.location.reload();
-    }, 500);
+    }, 1000);
+    
+    console.log('[权限刷新] 权限刷新成功');
     
     return true;
   } catch (error) {
