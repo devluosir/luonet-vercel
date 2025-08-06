@@ -287,7 +287,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           id: session.user.id || session.user.username || '',
           username: session.user.username || session.user.name || '',
           email: session.user.email || null,
-          status: session.user.status !== false,
+          status: (session.user as any).status !== false,
           isAdmin: session.user.isAdmin || false,
           permissions: session.user.permissions
         };
@@ -352,7 +352,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           id: session.user.id || session.user.username || '',
           username: session.user.username || session.user.name || '',
           email: session.user.email || null,
-          status: session.user.status !== false,
+          status: (session.user as any).status !== false,
           isAdmin: session.user.isAdmin || false,
           permissions: permissions
         };

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession, signIn, getSession } from 'next-auth/react';
+import { useSession, signIn, getSession, signOut } from 'next-auth/react';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { 
   Mail, 

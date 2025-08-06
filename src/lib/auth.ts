@@ -78,7 +78,7 @@ export const authOptions: NextAuthOptions = {
         token.username = user.username;
         token.isAdmin = !!user.isAdmin;
         token.permissions = user.permissions;
-        token.status = user.status;
+        token.status = (user as any).status;
         token.email = user.email;
       }
       return token;
@@ -90,7 +90,7 @@ export const authOptions: NextAuthOptions = {
         session.user.username = token.username;
         session.user.isAdmin = !!token.isAdmin;
         session.user.email = token.email;
-        session.user.status = token.status;
+        (session.user as any).status = token.status;
         
         // ✅ 确保权限数据格式正确
         if (Array.isArray(token.permissions)) {
