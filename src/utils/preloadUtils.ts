@@ -283,7 +283,7 @@ export class PreloadManager {
   private getFormPagesByPermissions(): string[] {
     try {
       // ✅ 优化：从多个来源获取权限数据，确保获取最新数据
-      let permissions: any[] = [];
+      let permissions: Array<{ moduleId: string; canAccess: boolean }> = [];
       
       // 1. 尝试从userCache获取
       if (typeof window !== 'undefined') {
@@ -322,7 +322,7 @@ export class PreloadManager {
       
       // 3. 如果还是没有，尝试从全局变量获取
       if (permissions.length === 0 && typeof window !== 'undefined') {
-        const globalPermissions = (window as any).__SESSION_PERMISSIONS__;
+        const globalPermissions = (window as { __SESSION_PERMISSIONS__?: unknown }).__SESSION_PERMISSIONS__;
         if (globalPermissions && Array.isArray(globalPermissions)) {
           permissions = globalPermissions;
           // ✅ 优化：进一步减少重复日志
@@ -351,8 +351,8 @@ export class PreloadManager {
       
       // 过滤出有访问权限的模块
       const accessibleModules = permissions
-        .filter((p: any) => p.canAccess)
-        .map((p: any) => p.moduleId);
+        .filter((p: { moduleId: string; canAccess: boolean }) => p.canAccess)
+        .map((p: { moduleId: string; canAccess: boolean }) => p.moduleId);
       
       // 映射到对应的页面路径
       const formPages = accessibleModules
@@ -401,7 +401,7 @@ export class PreloadManager {
   }
 
   // 预加载页面相关的API端点
-  private async preloadPageAPIs(path: string): Promise<void> {
+  private async preloadPageAPIs(_path: string): Promise<void> {
     // 暂时跳过API端点预加载，因为所有API都只支持POST请求
     // 避免405 Method Not Allowed错误
     console.log('跳过API端点预加载，避免405错误');
@@ -514,7 +514,7 @@ export class PreloadManager {
       const permissions = JSON.parse(latestPermissions);
       const userPermissions: string[] = [];
 
-      permissions.forEach((perm: any) => {
+      permissions.forEach((perm: { moduleId: string; canAccess: boolean }) => {
         if (perm.canAccess) {
           switch (perm.moduleId) {
             case 'quotation':
@@ -637,7 +637,6 @@ export class PreloadManager {
     
     // 检查关键资源是否已加载（作为备用检查）
     const fontLoaded = document.fonts.check('12px "Noto Sans SC"');
-    const logoLoaded = document.querySelector('img[src*="logo.png"]') !== null;
     
     // 检查预加载资源状态 - 只要有预加载的资源就认为有效
     const hasPreloadedResources = this.preloadedResources.size > 0;
