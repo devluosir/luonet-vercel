@@ -126,7 +126,8 @@ export const convertExcelToLineItems = (rows: string[][], existingItems: ExcelLi
       // 智能识别4列格式
       if (row.length === 4) {
         // 检查是否是 "名称 数量 单位 单价" 格式
-        if (isNumeric(row[1]) && isNumeric(row[3])) {
+        // 判断逻辑：第2列是数字（数量），第4列是数字或空（单价）
+        if (isNumeric(row[1]) && (isNumeric(row[3]) || row[3]?.trim() === '' || row[3]?.trim() === '0')) {
           // 4列格式：名称 数量 单位 单价
           partName = row[0].trim();
           quantity = parseInt(row[1]) || 0;
