@@ -7,6 +7,9 @@ export class PreloadManager {
   private preloadProgress = 0;
   private preloadCallbacks: ((progress: number, stage?: string) => void)[] = [];
   private preloadedResources = new Set<string>();
+  private hasPreloaded = false; // ✅ 新增：标记是否已经预加载过
+  private preloadTriggered = false; // ✅ 新增：标记是否已触发预加载
+  private lastPermissionsHash = ''; // ✅ 新增：记录上次权限的哈希值
 
   static getInstance(): PreloadManager {
     if (!PreloadManager.instance) {
@@ -35,8 +38,45 @@ export class PreloadManager {
     this.preloadCallbacks.forEach(callback => callback(progress, stage));
   }
 
+  // ✅ 新增：检查权限是否发生变化
+  private checkPermissionsChanged(): boolean {
+    try {
+      const formPages = this.getFormPagesByPermissions();
+      const currentHash = JSON.stringify(formPages.sort());
+      
+      if (this.lastPermissionsHash === currentHash) {
+        console.log('权限未发生变化，跳过预加载');
+        return false;
+      }
+      
+      console.log('检测到权限变化，需要重新预加载', {
+        oldHash: this.lastPermissionsHash,
+        newHash: currentHash,
+        formPages
+      });
+      
+      this.lastPermissionsHash = currentHash;
+      return true;
+    } catch (error) {
+      console.error('检查权限变化失败:', error);
+      return true; // 出错时保守地重新预加载
+    }
+  }
+
   // 预加载所有资源
   async preloadAllResources(): Promise<void> {
+    // ✅ 优化：检查权限是否发生变化
+    if (!this.checkPermissionsChanged()) {
+      console.log('权限未变化，跳过预加载');
+      return;
+    }
+
+    // ✅ 新增：如果已经预加载过，直接返回
+    if (this.hasPreloaded) {
+      console.log('资源已经预加载过，跳过重复预加载');
+      return;
+    }
+
     if (this.isPreloading) {
       console.log('预加载已在进行中，跳过重复请求');
       return;
@@ -62,6 +102,8 @@ export class PreloadManager {
       await this.preloadFonts();
       this.updateProgress(100, '预加载完成');
 
+      // ✅ 新增：标记为已预加载
+      this.hasPreloaded = true;
       console.log('所有资源预加载完成');
     } catch (error) {
       console.error('预加载过程中出错:', error);
@@ -70,8 +112,21 @@ export class PreloadManager {
     }
   }
 
-  // ✅ 新增：延迟预加载方法，在权限数据加载后调用
+  // ✅ 优化：延迟预加载方法，只在权限变化时调用
   async delayedPreload(): Promise<void> {
+    // ✅ 优化：检查权限是否发生变化
+    if (!this.checkPermissionsChanged()) {
+      console.log('权限未变化，跳过延迟预加载');
+      return;
+    }
+
+    // ✅ 新增：如果已经预加载过或已触发，直接返回
+    if (this.hasPreloaded || this.preloadTriggered) {
+      console.log('预加载已触发或完成，跳过延迟预加载');
+      return;
+    }
+
+    this.preloadTriggered = true;
     console.log('触发延迟预加载，检查权限数据...');
     
     // 等待一小段时间，确保权限数据已加载
@@ -84,7 +139,59 @@ export class PreloadManager {
       await this.preloadAllResources();
     } else {
       console.log('仍未检测到权限数据，跳过延迟预加载');
+      this.preloadTriggered = false; // 重置触发状态，允许后续重试
     }
+  }
+
+  // ✅ 新增：重置预加载状态，允许重新预加载
+  resetPreloadState(): void {
+    this.hasPreloaded = false;
+    this.isPreloading = false;
+    this.preloadProgress = 0;
+    this.preloadTriggered = false;
+    this.lastPermissionsHash = ''; // ✅ 重置权限哈希
+    console.log('预加载状态已重置');
+  }
+
+  // ✅ 新增：检查是否需要预加载
+  shouldPreload(): boolean {
+    return !this.hasPreloaded && !this.isPreloading && !this.preloadTriggered;
+  }
+
+  // ✅ 新增：检查是否需要重新预加载（基于权限变化）
+  shouldPreloadBasedOnPermissions(): boolean {
+    // 如果已经预加载过且权限未变化，不需要重新预加载
+    if (this.hasPreloaded && !this.checkPermissionsChanged()) {
+      console.log('已预加载且权限未变化，跳过预加载');
+      return false;
+    }
+    
+    // 如果正在预加载，不需要重新预加载
+    if (this.isPreloading) {
+      console.log('正在预加载中，跳过重复请求');
+      return false;
+    }
+    
+    // 检查本地缓存是否有效
+    if (typeof window !== 'undefined') {
+      try {
+        const userCache = localStorage.getItem('userCache');
+        if (userCache) {
+          const cacheData = JSON.parse(userCache);
+          const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
+          
+          if (isRecent && cacheData.permissions && Array.isArray(cacheData.permissions)) {
+            console.log('本地缓存有效，检查权限变化');
+            return this.checkPermissionsChanged();
+          }
+        }
+      } catch (error) {
+        console.error('检查本地缓存失败:', error);
+      }
+    }
+    
+    // 默认需要预加载
+    return true;
   }
 
   // 预加载PDF字体
@@ -467,7 +574,11 @@ export class PreloadManager {
     return {
       isPreloading: this.isPreloading,
       progress: this.preloadProgress,
-      preloadedCount: this.isPreloaded() ? '100%' : '0%'
+      hasPreloaded: this.hasPreloaded,
+      shouldPreload: this.shouldPreload(),
+      shouldPreloadBasedOnPermissions: this.shouldPreloadBasedOnPermissions(),
+      preloadTriggered: this.preloadTriggered,
+      lastPermissionsHash: this.lastPermissionsHash
     };
   }
 

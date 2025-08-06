@@ -1,74 +1,156 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePermissionStore } from '@/lib/permissions';
-import { logPermission } from '@/utils/permissionLogger';
+import { logPermission, logPermissionError } from '@/utils/permissionLogger';
 
-/**
- * 权限初始化Hook
- * 统一管理权限初始化逻辑，避免重复代码
- * ✅ 新增：登录时自动初始化用户信息
- */
-export const usePermissionInit = () => {
+// ✅ 新增：全局初始化状态管理
+let globalInitCompleted = false;
+let globalInitInProgress = false;
+
+export function usePermissionInit() {
   const { data: session, status } = useSession();
-  const { initializeUserFromStorage, fetchPermissions, clearExpiredCache, setUserFromSession } = usePermissionStore();
-  
-  useEffect(() => {
-    // 清理过期缓存（只在组件挂载时执行一次）
-    clearExpiredCache();
-  }, [clearExpiredCache]);
+  const { setUserFromSession, initializeUserFromStorage, clearUser } = usePermissionStore();
+  const initRef = useRef(false);
+  const mountedRef = useRef(false);
+  const lastSessionHash = useRef(''); // ✅ 新增：记录上次Session的哈希值
 
-  // 分离session初始化逻辑，避免重复调用
   useEffect(() => {
-    // 如果session已加载且有用户信息，优先从session初始化
-    if (status === 'authenticated' && session?.user) {
-      logPermission('检测到用户登录，从Session初始化用户信息', {
-        userId: session.user.id,
-        username: session.user.username,
-        isAdmin: session.user.isAdmin
-      });
-      
-      // ✅ 登录时立即初始化用户信息
-      setUserFromSession(session.user);
+    mountedRef.current = true;
+    
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    // ✅ 优化：避免重复初始化
+    if (initRef.current || globalInitInProgress) {
       return;
     }
-    
-    // 如果session未加载，尝试从本地存储初始化
-    if (status === 'loading') {
-      const initialized = initializeUserFromStorage();
-      if (initialized) {
-        logPermission('从本地缓存初始化用户信息成功');
+
+    // ✅ 优化：如果已经全局初始化完成，且session中有权限数据，直接使用
+    if (globalInitCompleted && session?.user?.permissions?.length > 0) {
+      logPermission('使用已初始化的权限数据', {
+        permissionsCount: session.user.permissions.length
+      });
+      return;
+    }
+
+    const initializePermissions = async () => {
+      if (globalInitInProgress) {
+        logPermission('权限初始化已在进行中，跳过重复初始化');
         return;
       }
-    }
-    
-    // 如果session加载完成但没有用户信息，尝试从本地存储初始化
-    if (status === 'unauthenticated') {
-      const initialized = initializeUserFromStorage();
-      if (initialized) {
-        logPermission('从本地缓存初始化用户信息成功');
-        return;
+
+      globalInitInProgress = true;
+      initRef.current = true;
+
+      try {
+        // 1. 首先尝试从session初始化
+        if (session?.user) {
+          logPermission('检测到用户登录，从Session初始化用户信息', {
+            userId: session.user.id,
+            username: session.user.username,
+            isAdmin: session.user.isAdmin
+          });
+
+          const sessionPermissions = session.user.permissions || [];
+          const store = usePermissionStore.getState();
+          
+          // ✅ 优化：检查Session是否真正发生变化
+          const currentSessionHash = JSON.stringify({
+            id: session.user.id,
+            username: session.user.username,
+            permissions: sessionPermissions
+          });
+          
+          if (lastSessionHash.current === currentSessionHash) {
+            logPermission('Session未发生变化，跳过重复初始化');
+            globalInitCompleted = true;
+            return;
+          }
+          
+          lastSessionHash.current = currentSessionHash;
+          
+          // ✅ 优化：检查是否需要强制更新
+          const needsUpdate = !store.user || 
+            store.user.id !== session.user.id ||
+            JSON.stringify(store.user.permissions) !== JSON.stringify(sessionPermissions);
+
+          if (needsUpdate) {
+            logPermission('检测到权限数据不一致，强制更新', {
+              sessionPermissionsCount: sessionPermissions.length,
+              storePermissionsCount: store.user?.permissions?.length || 0,
+              userId: session.user.id
+            });
+
+            // ✅ 优化：如果session中没有权限数据，尝试从缓存恢复
+            if (sessionPermissions.length === 0 && typeof window !== 'undefined') {
+              try {
+                const userCache = localStorage.getItem('userCache');
+                if (userCache) {
+                  const cacheData = JSON.parse(userCache);
+                  const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
+                  
+                  if (isRecent && cacheData.permissions && Array.isArray(cacheData.permissions)) {
+                    // 使用缓存数据更新session用户信息
+                    const updatedUser = {
+                      ...session.user,
+                      permissions: cacheData.permissions
+                    };
+                    
+                    logPermission('Session无权限数据，从缓存恢复权限', {
+                      permissionsCount: cacheData.permissions.length
+                    });
+                    
+                    setUserFromSession(updatedUser);
+                    globalInitCompleted = true;
+                    return;
+                  }
+                }
+              } catch (error) {
+                logPermissionError('从缓存恢复权限失败', error);
+              }
+            }
+
+            setUserFromSession(session.user);
+          }
+        } else if (status === 'unauthenticated') {
+          // 2. 用户未登录，清除权限数据
+          logPermission('用户未登录，清除权限数据');
+          clearUser();
+          globalInitCompleted = false;
+        } else if (status === 'loading') {
+          // 3. 正在加载，尝试从缓存初始化
+          logPermission('Session加载中，尝试从缓存初始化');
+          initializeUserFromStorage();
+        }
+
+        globalInitCompleted = true;
+      } catch (error) {
+        logPermissionError('权限初始化失败', error);
+        globalInitCompleted = false;
+      } finally {
+        globalInitInProgress = false;
       }
-    }
-    
-    // ✅ 修复：如果session中有权限数据但Store中没有，强制同步
-    if (status === 'authenticated' && session?.user?.permissions && session.user.permissions.length > 0) {
-      // 检查Store中是否有权限数据
-      const { user } = usePermissionStore.getState();
-      if (!user || !user.permissions || user.permissions.length === 0) {
-        logPermission('检测到Session有权限数据但Store中没有，强制同步', {
-          sessionPermissionsCount: session.user.permissions.length,
-          storePermissionsCount: user?.permissions?.length || 0
-        });
-        setUserFromSession(session.user);
-        return;
-      }
-    }
-    
-    // 如果都没有成功初始化，则获取权限（仅在需要时）
-    if (status === 'authenticated' && !session?.user) {
-      fetchPermissions(false); // 非强制刷新
-    }
-  }, [session?.user?.id, status, session?.user?.permissions]); // ✅ 添加permissions依赖，确保权限变化时重新初始化
-};
+    };
+
+    initializePermissions();
+  }, [session, status, setUserFromSession, initializeUserFromStorage, clearUser]);
+
+  // ✅ 优化：移除Session权限变化监听器，避免循环更新
+  // 原来的Session权限变化监听器会导致循环更新
+  // 现在只在初始化时处理权限同步
+
+  // ✅ 新增：重置全局初始化状态的方法
+  const resetInitState = () => {
+    globalInitCompleted = false;
+    globalInitInProgress = false;
+    initRef.current = false;
+    lastSessionHash.current = '';
+  };
+
+  return { resetInitState };
+}
 
  

@@ -48,6 +48,13 @@ interface PermissionStore {
   
   // 新增：缓存清理机制
   clearExpiredCache: () => void;
+  
+  // ✅ 新增：重置权限系统状态
+  resetPermissionState: () => void;
+  
+  // ✅ 新增：权限检查缓存
+  permissionCache: Map<string, boolean>;
+  clearPermissionCache: () => void;
 }
 
 export const usePermissionStore = create<PermissionStore>((set, get) => ({
@@ -56,6 +63,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   error: null,
   lastFetchTime: null,
   autoFetch: false,
+  permissionCache: new Map<string, boolean>(), // ✅ 新增：权限检查缓存
 
   setUser: (user: User) => set({ user }),
   setLoading: (loading: boolean) => set({ isLoading: loading }),
@@ -79,6 +87,13 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   },
   setAutoFetch: (autoFetch: boolean) => set({ autoFetch }),
 
+  // ✅ 新增：清理权限检查缓存
+  clearPermissionCache: () => {
+    const state = get();
+    state.permissionCache.clear();
+    console.log('权限检查缓存已清理');
+  },
+
   // ✅ 新增：从Session初始化用户信息（登录时调用）
   setUserFromSession: (sessionUser: any) => {
     if (!sessionUser) return;
@@ -86,22 +101,26 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     // 防重复初始化：检查是否已经初始化过相同的用户
     const currentUser = get().user;
     if (currentUser && currentUser.id === (sessionUser.id || sessionUser.username)) {
-      // ✅ 修复：即使用户已存在，也要检查权限数据是否需要更新
+      // ✅ 优化：更精确的权限数据比较
       const sessionPermissions = sessionUser.permissions || [];
       const currentPermissions = currentUser.permissions || [];
       
-      // 如果Session中的权限数据与Store中的不一致，强制更新
-      if (sessionPermissions.length !== currentPermissions.length || 
-          JSON.stringify(sessionPermissions) !== JSON.stringify(currentPermissions)) {
+      // 深度比较权限数据，避免不必要的更新
+      const permissionsChanged = sessionPermissions.length !== currentPermissions.length || 
+        JSON.stringify(sessionPermissions.map((p: any) => ({ moduleId: p.moduleId, canAccess: p.canAccess }))) !== 
+        JSON.stringify(currentPermissions.map((p: any) => ({ moduleId: p.moduleId, canAccess: p.canAccess })));
+      
+      if (permissionsChanged) {
         logPermission('检测到权限数据不一致，强制更新', {
           sessionPermissionsCount: sessionPermissions.length,
           storePermissionsCount: currentPermissions.length,
           userId: sessionUser.id || sessionUser.username
         });
       } else {
-        logPermission('用户已初始化，跳过重复初始化', {
+        logPermission('用户已初始化且权限数据一致，跳过重复初始化', {
           userId: currentUser.id,
-          username: currentUser.username
+          username: currentUser.username,
+          permissionsCount: currentPermissions.length
         });
         return;
       }
@@ -138,27 +157,41 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         }
       }
       
-      // 更新Store
-      set({ user, isLoading: false, error: null, lastFetchTime: Date.now() });
+      // ✅ 优化：只有在权限数据真正变化时才更新Store
+      const currentUser = get().user;
+      const shouldUpdate = !currentUser || 
+        currentUser.id !== user.id ||
+        JSON.stringify(currentUser.permissions) !== JSON.stringify(user.permissions);
       
-      // ✅ 立即保存到本地缓存
-      if (typeof window !== 'undefined') {
-        try {
-          const cacheData = {
-            ...user,
-            timestamp: Date.now()
-          };
-          localStorage.setItem('userCache', JSON.stringify(cacheData));
-          logPermission('登录时初始化用户信息并缓存', {
-            userId: user.id,
-            username: user.username,
-            email: user.email,
-            isAdmin: user.isAdmin,
-            permissionsCount: user.permissions.length
-          });
-        } catch (error) {
-          logPermissionError('保存用户信息到本地缓存失败', error);
+      if (shouldUpdate) {
+        // 清理权限检查缓存
+        const state = get();
+        state.permissionCache.clear();
+        
+        // 更新Store
+        set({ user, isLoading: false, error: null, lastFetchTime: Date.now() });
+        
+        // ✅ 立即保存到本地缓存
+        if (typeof window !== 'undefined') {
+          try {
+            const cacheData = {
+              ...user,
+              timestamp: Date.now()
+            };
+            localStorage.setItem('userCache', JSON.stringify(cacheData));
+            logPermission('登录时初始化用户信息并缓存', {
+              userId: user.id,
+              username: user.username,
+              email: user.email,
+              isAdmin: user.isAdmin,
+              permissionsCount: user.permissions.length
+            });
+          } catch (error) {
+            logPermissionError('保存用户信息到本地缓存失败', error);
+          }
         }
+      } else {
+        logPermission('用户数据未发生变化，跳过Store更新');
       }
     } catch (error) {
       logPermissionError('从Session初始化用户信息失败', error);
@@ -182,6 +215,29 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         console.warn('清理缓存失败:', error);
         // 清除损坏的缓存
         localStorage.removeItem('userCache');
+      }
+    }
+  },
+
+  // ✅ 新增：重置权限系统状态
+  resetPermissionState: () => {
+    // 重置Store状态
+    set({ user: null, error: null, isLoading: false, lastFetchTime: null });
+    
+    // 清理权限检查缓存
+    const state = get();
+    state.permissionCache.clear();
+    
+    // 清理本地缓存
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('userCache');
+        localStorage.removeItem('user_permissions');
+        localStorage.removeItem('latestPermissions');
+        localStorage.removeItem('permissionsTimestamp');
+        console.log('权限系统状态已重置');
+      } catch (error) {
+        console.error('重置权限系统状态失败:', error);
       }
     }
   },
@@ -230,8 +286,14 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
 
   // 统一的权限检查逻辑（增强错误处理）
   hasPermission: (moduleId: string) => {
-    const { user } = get();
+    const { user, permissionCache } = get();
     if (!user) return false;
+    
+    // ✅ 优化：使用缓存机制
+    const cacheKey = `${user.id}-${moduleId}`;
+    if (permissionCache.has(cacheKey)) {
+      return permissionCache.get(cacheKey)!;
+    }
     
     try {
       // 检查具体权限（管理员和普通用户使用相同的权限检查逻辑）
@@ -239,16 +301,21 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       const permission = user.permissions.find(p => p.moduleId === moduleId);
       const hasAccess = permission?.canAccess || false;
       
-      // ✅ 添加调试日志：权限检查详情
-      console.log(`权限检查 [${moduleId}]:`, {
-        userId: user.id,
-        username: user.username,
-        isAdmin: user.isAdmin,
-        permissionsCount: user.permissions.length,
-        foundPermission: permission,
-        hasAccess: hasAccess,
-        allPermissions: user.permissions.map(p => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
-      });
+      // ✅ 优化：只在开发环境下输出详细调试日志
+      if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+        // 只输出10%的权限检查日志，避免日志过多
+        console.log(`权限检查 [${moduleId}]:`, {
+          userId: user.id,
+          username: user.username,
+          isAdmin: user.isAdmin,
+          permissionsCount: user.permissions.length,
+          foundPermission: permission,
+          hasAccess: hasAccess
+        });
+      }
+      
+      // ✅ 缓存权限检查结果
+      permissionCache.set(cacheKey, hasAccess);
       
       return hasAccess;
     } catch (error) {

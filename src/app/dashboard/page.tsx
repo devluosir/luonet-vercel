@@ -658,21 +658,56 @@ export default function DashboardPage() {
   
   // 监听权限Store变化，确保UI及时更新
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    let hasTriggeredPreload = false; // ✅ 新增：标记是否已触发预加载
+    let lastPermissionsHash = ''; // ✅ 新增：记录上次权限的哈希值
+    
     const unsubscribe = usePermissionStore.subscribe((state) => {
       if (state.user && state.user.permissions && state.user.permissions.length > 0) {
         console.log('权限Store更新，触发重新渲染');
         setRefreshKey(prev => prev + 1);
         
-        // ✅ 新增：权限数据加载完成后触发延迟预加载
-        setTimeout(() => {
-          preloadManager.delayedPreload().catch(error => {
-            console.error('延迟预加载失败:', error);
+        // ✅ 优化：检查权限是否真正发生变化
+        const currentPermissionsHash = JSON.stringify(
+          state.user.permissions
+            .filter((p: any) => p.canAccess)
+            .map((p: any) => p.moduleId)
+            .sort()
+        );
+        
+        const permissionsChanged = lastPermissionsHash !== currentPermissionsHash;
+        
+        if (permissionsChanged) {
+          console.log('检测到权限变化，需要重新预加载', {
+            oldHash: lastPermissionsHash,
+            newHash: currentPermissionsHash,
+            permissions: state.user.permissions.map((p: any) => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
           });
-        }, 1000);
+          
+          lastPermissionsHash = currentPermissionsHash;
+          
+          // ✅ 优化：使用新的权限检查方法
+          if (!hasTriggeredPreload && preloadManager.shouldPreloadBasedOnPermissions()) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+              preloadManager.delayedPreload().catch(error => {
+                console.error('延迟预加载失败:', error);
+              });
+              hasTriggeredPreload = true; // 标记已触发预加载
+            }, 2000); // 增加延迟时间，避免频繁触发
+          } else {
+            console.log('权限未变化或不需要预加载，跳过');
+          }
+        } else {
+          console.log('权限未发生变化，跳过预加载');
+        }
       }
     });
     
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   // 监听权限更新事件，调用 NextAuth update() 更新 Session
