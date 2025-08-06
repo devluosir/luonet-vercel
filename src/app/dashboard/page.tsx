@@ -413,41 +413,8 @@ export default function DashboardPage() {
       }
     }
     
-    // 添加调试日志，帮助排查权限刷新问题
-    console.log('权限映射更新:', {
-      storePermissions: user?.permissions?.length || 0,
-      sessionPermissions: session?.user?.permissions?.length || 0,
-      finalPermissions: permissions.length,
-      refreshKey,
-      userExists: !!user,
-      sessionExists: !!session?.user,
-      // ✅ 新增：详细权限数据调试
-      storeUser: user ? {
-        id: user.id,
-        username: user.username,
-        isAdmin: user.isAdmin,
-        permissionsCount: user.permissions?.length || 0
-      } : null,
-      sessionUser: session?.user ? {
-        id: session.user.id,
-        username: session.user.username,
-        isAdmin: session.user.isAdmin,
-        permissionsCount: session.user.permissions?.length || 0
-      } : null
-    });
-
-    // ✅ 修复：如果权限数据为空，尝试强制刷新
+    // ✅ 修复：如果权限数据为空，返回默认权限映射
     if (!permissions || permissions.length === 0) {
-      // 如果Session中有用户信息但没有权限数据，尝试获取权限
-      if (session?.user && status === 'authenticated') {
-        console.log('检测到Session有用户但无权限数据，尝试获取权限');
-        // 延迟执行，避免在渲染期间调用
-        setTimeout(() => {
-          const { fetchPermissions } = usePermissionStore.getState();
-          fetchPermissions(true); // 强制刷新
-        }, 100);
-      }
-      
       return {
         permissions: {
           quotation: false,
@@ -534,7 +501,7 @@ export default function DashboardPage() {
       documentTypePermissions,
       accessibleDocumentTypes
     };
-  }, [user?.permissions, user?.isAdmin, session?.user?.permissions, session?.user?.isAdmin, refreshKey]);
+  }, [user?.permissions, session?.user?.permissions, refreshKey]);
 
   // ✅ 优化的初始化逻辑 - 立即显示内容，异步加载权限
   useEffect(() => {
@@ -692,9 +659,16 @@ export default function DashboardPage() {
   // 监听权限Store变化，确保UI及时更新
   useEffect(() => {
     const unsubscribe = usePermissionStore.subscribe((state) => {
-      if (state.user && state.user.permissions) {
+      if (state.user && state.user.permissions && state.user.permissions.length > 0) {
         console.log('权限Store更新，触发重新渲染');
         setRefreshKey(prev => prev + 1);
+        
+        // ✅ 新增：权限数据加载完成后触发延迟预加载
+        setTimeout(() => {
+          preloadManager.delayedPreload().catch(error => {
+            console.error('延迟预加载失败:', error);
+          });
+        }, 1000);
       }
     });
     

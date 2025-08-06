@@ -35,8 +35,31 @@ export const authOptions: NextAuthOptions = {
         if (isSilentRefresh) {
           console.log('检测到silent-refresh请求:', credentials.username);
           
-          // 对于silent-refresh，直接返回当前用户信息
-          // 这里可以从session或缓存中获取用户信息
+          // 对于silent-refresh，从本地缓存获取用户信息
+          if (typeof window !== 'undefined') {
+            try {
+              const userCache = localStorage.getItem('userCache');
+              if (userCache) {
+                const cacheData = JSON.parse(userCache);
+                console.log('silent-refresh: 从缓存获取用户信息', cacheData);
+                
+                return {
+                  id: cacheData.id || credentials.username,
+                  email: cacheData.email || "",
+                  name: cacheData.username || credentials.username,
+                  username: cacheData.username || credentials.username,
+                  isAdmin: cacheData.isAdmin || false,
+                  image: null,
+                  permissions: cacheData.permissions || [], // ✅ 使用缓存中的权限数据
+                  status: cacheData.status !== false
+                };
+              }
+            } catch (error) {
+              console.error('silent-refresh: 获取缓存用户信息失败', error);
+            }
+          }
+          
+          // 如果缓存中没有数据，返回默认用户信息
           return {
             id: credentials.username,
             email: "",

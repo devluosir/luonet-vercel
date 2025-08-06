@@ -118,6 +118,26 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         permissions: Array.isArray(sessionUser.permissions) ? sessionUser.permissions : []
       };
       
+      // ✅ 修复：如果Session中没有权限数据，尝试从缓存获取
+      if (user.permissions.length === 0 && typeof window !== 'undefined') {
+        try {
+          const userCache = localStorage.getItem('userCache');
+          if (userCache) {
+            const cacheData = JSON.parse(userCache);
+            const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
+            
+            if (isRecent && cacheData.permissions && Array.isArray(cacheData.permissions)) {
+              user.permissions = cacheData.permissions;
+              logPermission('Session无权限数据，从缓存恢复权限', {
+                permissionsCount: user.permissions.length
+              });
+            }
+          }
+        } catch (error) {
+          logPermissionError('从缓存恢复权限失败', error);
+        }
+      }
+      
       // 更新Store
       set({ user, isLoading: false, error: null, lastFetchTime: Date.now() });
       

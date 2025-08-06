@@ -38,61 +38,52 @@ export class PreloadManager {
   // 预加载所有资源
   async preloadAllResources(): Promise<void> {
     if (this.isPreloading) {
-      console.log('预加载已在进行中...');
-      return;
-    }
-
-    // 检查是否已经预加载过
-    if (this.isPreloaded()) {
-      console.log('资源已预加载，跳过重复预加载');
+      console.log('预加载已在进行中，跳过重复请求');
       return;
     }
 
     this.isPreloading = true;
-    this.updateProgress(0, '开始预加载资源...');
+    this.updateProgress(0, '开始预加载...');
 
     try {
-      // 获取用户权限
-      const permissions = this.getUserPermissions();
-      console.log(`用户权限: ${permissions}`);
+      // 1. 预加载静态资源（25%）
+      await this.preloadStaticAssets();
+      this.updateProgress(25);
 
-      this.updateProgress(5, `正在预加载资源 (权限: ${permissions.join(', ')})...`);
+      // 2. 预加载表单页面（45%）
+      await this.preloadFormPages();
+      this.updateProgress(45);
 
-      // 异步预加载，不阻塞用户操作
-      setTimeout(async () => {
-        try {
-          // 预加载静态资源（轻量级）
-          await this.preloadStaticAssets();
-          this.updateProgress(25);
+      // 3. 预加载CSS和JS资源（65%）
+      await this.preloadScriptsAndStyles();
+      this.updateProgress(65);
 
-          // 预加载表单页面（轻量级，只检查状态）
-          await this.preloadFormPages();
-          this.updateProgress(45);
+      // 4. 预加载PDF字体（最后一步）
+      await this.preloadFonts();
+      this.updateProgress(100, '预加载完成');
 
-          // 预加载脚本和样式（轻量级）
-          await this.preloadScriptsAndStyles();
-          this.updateProgress(65);
-
-          // 预加载字体（最后执行）
-          await this.preloadFonts();
-          this.updateProgress(100, '预加载完成');
-
-          // 标记预加载完成
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('preloadCompleted', Date.now().toString());
-          }
-
-          console.log('所有资源预加载完成');
-        } catch (error) {
-          console.error('预加载过程中出错:', error);
-        } finally {
-          this.isPreloading = false;
-        }
-      }, 100); // 延迟100ms开始，让用户先看到界面
-
+      console.log('所有资源预加载完成');
     } catch (error) {
-      console.error('预加载初始化失败:', error);
+      console.error('预加载过程中出错:', error);
+    } finally {
       this.isPreloading = false;
+    }
+  }
+
+  // ✅ 新增：延迟预加载方法，在权限数据加载后调用
+  async delayedPreload(): Promise<void> {
+    console.log('触发延迟预加载，检查权限数据...');
+    
+    // 等待一小段时间，确保权限数据已加载
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // 检查是否有权限数据
+    const formPages = this.getFormPagesByPermissions();
+    if (formPages.length > 0) {
+      console.log('检测到权限数据，开始延迟预加载');
+      await this.preloadAllResources();
+    } else {
+      console.log('仍未检测到权限数据，跳过延迟预加载');
     }
   }
 
@@ -100,12 +91,14 @@ export class PreloadManager {
   private async preloadFonts(): Promise<void> {
     console.log('预加载PDF字体（最后一步）...');
     
-    // 检查是否有权限使用PDF功能
+    // ✅ 修复：检查是否有权限使用PDF功能，使用改进的权限检查
     const formPages = this.getFormPagesByPermissions();
     if (formPages.length === 0) {
       console.log('没有PDF功能权限，跳过字体预加载');
       return;
     }
+    
+    console.log(`有PDF功能权限，预加载字体。表单页面: ${formPages.join(', ')}`);
     
     try {
       // 确保字体CSS已加载，浏览器会自动处理字体加载
@@ -172,49 +165,77 @@ export class PreloadManager {
     if (typeof window === 'undefined') return [];
 
     try {
-      const latestPermissions = localStorage.getItem('latestPermissions');
-      if (!latestPermissions) {
-        console.log('没有权限数据，跳过表单页面预加载');
-        return [];
+      // ✅ 修复：使用正确的权限数据源
+      // 优先级1: 从userCache获取权限数据
+      const userCache = localStorage.getItem('userCache');
+      if (userCache) {
+        const cacheData = JSON.parse(userCache);
+        if (cacheData.permissions && Array.isArray(cacheData.permissions)) {
+          console.log('从userCache获取权限数据进行预加载');
+          return this.getFormPagesFromPermissions(cacheData.permissions);
+        }
       }
 
-      const permissions = JSON.parse(latestPermissions);
-      const formPages: string[] = [];
+      // 优先级2: 从latestPermissions获取权限数据
+      const latestPermissions = localStorage.getItem('latestPermissions');
+      if (latestPermissions) {
+        const permissions = JSON.parse(latestPermissions);
+        console.log('从latestPermissions获取权限数据进行预加载');
+        return this.getFormPagesFromPermissions(permissions);
+      }
 
-      permissions.forEach((perm: any) => {
-        if (perm.canAccess) {
-          switch (perm.moduleId) {
-            case 'quotation':
-              formPages.push('/quotation');
-              break;
-            case 'packing':
-              formPages.push('/packing');
-              break;
-            case 'invoice':
-              formPages.push('/invoice');
-              break;
-            case 'purchase':
-              formPages.push('/purchase');
-              break;
-            case 'history':
-              formPages.push('/history');
-              break;
-            case 'customer':
-              formPages.push('/customer');
-              break;
-            case 'mail':
-              formPages.push('/mail');
-              break;
+      // 优先级3: 从session获取权限数据（通过全局变量）
+      if (typeof window !== 'undefined' && (window as any).__SESSION_PERMISSIONS__) {
+        const sessionPermissions = (window as any).__SESSION_PERMISSIONS__;
+        console.log('从session获取权限数据进行预加载');
+        return this.getFormPagesFromPermissions(sessionPermissions);
+      }
 
-          }
-        }
-      });
-
-      return formPages;
+      console.log('没有找到权限数据，使用默认权限进行预加载');
+      // 默认权限：允许所有表单页面预加载
+      return ['/quotation', '/packing', '/invoice', '/purchase'];
     } catch (error) {
-      console.error('解析权限数据失败:', error);
-      return [];
+      console.error('获取权限数据失败:', error);
+      // 出错时使用默认权限
+      return ['/quotation', '/packing', '/invoice', '/purchase'];
     }
+  }
+
+  // ✅ 新增：从权限数组获取表单页面
+  private getFormPagesFromPermissions(permissions: any[]): string[] {
+    const formPages: string[] = [];
+
+    permissions.forEach((perm: any) => {
+      if (perm.canAccess) {
+        switch (perm.moduleId) {
+          case 'quotation':
+            formPages.push('/quotation');
+            break;
+          case 'packing':
+            formPages.push('/packing');
+            break;
+          case 'invoice':
+            formPages.push('/invoice');
+            break;
+          case 'purchase':
+            formPages.push('/purchase');
+            break;
+          case 'history':
+            formPages.push('/history');
+            break;
+          case 'customer':
+            formPages.push('/customer');
+            break;
+          case 'ai-email':
+            formPages.push('/mail');
+            break;
+          default:
+            break;
+        }
+      }
+    });
+
+    return formPages;
   }
 
   // 使用多种方法预加载页面
