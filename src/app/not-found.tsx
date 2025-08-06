@@ -1706,7 +1706,7 @@ export default function NotFound() {
                       </div>
                       <div className="sm:hidden mt-1">
                         <p className="text-xs text-gray-500">
-                          💡 点击"开始推演"让AI自动游戏
+                          💡 点击&ldquo;开始推演&rdquo;让AI自动游戏
                         </p>
                       </div>
                     </div>
