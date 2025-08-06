@@ -1,209 +1,119 @@
-# Luo & Company - 专业报价和订单确认系统
+# MLUONET - 企业管理系统
 
 ## 项目概述
 
-这是一个基于Next.js 14构建的专业报价和订单确认系统，采用现代化的技术栈和架构设计。
+MLUONET是一个现代化的企业管理系统，提供完整的业务管理解决方案，包括报价、采购、发票、装箱单等核心功能。
 
-## 最新优化 - Dashboard本地化
+## 主要功能
 
-### 问题背景
-用户反馈从各个模块返回Dashboard时仍有加载过程，影响了用户体验。
+### 核心业务模块
+- **报价管理**: 创建和管理客户报价单
+- **采购管理**: 处理供应商采购订单
+- **发票管理**: 生成和管理发票
+- **装箱单管理**: 创建详细的装箱清单
+- **邮件系统**: 集成邮件发送功能
 
-### 优化方案
+### 404页面娱乐功能
+- **五子棋游戏**: 经典的五子棋对战游戏
+- **2048游戏**: 数字合并游戏，支持AI推演功能
 
-#### 1. 权限数据优先级优化
-```
-优先级从高到低：
-1. 全局权限store (user?.permissions) - 最新、最可靠
-2. 本地缓存权限 (localStorage) - 快速、持久化
-3. Session权限数据 (session?.user?.permissions) - NextAuth管理
-4. 本地状态权限 (latestPermissions) - 备用数据
-```
+## 2048游戏推演功能
 
-#### 2. 初始化逻辑优化
-- **移除session loading检查**：不再等待session加载完成
-- **立即显示内容**：页面挂载后立即显示，权限异步加载
-- **本地数据优先**：优先使用localStorage中的权限数据
-- **管理员默认权限**：管理员用户即使没有权限数据也能看到所有模块
+### 功能特点
+- **AI自动推演**: 使用Expectimax算法和蒙特卡洛树搜索进行智能推演
+- **随机演示**: 使用随机方向移动进行调试和演示
+- **实时统计**: 显示推演步数、模拟次数、当前分数等
+- **速度控制**: 支持快速、正常、慢速、极慢四种推演速度
+- **手动干预**: 可随时暂停推演并进行手动操作
+- **撤销功能**: 支持撤销到上一步状态
+- **单步推演**: 可以手动控制AI走一步
 
-#### 3. 权限映射优化
-```typescript
-// 优化的权限映射逻辑
-const permissionMap = useMemo(() => {
-  // 优先级1: 全局权限store（最新）
-  let permissions = user?.permissions || [];
-  
-  // 优先级2: 本地缓存权限（快速）
-  if (permissions.length === 0 && typeof window !== 'undefined') {
-    // 从localStorage读取权限数据
-  }
-  
-  // 优先级3: Session权限数据（备用）
-  if (permissions.length === 0) {
-    permissions = session?.user?.permissions || [];
-  }
-  
-  // 如果没有权限数据，根据用户是否为管理员显示默认权限
-  if (!permissions || permissions.length === 0) {
-    const isAdmin = user?.isAdmin ?? session?.user?.isAdmin ?? false;
-    if (isAdmin) {
-      // 管理员显示所有模块
-      return { permissions: { quotation: true, packing: true, ... } };
-    } else {
-      // 普通用户不显示任何模块
-      return { permissions: { quotation: false, packing: false, ... } };
-    }
-  }
-}, [user?.permissions, user?.isAdmin, session?.user?.permissions, session?.user?.isAdmin, latestPermissions]);
-```
+### 使用方法
+1. **开始推演**: 点击"开始推演"按钮，AI将自动进行游戏
+2. **暂停推演**: 点击"暂停推演"按钮停止自动推演
+3. **单步推演**: 点击"单步推演"按钮，AI走一步
+4. **随机演示**: 点击"随机演示"按钮，使用随机方向移动
+5. **撤销操作**: 点击"撤销"按钮回到上一步
+6. **速度调节**: 使用下拉菜单调整推演速度
+7. **手动干预**: 在推演过程中可以随时进行手动操作
 
-#### 4. 异步权限初始化
-```typescript
-// 异步权限初始化 - 不阻塞页面渲染
-useEffect(() => {
-  if (!mounted) return;
-  
-  // 立即初始化权限store，如果成功则不需要后续获取
-  const initialized = initializeUserFromStorage();
-  
-  if (initialized) {
-    // 如果本地初始化成功，延迟获取权限以更新数据
-    setTimeout(() => {
-      fetchPermissions(false); // 非强制刷新，优先使用本地缓存
-    }, 1000);
-  } else {
-    // 如果本地初始化失败，立即获取权限
-    setTimeout(() => {
-      fetchPermissions(false);
-    }, 500);
-  }
-}, [session, status, mounted, fetchPermissions, hasFetchedUserDetails, initializeUserFromStorage]);
-```
-
-### 优化效果
-
-1. **即时显示**：Dashboard页面挂载后立即显示内容，不再等待session加载
-2. **本地优先**：优先使用localStorage中的权限数据，减少网络请求
-3. **管理员友好**：管理员用户即使没有权限数据也能看到所有功能模块
-4. **异步更新**：权限数据在后台异步更新，不影响用户体验
-5. **减少依赖**：减少了对session状态的依赖，提高了页面响应速度
+### 算法说明
+- **Expectimax算法**: 2层深度搜索，支持Alpha-Beta剪枝优化
+- **蒙特卡洛树搜索**: 备选算法，支持100次随机模拟
+- **综合评估函数**: 基于空格数量、合并潜力、单调性、平滑度、角落策略和死路惩罚
+- **状态管理**: 完整的撤销栈和状态快照管理，使用JSON深拷贝确保状态隔离
 
 ### 技术实现
-
-#### 权限Store优化
-- `initializeUserFromStorage()` 返回boolean值，表示初始化是否成功
-- 优化了权限数据的优先级逻辑
-- 添加了管理员默认权限处理
-
-#### Dashboard组件优化
-- 移除了session loading状态检查
-- 优化了权限映射的依赖项
-- 实现了真正的本地化渲染
-
-#### 数据流向
-```
-页面挂载 → 立即显示内容 → 本地权限初始化 → 异步权限更新 → 页面重新渲染
-```
+- **React Hooks**: 使用useState、useEffect、useRef管理状态
+- **算法优化**: 避免阻塞主线程的计算密集型操作
+- **响应式设计**: 适配移动端和桌面端
+- **性能监控**: 实时显示推演统计信息
 
 ## 技术栈
 
 - **前端框架**: Next.js 14 (App Router)
-- **UI组件**: 自定义组件 + Tailwind CSS
-- **状态管理**: Zustand (权限管理)
-- **认证系统**: NextAuth.js
-- **数据库**: Cloudflare D1 (SQLite)
+- **UI组件**: Tailwind CSS
+- **图标库**: Lucide React
+- **状态管理**: React Hooks
 - **部署平台**: Vercel
 
-## 核心功能
+## 开发环境
 
-### 1. 权限管理系统
-- 基于角色的权限控制
-- 多层级权限数据源
-- 本地缓存优化
-- 实时权限更新
+```bash
+# 安装依赖
+npm install
 
-### 2. 单据管理
-- 报价单 (Quotation)
-- 销售确认 (Sales Confirmation)
-- 装箱单 (Packing List)
-- 财务发票 (Invoice)
-- 采购订单 (Purchase Order)
+# 启动开发服务器
+npm run dev
 
-### 3. 工具模块
-- AI邮件助手
-- 日期计算工具
-- 单据历史管理
-- 客户管理
+# 构建生产版本
+npm run build
+
+# 启动生产服务器
+npm start
+```
 
 ## 项目结构
 
 ```
-src/
-├── app/                    # Next.js App Router页面
-│   ├── dashboard/         # 主控制台
-│   ├── quotation/         # 报价单模块
-│   ├── packing/          # 装箱单模块
-│   ├── invoice/          # 发票模块
-│   ├── purchase/         # 采购模块
-│   └── history/          # 历史记录
-├── components/            # 可复用组件
-├── lib/                  # 工具库和配置
-├── types/                # TypeScript类型定义
-└── utils/                # 工具函数
+mluonet/
+├── src/
+│   ├── app/                 # Next.js App Router页面
+│   ├── components/          # React组件
+│   ├── lib/                 # 工具库和配置
+│   ├── types/               # TypeScript类型定义
+│   └── utils/               # 工具函数
+├── public/                  # 静态资源
+└── scripts/                 # 构建脚本
 ```
 
-## 开发指南
+## 部署
 
-### 环境设置
-1. 克隆项目
-2. 安装依赖: `npm install`
-3. 配置环境变量
-4. 启动开发服务器: `npm run dev`
+项目已配置为Vercel部署，包含以下优化：
 
-### 权限系统使用
-```typescript
-import { usePermissionStore } from '@/lib/permissions';
-
-// 在组件中使用
-const { user, hasPermission, fetchPermissions } = usePermissionStore();
-
-// 检查权限
-if (hasPermission('quotation')) {
-  // 显示报价单功能
-}
-```
-
-### 性能优化
-- 使用React.memo优化组件渲染
-- 实现权限数据的本地缓存
-- 异步加载非关键资源
-- 预加载常用页面
-
-## 部署说明
-
-项目已配置为在Vercel上部署，支持：
-- 自动构建和部署
-- 环境变量管理
-- 数据库连接
-- 静态资源优化
+- **字体优化**: 中文字体压缩和预加载
+- **图片优化**: Logo和图标资源优化
+- **性能监控**: 实时性能数据收集
+- **错误处理**: 完善的错误边界和404页面
 
 ## 更新日志
 
-### v1.2.0 - Dashboard本地化优化
-- ✅ 优化Dashboard加载逻辑，实现真正的本地化
-- ✅ 移除session loading状态检查
-- ✅ 优化权限数据优先级
-- ✅ 添加管理员默认权限处理
-- ✅ 实现异步权限更新
+### 最新版本
+- ✅ 新增2048游戏AI推演功能
+- ✅ 实现Expectimax算法和蒙特卡洛树搜索
+- ✅ 添加随机演示功能，用于调试和蒙特卡洛模拟
+- ✅ 添加推演统计和速度控制
+- ✅ 支持手动干预和撤销功能
+- ✅ 优化移动端用户体验
+- ✅ 修复状态同步问题，使用JSON深拷贝确保状态隔离
+- ✅ 增强AI算法性能，支持Alpha-Beta剪枝优化
+- ✅ 添加调试日志，便于问题排查
+- ✅ 修复重新开始功能数据恢复问题，确保重新开始后刷新页面不会恢复老数据
 
-### v1.1.0 - 权限系统重构
-- ✅ 实现基于Zustand的权限管理
-- ✅ 添加多层级权限数据源
-- ✅ 优化权限缓存机制
-- ✅ 实现实时权限更新
+## 贡献指南
 
-### v1.0.0 - 基础功能
-- ✅ 完整的单据管理系统
-- ✅ 用户认证和权限控制
-- ✅ 响应式UI设计
-- ✅ 数据持久化存储
+欢迎提交Issue和Pull Request来改进项目。
+
+## 许可证
+
+MIT License

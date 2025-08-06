@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Home, ArrowRight, Gamepad2, Square, Circle, RotateCcw } from 'lucide-react';
+import { Home, ArrowRight, Gamepad2, Square, Circle, RotateCcw, Play, Pause, SkipForward, Brain } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 export default function NotFound() {
@@ -29,6 +29,19 @@ export default function NotFound() {
   const [highestAchievedNumber, setHighestAchievedNumber] = useState(0);
   const [game2048Score, setGame2048Score] = useState(0);
   const [game2048HighScore, setGame2048HighScore] = useState(0);
+
+  // 推演功能状态
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+  const [autoPlaySpeed, setAutoPlaySpeed] = useState(1000); // 毫秒，默认慢一点便于观察
+  const [autoPlayStats, setAutoPlayStats] = useState({
+    moves: 0,
+    totalScore: 0,
+    bestScore: 0,
+    simulations: 0
+  });
+  const [undoStack, setUndoStack] = useState<number[][][]>([]);
+  const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isAutoPlayingRef = useRef(false);
 
   // 触摸和鼠标手势状态
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -63,20 +76,30 @@ export default function NotFound() {
         }
       }
       
-      // 获取2048游戏进度
-      const saved2048Game = localStorage.getItem('2048GameState');
-      if (saved2048Game) {
-        try {
-          const game2048State = JSON.parse(saved2048Game);
-          setBoard(game2048State.board || Array(7).fill(null).map(() => Array(7).fill(0)));
-          setGame2048Active(game2048State.gameActive || false);
-          setGame2048Over(game2048State.gameOver || false);
-          setGame2048Won(game2048State.gameWon || false);
-          setGame2048Score(game2048State.score || 0);
-          setHighestAchievedNumber(game2048State.highestAchievedNumber || 0);
-        } catch (error) {
-          console.error('加载2048进度失败:', error);
+      // 检查是否有重置标记，如果有则不恢复2048游戏进度
+      const resetMark = localStorage.getItem('2048GameReset');
+      if (!resetMark) {
+        // 获取2048游戏进度
+        const saved2048Game = localStorage.getItem('2048GameState');
+        if (saved2048Game) {
+          try {
+            const game2048State = JSON.parse(saved2048Game);
+            setBoard(game2048State.board || Array(7).fill(null).map(() => Array(7).fill(0)));
+            setGame2048Active(game2048State.gameActive || false);
+            setGame2048Over(game2048State.gameOver || false);
+            setGame2048Won(game2048State.gameWon || false);
+            setGame2048Score(game2048State.score || 0);
+            setHighestAchievedNumber(game2048State.highestAchievedNumber || 0);
+          } catch (error) {
+            console.error('加载2048进度失败:', error);
+          }
         }
+      } else {
+        // 如果有重置标记，清除它并初始化新游戏
+        localStorage.removeItem('2048GameReset');
+        setTimeout(() => {
+          init2048Game();
+        }, 0);
       }
     }
   }, []);
@@ -200,6 +223,9 @@ export default function NotFound() {
 
   // 初始化2048游戏
   const init2048Game = () => {
+    // 停止自动推演
+    stopAutoPlay();
+    
     const newBoard = Array(7).fill(null).map(() => Array(7).fill(0));
     // 添加两个初始数字
     addRandomTile(newBoard);
@@ -209,6 +235,14 @@ export default function NotFound() {
     setGame2048Over(false);
     setGame2048Won(false);
     setGame2048Active(true);
+    setUndoStack([]);
+    setAutoPlayStats({
+      moves: 0,
+      totalScore: 0,
+      bestScore: 0,
+      simulations: 0
+    });
+    setIsAutoPlaying(false);
     // 游戏开始时保存进度
     setTimeout(() => save2048Progress(), 0);
   };
@@ -236,17 +270,24 @@ export default function NotFound() {
     let score = 0;
 
     const moveRow = (row: number[]) => {
+      console.log('moveRow 输入:', row);
       const filtered = row.filter(cell => cell !== 0);
+      console.log('过滤后:', filtered);
+      
       for (let i = 0; i < filtered.length - 1; i++) {
+        console.log(`检查位置 ${i}: ${filtered[i]} 和 ${filtered[i + 1]}`);
         if (filtered[i] === filtered[i + 1]) {
+          console.log(`合并 ${filtered[i]} + ${filtered[i + 1]} = ${filtered[i] * 2}`);
           filtered[i] *= 2;
-          score += filtered[i];
           filtered.splice(i + 1, 1);
+          console.log('合并后数组:', filtered);
         }
       }
+      
       while (filtered.length < 7) {
         filtered.push(0);
       }
+      console.log('moveRow 输出:', filtered);
       return filtered;
     };
 
@@ -291,7 +332,7 @@ export default function NotFound() {
       // 移动后保存进度
       setTimeout(() => save2048Progress(), 0);
     }
-
+    
     return moved;
   };
 
@@ -328,6 +369,697 @@ export default function NotFound() {
     return false;
   };
 
+  // 优化的评估函数 - 基于你的建议
+  const evaluateBoard = (board: number[][]): number => {
+    let score = 0;
+
+    // 1. 空格数量 - 使用 log 平滑惩罚
+    let emptyCount = 0;
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 7; j++) {
+        if (board[i][j] === 0) {
+          emptyCount++;
+        }
+      }
+    }
+    score += Math.log(emptyCount + 1) * 100; // 使用 log 平滑
+
+    // 2. 合并潜力 - 鼓励同时合并多个 tile
+    let mergePotential = 0;
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 6; j++) {
+        if (board[i][j] !== 0 && board[i][j] === board[i][j + 1]) {
+          mergePotential += board[i][j] * 2; // 相邻相同数字
+        }
+      }
+    }
+    for (let i = 0; i < 6; i++) {
+      for (let j = 0; j < 7; j++) {
+        if (board[i][j] !== 0 && board[i][j] === board[i + 1][j]) {
+          mergePotential += board[i][j] * 2; // 相邻相同数字
+        }
+      }
+    }
+    score += mergePotential * 10;
+
+    // 3. 单调性 - 考察行/列的值是否递减或递增
+    let monotonicity = 0;
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 6; j++) {
+        if (board[i][j] >= board[i][j + 1] && board[i][j] !== 0) {
+          monotonicity += board[i][j] - board[i][j + 1];
+        }
+      }
+    }
+    for (let i = 0; i < 6; i++) {
+      for (let j = 0; j < 7; j++) {
+        if (board[i][j] >= board[i + 1][j] && board[i][j] !== 0) {
+          monotonicity += board[i][j] - board[i + 1][j];
+        }
+      }
+    }
+    score += monotonicity * 5;
+
+    // 4. 平滑度 - 鼓励相邻格子差值小
+    let smoothness = 0;
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 6; j++) {
+        if (board[i][j] !== 0 && board[i][j + 1] !== 0) {
+          smoothness -= Math.abs(board[i][j] - board[i][j + 1]);
+        }
+      }
+    }
+    for (let i = 0; i < 6; i++) {
+      for (let j = 0; j < 7; j++) {
+        if (board[i][j] !== 0 && board[i + 1][j] !== 0) {
+          smoothness -= Math.abs(board[i][j] - board[i + 1][j]);
+        }
+      }
+    }
+    score += smoothness * 2;
+
+    // 5. 角落策略 - 大数字靠角，惩罚角落之外的大 tile
+    let cornerBonus = 0;
+    let maxValue = 0;
+    let maxValuePosition = { i: 0, j: 0 };
+    
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 7; j++) {
+        if (board[i][j] > maxValue) {
+          maxValue = board[i][j];
+          maxValuePosition = { i, j };
+        }
+      }
+    }
+    
+    // 角落位置得分更高
+    const isCorner = (maxValuePosition.i === 0 || maxValuePosition.i === 6) && 
+                     (maxValuePosition.j === 0 || maxValuePosition.j === 6);
+    cornerBonus = isCorner ? maxValue * 2 : -maxValue; // 角落奖励，非角落惩罚
+    score += cornerBonus;
+
+    // 6. 死路惩罚 - 移动后若空格数降低、合并数下降，判为"风险"
+    let deadEndPenalty = 0;
+    let validMoves = 0;
+    const directions: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+    
+    for (const direction of directions) {
+      const boardCopy = deepCloneBoard(board);
+      if (moveAndMergeSimulation(boardCopy, direction)) {
+        validMoves++;
+      }
+    }
+    
+    if (validMoves === 0) {
+      deadEndPenalty = -10000; // 大幅惩罚死路
+    } else if (validMoves <= 1) {
+      deadEndPenalty = -1000; // 惩罚只有很少选择的情况
+    }
+    score += deadEndPenalty;
+
+    return score;
+  };
+
+  // 蒙特卡洛模拟
+  const simulateMove = (board: number[][], direction: 'up' | 'down' | 'left' | 'right', depth: number = 3): number => {
+    if (depth === 0) {
+      return evaluateBoard(board);
+    }
+
+    const newBoard = board.map(row => [...row]);
+    const moved = moveAndMergeSimulation(newBoard, direction);
+    
+    if (!moved) {
+      return -Infinity; // 无效移动
+    }
+
+    // 随机添加新数字
+    addRandomTileSimulation(newBoard);
+
+    // 递归模拟下一步
+    const directions: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+    let bestScore = -Infinity;
+    
+    for (const dir of directions) {
+      const score = simulateMove(newBoard, dir, depth - 1);
+      bestScore = Math.max(bestScore, score);
+    }
+
+    return bestScore;
+  };
+
+  // 模拟移动（不更新状态）
+  const moveAndMergeSimulation = (board: number[][], direction: 'up' | 'down' | 'left' | 'right'): boolean => {
+    let moved = false;
+
+    const moveRow = (row: number[]) => {
+      console.log('moveRow 输入:', row);
+      const filtered = row.filter(cell => cell !== 0);
+      console.log('过滤后:', filtered);
+      
+      for (let i = 0; i < filtered.length - 1; i++) {
+        console.log(`检查位置 ${i}: ${filtered[i]} 和 ${filtered[i + 1]}`);
+        if (filtered[i] === filtered[i + 1]) {
+          console.log(`合并 ${filtered[i]} + ${filtered[i + 1]} = ${filtered[i] * 2}`);
+          filtered[i] *= 2;
+          filtered.splice(i + 1, 1);
+          console.log('合并后数组:', filtered);
+        }
+      }
+      
+      while (filtered.length < 7) {
+        filtered.push(0);
+      }
+      console.log('moveRow 输出:', filtered);
+      return filtered;
+    };
+
+    if (direction === 'left' || direction === 'right') {
+      for (let i = 0; i < 7; i++) {
+        let row = [...board[i]];
+        if (direction === 'right') {
+          row = row.reverse();
+        }
+        const newRow = moveRow(row);
+        if (direction === 'right') {
+          newRow.reverse();
+        }
+        if (JSON.stringify(newRow) !== JSON.stringify(board[i])) {
+          moved = true;
+        }
+        board[i] = newRow;
+      }
+    } else {
+      for (let j = 0; j < 7; j++) {
+        let col = [board[0][j], board[1][j], board[2][j], board[3][j], board[4][j], board[5][j], board[6][j]];
+        if (direction === 'down') {
+          col = col.reverse();
+        }
+        const newCol = moveRow(col);
+        if (direction === 'down') {
+          newCol.reverse();
+        }
+        for (let i = 0; i < 7; i++) {
+          if (board[i][j] !== newCol[i]) {
+            moved = true;
+          }
+          board[i][j] = newCol[i];
+        }
+      }
+    }
+
+    return moved;
+  };
+
+  // 模拟添加随机数字（不更新状态）
+  const addRandomTileSimulation = (board: number[][]) => {
+    const emptyCells = [];
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 7; j++) {
+        if (board[i][j] === 0) {
+          emptyCells.push({ i, j });
+        }
+      }
+    }
+    if (emptyCells.length > 0) {
+      const { i, j } = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+      board[i][j] = Math.random() < 0.9 ? 2 : 4;
+    }
+  };
+
+  // 深拷贝棋盘 - 使用 JSON 深拷贝确保完全隔离
+  const deepCloneBoard = (board: number[][]): number[][] => {
+    return JSON.parse(JSON.stringify(board));
+  };
+
+  // 获取最佳移动方向 - 使用纯函数，基于当前棋盘快照
+  const getBestMove = (currentBoard: number[][]): 'up' | 'down' | 'left' | 'right' | null => {
+    const directions: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+    let bestDirection: 'up' | 'down' | 'left' | 'right' | null = null;
+    let bestScore = -Infinity;
+
+    // 使用深拷贝，避免影响原状态
+    const boardSnapshot = deepCloneBoard(currentBoard);
+    
+    // 调试日志：记录输入状态
+    console.log('AI决策 - 输入棋盘状态:', JSON.stringify(boardSnapshot));
+
+    for (const direction of directions) {
+      const boardCopy = deepCloneBoard(boardSnapshot);
+      const moved = moveAndMergeSimulation(boardCopy, direction);
+      
+      if (moved) {
+        // 使用 Expectimax 评估（简化版）
+        const score = expectimax(boardCopy, 2, false); // 2层深度，从AI角度开始
+        
+        console.log(`AI决策 - ${direction}方向评估分数:`, score);
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestDirection = direction;
+        }
+      } else {
+        console.log(`AI决策 - ${direction}方向无效移动`);
+      }
+    }
+
+    console.log('AI决策 - 最终选择方向:', bestDirection, '分数:', bestScore);
+    return bestDirection;
+  };
+
+  // 优化的 Expectimax 算法实现 - 增加深度控制和性能优化
+  const expectimax = (board: number[][], depth: number, isPlayerTurn: boolean, alpha: number = -Infinity, beta: number = Infinity): number => {
+    if (depth === 0 || isGameOver(board)) {
+      return evaluateBoard(board);
+    }
+
+    if (isPlayerTurn) {
+      // 玩家回合：尝试所有可能的移动，取最大值
+      let maxScore = -Infinity;
+      const directions: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+      
+      for (const direction of directions) {
+        const boardCopy = deepCloneBoard(board);
+        const moved = moveAndMergeSimulation(boardCopy, direction);
+        
+        if (moved) {
+          addRandomTileSimulation(boardCopy);
+          const score = expectimax(boardCopy, depth - 1, false, alpha, beta);
+          maxScore = Math.max(maxScore, score);
+          
+          // Alpha-Beta 剪枝优化
+          alpha = Math.max(alpha, score);
+          if (alpha >= beta) {
+            break; // Beta 剪枝
+          }
+        }
+      }
+      
+      return maxScore === -Infinity ? evaluateBoard(board) : maxScore;
+    } else {
+      // 电脑回合：计算随机生成数字的期望值
+      const emptyCells = getEmptyCells(board);
+      if (emptyCells.length === 0) {
+        return evaluateBoard(board);
+      }
+
+      let totalScore = 0;
+      let totalWeight = 0;
+
+      // 优化：限制随机模拟次数以提高性能
+      const maxSimulations = Math.min(emptyCells.length * 2, 8); // 最多8次模拟
+      const sampledCells = emptyCells.length > maxSimulations 
+        ? emptyCells.sort(() => Math.random() - 0.5).slice(0, maxSimulations)
+        : emptyCells;
+
+      for (const cell of sampledCells) {
+        // 90% 概率生成 2，10% 概率生成 4
+        const values = [2, 4];
+        const probabilities = [0.9, 0.1];
+
+        for (let i = 0; i < values.length; i++) {
+          const value = values[i];
+          const probability = probabilities[i];
+          const boardCopy = deepCloneBoard(board);
+          boardCopy[cell.i][cell.j] = value;
+          
+          const score = expectimax(boardCopy, depth - 1, true, alpha, beta);
+          totalScore += score * probability;
+          totalWeight += probability;
+        }
+      }
+
+      return totalWeight > 0 ? totalScore / totalWeight : evaluateBoard(board);
+    }
+  };
+
+  // 获取空格位置
+  const getEmptyCells = (board: number[][]): { i: number; j: number }[] => {
+    const emptyCells = [];
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 7; j++) {
+        if (board[i][j] === 0) {
+          emptyCells.push({ i, j });
+        }
+      }
+    }
+    return emptyCells;
+  };
+
+  // 检查游戏是否结束
+  const isGameOver = (board: number[][]): boolean => {
+    // 检查是否有空格
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 7; j++) {
+        if (board[i][j] === 0) return false;
+      }
+    }
+    
+    // 检查是否可以合并
+    for (let i = 0; i < 7; i++) {
+      for (let j = 0; j < 7; j++) {
+        const current = board[i][j];
+        if (
+          (i < 6 && board[i + 1][j] === current) ||
+          (j < 6 && board[i][j + 1] === current)
+        ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  // 自动推演控制器
+  const startAutoPlay = () => {
+    if (!game2048Active || game2048Over || isAutoPlaying) {
+      return;
+    }
+    
+    setIsAutoPlaying(true);
+    isAutoPlayingRef.current = true;
+    setAutoPlayStats(prev => ({ ...prev, moves: 0, totalScore: game2048Score }));
+    
+    const autoPlayStep = () => {
+      // 使用ref来跟踪推演状态，避免状态更新延迟问题
+      if (game2048Over || !isAutoPlayingRef.current) {
+        stopAutoPlay();
+        return;
+      }
+
+      // 保存当前状态用于撤销 - 使用深拷贝确保状态隔离
+      setUndoStack(prev => [...prev, deepCloneBoard(board)]);
+      
+      // 使用当前棋盘快照进行AI决策 - 确保完全隔离
+      const currentBoardSnapshot = deepCloneBoard(board);
+      const bestMove = getBestMove(currentBoardSnapshot);
+      
+      if (bestMove) {
+        console.log('AI选择移动方向:', bestMove);
+        console.log('当前棋盘状态:', currentBoardSnapshot);
+        
+        // 使用handleSwipe确保状态正确更新
+        handleSwipe(bestMove);
+        setAutoPlayStats(prev => ({
+          ...prev,
+          moves: prev.moves + 1,
+          totalScore: game2048Score,
+          simulations: prev.simulations + 16 // Expectimax 2层 * 4方向 * 2回合
+        }));
+        
+        // 等待状态更新完成后再继续下一步
+        setTimeout(() => {
+          if (isAutoPlayingRef.current) {
+            autoPlayIntervalRef.current = setTimeout(autoPlayStep, autoPlaySpeed);
+          }
+        }, 100); // 增加延迟确保状态完全更新
+      } else {
+        // 没有有效移动，游戏结束
+        console.log('没有有效移动，游戏结束');
+        stopAutoPlay();
+        return;
+      }
+    };
+
+    // 延迟执行第一步，确保状态已更新
+    setTimeout(autoPlayStep, 150);
+  };
+
+  // 测试函数 - 用于调试
+  const testAutoPlay = () => {
+    console.log('测试按钮点击');
+    console.log('当前状态:', { game2048Active, game2048Over, isAutoPlaying });
+    alert('按钮点击正常！');
+  };
+
+  const stopAutoPlay = () => {
+    setIsAutoPlaying(false);
+    isAutoPlayingRef.current = false;
+    if (autoPlayIntervalRef.current) {
+      clearTimeout(autoPlayIntervalRef.current);
+      autoPlayIntervalRef.current = null;
+    }
+  };
+
+  const pauseAutoPlay = () => {
+    stopAutoPlay();
+  };
+
+  const resumeAutoPlay = () => {
+    if (!isAutoPlaying && game2048Active && !game2048Over) {
+      startAutoPlay();
+    }
+  };
+
+  // 撤销功能
+  const undoMove = () => {
+    if (undoStack.length > 0) {
+      const previousBoard = undoStack[undoStack.length - 1];
+      setBoard(previousBoard.map(row => [...row]));
+      setUndoStack(prev => prev.slice(0, -1));
+      stopAutoPlay(); // 手动操作时停止自动推演
+    }
+  };
+
+  // 单步推演
+  const stepForward = () => {
+    if (!game2048Active || game2048Over) return;
+    
+    // 使用深拷贝确保状态完全隔离
+    const currentBoardSnapshot = deepCloneBoard(board);
+    const bestMove = getBestMove(currentBoardSnapshot);
+    
+    if (bestMove) {
+      console.log('单步推演 - AI选择方向:', bestMove);
+      console.log('单步推演 - 当前棋盘:', currentBoardSnapshot);
+      
+      // 计算当前棋盘评估分数
+      const currentScore = evaluateBoard(currentBoardSnapshot);
+      console.log('单步推演 - 当前评估分数:', currentScore);
+      
+      handleSwipe(bestMove);
+    } else {
+      console.log('单步推演 - 没有有效移动');
+    }
+  };
+
+  // 清理自动推演定时器
+  useEffect(() => {
+    return () => {
+      if (autoPlayIntervalRef.current) {
+        clearTimeout(autoPlayIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // 测试游戏状态函数
+  const testGameState = () => {
+    console.log('=== 游戏状态测试 ===');
+    console.log('game2048Active:', game2048Active);
+    console.log('game2048Over:', game2048Over);
+    console.log('isAutoPlaying:', isAutoPlaying);
+    console.log('isRandomMoving:', isRandomMoving);
+    console.log('board状态:', board.flat().some(cell => cell !== 0) ? '有数字' : '空棋盘');
+    console.log('board内容:', board);
+    console.log('==================');
+  };
+
+  // 监听 board 变化，确保状态同步
+  useEffect(() => {
+    if (isAutoPlayingRef.current && game2048Active && !game2048Over) {
+      // 当棋盘状态变化时，可以在这里添加额外的同步逻辑
+      console.log('棋盘状态已更新:', JSON.stringify(board));
+    }
+  }, [board, game2048Active, game2048Over]);
+
+  // 随机移动功能 - 使用 useRef 避免 React 状态更新影响
+  const [isRandomMoving, setIsRandomMoving] = useState(false);
+  const isRandomMovingRef = useRef(false);
+  const randomMoveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isProcessingRef = useRef(false); // 防抖机制
+
+  const startRandomMove = () => {
+    // 防抖机制，避免快速点击
+    if (isProcessingRef.current) {
+      console.log('正在处理中，忽略点击');
+      return;
+    }
+    
+    isProcessingRef.current = true;
+    
+    // 先测试游戏状态
+    testGameState();
+    
+    console.log('尝试启动随机移动，当前状态:', { 
+      game2048Active, 
+      game2048Over, 
+      isRandomMoving,
+      boardState: board.flat().some(cell => cell !== 0) ? '有数字' : '空棋盘'
+    });
+    
+    // 如果游戏还没开始，先初始化游戏
+    if (!game2048Active) {
+      console.log('游戏未开始，先初始化游戏');
+      init2048Game();
+      // 延迟启动随机移动，确保游戏初始化完成
+      setTimeout(() => {
+        isProcessingRef.current = false;
+        if (!isRandomMovingRef.current) {
+          startRandomMove();
+        }
+      }, 200);
+      return;
+    }
+    
+    if (game2048Over || isRandomMovingRef.current) {
+      console.log('随机移动启动失败:', { game2048Active, game2048Over, isRandomMoving: isRandomMovingRef.current });
+      isProcessingRef.current = false;
+      return;
+    }
+    
+    // 使用 ref 控制状态，避免 React 重新渲染影响
+    isRandomMovingRef.current = true;
+    setIsRandomMoving(true);
+    console.log('开始随机移动演示');
+    
+    // 延迟重置处理状态
+    setTimeout(() => {
+      isProcessingRef.current = false;
+    }, 100);
+    
+    const randomMoveStep = () => {
+      // 使用 ref 检查状态，避免 React 状态更新影响
+      if (!isRandomMovingRef.current) {
+        console.log('随机移动被停止');
+        return;
+      }
+      
+      // 使用深拷贝检查当前状态，避免状态读取问题
+      const currentBoard = deepCloneBoard(board);
+      const isGameOverNow = isGameOver(currentBoard);
+      
+      if (isGameOverNow) {
+        console.log('游戏结束，停止随机移动');
+        stopRandomMove();
+        return;
+      }
+
+      const directions: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+      const randomDirection = directions[Math.floor(Math.random() * directions.length)];
+      
+      console.log('随机移动方向:', randomDirection);
+      console.log('移动前棋盘状态:', JSON.stringify(currentBoard));
+      
+      // 使用深拷贝确保状态隔离
+      const boardCopy = deepCloneBoard(currentBoard);
+      const moved = moveAndMergeSimulation(boardCopy, randomDirection);
+      
+      if (moved) {
+        console.log('移动后（添加随机数字前）:', JSON.stringify(boardCopy));
+        
+        // 添加随机数字
+        addRandomTileSimulation(boardCopy);
+        
+        console.log('添加随机数字后:', JSON.stringify(boardCopy));
+        
+        // 更新真实棋盘状态
+        setBoard(boardCopy);
+        console.log('随机移动成功，新棋盘:', JSON.stringify(boardCopy));
+        
+        // 检查是否有合并发生
+        const maxValue = Math.max(...boardCopy.flat());
+        const totalTiles = boardCopy.flat().filter(cell => cell !== 0).length;
+        const valueCounts = boardCopy.flat().reduce((acc, cell) => {
+          if (cell !== 0) {
+            acc[cell] = (acc[cell] || 0) + 1;
+          }
+          return acc;
+        }, {} as Record<number, number>);
+        
+        console.log(`当前最大数字: ${maxValue}, 总数字个数: ${totalTiles}`);
+        console.log(`数字分布:`, valueCounts);
+        
+        // 继续下一步随机移动
+        randomMoveIntervalRef.current = setTimeout(randomMoveStep, 300);
+      } else {
+        // 如果无法移动，尝试其他方向
+        console.log('随机移动失败，尝试其他方向');
+        randomMoveIntervalRef.current = setTimeout(randomMoveStep, 100);
+      }
+    };
+
+    // 立即开始随机移动
+    randomMoveStep();
+  };
+
+  const stopRandomMove = () => {
+    // 防抖机制，避免快速点击
+    if (isProcessingRef.current) {
+      console.log('正在处理中，忽略停止点击');
+      return;
+    }
+    
+    isProcessingRef.current = true;
+    
+    console.log('停止随机移动演示，当前状态:', { isRandomMoving, game2048Active, game2048Over });
+    
+    // 使用 ref 控制状态
+    isRandomMovingRef.current = false;
+    setIsRandomMoving(false);
+    
+    // 清理定时器
+    if (randomMoveIntervalRef.current) {
+      clearTimeout(randomMoveIntervalRef.current);
+      randomMoveIntervalRef.current = null;
+    }
+    
+    console.log('随机移动已停止');
+    
+    // 延迟重置处理状态
+    setTimeout(() => {
+      isProcessingRef.current = false;
+    }, 100);
+  };
+
+  // 蒙特卡洛评估函数 - 使用随机移动进行模拟
+  const monteCarloEvaluate = (board: number[][], iterations: number = 50): number => {
+    let totalScore = 0;
+    const directions: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+
+    for (let i = 0; i < iterations; i++) {
+      let simBoard = deepCloneBoard(board);
+      let score = 0;
+      let steps = 0;
+      const maxSteps = 20; // 限制模拟步数
+
+      while (steps < maxSteps && !isGameOver(simBoard)) {
+        const randomDirection = directions[Math.floor(Math.random() * directions.length)];
+        const moved = moveAndMergeSimulation(simBoard, randomDirection);
+        
+        if (moved) {
+          addRandomTileSimulation(simBoard);
+          score += evaluateBoard(simBoard);
+          steps++;
+        } else {
+          // 如果无法移动，尝试其他方向
+          let foundValidMove = false;
+          for (const dir of directions) {
+            const testBoard = deepCloneBoard(simBoard);
+            if (moveAndMergeSimulation(testBoard, dir)) {
+              foundValidMove = true;
+              break;
+            }
+          }
+          if (!foundValidMove) break; // 没有有效移动，结束模拟
+        }
+      }
+
+      totalScore += score;
+    }
+
+    return totalScore / iterations;
+  };
+
   // 检查是否达到新的里程碑
   const checkNewMilestone = (board: number[][]) => {
     const currentMax = Math.max(...board.flat());
@@ -345,21 +1077,30 @@ export default function NotFound() {
   const handleSwipe = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
     if (!game2048Active || game2048Over) return;
 
+    // 如果是手动操作（不是AI推演），停止自动推演
+    if (!isAutoPlayingRef.current) {
+      stopAutoPlay();
+    }
+
     const moved = moveAndMerge(board, direction);
     
     if (moved) {
-      // 使用setTimeout确保状态更新后再检查
+      // 使用setTimeout确保状态更新后再检查，并使用深拷贝避免状态污染
       setTimeout(() => {
+        // 使用深拷贝确保读取到最新状态
+        const currentBoard = deepCloneBoard(board);
+        
         // 检查是否达到新的里程碑
-        const newMilestone = checkNewMilestone(board);
+        const newMilestone = checkNewMilestone(currentBoard);
         if (newMilestone) {
           setHighestAchievedNumber(newMilestone);
           setGame2048Won(true);
           setHasShown2048Message(true);
         }
         // 检查游戏是否结束
-        if (checkGameOver(board)) {
+        if (checkGameOver(currentBoard)) {
           setGame2048Over(true);
+          stopAutoPlay(); // 游戏结束时停止自动推演
           // 更新最高分
           const newScore = game2048Score;
           if (newScore > game2048HighScore) {
@@ -369,9 +1110,9 @@ export default function NotFound() {
             }
           }
         }
-      }, 0);
+      }, 50); // 增加延迟确保状态已完全更新
     }
-  }, [game2048Active, game2048Over, board, game2048Won, game2048Score, game2048HighScore]);
+  }, [game2048Active, game2048Over, board, game2048Won, game2048Score, game2048HighScore, isAutoPlayingRef]);
 
   // 触摸事件处理
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -535,6 +1276,16 @@ export default function NotFound() {
   }, [game2048Active, game2048Over, mouseStart]);
 
   const reset2048Game = () => {
+    // 停止自动推演
+    stopAutoPlay();
+    
+    // 清除保存的进度
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('2048GameState');
+      // 添加一个标记，表示已经重新开始
+      localStorage.setItem('2048GameReset', 'true');
+    }
+    
     setGame2048Active(false);
     setGame2048Over(false);
     setGame2048Won(false);
@@ -542,14 +1293,89 @@ export default function NotFound() {
     setHighestAchievedNumber(0);
     setGame2048Score(0);
     setBoard(Array(7).fill(null).map(() => Array(7).fill(0)));
-    // 清除保存的进度
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('2048GameState');
-    }
-    // 延迟初始化，确保状态重置完成
+    setUndoStack([]);
+    setAutoPlayStats({
+      moves: 0,
+      totalScore: 0,
+      bestScore: 0,
+      simulations: 0
+    });
+    setIsAutoPlaying(false);
+    
+    // 立即初始化新游戏，确保状态完全重置
     setTimeout(() => {
       init2048Game();
+      // 清除重置标记
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('2048GameReset');
+      }
     }, 0);
+  };
+
+  // 蒙特卡洛树搜索 (MCTS) 作为备选算法
+  const monteCarloSearch = (board: number[][], simulations: number = 100): 'up' | 'down' | 'left' | 'right' | null => {
+    const directions: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+    const scores: { [key in 'up' | 'down' | 'left' | 'right']: number } = { up: 0, down: 0, left: 0, right: 0 };
+    const counts: { [key in 'up' | 'down' | 'left' | 'right']: number } = { up: 0, down: 0, left: 0, right: 0 };
+
+    for (let i = 0; i < simulations; i++) {
+      for (const direction of directions) {
+        const boardCopy = deepCloneBoard(board);
+        const moved = moveAndMergeSimulation(boardCopy, direction);
+        
+        if (moved) {
+          // 随机模拟游戏到结束
+          const finalScore = simulateRandomGame(boardCopy, 10); // 模拟10步
+          scores[direction] += finalScore;
+          counts[direction]++;
+        }
+      }
+    }
+
+    // 选择平均分数最高的方向
+    let bestDirection: 'up' | 'down' | 'left' | 'right' | null = null;
+    let bestScore = -Infinity;
+
+    for (const direction of directions) {
+      if (counts[direction] > 0) {
+        const avgScore = scores[direction] / counts[direction];
+        if (avgScore > bestScore) {
+          bestScore = avgScore;
+          bestDirection = direction;
+        }
+      }
+    }
+
+    return bestDirection;
+  };
+
+  // 随机模拟游戏
+  const simulateRandomGame = (board: number[][], maxSteps: number): number => {
+    const boardCopy = deepCloneBoard(board);
+    let steps = 0;
+
+    while (steps < maxSteps && !isGameOver(boardCopy)) {
+      const directions: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+      const validMoves = [];
+
+      // 找出所有有效移动
+      for (const direction of directions) {
+        const testBoard = deepCloneBoard(boardCopy);
+        if (moveAndMergeSimulation(testBoard, direction)) {
+          validMoves.push(direction);
+        }
+      }
+
+      if (validMoves.length === 0) break;
+
+      // 随机选择一个有效移动
+      const randomDirection = validMoves[Math.floor(Math.random() * validMoves.length)] as 'up' | 'down' | 'left' | 'right';
+      moveAndMergeSimulation(boardCopy, randomDirection);
+      addRandomTileSimulation(boardCopy);
+      steps++;
+    }
+
+    return evaluateBoard(boardCopy);
   };
 
   return (
@@ -821,8 +1647,7 @@ export default function NotFound() {
                       display: 'grid',
                       gridTemplateColumns: 'repeat(7, 1fr)',
                       gridTemplateRows: 'repeat(7, 1fr)',
-                      maxWidth: 'min(100vw - 2rem, 70vh - 2rem)',
-                      maxHeight: 'min(100vw - 2rem, 70vh - 2rem)'
+                      maxWidth: 'min(100vw - 2rem, 70vh - 2rem)'
                     }}>
                       {board.map((row, rowIndex) =>
                         row.map((cell, colIndex) => (
@@ -873,10 +1698,17 @@ export default function NotFound() {
 
                   {/* 2048游戏控制提示 - 保持正方形比例优化 */}
                   {game2048Active && (
-                    <div className="mt-2 sm:mt-4 text-center hidden sm:block">
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                        支持键盘方向键、WASD、触摸滑动和鼠标拖拽
-                      </p>
+                    <div className="mt-2 sm:mt-4 text-center">
+                      <div className="hidden sm:block">
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                          支持键盘方向键、WASD、触摸滑动和鼠标拖拽
+                        </p>
+                      </div>
+                      <div className="sm:hidden mt-1">
+                        <p className="text-xs text-gray-500">
+                          💡 点击"开始推演"让AI自动游戏
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -909,6 +1741,117 @@ export default function NotFound() {
                           </div>
                         </div>
                         
+                        {/* 推演控制按钮 */}
+                        <div className="mt-2 sm:mt-3 space-y-2 sm:space-y-0">
+                          <div className="flex flex-wrap justify-center gap-1 sm:gap-2">
+                            <button
+                              onClick={isAutoPlaying ? pauseAutoPlay : startAutoPlay}
+                              disabled={!game2048Active || game2048Over}
+                              className={`flex items-center justify-center space-x-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 text-xs sm:text-sm font-medium ${
+                                isAutoPlaying
+                                  ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white'
+                                  : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white'
+                              } ${(!game2048Active || game2048Over) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              {isAutoPlaying ? (
+                                <>
+                                  <Pause className="w-3 h-3 sm:w-4 sm:h-4" />
+                                  <span>暂停推演</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="w-3 h-3 sm:w-4 sm:h-4" />
+                                  <span>开始推演</span>
+                                </>
+                              )}
+                            </button>
+
+                            <button
+                              onClick={stepForward}
+                              disabled={!game2048Active || game2048Over || isAutoPlaying}
+                              className={`flex items-center justify-center space-x-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 text-xs sm:text-sm font-medium bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white ${
+                                (!game2048Active || game2048Over || isAutoPlaying) ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
+                            >
+                              <SkipForward className="w-3 h-3 sm:w-4 sm:h-4" />
+                              <span>单步推演</span>
+                            </button>
+
+                            <button
+                              onClick={undoMove}
+                              disabled={undoStack.length === 0 || isAutoPlaying}
+                              className={`flex items-center justify-center space-x-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 text-xs sm:text-sm font-medium bg-gradient-to-r from-gray-500 to-slate-500 hover:from-gray-600 hover:to-slate-600 text-white ${
+                                (undoStack.length === 0 || isAutoPlaying) ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
+                            >
+                              <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4" />
+                              <span>撤销</span>
+                            </button>
+
+                            <button
+                              onClick={isRandomMoving ? stopRandomMove : startRandomMove}
+                              disabled={!game2048Active || game2048Over}
+                              className={`flex items-center justify-center space-x-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 text-xs sm:text-sm font-medium bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white ${
+                                (!game2048Active || game2048Over) ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
+                            >
+                              {isRandomMoving ? (
+                                <>
+                                  <Pause className="w-3 h-3 sm:w-4 sm:h-4" />
+                                  <span>停止随机</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Brain className="w-3 h-3 sm:w-4 sm:h-4" />
+                                  <span>随机演示</span>
+                                </>
+                              )}
+                            </button>
+
+
+                          </div>
+
+                          {/* 推演统计信息 */}
+                          {isAutoPlaying && (
+                            <div className="mt-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-2 sm:p-3">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-2 text-xs">
+                                <div className="text-center">
+                                  <p className="text-blue-600 font-medium">推演步数</p>
+                                  <p className="text-blue-800 font-bold">{autoPlayStats.moves}</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-indigo-600 font-medium">模拟次数</p>
+                                  <p className="text-indigo-800 font-bold">{autoPlayStats.simulations}</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-green-600 font-medium">当前分数</p>
+                                  <p className="text-green-800 font-bold">{autoPlayStats.totalScore}</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-purple-600 font-medium">最高数字</p>
+                                  <p className="text-purple-800 font-bold">{Math.max(...board.flat())}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 推演速度控制 */}
+                          <div className="flex items-center justify-center space-x-2 mt-2">
+                            <span className="text-xs text-gray-600">推演速度:</span>
+                            <select
+                              value={autoPlaySpeed}
+                              onChange={(e) => setAutoPlaySpeed(Number(e.target.value))}
+                              disabled={isAutoPlaying}
+                              className="text-xs px-2 py-1 rounded border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value={200}>快速</option>
+                              <option value={500}>正常</option>
+                              <option value={1000}>慢速</option>
+                              <option value={2000}>极慢</option>
+                            </select>
+                          </div>
+                        </div>
+
                         {/* 重新开始按钮 - 保持正方形比例优化 */}
                         <div className="flex justify-center sm:justify-end pt-1.5 sm:pt-0">
                           <button
@@ -953,6 +1896,27 @@ export default function NotFound() {
                         >
                           继续游戏
                         </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 推演功能帮助提示 */}
+                  {game2048Active && !game2048Over && !isAutoPlaying && (
+                    <div className="absolute top-2 right-2">
+                      <div className="bg-blue-100 border border-blue-300 rounded-lg p-2 shadow-lg max-w-[250px]">
+                        <div className="flex items-start space-x-2">
+                          <Brain className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <div className="text-xs text-blue-800">
+                            <p className="font-medium mb-1">🤖 AI推演功能</p>
+                            <p className="text-blue-700">
+                              • 开始推演：AI自动游戏<br/>
+                              • 单步推演：AI走一步<br/>
+                              • 撤销：回到上一步<br/>
+                              • 可随时手动干预<br/>
+                              <span className="text-blue-600 font-medium">策略：Expectimax算法，智能决策</span>
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}

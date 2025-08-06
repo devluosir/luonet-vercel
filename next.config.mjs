@@ -90,16 +90,7 @@ const nextConfig = {
           },
         ],
       },
-      // 优化图标缓存
-      {
-        source: '/icons/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
+
       // 优化logo缓存
       {
         source: '/assets/logo/(.*)',
