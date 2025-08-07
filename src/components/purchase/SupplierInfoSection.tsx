@@ -154,6 +154,7 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
     if (!data.attn.trim()) {
       // 如果输入框为空，显示所有供应商
       setFilteredSuppliers(savedSuppliers);
+      setShowSavedSuppliers(false);
     } else {
       // 根据输入内容过滤供应商
       const filtered = savedSuppliers.filter(supplier => {
@@ -164,6 +165,13 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
         return nameLower.includes(inputLower) || attnLower.includes(inputLower);
       });
       setFilteredSuppliers(filtered);
+      
+      // 如果有筛选结果，自动显示弹窗
+      if (filtered.length > 0) {
+        setShowSavedSuppliers(true);
+      } else {
+        setShowSavedSuppliers(false);
+      }
     }
   }, [data.attn, savedSuppliers]);
 
@@ -213,7 +221,8 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
             value={data.attn}
             onChange={e => onChange({ ...data, attn: e.target.value })}
             onFocus={() => {
-              if (savedSuppliers.length > 0) {
+              // 当聚焦时，如果有筛选结果就显示弹窗
+              if (filteredSuppliers.length > 0) {
                 setShowSavedSuppliers(true);
               }
             }}
@@ -227,29 +236,20 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
             rows={2}
             className={`${inputClassName} min-h-[80px]`}
           />
-          <div className="absolute right-2 bottom-2" ref={buttonsRef}>
-            <button
-              type="button"
-              onClick={() => setShowSavedSuppliers(true)}
-              className="px-3 py-1 rounded-lg text-xs font-medium
-                bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
-                hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
-                text-[#007AFF] dark:text-[#0A84FF]
-                transition-all duration-200"
-            >
-              Load ({filteredSuppliers.length})
-            </button>
-          </div>
+          {/* 移除Load按钮，改为自动显示筛选结果 */}
 
           {/* 保存的供应商列表弹窗 */}
           {showSavedSuppliers && filteredSuppliers.length > 0 && (
             <div 
               ref={savedSuppliersRef}
-              className="absolute z-10 right-0 top-full mt-1 w-full max-w-md
+              className="absolute z-50 right-0 top-full mt-1 w-full max-w-md
                 bg-white dark:bg-[#2C2C2E] rounded-xl shadow-lg
                 border border-gray-200/50 dark:border-gray-700/50
                 p-2"
             >
+              <div className="text-xs text-gray-500 mb-2 px-2">
+                找到 {filteredSuppliers.length} 个匹配的供应商
+              </div>
               <div className="max-h-[200px] overflow-y-auto">
                 {filteredSuppliers.map((supplier, index) => (
                   <div
@@ -261,7 +261,10 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
                       onClick={() => handleLoad(supplier)}
                       className="w-full text-left px-2 py-1 text-sm text-gray-700 dark:text-gray-300"
                     >
-                      {supplier.name}
+                      <div className="font-medium">{supplier.name}</div>
+                      <div className="text-xs text-gray-500 mt-1 line-clamp-1">
+                        {supplier.attn}
+                      </div>
                     </button>
                   </div>
                 ))}
