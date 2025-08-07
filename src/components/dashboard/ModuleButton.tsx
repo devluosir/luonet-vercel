@@ -37,7 +37,6 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
   
   // 使用模块对象的颜色字段
   const bgColor = module.bgColor || 'bg-gradient-to-br from-gray-50/80 to-gray-100/60 hover:from-gray-100/90 hover:to-gray-200/80 dark:from-gray-800/20 dark:to-gray-700/30 dark:hover:from-gray-700/40 dark:hover:to-gray-600/50';
-  const iconBg = module.iconBg || 'bg-gradient-to-br from-gray-500/90 to-gray-600/90';
   const titleColor = module.titleColor || module.textColor || 'text-gray-700 dark:text-gray-300';
   
   // 根据模块ID获取对应的数量

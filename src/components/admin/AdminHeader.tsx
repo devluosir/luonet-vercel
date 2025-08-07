@@ -1,6 +1,6 @@
 import { useRouter } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, LogOut, ArrowLeft, User, Mail } from 'lucide-react';
+import { ChevronDown, LogOut, ArrowLeft } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { Avatar } from '../Avatar';
 

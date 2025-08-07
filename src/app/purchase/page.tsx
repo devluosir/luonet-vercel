@@ -1,25 +1,30 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 // 移除CSS导入，改为动态加载
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { Download, Settings, ChevronDown, ChevronUp, ArrowLeft, Save, History, Eye } from 'lucide-react';
-import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
+import { Download, Settings, ArrowLeft, Save, History, Eye } from 'lucide-react';
 import { SettingsPanel } from '@/components/purchase/SettingsPanel';
 import { BankInfoSection } from '@/components/purchase/BankInfoSection';
 import { SupplierInfoSection } from '@/components/purchase/SupplierInfoSection';
 import type { PurchaseOrderData } from '@/types/purchase';
-import { savePurchaseHistory, getPurchaseHistory } from '@/utils/purchaseHistory';
-import { useRouter, usePathname } from 'next/navigation';
+import { savePurchaseHistory } from '@/utils/purchaseHistory';
+import { usePathname } from 'next/navigation';
 import { Footer } from '@/components/Footer';
-import { v4 as uuidv4 } from 'uuid';
+
 import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
-
+import { useToast } from '@/components/ui/Toast';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { usePurchasePdfGenerator } from '@/hooks/usePdfGenerator';
+import { useAutoResizeTextareas } from '@/hooks/useAutoResizeTextareas';
 
 // 动态导入PDFPreviewModal
-const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
+const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { 
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg h-64"></div>
+});
 
 const defaultData: PurchaseOrderData = {
   attn: '',
@@ -41,6 +46,12 @@ const defaultData: PurchaseOrderData = {
   from: '',
 };
 
+interface CustomWindow extends Window {
+  __PURCHASE_DATA__?: PurchaseOrderData;
+  __EDIT_MODE__?: boolean;
+  __EDIT_ID__?: string;
+}
+
 export default function PurchaseOrderPage() {
   // 权限初始化
 
@@ -50,37 +61,84 @@ export default function PurchaseOrderPage() {
   const [showSettings, setShowSettings] = useState(false);
   const { data: session } = useSession();
   const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
   const [editId, setEditId] = useState<string | undefined>(undefined);
-  const [isPreviewing, setIsPreviewing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [previewItem, setPreviewItem] = useState<any>(null);
+  const [previewItem, setPreviewItem] = useState<{
+    id: string;
+    createdAt: string;
+    updatedAt: string;
+    supplierName: string;
+    orderNo: string;
+    totalAmount: number;
+    currency: string;
+    data: PurchaseOrderData;
+  } | null>(null);
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [isEditMode, setIsEditMode] = useState(false);
-  const router = useRouter();
   const pathname = usePathname();
+  const { showToast } = useToast();
+  const { generate: generatePdf } = usePurchasePdfGenerator();
 
   const projectSpecificationRef = useRef<HTMLTextAreaElement>(null);
   const deliveryInfoRef = useRef<HTMLTextAreaElement>(null);
   const orderNumbersRef = useRef<HTMLTextAreaElement>(null);
   const paymentTermsRef = useRef<HTMLTextAreaElement>(null);
 
-  // 移除页面级别的字体加载，因为字体已经在预加载阶段处理了
+  // 自动保存功能
+  const { clearSaved } = useAutoSave({
+    data,
+    key: 'draftPurchase',
+    delay: 2000, // 2秒后自动保存
+    enabled: !editId // 只在新建模式下启用自动保存
+  });
 
-  // 从 window 全局变量获取初始数据
-  const initialData = typeof window !== 'undefined' ? ((window as any).__PURCHASE_DATA__) : null;
-  const initialEditId = typeof window !== 'undefined' ? ((window as any).__EDIT_ID__) : null;
+  // 使用useMemo优化计算属性
+  const contractAmountNumber = useMemo(() => {
+    return parseFloat(data.contractAmount) || 0;
+  }, [data.contractAmount]);
 
-  // 初始化数据
+  // 使用useCallback优化事件处理函数
+  const handleSettingsToggle = useCallback(() => {
+    setShowSettings(prev => !prev);
+  }, []);
+
+  // 优化数据更新函数，使用局部更新
+  const updateData = useCallback((updates: Partial<PurchaseOrderData>) => {
+    setData(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  // 统一的初始化数据逻辑
   useEffect(() => {
-    if (initialData) {
-      setData(initialData);
+    const win = window as CustomWindow;
+    
+    // 优先使用全局数据（编辑模式）
+    if (win.__PURCHASE_DATA__) {
+      setData(win.__PURCHASE_DATA__);
+      setEditId(win.__EDIT_ID__);
+      setIsEditMode(win.__EDIT_MODE__ || false);
+      
+      // 清理全局变量
+      delete win.__PURCHASE_DATA__;
+      delete win.__EDIT_ID__;
+      delete win.__EDIT_MODE__;
+      return;
     }
-    if (initialEditId) {
-      setEditId(initialEditId);
-      setIsEditMode(true);
+
+    // 其次使用草稿数据（新建模式）
+    try {
+      const draft = localStorage.getItem('draftPurchase');
+      if (draft) {
+        const parsed = JSON.parse(draft);
+        setData(parsed);
+        return;
+      }
+    } catch (error) {
+      console.warn('读取草稿失败:', error);
     }
-  }, [initialData, initialEditId]);
+
+    // 最后使用默认数据
+    setData(defaultData);
+  }, []);
 
   useEffect(() => {
     // 优先使用session中的用户信息
@@ -113,57 +171,16 @@ export default function PurchaseOrderPage() {
     }
   }, [session]);
 
-  useEffect(() => {
-    const textarea = projectSpecificationRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    }
-  }, [data.projectSpecification]);
 
-  useEffect(() => {
-    const textarea = deliveryInfoRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    }
-  }, [data.deliveryInfo]);
 
-  useEffect(() => {
-    const textarea = orderNumbersRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    }
-  }, [data.orderNumbers]);
+  // 使用统一的textarea自动高度调整Hook
+  useAutoResizeTextareas(
+    [projectSpecificationRef, deliveryInfoRef, orderNumbersRef, paymentTermsRef],
+    [data.projectSpecification, data.deliveryInfo, data.orderNumbers, data.paymentTerms]
+  );
 
-  useEffect(() => {
-    const textarea = paymentTermsRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    }
-  }, [data.paymentTerms]);
-
-  // 检查是否为编辑模式
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const injected = (window as any).__PURCHASE_DATA__;
-      const injectedId = (window as any).__EDIT_ID__;
-      const editMode = (window as any).__EDIT_MODE__;
-      if (injected) {
-        setData(injected);
-        setEditId(injectedId);
-        setIsEditMode(editMode || false);
-        delete (window as any).__PURCHASE_DATA__;
-        delete (window as any).__EDIT_ID__;
-        delete (window as any).__EDIT_MODE__;
-      }
-    }
-  }, []);
-
-  // 生成PDF
-  const handleGenerate = async () => {
+  // 使用useCallback优化生成PDF函数
+  const handleGenerate = useCallback(async () => {
     setIsGenerating(true);
     setGeneratingProgress(10);
     let progressInterval: NodeJS.Timeout | undefined;
@@ -175,7 +192,24 @@ export default function PurchaseOrderPage() {
           return prev >= 90 ? prev : prev + increment;
         });
       }, 100);
-      const blob = await generatePurchaseOrderPDF(data, false);
+
+      // 并行执行保存和PDF生成
+      const [saveResult] = await Promise.all([
+        savePurchaseHistory(data, editId),
+        new Promise(resolve => setTimeout(resolve, 100)) // 给UI一点时间更新
+      ]);
+
+      setGeneratingProgress(50);
+
+      if (saveResult && !editId) {
+        setEditId(saveResult.id);
+        setIsEditMode(true);
+      }
+
+      setGeneratingProgress(80);
+
+      // 使用统一的PDF生成Hook
+      const blob = await generatePdf(data);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -183,25 +217,26 @@ export default function PurchaseOrderPage() {
       a.click();
       URL.revokeObjectURL(url);
       
-      // 自动保存到历史记录
-      await handleSave();
-      setSaveMessage('PDF已生成并保存');
-      setTimeout(() => setSaveMessage(''), 2000);
+      // 生成成功后清除草稿
+      clearSaved();
+      showToast('PDF生成成功', 'success');
+      
       // 进度条完成
       if (progressInterval) clearInterval(progressInterval);
       setGeneratingProgress(100);
       setTimeout(() => setGeneratingProgress(0), 500);
     } catch (err) {
-      alert('生成PDF失败');
+      console.error('生成PDF失败:', err);
+      showToast('PDF生成失败，请重试', 'error');
       if (progressInterval) clearInterval(progressInterval);
       setGeneratingProgress(0);
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [data, editId, clearSaved, showToast, generatePdf]);
 
-  // 预览PDF
-  const handlePreview = async () => {
+  // 使用useCallback优化预览PDF函数
+  const handlePreview = useCallback(async () => {
     try {
       // 准备预览数据，包装成历史记录格式
       const previewData = {
@@ -210,7 +245,7 @@ export default function PurchaseOrderPage() {
         updatedAt: new Date().toISOString(),
         supplierName: data.from || 'Unknown',
         orderNo: data.orderNo || 'N/A',
-        totalAmount: parseFloat(data.contractAmount) || 0,
+        totalAmount: contractAmountNumber,
         currency: data.currency,
         data: data
       };
@@ -219,38 +254,57 @@ export default function PurchaseOrderPage() {
       setShowPreview(true);
     } catch (err) {
       console.error('Preview failed:', err);
-      alert('预览PDF失败');
+      showToast('预览PDF失败', 'error');
     }
-  };
+  }, [data, editId, contractAmountNumber, showToast]);
 
-  const handleAmountBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  // 使用useCallback优化金额处理函数
+  const handleAmountBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const amount = parseFloat(value);
     if (!isNaN(amount)) {
       setData(prevData => ({ ...prevData, contractAmount: amount.toFixed(2) }));
     }
-  };
+  }, []);
 
-  const handleSave = async () => {
+  // 使用useCallback优化保存函数
+  const handleSave = useCallback(async () => {
     setIsSaving(true);
     try {
       const saved = savePurchaseHistory(data, editId);
       if (saved) {
-        setSaveMessage('保存成功');
         if (!editId) {
           setEditId(saved.id);
           setIsEditMode(true);
         }
+        // 保存成功后清除草稿
+        clearSaved();
+        showToast('保存成功', 'success');
       } else {
-        setSaveMessage('保存失败');
+        showToast('保存失败', 'error');
       }
-    } catch {
-      setSaveMessage('保存失败');
+    } catch (error) {
+      console.error('保存失败:', error);
+      showToast('保存失败，请重试', 'error');
     } finally {
       setIsSaving(false);
-      setTimeout(() => setSaveMessage(''), 2000);
     }
-  };
+  }, [data, editId, clearSaved, showToast]);
+
+  // 使用useCallback优化货币切换函数
+  const handleCurrencyChange = useCallback((currency: 'CNY' | 'USD' | 'EUR') => {
+    setData(prevData => ({ ...prevData, currency }));
+  }, []);
+
+  // 使用useCallback优化银行信息切换函数
+  const handleBankToggle = useCallback(() => {
+    const newShowBank = !data.showBank;
+    setData(prevData => ({
+      ...prevData,
+      showBank: newShowBank,
+      invoiceRequirements: newShowBank ? '请在发票开具前与我司财务确认；' : '如前；',
+    }));
+  }, [data.showBank]);
 
   // 输入控件样式
   const inputClass =
@@ -305,17 +359,10 @@ export default function PurchaseOrderPage() {
                   ) : (
                     <Save className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                   )}
-                  {saveMessage && (
-                    <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 text-xs text-white rounded-lg whitespace-nowrap ${
-                      saveMessage === 'PDF已生成并保存' || saveMessage === '保存成功' ? 'bg-green-500' : 'bg-red-500'
-                    }`}>
-                      {saveMessage}
-                    </div>
-                  )}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowSettings(!showSettings)}
+                  onClick={handleSettingsToggle}
                   className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
                   title="Settings"
                 >
@@ -327,7 +374,7 @@ export default function PurchaseOrderPage() {
             {/* 设置面板 */}
             <div className={`overflow-hidden transition-all duration-300 ease-in-out
               ${showSettings ? 'opacity-100 px-4 sm:px-6 py-6 h-auto' : 'opacity-0 px-0 py-0 h-0'}`}>
-              <SettingsPanel data={data} onDataChange={setData} />
+              <SettingsPanel data={data} onDataChange={updateData} />
             </div>
 
             {/* 主内容区域 */}
@@ -341,8 +388,7 @@ export default function PurchaseOrderPage() {
                     yourRef: data.yourRef,
                     supplierQuoteDate: data.supplierQuoteDate
                   }}
-                  onChange={(supplierData) => setData({
-                    ...data,
+                  onChange={(supplierData) => updateData({
                     attn: supplierData.attn,
                     yourRef: supplierData.yourRef,
                     supplierQuoteDate: supplierData.supplierQuoteDate
@@ -357,7 +403,7 @@ export default function PurchaseOrderPage() {
                       <input
                         className={inputClass}
                         value={data.orderNo}
-                        onChange={e => setData({ ...data, orderNo: e.target.value })}
+                        onChange={e => updateData({ orderNo: e.target.value })}
                       />
                     </div>
                     <div>
@@ -365,7 +411,7 @@ export default function PurchaseOrderPage() {
                       <input
                         className={inputClass}
                         value={data.ourRef}
-                        onChange={e => setData({ ...data, ourRef: e.target.value })}
+                        onChange={e => updateData({ ourRef: e.target.value })}
                       />
                     </div>
                     <div>
@@ -374,7 +420,7 @@ export default function PurchaseOrderPage() {
                         type="date"
                         className={inputClass}
                         value={data.date}
-                        onChange={e => setData({ ...data, date: e.target.value })}
+                        onChange={e => updateData({ date: e.target.value })}
                       />
                     </div>
                   </div>
@@ -397,7 +443,7 @@ export default function PurchaseOrderPage() {
                         <button
                           key={c}
                           type="button"
-                          onClick={() => setData({ ...data, currency: c })}
+                          onClick={() => handleCurrencyChange(c)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                             data.currency === c
                               ? 'bg-blue-600 text-white shadow-sm'
@@ -412,7 +458,7 @@ export default function PurchaseOrderPage() {
                       className={`${inputClass} flex-1 min-w-[150px]`}
                       placeholder="0.00"
                       value={data.contractAmount}
-                      onChange={e => setData({ ...data, contractAmount: e.target.value })}
+                      onChange={e => updateData({ contractAmount: e.target.value })}
                       onBlur={handleAmountBlur}
                     />
                   </div>
@@ -427,7 +473,7 @@ export default function PurchaseOrderPage() {
                     rows={1}
                     placeholder="项目规格描述（可多行输入）"
                     value={data.projectSpecification}
-                    onChange={e => setData({ ...data, projectSpecification: e.target.value })}
+                    onChange={e => updateData({ projectSpecification: e.target.value })}
                   />
                 </div>
               </div>
@@ -441,7 +487,7 @@ export default function PurchaseOrderPage() {
                     className={`${inputClass} resize-none overflow-hidden`}
                     rows={1}
                     value={data.paymentTerms}
-                    onChange={e => setData({ ...data, paymentTerms: e.target.value })}
+                    onChange={e => updateData({ paymentTerms: e.target.value })}
                     placeholder="交货后30天"
                   />
                 </div>
@@ -452,14 +498,7 @@ export default function PurchaseOrderPage() {
                 <div className="flex items-center gap-3">
                   <label className={subheadingClass}>3. 发票要求</label>
                   <button
-                    onClick={() => {
-                      const newShowBank = !data.showBank;
-                      setData({
-                        ...data,
-                        showBank: newShowBank,
-                        invoiceRequirements: newShowBank ? '请在发票开具前与我司财务确认；' : '如前；',
-                      });
-                    }}
+                    onClick={handleBankToggle}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                       data.showBank 
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700' 
@@ -486,7 +525,7 @@ export default function PurchaseOrderPage() {
                   <input
                     className={`${inputClass} flex-1`}
                     value={data.invoiceRequirements}
-                    onChange={e => setData({ ...data, invoiceRequirements: e.target.value })}
+                    onChange={e => updateData({ invoiceRequirements: e.target.value })}
                   />
                 </div>
                 <BankInfoSection showBank={data.showBank} />
@@ -505,7 +544,7 @@ export default function PurchaseOrderPage() {
                     rows={1}
                     placeholder="收货人信息（可多行输入）"
                     value={data.deliveryInfo}
-                    onChange={e => setData({ ...data, deliveryInfo: e.target.value })}
+                    onChange={e => updateData({ deliveryInfo: e.target.value })}
                   />
                 </div>
               </div>
@@ -519,7 +558,7 @@ export default function PurchaseOrderPage() {
                   rows={1}
                   placeholder="客户订单号码（可多行输入）"
                   value={data.orderNumbers}
-                  onChange={e => setData({ ...data, orderNumbers: e.target.value })}
+                  onChange={e => updateData({ orderNumbers: e.target.value })}
                 />
               </div>
             </div>
@@ -564,24 +603,11 @@ export default function PurchaseOrderPage() {
                 <button
                   type="button"
                   onClick={handlePreview}
-                  disabled={isPreviewing}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08] text-[#007AFF] dark:text-[#0A84FF] font-medium border border-[#007AFF]/20 dark:border-[#0A84FF]/20 hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12] hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30 active:bg-[#007AFF]/[0.16] dark:active:bg-[#0A84FF]/[0.16] active:scale-[0.98] active:shadow-inner w-full sm:w-auto sm:min-w-[120px] h-10 disabled:opacity-50 disabled:cursor-not-allowed ${isPreviewing ? 'scale-[0.98] shadow-inner bg-[#007AFF]/[0.16] dark:bg-[#0A84FF]/[0.16]' : ''}`}
+                  className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08] text-[#007AFF] dark:text-[#0A84FF] font-medium border border-[#007AFF]/20 dark:border-[#0A84FF]/20 hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12] hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30 active:bg-[#007AFF]/[0.16] dark:active:bg-[#0A84FF]/[0.16] active:scale-[0.98] active:shadow-inner w-full sm:w-auto sm:min-w-[120px] h-10"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    {isPreviewing ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>预览中...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="w-4 h-4" />
-                        <span>预览PDF</span>
-                      </>
-                    )}
+                    <Eye className="w-4 h-4" />
+                    <span>预览PDF</span>
                   </div>
                 </button>
               </div>

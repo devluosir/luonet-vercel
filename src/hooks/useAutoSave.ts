@@ -1,14 +1,13 @@
 import { useEffect, useRef } from 'react';
-import type { QuotationData } from '@/types/quotation';
 
-interface UseAutoSaveOptions {
-  data: QuotationData;
+interface UseAutoSaveOptions<T> {
+  data: T;
   key: string;
   delay?: number;
   enabled?: boolean;
 }
 
-export function useAutoSave({ data, key, delay = 1000, enabled = true }: UseAutoSaveOptions) {
+export function useAutoSave<T>({ data, key, delay = 1000, enabled = true }: UseAutoSaveOptions<T>) {
   const timeoutRef = useRef<NodeJS.Timeout>();
   const lastSavedRef = useRef<string>('');
 
