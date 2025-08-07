@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 // 移除CSS导入，改为动态加载
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { Download, Settings, ArrowLeft, Save, History, Eye } from 'lucide-react';
+import { Download, Settings, ArrowLeft, History, Eye } from 'lucide-react';
 import { SettingsPanel } from '@/components/purchase/SettingsPanel';
 import { BankInfoSection } from '@/components/purchase/BankInfoSection';
 import { SupplierInfoSection } from '@/components/purchase/SupplierInfoSection';
@@ -60,7 +60,6 @@ export default function PurchaseOrderPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const { data: session } = useSession();
-  const [isSaving, setIsSaving] = useState(false);
   const [editId, setEditId] = useState<string | undefined>(undefined);
   const [showPreview, setShowPreview] = useState(false);
   const [previewItem, setPreviewItem] = useState<{
@@ -267,29 +266,7 @@ export default function PurchaseOrderPage() {
     }
   }, []);
 
-  // 使用useCallback优化保存函数
-  const handleSave = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      const saved = savePurchaseHistory(data, editId);
-      if (saved) {
-        if (!editId) {
-          setEditId(saved.id);
-          setIsEditMode(true);
-        }
-        // 保存成功后清除草稿
-        clearSaved();
-        showToast('保存成功', 'success');
-      } else {
-        showToast('保存失败', 'error');
-      }
-    } catch (error) {
-      console.error('保存失败:', error);
-      showToast('保存失败，请重试', 'error');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [data, editId, clearSaved, showToast]);
+
 
   // 使用useCallback优化货币切换函数
   const handleCurrencyChange = useCallback((currency: 'CNY' | 'USD' | 'EUR') => {
@@ -344,22 +321,6 @@ export default function PurchaseOrderPage() {
                 >
                   <History className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                 </Link>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0 relative"
-                  title={editId ? '保存修改' : '保存新记录'}
-                >
-                  {isSaving ? (
-                    <svg className="animate-spin h-5 w-5 text-gray-600 dark:text-[#98989D]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  ) : (
-                    <Save className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
-                  )}
-                </button>
                 <button
                   type="button"
                   onClick={handleSettingsToggle}

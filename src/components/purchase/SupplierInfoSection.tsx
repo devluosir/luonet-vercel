@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { getPurchaseHistory } from '@/utils/purchaseHistory';
-import { format } from 'date-fns';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { getPurchaseHistory, PurchaseHistory } from '@/utils/purchaseHistory';
 
 interface SupplierInfoSectionProps {
   data: {
@@ -10,14 +9,16 @@ interface SupplierInfoSectionProps {
     yourRef: string;
     supplierQuoteDate: string;
   };
-  onChange: (data: any) => void;
+  onChange: (data: {
+    attn: string;
+    yourRef: string;
+    supplierQuoteDate: string;
+  }) => void;
 }
 
 interface SavedSupplier {
   name: string;
   attn: string;
-  yourRef: string; // 保持兼容性，但实际不使用
-  supplierQuoteDate: string; // 保持兼容性，但实际不使用
 }
 
 const inputClassName = `
@@ -29,74 +30,142 @@ const inputClassName = `
 
 const labelClassName = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2';
 
+// 统一处理供应商名称格式 - 移到组件外部避免重新创建
+const normalizeSupplierName = (name: string) => {
+  if (!name || typeof name !== 'string') {
+    return '未命名供应商';
+  }
+  return name
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
+};
+
 export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps) {
   const [savedSuppliers, setSavedSuppliers] = useState<SavedSupplier[]>([]);
   const [showSavedSuppliers, setShowSavedSuppliers] = useState(false);
+  const [filteredSuppliers, setFilteredSuppliers] = useState<SavedSupplier[]>([]);
   
   // 添加 ref 用于检测点击外部区域
   const savedSuppliersRef = useRef<HTMLDivElement>(null);
   const buttonsRef = useRef<HTMLDivElement>(null);
 
-  // 统一处理供应商名称格式
-  const normalizeSupplierName = (name: string) => {
-    if (!name || typeof name !== 'string') {
-      return '未命名供应商';
-    }
-    return name
-      .trim()
-      .replace(/\s+/g, ' ')
-      .toUpperCase();
-  };
-
   // 加载供应商数据的通用函数
-  const loadSupplierData = () => {
+  const loadSupplierData = useCallback(() => {
     try {
-      const purchaseHistory = getPurchaseHistory();
-      
-      // 从采购历史中提取供应商信息
-      const supplierMap = new Map<string, SavedSupplier>();
-      
-      purchaseHistory.forEach((record: any) => {
-        if (record.data && record.data.attn) {
-          const supplierName = normalizeSupplierName(record.data.attn);
+      if (typeof window !== 'undefined') {
+        // 从localStorage加载采购历史记录
+        const purchaseHistory = getPurchaseHistory();
+        
+        // 过滤掉无效的记录
+        const validPurchaseHistory = purchaseHistory.filter((doc: PurchaseHistory) => {
+          const isValid = doc && 
+            typeof doc === 'object' && 
+            (doc.supplierName || doc.data?.attn);
+          return isValid;
+        });
+
+        // 统计供应商数据
+        const supplierMap = new Map<string, { name: string; lastUpdated: Date; documents: Array<{ id: string; type: string; number: string; date: Date }> }>();
+        
+        // 处理所有记录
+        validPurchaseHistory.forEach((doc: PurchaseHistory) => {
+          if (!doc || typeof doc !== 'object') {
+            return;
+          }
+
+          let rawSupplierName = doc.supplierName || doc.data?.attn || '未命名供应商';
+          
+          if (!rawSupplierName || rawSupplierName === '未命名供应商') {
+            return;
+          }
+
+          const supplierName = normalizeSupplierName(rawSupplierName);
           
           if (!supplierMap.has(supplierName)) {
             supplierMap.set(supplierName, {
-              name: record.data.attn,
-              attn: record.data.attn || '',
-              yourRef: '', // 不保存报价号码
-              supplierQuoteDate: '' // 不保存报价日期
+              name: rawSupplierName,
+              lastUpdated: new Date(doc.updatedAt || doc.createdAt || Date.now()),
+              documents: []
             });
-          } else {
-            // 如果已存在，使用最新的数据
-            const existing = supplierMap.get(supplierName)!;
-            const recordDate = new Date(record.updatedAt || record.createdAt);
-            const existingDate = new Date(existing.supplierQuoteDate || '1970-01-01');
-            
-            if (recordDate > existingDate) {
-              supplierMap.set(supplierName, {
-                name: record.data.attn,
-                attn: record.data.attn || '',
-                yourRef: '', // 不保存报价号码
-                supplierQuoteDate: '' // 不保存报价日期
-              });
+          }
+
+          const supplier = supplierMap.get(supplierName)!;
+          
+          // 更新最后更新时间
+          const docDate = new Date(doc.updatedAt || doc.createdAt || Date.now());
+          if (docDate > supplier.lastUpdated) {
+            supplier.lastUpdated = docDate;
+            supplier.name = rawSupplierName;
+          }
+
+          // 添加文档信息
+          supplier.documents.push({
+            id: doc.id || '',
+            type: 'purchase',
+            number: doc.orderNo || doc.data?.orderNo || '-',
+            date: docDate
+          });
+        });
+
+        // 转换为数组并按最后更新时间排序
+        const sortedSuppliers = Array.from(supplierMap.values())
+          .sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime());
+
+        // 格式化供应商信息，提取完整的供应商信息
+        const formattedSuppliers = sortedSuppliers.map((supplier) => {
+          let supplierInfo = supplier.name;
+          
+          // 尝试从历史记录中获取完整的供应商信息
+          const matchingRecord = validPurchaseHistory.find((record: PurchaseHistory) => {
+            const recordSupplierName = record.supplierName || record.data?.attn;
+            return recordSupplierName && normalizeSupplierName(recordSupplierName) === normalizeSupplierName(supplier.name);
+          });
+          
+          if (matchingRecord) {
+            // 使用data.attn字段
+            if (matchingRecord.data && matchingRecord.data.attn) {
+              supplierInfo = matchingRecord.data.attn;
+            } else if (matchingRecord.supplierName) {
+              supplierInfo = matchingRecord.supplierName;
             }
           }
-        }
-      });
-      
-      setSavedSuppliers(Array.from(supplierMap.values()));
+          
+          return {
+            name: supplier.name.split('\n')[0].trim(), // 只取第一行作为显示名称
+            attn: supplierInfo
+          };
+        });
+
+        setSavedSuppliers(formattedSuppliers);
+      }
     } catch (error) {
-      // 静默处理加载错误
+      console.error('加载供应商数据失败:', error);
     }
-  };
+  }, []); // 移除所有依赖项，因为函数内部不依赖任何props或state
 
   // 加载保存的供应商信息
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      loadSupplierData();
+    loadSupplierData();
+  }, [loadSupplierData]);
+
+  // 根据输入内容过滤供应商
+  useEffect(() => {
+    if (!data.attn.trim()) {
+      // 如果输入框为空，显示所有供应商
+      setFilteredSuppliers(savedSuppliers);
+    } else {
+      // 根据输入内容过滤供应商
+      const filtered = savedSuppliers.filter(supplier => {
+        const inputLower = data.attn.toLowerCase();
+        const nameLower = supplier.name.toLowerCase();
+        const attnLower = supplier.attn.toLowerCase();
+        
+        return nameLower.includes(inputLower) || attnLower.includes(inputLower);
+      });
+      setFilteredSuppliers(filtered);
     }
-  }, []);
+  }, [data.attn, savedSuppliers]);
 
   // 添加点击外部区域关闭弹窗的功能
   useEffect(() => {
@@ -123,64 +192,8 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
     };
   }, [showSavedSuppliers]);
 
-  // 保存供应商信息
-  const handleSave = () => {
-    if (!data.attn.trim()) return;
-
-    const supplierName = data.attn.split('\n')[0].trim(); // 使用第一行作为供应商名称
-    const normalizedSupplierName = normalizeSupplierName(supplierName);
-    
-    // 保存到历史记录中，这样客户页面就能读取到
-    if (typeof window !== 'undefined') {
-      const purchaseHistory = JSON.parse(localStorage.getItem('purchase_history') || '[]');
-      
-      // 检查是否已经存在相同的供应商信息
-      const existingIndex = purchaseHistory.findIndex((record: any) => {
-        if (!record.supplierName) return false;
-        const recordNormalizedName = normalizeSupplierName(record.supplierName);
-        return recordNormalizedName === normalizedSupplierName;
-      });
-      
-      if (existingIndex !== -1) {
-        // 如果已存在，更新现有记录
-        purchaseHistory[existingIndex] = {
-          ...purchaseHistory[existingIndex],
-          attn: data.attn,
-          updatedAt: new Date().toISOString(),
-          data: {
-            ...purchaseHistory[existingIndex].data,
-            attn: data.attn
-          }
-        };
-      } else {
-        // 如果不存在，创建新的历史记录
-        const newRecord = {
-          id: Date.now().toString(),
-          supplierName: supplierName,
-          attn: data.attn,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          type: 'purchase',
-          data: {
-            attn: data.attn
-            // 只保存供应商基本信息，不保存报价号码和报价日期
-          }
-        };
-        
-        // 添加到历史记录
-        purchaseHistory.push(newRecord);
-      }
-      
-      localStorage.setItem('purchase_history', JSON.stringify(purchaseHistory));
-    }
-    
-    // 重新加载供应商数据
-    loadSupplierData();
-    setShowSavedSuppliers(false);
-  };
-
   // 加载供应商信息
-  const handleLoad = (supplier: SavedSupplier) => {
+  const handleLoad = useCallback((supplier: SavedSupplier) => {
     onChange({
       ...data,
       attn: supplier.attn
@@ -188,7 +201,7 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
     });
     
     setShowSavedSuppliers(false);
-  };
+  }, [data, onChange]);
 
   return (
     <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
@@ -199,11 +212,22 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
           <textarea
             value={data.attn}
             onChange={e => onChange({ ...data, attn: e.target.value })}
+            onFocus={() => {
+              if (savedSuppliers.length > 0) {
+                setShowSavedSuppliers(true);
+              }
+            }}
+            onBlur={() => {
+              // 延迟关闭，让用户有时间点击列表项
+              setTimeout(() => {
+                setShowSavedSuppliers(false);
+              }, 200);
+            }}
             placeholder="Enter supplier name and address"
             rows={2}
             className={`${inputClassName} min-h-[80px]`}
           />
-          <div className="absolute right-2 bottom-2 flex gap-2" ref={buttonsRef}>
+          <div className="absolute right-2 bottom-2" ref={buttonsRef}>
             <button
               type="button"
               onClick={() => setShowSavedSuppliers(true)}
@@ -213,23 +237,12 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
                 text-[#007AFF] dark:text-[#0A84FF]
                 transition-all duration-200"
             >
-              Load
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="px-3 py-1 rounded-lg text-xs font-medium
-                bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
-                hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
-                text-[#007AFF] dark:text-[#0A84FF]
-                transition-all duration-200"
-            >
-              Save
+              Load ({filteredSuppliers.length})
             </button>
           </div>
 
           {/* 保存的供应商列表弹窗 */}
-          {showSavedSuppliers && savedSuppliers.length > 0 && (
+          {showSavedSuppliers && filteredSuppliers.length > 0 && (
             <div 
               ref={savedSuppliersRef}
               className="absolute z-10 right-0 top-full mt-1 w-full max-w-md
@@ -238,7 +251,7 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
                 p-2"
             >
               <div className="max-h-[200px] overflow-y-auto">
-                {savedSuppliers.map((supplier, index) => (
+                {filteredSuppliers.map((supplier, index) => (
                   <div
                     key={index}
                     className="p-2 hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded-lg"
