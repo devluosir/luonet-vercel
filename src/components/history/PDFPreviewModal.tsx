@@ -21,7 +21,14 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [showDownloadFallback, setShowDownloadFallback] = useState(false);
   const [deviceInfo, setDeviceInfo] = useState<any>(null);
-  const [previewInfo, setPreviewInfo] = useState<any>(null);
+  const [previewInfo, setPreviewInfo] = useState<any>({
+    canPreview: false,
+    shouldUseFallback: true,
+    fallbackType: 'download',
+    message: '正在初始化预览...',
+    showDownloadButton: true,
+    showOpenInNewTab: true
+  });
 
   // 在客户端环境下获取设备信息
   useEffect(() => {
@@ -52,13 +59,26 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
       } catch (error) {
         console.warn('处理PDF预览失败:', error);
         setShowDownloadFallback(true);
+        // 设置默认的预览信息
+        setPreviewInfo({
+          canPreview: false,
+          shouldUseFallback: true,
+          fallbackType: 'download',
+          message: 'PDF预览初始化失败，请下载查看',
+          showDownloadButton: true,
+          showOpenInNewTab: true
+        });
       }
     }
   }, [pdfPreviewUrl, deviceInfo]);
 
   // 生成PDF预览
   const generatePdfPreview = async () => {
-    if (!item) return;
+    if (!item || !item.data) {
+      console.warn('预览数据不完整');
+      setShowDownloadFallback(true);
+      return;
+    }
 
     setIsGeneratingPdf(true);
     setPdfPreviewUrl(null);
@@ -85,11 +105,12 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
       if (pdfUrl) {
         setPdfPreviewUrl(pdfUrl);
         // 安卓设备不尝试iframe预览，直接显示fallback
-        if (deviceInfo.isAndroid) {
+        if (deviceInfo?.isAndroid) {
           setShowDownloadFallback(true);
         }
       }
     } catch (error) {
+      console.error('生成PDF预览失败:', error);
       setShowDownloadFallback(true);
     } finally {
       setIsGeneratingPdf(false);
@@ -98,7 +119,11 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
 
   // 下载PDF
   const downloadPDF = async () => {
-    if (!item) return;
+    if (!item || !item.data) {
+      console.warn('下载数据不完整');
+      alert('PDF下载失败，数据不完整');
+      return;
+    }
 
     setIsGeneratingPdf(true);
     try {
@@ -115,6 +140,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         await generatePackingListPDF(item.data, false);
       }
     } catch (error) {
+      console.error('PDF下载失败:', error);
       alert('PDF下载失败，请重试');
     } finally {
       setIsGeneratingPdf(false);
@@ -157,7 +183,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
 
   // 当模态框打开时生成PDF
   useEffect(() => {
-    if (isOpen && item) {
+    if (isOpen && item && item.data) {
       generatePdfPreview();
     }
   }, [isOpen, item, itemType]);
@@ -334,7 +360,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                 PDF预览
               </h4>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                {previewInfo.message || '选择您偏好的PDF查看方式'}
+                {previewInfo?.message || '选择您偏好的PDF查看方式'}
               </p>
               
               <div className="flex flex-col sm:flex-row gap-3 justify-center">

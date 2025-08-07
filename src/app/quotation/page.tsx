@@ -15,7 +15,7 @@ import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
 import { Footer } from '@/components/Footer';
 import { parseExcelData, convertExcelToLineItems } from '@/utils/excelPasteHandler';
 import { saveQuotationHistory } from '@/utils/quotationHistory';
-import { validateQuotation, validateQuotationForPreview } from '@/utils/quotationValidation';
+
 import { usePdfGenerator } from '@/hooks/usePdfGenerator';
 import { useToast } from '@/components/ui/Toast';
 import { useAutoSave } from '@/hooks/useAutoSave';
@@ -88,7 +88,17 @@ export default function QuotationPage() {
   const [activeTab, setActiveTab] = useState<'quotation' | 'confirmation' | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [previewItem, setPreviewItem] = useState<unknown>(null);
+  const [previewItem, setPreviewItem] = useState<{
+    id: string;
+    createdAt: string;
+    updatedAt: string;
+    customerName: string;
+    quotationNo: string;
+    totalAmount: number;
+    currency: string;
+    type: 'quotation' | 'confirmation';
+    data: QuotationData;
+  } | null>(null);
   // 延迟初始化数据状态，避免 SSR 不一致
   const [data, setData] = useState<QuotationData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -196,12 +206,6 @@ export default function QuotationPage() {
   // 使用useCallback优化保存函数
   const handleSave = useCallback(async () => {
     if (!data) return;
-    
-    const validation = validateQuotation(data);
-    if (!validation.valid) {
-      showToast(validation.message!, 'error');
-      return;
-    }
 
     try {
       // 使用 URL 中的 ID 或现有的 editId
@@ -226,12 +230,6 @@ export default function QuotationPage() {
   // 优化生成PDF函数，使用统一的PDF生成Hook
   const handleGenerate = useCallback(async () => {
     if (!data) return;
-    
-    const validation = validateQuotation(data);
-    if (!validation.valid) {
-      showToast(validation.message!, 'error');
-      return;
-    }
 
     setIsGenerating(true);
     setGeneratingProgress(0);
@@ -291,24 +289,28 @@ export default function QuotationPage() {
   // 优化预览函数
   const handlePreview = useCallback(async () => {
     if (!data) return;
-    
-    const validation = validateQuotationForPreview(data);
-    if (!validation.valid) {
-      showToast(validation.message!, 'error');
-      return;
-    }
 
     try {
-      const pdfBlob = await generatePdf(safeActiveTab, data);
-
-      const url = URL.createObjectURL(pdfBlob);
-      setPreviewItem({ url, type: safeActiveTab });
+      // 准备预览数据，包装成历史记录格式
+      const previewData = {
+        id: editId || 'preview',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        customerName: data.to || 'Unknown',
+        quotationNo: data.quotationNo || 'N/A',
+        totalAmount: totalAmount,
+        currency: data.currency,
+        type: safeActiveTab,
+        data: data
+      };
+      
+      setPreviewItem(previewData);
       setShowPreview(true);
     } catch (error) {
       console.error('Error previewing PDF:', error);
       showToast('预览失败，请重试', 'error');
     }
-  }, [safeActiveTab, data, generatePdf, showToast]);
+  }, [safeActiveTab, data, totalAmount, editId, showToast]);
 
   // 优化全局粘贴处理
   const handleGlobalPaste = useCallback(async (text: string) => {
