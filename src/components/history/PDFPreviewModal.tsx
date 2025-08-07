@@ -94,7 +94,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         const pdfBlob = await generateOrderConfirmationPDF(item.data, true);
         pdfUrl = URL.createObjectURL(pdfBlob);
       } else if (itemType === 'invoice') {
-        const pdfBlob = await generateInvoicePDF(item.data, true);
+        const pdfBlob = await generateInvoicePDF(item.data);
         pdfUrl = URL.createObjectURL(pdfBlob);
       } else if (itemType === 'purchase') {
         const pdfBlob = await generatePurchaseOrderPDF(item.data, true);
@@ -151,7 +151,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       } else if (itemType === 'invoice') {
-        const pdfBlob = await generateInvoicePDF(item.data, false);
+        const pdfBlob = await generateInvoicePDF(item.data);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;

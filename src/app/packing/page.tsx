@@ -516,7 +516,7 @@ export default function PackingPage() {
         recordCustomerUsage(customerName, 'packing', data.invoiceNo);
       }
       
-      const blob = await generatePackingListPDF(data, totals);
+      const blob = await generatePackingListPDF(data);
       if (blob) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');

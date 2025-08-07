@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 export default {
+  darkMode: 'class', // ✅ 启用类控制的暗黑模式
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -35,88 +36,85 @@ export default {
     
     // 渐变基础类
     'bg-gradient-to-br',
-    
-    // 背景渐变颜色 - 基础版本
+
+    // 🌞 白天模式
     'from-blue-50', 'to-blue-100',
     'from-emerald-50', 'to-emerald-100',
     'from-cyan-50', 'to-cyan-100',
     'from-violet-50', 'to-violet-100',
-    'from-amber-50', 'to-amber-100',
+    'from-orange-50', 'to-orange-100',
     'from-indigo-50', 'to-indigo-100',
     'from-rose-50', 'to-rose-100',
-    'from-purple-50', 'to-purple-100',
     'from-fuchsia-50', 'to-fuchsia-100',
-    
-    // 图标背景渐变
+
+    // 🌙 黑夜模式
+    'dark:from-blue-900/20', 'dark:to-blue-800/30',
+    'dark:from-emerald-900/20', 'dark:to-emerald-800/30',
+    'dark:from-cyan-900/20', 'dark:to-cyan-800/30',
+    'dark:from-violet-900/20', 'dark:to-violet-800/30',
+    'dark:from-orange-900/20', 'dark:to-orange-800/30',
+    'dark:from-indigo-900/20', 'dark:to-indigo-800/30',
+    'dark:from-rose-900/20', 'dark:to-rose-800/30',
+    'dark:from-fuchsia-900/20', 'dark:to-fuchsia-800/30',
+
+    // 🎨 图标背景色
     'from-blue-500', 'to-blue-600',
     'from-emerald-500', 'to-emerald-600',
     'from-cyan-500', 'to-cyan-600',
     'from-violet-500', 'to-violet-600',
-    'from-amber-500', 'to-amber-600',
+    'from-orange-500', 'to-orange-600',
     'from-indigo-500', 'to-indigo-600',
     'from-rose-500', 'to-rose-600',
-    'from-purple-500', 'to-purple-600',
     'from-fuchsia-500', 'to-fuchsia-600',
-    
-    // 后台管理页面模块颜色
-    'text-blue-600', 'dark:text-blue-400',
-    'text-cyan-600', 'dark:text-cyan-400',
-    'text-violet-600', 'dark:text-violet-400',
-    'text-amber-600', 'dark:text-amber-400',
-    'text-rose-600', 'dark:text-rose-400',
-    'text-fuchsia-600', 'dark:text-fuchsia-400',
-    'text-indigo-600', 'dark:text-indigo-400',
-    'bg-blue-100', 'dark:bg-blue-900/20',
-    'bg-cyan-100', 'dark:bg-cyan-900/20',
-    'bg-violet-100', 'dark:bg-violet-900/20',
-    'bg-amber-100', 'dark:bg-amber-900/20',
-    'bg-rose-100', 'dark:bg-rose-900/20',
-    'bg-fuchsia-100', 'dark:bg-fuchsia-900/20',
-    'bg-indigo-100', 'dark:bg-indigo-900/20',
-    
-    // 文本颜色
+
+    // 🌙 夜间图标色
+    'dark:from-blue-600', 'dark:to-blue-700',
+    'dark:from-emerald-600', 'dark:to-emerald-700',
+    'dark:from-cyan-600', 'dark:to-cyan-700',
+    'dark:from-violet-600', 'dark:to-violet-700',
+    'dark:from-orange-600', 'dark:to-orange-700',
+    'dark:from-indigo-600', 'dark:to-indigo-700',
+    'dark:from-rose-600', 'dark:to-rose-700',
+    'dark:from-fuchsia-600', 'dark:to-fuchsia-700',
+
+    // 🎯 悬停状态
+    'hover:from-blue-100', 'hover:to-blue-200',
+    'hover:from-emerald-100', 'hover:to-emerald-200',
+    'hover:from-cyan-100', 'hover:to-cyan-200',
+    'hover:from-violet-100', 'hover:to-violet-200',
+    'hover:from-orange-100', 'hover:to-orange-200',
+    'hover:from-indigo-100', 'hover:to-indigo-200',
+    'hover:from-rose-100', 'hover:to-rose-200',
+    'hover:from-fuchsia-100', 'hover:to-fuchsia-200',
+
+    // 🌙 夜间悬停状态
+    'dark:hover:from-blue-800/30', 'dark:hover:to-blue-700/40',
+    'dark:hover:from-emerald-800/30', 'dark:hover:to-emerald-700/40',
+    'dark:hover:from-cyan-800/30', 'dark:hover:to-cyan-700/40',
+    'dark:hover:from-violet-800/30', 'dark:hover:to-violet-700/40',
+    'dark:hover:from-orange-800/30', 'dark:hover:to-orange-700/40',
+    'dark:hover:from-indigo-800/30', 'dark:hover:to-indigo-700/40',
+    'dark:hover:from-rose-800/30', 'dark:hover:to-rose-700/40',
+    'dark:hover:from-fuchsia-800/30', 'dark:hover:to-fuchsia-700/40',
+
+    // 📝 文本颜色
     'text-gray-800', 'dark:text-gray-200',
-    
-    // 灰色系（备用颜色）
-    'from-gray-50', 'to-gray-100',
     'text-gray-700', 'dark:text-gray-300',
-    'from-gray-500', 'to-gray-600',
-    
-    // 边框和阴影
+    'text-gray-600', 'dark:text-gray-400',
+    'text-gray-500', 'dark:text-gray-500',
+    'text-gray-400', 'dark:text-gray-400',
+    'text-gray-300', 'dark:text-gray-300',
+    'text-gray-200', 'dark:text-gray-200',
+    'text-gray-100', 'dark:text-gray-100',
+    'text-gray-50', 'dark:text-gray-50',
+
+    // 🔲 边框颜色
     'border-gray-200/30', 'dark:border-gray-800/30',
-    'hover:border-gray-300/50', 'dark:hover:border-gray-700/50',
+    'border-gray-300/50', 'dark:border-gray-700/50',
+    'border-white/30', 'border-white/50',
+
+    // 🌟 阴影
     'shadow-lg', 'hover:shadow-xl', 'active:shadow-md',
-    
-    // 动画和过渡
-    'transition-all', 'duration-300', 'ease-in-out',
-    'hover:-translate-y-1', 'active:translate-y-0',
-    'group-hover:scale-110', 'group-hover:shadow-2xl',
-    'group-hover:scale-105', 'group-hover:drop-shadow-sm',
-    'group-hover:drop-shadow-lg', 'group-hover:rotate-6', 'group-hover:animate-pulse',
-    
-    // 背景效果
-    'backdrop-blur-sm', 'overflow-hidden', 'rounded-xl',
-    
-    // 图标相关
-    'dashboard-module-icon', 'relative', 'z-10',
-    'absolute', 'inset-0', 'flex-shrink-0',
-    
-    // 文本相关
-    'text-base', 'font-bold', 'leading-tight', 'line-clamp-1',
-    'text-left', 'flex-1', 'min-w-0',
-    
-    // 布局
-    'flex', 'items-center', 'space-x-3', 'w-full', 'p-4', 'h-20',
-    'p-2.5', 'rounded-xl', 'text-white', 'text-xs', 'font-bold',
-    'min-w-[20px]', 'h-5', 'px-1.5', 'w-6', 'h-6',
-    'flex', 'items-center', 'justify-center',
-    
-    // 特殊效果
-    'opacity-0', 'group-hover:opacity-100', 'pointer-events-none',
-    'bg-gradient-to-r', 'from-transparent', 'via-white/15', 'to-transparent',
-    'bg-gradient-to-br', 'from-white/40', 'via-white/20', 'to-transparent',
-    'group-hover:from-white/50', 'group-hover:via-white/30',
-    'from-white/30', 'border-2', 'border-transparent', 'group-hover:border-white/30',
   ],
   plugins: [],
 } satisfies Config;

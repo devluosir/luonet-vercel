@@ -96,7 +96,7 @@ export default function PDFPreviewComponent({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       } else if (itemType === 'invoice') {
-        const pdfBlob = await generateInvoicePDF(data, false);
+        const pdfBlob = await generateInvoicePDF(data);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;

@@ -29,6 +29,8 @@
   filter: brightness(1.05) contrast(1.1) !important;
 }
 
+/* 删除强制定义，使用 Tailwind 原生语法 */
+
 @media (min-width: 720px) {
   .dashboard-grid {
     grid-template-columns: repeat(3, 1fr); /* 中屏3列 */
