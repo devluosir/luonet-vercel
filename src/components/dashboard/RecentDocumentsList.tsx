@@ -89,6 +89,19 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     return name.split('\n')[0]?.trim() || name;
   };
 
+  // 获取搜索文本 - 用于搜索功能
+  const getSearchText = (doc: Document) => {
+    const documentNumber = getDocumentNumber(doc);
+    const documentName = getDocumentName(doc);
+    
+    // 扩展搜索范围，包括data字段中的信息
+    const customerName = doc.customerName || doc.data?.customerName || '';
+    const supplierName = doc.supplierName || doc.data?.supplierName || '';
+    const consigneeName = doc.consigneeName || doc.data?.consigneeName || '';
+    
+    return `${documentNumber} ${documentName} ${customerName} ${supplierName} ${consigneeName}`.toLowerCase();
+  };
+
   // 过滤和搜索文档
   const filteredDocuments = useMemo(() => {
     let filtered = documents;
@@ -98,21 +111,8 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(doc => {
         try {
-          const documentNumber = getDocumentNumber(doc);
-          const documentName = getDocumentName(doc);
-          
-          // 扩展搜索范围，包括data字段中的信息
-          const customerName = doc.customerName || doc.data?.customerName || '';
-          const supplierName = doc.supplierName || doc.data?.supplierName || '';
-          const consigneeName = doc.consigneeName || doc.data?.consigneeName || '';
-          
-          return (
-            documentNumber.toLowerCase().includes(searchLower) ||
-            documentName.toLowerCase().includes(searchLower) ||
-            customerName.toLowerCase().includes(searchLower) ||
-            supplierName.toLowerCase().includes(searchLower) ||
-            consigneeName.toLowerCase().includes(searchLower)
-          );
+          const searchText = getSearchText(doc);
+          return searchText.includes(searchLower);
         } catch (error) {
           console.warn('搜索过滤时出错:', error, doc);
           return false;
