@@ -80,6 +80,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   const [showAutoComplete, setShowAutoComplete] = useState(false);
   const [autoCompleteSuggestions, setAutoCompleteSuggestions] = useState<SavedCustomer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<SavedCustomer[]>([]);
+  const [hasSelectedCustomer, setHasSelectedCustomer] = useState(false);
   
   // 添加 ref 用于检测点击外部区域
   const savedCustomersRef = useRef<HTMLDivElement>(null);
@@ -121,6 +122,11 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
       setShowAutoComplete(false);
     }
     
+    // 当用户开始输入时，重置选择状态
+    if (newTo !== data.to) {
+      setHasSelectedCustomer(false);
+    }
+    
     onChange({
       ...data,
       to: newTo
@@ -130,6 +136,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   // 选择自动完成建议
   const handleAutoCompleteSelect = useCallback((customer: SavedCustomer) => {
     setShowAutoComplete(false);
+    setHasSelectedCustomer(true);
     onChange({
       ...data,
       to: customer.to
@@ -303,6 +310,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
       // 如果输入框为空，显示所有客户
       setFilteredCustomers(savedCustomers);
       setShowSavedCustomers(false);
+      setHasSelectedCustomer(false);
     } else {
       // 根据输入内容过滤客户
       const filtered = savedCustomers.filter(customer => {
@@ -387,6 +395,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
     }
     
     setShowSavedCustomers(false);
+    setHasSelectedCustomer(true);
   }, [data, onChange]);
 
   // 添加调试信息
@@ -450,8 +459,8 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
               value={data.to}
               onChange={(e) => handleCustomerInfoChange(e.target.value)}
               onFocus={() => {
-                // 当聚焦时，如果有筛选结果就显示弹窗
-                if (filteredCustomers.length > 0) {
+                // 只有当用户没有选择过客户，或者正在输入内容时才显示弹窗
+                if (filteredCustomers.length > 0 && !hasSelectedCustomer) {
                   setShowSavedCustomers(true);
                 }
               }}

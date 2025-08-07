@@ -45,6 +45,7 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
   const [savedSuppliers, setSavedSuppliers] = useState<SavedSupplier[]>([]);
   const [showSavedSuppliers, setShowSavedSuppliers] = useState(false);
   const [filteredSuppliers, setFilteredSuppliers] = useState<SavedSupplier[]>([]);
+  const [hasSelectedSupplier, setHasSelectedSupplier] = useState(false);
   
   // 添加 ref 用于检测点击外部区域
   const savedSuppliersRef = useRef<HTMLDivElement>(null);
@@ -155,6 +156,7 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
       // 如果输入框为空，显示所有供应商
       setFilteredSuppliers(savedSuppliers);
       setShowSavedSuppliers(false);
+      setHasSelectedSupplier(false);
     } else {
       // 根据输入内容过滤供应商
       const filtered = savedSuppliers.filter(supplier => {
@@ -209,6 +211,7 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
     });
     
     setShowSavedSuppliers(false);
+    setHasSelectedSupplier(true);
   }, [data, onChange]);
 
   return (
@@ -219,10 +222,16 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
           <label className={labelClassName}>供应商 Attn:</label>
           <textarea
             value={data.attn}
-            onChange={e => onChange({ ...data, attn: e.target.value })}
+            onChange={e => {
+              onChange({ ...data, attn: e.target.value });
+              // 当用户开始输入时，重置选择状态
+              if (e.target.value !== data.attn) {
+                setHasSelectedSupplier(false);
+              }
+            }}
             onFocus={() => {
-              // 当聚焦时，如果有筛选结果就显示弹窗
-              if (filteredSuppliers.length > 0) {
+              // 只有当用户没有选择过供应商，或者正在输入内容时才显示弹窗
+              if (filteredSuppliers.length > 0 && !hasSelectedSupplier) {
                 setShowSavedSuppliers(true);
               }
             }}
