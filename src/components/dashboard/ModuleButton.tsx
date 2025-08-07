@@ -36,16 +36,11 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
 }) => {
   const Icon = module.icon;
   
-  // 使用颜色映射或模块配置的颜色字段
-  const colors = module.bgColor ? {
-    bgColor: module.bgColor,
-    iconBg: module.iconBg || 'bg-gradient-to-br from-gray-500 to-gray-600 dark:from-gray-600 dark:to-gray-700',
-    textColor: module.textColor || 'text-gray-700 dark:text-gray-300'
-  } : getModuleColors(module.id);
-  
-  const bgColor = colors.bgColor;
-  const iconBg = colors.iconBg;
-  const titleColor = module.titleColor || colors.textColor;
+  // 优先使用模块配置的颜色，如果没有则从 colorMap 获取
+  const colors = getModuleColors(module.id);
+  const bgColor = module.bgColor || colors.bgColor;
+  const iconBg = module.iconBg || colors.iconBg;
+  const titleColor = module.titleColor || module.textColor || colors.textColor;
   
 
   
