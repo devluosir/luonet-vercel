@@ -89,26 +89,8 @@ export default function QuotationPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewItem, setPreviewItem] = useState<unknown>(null);
-  // 获取初始数据（优先使用全局数据，其次使用草稿，最后使用默认数据）
-  const getInitialData = () => {
-    if (_initialData) return _initialData;
-    
-    if (typeof window !== 'undefined') {
-      try {
-        const draft = localStorage.getItem('draftQuotation');
-        if (draft) {
-          const parsed = JSON.parse(draft);
-          return parsed;
-        }
-      } catch (error) {
-        console.warn('读取草稿失败:', error);
-      }
-    }
-    
-    return getInitialQuotationData();
-  };
-
-  const [data, setData] = useState<QuotationData>(getInitialData());
+  // 延迟初始化数据状态，避免 SSR 不一致
+  const [data, setData] = useState<QuotationData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
@@ -116,7 +98,7 @@ export default function QuotationPage() {
 
   // 自动保存功能
   const { clearSaved } = useAutoSave({
-    data,
+    data: data || getInitialQuotationData(),
     key: 'draftQuotation',
     delay: 2000, // 2秒后自动保存
     enabled: !editId // 只在新建模式下启用自动保存
@@ -130,20 +112,48 @@ export default function QuotationPage() {
     setActiveTab(tabFromUrl || win.__QUOTATION_TYPE__ || 'quotation');
   }, []);
 
+  // 客户端初始化数据状态，避免 SSR 不一致
+  useEffect(() => {
+    const win = window as unknown as CustomWindow;
+    
+    // 优先使用全局数据
+    if (win.__QUOTATION_DATA__) {
+      setData(win.__QUOTATION_DATA__);
+      return;
+    }
+
+    // 其次使用草稿数据
+    try {
+      const draft = localStorage.getItem('draftQuotation');
+      if (draft) {
+        const parsed = JSON.parse(draft);
+        setData(parsed);
+        return;
+      }
+    } catch (error) {
+      console.warn('读取草稿失败:', error);
+    }
+
+    // 最后使用默认数据
+    setData(getInitialQuotationData());
+  }, []);
+
   // 使用useRef缓存用户信息，避免重复解析（暂时未使用）
   const _userInfoRef = useRef<string>('');
   
   // 使用useMemo优化计算属性
   const totalAmount = useMemo(() => {
+    if (!data) return 0;
     return (
       data.items.reduce((sum, item) => sum + item.amount, 0) +
       (data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0)
     );
-  }, [data.items, data.otherFees]);
+  }, [data]);
 
   const currencySymbol = useMemo(() => {
+    if (!data) return '$';
     return data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥';
-  }, [data.currency]);
+  }, [data]);
 
   // 使用useCallback优化事件处理函数，同时更新URL参数
   const handleTabChange = useCallback((tab: 'quotation' | 'confirmation') => {
@@ -157,7 +167,7 @@ export default function QuotationPage() {
     }
   }, []);
 
-  // 类型安全的 activeTab，在守卫之后确保不为 null
+  // 类型安全的变量，在守卫之后确保不为 null
   const safeActiveTab = activeTab as 'quotation' | 'confirmation';
 
   const handleSettingsToggle = useCallback(() => {
@@ -170,21 +180,23 @@ export default function QuotationPage() {
 
   // 优化数据更新函数，使用局部更新
   const updateData = useCallback((updates: Partial<QuotationData>) => {
-    setData(prev => ({ ...prev, ...updates }));
+    setData(prev => prev ? { ...prev, ...updates } : null);
   }, []);
 
   // 优化项目更新函数
   const updateItems = useCallback((newItems: LineItem[]) => {
-    setData(prev => ({ ...prev, items: newItems }));
+    setData(prev => prev ? { ...prev, items: newItems } : null);
   }, []);
 
   // 优化其他费用更新函数
   const updateOtherFees = useCallback((newFees: OtherFee[]) => {
-    setData(prev => ({ ...prev, otherFees: newFees }));
+    setData(prev => prev ? { ...prev, otherFees: newFees } : null);
   }, []);
 
   // 使用useCallback优化保存函数
   const handleSave = useCallback(async () => {
+    if (!data) return;
+    
     const validation = validateQuotation(data);
     if (!validation.valid) {
       showToast(validation.message!, 'error');
@@ -213,6 +225,8 @@ export default function QuotationPage() {
 
   // 优化生成PDF函数，使用统一的PDF生成Hook
   const handleGenerate = useCallback(async () => {
+    if (!data) return;
+    
     const validation = validateQuotation(data);
     if (!validation.valid) {
       showToast(validation.message!, 'error');
@@ -276,6 +290,8 @@ export default function QuotationPage() {
 
   // 优化预览函数
   const handlePreview = useCallback(async () => {
+    if (!data) return;
+    
     const validation = validateQuotationForPreview(data);
     if (!validation.valid) {
       showToast(validation.message!, 'error');
@@ -348,7 +364,7 @@ export default function QuotationPage() {
   }, [pathname]);
 
   // 守卫：等待客户端初始化完成
-  if (!activeTab) {
+  if (!activeTab || !data) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#007AFF] dark:border-[#0A84FF]"></div>
