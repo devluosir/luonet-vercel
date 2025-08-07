@@ -79,6 +79,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   const [showSavedCustomers, setShowSavedCustomers] = useState(false);
   const [showAutoComplete, setShowAutoComplete] = useState(false);
   const [autoCompleteSuggestions, setAutoCompleteSuggestions] = useState<SavedCustomer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<SavedCustomer[]>([]);
   
   // 添加 ref 用于检测点击外部区域
   const savedCustomersRef = useRef<HTMLDivElement>(null);
@@ -262,7 +263,22 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
           };
         });
 
-        setSavedCustomers(formattedCustomers);
+        // 去重处理 - 根据name和to的组合去重
+        const uniqueCustomers = formattedCustomers.filter((customer, index, self) => {
+          const key = `${normalizeCustomerName(customer.name)}_${customer.to}`;
+          return index === self.findIndex(c => {
+            const cKey = `${normalizeCustomerName(c.name)}_${c.to}`;
+            return cKey === key;
+          });
+        });
+
+        console.log('客户数据统计:', {
+          total: formattedCustomers.length,
+          unique: uniqueCustomers.length,
+          customers: uniqueCustomers.map(c => ({ name: c.name, to: c.to.substring(0, 50) }))
+        });
+
+        setSavedCustomers(uniqueCustomers);
       }
     } catch (error) {
       console.error('加载客户数据失败:', error);
@@ -281,6 +297,40 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
     loadCustomerData();
   }, [loadCustomerData]);
 
+  // 根据输入内容过滤客户
+  useEffect(() => {
+    if (!data.to.trim()) {
+      // 如果输入框为空，显示所有客户
+      setFilteredCustomers(savedCustomers);
+      setShowSavedCustomers(false);
+    } else {
+      // 根据输入内容过滤客户
+      const filtered = savedCustomers.filter(customer => {
+        const inputLower = data.to.toLowerCase();
+        const nameLower = customer.name.toLowerCase();
+        const toLower = customer.to.toLowerCase();
+        
+        return nameLower.includes(inputLower) || toLower.includes(inputLower);
+      });
+      
+      console.log('筛选结果:', {
+        input: data.to,
+        totalCustomers: savedCustomers.length,
+        filteredCount: filtered.length,
+        filtered: filtered.map(c => ({ name: c.name, to: c.to.substring(0, 50) }))
+      });
+      
+      setFilteredCustomers(filtered);
+      
+      // 如果有筛选结果，自动显示弹窗
+      if (filtered.length > 0) {
+        setShowSavedCustomers(true);
+      } else {
+        setShowSavedCustomers(false);
+      }
+    }
+  }, [data.to, savedCustomers]);
+
   // 添加点击外部区域关闭弹窗的功能
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -292,6 +342,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
           !savedCustomersRef.current.contains(target) &&
           buttonsRef.current &&
           !buttonsRef.current.contains(target)) {
+        console.log('点击外部区域，关闭客户列表弹窗');
         setShowSavedCustomers(false);
       }
       
@@ -309,12 +360,14 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
     if (showSavedCustomers || showAutoComplete) {
       if (typeof window !== 'undefined') {
         document.addEventListener('mousedown', handleClickOutside);
+        console.log('添加了点击外部区域监听器');
       }
     }
 
     return () => {
       if (typeof window !== 'undefined') {
         document.removeEventListener('mousedown', handleClickOutside);
+        console.log('移除了点击外部区域监听器');
       }
     };
   }, [showSavedCustomers, showAutoComplete]);
@@ -335,6 +388,15 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
     
     setShowSavedCustomers(false);
   }, [data, onChange]);
+
+  // 添加调试信息
+  useEffect(() => {
+    console.log('弹窗状态:', {
+      showSavedCustomers,
+      filteredCustomersLength: filteredCustomers.length,
+      filteredCustomers: filteredCustomers.map(c => ({ name: c.name, to: c.to.substring(0, 30) }))
+    });
+  }, [showSavedCustomers, filteredCustomers]);
 
   // 使用useMemo优化询价单号更新
   const handleInquiryNoChange = useCallback((newInquiryNo: string) => {
@@ -387,24 +449,24 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
               ref={customerInputRef}
               value={data.to}
               onChange={(e) => handleCustomerInfoChange(e.target.value)}
+              onFocus={() => {
+                // 当聚焦时，如果有筛选结果就显示弹窗
+                if (filteredCustomers.length > 0) {
+                  setShowSavedCustomers(true);
+                }
+              }}
+              onBlur={() => {
+                // 延迟关闭，让用户有时间点击列表项
+                setTimeout(() => {
+                  setShowSavedCustomers(false);
+                }, 200);
+              }}
               placeholder="Enter customer name and address"
               rows={3}
               className={`${inputClassName} min-h-[100px]`}
               style={iosCaretStyle}
             />
-            <div className="absolute right-2 bottom-2" ref={buttonsRef}>
-              <button
-                type="button"
-                onClick={() => setShowSavedCustomers(true)}
-                className="px-3 py-1 rounded-lg text-xs font-medium
-                  bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
-                  hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
-                  text-[#007AFF] dark:text-[#0A84FF]
-                  transition-all duration-200"
-              >
-                Load
-              </button>
-            </div>
+            {/* 移除Load按钮，改为自动显示筛选结果 */}
 
             {/* 自动完成建议弹窗 */}
             {showAutoComplete && autoCompleteSuggestions.length > 0 && (
@@ -439,16 +501,19 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
             )}
 
             {/* 保存的客户列表弹窗 */}
-            {showSavedCustomers && savedCustomers.length > 0 && (
+            {showSavedCustomers && filteredCustomers.length > 0 && (
               <div 
                 ref={savedCustomersRef}
-                className="absolute z-10 right-0 top-full mt-1 w-full max-w-md
+                className="absolute z-50 right-0 top-full mt-1 w-full max-w-md
                   bg-white dark:bg-[#2C2C2E] rounded-xl shadow-lg
                   border border-gray-200/50 dark:border-gray-700/50
                   p-2"
               >
+                <div className="text-xs text-gray-500 mb-2 px-2">
+                  找到 {filteredCustomers.length} 个匹配的客户
+                </div>
                 <div className="max-h-[200px] overflow-y-auto">
-                  {savedCustomers.map((customer, index) => (
+                  {filteredCustomers.map((customer, index) => (
                     <div
                       key={index}
                       className="p-2 hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded-lg"
@@ -458,7 +523,10 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                         onClick={() => handleLoad(customer)}
                         className="w-full text-left px-2 py-1 text-sm text-gray-700 dark:text-gray-300"
                       >
-                        {customer.name}
+                        <div className="font-medium">{customer.name}</div>
+                        <div className="text-xs text-gray-500 mt-1 line-clamp-1">
+                          {customer.to}
+                        </div>
                       </button>
                     </div>
                   ))}

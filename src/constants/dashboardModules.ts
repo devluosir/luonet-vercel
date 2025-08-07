@@ -51,8 +51,8 @@ export const QUICK_CREATE_MODULES = [
     name: '采购订单', 
     path: '/purchase',
     icon: ShoppingCart,
-    bgColor: 'bg-gradient-to-br from-amber-50 to-amber-100',
-    iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
+    bgColor: 'bg-gradient-to-br from-orange-50 to-orange-100',
+    iconBg: 'bg-gradient-to-br from-orange-500 to-orange-600',
     textColor: 'text-gray-800 dark:text-gray-200'
   }
 ];

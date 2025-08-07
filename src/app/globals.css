@@ -19,12 +19,14 @@
   color: white !important;
   fill: none !important;
   stroke: white !important;
+  filter: brightness(1.05) contrast(1.1) !important;
 }
 
 .dashboard-module-icon svg {
   color: white !important;
   fill: none !important;
   stroke: white !important;
+  filter: brightness(1.05) contrast(1.1) !important;
 }
 
 @media (min-width: 720px) {
