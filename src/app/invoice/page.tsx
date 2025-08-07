@@ -373,7 +373,15 @@ export default function InvoicePage() {
         }
         
         // 生成 PDF
-        await generateInvoicePDF(data);
+        const pdfBlob = await generateInvoicePDF(data);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Invoice-${data.invoiceNo || 'draft'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       } else {
         // 生成新发票并保存到历史记录
         const newInvoice = {
@@ -400,7 +408,15 @@ export default function InvoicePage() {
         }
         
         // 生成 PDF
-        await generateInvoicePDF(data);
+        const pdfBlob = await generateInvoicePDF(data);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Invoice-${data.invoiceNo || 'draft'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       }
     } catch (error) {
       console.error('Error handling submit:', error);

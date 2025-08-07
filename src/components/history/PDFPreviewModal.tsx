@@ -94,12 +94,14 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         const pdfBlob = await generateOrderConfirmationPDF(item.data, true);
         pdfUrl = URL.createObjectURL(pdfBlob);
       } else if (itemType === 'invoice') {
-        pdfUrl = await generateInvoicePDF(item.data, true);
+        const pdfBlob = await generateInvoicePDF(item.data, true);
+        pdfUrl = URL.createObjectURL(pdfBlob);
       } else if (itemType === 'purchase') {
         const pdfBlob = await generatePurchaseOrderPDF(item.data, true);
         pdfUrl = URL.createObjectURL(pdfBlob);
       } else if (itemType === 'packing') {
-        pdfUrl = await generatePackingListPDF(item.data, true);
+        const pdfBlob = await generatePackingListPDF(item.data);
+        pdfUrl = URL.createObjectURL(pdfBlob);
       }
 
       if (pdfUrl) {
@@ -129,15 +131,55 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
     try {
       // 根据记录类型生成对应的PDF并下载
       if (itemType === 'quotation') {
-        await generateQuotationPDF(item.data, false);
+        const pdfBlob = await generateQuotationPDF(item.data, false);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `quotation_${item.quotationNo || 'export'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       } else if (itemType === 'confirmation') {
-        await generateOrderConfirmationPDF(item.data, false);
+        const pdfBlob = await generateOrderConfirmationPDF(item.data, false);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `order_confirmation_${item.quotationNo || 'export'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       } else if (itemType === 'invoice') {
-        await generateInvoicePDF(item.data, false);
+        const pdfBlob = await generateInvoicePDF(item.data, false);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `invoice_${item.invoiceNo || 'export'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       } else if (itemType === 'purchase') {
-        await generatePurchaseOrderPDF(item.data, false);
+        const pdfBlob = await generatePurchaseOrderPDF(item.data, false);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `purchase_order_${item.orderNo || 'export'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       } else if (itemType === 'packing') {
-        await generatePackingListPDF(item.data, false);
+        const pdfBlob = await generatePackingListPDF(item.data);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `packing_list_${item.invoiceNo || 'export'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       }
     } catch (error) {
       console.error('PDF下载失败:', error);

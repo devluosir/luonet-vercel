@@ -38,7 +38,15 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
     
     setIsGenerating(true);
     try {
-      await generateShippingMarksPDF(value, false, pdfOrientation, fontSize, 'bold', '#000000');
+      const pdfBlob = await generateShippingMarksPDF(value, false, pdfOrientation, fontSize, 'bold', '#000000');
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `shipping_marks_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
       alert('PDF生成失败，请重试');
     } finally {
@@ -51,7 +59,8 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
     
     setIsGeneratingPreview(true);
     try {
-      const previewUrl = await generateShippingMarksPDF(value, true, pdfOrientation, fontSize, 'bold', '#000000') as string;
+      const pdfBlob = await generateShippingMarksPDF(value, true, pdfOrientation, fontSize, 'bold', '#000000');
+      const previewUrl = URL.createObjectURL(pdfBlob);
       setPdfPreviewUrl(previewUrl);
       setShowPDFPreview(true);
     } catch (error) {

@@ -290,10 +290,6 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
       return doc.output('blob');
     }
     
-    // 获取当前日期并格式化
-    const currentDate = new Date();
-    const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
-
     // 确保所有页面都有页码（非预览模式下也需要）
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
@@ -309,9 +305,8 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
       doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
     }
 
-    // 保存文件
-    doc.save(`Quotation-${data.quotationNo}-${formattedDate}.pdf`);
-    return new Blob(); // 返回空 Blob 以满足类型要求
+    // 返回 blob 对象，让调用方处理下载
+    return doc.output('blob');
   } catch (error) {
     console.error('Error generating PDF:', error);
     throw error;

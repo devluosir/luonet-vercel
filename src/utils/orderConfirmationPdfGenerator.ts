@@ -26,18 +26,6 @@ const currencySymbols: { [key: string]: string } = {
   CNY: '¥'
 };
 
-// 默认单位列表（需要单复数变化的单位）
-const defaultUnits = ['pc', 'set', 'length'];
-
-// 处理单位的单复数
-const getUnitDisplay = (baseUnit: string, quantity: number) => {
-  const singularUnit = baseUnit.replace(/s$/, '');
-  if (defaultUnits.includes(singularUnit)) {
-    return quantity > 1 ? `${singularUnit}s` : singularUnit;
-  }
-  return baseUnit; // 自定义单位不变化单复数
-};
-
 // 获取印章图片的简化版本
 async function getStampImage(stampType: string): Promise<string> {
   const { embeddedResources } = await import('@/lib/embedded-resources');
@@ -657,10 +645,6 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
       return doc.output('blob');
     }
     
-    // 获取当前日期并格式化
-    const currentDate = new Date();
-    const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
-
     // 确保所有页面都有页码（非预览模式下也需要）
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
@@ -676,9 +660,8 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
       doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
     }
 
-    // 保存文件
-    doc.save(`Sales Confirmation ${data.contractNo}-${formattedDate}.pdf`);
-    return new Blob();
+    // 返回 blob 对象，让调用方处理下载
+    return doc.output('blob');
   } catch (error) {
     console.error('Error generating PDF:', error);
     throw error;

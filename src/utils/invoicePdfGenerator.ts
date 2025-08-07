@@ -118,11 +118,10 @@ async function getStampImage(stampType: string): Promise<string> {
 }
 
 // 函数重载签名
-export async function generateInvoicePDF(data: PDFGeneratorData, preview: true): Promise<string>;
-export async function generateInvoicePDF(data: PDFGeneratorData, preview?: false): Promise<void>;
+export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob>;
 
 // 生成发票PDF - 实现
-export async function generateInvoicePDF(data: PDFGeneratorData, preview: boolean = false): Promise<string | void> {
+export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> {
   // 检查是否在客户端环境
   if (typeof window === 'undefined') {
     throw new Error('PDF generation is only available in client-side environment');
@@ -202,8 +201,8 @@ export async function generateInvoicePDF(data: PDFGeneratorData, preview: boolea
     // 添加页码
     addPageNumbers(doc, pageWidth, pageHeight, margin);
 
-    // 根据预览模式返回不同格式
-    return preview ? doc.output('bloburl').toString() : saveInvoicePDF(doc, data);
+    // 统一返回 blob 对象，让调用方处理下载
+    return doc.output('blob');
 
   } catch (error) {
     console.error('Error generating PDF:', error);
@@ -403,13 +402,6 @@ function getColumnStyles(data: PDFGeneratorData, tableWidth: number): Record<str
   };
 
   // 计算实际显示的列数
-  let visibleColumns = 1; // No.
-  if (data.showHsCode) visibleColumns++;
-  visibleColumns += 1; // Part Name
-  if (data.showDescription) visibleColumns++;
-  visibleColumns += 3; // Q'TY + Unit + Unit Price + Amount
-
-  // 计算总权重
   let totalWeight = baseWidths.no;
   if (data.showHsCode) totalWeight += baseWidths.hsCode;
   totalWeight += baseWidths.partName;
@@ -669,11 +661,4 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
     doc.setFont('NotoSansSC', 'normal');
     doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
   }
-}
-
-// 保存 PDF
-function saveInvoicePDF(doc: ExtendedJsPDF, data: PDFGeneratorData): void {
-  const currentDate = new Date();
-  const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
-  doc.save(`${getInvoiceTitle(data)}-${data.invoiceNo}-${formattedDate}.pdf`);
 } 

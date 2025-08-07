@@ -516,7 +516,17 @@ export default function PackingPage() {
         recordCustomerUsage(customerName, 'packing', data.invoiceNo);
       }
       
-      await generatePackingListPDF(data, false, totals);
+      const blob = await generatePackingListPDF(data, totals);
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `packing_list_${data.invoiceNo || 'export'}_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate packing list. Please try again.');

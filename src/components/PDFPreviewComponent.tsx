@@ -76,15 +76,55 @@ export default function PDFPreviewComponent({
     try {
       // 根据类型生成并下载PDF
       if (itemType === 'quotation') {
-        await generateQuotationPDF(data, false);
+        const pdfBlob = await generateQuotationPDF(data, false);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `quotation_${data.quotationNo || 'export'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       } else if (itemType === 'confirmation') {
-        await generateOrderConfirmationPDF(data, false);
+        const pdfBlob = await generateOrderConfirmationPDF(data, false);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `order_confirmation_${data.quotationNo || 'export'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       } else if (itemType === 'invoice') {
-        await generateInvoicePDF(data, false);
+        const pdfBlob = await generateInvoicePDF(data, false);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `invoice_${data.invoiceNo || 'export'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       } else if (itemType === 'purchase') {
-        await generatePurchaseOrderPDF(data, false);
+        const pdfBlob = await generatePurchaseOrderPDF(data, false);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `purchase_order_${data.orderNo || 'export'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       } else if (itemType === 'packing') {
-        await generatePackingListPDF(data, false);
+        const pdfBlob = await generatePackingListPDF(data);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `packing_list_${data.invoiceNo || 'export'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       }
     } catch (error) {
       alert('PDF下载失败，请重试');

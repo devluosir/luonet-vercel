@@ -1,6 +1,5 @@
 import jsPDF from 'jspdf';
 import { UserOptions } from 'jspdf-autotable';
-import { embeddedResources } from '@/lib/embedded-resources';
 import { addChineseFontsToPDF } from '@/utils/fontLoader';
 
 // 扩展 jsPDF 类型
@@ -11,12 +10,12 @@ interface ExtendedJsPDF extends jsPDF {
 // 生成运输标记PDF
 export async function generateShippingMarksPDF(
   shippingMarks: string,
-  preview: boolean = false,
+  _preview: boolean = false,
   orientation: 'portrait' | 'landscape' = 'portrait',
   fontSize: number = 12,
   fontStyle: 'normal' | 'bold' = 'bold',
   textColor: string = '#000000'
-): Promise<string | void> {
+): Promise<Blob> {
   if (!shippingMarks.trim()) {
     throw new Error('Shipping marks content is required');
   }
@@ -74,15 +73,8 @@ export async function generateShippingMarksPDF(
       }
     }
 
-    // 根据预览模式返回不同格式
-    if (preview) {
-      return doc.output('bloburl').toString();
-    } else {
-      const currentDate = new Date();
-      const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
-      const filename = `Shipping-Marks-${formattedDate}.pdf`;
-      doc.save(filename);
-    }
+    // 统一返回 blob 对象，让调用方处理下载
+    return doc.output('blob');
 
   } catch (error) {
     console.error('Error generating shipping marks PDF:', error);
