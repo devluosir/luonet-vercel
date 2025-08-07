@@ -97,6 +97,18 @@ export default {
     'dark:hover:from-rose-800/30', 'dark:hover:to-rose-700/40',
     'dark:hover:from-fuchsia-800/30', 'dark:hover:to-fuchsia-700/40',
 
+    // 🌙 透明背景和悬停效果
+    'bg-transparent',
+    'hover:bg-blue-50/50', 'dark:hover:bg-blue-900/10',
+    'hover:bg-emerald-50/50', 'dark:hover:bg-emerald-900/10',
+    'hover:bg-cyan-50/50', 'dark:hover:bg-cyan-900/10',
+    'hover:bg-violet-50/50', 'dark:hover:bg-violet-900/10',
+    'hover:bg-orange-50/50', 'dark:hover:bg-orange-900/10',
+    'hover:bg-indigo-50/50', 'dark:hover:bg-indigo-900/10',
+    'hover:bg-rose-50/50', 'dark:hover:bg-rose-900/10',
+    'hover:bg-fuchsia-50/50', 'dark:hover:bg-fuchsia-900/10',
+    'hover:bg-gray-50/50', 'dark:hover:bg-gray-900/10',
+
     // 📝 文本颜色
     'text-gray-800', 'dark:text-gray-200',
     'text-gray-700', 'dark:text-gray-300',

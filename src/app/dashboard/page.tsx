@@ -391,7 +391,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-black">
+    <div className="min-h-screen flex flex-col bg-transparent dark:bg-gray-900/20">
       <div className="flex-1">
         <Header 
           user={{
