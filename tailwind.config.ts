@@ -103,6 +103,11 @@ export default {
       pattern: /(bg|text)-(blue|green|teal|purple|orange)-(100|700|900\/30)/,
       variants: ['dark', 'hover'],
     },
+    // 🎨 文档卡片悬停背景色 - 动态生成
+    {
+      pattern: /(bg)-(blue|green|teal|purple|orange|gray)-(50|900\/20)/,
+      variants: ['dark', 'hover'],
+    },
 
     // 🔲 边框颜色
     'border-gray-200/30', 'dark:border-gray-800/30',

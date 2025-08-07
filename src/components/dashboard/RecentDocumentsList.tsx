@@ -7,7 +7,9 @@ import {
   ShoppingCart, 
   Search,
   Archive,
-  X
+  X,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { DOCUMENT_TYPES } from '@/constants/dashboardModules';
 
@@ -146,6 +148,24 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     }
   };
 
+  // 获取悬停背景色
+  const getHoverBgColor = (docType: string) => {
+    switch (docType) {
+      case 'quotation':
+        return 'hover:bg-blue-50 dark:hover:bg-blue-900/20';
+      case 'confirmation':
+        return 'hover:bg-green-50 dark:hover:bg-green-900/20';
+      case 'packing':
+        return 'hover:bg-teal-50 dark:hover:bg-teal-900/20';
+      case 'invoice':
+        return 'hover:bg-purple-50 dark:hover:bg-purple-900/20';
+      case 'purchase':
+        return 'hover:bg-orange-50 dark:hover:bg-orange-900/20';
+      default:
+        return 'hover:bg-gray-50 dark:hover:bg-gray-900/20';
+    }
+  };
+
   // 高亮搜索词
   const highlightText = (text: string, searchTerm: string) => {
     if (!searchTerm.trim()) return text;
@@ -273,13 +293,18 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
             {/* ALL 按钮：开关 */}
             <button
               onClick={() => onShowAllFiltersChange(!showAllFilters)}
-              className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
+              className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 flex items-center gap-1 ${
                 typeFilter === 'all' && !showAllFilters
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'
               }`}
             >
-              {showAllFilters ? 'X' : 'All'}
+              <span>All</span>
+              {showAllFilters ? (
+                <ChevronUp className="w-3 h-3 transition-transform duration-200" />
+              ) : (
+                <ChevronDown className="w-3 h-3 transition-transform duration-200" />
+              )}
             </button>
           </div>
 
@@ -328,9 +353,9 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
               <div
                 key={doc.id}
                 onClick={() => handleDocumentClick(doc)}
-                className="group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50
+                className={`group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50
                   p-5 cursor-pointer transition-all duration-200 ease-in-out hover:shadow-lg hover:-translate-y-1
-                  active:translate-y-0 active:shadow-md"
+                  active:translate-y-0 active:shadow-md ${getHoverBgColor(doc.type)}`}
               >
                 <div className="flex items-start space-x-4">
                   {/* 文档类型图标 */}
