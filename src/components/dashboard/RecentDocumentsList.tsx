@@ -49,40 +49,6 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
 
-  // 过滤和搜索文档
-  const filteredDocuments = useMemo(() => {
-    let filtered = documents;
-
-    // 根据搜索词过滤
-    if (searchTerm.trim()) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(doc => {
-        try {
-          const documentNumber = getDocumentNumber(doc);
-          const documentName = getDocumentName(doc);
-          
-          // 扩展搜索范围，包括data字段中的信息
-          const customerName = doc.customerName || doc.data?.customerName || '';
-          const supplierName = doc.supplierName || doc.data?.supplierName || '';
-          const consigneeName = doc.consigneeName || doc.data?.consigneeName || '';
-          
-          return (
-            documentNumber.toLowerCase().includes(searchLower) ||
-            documentName.toLowerCase().includes(searchLower) ||
-            customerName.toLowerCase().includes(searchLower) ||
-            supplierName.toLowerCase().includes(searchLower) ||
-            consigneeName.toLowerCase().includes(searchLower)
-          );
-        } catch (error) {
-          console.warn('搜索过滤时出错:', error, doc);
-          return false;
-        }
-      });
-    }
-
-    return filtered;
-  }, [documents, searchTerm]);
-
   // 获取文档类型名称
   const getDocumentTypeName = (type: string) => {
     return DOCUMENT_TYPES[type as keyof typeof DOCUMENT_TYPES]?.label || 'DOC';
@@ -122,6 +88,40 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     // 处理多行文本，取第一行
     return name.split('\n')[0]?.trim() || name;
   };
+
+  // 过滤和搜索文档
+  const filteredDocuments = useMemo(() => {
+    let filtered = documents;
+
+    // 根据搜索词过滤
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(doc => {
+        try {
+          const documentNumber = getDocumentNumber(doc);
+          const documentName = getDocumentName(doc);
+          
+          // 扩展搜索范围，包括data字段中的信息
+          const customerName = doc.customerName || doc.data?.customerName || '';
+          const supplierName = doc.supplierName || doc.data?.supplierName || '';
+          const consigneeName = doc.consigneeName || doc.data?.consigneeName || '';
+          
+          return (
+            documentNumber.toLowerCase().includes(searchLower) ||
+            documentName.toLowerCase().includes(searchLower) ||
+            customerName.toLowerCase().includes(searchLower) ||
+            supplierName.toLowerCase().includes(searchLower) ||
+            consigneeName.toLowerCase().includes(searchLower)
+          );
+        } catch (error) {
+          console.warn('搜索过滤时出错:', error, doc);
+          return false;
+        }
+      });
+    }
+
+    return filtered;
+  }, [documents, searchTerm]);
 
   // 获取颜色类名
   const getColorClasses = (docType: string) => {
