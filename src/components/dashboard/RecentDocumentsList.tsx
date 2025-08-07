@@ -6,7 +6,8 @@ import {
   Package, 
   ShoppingCart, 
   Search,
-  Archive
+  Archive,
+  X
 } from 'lucide-react';
 import { DOCUMENT_TYPES } from '@/constants/dashboardModules';
 
@@ -212,8 +213,17 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
             placeholder="搜索文档编号、客户名称..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-sm bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400"
+            className="w-full pl-10 pr-10 py-2 text-sm bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400"
           />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
+              title="清除搜索"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* 筛选器按钮组 */}
