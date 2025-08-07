@@ -59,7 +59,7 @@ export function getInitialQuotationData(): QuotationData {
       hasDecimals: false 
     },
     showDescription: true,
-    showRemarks: true,
+    showRemarks: false,
     showBank: false,
     showStamp: false,
     otherFees: [],
@@ -68,7 +68,7 @@ export function getInitialQuotationData(): QuotationData {
     showInvoiceReminder: false,
     additionalPaymentTerms: '',
     templateConfig: { 
-      headerType: 'none', 
+      headerType: 'bilingual', 
       stampType: 'none' 
     }
   };
