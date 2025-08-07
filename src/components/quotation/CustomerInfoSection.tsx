@@ -1,5 +1,6 @@
+import React from 'react';
 import type { QuotationData } from '@/types/quotation';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 
 interface CustomerInfoSectionProps {
@@ -64,7 +65,52 @@ interface SavedCustomer {
   to: string;
 }
 
-export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectionProps) {
+// 缓存localStorage数据
+const localStorageCache = new Map<string, any>();
+
+// 获取缓存的localStorage数据
+const getCachedLocalStorage = (key: string) => {
+  if (!localStorageCache.has(key)) {
+    try {
+      const data = localStorage.getItem(key);
+      const parsed = data ? JSON.parse(data) : null;
+      localStorageCache.set(key, parsed);
+      return parsed;
+    } catch (error) {
+      console.warn(`Failed to parse localStorage key: ${key}`, error);
+      return null;
+    }
+  }
+  return localStorageCache.get(key);
+};
+
+// 异步设置localStorage
+const setLocalStorageAsync = (key: string, value: any) => {
+  const serialized = JSON.stringify(value);
+  localStorageCache.set(key, value);
+  
+  // 使用requestIdleCallback延迟写入
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    (window as any).requestIdleCallback(() => {
+      try {
+        localStorage.setItem(key, serialized);
+      } catch (error) {
+        console.warn(`Failed to set localStorage key: ${key}`, error);
+      }
+    });
+  } else {
+    // 降级到setTimeout
+    setTimeout(() => {
+      try {
+        localStorage.setItem(key, serialized);
+      } catch (error) {
+        console.warn(`Failed to set localStorage key: ${key}`, error);
+      }
+    }, 0);
+  }
+};
+
+export const CustomerInfoSection = React.memo(({ data, onChange, type }: CustomerInfoSectionProps) => {
   const [savedCustomers, setSavedCustomers] = useState<SavedCustomer[]>([]);
   const [showSavedCustomers, setShowSavedCustomers] = useState(false);
   
@@ -73,7 +119,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
   const buttonsRef = useRef<HTMLDivElement>(null);
 
   // 统一处理客户名称格式
-  const normalizeCustomerName = (name: string) => {
+  const normalizeCustomerName = useCallback((name: string) => {
     if (!name || typeof name !== 'string') {
       return '未命名客户';
     }
@@ -81,18 +127,18 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
       .trim()
       .replace(/\s+/g, ' ')
       .toUpperCase();
-  };
+  }, []);
 
   // 加载客户数据的通用函数
   // 注意：这里只加载客户相关的历史记录，不包含供应商信息
   // 供应商信息来自 purchase_history，只在客户页面的供应商tab中显示
-  const loadCustomerData = () => {
+  const loadCustomerData = useCallback(() => {
     try {
       if (typeof window !== 'undefined') {
         // 从localStorage加载客户相关的历史记录
-        const quotationHistory = JSON.parse(localStorage.getItem('quotation_history') || '[]');
-        const packingHistory = JSON.parse(localStorage.getItem('packing_history') || '[]');
-        const invoiceHistory = JSON.parse(localStorage.getItem('invoice_history') || '[]');
+        const quotationHistory = getCachedLocalStorage('quotation_history') || [];
+        const packingHistory = getCachedLocalStorage('packing_history') || [];
+        const invoiceHistory = getCachedLocalStorage('invoice_history') || [];
         
         // 不加载 purchase_history，因为它包含的是供应商信息，不是客户信息
 
@@ -211,18 +257,18 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
       console.error('加载客户数据失败:', error);
       // 兼容旧的保存格式
       if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('savedCustomers');
+        const saved = getCachedLocalStorage('savedCustomers');
         if (saved) {
-          setSavedCustomers(JSON.parse(saved));
+          setSavedCustomers(saved);
         }
       }
     }
-  };
+  }, [normalizeCustomerName]);
 
   // 加载保存的客户信息
   useEffect(() => {
     loadCustomerData();
-  }, []);
+  }, [loadCustomerData]);
 
   // 添加点击外部区域关闭弹窗的功能
   useEffect(() => {
@@ -254,7 +300,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
   }, [showSavedCustomers]);
 
   // 保存客户信息
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (!data.to.trim()) return;
 
     const customerName = data.to.split('\n')[0].trim(); // 使用第一行作为客户名称
@@ -262,7 +308,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
     
     // 保存到历史记录中，这样客户页面就能读取到
     if (typeof window !== 'undefined') {
-      const quotationHistory = JSON.parse(localStorage.getItem('quotation_history') || '[]');
+      const quotationHistory = getCachedLocalStorage('quotation_history') || [];
       
       // 检查是否已经存在相同的客户信息
       const existingIndex = quotationHistory.findIndex((record: any) => {
@@ -302,16 +348,16 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
         quotationHistory.push(newRecord);
       }
       
-      localStorage.setItem('quotation_history', JSON.stringify(quotationHistory));
+      setLocalStorageAsync('quotation_history', quotationHistory);
     }
     
     // 重新加载客户数据
     loadCustomerData();
     setShowSavedCustomers(false);
-  };
+  }, [data.to, normalizeCustomerName, loadCustomerData]);
 
   // 加载客户信息
-  const handleLoad = (customer: SavedCustomer) => {
+  const handleLoad = useCallback((customer: SavedCustomer) => {
     onChange({
       ...data,
       to: customer.to
@@ -323,23 +369,66 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
     }
     
     setShowSavedCustomers(false);
-  };
+  }, [data, onChange]);
 
+  // 使用useMemo优化客户信息更新
+  const handleCustomerInfoChange = useCallback((newTo: string) => {
+    onChange({
+      ...data,
+      to: newTo
+    });
+  }, [data, onChange]);
 
+  // 使用useMemo优化询价单号更新
+  const handleInquiryNoChange = useCallback((newInquiryNo: string) => {
+    onChange({
+      ...data,
+      inquiryNo: newInquiryNo
+    });
+  }, [data, onChange]);
+
+  // 使用useMemo优化报价单号更新
+  const handleQuotationNoChange = useCallback((newQuotationNo: string) => {
+    onChange({
+      ...data,
+      quotationNo: newQuotationNo
+    });
+  }, [data, onChange]);
+
+  // 使用useMemo优化合同号更新
+  const handleContractNoChange = useCallback((newContractNo: string) => {
+    onChange({
+      ...data,
+      contractNo: newContractNo
+    });
+  }, [data, onChange]);
+
+  // 使用useMemo优化日期更新
+  const handleDateChange = useCallback((newDate: string) => {
+    onChange({
+      ...data,
+      date: newDate
+    });
+  }, [data, onChange]);
+
+  // 使用useMemo优化显示名称
+  const displayTitle = useMemo(() => {
+    return type === 'quotation' ? 'Customer Information' : 'Customer Information';
+  }, [type]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* 左列：用户信息和询价单号 */}
       <div className="bg-gray-50 dark:bg-[#1C1C1E] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-          {type === 'quotation' ? 'Customer Information' : 'Customer Information'}
+          {displayTitle}
         </h3>
         <div className="space-y-4">
           {/* 客户信息 */}
           <div className="relative">
             <textarea
               value={data.to}
-              onChange={e => onChange({ ...data, to: e.target.value })}
+              onChange={(e) => handleCustomerInfoChange(e.target.value)}
               placeholder="Enter customer name and address"
               rows={3}
               className={`${inputClassName} min-h-[100px]`}
@@ -369,8 +458,6 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
                 Save
               </button>
             </div>
-
-
 
             {/* 保存的客户列表弹窗 */}
             {showSavedCustomers && savedCustomers.length > 0 && (
@@ -409,7 +496,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
             <input
               type="text"
               value={data.inquiryNo}
-              onChange={e => onChange({ ...data, inquiryNo: e.target.value })}
+              onChange={(e) => handleInquiryNoChange(e.target.value)}
               placeholder="Inquiry No."
               className={inputClassName}
               style={iosCaretStyle}
@@ -432,7 +519,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
                 <input
                   type="text"
                   value={data.quotationNo}
-                  onChange={e => onChange({ ...data, quotationNo: e.target.value })}
+                  onChange={(e) => handleQuotationNoChange(e.target.value)}
                   placeholder="Quotation No. *"
                   className={`${inputClassName} [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 font-medium text-[#007AFF] dark:text-[#0A84FF]`}
                   style={iosCaretStyle}
@@ -447,7 +534,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
                 <input
                   type="date"
                   value={data.date}
-                  onChange={e => onChange({ ...data, date: e.target.value })}
+                  onChange={(e) => handleDateChange(e.target.value)}
                   className={inputClassName}
                   style={iosCaretStyle}
                   required
@@ -464,7 +551,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
                 <input
                   type="text"
                   value={data.contractNo}
-                  onChange={e => onChange({ ...data, contractNo: e.target.value })}
+                  onChange={(e) => handleContractNoChange(e.target.value)}
                   placeholder="Contract No."
                   className={`${inputClassName} [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 font-medium text-[#007AFF] dark:text-[#0A84FF]`}
                   style={iosCaretStyle}
@@ -479,7 +566,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
                 <input
                   type="date"
                   value={data.date}
-                  onChange={e => onChange({ ...data, date: e.target.value })}
+                  onChange={(e) => handleDateChange(e.target.value)}
                   className={inputClassName}
                   style={iosCaretStyle}
                   required
@@ -493,7 +580,7 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
                 <input
                   type="text"
                   value={data.quotationNo}
-                  onChange={e => onChange({ ...data, quotationNo: e.target.value })}
+                  onChange={(e) => handleQuotationNoChange(e.target.value)}
                   placeholder="Quotation No."
                   className={inputClassName}
                   style={iosCaretStyle}
@@ -505,4 +592,6 @@ export function CustomerInfoSection({ data, onChange, type }: CustomerInfoSectio
       </div>
     </div>
   );
-} 
+});
+
+CustomerInfoSection.displayName = 'CustomerInfoSection'; 
