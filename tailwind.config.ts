@@ -25,56 +25,133 @@ export default {
     },
   },
   safelist: [
+    // 基础类
     'caret-blue-600',
     'caret-blue-400',
     'dark:caret-blue-400',
     '-webkit-appearance-none',
     'touch-manipulation',
-    // 模块背景颜色
-    'bg-gradient-to-br',
-    'from-blue-50', 'to-blue-100', 'hover:from-blue-100', 'hover:to-blue-200',
-    'dark:from-blue-900/20', 'dark:to-blue-800/30', 'dark:hover:from-blue-800/30', 'dark:hover:to-blue-700/40',
-    'from-green-50', 'to-green-100', 'hover:from-green-100', 'hover:to-green-200',
-    'dark:from-green-900/20', 'dark:to-green-800/30', 'dark:hover:from-green-800/30', 'dark:hover:to-green-700/40',
-    'from-teal-50', 'to-teal-100', 'hover:from-teal-100', 'hover:to-teal-200',
-    'dark:from-teal-900/20', 'dark:to-teal-800/30', 'dark:hover:from-teal-800/30', 'dark:hover:to-teal-700/40',
-    'from-purple-50', 'to-purple-100', 'hover:from-purple-100', 'hover:to-purple-200',
-    'dark:from-purple-900/20', 'dark:to-purple-800/30', 'dark:hover:from-purple-800/30', 'dark:hover:to-purple-700/40',
-    'from-orange-50', 'to-orange-100', 'hover:from-orange-100', 'hover:to-orange-200',
-    'dark:from-orange-900/20', 'dark:to-orange-800/30', 'dark:hover:from-orange-800/30', 'dark:hover:to-orange-700/40',
-    'from-indigo-50', 'to-indigo-100', 'hover:from-indigo-100', 'hover:to-indigo-200',
-    'dark:from-indigo-900/20', 'dark:to-indigo-800/30', 'dark:hover:from-indigo-800/30', 'dark:hover:to-indigo-700/40',
-    'from-pink-50', 'to-pink-100', 'hover:from-pink-100', 'hover:to-pink-200',
-    'dark:from-pink-900/20', 'dark:to-pink-800/30', 'dark:hover:from-pink-800/30', 'dark:hover:to-pink-700/40',
-    'from-violet-50', 'to-violet-100', 'hover:from-violet-100', 'hover:to-violet-200',
-    'dark:from-violet-900/20', 'dark:to-violet-800/30', 'dark:hover:from-violet-800/30', 'dark:hover:to-violet-700/40',
-    // 图标背景颜色
-    'from-blue-500', 'to-blue-600',
-    'from-green-500', 'to-green-600',
-    'from-teal-500', 'to-teal-600',
-    'from-purple-500', 'to-purple-600',
-    'from-orange-500', 'to-orange-600',
-    'from-indigo-500', 'to-indigo-600',
-    'from-pink-500', 'to-pink-600',
-    'from-violet-500', 'to-violet-600',
+    
+    // 渐变基础类
+    {
+      pattern: /bg-gradient-to-br/,
+    },
+    
+    // 背景渐变颜色 - 使用正则确保覆盖所有颜色和变体
+    {
+      pattern: /from-(blue|green|teal|purple|orange|indigo|pink|violet)-(50|100|500|600|900)/,
+      variants: ['hover', 'dark', 'dark:hover'],
+    },
+    {
+      pattern: /to-(blue|green|teal|purple|orange|indigo|pink|violet)-(100|200|300|600|700|800)/,
+      variants: ['hover', 'dark', 'dark:hover'],
+    },
+    
     // 文本颜色
-    'text-blue-700', 'dark:text-blue-300',
-    'text-green-700', 'dark:text-green-300',
-    'text-teal-700', 'dark:text-teal-300',
-    'text-purple-700', 'dark:text-purple-300',
-    'text-orange-700', 'dark:text-orange-300',
-    'text-indigo-700', 'dark:text-indigo-300',
-    'text-pink-700', 'dark:text-pink-300',
-    'text-violet-700', 'dark:text-violet-300',
-    // 默认颜色（备用）
-    'from-gray-50', 'to-gray-100', 'hover:from-gray-100', 'hover:to-gray-200',
-    'dark:from-gray-800/50', 'dark:to-gray-700/40', 'dark:hover:from-gray-700/40', 'dark:hover:to-gray-600/50',
-    'from-gray-500', 'to-gray-600',
-    'text-gray-800', 'dark:text-gray-200',
-    'text-gray-700', 'dark:text-gray-300',
-    // 更多功能按钮颜色
-    'bg-gray-100', 'hover:bg-gray-200', 'dark:bg-gray-800/50', 'dark:hover:bg-gray-700/60',
-    'bg-gray-500'
+    {
+      pattern: /text-(blue|green|teal|purple|orange|indigo|pink|violet)-(300|700|800)/,
+      variants: ['dark'],
+    },
+    
+    // 背景颜色
+    {
+      pattern: /bg-(blue|green|teal|purple|orange|indigo|pink|violet)-(100|500|600)/,
+      variants: ['hover', 'dark'],
+    },
+    
+    // 边框颜色
+    {
+      pattern: /border-(blue|green|teal|purple|orange|indigo|pink|violet)-(200|800)/,
+      variants: ['dark'],
+    },
+    
+    // 灰色系（备用颜色）
+    {
+      pattern: /from-gray-(50|100|800|900)/,
+      variants: ['hover', 'dark', 'dark:hover'],
+    },
+    {
+      pattern: /to-gray-(100|200|700|800)/,
+      variants: ['hover', 'dark', 'dark:hover'],
+    },
+    {
+      pattern: /text-gray-(200|300|700|800)/,
+      variants: ['dark'],
+    },
+    {
+      pattern: /bg-gray-(100|500|800)/,
+      variants: ['hover', 'dark'],
+    },
+    {
+      pattern: /border-gray-(200|800)/,
+      variants: ['dark'],
+    },
+    
+    // 透明度变体
+    {
+      pattern: /(from|to)-(blue|green|teal|purple|orange|indigo|pink|violet)-(900)\/20/,
+      variants: ['dark'],
+    },
+    {
+      pattern: /(from|to)-(blue|green|teal|purple|orange|indigo|pink|violet)-(800)\/30/,
+      variants: ['dark'],
+    },
+    {
+      pattern: /(from|to)-(blue|green|teal|purple|orange|indigo|pink|violet)-(700)\/40/,
+      variants: ['dark', 'dark:hover'],
+    },
+    
+    // 特殊组合类
+    'dark:from-blue-900/20',
+    'dark:to-blue-800/30',
+    'dark:hover:from-blue-800/30',
+    'dark:hover:to-blue-700/40',
+    'dark:from-green-900/20',
+    'dark:to-green-800/30',
+    'dark:hover:from-green-800/30',
+    'dark:hover:to-green-700/40',
+    'dark:from-teal-900/20',
+    'dark:to-teal-800/30',
+    'dark:hover:from-teal-800/30',
+    'dark:hover:to-teal-700/40',
+    'dark:from-purple-900/20',
+    'dark:to-purple-800/30',
+    'dark:hover:from-purple-800/30',
+    'dark:hover:to-purple-700/40',
+    'dark:from-orange-900/20',
+    'dark:to-orange-800/30',
+    'dark:hover:from-orange-800/30',
+    'dark:hover:to-orange-700/40',
+    'dark:from-indigo-900/20',
+    'dark:to-indigo-800/30',
+    'dark:hover:from-indigo-800/30',
+    'dark:hover:to-indigo-700/40',
+    'dark:from-pink-900/20',
+    'dark:to-pink-800/30',
+    'dark:hover:from-pink-800/30',
+    'dark:hover:to-pink-700/40',
+    'dark:from-violet-900/20',
+    'dark:to-violet-800/30',
+    'dark:hover:from-violet-800/30',
+    'dark:hover:to-violet-700/40',
+    
+    // 悬停变体
+    'hover:from-blue-100',
+    'hover:to-blue-200',
+    'hover:from-green-100',
+    'hover:to-green-200',
+    'hover:from-teal-100',
+    'hover:to-teal-200',
+    'hover:from-purple-100',
+    'hover:to-purple-200',
+    'hover:from-orange-100',
+    'hover:to-orange-200',
+    'hover:from-indigo-100',
+    'hover:to-indigo-200',
+    'hover:from-pink-100',
+    'hover:to-pink-200',
+    'hover:from-violet-100',
+    'hover:to-violet-200',
   ],
   plugins: [],
 } satisfies Config;
