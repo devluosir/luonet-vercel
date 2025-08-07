@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSession } from 'next-auth/react';
+import React, { useState, useEffect, useCallback } from 'react';
 // 移除CSS导入，改为动态加载
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
@@ -61,7 +60,7 @@ export default function QuotationPage() {
   const [activeTab, setActiveTab] = useState<'quotation' | 'confirmation'>(initialType || 'quotation');
   const [showSettings, setShowSettings] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [previewItem, setPreviewItem] = useState<any>(null);
+  const [previewItem, setPreviewItem] = useState<unknown>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
