@@ -3,6 +3,7 @@
 import { ThemeProvider } from 'next-themes';
 import { SessionProvider } from 'next-auth/react';
 import { usePermissionInit } from '@/hooks/usePermissionInit';
+import { ToastProvider } from '@/components/ui/Toast';
 
 // ✅ 全局权限初始化组件
 function PermissionInitializer() {
@@ -19,8 +20,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <SessionProvider>
-        <PermissionInitializer />
-        {children}
+        <ToastProvider>
+          <PermissionInitializer />
+          {children}
+        </ToastProvider>
       </SessionProvider>
     </ThemeProvider>
   );

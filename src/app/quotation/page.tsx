@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Settings, Download, ArrowLeft, Eye, Clipboard, History, Save } from 'lucide-react';
 import { TabButton } from '@/components/quotation/TabButton';
-import { getDefaultNotes } from '@/utils/getDefaultNotes';
+// getDefaultNotes 现在在 getInitialQuotationData 中使用
 import { CustomerInfoSection } from '@/components/quotation/CustomerInfoSection';
 import { ItemsTable } from '@/components/quotation/ItemsTable';
 import { NotesSection } from '@/components/quotation/NotesSection';
@@ -15,7 +15,13 @@ import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
 import { Footer } from '@/components/Footer';
 import { parseExcelData, convertExcelToLineItems } from '@/utils/excelPasteHandler';
 import { saveQuotationHistory } from '@/utils/quotationHistory';
-import { format } from 'date-fns';
+import { validateQuotation, validateQuotationForPreview } from '@/utils/quotationValidation';
+import { usePdfGenerator } from '@/hooks/usePdfGenerator';
+import { useToast } from '@/components/ui/Toast';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { getInitialQuotationData } from '@/utils/quotationInitialData';
+import { PasteDialog } from '@/components/quotation/PasteDialog';
+// format 现在在 getInitialQuotationData 中使用
 import dynamic from 'next/dynamic';
 
 // 动态导入PDF预览组件
@@ -30,29 +36,11 @@ const DynamicPaymentTermsSection = dynamic(() => import('@/components/quotation/
   loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg h-8"></div>
 });
 
-// 缓存localStorage数据
-const localStorageCache = new Map<string, unknown>();
-
-// 获取缓存的localStorage数据
-const getCachedLocalStorage = (key: string) => {
-  if (!localStorageCache.has(key)) {
-    try {
-      const data = localStorage.getItem(key);
-      const parsed = data ? JSON.parse(data) : null;
-      localStorageCache.set(key, parsed);
-      return parsed;
-    } catch (error) {
-      console.warn(`Failed to parse localStorage key: ${key}`, error);
-      return null;
-    }
-  }
-  return localStorageCache.get(key);
-};
+// 这些函数现在在 getInitialQuotationData 中定义
 
 // 异步设置localStorage（暂时未使用）
 const _setLocalStorageAsync = (key: string, value: unknown) => {
   const serialized = JSON.stringify(value);
-  localStorageCache.set(key, value);
   
   // 使用requestIdleCallback延迟写入
   if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
@@ -85,6 +73,8 @@ interface CustomWindow extends Window {
 export default function QuotationPage() {
   const _router = useRouter();
   const pathname = usePathname();
+  const { generate: generatePdf } = usePdfGenerator();
+  const { showToast } = useToast();
   
   // 权限初始化
   // usePermissionInit(); // 移除：权限初始化已在全局处理
@@ -98,65 +88,37 @@ export default function QuotationPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewItem, setPreviewItem] = useState<unknown>(null);
+  // 获取初始数据（优先使用全局数据，其次使用草稿，最后使用默认数据）
+  const getInitialData = () => {
+    if (_initialData) return _initialData;
+    
+    if (typeof window !== 'undefined') {
+      try {
+        const draft = localStorage.getItem('draftQuotation');
+        if (draft) {
+          const parsed = JSON.parse(draft);
+          return parsed;
+        }
+      } catch (error) {
+        console.warn('读取草稿失败:', error);
+      }
+    }
+    
+    return getInitialQuotationData();
+  };
+
+  const [data, setData] = useState<QuotationData>(getInitialData());
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatingProgress, setGeneratingProgress] = useState(0);
   const [editId, setEditId] = useState<string | undefined>(initialEditId || undefined);
-  const [data, setData] = useState<QuotationData>(_initialData || {
-    to: '',
-    inquiryNo: '',
-    quotationNo: '',
-    contractNo: '',
-    date: format(new Date(), 'yyyy-MM-dd'),
-    from: typeof window !== 'undefined' ? 
-      (() => {
-        try {
-          const userInfo = getCachedLocalStorage('userInfo');
-          if (userInfo) {
-            return userInfo.username || 'Roger';
-          }
-          // 兼容旧的存储方式
-          const username = getCachedLocalStorage('username');
-          if (username) {
-            return username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
-          }
-          return 'Roger';
-        } catch (error) {
-          console.warn('获取用户信息失败:', error);
-          return 'Roger';
-        }
-      })() : 
-      'Roger',
-    currency: 'USD',
-    paymentDate: format(new Date(), 'yyyy-MM-dd'),
-    items: [{
-      id: 1,
-      partName: '',
-      description: '',
-      quantity: 0,
-      unit: 'pc',
-      unitPrice: 0,
-      amount: 0,
-      remarks: ''
-    }],
-    notes: getDefaultNotes('Roger', 'quotation'),
-    amountInWords: {
-      dollars: '',
-      cents: '',
-      hasDecimals: false
-    },
-    showDescription: true,
-    showRemarks: true,
-    showBank: false,
-    showStamp: false,
-    otherFees: [],
-    customUnits: [],
-    showPaymentTerms: false,
-    showInvoiceReminder: false,
-    additionalPaymentTerms: '',
-    templateConfig: {
-      headerType: 'none',
-      stampType: 'none'
-    }
+  const [isPasteDialogOpen, setIsPasteDialogOpen] = useState(false);
+
+  // 自动保存功能
+  const { clearSaved } = useAutoSave({
+    data,
+    key: 'draftQuotation',
+    delay: 2000, // 2秒后自动保存
+    enabled: !editId // 只在新建模式下启用自动保存
   });
 
   // 使用useRef缓存用户信息，避免重复解析（暂时未使用）
@@ -204,13 +166,9 @@ export default function QuotationPage() {
 
   // 使用useCallback优化保存函数
   const handleSave = useCallback(async () => {
-    if (!data.to.trim()) {
-      // 显示错误消息
-      return;
-    }
-
-    if (data.items.length === 0 || (data.items.length === 1 && !data.items[0].partName)) {
-      // 显示错误消息
+    const validation = validateQuotation(data);
+    if (!validation.valid) {
+      showToast(validation.message!, 'error');
       return;
     }
 
@@ -224,21 +182,21 @@ export default function QuotationPage() {
         if (!editId) {
           setEditId(result.id);
         }
+        // 保存成功后清除草稿
+        clearSaved();
+        showToast('保存成功', 'success');
       }
     } catch (error) {
       console.error('Error saving:', error);
+      showToast('保存失败，请重试', 'error');
     }
-  }, [activeTab, data, editId, pathname]);
+  }, [activeTab, data, editId, pathname, showToast, clearSaved]);
 
-  // 优化生成PDF函数，使用动态导入
+  // 优化生成PDF函数，使用统一的PDF生成Hook
   const handleGenerate = useCallback(async () => {
-    if (!data.to.trim()) {
-      // 显示错误消息
-      return;
-    }
-
-    if (data.items.length === 0 || (data.items.length === 1 && !data.items[0].partName)) {
-      // 显示错误消息
+    const validation = validateQuotation(data);
+    if (!validation.valid) {
+      showToast(validation.message!, 'error');
       return;
     }
 
@@ -246,9 +204,6 @@ export default function QuotationPage() {
     setGeneratingProgress(0);
 
     try {
-      // 动态导入PDF生成函数
-      const { generateQuotationPDF } = await import('@/utils/quotationPdfGenerator');
-      const { generateOrderConfirmationPDF } = await import('@/utils/orderConfirmationPdfGenerator');
       const { recordCustomerUsage } = await import('@/utils/customerUsageTracker');
       
       // 并行执行保存和PDF生成
@@ -272,10 +227,8 @@ export default function QuotationPage() {
 
       setGeneratingProgress(80);
 
-      // 生成PDF
-      const pdfBlob = activeTab === 'quotation' 
-        ? await generateQuotationPDF(data)
-        : await generateOrderConfirmationPDF(data);
+      // 使用统一的PDF生成Hook
+      const pdfBlob = await generatePdf(activeTab, data);
 
       setGeneratingProgress(100);
 
@@ -289,42 +242,38 @@ export default function QuotationPage() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
+      // 生成成功后清除草稿
+      clearSaved();
+      showToast('PDF生成成功', 'success');
+
     } catch (error) {
       console.error('Error generating PDF:', error);
+      showToast('PDF生成失败，请重试', 'error');
     } finally {
       setIsGenerating(false);
       setGeneratingProgress(0);
     }
-  }, [activeTab, data, editId]);
+  }, [activeTab, data, editId, generatePdf, showToast, clearSaved]);
 
   // 优化预览函数
   const handlePreview = useCallback(async () => {
-    if (!data.to.trim()) {
-      // 显示错误消息
-      return;
-    }
-
-    if (data.items.length === 0 || (data.items.length === 1 && !data.items[0].partName)) {
-      // 显示错误消息
+    const validation = validateQuotationForPreview(data);
+    if (!validation.valid) {
+      showToast(validation.message!, 'error');
       return;
     }
 
     try {
-      // 动态导入PDF生成函数
-      const { generateQuotationPDF } = await import('@/utils/quotationPdfGenerator');
-      const { generateOrderConfirmationPDF } = await import('@/utils/orderConfirmationPdfGenerator');
-      
-      const pdfBlob = activeTab === 'quotation' 
-        ? await generateQuotationPDF(data)
-        : await generateOrderConfirmationPDF(data);
+      const pdfBlob = await generatePdf(activeTab, data);
 
       const url = URL.createObjectURL(pdfBlob);
       setPreviewItem({ url, type: activeTab });
       setShowPreview(true);
     } catch (error) {
       console.error('Error previewing PDF:', error);
+      showToast('预览失败，请重试', 'error');
     }
-  }, [activeTab, data]);
+  }, [activeTab, data, generatePdf, showToast]);
 
   // 优化全局粘贴处理
   const handleGlobalPaste = useCallback(async (text: string) => {
@@ -333,47 +282,20 @@ export default function QuotationPage() {
       if (items.length > 0) {
         const convertedItems = convertExcelToLineItems(items);
         updateItems(convertedItems);
+        showToast(`成功导入 ${items.length} 个商品条目`, 'success');
+      } else {
+        showToast('未检测到有效的Excel数据', 'info');
       }
     } catch (error) {
       console.error('Error parsing pasted data:', error);
+      showToast('数据解析失败，请检查格式', 'error');
     }
-  }, [updateItems]);
+  }, [updateItems, showToast]);
 
-  // 显示粘贴对话框
-  const showPasteDialog = useCallback(() => {
-    const overlay = document.createElement('div');
-    overlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
-    
-    const input = document.createElement('textarea');
-    input.className = 'w-96 h-32 p-4 border rounded-lg resize-none';
-    input.placeholder = 'Paste your data here...';
-    
-    const confirmBtn = document.createElement('button');
-    confirmBtn.className = 'mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg';
-    confirmBtn.textContent = 'Import';
-    
-    const cleanup = () => {
-      document.body.removeChild(overlay);
-      document.body.removeChild(input);
-      document.body.removeChild(confirmBtn);
-    };
-    
-    confirmBtn.onclick = () => {
-      const text = input.value;
-      if (text) {
-        handleGlobalPaste(text);
-      }
-      cleanup();
-    };
-    
-    overlay.onclick = cleanup;
-    
-    document.body.appendChild(overlay);
-    document.body.appendChild(input);
-    document.body.appendChild(confirmBtn);
-    
-    input.focus();
-  }, [handleGlobalPaste]);
+  // 显示粘贴对话框（使用React组件替代DOM API）
+  const openPasteDialog = useCallback(() => {
+    setIsPasteDialogOpen(true);
+  }, []);
 
   // 优化剪贴板按钮点击
   const handleClipboardButtonClick = useCallback(async () => {
@@ -381,13 +303,16 @@ export default function QuotationPage() {
       const text = await navigator.clipboard.readText();
       if (text) {
         handleGlobalPaste(text);
+      } else {
+        showToast('剪贴板为空', 'info');
       }
     } catch (error) {
       console.error('Error reading clipboard:', error);
+      showToast('无法访问剪贴板，请手动粘贴', 'info');
       // 显示粘贴对话框
-      showPasteDialog();
+      openPasteDialog();
     }
-  }, [handleGlobalPaste, showPasteDialog]);
+  }, [handleGlobalPaste, openPasteDialog, showToast]);
 
   // 优化表单提交
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -703,6 +628,13 @@ export default function QuotationPage() {
         onClose={handlePreviewToggle}
         item={previewItem}
         itemType={activeTab as 'quotation' | 'confirmation'}
+      />
+
+      {/* 粘贴对话框组件 */}
+      <PasteDialog
+        isOpen={isPasteDialogOpen}
+        onClose={() => setIsPasteDialogOpen(false)}
+        onConfirm={handleGlobalPaste}
       />
 
       <Footer />
