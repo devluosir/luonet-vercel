@@ -121,7 +121,33 @@ const overlay = document.createElement('div');
   - 粘贴操作提供导入结果反馈
   - 剪贴板访问失败时的降级处理
 
-### 8. **代码质量：ESLint 合规性**
+### 8. **Tab 状态持久化：URL 参数支持**
+- **优化内容**:
+  - 通过 URL 参数持久化 tab 状态（`?tab=quotation` 或 `?tab=confirmation`）
+  - 切换 tab 时自动更新 URL，刷新页面后保持当前 tab
+  - 支持分享特定 tab 的链接
+  - 优先级：URL 参数 > 全局变量 > 默认值
+
+```typescript
+// URL 参数解析
+const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+const tabFromUrl = searchParams?.get('tab') as 'quotation' | 'confirmation' | null;
+
+// Tab 状态初始化
+const [activeTab, setActiveTab] = useState<'quotation' | 'confirmation'>(
+  tabFromUrl || initialType || 'quotation'
+);
+
+// URL 更新
+const handleTabChange = useCallback((tab: 'quotation' | 'confirmation') => {
+  setActiveTab(tab);
+  const url = new URL(window.location.href);
+  url.searchParams.set('tab', tab);
+  window.history.replaceState(null, '', url.toString());
+}, []);
+```
+
+### 9. **代码质量：ESLint 合规性**
 - **修复问题**:
   - 移除所有 `any` 类型，使用更具体的类型
   - 修复未使用变量的警告
@@ -140,6 +166,7 @@ const overlay = document.createElement('div');
 | **维护性** | 分散的校验逻辑 | 统一的验证函数 | ⭐⭐⭐⭐⭐ |
 | **数据持久化** | 无自动保存 | 智能草稿保存 | ⭐⭐⭐⭐⭐ |
 | **组件化** | DOM API 操作 | React 组件 | ⭐⭐⭐⭐⭐ |
+| **Tab 持久化** | 刷新重置 | URL 参数保持 | ⭐⭐⭐⭐⭐ |
 
 ## 🔧 技术实现亮点
 
@@ -170,6 +197,11 @@ const overlay = document.createElement('div');
 - 自动保存草稿功能
 - 成功操作后自动清理草稿
 
+### 6. **状态持久化**
+- URL 参数持久化 tab 状态
+- 支持分享特定 tab 的链接
+- 刷新页面后保持用户选择
+
 ## 🚀 生产就绪特性
 
 ### ✅ 已完成
@@ -182,6 +214,7 @@ const overlay = document.createElement('div');
 - [x] 自动保存功能
 - [x] React 组件化对话框
 - [x] 统一的数据初始化
+- [x] Tab 状态持久化
 
 ### 🔮 未来可扩展
 - [ ] Zustand 状态管理集成
@@ -200,6 +233,7 @@ const overlay = document.createElement('div');
 | 用户反馈 | 无 | 完整 |
 | 自动保存 | 无 | 有 |
 | 组件化程度 | 低 | 高 |
+| Tab 持久化 | 无 | 有 |
 
 ## 🎉 总结
 
@@ -212,5 +246,6 @@ const overlay = document.createElement('div');
 5. **健壮性**: 全面的错误处理和边界情况处理
 6. **数据安全**: 自动保存功能防止数据丢失
 7. **组件化**: 更好的 React 生态集成
+8. **状态持久化**: URL 参数保持用户选择
 
 这个优化后的页面现在具备了企业级应用所需的所有特性，可以作为其他页面优化的参考模板。 

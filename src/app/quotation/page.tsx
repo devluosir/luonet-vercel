@@ -82,9 +82,10 @@ export default function QuotationPage() {
   // 从 window 全局变量获取初始数据，添加下划线前缀表示有意未使用
   const _initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__QUOTATION_DATA__) : null;
   const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
-  const initialType = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__QUOTATION_TYPE__) : 'quotation';
+  const _initialType = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__QUOTATION_TYPE__) : 'quotation';
 
-  const [activeTab, setActiveTab] = useState<'quotation' | 'confirmation'>(initialType || 'quotation');
+  // 延迟初始化 tab 状态，避免 SSR 不一致
+  const [activeTab, setActiveTab] = useState<'quotation' | 'confirmation' | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewItem, setPreviewItem] = useState<unknown>(null);
@@ -121,6 +122,14 @@ export default function QuotationPage() {
     enabled: !editId // 只在新建模式下启用自动保存
   });
 
+  // 客户端初始化 tab 状态，避免 SSR 不一致
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const tabFromUrl = searchParams.get('tab') as 'quotation' | 'confirmation' | null;
+    const win = window as unknown as CustomWindow;
+    setActiveTab(tabFromUrl || win.__QUOTATION_TYPE__ || 'quotation');
+  }, []);
+
   // 使用useRef缓存用户信息，避免重复解析（暂时未使用）
   const _userInfoRef = useRef<string>('');
   
@@ -136,10 +145,20 @@ export default function QuotationPage() {
     return data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥';
   }, [data.currency]);
 
-  // 使用useCallback优化事件处理函数
+  // 使用useCallback优化事件处理函数，同时更新URL参数
   const handleTabChange = useCallback((tab: 'quotation' | 'confirmation') => {
     setActiveTab(tab);
+    
+    // 更新 URL 参数以持久化 tab 状态
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tab);
+      window.history.replaceState(null, '', url.toString());
+    }
   }, []);
+
+  // 类型安全的 activeTab，在守卫之后确保不为 null
+  const safeActiveTab = activeTab as 'quotation' | 'confirmation';
 
   const handleSettingsToggle = useCallback(() => {
     setShowSettings(prev => !prev);
@@ -176,7 +195,7 @@ export default function QuotationPage() {
       // 使用 URL 中的 ID 或现有的 editId
       const id = pathname?.startsWith('/quotation/edit/') ? pathname.split('/').pop() : editId;
       
-      const result = await saveQuotationHistory(activeTab, data, id);
+      const result = await saveQuotationHistory(safeActiveTab, data, id);
       if (result) {
         // 更新 editId，确保后续的保存操作会更新同一条记录
         if (!editId) {
@@ -190,7 +209,7 @@ export default function QuotationPage() {
       console.error('Error saving:', error);
       showToast('保存失败，请重试', 'error');
     }
-  }, [activeTab, data, editId, pathname, showToast, clearSaved]);
+  }, [safeActiveTab, data, editId, pathname, showToast, clearSaved]);
 
   // 优化生成PDF函数，使用统一的PDF生成Hook
   const handleGenerate = useCallback(async () => {
@@ -208,7 +227,7 @@ export default function QuotationPage() {
       
       // 并行执行保存和PDF生成
       const [saveResult] = await Promise.all([
-        saveQuotationHistory(activeTab, data, editId),
+        saveQuotationHistory(safeActiveTab, data, editId),
         new Promise(resolve => setTimeout(resolve, 100)) // 给UI一点时间更新
       ]);
 
@@ -222,13 +241,13 @@ export default function QuotationPage() {
 
       // 记录使用情况
       if (data.quotationNo) {
-        recordCustomerUsage(data.to.split('\n')[0].trim(), activeTab, data.quotationNo);
+        recordCustomerUsage(data.to.split('\n')[0].trim(), safeActiveTab, data.quotationNo);
       }
 
       setGeneratingProgress(80);
 
       // 使用统一的PDF生成Hook
-      const pdfBlob = await generatePdf(activeTab, data);
+      const pdfBlob = await generatePdf(safeActiveTab, data);
 
       setGeneratingProgress(100);
 
@@ -236,7 +255,7 @@ export default function QuotationPage() {
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${activeTab === 'quotation' ? 'quotation' : 'order-confirmation'}_${data.quotationNo || 'draft'}.pdf`;
+      link.download = `${safeActiveTab === 'quotation' ? 'quotation' : 'order-confirmation'}_${data.quotationNo || 'draft'}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -253,7 +272,7 @@ export default function QuotationPage() {
       setIsGenerating(false);
       setGeneratingProgress(0);
     }
-  }, [activeTab, data, editId, generatePdf, showToast, clearSaved]);
+  }, [safeActiveTab, data, editId, generatePdf, showToast, clearSaved]);
 
   // 优化预览函数
   const handlePreview = useCallback(async () => {
@@ -264,16 +283,16 @@ export default function QuotationPage() {
     }
 
     try {
-      const pdfBlob = await generatePdf(activeTab, data);
+      const pdfBlob = await generatePdf(safeActiveTab, data);
 
       const url = URL.createObjectURL(pdfBlob);
-      setPreviewItem({ url, type: activeTab });
+      setPreviewItem({ url, type: safeActiveTab });
       setShowPreview(true);
     } catch (error) {
       console.error('Error previewing PDF:', error);
       showToast('预览失败，请重试', 'error');
     }
-  }, [activeTab, data, generatePdf, showToast]);
+  }, [safeActiveTab, data, generatePdf, showToast]);
 
   // 优化全局粘贴处理
   const handleGlobalPaste = useCallback(async (text: string) => {
@@ -328,6 +347,15 @@ export default function QuotationPage() {
     }
   }, [pathname]);
 
+  // 守卫：等待客户端初始化完成
+  if (!activeTab) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#007AFF] dark:border-[#0A84FF]"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
       <main className="flex-1">
@@ -335,8 +363,8 @@ export default function QuotationPage() {
           {/* 返回按钮 */}
           <Link 
             href={
-              pathname?.includes('/edit/') ? `/history?tab=${activeTab}` : 
-              pathname?.includes('/copy/') ? `/history?tab=${activeTab}` : 
+              pathname?.includes('/edit/') ? `/history?tab=${safeActiveTab}` : 
+              pathname?.includes('/copy/') ? `/history?tab=${safeActiveTab}` : 
               '/dashboard'
             } 
             className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
@@ -348,13 +376,13 @@ export default function QuotationPage() {
           {/* 标签切换 */}
           <div className="flex justify-center gap-2 sm:gap-4 mt-4 sm:mt-6 mb-6 sm:mb-8">
             <TabButton 
-              active={activeTab === 'quotation'}
+              active={safeActiveTab === 'quotation'}
               onClick={() => handleTabChange('quotation')}
             >
               Quotation
             </TabButton>
             <TabButton 
-              active={activeTab === 'confirmation'}
+              active={safeActiveTab === 'confirmation'}
               onClick={() => handleTabChange('confirmation')}
             >
               Order Confirmation
@@ -368,7 +396,7 @@ export default function QuotationPage() {
               <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 dark:border-[#3A3A3C]">
                 <div className="flex items-center gap-4">
                   <h1 className="text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]">
-                    Generate {activeTab === 'quotation' ? 'Quotation' : 'Order'}
+                    Generate {safeActiveTab === 'quotation' ? 'Quotation' : 'Order'}
                   </h1>
                   <button
                     type="button"
@@ -381,7 +409,7 @@ export default function QuotationPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Link
-                    href={`/history?tab=${activeTab}`}
+                    href={`/history?tab=${safeActiveTab}`}
                     className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
                     title="历史记录"
                   >
@@ -516,7 +544,7 @@ export default function QuotationPage() {
                     onChange={updateData}
                   />
                   {/* 银行信息区域 */}
-                  {activeTab === 'confirmation' && data.showBank && (
+                  {safeActiveTab === 'confirmation' && data.showBank && (
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-gray-600 dark:text-[#98989D] mb-2">
                         Bank Information:
@@ -532,7 +560,7 @@ export default function QuotationPage() {
                   )}
 
                   {/* 动态加载PaymentTermsSection */}
-                  {activeTab === 'confirmation' && (
+                  {safeActiveTab === 'confirmation' && (
                     <DynamicPaymentTermsSection
                       data={data}
                       onChange={updateData}
@@ -578,7 +606,7 @@ export default function QuotationPage() {
                         ) : (
                           <>
                             <Download className="w-4 h-4" />
-                            <span>Generate {activeTab === 'quotation' ? 'Quotation' : 'Order'}</span>
+                            <span>Generate {safeActiveTab === 'quotation' ? 'Quotation' : 'Order'}</span>
                           </>
                         )}
                       </div>
@@ -627,7 +655,7 @@ export default function QuotationPage() {
         isOpen={showPreview}
         onClose={handlePreviewToggle}
         item={previewItem}
-        itemType={activeTab as 'quotation' | 'confirmation'}
+        itemType={safeActiveTab}
       />
 
       {/* 粘贴对话框组件 */}
