@@ -34,11 +34,30 @@ interface SavedCustomer {
   to: string;
 }
 
+// 历史记录文档的通用接口
+interface HistoryDocument {
+  id?: string;
+  type?: string;
+  customerName?: string;
+  consigneeName?: string;
+  quotationNo?: string;
+  contractNo?: string;
+  invoiceNo?: string;
+  date?: string;
+  updatedAt?: string;
+  createdAt?: string;
+  data?: {
+    to?: string;
+    type?: string;
+  };
+  to?: string;
+}
+
 // 缓存localStorage数据
-const localStorageCache = new Map<string, any>();
+const localStorageCache = new Map<string, unknown>();
 
 // 获取缓存的localStorage数据
-const getCachedLocalStorage = (key: string) => {
+const getCachedLocalStorage = (key: string): unknown => {
   if (!localStorageCache.has(key)) {
     try {
       const data = localStorage.getItem(key);
@@ -53,38 +72,13 @@ const getCachedLocalStorage = (key: string) => {
   return localStorageCache.get(key);
 };
 
-// 异步设置localStorage
-const setLocalStorageAsync = (key: string, value: any) => {
-  const serialized = JSON.stringify(value);
-  localStorageCache.set(key, value);
-  
-  // 使用requestIdleCallback延迟写入
-  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-    (window as any).requestIdleCallback(() => {
-      try {
-        localStorage.setItem(key, serialized);
-      } catch (error) {
-        console.warn(`Failed to set localStorage key: ${key}`, error);
-      }
-    });
-  } else {
-    // 降级到setTimeout
-    setTimeout(() => {
-      try {
-        localStorage.setItem(key, serialized);
-      } catch (error) {
-        console.warn(`Failed to set localStorage key: ${key}`, error);
-      }
-    }, 0);
-  }
-};
+
 
 export const CustomerInfoSection = React.memo(({ data, onChange, type }: CustomerInfoSectionProps) => {
   const [savedCustomers, setSavedCustomers] = useState<SavedCustomer[]>([]);
   const [showSavedCustomers, setShowSavedCustomers] = useState(false);
   const [showAutoComplete, setShowAutoComplete] = useState(false);
   const [autoCompleteSuggestions, setAutoCompleteSuggestions] = useState<SavedCustomer[]>([]);
-  const [currentInputValue, setCurrentInputValue] = useState('');
   
   // 添加 ref 用于检测点击外部区域
   const savedCustomersRef = useRef<HTMLDivElement>(null);
@@ -117,8 +111,6 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 处理客户信息输入变化
   const handleCustomerInfoChange = useCallback((newTo: string) => {
-    setCurrentInputValue(newTo);
-    
     // 如果输入内容变化，显示自动完成建议
     if (newTo.trim() && savedCustomers.length > 0) {
       const suggestions = getAutoCompleteSuggestions(newTo);
@@ -136,7 +128,6 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 选择自动完成建议
   const handleAutoCompleteSelect = useCallback((customer: SavedCustomer) => {
-    setCurrentInputValue(customer.to);
     setShowAutoComplete(false);
     onChange({
       ...data,
@@ -156,14 +147,14 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
     try {
       if (typeof window !== 'undefined') {
         // 从localStorage加载客户相关的历史记录
-        const quotationHistory = getCachedLocalStorage('quotation_history') || [];
-        const packingHistory = getCachedLocalStorage('packing_history') || [];
-        const invoiceHistory = getCachedLocalStorage('invoice_history') || [];
+        const quotationHistory = (getCachedLocalStorage('quotation_history') as HistoryDocument[]) || [];
+        const packingHistory = (getCachedLocalStorage('packing_history') as HistoryDocument[]) || [];
+        const invoiceHistory = (getCachedLocalStorage('invoice_history') as HistoryDocument[]) || [];
         
         // 不加载 purchase_history，因为它包含的是供应商信息，不是客户信息
 
         // 过滤掉无效的记录
-        const validQuotationHistory = quotationHistory.filter((doc: any) => {
+        const validQuotationHistory = quotationHistory.filter((doc: HistoryDocument) => {
           const isValid = doc && 
             typeof doc === 'object' && 
             (doc.customerName || doc.quotationNo);
@@ -172,22 +163,22 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
         // 合并所有历史记录
         const allRecords = [
-          ...validQuotationHistory.map((doc: any) => {
+          ...validQuotationHistory.map((doc: HistoryDocument) => {
             const isConfirmation = doc.type === 'confirmation' || (doc.data && doc.data.type === 'confirmation');
             return {
               ...doc,
               type: isConfirmation ? 'confirmation' : 'quotation'
             };
           }),
-          ...packingHistory.map((doc: any) => ({ ...doc, type: 'packing' })),
-          ...invoiceHistory.map((doc: any) => ({ ...doc, type: 'invoice' }))
+          ...packingHistory.map((doc: HistoryDocument) => ({ ...doc, type: 'packing' })),
+          ...invoiceHistory.map((doc: HistoryDocument) => ({ ...doc, type: 'invoice' }))
         ];
 
         // 统计客户数据
-        const customerMap = new Map<string, any>();
+        const customerMap = new Map<string, { name: string; lastUpdated: Date; documents: Array<{ id: string; type: string; number: string; date: Date }> }>();
         
         // 处理所有记录
-        allRecords.forEach((doc: any) => {
+        allRecords.forEach((doc: HistoryDocument) => {
           if (!doc || typeof doc !== 'object') {
             return;
           }
@@ -208,7 +199,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
           if (!customerMap.has(customerName)) {
             customerMap.set(customerName, {
               name: rawCustomerName,
-              lastUpdated: new Date(doc.date || doc.updatedAt || doc.createdAt),
+              lastUpdated: new Date(doc.date || doc.updatedAt || doc.createdAt || Date.now()),
               documents: []
             });
           }
@@ -216,7 +207,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
           const customer = customerMap.get(customerName)!;
           
           // 更新最后更新时间
-          const docDate = new Date(doc.date || doc.updatedAt || doc.createdAt);
+          const docDate = new Date(doc.date || doc.updatedAt || doc.createdAt || Date.now());
           if (docDate > customer.lastUpdated) {
             customer.lastUpdated = docDate;
             customer.name = rawCustomerName;
@@ -225,7 +216,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
           // 添加文档信息
           customer.documents.push({
             id: doc.id || '',
-            type: doc.type,
+            type: doc.type || 'unknown',
             number: doc.quotationNo || doc.contractNo || doc.invoiceNo || '-',
             date: docDate
           });
@@ -246,14 +237,14 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
             ...invoiceHistory
           ];
           
-          const matchingRecord = allHistory.find((record: any) => {
+          const matchingRecord = allHistory.find((record: HistoryDocument) => {
             let recordCustomerName;
             if (record.type === 'packing') {
               recordCustomerName = record.consigneeName || record.customerName;
             } else {
               recordCustomerName = record.customerName;
             }
-            return normalizeCustomerName(recordCustomerName) === normalizeCustomerName(customer.name);
+            return recordCustomerName && normalizeCustomerName(recordCustomerName) === normalizeCustomerName(customer.name);
           });
           
           if (matchingRecord) {
@@ -277,8 +268,8 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
       console.error('加载客户数据失败:', error);
       // 兼容旧的保存格式
       if (typeof window !== 'undefined') {
-        const saved = getCachedLocalStorage('savedCustomers');
-        if (saved) {
+        const saved = getCachedLocalStorage('savedCustomers') as SavedCustomer[];
+        if (saved && Array.isArray(saved)) {
           setSavedCustomers(saved);
         }
       }
