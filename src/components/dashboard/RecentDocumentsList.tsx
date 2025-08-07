@@ -318,7 +318,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
       {/* 文档列表 */}
       {filteredDocuments.length > 0 ? (
-        <div className="dashboard-grid gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-auto md:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
           {filteredDocuments.map((doc) => {
             const { Icon, bgColor, textColor } = getDocumentTypeInfo(doc.type);
             const documentNumber = getDocumentNumber(doc);
