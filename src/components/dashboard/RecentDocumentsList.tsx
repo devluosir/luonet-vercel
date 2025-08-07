@@ -54,6 +54,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 }) => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
+  const [showTypeFilters, setShowTypeFilters] = useState<boolean>(false);
 
   // 获取文档类型名称
   const getDocumentTypeName = (type: string) => {
@@ -187,21 +188,32 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     return `${timeText}还没有创建或修改的${typeText}`;
   };
 
-  // 获取文档图标和颜色
-  const getDocumentIconAndColor = (type: string) => {
+  // 获取文档类型图标和颜色
+  const getDocumentTypeInfo = (type: string) => {
     switch (type) {
       case 'quotation':
-        return { Icon: FileText, bgColor: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-600 dark:text-blue-400' };
+        return { Icon: FileText, bgColor: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-700 dark:text-blue-300' };
       case 'confirmation':
-        return { Icon: FileText, bgColor: 'bg-green-100 dark:bg-green-900/30', textColor: 'text-green-600 dark:text-green-400' };
+        return { Icon: FileText, bgColor: 'bg-green-100 dark:bg-green-900/30', textColor: 'text-green-700 dark:text-green-300' };
       case 'packing':
-        return { Icon: Package, bgColor: 'bg-teal-100 dark:bg-teal-900/30', textColor: 'text-teal-600 dark:text-teal-400' };
+        return { Icon: Package, bgColor: 'bg-teal-100 dark:bg-teal-900/30', textColor: 'text-teal-700 dark:text-teal-300' };
       case 'invoice':
-        return { Icon: Receipt, bgColor: 'bg-purple-100 dark:bg-purple-900/30', textColor: 'text-purple-600 dark:text-purple-400' };
+        return { Icon: Receipt, bgColor: 'bg-purple-100 dark:bg-purple-900/30', textColor: 'text-purple-700 dark:text-purple-300' };
       case 'purchase':
-        return { Icon: ShoppingCart, bgColor: 'bg-orange-100 dark:bg-orange-900/30', textColor: 'text-orange-600 dark:text-orange-400' };
+        return { Icon: ShoppingCart, bgColor: 'bg-orange-100 dark:bg-orange-900/30', textColor: 'text-orange-700 dark:text-orange-300' };
       default:
-        return { Icon: FileText, bgColor: 'bg-gray-100 dark:bg-gray-900/30', textColor: 'text-gray-600 dark:text-gray-400' };
+        return { Icon: FileText, bgColor: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-700 dark:text-blue-300' };
+    }
+  };
+
+  const handleDocumentClick = (doc: Document) => {
+    // 对于confirmation类型，需要跳转到quotation页面并设置tab
+    if (doc.type === 'confirmation') {
+      const editPath = `/quotation/edit/${doc.id}?tab=confirmation`;
+      router.push(editPath);
+    } else {
+      const editPath = `/${doc.type}/edit/${doc.id}`;
+      router.push(editPath);
     }
   };
 
@@ -209,8 +221,8 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     <div className="mb-8">
       {/* 筛选器区域 */}
       <div className="flex items-center justify-center sm:justify-between mb-4">
-        {/* 搜索框 */}
-        <div className="relative flex-1 max-w-md mr-4">
+        {/* 搜索框 - 小屏隐藏 */}
+        <div className="relative flex-1 max-w-md mr-4 hidden sm:block">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
@@ -231,109 +243,144 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
         </div>
 
         {/* 筛选器按钮组 */}
-        <div className="flex items-center space-x-2">
-          {/* 文档类型筛选器 */}
-          <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
+        <div className="flex items-center space-x-1 sm:space-x-2">
+          {/* 类型筛选器 */}
+          <div className="flex items-center space-x-0.5 sm:space-x-1 overflow-x-auto scrollbar-hide">
+            {/* All 按钮 - 中屏时作为开关 */}
             <button
               onClick={() => {
-                onShowAllFiltersChange(!showAllFilters);
-                if (typeFilter !== 'all') {
+                // 中屏时作为折叠开关，其他屏幕尺寸时正常筛选
+                if (window.innerWidth >= 640 && window.innerWidth < 1024) {
+                  setShowTypeFilters(!showTypeFilters);
+                } else {
                   onTypeFilterChange('all');
                 }
               }}
-              className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                active:scale-95 ${typeFilter === 'all' && !showAllFilters ? 'bg-gray-100 dark:bg-gray-800/30 text-gray-700 dark:text-gray-300 font-bold' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
+              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                active:scale-95 ${typeFilter === 'all' && !showAllFilters ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
             >
-              ALL
+              All
             </button>
-            {showAllFilters && (
-              <>
-                <button
-                  onClick={() => onTypeFilterChange('quotation')}
-                  className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                    active:scale-95 ${typeFilter === 'quotation' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
-                >
-                  QTN
-                </button>
-                <button
-                  onClick={() => onTypeFilterChange('confirmation')}
-                  className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                    active:scale-95 ${typeFilter === 'confirmation' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
-                >
-                  SC
-                </button>
-                <button
-                  onClick={() => onTypeFilterChange('packing')}
-                  className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                    active:scale-95 ${typeFilter === 'packing' ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
-                >
-                  PL
-                </button>
-                <button
-                  onClick={() => onTypeFilterChange('invoice')}
-                  className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                    active:scale-95 ${typeFilter === 'invoice' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
-                >
-                  INV
-                </button>
-                <button
-                  onClick={() => onTypeFilterChange('purchase')}
-                  className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                    active:scale-95 ${typeFilter === 'purchase' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
-                >
-                  PO
-                </button>
-              </>
-            )}
+            {/* 其他类型筛选器 - 中屏时根据状态显示/隐藏 */}
+            <div className={`hidden lg:flex items-center space-x-0.5 sm:space-x-1 ${showTypeFilters ? 'flex' : 'hidden'} md:flex`}>
+              <button
+                onClick={() => onTypeFilterChange('quotation')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                  active:scale-95 ${typeFilter === 'quotation' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
+              >
+                QTN
+              </button>
+              <button
+                onClick={() => onTypeFilterChange('confirmation')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                  active:scale-95 ${typeFilter === 'confirmation' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-green-50 dark:hover:bg-green-800/50'}`}
+              >
+                SC
+              </button>
+              <button
+                onClick={() => onTypeFilterChange('packing')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                  active:scale-95 ${typeFilter === 'packing' ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-teal-50 dark:hover:bg-teal-800/50'}`}
+              >
+                PL
+              </button>
+              <button
+                onClick={() => onTypeFilterChange('invoice')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                  active:scale-95 ${typeFilter === 'invoice' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-purple-50 dark:hover:bg-purple-800/50'}`}
+              >
+                INV
+              </button>
+              <button
+                onClick={() => onTypeFilterChange('purchase')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                  active:scale-95 ${typeFilter === 'purchase' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-orange-50 dark:hover:bg-orange-800/50'}`}
+              >
+                PO
+              </button>
+            </div>
+            
+            {/* 小屏时显示所有按钮 */}
+            <div className="flex lg:hidden md:hidden items-center space-x-0.5 sm:space-x-1">
+              <button
+                onClick={() => onTypeFilterChange('quotation')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                  active:scale-95 ${typeFilter === 'quotation' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
+              >
+                QTN
+              </button>
+              <button
+                onClick={() => onTypeFilterChange('confirmation')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                  active:scale-95 ${typeFilter === 'confirmation' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-green-50 dark:hover:bg-green-800/50'}`}
+              >
+                SC
+              </button>
+              <button
+                onClick={() => onTypeFilterChange('packing')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                  active:scale-95 ${typeFilter === 'packing' ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-teal-50 dark:hover:bg-teal-800/50'}`}
+              >
+                PL
+              </button>
+              <button
+                onClick={() => onTypeFilterChange('invoice')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                  active:scale-95 ${typeFilter === 'invoice' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-purple-50 dark:hover:bg-purple-800/50'}`}
+              >
+                INV
+              </button>
+              <button
+                onClick={() => onTypeFilterChange('purchase')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                  active:scale-95 ${typeFilter === 'purchase' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-orange-50 dark:hover:bg-orange-800/50'}`}
+              >
+                PO
+              </button>
+            </div>
           </div>
 
           {/* 时间筛选器 */}
-          <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
+          <div className="flex items-center space-x-0.5 sm:space-x-1 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => onTimeFilterChange('today')}
-              className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                active:scale-95 ${timeFilter === 'today' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
+              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                active:scale-95 ${timeFilter === 'today' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
             >
               1D
             </button>
             <button
               onClick={() => onTimeFilterChange('3days')}
-              className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                active:scale-95 ${timeFilter === '3days' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
+              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                active:scale-95 ${timeFilter === '3days' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
             >
               3D
             </button>
             <button
               onClick={() => onTimeFilterChange('week')}
-              className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                active:scale-95 ${timeFilter === 'week' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
+              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                active:scale-95 ${timeFilter === 'week' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
             >
               1W
             </button>
             <button
               onClick={() => onTimeFilterChange('month')}
-              className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                active:scale-95 ${timeFilter === 'month' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
+              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
+                active:scale-95 ${timeFilter === 'month' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
             >
               1M
             </button>
           </div>
 
-          {/* 查看全部按钮 */}
-          <div className="flex items-center space-x-1">
-            <div className="flex items-center space-x-0.5 bg-white dark:bg-[#1c1c1e] rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
-              <button
-                onClick={() => router.push('/history')}
-                className="px-2 py-1 text-xs rounded-md transition-all duration-200 ease-in-out
-                  active:scale-95 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 
-                  hover:bg-gray-50 dark:hover:bg-gray-800/50 flex items-center space-x-1"
-                title="单据管理"
-              >
-                <Archive className="w-3 h-3 transition-colors" />
-                <span className="hidden sm:inline">管理</span>
-              </button>
-            </div>
-          </div>
+          {/* 管理按钮 */}
+          <button
+            onClick={() => router.push('/history')}
+            className="px-2 sm:px-3 py-1 sm:py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 
+              hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50 flex items-center space-x-1"
+          >
+            <Archive className="w-3 h-3 sm:w-3 sm:h-3 transition-colors" />
+            <span className="hidden sm:inline">Manage</span>
+          </button>
         </div>
       </div>
 
@@ -341,64 +388,25 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       {filteredDocuments.length > 0 ? (
         <div className="dashboard-grid gap-4">
           {filteredDocuments.map((doc) => {
-            const { Icon, bgColor, textColor } = getDocumentIconAndColor(doc.type);
+            const { Icon, bgColor, textColor } = getDocumentTypeInfo(doc.type);
             const documentNumber = getDocumentNumber(doc);
             const documentName = getDocumentName(doc);
             
             return (
               <div
                 key={doc.id}
-                className={`group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50 
-                  p-3 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 transition-all duration-200 cursor-pointer
-                  active:shadow-sm hover:border-gray-300/70 dark:hover:border-gray-700/70 w-full
-                  ${(() => {
-                    switch (doc.type) {
-                      case 'quotation':
-                        return 'hover:bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20';
-                      case 'confirmation':
-                        return 'hover:bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20';
-                      case 'packing':
-                        return 'hover:bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20';
-                      case 'invoice':
-                        return 'hover:bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20';
-                      case 'purchase':
-                        return 'hover:bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20';
-                      default:
-                        return 'hover:bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20';
-                    }
-                  })()}`}
-                onClick={() => {
-                  // 对于confirmation类型，需要跳转到quotation页面并设置tab
-                  if (doc.type === 'confirmation') {
-                    const editPath = `/quotation/edit/${doc.id}?tab=confirmation`;
-                    router.push(editPath);
-                  } else {
-                    const editPath = `/${doc.type}/edit/${doc.id}`;
-                    router.push(editPath);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    // 对于confirmation类型，需要跳转到quotation页面并设置tab
-                    if (doc.type === 'confirmation') {
-                      const editPath = `/quotation/edit/${doc.id}?tab=confirmation`;
-                      router.push(editPath);
-                    } else {
-                      const editPath = `/${doc.type}/edit/${doc.id}`;
-                      router.push(editPath);
-                    }
-                  }
-                }}
-                tabIndex={0}
-                role="button"
-                aria-label={`编辑${getDocumentTypeName(doc.type)}单据 ${documentNumber}`}
+                onClick={() => handleDocumentClick(doc)}
+                className="group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50
+                  p-5 cursor-pointer transition-all duration-200 ease-in-out hover:shadow-lg hover:-translate-y-1
+                  active:translate-y-0 active:shadow-md"
               >
-                <div className="flex items-center space-x-3">
-                  <div className={`w-7 h-7 rounded-lg ${bgColor} flex items-center justify-center flex-shrink-0
-                    group-hover:scale-110 transition-transform duration-200`}>
-                    <Icon className={`w-3.5 h-3.5 ${textColor} transition-colors`} />
+                <div className="flex items-start space-x-4">
+                  {/* 文档类型图标 */}
+                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${bgColor}`}>
+                    <Icon className={`w-5 h-5 ${textColor}`} />
                   </div>
+                  
+                  {/* 文档信息 */}
                   <div className="flex-1 min-w-0">
                     <div className={`text-sm font-medium text-gray-900 dark:text-white truncate
                       transition-colors duration-200 ${getColorClasses(doc.type)}`}>
@@ -409,6 +417,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
                       {highlightText(documentName, searchTerm)}
                     </div>
                   </div>
+                  
                   {/* 添加一个微妙的箭头指示器 */}
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
                     <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -432,4 +441,4 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       )}
     </div>
   );
-}; 
+};

@@ -414,110 +414,123 @@ export default function DashboardPage() {
           }}
         />
 
-        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-6">
-          {/* 成功消息 */}
-          {showSuccessMessage && (
-            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-              <div className="flex items-center">
-                <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <span className="text-blue-800 dark:text-blue-200 text-sm font-medium">
-                  {successMessage}
-                </span>
-              </div>
-            </div>
-          )}
+        {/* Dashboard内容区域 - 设置独立背景层，防止父级背景污染 */}
+        <div className="relative z-0 bg-transparent isolation isolate">
+          {/* 独立背景层 - 完全隐藏，避免任何干扰 */}
+          <div className="hidden" />
 
-          {/* 功能按钮区域 */}
-          {(availableQuickCreateModules.length > 0 || availableToolModules.length > 0 || availableToolsModules.length > 0) && (
-            <div className="mb-8">
-              <div className="dashboard-grid gap-3">
-                {/* 新建单据按钮 */}
-                {availableQuickCreateModules.map((module) => (
-                  <ModuleButton 
-                    key={module.id}
-                    module={module}
-                    onClick={handleModuleClick}
-                    onHover={handleModuleHover}
-                    quotationCount={documentCounts.quotation}
-                    confirmationCount={documentCounts.confirmation}
-                    invoiceCount={documentCounts.invoice}
-                    packingCount={documentCounts.packing}
-                    purchaseCount={documentCounts.purchase}
-                  />
-                ))}
-                
-                {/* 管理中心按钮 */}
-                {availableToolsModules.slice(0, 4).map((module) => (
-                  <ModuleButton 
-                    key={module.id}
-                    module={module}
-                    onClick={handleModuleClick}
-                    onHover={handleModuleHover}
-                    quotationCount={documentCounts.quotation}
-                    confirmationCount={documentCounts.confirmation}
-                    invoiceCount={documentCounts.invoice}
-                    packingCount={documentCounts.packing}
-                    purchaseCount={documentCounts.purchase}
-                  />
-                ))}
-                
-                {/* 实用工具按钮 */}
-                {availableToolModules.map((module) => (
-                  <ModuleButton 
-                    key={module.id}
-                    module={module}
-                    onClick={handleModuleClick}
-                    onHover={handleModuleHover}
-                    quotationCount={documentCounts.quotation}
-                    confirmationCount={documentCounts.confirmation}
-                    invoiceCount={documentCounts.invoice}
-                    packingCount={documentCounts.packing}
-                    purchaseCount={documentCounts.purchase}
-                  />
-                ))}
-                
-                {/* 更多功能按钮 */}
-                {availableToolsModules.length > 4 && (
-                  <ModuleButton 
-                    key="more-tools"
-                    module={{
-                      id: 'more-tools',
-                      name: '更多功能',
-                      path: '/tools',
-                      icon: Settings,
-                      bgColor: 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800/50 dark:hover:bg-gray-700/60',
-                      iconBg: 'bg-gray-500',
-                      textColor: 'text-gray-700 dark:text-gray-300'
-                    }}
-                    onClick={handleModuleClick}
-                    onHover={handleModuleHover}
-                    quotationCount={documentCounts.quotation}
-                    confirmationCount={documentCounts.confirmation}
-                    invoiceCount={documentCounts.invoice}
-                    packingCount={documentCounts.packing}
-                    purchaseCount={documentCounts.purchase}
-                  />
-                )}
+          <div className="relative z-10 w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-6">
+            {/* 成功消息 */}
+            {showSuccessMessage && (
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span className="text-blue-800 dark:text-blue-200 text-sm font-medium">
+                    {successMessage}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* 最近文档列表 */}
-          {permissionMap.accessibleDocumentTypes.length > 0 && (
-            <RecentDocumentsList
-              documents={recentDocuments}
-              timeFilter={timeFilter}
-              typeFilter={typeFilter}
-              onTimeFilterChange={setTimeFilter}
-              onTypeFilterChange={setTypeFilter}
-              showAllFilters={showAllFilters}
-              onShowAllFiltersChange={setShowAllFilters}
-            />
-          )}
+            {/* 功能按钮区域 */}
+            {(availableQuickCreateModules.length > 0 || availableToolModules.length > 0 || availableToolsModules.length > 0) && (
+              <div className="mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                  {/* 新建单据按钮 */}
+                  {availableQuickCreateModules.map((module) => (
+                    <ModuleButton 
+                      key={module.id}
+                      module={module}
+                      onClick={handleModuleClick}
+                      onHover={handleModuleHover}
+                      quotationCount={documentCounts.quotation}
+                      confirmationCount={documentCounts.confirmation}
+                      invoiceCount={documentCounts.invoice}
+                      packingCount={documentCounts.packing}
+                      purchaseCount={documentCounts.purchase}
+                    />
+                  ))}
+                  
+                  {/* 管理中心按钮 */}
+                  {availableToolsModules.slice(0, 4).map((module) => (
+                    <ModuleButton 
+                      key={module.id}
+                      module={module}
+                      onClick={handleModuleClick}
+                      onHover={handleModuleHover}
+                      quotationCount={documentCounts.quotation}
+                      confirmationCount={documentCounts.confirmation}
+                      invoiceCount={documentCounts.invoice}
+                      packingCount={documentCounts.packing}
+                      purchaseCount={documentCounts.purchase}
+                    />
+                  ))}
+                  
+                  {/* 实用工具按钮 */}
+                  {availableToolModules.map((module) => (
+                    <ModuleButton 
+                      key={module.id}
+                      module={module}
+                      onClick={handleModuleClick}
+                      onHover={handleModuleHover}
+                      quotationCount={documentCounts.quotation}
+                      confirmationCount={documentCounts.confirmation}
+                      invoiceCount={documentCounts.invoice}
+                      packingCount={documentCounts.packing}
+                      purchaseCount={documentCounts.purchase}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 最近文档列表 */}
+            {permissionMap.accessibleDocumentTypes.length > 0 && (
+              <RecentDocumentsList
+                documents={recentDocuments}
+                timeFilter={timeFilter}
+                typeFilter={typeFilter}
+                onTimeFilterChange={setTimeFilter}
+                onTypeFilterChange={setTypeFilter}
+                showAllFilters={showAllFilters}
+                onShowAllFiltersChange={setShowAllFilters}
+              />
+            )}
+          </div>
         </div>
       </div>
+      
+      {/* 强制 Tailwind JIT 包含所有渐变类名 */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="hidden">
+          bg-gradient-to-tr
+
+          from-blue-300/80 to-blue-500/80
+          from-emerald-300/80 to-emerald-500/80
+          from-orange-300/80 to-orange-500/80
+          from-violet-300/80 to-violet-500/80
+          from-indigo-300/80 to-indigo-500/80
+          from-pink-300/80 to-pink-500/80
+          from-cyan-300/80 to-cyan-500/80
+          from-fuchsia-300/80 to-fuchsia-500/80
+
+          dark:from-blue-600/80 dark:to-blue-800/80
+          dark:from-emerald-600/80 dark:to-emerald-800/80
+          dark:from-orange-600/80 dark:to-orange-800/80
+          dark:from-violet-600/80 dark:to-violet-800/80
+          dark:from-indigo-600/80 dark:to-indigo-800/80
+          dark:from-pink-600/80 dark:to-pink-800/80
+          dark:from-cyan-600/80 dark:to-cyan-800/80
+          dark:from-fuchsia-600/80 dark:to-fuchsia-800/80
+
+          bg-white/30 bg-white/20 bg-white/40
+          border-white/40 backdrop-blur-md
+          bg-gray-800/80 text-gray-800
+        </div>
+      )}
+      
       <Footer />
     </div>
   );

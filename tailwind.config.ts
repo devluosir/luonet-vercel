@@ -16,8 +16,7 @@ export default {
         sans: ['Arial', 'Helvetica', 'sans-serif'],
       },
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        // 删除CSS变量，避免干扰背景色
       },
       caretColor: {
         'blue-600': '#2563eb',
@@ -37,79 +36,58 @@ export default {
     // 渐变基础类
     'bg-gradient-to-br',
 
-    // 🌞 白天模式
-    'from-blue-50', 'to-blue-100',
-    'from-emerald-50', 'to-emerald-100',
-    'from-cyan-50', 'to-cyan-100',
-    'from-violet-50', 'to-violet-100',
-    'from-orange-50', 'to-orange-100',
-    'from-indigo-50', 'to-indigo-100',
-    'from-rose-50', 'to-rose-100',
-    'from-fuchsia-50', 'to-fuchsia-100',
+    // 🌞 Apple 风格 - 浅色渐变类名
+    'from-blue-300/80', 'to-blue-500/80',
+    'from-emerald-300/80', 'to-emerald-500/80',
+    'from-orange-300/80', 'to-orange-500/80',
+    'from-violet-300/80', 'to-violet-500/80',
+    'from-indigo-300/80', 'to-indigo-500/80',
+    'from-pink-300/80', 'to-pink-500/80',
+    'from-cyan-300/80', 'to-cyan-500/80',
+    'from-fuchsia-300/80', 'to-fuchsia-500/80',
 
-    // 🌙 黑夜模式
-    'dark:from-blue-900/20', 'dark:to-blue-800/30',
-    'dark:from-emerald-900/20', 'dark:to-emerald-800/30',
-    'dark:from-cyan-900/20', 'dark:to-cyan-800/30',
-    'dark:from-violet-900/20', 'dark:to-violet-800/30',
-    'dark:from-orange-900/20', 'dark:to-orange-800/30',
-    'dark:from-indigo-900/20', 'dark:to-indigo-800/30',
-    'dark:from-rose-900/20', 'dark:to-rose-800/30',
-    'dark:from-fuchsia-900/20', 'dark:to-fuchsia-800/30',
+    // 🌙 Apple 风格 - 深色渐变类名
+    'dark:from-blue-600/80', 'dark:to-blue-800/80',
+    'dark:from-emerald-600/80', 'dark:to-emerald-800/80',
+    'dark:from-orange-600/80', 'dark:to-orange-800/80',
+    'dark:from-violet-600/80', 'dark:to-violet-800/80',
+    'dark:from-indigo-600/80', 'dark:to-indigo-800/80',
+    'dark:from-pink-600/80', 'dark:to-pink-800/80',
+    'dark:from-cyan-600/80', 'dark:to-cyan-800/80',
+    'dark:from-fuchsia-600/80', 'dark:to-fuchsia-800/80',
 
-    // 🎨 图标背景色
-    'from-blue-500', 'to-blue-600',
-    'from-emerald-500', 'to-emerald-600',
-    'from-cyan-500', 'to-cyan-600',
-    'from-violet-500', 'to-violet-600',
-    'from-orange-500', 'to-orange-600',
-    'from-indigo-500', 'to-indigo-600',
-    'from-rose-500', 'to-rose-600',
-    'from-fuchsia-500', 'to-fuchsia-600',
+    // 🎨 Apple 风格 - 玻璃态效果
+    'bg-white/30', 'bg-white/20', 'bg-white/40',
+    'border-white/40', 'backdrop-blur-md',
+    'bg-gray-800/80', 'text-gray-800',
 
-    // 🌙 夜间图标色
-    'dark:from-blue-600', 'dark:to-blue-700',
-    'dark:from-emerald-600', 'dark:to-emerald-700',
-    'dark:from-cyan-600', 'dark:to-cyan-700',
-    'dark:from-violet-600', 'dark:to-violet-700',
-    'dark:from-orange-600', 'dark:to-orange-700',
-    'dark:from-indigo-600', 'dark:to-indigo-700',
-    'dark:from-rose-600', 'dark:to-rose-700',
-    'dark:from-fuchsia-600', 'dark:to-fuchsia-700',
+    // 🎨 玻璃态效果
+    'bg-white/20', 'backdrop-blur-sm',
+    'bg-white/10', 'backdrop-blur-md',
+    'bg-white/30', 'backdrop-blur-lg',
+    
+    // 🎨 图标背景色 - 白天模式
+    'from-blue-600', 'to-blue-700',
+    'from-green-600', 'to-green-700',
+    'from-orange-600', 'to-orange-700',
+    'from-purple-600', 'to-purple-700',
+    'from-indigo-600', 'to-indigo-700',
+    'from-pink-600', 'to-pink-700',
+    'from-cyan-600', 'to-cyan-700',
+    'from-fuchsia-600', 'to-fuchsia-700',
 
-    // 🎯 悬停状态
-    'hover:from-blue-100', 'hover:to-blue-200',
-    'hover:from-emerald-100', 'hover:to-emerald-200',
-    'hover:from-cyan-100', 'hover:to-cyan-200',
-    'hover:from-violet-100', 'hover:to-violet-200',
-    'hover:from-orange-100', 'hover:to-orange-200',
-    'hover:from-indigo-100', 'hover:to-indigo-200',
-    'hover:from-rose-100', 'hover:to-rose-200',
-    'hover:from-fuchsia-100', 'hover:to-fuchsia-200',
+    // 🎨 图标背景色 - 黑夜模式
+    'dark:from-blue-500', 'dark:to-blue-600',
+    'dark:from-green-500', 'dark:to-green-600',
+    'dark:from-orange-500', 'dark:to-orange-600',
+    'dark:from-purple-500', 'dark:to-purple-600',
+    'dark:from-indigo-500', 'dark:to-indigo-600',
+    'dark:from-pink-500', 'dark:to-pink-600',
+    'dark:from-cyan-500', 'dark:to-cyan-600',
+    'dark:from-fuchsia-500', 'dark:to-fuchsia-600',
 
-    // 🌙 夜间悬停状态
-    'dark:hover:from-blue-800/30', 'dark:hover:to-blue-700/40',
-    'dark:hover:from-emerald-800/30', 'dark:hover:to-emerald-700/40',
-    'dark:hover:from-cyan-800/30', 'dark:hover:to-cyan-700/40',
-    'dark:hover:from-violet-800/30', 'dark:hover:to-violet-700/40',
-    'dark:hover:from-orange-800/30', 'dark:hover:to-orange-700/40',
-    'dark:hover:from-indigo-800/30', 'dark:hover:to-indigo-700/40',
-    'dark:hover:from-rose-800/30', 'dark:hover:to-rose-700/40',
-    'dark:hover:from-fuchsia-800/30', 'dark:hover:to-fuchsia-700/40',
-
-    // 🌙 透明背景和悬停效果
-    'bg-transparent',
-    'hover:bg-blue-50/50', 'dark:hover:bg-blue-900/10',
-    'hover:bg-emerald-50/50', 'dark:hover:bg-emerald-900/10',
-    'hover:bg-cyan-50/50', 'dark:hover:bg-cyan-900/10',
-    'hover:bg-violet-50/50', 'dark:hover:bg-violet-900/10',
-    'hover:bg-orange-50/50', 'dark:hover:bg-orange-900/10',
-    'hover:bg-indigo-50/50', 'dark:hover:bg-indigo-900/10',
-    'hover:bg-rose-50/50', 'dark:hover:bg-rose-900/10',
-    'hover:bg-fuchsia-50/50', 'dark:hover:bg-fuchsia-900/10',
-    'hover:bg-gray-50/50', 'dark:hover:bg-gray-900/10',
-
-    // 📝 文本颜色
+    // 📝 文本颜色 - 完整类名
+    'text-white', 'dark:text-white',
     'text-gray-800', 'dark:text-gray-200',
     'text-gray-700', 'dark:text-gray-300',
     'text-gray-600', 'dark:text-gray-400',
@@ -127,6 +105,12 @@ export default {
 
     // 🌟 阴影
     'shadow-lg', 'hover:shadow-xl', 'active:shadow-md',
+    
+    // 🎯 隔离和层级
+    'isolation', 'isolate',
+    'z-0', 'z-10', 'z-20', 'z-30', 'z-50',
+    'pointer-events-none',
+    'relative', 'absolute', 'inset-0',
   ],
   plugins: [],
 } satisfies Config;
