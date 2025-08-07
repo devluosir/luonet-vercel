@@ -20,12 +20,17 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
         return;
       }
 
+      // 检查URL中的tab参数
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabFromUrl = urlParams.get('tab') as 'quotation' | 'confirmation' | null;
+      
       // 将数据注入到 QuotationPage 组件中
       const customWindow = window as unknown as CustomWindow;
       customWindow.__QUOTATION_DATA__ = quotation.data;
       customWindow.__EDIT_MODE__ = true;
       customWindow.__EDIT_ID__ = params.id;
-      customWindow.__QUOTATION_TYPE__ = quotation.type;
+      // 优先使用URL中的tab参数，否则使用文档的原始类型
+      customWindow.__QUOTATION_TYPE__ = tabFromUrl || quotation.type;
       
       // 立即设置loading为false，让页面快速显示
       setIsLoading(false);
