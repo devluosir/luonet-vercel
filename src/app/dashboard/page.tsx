@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Settings } from 'lucide-react';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';

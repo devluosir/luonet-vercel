@@ -98,6 +98,12 @@ export default {
     'text-gray-100', 'dark:text-gray-100',
     'text-gray-50', 'dark:text-gray-50',
 
+    // 🎨 筛选器按钮颜色 - 动态生成
+    {
+      pattern: /(bg|text)-(blue|green|teal|purple|orange)-(100|700|900\/30)/,
+      variants: ['dark', 'hover'],
+    },
+
     // 🔲 边框颜色
     'border-gray-200/30', 'dark:border-gray-800/30',
     'border-gray-300/50', 'dark:border-gray-700/50',

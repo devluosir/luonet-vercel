@@ -54,7 +54,6 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 }) => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
-  const [showTypeFilters, setShowTypeFilters] = useState<boolean>(false);
 
   // 获取文档类型名称
   const getDocumentTypeName = (type: string) => {
@@ -219,10 +218,10 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
   return (
     <div className="mb-8">
-      {/* 筛选器区域 */}
-      <div className="flex items-center justify-center sm:justify-between mb-4">
-        {/* 搜索框 - 小屏隐藏 */}
-        <div className="relative flex-1 max-w-md mr-4 hidden sm:block">
+      {/* ✅ 筛选器区域 */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-4">
+        {/* ✅ 搜索框：中大屏可见，中屏时收缩 */}
+        <div className="relative hidden md:block w-full lg:max-w-md md:max-w-xs xl:max-w-lg">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
@@ -242,144 +241,77 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
           )}
         </div>
 
-        {/* 筛选器按钮组 */}
-        <div className="flex items-center space-x-1 sm:space-x-2">
-          {/* 类型筛选器 */}
-          <div className="flex items-center space-x-0.5 sm:space-x-1 overflow-x-auto scrollbar-hide">
-            {/* All 按钮 - 中屏时作为开关 */}
-            <button
-              onClick={() => {
-                // 中屏时作为折叠开关，其他屏幕尺寸时正常筛选
-                if (window.innerWidth >= 640 && window.innerWidth < 1024) {
-                  setShowTypeFilters(!showTypeFilters);
-                } else {
-                  onTypeFilterChange('all');
-                }
-              }}
-              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                active:scale-95 ${typeFilter === 'all' && !showAllFilters ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
-            >
-              All
-            </button>
-            {/* 其他类型筛选器 - 中屏时根据状态显示/隐藏 */}
-            <div className={`hidden lg:flex items-center space-x-0.5 sm:space-x-1 ${showTypeFilters ? 'flex' : 'hidden'} md:flex`}>
-              <button
-                onClick={() => onTypeFilterChange('quotation')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                  active:scale-95 ${typeFilter === 'quotation' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
-              >
-                QTN
-              </button>
-              <button
-                onClick={() => onTypeFilterChange('confirmation')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                  active:scale-95 ${typeFilter === 'confirmation' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-green-50 dark:hover:bg-green-800/50'}`}
-              >
-                SC
-              </button>
-              <button
-                onClick={() => onTypeFilterChange('packing')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                  active:scale-95 ${typeFilter === 'packing' ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-teal-50 dark:hover:bg-teal-800/50'}`}
-              >
-                PL
-              </button>
-              <button
-                onClick={() => onTypeFilterChange('invoice')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                  active:scale-95 ${typeFilter === 'invoice' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-purple-50 dark:hover:bg-purple-800/50'}`}
-              >
-                INV
-              </button>
-              <button
-                onClick={() => onTypeFilterChange('purchase')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                  active:scale-95 ${typeFilter === 'purchase' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-orange-50 dark:hover:bg-orange-800/50'}`}
-              >
-                PO
-              </button>
-            </div>
-            
-            {/* 小屏时显示所有按钮 */}
-            <div className="flex lg:hidden md:hidden items-center space-x-0.5 sm:space-x-1">
-              <button
-                onClick={() => onTypeFilterChange('quotation')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                  active:scale-95 ${typeFilter === 'quotation' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
-              >
-                QTN
-              </button>
-              <button
-                onClick={() => onTypeFilterChange('confirmation')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                  active:scale-95 ${typeFilter === 'confirmation' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-green-50 dark:hover:bg-green-800/50'}`}
-              >
-                SC
-              </button>
-              <button
-                onClick={() => onTypeFilterChange('packing')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                  active:scale-95 ${typeFilter === 'packing' ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-teal-50 dark:hover:bg-teal-800/50'}`}
-              >
-                PL
-              </button>
-              <button
-                onClick={() => onTypeFilterChange('invoice')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                  active:scale-95 ${typeFilter === 'invoice' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-purple-50 dark:hover:bg-purple-800/50'}`}
-              >
-                INV
-              </button>
-              <button
-                onClick={() => onTypeFilterChange('purchase')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                  active:scale-95 ${typeFilter === 'purchase' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-orange-50 dark:hover:bg-orange-800/50'}`}
-              >
-                PO
-              </button>
-            </div>
-          </div>
+        {/* ✅ 筛选按钮组：小屏&大屏均展示 */}
+        <div className="flex items-center justify-between w-full md:w-auto gap-1 flex-wrap">
+          {/* 📌 文档类型按钮组（右侧 ALL 开关 + 类型） */}
+          <div className="flex items-center gap-1 ml-auto">
+            {/* 类型按钮：展开时显示 */}
+            {showAllFilters && (
+              <div className="flex items-center gap-1 transition-all duration-300">
+                {[
+                  { label: 'QTN', value: 'quotation', color: 'blue' },
+                  { label: 'SC', value: 'confirmation', color: 'green' },
+                  { label: 'PL', value: 'packing', color: 'teal' },
+                  { label: 'INV', value: 'invoice', color: 'purple' },
+                  { label: 'PO', value: 'purchase', color: 'orange' },
+                ].map(({ label, value, color }) => (
+                  <button
+                    key={value}
+                    onClick={() => onTypeFilterChange(value as 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase')}
+                    className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
+                      typeFilter === value
+                        ? `bg-${color}-100 dark:bg-${color}-900/30 text-${color}-700 dark:text-${color}-300`
+                        : `text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-${color}-50 dark:hover:bg-${color}-800/50`
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          {/* 时间筛选器 */}
-          <div className="flex items-center space-x-0.5 sm:space-x-1 overflow-x-auto scrollbar-hide">
+            {/* ALL 按钮：开关 */}
             <button
-              onClick={() => onTimeFilterChange('today')}
-              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                active:scale-95 ${timeFilter === 'today' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
+              onClick={() => onShowAllFiltersChange(!showAllFilters)}
+              className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
+                typeFilter === 'all' && !showAllFilters
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'
+              }`}
             >
-              1D
-            </button>
-            <button
-              onClick={() => onTimeFilterChange('3days')}
-              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                active:scale-95 ${timeFilter === '3days' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
-            >
-              3D
-            </button>
-            <button
-              onClick={() => onTimeFilterChange('week')}
-              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                active:scale-95 ${timeFilter === 'week' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
-            >
-              1W
-            </button>
-            <button
-              onClick={() => onTimeFilterChange('month')}
-              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 
-                active:scale-95 ${timeFilter === 'month' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'}`}
-            >
-              1M
+              {showAllFilters ? 'X' : 'All'}
             </button>
           </div>
 
-          {/* 管理按钮 */}
+          {/* 📅 时间筛选器 */}
+          <div className="flex items-center gap-1">
+            {[
+              { label: '1D', value: 'today' },
+              { label: '3D', value: '3days' },
+              { label: '1W', value: 'week' },
+              { label: '1M', value: 'month' },
+            ].map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => onTimeFilterChange(value as 'today' | '3days' | 'week' | 'month')}
+                className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
+                  timeFilter === value
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* 📂 管理按钮 */}
           <button
             onClick={() => router.push('/history')}
-            className="px-2 sm:px-3 py-1 sm:py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 
-              hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50 flex items-center space-x-1"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50 rounded-lg"
           >
-            <Archive className="w-3 h-3 sm:w-3 sm:h-3 transition-colors" />
-            <span className="hidden sm:inline">Manage</span>
+            <Archive className="w-4 h-4" />
+            <span className="hidden sm:inline">管理</span>
           </button>
         </div>
       </div>

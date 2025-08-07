@@ -36,7 +36,6 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
 
   // 直接使用模块配置的颜色（已通过 ...moduleColorMap[xxx] 注入）
   const bgColor = module.bgColor;
-  const titleColor = module.titleColor || module.textColor;
 
   const getCountForModule = (moduleId: string): number => {
     switch (moduleId) {
