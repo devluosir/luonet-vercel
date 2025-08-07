@@ -9,37 +9,6 @@ interface CustomerInfoSectionProps {
   type: 'quotation' | 'confirmation';
 }
 
-/**
- * 标准化客户名称，用于匹配
- * @param name 客户名称
- * @returns 标准化后的客户名称
- */
-function normalizeCustomerName(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ') // 将多个空格替换为单个空格
-    .replace(/[^\w\s]/g, '') // 移除特殊字符，只保留字母、数字和空格
-    .trim();
-}
-
-/**
- * 查找最匹配的客户记录
- * @param customerName 客户名称
- * @param records 客户记录数组
- * @returns 匹配的客户记录索引，如果未找到返回-1
- */
-function findBestCustomerMatch(customerName: string, records: any[]): number {
-  const normalizedSearchName = normalizeCustomerName(customerName);
-  
-  // 只进行精确匹配，避免错误的匹配
-  const exactMatch = records.findIndex(record => 
-    normalizeCustomerName(record.name) === normalizedSearchName
-  );
-  
-  return exactMatch;
-}
-
 // 参考invoice页面的简洁样式 - iOS兼容性更好
 const inputClassName = `w-full px-4 py-2.5 rounded-2xl
   bg-white/95 dark:bg-[#1c1c1e]/95
@@ -113,10 +82,15 @@ const setLocalStorageAsync = (key: string, value: any) => {
 export const CustomerInfoSection = React.memo(({ data, onChange, type }: CustomerInfoSectionProps) => {
   const [savedCustomers, setSavedCustomers] = useState<SavedCustomer[]>([]);
   const [showSavedCustomers, setShowSavedCustomers] = useState(false);
+  const [showAutoComplete, setShowAutoComplete] = useState(false);
+  const [autoCompleteSuggestions, setAutoCompleteSuggestions] = useState<SavedCustomer[]>([]);
+  const [currentInputValue, setCurrentInputValue] = useState('');
   
   // 添加 ref 用于检测点击外部区域
   const savedCustomersRef = useRef<HTMLDivElement>(null);
   const buttonsRef = useRef<HTMLDivElement>(null);
+  const autoCompleteRef = useRef<HTMLDivElement>(null);
+  const customerInputRef = useRef<HTMLTextAreaElement>(null);
 
   // 统一处理客户名称格式
   const normalizeCustomerName = useCallback((name: string) => {
@@ -128,6 +102,52 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
       .replace(/\s+/g, ' ')
       .toUpperCase();
   }, []);
+
+  // 自动完成匹配函数
+  const getAutoCompleteSuggestions = useCallback((input: string) => {
+    if (!input.trim()) return [];
+    
+    const normalizedInput = normalizeCustomerName(input);
+    return savedCustomers.filter(customer => {
+      const normalizedCustomer = normalizeCustomerName(customer.name);
+      return normalizedCustomer.includes(normalizedInput) || 
+             customer.name.toLowerCase().includes(input.toLowerCase());
+    }).slice(0, 5); // 限制显示5个建议
+  }, [savedCustomers, normalizeCustomerName]);
+
+  // 处理客户信息输入变化
+  const handleCustomerInfoChange = useCallback((newTo: string) => {
+    setCurrentInputValue(newTo);
+    
+    // 如果输入内容变化，显示自动完成建议
+    if (newTo.trim() && savedCustomers.length > 0) {
+      const suggestions = getAutoCompleteSuggestions(newTo);
+      setAutoCompleteSuggestions(suggestions);
+      setShowAutoComplete(suggestions.length > 0);
+    } else {
+      setShowAutoComplete(false);
+    }
+    
+    onChange({
+      ...data,
+      to: newTo
+    });
+  }, [data, onChange, savedCustomers, getAutoCompleteSuggestions]);
+
+  // 选择自动完成建议
+  const handleAutoCompleteSelect = useCallback((customer: SavedCustomer) => {
+    setCurrentInputValue(customer.to);
+    setShowAutoComplete(false);
+    onChange({
+      ...data,
+      to: customer.to
+    });
+    
+    // 记录使用情况
+    if (data.quotationNo) {
+      recordCustomerUsage(customer.name, 'quotation', data.quotationNo);
+    }
+  }, [data, onChange]);
 
   // 加载客户数据的通用函数
   // 注意：这里只加载客户相关的历史记录，不包含供应商信息
@@ -283,10 +303,19 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
           !buttonsRef.current.contains(target)) {
         setShowSavedCustomers(false);
       }
+      
+      // 检查是否点击了自动完成弹窗外部
+      if (showAutoComplete && 
+          autoCompleteRef.current && 
+          !autoCompleteRef.current.contains(target) &&
+          customerInputRef.current &&
+          !customerInputRef.current.contains(target)) {
+        setShowAutoComplete(false);
+      }
     };
 
     // 只在弹窗显示时添加事件监听器
-    if (showSavedCustomers) {
+    if (showSavedCustomers || showAutoComplete) {
       if (typeof window !== 'undefined') {
         document.addEventListener('mousedown', handleClickOutside);
       }
@@ -297,64 +326,9 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
         document.removeEventListener('mousedown', handleClickOutside);
       }
     };
-  }, [showSavedCustomers]);
+  }, [showSavedCustomers, showAutoComplete]);
 
-  // 保存客户信息
-  const handleSave = useCallback(() => {
-    if (!data.to.trim()) return;
 
-    const customerName = data.to.split('\n')[0].trim(); // 使用第一行作为客户名称
-    const normalizedCustomerName = normalizeCustomerName(customerName);
-    
-    // 保存到历史记录中，这样客户页面就能读取到
-    if (typeof window !== 'undefined') {
-      const quotationHistory = getCachedLocalStorage('quotation_history') || [];
-      
-      // 检查是否已经存在相同的客户信息
-      const existingIndex = quotationHistory.findIndex((record: any) => {
-        if (!record.customerName) return false;
-        const recordNormalizedName = normalizeCustomerName(record.customerName);
-        return recordNormalizedName === normalizedCustomerName;
-      });
-      
-      if (existingIndex !== -1) {
-        // 如果已存在，更新现有记录
-        quotationHistory[existingIndex] = {
-          ...quotationHistory[existingIndex],
-          to: data.to,
-          updatedAt: new Date().toISOString(),
-          data: {
-            ...quotationHistory[existingIndex].data,
-            to: data.to,
-            customerName: customerName
-          }
-        };
-      } else {
-        // 如果不存在，创建新的历史记录
-        const newRecord = {
-          id: Date.now().toString(),
-          customerName: customerName,
-          to: data.to,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          type: 'quotation',
-          data: {
-            to: data.to,
-            customerName: customerName
-          }
-        };
-        
-        // 添加到历史记录
-        quotationHistory.push(newRecord);
-      }
-      
-      setLocalStorageAsync('quotation_history', quotationHistory);
-    }
-    
-    // 重新加载客户数据
-    loadCustomerData();
-    setShowSavedCustomers(false);
-  }, [data.to, normalizeCustomerName, loadCustomerData]);
 
   // 加载客户信息
   const handleLoad = useCallback((customer: SavedCustomer) => {
@@ -369,14 +343,6 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
     }
     
     setShowSavedCustomers(false);
-  }, [data, onChange]);
-
-  // 使用useMemo优化客户信息更新
-  const handleCustomerInfoChange = useCallback((newTo: string) => {
-    onChange({
-      ...data,
-      to: newTo
-    });
   }, [data, onChange]);
 
   // 使用useMemo优化询价单号更新
@@ -427,6 +393,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
           {/* 客户信息 */}
           <div className="relative">
             <textarea
+              ref={customerInputRef}
               value={data.to}
               onChange={(e) => handleCustomerInfoChange(e.target.value)}
               placeholder="Enter customer name and address"
@@ -434,7 +401,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
               className={`${inputClassName} min-h-[100px]`}
               style={iosCaretStyle}
             />
-            <div className="absolute right-2 bottom-2 flex gap-2" ref={buttonsRef}>
+            <div className="absolute right-2 bottom-2" ref={buttonsRef}>
               <button
                 type="button"
                 onClick={() => setShowSavedCustomers(true)}
@@ -446,18 +413,39 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
               >
                 Load
               </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                className="px-3 py-1 rounded-lg text-xs font-medium
-                  bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
-                  hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
-                  text-[#007AFF] dark:text-[#0A84FF]
-                  transition-all duration-200"
-              >
-                Save
-              </button>
             </div>
+
+            {/* 自动完成建议弹窗 */}
+            {showAutoComplete && autoCompleteSuggestions.length > 0 && (
+              <div 
+                ref={autoCompleteRef}
+                className="absolute z-20 left-0 right-0 top-full mt-1
+                  bg-white dark:bg-[#2C2C2E] rounded-xl shadow-lg
+                  border border-gray-200/50 dark:border-gray-700/50
+                  max-h-[200px] overflow-y-auto"
+              >
+                {autoCompleteSuggestions.map((customer, index) => (
+                  <div
+                    key={index}
+                    className="p-3 hover:bg-gray-50 dark:hover:bg-[#3A3A3C] cursor-pointer
+                      border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleAutoCompleteSelect(customer)}
+                      className="w-full text-left"
+                    >
+                      <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                        {customer.name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                        {customer.to}
+                      </div>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* 保存的客户列表弹窗 */}
             {showSavedCustomers && savedCustomers.length > 0 && (
