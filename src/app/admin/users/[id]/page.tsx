@@ -51,45 +51,44 @@ const MODULES = [
     id: 'packing', 
     name: '箱单发票',
     icon: Archive,
-    color: 'text-teal-600 dark:text-teal-400',
-    bgColor: 'bg-teal-100 dark:bg-teal-900/20'
+    color: 'text-cyan-600 dark:text-cyan-400',
+    bgColor: 'bg-cyan-100 dark:bg-cyan-900/20'
   },
   { 
     id: 'invoice', 
     name: '财务发票',
     icon: Receipt,
-    color: 'text-purple-600 dark:text-purple-400',
-    bgColor: 'bg-purple-100 dark:bg-purple-900/20'
+    color: 'text-violet-600 dark:text-violet-400',
+    bgColor: 'bg-violet-100 dark:bg-violet-900/20'
   },
   { 
     id: 'purchase', 
     name: '采购订单',
     icon: ShoppingCart,
-    color: 'text-orange-600 dark:text-orange-400',
-    bgColor: 'bg-orange-100 dark:bg-orange-900/20'
+    color: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-100 dark:bg-amber-900/20'
   },
   { 
     id: 'history', 
     name: '单据管理中心',
     icon: Archive,
-    color: 'text-gray-600 dark:text-gray-400',
-    bgColor: 'bg-gray-100 dark:bg-gray-800/20'
+    color: 'text-rose-600 dark:text-rose-400',
+    bgColor: 'bg-rose-100 dark:bg-rose-900/20'
   },
   { 
     id: 'customer', 
     name: '客户管理',
     icon: Users,
-    color: 'text-violet-600 dark:text-violet-400',
-    bgColor: 'bg-violet-100 dark:bg-violet-900/20'
+    color: 'text-fuchsia-600 dark:text-fuchsia-400',
+    bgColor: 'bg-fuchsia-100 dark:bg-fuchsia-900/20'
   },
   { 
     id: 'ai-email', 
     name: 'AI邮件助手',
     icon: Mail,
-    color: 'text-blue-600 dark:text-blue-400',
-    bgColor: 'bg-blue-100 dark:bg-blue-900/20'
+    color: 'text-indigo-600 dark:text-indigo-400',
+    bgColor: 'bg-indigo-100 dark:bg-indigo-900/20'
   },
-
 ];
 
 export default function UserDetailPage() {

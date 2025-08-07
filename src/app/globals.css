@@ -14,6 +14,19 @@
   max-width: 100%; /* 确保不超出列宽 */
 }
 
+/* 确保dashboard模块图标显示为白色轮廓，保持透明区域 */
+.dashboard-module-icon {
+  color: white !important;
+  fill: none !important;
+  stroke: white !important;
+}
+
+.dashboard-module-icon svg {
+  color: white !important;
+  fill: none !important;
+  stroke: white !important;
+}
+
 @media (min-width: 720px) {
   .dashboard-grid {
     grid-template-columns: repeat(3, 1fr); /* 中屏3列 */

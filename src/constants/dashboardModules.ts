@@ -15,50 +15,45 @@ export const QUICK_CREATE_MODULES = [
     name: '新报价单', 
     path: '/quotation?tab=quotation',
     icon: FileText,
-    bgColor: 'bg-gradient-to-br from-blue-100 to-blue-200 hover:from-blue-200 hover:to-blue-300 dark:from-blue-800/30 dark:to-blue-700/40 dark:hover:from-blue-700/40 dark:hover:to-blue-600/50',
-    iconBg: 'bg-gradient-to-br from-blue-600 to-blue-700',
-    textColor: 'text-blue-800 dark:text-blue-200',
-    shortcut: 'Q'
+    bgColor: 'bg-gradient-to-br from-blue-50 to-blue-100',
+    iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
+    textColor: 'text-gray-800 dark:text-gray-200'
   },
   { 
     id: 'confirmation', 
     name: '销售确认', 
     path: '/quotation?tab=confirmation',
     icon: FileText,
-    bgColor: 'bg-gradient-to-br from-green-100 to-green-200 hover:from-green-200 hover:to-green-300 dark:from-green-800/30 dark:to-green-700/40 dark:hover:from-green-700/40 dark:hover:to-green-600/50',
-    iconBg: 'bg-gradient-to-br from-green-600 to-green-700',
-    textColor: 'text-green-800 dark:text-green-200',
-    shortcut: 'C'
+    bgColor: 'bg-gradient-to-br from-emerald-50 to-emerald-100',
+    iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+    textColor: 'text-gray-800 dark:text-gray-200'
   },
   { 
     id: 'packing', 
     name: '箱单发票', 
     path: '/packing',
     icon: Package,
-    bgColor: 'bg-gradient-to-br from-teal-100 to-teal-200 hover:from-teal-200 hover:to-teal-300 dark:from-teal-800/30 dark:to-teal-700/40 dark:hover:from-teal-700/40 dark:hover:to-teal-600/50',
-    iconBg: 'bg-gradient-to-br from-teal-600 to-teal-700',
-    textColor: 'text-teal-800 dark:text-teal-200',
-    shortcut: 'B'
+    bgColor: 'bg-gradient-to-br from-cyan-50 to-cyan-100',
+    iconBg: 'bg-gradient-to-br from-cyan-500 to-cyan-600',
+    textColor: 'text-gray-800 dark:text-gray-200'
   },
   { 
     id: 'invoice', 
     name: '财务发票', 
     path: '/invoice',
     icon: Receipt,
-    bgColor: 'bg-gradient-to-br from-purple-100 to-purple-200 hover:from-purple-200 hover:to-purple-300 dark:from-purple-800/30 dark:to-purple-700/40 dark:hover:from-purple-700/40 dark:hover:to-purple-600/50',
-    iconBg: 'bg-gradient-to-br from-purple-600 to-purple-700',
-    textColor: 'text-purple-800 dark:text-purple-200',
-    shortcut: 'I'
+    bgColor: 'bg-gradient-to-br from-violet-50 to-violet-100',
+    iconBg: 'bg-gradient-to-br from-violet-500 to-violet-600',
+    textColor: 'text-gray-800 dark:text-gray-200'
   },
   { 
     id: 'purchase', 
     name: '采购订单', 
     path: '/purchase',
     icon: ShoppingCart,
-    bgColor: 'bg-gradient-to-br from-orange-100 to-orange-200 hover:from-orange-200 hover:to-orange-300 dark:from-orange-800/30 dark:to-orange-700/40 dark:hover:from-orange-700/40 dark:hover:to-orange-600/50',
-    iconBg: 'bg-gradient-to-br from-orange-600 to-orange-700',
-    textColor: 'text-orange-800 dark:text-orange-200',
-    shortcut: 'P'
+    bgColor: 'bg-gradient-to-br from-amber-50 to-amber-100',
+    iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
+    textColor: 'text-gray-800 dark:text-gray-200'
   }
 ];
 
@@ -69,9 +64,9 @@ export const TOOL_MODULES = [
     name: 'AI邮件助手', 
     path: '/mail',
     icon: Mail,
-    bgColor: 'bg-gradient-to-br from-indigo-100 to-indigo-200 hover:from-indigo-200 hover:to-indigo-300 dark:from-indigo-800/30 dark:to-indigo-700/40 dark:hover:from-indigo-700/40 dark:hover:to-indigo-600/50',
-    iconBg: 'bg-gradient-to-br from-indigo-600 to-indigo-700',
-    textColor: 'text-indigo-800 dark:text-indigo-200'
+    bgColor: 'bg-gradient-to-br from-indigo-50 to-indigo-100',
+    iconBg: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
+    textColor: 'text-gray-800 dark:text-gray-200'
   }
 ];
 
@@ -82,18 +77,18 @@ export const TOOLS_MODULES = [
     name: '单据管理', 
     path: '/history',
     icon: Archive,
-    bgColor: 'bg-gradient-to-br from-pink-100 to-pink-200 hover:from-pink-200 hover:to-pink-300 dark:from-pink-800/30 dark:to-pink-700/40 dark:hover:from-pink-700/40 dark:hover:to-pink-600/50',
-    iconBg: 'bg-gradient-to-br from-pink-600 to-pink-700',
-    textColor: 'text-pink-800 dark:text-pink-200'
+    bgColor: 'bg-gradient-to-br from-rose-50 to-rose-100',
+    iconBg: 'bg-gradient-to-br from-rose-500 to-rose-600',
+    textColor: 'text-gray-800 dark:text-gray-200'
   },
   { 
     id: 'customer', 
     name: '客户管理', 
     path: '/customer',
     icon: Users,
-    bgColor: 'bg-gradient-to-br from-violet-100 to-violet-200 hover:from-violet-200 hover:to-violet-300 dark:from-violet-800/30 dark:to-violet-700/40 dark:hover:from-violet-700/40 dark:hover:to-violet-600/50',
-    iconBg: 'bg-gradient-to-br from-violet-600 to-violet-700',
-    textColor: 'text-violet-800 dark:text-violet-200'
+    bgColor: 'bg-gradient-to-br from-fuchsia-50 to-fuchsia-100',
+    iconBg: 'bg-gradient-to-br from-fuchsia-500 to-fuchsia-600',
+    textColor: 'text-gray-800 dark:text-gray-200'
   }
 ];
 
