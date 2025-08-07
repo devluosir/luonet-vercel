@@ -1,5 +1,4 @@
 import React from 'react';
-import { getModuleColors } from '@/constants/colorMap';
 
 // 定义模块接口
 interface Module {
@@ -7,8 +6,8 @@ interface Module {
   name: string;
   path: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  bgColor?: string;
-  iconBg?: string;
+  bgColor: string;  // 改为必需字段
+  iconBg: string;   // 改为必需字段
   textColor?: string;
   titleColor?: string;
 }
@@ -36,11 +35,10 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
 }) => {
   const Icon = module.icon;
   
-  // 优先使用模块配置的颜色，如果没有则从 colorMap 获取
-  const colors = getModuleColors(module.id);
-  const bgColor = module.bgColor || colors.bgColor;
-  const iconBg = module.iconBg || colors.iconBg;
-  const titleColor = module.titleColor || module.textColor || colors.textColor;
+  // 直接使用模块配置的颜色（已通过 ...moduleColorMap[xxx] 注入）
+  const bgColor = module.bgColor;
+  const iconBg = module.iconBg;
+  const titleColor = module.titleColor || module.textColor;
   
 
   
@@ -84,7 +82,7 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
         className={`p-2.5 rounded-xl flex-shrink-0 shadow-lg group-hover:shadow-xl 
           transition-all duration-300 group-hover:scale-105
           relative w-10 h-10 flex items-center justify-center
-          border border-white/30 group-hover:border-white/50 ${iconBg}`}
+          ${iconBg}`}
       >
         {/* 图标本身 */}
         <Icon 
