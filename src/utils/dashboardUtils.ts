@@ -11,6 +11,7 @@ export type TimeFilter = 'today' | '3days' | 'week' | 'month';
 // 扩展的文档类型，包含 HistoryItem 的所有属性以及 type 属性
 export interface DocumentWithType extends HistoryItem {
   type: DocumentType;
+  [key: string]: unknown;
 }
 
 // 权限事件工具函数

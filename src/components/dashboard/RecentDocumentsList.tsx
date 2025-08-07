@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { DOCUMENT_TYPES } from '@/constants/dashboardModules';
 
+
+
 interface Document {
   id: string;
   type: string;
@@ -24,8 +26,11 @@ interface Document {
   date?: string;
   updatedAt?: string;
   createdAt?: string;
-  data?: any;
-  [key: string]: any;
+  totalAmount?: number;
+  currency?: string;
+  documentType?: string;
+  data?: unknown;
+  [key: string]: unknown;
 }
 
 interface RecentDocumentsListProps {
@@ -57,17 +62,18 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
   // 获取文档编号
   const getDocumentNumber = (doc: Document) => {
+    const data = doc.data as Record<string, unknown> | undefined;
     switch (doc.type) {
       case 'quotation': 
-        return doc.quotationNo || doc.data?.quotationNo || '';
+        return doc.quotationNo || (data?.quotationNo as string) || '';
       case 'confirmation': 
-        return doc.contractNo || doc.data?.contractNo || doc.quotationNo || doc.data?.quotationNo || '';
+        return doc.contractNo || (data?.contractNo as string) || doc.quotationNo || (data?.quotationNo as string) || '';
       case 'invoice': 
-        return doc.invoiceNo || doc.data?.invoiceNo || '';
+        return doc.invoiceNo || (data?.invoiceNo as string) || '';
       case 'purchase': 
-        return doc.orderNo || doc.data?.orderNo || '';
+        return doc.orderNo || (data?.orderNo as string) || '';
       case 'packing': 
-        return doc.invoiceNo || doc.data?.invoiceNo || doc.orderNo || doc.data?.orderNo || '';
+        return doc.invoiceNo || (data?.invoiceNo as string) || doc.orderNo || (data?.orderNo as string) || '';
       default: 
         return doc.id;
     }
@@ -75,32 +81,20 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
   // 获取文档名称
   const getDocumentName = (doc: Document) => {
+    const data = doc.data as Record<string, unknown> | undefined;
     let name = '';
     
     // 尝试从不同字段获取名称
     if (doc.type === 'purchase') {
-      name = doc.supplierName || doc.data?.supplierName || '未命名供应商';
+      name = doc.supplierName || (data?.supplierName as string) || '未命名供应商';
     } else if (doc.type === 'packing') {
-      name = doc.consigneeName || doc.data?.consigneeName || '未命名收货人';
+      name = doc.consigneeName || (data?.consigneeName as string) || '未命名收货人';
     } else {
-      name = doc.customerName || doc.data?.customerName || '未命名客户';
+      name = doc.customerName || (data?.customerName as string) || '未命名客户';
     }
     
     // 处理多行文本，取第一行
     return name.split('\n')[0]?.trim() || name;
-  };
-
-  // 获取搜索文本 - 用于搜索功能
-  const getSearchText = (doc: Document) => {
-    const documentNumber = getDocumentNumber(doc);
-    const documentName = getDocumentName(doc);
-    
-    // 扩展搜索范围，包括data字段中的信息
-    const customerName = doc.customerName || doc.data?.customerName || '';
-    const supplierName = doc.supplierName || doc.data?.supplierName || '';
-    const consigneeName = doc.consigneeName || doc.data?.consigneeName || '';
-    
-    return `${documentNumber} ${documentName} ${customerName} ${supplierName} ${consigneeName}`.toLowerCase();
   };
 
   // 过滤和搜索文档
@@ -112,7 +106,17 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(doc => {
         try {
-          const searchText = getSearchText(doc);
+          // 获取搜索文本 - 用于搜索功能
+          const data = doc.data as Record<string, unknown> | undefined;
+          const documentNumber = getDocumentNumber(doc);
+          const documentName = getDocumentName(doc);
+          
+          // 扩展搜索范围，包括data字段中的信息
+          const customerName = doc.customerName || (data?.customerName as string) || '';
+          const supplierName = doc.supplierName || (data?.supplierName as string) || '';
+          const consigneeName = doc.consigneeName || (data?.consigneeName as string) || '';
+          
+          const searchText = `${documentNumber} ${documentName} ${customerName} ${supplierName} ${consigneeName}`.toLowerCase();
           return searchText.includes(searchLower);
         } catch (error) {
           console.warn('搜索过滤时出错:', error, doc);
