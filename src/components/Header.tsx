@@ -19,7 +19,7 @@ interface HeaderProps {
     email?: string | null;
   };
   onLogout: () => void;
-  onProfile: () => void;
+  onProfile?: () => void;
   title?: string;
   showWelcome?: boolean;
 }
@@ -261,7 +261,7 @@ export function Header({
                           <div className="flex items-center flex-wrap gap-2">
                             <span className="text-base font-semibold text-gray-900 dark:text-white leading-tight truncate max-w-[11rem]">{user.name}</span>
                             <button
-                              onClick={onProfile}
+                              onClick={() => onProfile?.()}
                               className="text-[11px] text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline underline-offset-2"
                             >
                               修改密码

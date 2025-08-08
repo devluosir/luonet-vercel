@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { ProfileModal } from '@/components/profile/ProfileModal';
 import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { ModuleButton } from '@/components/dashboard/ModuleButton';
@@ -52,7 +51,7 @@ export default function DashboardPage() {
   // 所有 hooks 统一声明
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [showProfileModal, setShowProfileModal] = useState(false);
+  // 旧的个人信息弹窗已移除
   const [mounted, setMounted] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -399,7 +398,6 @@ export default function DashboardPage() {
             email: user?.email || session?.user?.email || null
           }}
           onLogout={handleLogout}
-          onProfile={() => setShowProfileModal(true)}
           title="Dashboard"
           showWelcome={true}
         />
