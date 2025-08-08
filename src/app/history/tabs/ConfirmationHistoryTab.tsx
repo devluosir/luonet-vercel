@@ -79,7 +79,7 @@ export default function ConfirmationHistoryTab({
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         results = results.filter(item =>
-          item.customerName.toLowerCase().includes(searchLower) ||
+          (item.customerName?.toLowerCase() || '').includes(searchLower) ||
           item.quotationNo.toLowerCase().includes(searchLower) ||
           (item.data?.contractNo && item.data.contractNo.toLowerCase().includes(searchLower))
         );
@@ -248,8 +248,8 @@ export default function ConfirmationHistoryTab({
                                checked:border-green-600 dark:checked:border-green-500"
                   />
                 </div>
-                <div className="flex-1 min-w-0 truncate text-xs sm:text-sm font-medium text-gray-900 dark:text-white pl-2" title={item.customerName}>
-                  {item.customerName.split('\n')[0]?.trim() || item.customerName}
+                <div className="flex-1 min-w-0 truncate text-xs sm:text-sm font-medium text-gray-900 dark:text-white pl-2" title={item.customerName || ''}>
+                  {item.customerName ? item.customerName.split('\n')[0]?.trim() || item.customerName : '未命名客户'}
                 </div>
                 <div className="w-24 sm:w-40 flex-shrink-0">
                   <div className="whitespace-nowrap text-xs sm:text-sm font-bold text-green-600 dark:text-green-400 font-mono">

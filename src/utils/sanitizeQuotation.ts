@@ -2,6 +2,11 @@ import type { QuotationData } from '../types/quotation';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function sanitizeQuotation(raw: any): QuotationData {
+  // 快速检查：如果数据已经是正确的格式，直接返回
+  if (raw && typeof raw === 'object' && Array.isArray(raw.items) && Array.isArray(raw.notes)) {
+    return raw as QuotationData;
+  }
+  
   // 确保items是数组
   const items = Array.isArray(raw.items) ? raw.items : [];
   

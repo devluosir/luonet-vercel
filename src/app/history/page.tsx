@@ -742,22 +742,22 @@ export default function HistoryManagementPage() {
         currentHistory = currentHistory.filter(item => {
           switch (activeTab) {
             case 'quotation':
-              return (item as QuotationHistory).customerName.toLowerCase().includes(searchLower) ||
+              return ((item as QuotationHistory).customerName?.toLowerCase() || '').includes(searchLower) ||
                      (item as QuotationHistory).quotationNo.toLowerCase().includes(searchLower);
             case 'confirmation':
               const confirmationItem = item as QuotationHistory;
-              return confirmationItem.customerName.toLowerCase().includes(searchLower) ||
+              return (confirmationItem.customerName?.toLowerCase() || '').includes(searchLower) ||
                      confirmationItem.quotationNo.toLowerCase().includes(searchLower) ||
                      (confirmationItem.data?.contractNo && confirmationItem.data.contractNo.toLowerCase().includes(searchLower));
             case 'invoice':
-              return (item as InvoiceHistory).customerName.toLowerCase().includes(searchLower) ||
+              return ((item as InvoiceHistory).customerName?.toLowerCase() || '').includes(searchLower) ||
                      (item as InvoiceHistory).invoiceNo.toLowerCase().includes(searchLower) ||
                      ((item as InvoiceHistory).data?.customerPO && (item as InvoiceHistory).data.customerPO.toLowerCase().includes(searchLower));
             case 'purchase':
-              return (item as PurchaseHistory).supplierName.toLowerCase().includes(searchLower) ||
+              return ((item as PurchaseHistory).supplierName?.toLowerCase() || '').includes(searchLower) ||
                      (item as PurchaseHistory).orderNo.toLowerCase().includes(searchLower);
             case 'packing':
-              return (item as PackingHistory).consigneeName.toLowerCase().includes(searchLower) ||
+              return ((item as PackingHistory).consigneeName?.toLowerCase() || '').includes(searchLower) ||
                      (item as PackingHistory).invoiceNo.toLowerCase().includes(searchLower) ||
                      (item as PackingHistory).orderNo.toLowerCase().includes(searchLower);
             default:
@@ -938,26 +938,26 @@ export default function HistoryManagementPage() {
           
           switch (tabType) {
             case 'quotation':
-              matches = (item as QuotationHistory).customerName.toLowerCase().includes(searchLower) ||
+              matches = ((item as QuotationHistory).customerName?.toLowerCase() || '').includes(searchLower) ||
                        (item as QuotationHistory).quotationNo.toLowerCase().includes(searchLower);
               break;
             case 'confirmation':
               const confirmationItem = item as QuotationHistory;
-              matches = confirmationItem.customerName.toLowerCase().includes(searchLower) ||
+              matches = (confirmationItem.customerName?.toLowerCase() || '').includes(searchLower) ||
                        confirmationItem.quotationNo.toLowerCase().includes(searchLower) ||
                        Boolean(confirmationItem.data?.contractNo && confirmationItem.data.contractNo.toLowerCase().includes(searchLower));
               break;
             case 'invoice':
-              matches = (item as InvoiceHistory).customerName.toLowerCase().includes(searchLower) ||
+              matches = ((item as InvoiceHistory).customerName?.toLowerCase() || '').includes(searchLower) ||
                        (item as InvoiceHistory).invoiceNo.toLowerCase().includes(searchLower) ||
                        Boolean((item as InvoiceHistory).data?.customerPO && (item as InvoiceHistory).data.customerPO.toLowerCase().includes(searchLower));
               break;
             case 'purchase':
-              matches = (item as PurchaseHistory).supplierName.toLowerCase().includes(searchLower) ||
+              matches = ((item as PurchaseHistory).supplierName?.toLowerCase() || '').includes(searchLower) ||
                        (item as PurchaseHistory).orderNo.toLowerCase().includes(searchLower);
               break;
             case 'packing':
-              matches = (item as PackingHistory).consigneeName.toLowerCase().includes(searchLower) ||
+              matches = ((item as PackingHistory).consigneeName?.toLowerCase() || '').includes(searchLower) ||
                        (item as PackingHistory).invoiceNo.toLowerCase().includes(searchLower) ||
                        (item as PackingHistory).orderNo.toLowerCase().includes(searchLower);
               break;

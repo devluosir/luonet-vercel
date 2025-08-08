@@ -12,6 +12,8 @@ interface QuotationState {
   editId?: string;
   isGenerating: boolean;
   generatingProgress: number;
+  isPreviewing: boolean;
+  previewProgress: number;
   
   // UI状态
   showSettings: boolean;
@@ -36,6 +38,8 @@ interface QuotationState {
   setEditId: (id?: string) => void;
   setGenerating: (isGenerating: boolean) => void;
   setProgress: (progress: number) => void;
+  setPreviewing: (isPreviewing: boolean) => void;
+  setPreviewProgress: (progress: number) => void;
   
   // UI Actions
   setShowSettings: (show: boolean) => void;
@@ -91,6 +95,8 @@ export const useQuotationStore = create<QuotationState>((set) => ({
   editId: undefined,
   isGenerating: false,
   generatingProgress: 0,
+  isPreviewing: false,
+  previewProgress: 0,
   
   // UI状态
   showSettings: false,
@@ -105,6 +111,8 @@ export const useQuotationStore = create<QuotationState>((set) => ({
   setEditId: (id) => set({ editId: id }),
   setGenerating: (isGenerating) => set({ isGenerating }),
   setProgress: (progress) => set({ generatingProgress: progress }),
+  setPreviewing: (isPreviewing) => set({ isPreviewing }),
+  setPreviewProgress: (progress) => set({ previewProgress: progress }),
   
   // UI Actions
   setShowSettings: (show) => set({ showSettings: show }),

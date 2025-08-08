@@ -57,6 +57,8 @@ export default function QuotationPage() {
     editId,
     isGenerating,
     generatingProgress,
+    isPreviewing,
+    previewProgress,
     showSettings,
     showPreview,
     isPasteDialogOpen,
@@ -67,6 +69,8 @@ export default function QuotationPage() {
     setEditId,
     setGenerating,
     setProgress,
+    setPreviewing,
+    setPreviewProgress,
     setShowSettings,
     setShowPreview,
     setPasteDialogOpen,
@@ -175,9 +179,16 @@ export default function QuotationPage() {
   const handlePreview = async () => {
     if (!data) return;
 
+    setPreviewing(true);
+    setPreviewProgress(0);
+
     try {
+      setPreviewProgress(20);
+      
       // 使用新的生成服务，包含Notes配置
-      const pdfBlob = await generatePdf(activeTab, data, notesConfig, () => {});
+      const pdfBlob = await generatePdf(activeTab, data, notesConfig, setPreviewProgress);
+      
+      setPreviewProgress(90);
       
       // 创建预览数据，包含PDF blob
       const previewData = {
@@ -187,9 +198,15 @@ export default function QuotationPage() {
       
       setPreviewItem(previewData);
       setShowPreview(true);
+      setPreviewProgress(100);
+      
+      showToast('预览生成成功', 'success');
     } catch (error) {
       console.error('Error previewing PDF:', error);
       showToast('预览失败，请重试', 'error');
+    } finally {
+      setPreviewing(false);
+      setPreviewProgress(0);
     }
   };
   
@@ -477,6 +494,7 @@ export default function QuotationPage() {
                   <button
                     type="button"
                     onClick={handlePreview}
+                    disabled={isPreviewing || isGenerating}
                     className={`px-4 py-2 rounded-xl text-sm font-medium 
                       transition-all duration-300
                       bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
@@ -488,13 +506,35 @@ export default function QuotationPage() {
                       active:scale-[0.98] active:shadow-inner
                       transform transition-all duration-75 ease-out
                       w-full sm:w-auto sm:min-w-[120px] h-10
-                      disabled:opacity-50 disabled:cursor-not-allowed`}
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                      ${isPreviewing ? 'scale-[0.98] shadow-inner bg-[#007AFF]/[0.16] dark:bg-[#0A84FF]/[0.16]' : ''}`}
                   >
                     <div className="flex items-center justify-center gap-2">
-                      <Eye className="w-4 h-4" />
-                      <span>Preview</span>
+                      {isPreviewing ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Generating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-4 h-4" />
+                          <span>Preview</span>
+                        </>
+                      )}
                     </div>
                   </button>
+                  {/* 预览进度条 */}
+                  {isPreviewing && (
+                    <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
+                      <div 
+                        className="bg-[#007AFF] dark:bg-[#0A84FF] h-1.5 rounded-full transition-all duration-300 ease-out"
+                        style={{ width: `${Math.min(100, previewProgress)}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </form>

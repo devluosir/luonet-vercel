@@ -99,7 +99,7 @@ export const getQuotationHistory = (filters?: QuotationHistoryFilters): Quotatio
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         history = history.filter((item: QuotationHistory) => 
-          item.customerName.toLowerCase().includes(searchLower) ||
+          (item.customerName?.toLowerCase() || '').includes(searchLower) ||
           item.quotationNo.toLowerCase().includes(searchLower) ||
           (item.type === 'confirmation' && item.data?.contractNo && item.data.contractNo.toLowerCase().includes(searchLower))
         );

@@ -76,7 +76,7 @@ export default function PackingHistoryTab({
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         const matches = 
-          item.consigneeName.toLowerCase().includes(searchLower) ||
+          (item.consigneeName?.toLowerCase() || '').includes(searchLower) ||
           item.invoiceNo.toLowerCase().includes(searchLower) ||
           item.orderNo.toLowerCase().includes(searchLower);
         
@@ -287,7 +287,7 @@ export default function PackingHistoryTab({
                   />
                 </div>
                 <div className="flex-1 min-w-0 truncate text-xs sm:text-sm font-medium text-gray-900 dark:text-white pl-2" title={item.consigneeName}>
-                  {(item.consigneeName || '-').split('\n')[0]?.trim() || item.consigneeName || '-'}
+                  {item.consigneeName ? item.consigneeName.split('\n')[0]?.trim() || item.consigneeName : '-'}
                 </div>
                 <div className="w-24 sm:w-40 flex-shrink-0">
                   <div className="whitespace-nowrap text-xs sm:text-sm font-bold text-teal-600 dark:text-teal-400 font-mono">

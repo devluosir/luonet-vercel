@@ -26,7 +26,7 @@ export const DEFAULT_NOTES_CONFIG: NoteConfig[] = [
 
 // Notes内容映射 - 使用双语模板的英文部分
 export const NOTES_CONTENT_MAP: Record<string, string> = {
-  delivery_time: 'Delivery Time: As stated in Remarks.',
+  delivery_time: 'Delivery Time: 30 days.',
   price_based_on: 'Price Basis: FOB Shanghai, China.',
   delivery_terms: 'Delivery Terms: As stated above, subject to prior sale.',
   payment_terms: 'Payment Term: 30% advance payment, 70% before shipment.',
@@ -45,19 +45,16 @@ export interface SpecialNoteConfig extends NoteConfig {
 
 // 付款方式选项（用于Notes中的payment_terms）
 export const PAYMENT_TERMS_OPTIONS = [
-  { id: 'tt_100_advance', chinese: '全额预付', english: '100% T/T in advance', remark: '风险最低，常用于小额或首次交易' },
-  { id: 'tt_100_before_shipment', chinese: '装船前全额付款', english: '100% before shipment', remark: '与全额预付类似，但在出货前结清' },
-  { id: 'tt_30_70', chinese: '30%定金，70%装船前付清', english: '30% deposit, 70% before shipment', remark: '常见比例 30/70' },
-  { id: 'tt_50_50', chinese: '50%定金，50%装船前付清', english: '50% deposit, 50% before shipment', remark: '大额或定制单常用' },
-  { id: 'progress_payment', chinese: '分阶段付款', english: 'Progress payment', remark: '按合同阶段付款' },
-  { id: 'd_p', chinese: '付款交单', english: 'D/P (Documents against Payment)', remark: '银行见单付款' },
-  { id: 'd_a', chinese: '承兑交单', english: 'D/A (Documents against Acceptance)', remark: '风险较高' },
-  { id: 'lc_at_sight', chinese: '即期信用证', english: 'Irrevocable L/C at sight', remark: '见单即付' },
-  { id: 'lc_usance', chinese: '远期信用证', english: 'Usance L/C (e.g. 60 days)', remark: '到期付款' },
-  { id: 'cod', chinese: '货到付款', english: 'COD (Cash on Delivery)', remark: '国内或小额交易' },
-  { id: 'open_account', chinese: '赊账结算', english: 'Open Account / Net 30-90 days', remark: '完全基于信用' },
-  { id: 'escrow', chinese: '第三方托管', english: 'Escrow / Third-party payment', remark: 'PayPal、支付宝担保交易等' }
-];
+    { id: 'tt_50_50', chinese: '50%定金，50%装船前付清', english: '50% deposit, 50% before shipment', remark: '我司常见比例，风险与现金流平衡' },
+    { id: 'tt_30_70', chinese: '30%定金，70%装船前付清', english: '30% deposit, 70% before shipment', remark: '最常见比例，风险与现金流平衡' },
+    { id: 'tt_100_before_shipment', chinese: '装船前全额付款', english: '100% before shipment', remark: '与全额预付类似，发货前结清' },
+    { id: 'tt_100_advance', chinese: '全额预付', english: '100% T/T in advance', remark: '小额/样品/首次交易' },
+    { id: 'open_account', chinese: '30天', english: '30 days', remark: '老客户/长期合作' },
+    { id: 'lc_at_sight', chinese: '即期信用证', english: 'Irrevocable L/C at sight', remark: '银行信用，见单即付' },
+    { id: 'lc_usance', chinese: '远期信用证', english: 'Usance L/C (e.g. 60 days)', remark: '账期由信用证承担' },
+    { id: 'd_p', chinese: '付款交单', english: 'D/P (Documents against Payment)', remark: '风险中等，可替代部分L/C' },
+    { id: 'progress_payment', chinese: '分阶段付款', english: 'Progress payment', remark: '按里程碑/节点付款' }
+  ];
 
 // 提取英文内容的工具函数
 export const extractEnglishContent = (bilingualText: string): string => {
@@ -98,20 +95,15 @@ export const NOTES_TEMPLATES_BILINGUAL = {
 
 // 交货期选项（用于Notes中的delivery_terms）
 export const DELIVERY_TERMS_OPTIONS = [
-  { id: 'on_or_before_date', chinese: '在某日期或之前交货', english: 'On or before [Date]', remark: '固定日期交货' },
-  { id: 'on_date', chinese: '固定日期交货', english: 'On [Date]', remark: '' },
-  { id: 'not_later_than_date', chinese: '不迟于某日交货', english: 'Not later than [Date]', remark: '' },
-  { id: 'days_after_order', chinese: '订单确认后XX天交货', english: 'XX days after order confirmation (AOC)', remark: '常见 30/45/60天' },
-  { id: 'days_after_deposit', chinese: '收到定金后XX天交货', english: 'XX days after receipt of deposit', remark: '' },
-  { id: 'days_after_lc', chinese: '信用证开立后XX天交货', english: 'XX days after L/C issuance', remark: '' },
-  { id: 'days_after_sample', chinese: '最终样品确认后XX天交货', english: 'XX days after final sample approval', remark: '适用于定制品' },
-  { id: 'production_lead_time', chinese: '生产周期XX天/周', english: 'Production lead time: XX days/weeks', remark: '' },
+  { id: 'days_after_order', chinese: '订单确认后30天交货', english: '30 days after order confirmation (AOC)', remark: '常见30/45/60天' },
+  { id: 'days_after_deposit', chinese: '收到定金后30天交货', english: '30 days after receipt of deposit', remark: '与30/70搭配常用' },
+  { id: 'immediate_delivery', chinese: '现货', english: 'Ex-stock', remark: '库存可随时发' },
+  { id: 'days_after_sample', chinese: '最终样品确认后XX天交货', english: 'XX days after final sample approval', remark: '定制/来样业务常用' },
+  { id: 'production_lead_time', chinese: '生产周期XX天/周', english: 'Production lead time: XX days/weeks', remark: '标准产期表述' },
+  { id: 'flexible_range', chinese: '弹性区间交货', english: 'Delivery within 45–60 days after order', remark: '给产线/船期留余量' },    
+  { id: 'days_after_lc', chinese: '信用证开立后XX天交货', english: 'XX days after L/C issuance', remark: '与L/C条款联动' },
   { id: 'vessel_schedule', chinese: '按船期交货', english: 'Delivery in line with vessel schedule', remark: '海运常用' },
-  { id: 'partial_shipments', chinese: '分批发货', english: 'Partial shipments allowed/prohibited', remark: '' },
-  { id: 'flexible_range', chinese: '弹性区间交货', english: 'Delivery within XX–XX days after order', remark: '' },
-  { id: 'immediate_delivery', chinese: '现货交付', english: 'Immediate delivery / Ex-stock', remark: '随时可发' },
-  { id: 'subject_to_availability', chinese: '视库存情况交货', english: 'Subject to availability', remark: '' },
-  { id: 'subject_to_prior_sales', chinese: '库存先售出则顺延', english: 'Delivery subject to prior sales', remark: '' },
-  { id: 'upon_full_payment', chinese: '全额付款后交货', english: 'Delivery upon full payment', remark: '' },
-  { id: 'sample_confirmation', chinese: '来样订制，收到样品后确认交货期', english: 'Delivery time to be confirmed upon receipt of sample', remark: '样品评估后确认' }
+  { id: 'not_later_than_date', chinese: '不迟于某日交货', english: 'Not later than [Date]', remark: '对接客户硬截止' },
+  { id: 'partial_shipments', chinese: '分批发货', english: 'Partial shipments allowed/prohibited', remark: '与信用证/订舱配合' },
+  { id: 'subject_to_availability', chinese: '视库存情况交货', english: 'Subject to availability', remark: '补充说明库存优先级' }
 ];

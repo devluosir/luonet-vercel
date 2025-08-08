@@ -42,7 +42,7 @@ export const generateQuotationPDF = async (rawData: unknown, preview = false): P
     throw new Error('PDF generation is only available in client-side environment');
   }
 
-  // 净化数据
+  // 如果数据已经是QuotationData类型，直接使用，避免重复净化
   const data = sanitizeQuotation(rawData);
 
   const doc = new jsPDF({

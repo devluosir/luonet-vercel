@@ -75,7 +75,7 @@ export default function PurchaseHistoryTab({
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         results = results.filter(item =>
-          item.supplierName.toLowerCase().includes(searchLower) ||
+          (item.supplierName?.toLowerCase() || '').includes(searchLower) ||
           item.orderNo.toLowerCase().includes(searchLower)
         );
       }
@@ -243,7 +243,7 @@ export default function PurchaseHistoryTab({
                   />
                 </div>
                 <div className="flex-1 min-w-0 truncate text-xs sm:text-sm font-medium text-gray-900 dark:text-white pl-2" title={item.supplierName}>
-                  {item.supplierName.split('\n')[0]?.trim() || item.supplierName}
+                  {item.supplierName ? item.supplierName.split('\n')[0]?.trim() || item.supplierName : '未命名供应商'}
                 </div>
                 <div className="w-24 sm:w-40 flex-shrink-0">
                   <div className="whitespace-nowrap text-xs sm:text-sm font-bold text-orange-600 dark:text-orange-400 font-mono">

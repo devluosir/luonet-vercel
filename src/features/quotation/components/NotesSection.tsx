@@ -11,7 +11,6 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
@@ -20,13 +19,15 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Eye, EyeOff, GripVertical, Settings, ChevronDown, Check } from 'lucide-react';
+import { EyeOff, GripVertical, Settings, ChevronDown } from 'lucide-react';
 import { useQuotationStore } from '../state/useQuotationStore';
-import { NOTES_CONTENT_MAP, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS, DEFAULT_NOTES_CONFIG, NOTES_TEMPLATES_BILINGUAL, extractEnglishContent } from '../types/notes';
+import { NOTES_CONTENT_MAP, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS, DEFAULT_NOTES_CONFIG } from '../types/notes';
 import type { NoteConfig } from '../types/notes';
 
 interface NotesSectionProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (data: any) => void;
 }
 
@@ -276,28 +277,16 @@ export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) =>
   );
 };
 
-// 获取Note显示名称
-function getNoteDisplayName(noteId: string): string {
-  const displayNames: Record<string, string> = {
-    delivery_time: 'Delivery Time',
-    price_based_on: 'Price Based On',
-    delivery_terms: 'Delivery Terms',
-    payment_terms: 'Payment Terms',
-    validity: 'Validity',
-    quality_terms: 'Quality Terms',
-    warranty_terms: 'Warranty Terms',
-    custom_note_1: 'Custom Note 1',
-    custom_note_2: 'Custom Note 2',
-  };
-  return displayNames[noteId] || noteId;
-}
+
 
 // 可拖拽的Note组件
 interface SortableNoteProps {
   note: NoteConfig;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
   onVisibilityToggle: (noteId: string, currentVisible: boolean) => void;
   onUpdateSpecialOption: (noteId: string, optionId: string) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (data: any) => void;
 }
 
@@ -319,7 +308,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
   // 检查是否为特殊Notes（支持选项选择）
   const isSpecialNote = note.id === 'payment_terms' || note.id === 'delivery_time';
   const options = note.id === 'payment_terms' ? PAYMENT_TERMS_OPTIONS : DELIVERY_TERMS_OPTIONS;
-  const selectedOptionId = (note as any).selectedOption;
+  const selectedOptionId = (note as NoteConfig & { selectedOption?: string }).selectedOption;
   const selectedOption = options.find(opt => opt.id === selectedOptionId);
   const [showOptions, setShowOptions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -414,11 +403,8 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
             {/* 内容区域 - 分离拖拽和编辑 */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2">
-                {/* Label — 内容格式 */}
+                {/* 内容区域 */}
                 <div className="flex items-center space-x-2 flex-1 min-w-0">
-                  <span className="text-sm font-medium text-gray-700 dark:text-[#F5F5F7] flex-shrink-0">
-                    {getNoteDisplayName(note.id)} —
-                  </span>
                   <div className="flex-1 min-w-0">
                     {isSpecialNote ? (
                       // 特殊Notes：显示选择的内容或自定义内容
@@ -525,7 +511,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
                 type="text"
                 placeholder="搜索选项..."
                 className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#3A3A3C] rounded-lg bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF]"
-                onChange={(e) => {
+                onChange={(_e) => {
                   // TODO: 实现搜索过滤功能
                 }}
               />
@@ -632,6 +618,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
 };
 
 // 获取Note内容
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getNoteContent(noteId: string, data: any, selectedOption?: any): string {
   // 特殊Notes（付款方式和交货时间）
   if (noteId === 'payment_terms' && selectedOption) {

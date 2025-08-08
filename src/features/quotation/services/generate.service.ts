@@ -13,11 +13,12 @@ export function useGenerateService() {
     notesConfig: any[],
     setProgress: (progress: number) => void
   ): Promise<Blob> => {
-    setProgress(50);
+    setProgress(20);
     
     try {
       // 净化数据
       const data = sanitizeQuotation(rawData);
+      setProgress(40);
       // 根据notesConfig过滤和排序notes
       const visibleNotes = notesConfig
         .filter(note => note.visible)
@@ -79,6 +80,7 @@ export function useGenerateService() {
         notes: visibleNotes
       };
 
+      setProgress(80);
       const blob = await generate(tab, dataWithConfiguredNotes);
       setProgress(100);
       return blob;
