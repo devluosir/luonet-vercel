@@ -43,6 +43,17 @@ const inputClassName = `w-full px-4 py-2.5 rounded-2xl
   hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
   shadow-sm hover:shadow-md`;
 
+// 日期输入框专用样式
+const dateInputClassName = `w-full min-w-0 px-4 py-2.5 rounded-2xl
+  bg-white/95 dark:bg-[#1c1c1e]/95
+  border border-[#007AFF]/10 dark:border-[#0A84FF]/10
+  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
+  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
+  text-[15px] leading-relaxed text-gray-800 dark:text-gray-100
+  transition-all duration-300 ease-out
+  hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
+  shadow-sm hover:shadow-md`;
+
 // 默认单位列表（需要单复数变化的单位）
 const defaultUnits = ['pc', 'set', 'length'];
 
@@ -1203,7 +1214,7 @@ export default function InvoicePage() {
                           type="date"
                           value={data.date}
                           onChange={(e) => setData(prev => ({ ...prev, date: e.target.value }))}
-                          className={`${inputClassName} w-full`}
+                          className={dateInputClassName}
                           required
                         />
                       </div>
@@ -1349,7 +1360,7 @@ export default function InvoicePage() {
                               ...prev, 
                               paymentDate: e.target.value 
                             }))}
-                            className={`${inputClassName} !py-1.5 text-red-500 dark:text-red-400`}
+                            className={`${dateInputClassName} !py-1.5 text-red-500 dark:text-red-400`}
                             style={{ 
                               colorScheme: 'light dark',
                               width: '150px',

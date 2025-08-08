@@ -286,6 +286,8 @@ export default function PurchaseOrderPage() {
   // 输入控件样式
   const inputClass =
     'w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm';
+  const dateInputClass =
+    'w-full min-w-0 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm';
   const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2';
   const subheadingClass = 'block text-lg font-semibold text-gray-800 dark:text-gray-200 pt-6 pb-3';
 
@@ -379,7 +381,7 @@ export default function PurchaseOrderPage() {
                       <label className={labelClass}>采购订单日期 Date:</label>
                       <input
                         type="date"
-                        className={inputClass}
+                        className={dateInputClass}
                         value={data.date}
                         onChange={e => updateData({ date: e.target.value })}
                       />

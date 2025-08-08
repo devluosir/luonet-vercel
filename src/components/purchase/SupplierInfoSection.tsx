@@ -28,6 +28,13 @@ const inputClassName = `
   transition-all duration-200 text-sm
 `;
 
+const dateInputClassName = `
+  w-full min-w-0 px-4 py-3 border border-gray-200 dark:border-gray-600 
+  rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 
+  focus:ring-2 focus:ring-blue-500 focus:border-transparent 
+  transition-all duration-200 text-sm
+`;
+
 const labelClassName = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2';
 
 // 统一处理供应商名称格式 - 移到组件外部避免重新创建
@@ -297,7 +304,7 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
           <label className={labelClassName}>报价日期 Quote Date:</label>
           <input
             type="date"
-            className={inputClassName}
+            className={dateInputClassName}
             value={data.supplierQuoteDate}
             onChange={e => onChange({ ...data, supplierQuoteDate: e.target.value })}
           />

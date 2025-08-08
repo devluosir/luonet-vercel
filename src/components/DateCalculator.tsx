@@ -271,7 +271,7 @@ export function DateCalculator({ isOpen, onClose, triggerRef }: DateCalculatorPr
                     type="date"
                     value={baseDate}
                     onChange={e => setBaseDate(e.target.value)}
-                    className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white/50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    className="w-full min-w-0 p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white/50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   />
                   <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
@@ -364,7 +364,7 @@ export function DateCalculator({ isOpen, onClose, triggerRef }: DateCalculatorPr
                     type="date"
                     value={date1}
                     onChange={e => setDate1(e.target.value)}
-                    className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white/50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    className="w-full min-w-0 p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white/50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   />
                   <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
@@ -374,7 +374,7 @@ export function DateCalculator({ isOpen, onClose, triggerRef }: DateCalculatorPr
                     type="date"
                     value={date2}
                     onChange={e => setDate2(e.target.value)}
-                    className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white/50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                    className="w-full min-w-0 p-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white/50 dark:bg-gray-900/50 text-gray-900 dark:text-gray-100 text-center focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                   />
                   <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>

@@ -21,6 +21,18 @@ const inputClassName = `w-full px-4 py-2.5 rounded-2xl
   shadow-sm hover:shadow-md
   ios-optimized-input`;
 
+// 日期输入框专用样式
+const dateInputClassName = `w-full min-w-0 px-4 py-2.5 rounded-2xl
+  bg-white/95 dark:bg-[#1c1c1e]/95
+  border border-[#007AFF]/10 dark:border-[#0A84FF]/10
+  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
+  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
+  text-[15px] leading-relaxed text-gray-800 dark:text-gray-100
+  transition-all duration-300 ease-out
+  hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
+  shadow-sm hover:shadow-md
+  ios-optimized-input`;
+
 // iOS光标优化样式 - 简化版本
 const iosCaretStyle = {
   caretColor: '#007AFF',
@@ -591,7 +603,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                   type="date"
                   value={data.date}
                   onChange={(e) => handleDateChange(e.target.value)}
-                  className={inputClassName}
+                  className={dateInputClassName}
                   style={iosCaretStyle}
                   required
                 />
@@ -623,7 +635,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                   type="date"
                   value={data.date}
                   onChange={(e) => handleDateChange(e.target.value)}
-                  className={inputClassName}
+                  className={dateInputClassName}
                   style={iosCaretStyle}
                   required
                 />
