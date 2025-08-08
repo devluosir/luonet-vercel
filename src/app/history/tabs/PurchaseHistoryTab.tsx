@@ -1,27 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getPurchaseHistory, deletePurchaseHistory, exportPurchaseHistory, importPurchaseHistory } from '@/utils/purchaseHistory';
-import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
+import { getPurchaseHistory } from '@/utils/purchaseHistory';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import type { PurchaseOrderData } from '@/types/purchase';
 import { 
-  FileText, 
-  Receipt, 
-  ShoppingCart,
-  Search, 
-  Filter, 
-  Download, 
-  Upload, 
   Trash2, 
   Edit, 
   Copy, 
   Eye,
   ChevronUp,
-  ChevronDown,
-  MoreHorizontal,
-  RefreshCw,
-  Archive,
-  Star,
-  X
+  ChevronDown
 } from 'lucide-react';
 
 interface PurchaseHistory {
@@ -32,7 +20,7 @@ interface PurchaseHistory {
   orderNo: string;
   totalAmount: number;
   currency: string;
-  data: any;
+  data: PurchaseOrderData;
 }
 
 interface SortConfig {

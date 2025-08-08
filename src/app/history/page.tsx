@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 // 移除CSS导入，改为动态加载
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
@@ -19,8 +19,11 @@ import {
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 
-// 导入权限store
-
+// 导入类型定义
+import type { QuotationData } from '@/types/quotation';
+import type { InvoiceData } from '@/types/invoice';
+import type { PurchaseOrderData } from '@/types/purchase';
+import type { PackingData } from '@/types/packing-history';
 
 // 导入历史记录工具函数
 import { 
@@ -41,20 +44,6 @@ import {
 } from '@/utils/packingHistory';
 
 // 类型定义
-interface Permission {
-  id: string;
-  moduleId: string;
-  canAccess: boolean;
-}
-
-interface User {
-  id: string;
-  username: string;
-  email: string | null;
-  status: boolean;
-  isAdmin: boolean;
-  permissions: Permission[];
-}
 
 interface QuotationHistory {
   id: string;
@@ -65,7 +54,7 @@ interface QuotationHistory {
   quotationNo: string;
   totalAmount: number;
   currency: string;
-  data: any;
+  data: QuotationData;
 }
 
 interface PurchaseHistory {
@@ -76,7 +65,7 @@ interface PurchaseHistory {
   orderNo: string;
   totalAmount: number;
   currency: string;
-  data: any;
+  data: PurchaseOrderData;
 }
 
 interface InvoiceHistory {
@@ -87,7 +76,7 @@ interface InvoiceHistory {
   invoiceNo: string;
   totalAmount: number;
   currency: string;
-  data: any;
+  data: InvoiceData;
 }
 
 interface PackingHistory {
@@ -100,7 +89,7 @@ interface PackingHistory {
   totalAmount: number;
   currency: string;
   documentType: 'proforma' | 'packing' | 'both';
-  data: any;
+  data: PackingData;
 }
 
 type HistoryType = 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
@@ -163,11 +152,7 @@ export default function HistoryManagementPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  // 数据状态
-  const [quotationHistory, setQuotationHistory] = useState<QuotationHistory[]>([]);
-  const [invoiceHistory, setInvoiceHistory] = useState<InvoiceHistory[]>([]);
-  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseHistory[]>([]);
-  const [packingHistory, setPackingHistory] = useState<PackingHistory[]>([]);
+  // 数据状态 - 这些状态在动态组件中管理，这里不需要
 
   // 筛选和排序状态
   const [filters, setFilters] = useState<Filters>({
@@ -184,10 +169,9 @@ export default function HistoryManagementPage() {
 
   // 选择状态
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [selectAll, setSelectAll] = useState(false);
 
   // 预览状态
-  const [previewItem, setPreviewItem] = useState<any>(null);
+  const [previewItem, setPreviewItem] = useState<HistoryItem | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
   // 刷新键
@@ -197,8 +181,7 @@ export default function HistoryManagementPage() {
   // 过滤器显示状态
   const [showFilters, setShowFilters] = useState(false);
 
-  // 标记是否是从其他页面跳转过来的（不进行权限验证）
-  const [isFromOtherPage, setIsFromOtherPage] = useState(false);
+
 
 
 
@@ -208,7 +191,6 @@ export default function HistoryManagementPage() {
       const tabParam = searchParams.get('tab');
       if (tabParam && ['quotation', 'confirmation', 'invoice', 'purchase', 'packing'].includes(tabParam)) {
         setActiveTab(tabParam as HistoryType);
-        setIsFromOtherPage(true); // 标记为从其他页面跳转过来
       }
     }
   }, [mounted, searchParams]);
@@ -218,10 +200,6 @@ export default function HistoryManagementPage() {
     
     // 组件卸载时的清理函数
     return () => {
-      setQuotationHistory([]);
-      setInvoiceHistory([]);
-      setPurchaseHistory([]);
-      setPackingHistory([]);
       setSelectedItems(new Set());
       setShowDeleteConfirm(false);
       setDeleteConfirmId(null);
@@ -233,7 +211,7 @@ export default function HistoryManagementPage() {
 
   // 获取可用的标签页
   const getAvailableTabs = useCallback(() => {
-    const availableTabs: { id: HistoryType; name: string; shortName: string; icon: any }[] = [];
+    const availableTabs: { id: HistoryType; name: string; shortName: string; icon: React.ComponentType<{ className?: string }> }[] = [];
     
     // 直接添加所有标签页，不再进行权限检查
     const tabOrder: HistoryType[] = ['quotation', 'confirmation', 'packing', 'invoice', 'purchase'];
@@ -278,10 +256,6 @@ export default function HistoryManagementPage() {
   // 处理返回按钮点击
   const handleBack = () => {
     // 清理状态和资源
-    setQuotationHistory([]);
-    setInvoiceHistory([]);
-    setPurchaseHistory([]);
-    setPackingHistory([]);
     setSelectedItems(new Set());
     setShowDeleteConfirm(false);
     setDeleteConfirmId(null);
@@ -418,7 +392,7 @@ export default function HistoryManagementPage() {
       }
 
       const filteredResults = getFilteredHistory(results);
-      const sortedResults = getSortedHistory(filteredResults);
+      getSortedHistory(filteredResults);
     } catch (error) {
       // 静默处理错误
     }
@@ -439,7 +413,7 @@ export default function HistoryManagementPage() {
   };
 
   // 处理删除
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     try {
       // 始终检查用户是否有权限访问当前activeTab
       const availableTabs = getAvailableTabs();
@@ -482,10 +456,10 @@ export default function HistoryManagementPage() {
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [activeTab, getAvailableTabs, loadHistory]);
 
   // 批量删除
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = useCallback(async () => {
     try {
       // 始终检查用户是否有权限访问当前activeTab
       const availableTabs = getAvailableTabs();
@@ -533,7 +507,7 @@ export default function HistoryManagementPage() {
     } finally {
       setIsDeleting(false);
     }
-  };
+  }, [activeTab, getAvailableTabs, selectedItems, loadHistory]);
 
   // 处理编辑
   const handleEdit = (id: string) => {
@@ -624,8 +598,8 @@ export default function HistoryManagementPage() {
           const packingData = convertConfirmationToPacking(confirmationItem.data);
           
           // 将数据存储到全局变量供packing页面使用
-          (window as any).__PACKING_DATA__ = packingData;
-          (window as any).__EDIT_MODE__ = false;
+          (window as typeof window & { __PACKING_DATA__?: PackingData; __EDIT_MODE__?: boolean }).__PACKING_DATA__ = packingData;
+          (window as typeof window & { __PACKING_DATA__?: PackingData; __EDIT_MODE__?: boolean }).__EDIT_MODE__ = false;
           
           // 跳转到装箱单页面
           router.push('/packing');
@@ -637,7 +611,7 @@ export default function HistoryManagementPage() {
   };
 
   // 转换订单确认数据到装箱单数据
-  const convertConfirmationToPacking = (confirmationData: any) => {
+  const convertConfirmationToPacking = (confirmationData: QuotationData) => {
     // 默认单位列表（需要单复数变化的单位）
     const defaultUnits = ['pc', 'set', 'length'];
     
@@ -649,7 +623,7 @@ export default function HistoryManagementPage() {
       return baseUnit; // 自定义单位不变化单复数
     };
 
-    const packingItems = confirmationData.items.map((item: any, index: number) => {
+    const packingItems = confirmationData.items.map((item, index: number) => {
       const quantity = item.quantity || 0;
       const originalUnit = item.unit || 'pc';
       // 去掉原单位可能的复数后缀，然后根据数量重新处理
@@ -962,12 +936,12 @@ export default function HistoryManagementPage() {
               const confirmationItem = item as QuotationHistory;
               matches = confirmationItem.customerName.toLowerCase().includes(searchLower) ||
                        confirmationItem.quotationNo.toLowerCase().includes(searchLower) ||
-                       (confirmationItem.data?.contractNo && confirmationItem.data.contractNo.toLowerCase().includes(searchLower));
+                       Boolean(confirmationItem.data?.contractNo && confirmationItem.data.contractNo.toLowerCase().includes(searchLower));
               break;
             case 'invoice':
               matches = (item as InvoiceHistory).customerName.toLowerCase().includes(searchLower) ||
                        (item as InvoiceHistory).invoiceNo.toLowerCase().includes(searchLower) ||
-                       ((item as InvoiceHistory).data?.customerPO && (item as InvoiceHistory).data.customerPO.toLowerCase().includes(searchLower));
+                       Boolean((item as InvoiceHistory).data?.customerPO && (item as InvoiceHistory).data.customerPO.toLowerCase().includes(searchLower));
               break;
             case 'purchase':
               matches = (item as PurchaseHistory).supplierName.toLowerCase().includes(searchLower) ||
@@ -1110,7 +1084,7 @@ export default function HistoryManagementPage() {
   const activeColor = tabColorMap[activeTab] || 'blue';
 
   // 处理删除确认
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (deleteConfirmId === 'batch') {
       await handleBatchDelete();
     } else if (deleteConfirmId) {
@@ -1118,7 +1092,7 @@ export default function HistoryManagementPage() {
     }
     setShowDeleteConfirm(false);
     setDeleteConfirmId(null);
-  };
+  }, [deleteConfirmId, handleBatchDelete, handleDelete]);
 
   // 处理键盘事件
   useEffect(() => {
@@ -1144,7 +1118,7 @@ export default function HistoryManagementPage() {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
-  }, [showDeleteConfirm, isDeleting, deleteConfirmId]);
+  }, [showDeleteConfirm, isDeleting, deleteConfirmId, handleDeleteConfirm]);
 
   // 避免闪烁，在客户端渲染前或activeTab未设置时返回空内容
   if (!mounted) {
@@ -1219,7 +1193,7 @@ export default function HistoryManagementPage() {
                     {/* 日期范围过滤 */}
                     <select
                       value={filters.dateRange}
-                      onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
+                      onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as Filters['dateRange'] }))}
                       className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
                     >
                       <option value="all">全部时间</option>
@@ -1231,7 +1205,7 @@ export default function HistoryManagementPage() {
                     {/* 金额范围过滤 */}
                     <select
                       value={filters.amountRange}
-                      onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as any }))}
+                      onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as Filters['amountRange'] }))}
                       className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
                     >
                       <option value="all">全部金额</option>
@@ -1302,7 +1276,7 @@ export default function HistoryManagementPage() {
                 {/* 日期范围过滤 */}
                 <select
                   value={filters.dateRange}
-                  onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as any }))}
+                  onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value as Filters['dateRange'] }))}
                   className="flex-1 max-w-[140px] px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-[10px]"
                   style={{ fontSize: '10px' }}
                 >
@@ -1315,7 +1289,7 @@ export default function HistoryManagementPage() {
                 {/* 金额范围过滤 */}
                 <select
                   value={filters.amountRange}
-                  onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as any }))}
+                  onChange={(e) => setFilters(prev => ({ ...prev, amountRange: e.target.value as Filters['amountRange'] }))}
                   className="flex-1 max-w-[140px] px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-[10px]"
                   style={{ fontSize: '10px' }}
                 >

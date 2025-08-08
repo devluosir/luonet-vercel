@@ -8,15 +8,13 @@ interface ImportModalProps {
   onClose: () => void;
   activeTab: HistoryType;
   onImportSuccess?: () => void;
-  availableTabs?: { id: HistoryType; name: string; shortName: string; icon: any }[];
 }
 
 export default function ImportModal({
   isOpen,
   onClose,
   activeTab,
-  onImportSuccess,
-  availableTabs
+  onImportSuccess
 }: ImportModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -76,7 +74,7 @@ export default function ImportModal({
 
           resolve(result);
         };
-        reader.onerror = (error) => {
+        reader.onerror = () => {
           reject(new Error('文件读取失败'));
         };
         reader.onabort = () => {
@@ -88,7 +86,7 @@ export default function ImportModal({
         reader.onloadend = () => {
           // 静默处理
         };
-        reader.onprogress = (e) => {
+        reader.onprogress = () => {
           // 静默处理
         };
         try {
@@ -98,9 +96,8 @@ export default function ImportModal({
         }
       });
       // 测试JSON解析
-      let parsedData;
       try {
-        parsedData = JSON.parse(content);
+        JSON.parse(content);
       } catch (parseError) {
         let fixedContent = content;
         if (fixedContent.charCodeAt(0) === 0xFEFF) {
@@ -108,7 +105,7 @@ export default function ImportModal({
         }
         fixedContent = fixedContent.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
         try {
-          parsedData = JSON.parse(fixedContent);
+          JSON.parse(fixedContent);
         } catch (secondError) {
           showMessage('error', '文件格式错误：不是有效的JSON文件，请检查文件内容');
           setIsLoading(false);

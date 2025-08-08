@@ -8,15 +8,13 @@ interface ExportModalProps {
   onClose: () => void;
   activeTab: HistoryType;
   filteredData?: HistoryItem[];
-  availableTabs?: { id: HistoryType; name: string; shortName: string; icon: any }[];
 }
 
 export default function ExportModal({
   isOpen,
   onClose,
   activeTab,
-  filteredData,
-  availableTabs
+  filteredData
 }: ExportModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null);

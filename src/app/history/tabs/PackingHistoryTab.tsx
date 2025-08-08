@@ -1,25 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getPackingHistory, deletePackingHistory, exportPackingHistory, importPackingHistory } from '@/utils/packingHistory';
+import { getPackingHistory } from '@/utils/packingHistory';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import type { PackingData } from '@/types/packing-history';
 import { 
-  FileText, 
-  Package,
-  Search, 
-  Filter, 
-  Download, 
-  Upload, 
   Trash2, 
   Edit, 
   Copy, 
   Eye,
   ChevronUp,
-  ChevronDown,
-  MoreHorizontal,
-  RefreshCw,
-  Archive,
-  Star,
-  X
+  ChevronDown
 } from 'lucide-react';
 
 interface PackingHistory {
@@ -32,12 +22,12 @@ interface PackingHistory {
   totalAmount: number;
   currency: string;
   documentType: 'proforma' | 'packing' | 'both';
-  data: any;
+  data: PackingData;
 }
 
 interface Filters {
   search: string;
-  type: any;
+  type: 'all' | 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing' | 'proforma' | 'both';
   dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
   amountRange: 'all' | 'low' | 'medium' | 'high';
 }

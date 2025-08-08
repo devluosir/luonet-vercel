@@ -1,27 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getQuotationHistory, deleteQuotationHistory, exportQuotationHistory, importQuotationHistory } from '@/utils/quotationHistory';
-import { generateQuotationPDF } from '@/utils/quotationPdfGenerator';
-import { generateOrderConfirmationPDF } from '@/utils/orderConfirmationPdfGenerator';
+import { getQuotationHistory } from '@/utils/quotationHistory';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import type { QuotationData } from '@/types/quotation';
 import { 
-  FileText, 
-  Receipt, 
-  Search, 
-  Filter, 
-  Download, 
-  Upload, 
   Trash2, 
   Edit, 
   Copy, 
   Eye,
   ChevronUp,
-  ChevronDown,
-  MoreHorizontal,
-  RefreshCw,
-  Archive,
-  Star,
-  X
+  ChevronDown
 } from 'lucide-react';
 
 interface QuotationHistory {
@@ -33,7 +21,7 @@ interface QuotationHistory {
   quotationNo: string;
   totalAmount: number;
   currency: string;
-  data: any;
+  data: QuotationData;
 }
 
 interface SortConfig {

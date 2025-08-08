@@ -1,26 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getInvoiceHistory, deleteInvoiceHistory, exportInvoiceHistory, importInvoiceHistory } from '@/utils/invoiceHistory';
-import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
+import { getInvoiceHistory } from '@/utils/invoiceHistory';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
+import type { InvoiceData } from '@/types/invoice';
 import { 
-  FileText, 
-  Receipt, 
-  Search, 
-  Filter, 
-  Download, 
-  Upload, 
   Trash2, 
   Edit, 
   Copy, 
   Eye,
   ChevronUp,
-  ChevronDown,
-  MoreHorizontal,
-  RefreshCw,
-  Archive,
-  Star,
-  X
+  ChevronDown
 } from 'lucide-react';
 
 interface InvoiceHistory {
@@ -30,7 +19,7 @@ interface InvoiceHistory {
   invoiceNo: string;
   totalAmount: number;
   currency: string;
-  data: any;
+  data: InvoiceData;
   updatedAt: string;
 }
 
