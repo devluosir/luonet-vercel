@@ -414,7 +414,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
       {/* 文档列表 */}
       {filteredDocuments.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-auto md:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] md:gap-4">
           {filteredDocuments.map((doc) => {
             const { Icon, bgColor, textColor } = getDocumentTypeInfo(doc.type);
             const documentNumber = getDocumentNumber(doc);
@@ -425,18 +425,18 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
                 key={doc.id}
                 onClick={() => handleDocumentClick(doc)}
                 className={`group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50
-                  p-5 cursor-pointer transition-all duration-200 ease-in-out hover:shadow-lg hover:-translate-y-1
+                  p-3 sm:p-4 md:p-5 cursor-pointer transition-all duration-200 ease-in-out hover:shadow-lg hover:-translate-y-1
                   active:translate-y-0 active:shadow-md ${getHoverBgColor(doc.type)}`}
               >
-                <div className="flex items-start space-x-4">
+                <div className="flex items-start space-x-3 md:space-x-4">
                   {/* 文档类型图标 */}
-                  <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${bgColor}`}>
-                    <Icon className={`w-5 h-5 ${textColor}`} />
+                  <div className={`flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center ${bgColor}`}>
+                    <Icon className={`w-4 h-4 md:w-5 md:h-5 ${textColor}`} />
                   </div>
                   
                   {/* 文档信息 */}
                   <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-medium text-gray-900 dark:text-white truncate
+                    <div className={`text-sm font-medium text-gray-900 dark:text-white md:truncate
                       transition-colors duration-200 ${getColorClasses(doc.type)}`}>
                       {highlightText(documentNumber, searchTerm)}
                     </div>
@@ -446,8 +446,8 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
                     </div>
                   </div>
                   
-                  {/* 添加一个微妙的箭头指示器 */}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
+                  {/* 添加一个微妙的箭头指示器（小屏隐藏以节省空间） */}
+                  <div className="hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
                     <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
