@@ -67,22 +67,34 @@ export default {
     // 🎨 Apple 风格 - 玻璃态效果
     'bg-white/30', 'bg-white/20', 'bg-white/40',
     'border-white/40', 'backdrop-blur-md', 'backdrop-blur-sm',
-    'bg-gray-800/80', 'text-gray-800', 'text-neutral-800',
+    'text-gray-800', 'text-neutral-800',
 
     // 🎨 经典主题颜色
-    'bg-gray-800/30', 'hover:bg-blue-50', 'hover:bg-green-50', 'hover:bg-teal-50',
-    'hover:bg-purple-50', 'hover:bg-orange-50', 'hover:bg-indigo-50', 'hover:bg-pink-50', 'hover:bg-fuchsia-50',
-    'dark:hover:bg-blue-900/20', 'dark:hover:bg-green-900/20', 'dark:hover:bg-teal-900/20',
-    'dark:hover:bg-purple-900/20', 'dark:hover:bg-orange-900/20', 'dark:hover:bg-indigo-900/20',
-    'dark:hover:bg-pink-900/20', 'dark:hover:bg-fuchsia-900/20', 'dark:hover:bg-gray-900/20',
+    'bg-gray-800/80', 'hover:from-blue-200', 'hover:to-blue-300', 'hover:from-emerald-200', 'hover:to-emerald-300',
+    'hover:from-cyan-200', 'hover:to-cyan-300', 'hover:from-violet-200', 'hover:to-violet-300',
+    'hover:from-orange-200', 'hover:to-orange-300', 'hover:from-indigo-200', 'hover:to-indigo-300',
+    'hover:from-pink-200', 'hover:to-pink-300', 'hover:from-fuchsia-200', 'hover:to-fuchsia-300',
+    'hover:from-gray-200', 'hover:to-gray-300',
+    'dark:hover:from-blue-400/80', 'dark:hover:to-blue-600/80', 'dark:hover:from-emerald-400/80', 'dark:hover:to-emerald-600/80',
+    'dark:hover:from-cyan-400/80', 'dark:hover:to-cyan-600/80', 'dark:hover:from-violet-400/80', 'dark:hover:to-violet-600/80',
+    'dark:hover:from-orange-400/80', 'dark:hover:to-orange-600/80', 'dark:hover:from-indigo-400/80', 'dark:hover:to-indigo-600/80',
+    'dark:hover:from-pink-400/80', 'dark:hover:to-pink-600/80', 'dark:hover:from-fuchsia-400/80', 'dark:hover:to-fuchsia-600/80',
+    'dark:hover:from-gray-400/80', 'dark:hover:to-gray-600/80',
+
+    // 强制包含所有渐变悬停类名
+    'hover:from-blue-200', 'hover:to-blue-300', 'hover:from-emerald-200', 'hover:to-emerald-300',
+    'hover:from-cyan-200', 'hover:to-cyan-300', 'hover:from-violet-200', 'hover:to-violet-300',
+    'hover:from-orange-200', 'hover:to-orange-300', 'hover:from-indigo-200', 'hover:to-indigo-300',
+    'hover:from-pink-200', 'hover:to-pink-300', 'hover:from-fuchsia-200', 'hover:to-fuchsia-300',
+    'hover:from-gray-200', 'hover:to-gray-300',
 
     // 经典主题图标背景
-    'group-hover:bg-blue-100/50', 'group-hover:bg-green-100/50', 'group-hover:bg-teal-100/50',
-    'group-hover:bg-purple-100/50', 'group-hover:bg-orange-100/50', 'group-hover:bg-indigo-100/50',
-    'group-hover:bg-pink-100/50', 'group-hover:bg-fuchsia-100/50', 'group-hover:bg-gray-100/50',
-    'dark:group-hover:bg-blue-900/30', 'dark:group-hover:bg-green-900/30', 'dark:group-hover:bg-teal-900/30',
-    'dark:group-hover:bg-purple-900/30', 'dark:group-hover:bg-orange-900/30', 'dark:group-hover:bg-indigo-900/30',
-    'dark:group-hover:bg-pink-900/30', 'dark:group-hover:bg-fuchsia-900/30', 'dark:group-hover:bg-gray-900/30',
+    'group-hover:bg-blue-200/60', 'group-hover:bg-emerald-200/60', 'group-hover:bg-cyan-200/60',
+    'group-hover:bg-violet-200/60', 'group-hover:bg-orange-200/60', 'group-hover:bg-indigo-200/60',
+    'group-hover:bg-pink-200/60', 'group-hover:bg-fuchsia-200/60', 'group-hover:bg-gray-200/60',
+    'dark:group-hover:bg-blue-900/40', 'dark:group-hover:bg-emerald-900/40', 'dark:group-hover:bg-cyan-900/40',
+    'dark:group-hover:bg-violet-900/40', 'dark:group-hover:bg-orange-900/40', 'dark:group-hover:bg-indigo-900/40',
+    'dark:group-hover:bg-pink-900/40', 'dark:group-hover:bg-fuchsia-900/40', 'dark:group-hover:bg-gray-900/40',
 
     // 🎨 徽章颜色
     'bg-blue-600', 'bg-emerald-600', 'bg-cyan-600', 'bg-violet-600', 
@@ -91,7 +103,7 @@ export default {
     'dark:bg-orange-500', 'dark:bg-indigo-500', 'dark:bg-pink-500', 'dark:bg-fuchsia-500', 'dark:bg-gray-500',
     
     // 经典主题徽章颜色
-    'bg-gray-800/80', 'dark:bg-gray-700/80',
+    'bg-gray-600', 'dark:bg-gray-500',
 
     // 🎨 玻璃态效果
     'bg-white/20', 'backdrop-blur-sm',
