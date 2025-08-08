@@ -1,6 +1,7 @@
 import { usePdfGenerator } from '@/hooks/usePdfGenerator';
 import type { QuotationData } from '@/types/quotation';
 import { NOTES_CONTENT_MAP, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS, NOTES_TEMPLATES_BILINGUAL, extractEnglishContent } from '../types/notes';
+import { sanitizeQuotation } from '@/utils/sanitizeQuotation';
 
 // PDF生成服务Hook
 export function useGenerateService() {
@@ -8,19 +9,21 @@ export function useGenerateService() {
 
   const generatePdf = async (
     tab: 'quotation' | 'confirmation', 
-    data: QuotationData,
+    rawData: any,
     notesConfig: any[],
     setProgress: (progress: number) => void
   ): Promise<Blob> => {
     setProgress(50);
     
     try {
+      // 净化数据
+      const data = sanitizeQuotation(rawData);
       // 根据notesConfig过滤和排序notes
       const visibleNotes = notesConfig
         .filter(note => note.visible)
         .sort((a, b) => a.order - b.order)
         .map(note => {
-          // 特殊Notes（付款方式和交货期）
+          // 特殊Notes（付款方式和交货时间）
           if (note.id === 'payment_terms' && (note as any).selectedOption) {
             const selectedOptionId = (note as any).selectedOption;
             // 检查是否为自定义编辑的内容
@@ -30,14 +33,14 @@ export function useGenerateService() {
             const selectedOption = PAYMENT_TERMS_OPTIONS.find(opt => opt.id === selectedOptionId);
             return selectedOption ? `Payment Terms: ${selectedOption.english}` : '';
           }
-          if (note.id === 'delivery_terms' && (note as any).selectedOption) {
+          if (note.id === 'delivery_time' && (note as any).selectedOption) {
             const selectedOptionId = (note as any).selectedOption;
             // 检查是否为自定义编辑的内容
             if (selectedOptionId.startsWith('custom_')) {
-              return `Delivery Terms: ${selectedOptionId.replace('custom_', '')}`;
+              return `Delivery Time: ${selectedOptionId.replace('custom_', '')}`;
             }
             const selectedOption = DELIVERY_TERMS_OPTIONS.find(opt => opt.id === selectedOptionId);
-            return selectedOption ? `Delivery Terms: ${selectedOption.english}` : '';
+            return selectedOption ? `Delivery Time: ${selectedOption.english}` : '';
           }
           
           // 自定义Notes从data中获取

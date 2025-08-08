@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
-import type { NoteConfig, SpecialNoteConfig } from '../types/notes';
-import { DEFAULT_NOTES_CONFIG, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS } from '../types/notes';
+import type { NoteConfig } from '../types/notes';
+import { DEFAULT_NOTES_CONFIG } from '../types/notes';
 
 type Tab = 'quotation' | 'confirmation';
 

@@ -13,7 +13,7 @@ const generateId = () => {
 export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: QuotationData, existingId?: string) => {
   try {
     const history = getQuotationHistory();
-    const totalAmount = data.items.reduce((sum, item) => sum + item.amount, 0) +
+    const totalAmount = (data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0) +
       (data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0);
 
     // 如果提供了现有ID，则更新该记录

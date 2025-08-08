@@ -210,7 +210,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     }
 
     // 添加总金额
-    const itemsTotal = data.items.reduce((sum, item) => sum + item.amount, 0);
+    const itemsTotal = (data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0);
     const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
     const total = itemsTotal + feesTotal;
     

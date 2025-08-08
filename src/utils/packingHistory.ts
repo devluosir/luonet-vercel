@@ -75,7 +75,7 @@ const generateId = () => {
 export const savePackingHistory = (data: PackingData, existingId?: string) => {
   try {
     const history = getPackingHistory();
-    const totalAmount = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
+    const totalAmount = (data.items || []).reduce((sum, item) => sum + (item.totalPrice || 0), 0);
 
     // 如果提供了现有ID，则更新该记录
     if (existingId) {

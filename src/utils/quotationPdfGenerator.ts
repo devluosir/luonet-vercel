@@ -1,10 +1,10 @@
 import jsPDF, { ImageProperties } from 'jspdf';
 import 'jspdf-autotable';
-import { QuotationData } from '@/types/quotation';
 import { UserOptions } from 'jspdf-autotable';
 import { embeddedResources } from '@/lib/embedded-resources';
 import { generateTableConfig } from './pdfTableGenerator';
 import { addChineseFontsToPDF } from '@/utils/fontLoader';
+import { sanitizeQuotation } from './sanitizeQuotation';
 
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
@@ -36,11 +36,14 @@ const _getUnitDisplay = (baseUnit: string, quantity: number) => {
 };
 
 // 生成报价单PDF
-export const generateQuotationPDF = async (data: QuotationData, preview = false): Promise<Blob> => {
+export const generateQuotationPDF = async (rawData: unknown, preview = false): Promise<Blob> => {
   // 检查是否在客户端环境
   if (typeof window === 'undefined') {
     throw new Error('PDF generation is only available in client-side environment');
   }
+
+  // 净化数据
+  const data = sanitizeQuotation(rawData);
 
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -216,8 +219,8 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     }
 
     // 添加总金额
-    const itemsTotal = data.items.reduce((sum, item) => sum + item.amount, 0);
-    const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
+    const itemsTotal = (data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0);
+    const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + (fee.amount || 0), 0);
     const totalAmount = itemsTotal + feesTotal;
 
     // 显示总金额

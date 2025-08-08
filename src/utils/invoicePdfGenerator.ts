@@ -481,7 +481,7 @@ function getColumnStyles(data: PDFGeneratorData, tableWidth: number): Record<str
 
 // 渲染总金额
 function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: number, pageWidth: number, margin: number): number {
-  const itemsTotal = data.items.reduce((sum, item) => sum + item.amount, 0);
+      const itemsTotal = (data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0);
   const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
   const totalAmount = itemsTotal + feesTotal;
   const totalAmountValue = `${data.currency === 'USD' ? '$' : '¥'}${totalAmount.toFixed(2)}`;

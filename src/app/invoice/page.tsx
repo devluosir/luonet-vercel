@@ -179,7 +179,7 @@ export default function InvoicePage() {
   }, []);
 
   const getTotalAmount = useCallback(() => {
-    const itemsTotal = data.items.reduce((sum, item) => sum + item.amount, 0);
+    const itemsTotal = (data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0);
     const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
     return itemsTotal + feesTotal;
   }, [data.items, data.otherFees]);
