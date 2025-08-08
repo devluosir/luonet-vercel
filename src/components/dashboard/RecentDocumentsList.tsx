@@ -43,6 +43,15 @@ interface RecentDocumentsListProps {
   onTypeFilterChange: (filter: 'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase') => void;
   showAllFilters: boolean;
   onShowAllFiltersChange: (show: boolean) => void;
+  permissionMap?: {
+    documentTypePermissions: {
+      quotation: boolean;
+      confirmation: boolean;
+      packing: boolean;
+      invoice: boolean;
+      purchase: boolean;
+    };
+  };
 }
 
 export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
@@ -52,10 +61,46 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
   onTimeFilterChange,
   onTypeFilterChange,
   showAllFilters,
-  onShowAllFiltersChange
+  onShowAllFiltersChange,
+  permissionMap
 }) => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
+
+  // 获取有权限的文档类型
+  const getAvailableDocumentTypes = () => {
+    if (!permissionMap?.documentTypePermissions) {
+      // 如果没有权限映射，返回所有类型
+      return [
+        { label: 'QTN', value: 'quotation', color: 'blue' },
+        { label: 'SC', value: 'confirmation', color: 'green' },
+        { label: 'PL', value: 'packing', color: 'teal' },
+        { label: 'INV', value: 'invoice', color: 'purple' },
+        { label: 'PO', value: 'purchase', color: 'orange' },
+      ];
+    }
+
+    const availableTypes = [];
+    const { documentTypePermissions } = permissionMap;
+
+    if (documentTypePermissions.quotation) {
+      availableTypes.push({ label: 'QTN', value: 'quotation', color: 'blue' });
+    }
+    if (documentTypePermissions.confirmation) {
+      availableTypes.push({ label: 'SC', value: 'confirmation', color: 'green' });
+    }
+    if (documentTypePermissions.packing) {
+      availableTypes.push({ label: 'PL', value: 'packing', color: 'teal' });
+    }
+    if (documentTypePermissions.invoice) {
+      availableTypes.push({ label: 'INV', value: 'invoice', color: 'purple' });
+    }
+    if (documentTypePermissions.purchase) {
+      availableTypes.push({ label: 'PO', value: 'purchase', color: 'orange' });
+    }
+
+    return availableTypes;
+  };
 
   // 获取文档类型名称
   const getDocumentTypeName = (type: string) => {
@@ -103,6 +148,31 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
   const filteredDocuments = useMemo(() => {
     let filtered = documents;
 
+    // 首先根据权限过滤文档类型
+    if (permissionMap?.documentTypePermissions) {
+      filtered = filtered.filter(doc => {
+        switch (doc.type) {
+          case 'quotation':
+            return permissionMap.documentTypePermissions.quotation;
+          case 'confirmation':
+            return permissionMap.documentTypePermissions.confirmation;
+          case 'packing':
+            return permissionMap.documentTypePermissions.packing;
+          case 'invoice':
+            return permissionMap.documentTypePermissions.invoice;
+          case 'purchase':
+            return permissionMap.documentTypePermissions.purchase;
+          default:
+            return false;
+        }
+      });
+    }
+
+    // 根据类型筛选器过滤
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(doc => doc.type === typeFilter);
+    }
+
     // 根据搜索词过滤
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
@@ -128,7 +198,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     }
 
     return filtered;
-  }, [documents, searchTerm]);
+  }, [documents, searchTerm, typeFilter, permissionMap]);
 
   // 获取颜色类名
   const getColorClasses = (docType: string) => {
@@ -268,13 +338,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
             {/* 类型按钮：展开时显示 */}
             {showAllFilters && (
               <div className="flex items-center gap-1 transition-all duration-300">
-                {[
-                  { label: 'QTN', value: 'quotation', color: 'blue' },
-                  { label: 'SC', value: 'confirmation', color: 'green' },
-                  { label: 'PL', value: 'packing', color: 'teal' },
-                  { label: 'INV', value: 'invoice', color: 'purple' },
-                  { label: 'PO', value: 'purchase', color: 'orange' },
-                ].map(({ label, value, color }) => (
+                {getAvailableDocumentTypes().map(({ label, value, color }) => (
                   <button
                     key={value}
                     onClick={() => onTypeFilterChange(value as 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase')}
@@ -292,7 +356,13 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
             {/* ALL 按钮：开关 */}
             <button
-              onClick={() => onShowAllFiltersChange(!showAllFilters)}
+              onClick={() => {
+                if (showAllFilters) {
+                  // 如果当前是展开状态，收起时设置为 'all'
+                  onTypeFilterChange('all');
+                }
+                onShowAllFiltersChange(!showAllFilters);
+              }}
               className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 flex items-center gap-1 ${
                 typeFilter === 'all' && !showAllFilters
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold'

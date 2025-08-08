@@ -495,6 +495,7 @@ export default function DashboardPage() {
                 onTypeFilterChange={setTypeFilter}
                 showAllFilters={showAllFilters}
                 onShowAllFiltersChange={setShowAllFilters}
+                permissionMap={permissionMap}
               />
             )}
           </div>
