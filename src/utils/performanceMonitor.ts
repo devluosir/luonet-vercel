@@ -84,9 +84,9 @@ export class PerformanceMonitor {
    */
   getAllStats(): Record<string, any> {
     const stats: Record<string, any> = {};
-    for (const [name] of this.metrics) {
+    this.metrics.forEach((_, name) => {
       stats[name] = this.getStats(name);
-    }
+    });
     return stats;
   }
 

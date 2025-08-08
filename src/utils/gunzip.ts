@@ -7,7 +7,7 @@ export async function gunzip(compressed: Uint8Array): Promise<Uint8Array> {
   if (typeof window !== 'undefined' && 'DecompressionStream' in window) {
     try {
       const ds = new DecompressionStream('gzip');
-      const stream = new Blob([compressed]).stream().pipeThrough(ds);
+      const stream = new Blob([compressed as BlobPart]).stream().pipeThrough(ds);
       const buf = await new Response(stream).arrayBuffer();
       console.log('[gunzip] 使用浏览器原生 DecompressionStream');
       return new Uint8Array(buf);

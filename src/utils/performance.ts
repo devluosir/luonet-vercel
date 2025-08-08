@@ -52,7 +52,7 @@ export class PerformanceMonitor {
     const duration = endTime - metric.startTime;
     
     // 检查是否超过阈值
-    const threshold = this.thresholds[metric.category];
+    const threshold = this.thresholds[metric.category as keyof typeof this.thresholds];
     if (duration > threshold) {
       console.warn(`⚠️ 性能警告 [${metric.category}] [${id}]: ${duration.toFixed(2)}ms (阈值: ${threshold}ms)`);
     }
@@ -115,6 +115,59 @@ export class PerformanceMonitor {
   clear(): void {
     this.metrics.clear();
     this.categories.clear();
+  }
+
+  // 兼容性方法 - 用于页面加载监控
+  startTimer(name: string): string {
+    return this.start(name, 'loading');
+  }
+
+  endTimer(name: string): number {
+    // 查找对应的metric
+    const matchingKey = Array.from(this.metrics.keys()).find(key => key.includes(name));
+    if (matchingKey) {
+      return this.end(matchingKey);
+    }
+    console.warn(`性能监控: 未找到对应的计时器 ${name}`);
+    return 0;
+  }
+
+  // 获取页面加载性能指标
+  getPageLoadMetrics(): Record<string, any> {
+    const stats = this.getCategoryStats();
+    
+    // 添加页面加载相关的性能指标
+    const navigationTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+    
+    const pageMetrics = {
+      categories: stats,
+      navigation: navigationTiming ? {
+        domContentLoaded: navigationTiming.domContentLoadedEventEnd - navigationTiming.fetchStart,
+        loadComplete: navigationTiming.loadEventEnd - navigationTiming.fetchStart,
+        ttfb: navigationTiming.responseStart - navigationTiming.requestStart,
+        domInteractive: navigationTiming.domInteractive - navigationTiming.fetchStart
+      } : null,
+      memory: (performance as any).memory ? {
+        usedJSHeapSize: (performance as any).memory.usedJSHeapSize,
+        totalJSHeapSize: (performance as any).memory.totalJSHeapSize,
+        jsHeapSizeLimit: (performance as any).memory.jsHeapSizeLimit
+      } : null
+    };
+    
+    return pageMetrics;
+  }
+
+  // 监控异步函数执行时间
+  async monitor<T>(name: string, fn: () => Promise<T>): Promise<T> {
+    const id = this.start(name, 'generation');
+    try {
+      const result = await fn();
+      this.end(id);
+      return result;
+    } catch (error) {
+      this.end(id);
+      throw error;
+    }
   }
 }
 

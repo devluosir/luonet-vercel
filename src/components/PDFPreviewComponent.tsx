@@ -76,7 +76,7 @@ export default function PDFPreviewComponent({
     try {
       // 根据类型生成并下载PDF
       if (itemType === 'quotation') {
-        const pdfBlob = await generateQuotationPDF(data, false);
+        const pdfBlob = await generateQuotationPDF(data);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;

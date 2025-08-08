@@ -5,9 +5,9 @@ import { Gamepad2, Square, RotateCcw, Play, Pause, SkipForward, Brain } from 'lu
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 export default function NotFound() {
-  const [mounted, setMounted] = React.useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setMounted(true);
   }, []);
   const _router = useRouter();
