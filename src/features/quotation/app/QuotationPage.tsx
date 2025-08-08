@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -9,6 +9,7 @@ import { useQuotationStore } from '../state/useQuotationStore';
 import { useInitQuotation } from '../hooks/useInitQuotation';
 import { useClipboardImport } from '../hooks/useClipboardImport';
 import { useAutoSave } from '@/hooks/useAutoSave';
+import { getInitialQuotationData } from '@/utils/quotationInitialData';
 import { useToast } from '@/components/ui/Toast';
 import { saveOrUpdate } from '../services/quotation.service';
 import { useGenerateService } from '../services/generate.service';
@@ -86,7 +87,7 @@ export default function QuotationPage() {
   
   // 自动保存 - 使用稳定的数据引用
   const { clearSaved: clearAutoSave } = useAutoSave({
-    data: JSON.stringify(data), // 序列化数据避免对象引用变化
+    data: JSON.stringify(data ?? getInitialQuotationData()),
     key: 'draftQuotation',
     delay: 2000,
     enabled: !editId
@@ -96,9 +97,10 @@ export default function QuotationPage() {
   const { generatePdf } = useGenerateService();
   
   // 处理标签切换
-  const handleTabChange = (tab: 'quotation' | 'confirmation') => {
+  const handleTabChange = useCallback((tab: 'quotation' | 'confirmation') => {
+    if (activeTab === tab) return;
     setTab(tab);
-  };
+  }, [activeTab, setTab]);
   
   // 处理保存
   const handleSave = async () => {
@@ -311,7 +313,7 @@ export default function QuotationPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        const newItems = [...data.items];
+                        const newItems = [...(data.items || [])];
                         newItems.push({
                           id: newItems.length + 1,
                           partName: '',

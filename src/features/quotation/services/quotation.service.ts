@@ -16,15 +16,18 @@ export async function saveOrUpdate(
   editId?: string
 ): Promise<{ id: string } | null> {
   try {
+    // 使用局部副本，避免直接修改传入的data
+    let workingData = data;
+    
     // confirmation 自动补合同号
     if (tab === 'confirmation' && !data.contractNo) {
-      data = { 
+      workingData = { 
         ...data, 
         contractNo: data.quotationNo || `SC${Date.now()}` 
       };
     }
     
-    const result = await saveQuotationHistory(tab, data, editId);
+    const result = await saveQuotationHistory(tab, workingData, editId);
     return result;
   } catch (error) {
     console.error('Error saving quotation:', error);

@@ -10,8 +10,8 @@ export function useInitQuotation() {
   const { setTab, setData, setEditId } = useQuotationStore();
   const initialized = useRef(false);
 
+  // 初始化标签页和编辑ID
   useEffect(() => {
-    // 防止重复初始化
     if (initialized.current) return;
     initialized.current = true;
 
@@ -24,8 +24,12 @@ export function useInitQuotation() {
     if (editId) {
       setEditId(editId);
     }
+  }, []); // 只在组件挂载时执行一次
 
-    // 初始化数据
+  // 初始化数据 - 只在首个effect之后执行
+  useEffect(() => {
+    if (!initialized.current) return;
+    
     const initialData = initDataFromSources();
     setData(() => initialData);
   }, []); // 只在组件挂载时执行一次
