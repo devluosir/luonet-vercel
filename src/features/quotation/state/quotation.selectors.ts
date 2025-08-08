@@ -42,3 +42,20 @@ export const useUIState = () =>
     isPasteDialogOpen: state.isPasteDialogOpen,
     previewItem: state.previewItem,
   }));
+
+// 获取所有actions
+export const useQuotationActions = () =>
+  useQuotationStore((state) => ({
+    setTab: state.setTab,
+    setData: state.setData,
+    setEditId: state.setEditId,
+    setGenerating: state.setGenerating,
+    setProgress: state.setProgress,
+    setShowSettings: state.setShowSettings,
+    setShowPreview: state.setShowPreview,
+    setPasteDialogOpen: state.setPasteDialogOpen,
+    setPreviewItem: state.setPreviewItem,
+    updateItems: state.updateItems,
+    updateOtherFees: state.updateOtherFees,
+    updateData: state.updateData,
+  }));

@@ -49,7 +49,36 @@ interface QuotationState {
 export const useQuotationStore = create<QuotationState>((set, get) => ({
   // 初始状态
   tab: 'quotation',
-  data: {} as QuotationData, // 将在初始化时注入
+  data: {
+    quotationNo: '',
+    contractNo: '',
+    date: '',
+    notes: [],
+    from: '',
+    to: '',
+    inquiryNo: '',
+    currency: 'USD',
+    paymentDate: '',
+    items: [],
+    amountInWords: {
+      dollars: '',
+      cents: '',
+      hasDecimals: false
+    },
+    showDescription: true,
+    showRemarks: false,
+    showBank: false,
+    showStamp: false,
+    otherFees: [],
+    customUnits: [],
+    showPaymentTerms: false,
+    showInvoiceReminder: false,
+    additionalPaymentTerms: '',
+    templateConfig: {
+      headerType: 'bilingual',
+      stampType: 'none'
+    }
+  } as QuotationData,
   editId: undefined,
   isGenerating: false,
   generatingProgress: 0,

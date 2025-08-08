@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useQuotationStore } from '../state/useQuotationStore';
-import { useActiveTab, useQuotationData, useTotalAmount, useCurrencySymbol, useGeneratingState, useUIState } from '../state/quotation.selectors';
+import { useActiveTab, useQuotationData, useTotalAmount, useCurrencySymbol, useGeneratingState, useUIState, useQuotationActions, useEditId } from '../state/quotation.selectors';
 import { useInitQuotation } from '../hooks/useInitQuotation';
 import { useClipboardImport } from '../hooks/useClipboardImport';
 import { useAutoSave } from '@/hooks/useAutoSave';
@@ -70,13 +70,13 @@ export default function QuotationPage() {
     updateItems,
     updateOtherFees,
     updateData
-  } = useQuotationStore();
+  } = useQuotationActions();
   
   // 剪贴板导入
   const { handleClipboardButtonClick, handleGlobalPaste } = useClipboardImport();
   
   // 获取编辑ID
-  const editId = useQuotationStore((state) => state.editId);
+  const editId = useEditId();
   
   // 自动保存
   const { clearSaved: clearAutoSave } = useAutoSave({

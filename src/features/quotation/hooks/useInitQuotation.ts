@@ -8,6 +8,7 @@ export function useInitQuotation() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { setTab, setData, setEditId } = useQuotationStore();
+  const activeTab = useQuotationStore((state) => state.tab);
 
   useEffect(() => {
     // 初始化标签页
@@ -24,6 +25,15 @@ export function useInitQuotation() {
     const initialData = initDataFromSources();
     setData(() => initialData);
   }, [searchParams, pathname, setTab, setData, setEditId]);
+
+  // 更新URL参数以持久化tab状态
+  useEffect(() => {
+    if (typeof window !== 'undefined' && activeTab) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', activeTab);
+      window.history.replaceState(null, '', url.toString());
+    }
+  }, [activeTab]);
 
   // 更新URL参数以持久化tab状态
   useEffect(() => {
