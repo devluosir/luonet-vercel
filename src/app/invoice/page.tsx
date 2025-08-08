@@ -388,7 +388,7 @@ export default function InvoicePage() {
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `Invoice-${data.invoiceNo || 'draft'}.pdf`;
+        link.download = `INV_${data.invoiceNo || 'draft'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -423,7 +423,7 @@ export default function InvoicePage() {
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `Invoice-${data.invoiceNo || 'draft'}.pdf`;
+        link.download = `INV_${data.invoiceNo || 'draft'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

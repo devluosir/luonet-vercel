@@ -80,7 +80,7 @@ export default function PDFPreviewComponent({
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `quotation_${data.quotationNo || 'export'}.pdf`;
+        link.download = `QTN_${data.quotationNo || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -90,7 +90,7 @@ export default function PDFPreviewComponent({
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `order_confirmation_${data.quotationNo || 'export'}.pdf`;
+        link.download = `SC_${data.quotationNo || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -100,7 +100,7 @@ export default function PDFPreviewComponent({
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `invoice_${data.invoiceNo || 'export'}.pdf`;
+        link.download = `INV_${data.invoiceNo || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -110,7 +110,7 @@ export default function PDFPreviewComponent({
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `purchase_order_${data.orderNo || 'export'}.pdf`;
+        link.download = `PO_${data.orderNo || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -120,7 +120,7 @@ export default function PDFPreviewComponent({
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `packing_list_${data.invoiceNo || 'export'}.pdf`;
+        link.download = `PL_${data.invoiceNo || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

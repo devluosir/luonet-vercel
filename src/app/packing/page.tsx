@@ -532,7 +532,7 @@ export default function PackingPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `packing_list_${data.invoiceNo || 'export'}_${new Date().toISOString().split('T')[0]}.pdf`;
+        a.download = `PL_${data.invoiceNo || 'export'}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

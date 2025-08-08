@@ -42,7 +42,7 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `shipping_marks_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.download = `SC_${new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

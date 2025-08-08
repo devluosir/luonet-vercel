@@ -135,7 +135,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `quotation_${item.quotationNo || 'export'}.pdf`;
+        link.download = `QTN_${item.quotationNo || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -145,7 +145,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `order_confirmation_${item.quotationNo || 'export'}.pdf`;
+        link.download = `SC_${item.quotationNo || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -155,7 +155,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `invoice_${item.invoiceNo || 'export'}.pdf`;
+        link.download = `INV_${item.invoiceNo || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -165,7 +165,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `purchase_order_${item.orderNo || 'export'}.pdf`;
+        link.download = `PO_${item.orderNo || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -175,7 +175,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `packing_list_${item.invoiceNo || 'export'}.pdf`;
+        link.download = `PL_${item.invoiceNo || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

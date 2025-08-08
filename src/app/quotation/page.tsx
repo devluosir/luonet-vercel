@@ -267,7 +267,7 @@ export default function QuotationPage() {
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${safeActiveTab === 'quotation' ? 'quotation' : 'order-confirmation'}_${data.quotationNo || 'draft'}.pdf`;
+      link.download = `${safeActiveTab === 'quotation' ? 'QTN' : 'SC'}_${data.quotationNo || 'draft'}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
