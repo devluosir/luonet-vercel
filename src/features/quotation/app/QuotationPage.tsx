@@ -85,7 +85,7 @@ export default function QuotationPage() {
   // 剪贴板导入
   const { handleClipboardButtonClick, handleGlobalPaste } = useClipboardImport();
   
-  // 自动保存 - 使用稳定的数据引用
+  // 自动保存 - 传序列化后的数据，避免引用抖动
   const { clearSaved: clearAutoSave } = useAutoSave({
     data: JSON.stringify(data ?? getInitialQuotationData()),
     key: 'draftQuotation',
@@ -96,7 +96,7 @@ export default function QuotationPage() {
   // PDF生成服务
   const { generatePdf } = useGenerateService();
   
-  // 处理标签切换
+  // 处理标签切换 - 同值不set，减少无谓渲染
   const handleTabChange = useCallback((tab: 'quotation' | 'confirmation') => {
     if (activeTab === tab) return;
     setTab(tab);
