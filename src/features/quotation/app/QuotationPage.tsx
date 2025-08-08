@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useQuotationStore } from '../state/useQuotationStore';
-import { useActiveTab, useQuotationData, useTotalAmount, useCurrencySymbol, useGeneratingState, useUIState, useQuotationActions, useEditId } from '../state/quotation.selectors';
+// 移除选择器导入，直接使用store
 import { useInitQuotation } from '../hooks/useInitQuotation';
 import { useClipboardImport } from '../hooks/useClipboardImport';
 import { useAutoSave } from '@/hooks/useAutoSave';
@@ -46,41 +46,47 @@ export default function QuotationPage() {
   const pathname = usePathname();
   const { showToast } = useToast();
   
-  // 初始化
-  useInitQuotation();
-  
-  // 状态选择器
-  const activeTab = useActiveTab();
-  const data = useQuotationData();
-  const totalAmount = useTotalAmount();
-  const currencySymbol = useCurrencySymbol();
-  const { isGenerating, generatingProgress } = useGeneratingState();
-  const { showSettings, showPreview, isPasteDialogOpen, previewItem } = useUIState();
-  
-  // Store actions
-  const { 
-    setTab, 
-    setEditId, 
-    setGenerating, 
-    setProgress, 
-    setShowSettings, 
-    setShowPreview, 
-    setPasteDialogOpen, 
+  // 直接从store获取所有状态和actions，避免选择器循环
+  const {
+    // 状态
+    tab: activeTab,
+    data,
+    editId,
+    isGenerating,
+    generatingProgress,
+    showSettings,
+    showPreview,
+    isPasteDialogOpen,
+    previewItem,
+    // actions
+    setTab,
+    setEditId,
+    setGenerating,
+    setProgress,
+    setShowSettings,
+    setShowPreview,
+    setPasteDialogOpen,
     setPreviewItem,
     updateItems,
     updateOtherFees,
     updateData
-  } = useQuotationActions();
+  } = useQuotationStore();
+  
+  // 初始化
+  useInitQuotation();
+  
+  // 计算衍生状态
+  const itemsTotal = data.items?.reduce((sum, item) => sum + item.amount, 0) || 0;
+  const feesTotal = data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
+  const totalAmount = itemsTotal + feesTotal;
+  const currencySymbol = data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥';
   
   // 剪贴板导入
   const { handleClipboardButtonClick, handleGlobalPaste } = useClipboardImport();
   
-  // 获取编辑ID
-  const editId = useEditId();
-  
-  // 自动保存
+  // 自动保存 - 使用稳定的数据引用
   const { clearSaved: clearAutoSave } = useAutoSave({
-    data,
+    data: JSON.stringify(data), // 序列化数据避免对象引用变化
     key: 'draftQuotation',
     delay: 2000,
     enabled: !editId

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 import { useQuotationStore } from '../state/useQuotationStore';
 import { initDataFromSources, getEditIdFromPathname, getTabFromSearchParams } from '../services/quotation.service';
@@ -8,9 +8,13 @@ export function useInitQuotation() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { setTab, setData, setEditId } = useQuotationStore();
-  const activeTab = useQuotationStore((state) => state.tab);
+  const initialized = useRef(false);
 
   useEffect(() => {
+    // 防止重复初始化
+    if (initialized.current) return;
+    initialized.current = true;
+
     // 初始化标签页
     const tab = getTabFromSearchParams(searchParams);
     setTab(tab);
@@ -24,16 +28,7 @@ export function useInitQuotation() {
     // 初始化数据
     const initialData = initDataFromSources();
     setData(() => initialData);
-  }, [searchParams, pathname, setTab, setData, setEditId]);
-
-  // 更新URL参数以持久化tab状态
-  useEffect(() => {
-    if (typeof window !== 'undefined' && activeTab) {
-      const url = new URL(window.location.href);
-      url.searchParams.set('tab', activeTab);
-      window.history.replaceState(null, '', url.toString());
-    }
-  }, [activeTab]);
+  }, []); // 只在组件挂载时执行一次
 
   // 更新URL参数以持久化tab状态
   useEffect(() => {
