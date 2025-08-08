@@ -84,6 +84,15 @@ export default {
     'dark:group-hover:bg-purple-900/30', 'dark:group-hover:bg-orange-900/30', 'dark:group-hover:bg-indigo-900/30',
     'dark:group-hover:bg-pink-900/30', 'dark:group-hover:bg-fuchsia-900/30', 'dark:group-hover:bg-gray-900/30',
 
+    // 🎨 徽章颜色
+    'bg-blue-600', 'bg-emerald-600', 'bg-cyan-600', 'bg-violet-600', 
+    'bg-orange-600', 'bg-indigo-600', 'bg-pink-600', 'bg-fuchsia-600', 'bg-gray-600',
+    'dark:bg-blue-500', 'dark:bg-emerald-500', 'dark:bg-cyan-500', 'dark:bg-violet-500',
+    'dark:bg-orange-500', 'dark:bg-indigo-500', 'dark:bg-pink-500', 'dark:bg-fuchsia-500', 'dark:bg-gray-500',
+    
+    // 经典主题徽章颜色
+    'bg-gray-800/80', 'dark:bg-gray-700/80',
+
     // 🎨 玻璃态效果
     'bg-white/20', 'backdrop-blur-sm',
     'bg-white/10', 'backdrop-blur-md',

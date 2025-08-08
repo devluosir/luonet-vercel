@@ -16,6 +16,9 @@ interface ModuleColorConfig {
     darkBgTo: string;
     darkHoverFrom: string;
     darkHoverTo: string;
+    // 徽章颜色
+    badgeBg: string;
+    badgeText: string;
   };
   // 经典白色主题配置
   classic: {
@@ -24,6 +27,9 @@ interface ModuleColorConfig {
     textColor: string;
     iconBg: string;
     hoverIconBg: string;
+    // 徽章颜色
+    badgeBg: string;
+    badgeText: string;
   };
 }
 
@@ -40,6 +46,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       darkBgTo: 'dark:to-blue-500/70',
       darkHoverFrom: 'dark:hover:from-blue-400/80',
       darkHoverTo: 'dark:hover:to-blue-600/80',
+      badgeBg: 'bg-blue-600 dark:bg-blue-500',
+      badgeText: 'text-white',
     },
     classic: {
       bgColor: 'bg-white/30 dark:bg-gray-800/30',
@@ -47,6 +55,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       textColor: 'text-gray-800 dark:text-white',
       iconBg: 'bg-white/20 backdrop-blur-sm',
       hoverIconBg: 'group-hover:bg-blue-100/50 dark:group-hover:bg-blue-900/30',
+      badgeBg: 'bg-gray-800/80 dark:bg-gray-700/80',
+      badgeText: 'text-white',
     },
   },
   confirmation: {
@@ -61,6 +71,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       darkBgTo: 'dark:to-emerald-500/70',
       darkHoverFrom: 'dark:hover:from-emerald-400/80',
       darkHoverTo: 'dark:hover:to-emerald-600/80',
+      badgeBg: 'bg-emerald-600 dark:bg-emerald-500',
+      badgeText: 'text-white',
     },
     classic: {
       bgColor: 'bg-white/30 dark:bg-gray-800/30',
@@ -68,6 +80,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       textColor: 'text-gray-800 dark:text-white',
       iconBg: 'bg-white/20 backdrop-blur-sm',
       hoverIconBg: 'group-hover:bg-green-100/50 dark:group-hover:bg-green-900/30',
+      badgeBg: 'bg-gray-800/80 dark:bg-gray-700/80',
+      badgeText: 'text-white',
     },
   },
   packing: {
@@ -82,6 +96,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       darkBgTo: 'dark:to-cyan-500/70',
       darkHoverFrom: 'dark:hover:from-cyan-400/80',
       darkHoverTo: 'dark:hover:to-cyan-600/80',
+      badgeBg: 'bg-cyan-600 dark:bg-cyan-500',
+      badgeText: 'text-white',
     },
     classic: {
       bgColor: 'bg-white/30 dark:bg-gray-800/30',
@@ -89,6 +105,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       textColor: 'text-gray-800 dark:text-white',
       iconBg: 'bg-white/20 backdrop-blur-sm',
       hoverIconBg: 'group-hover:bg-teal-100/50 dark:group-hover:bg-teal-900/30',
+      badgeBg: 'bg-gray-800/80 dark:bg-gray-700/80',
+      badgeText: 'text-white',
     },
   },
   invoice: {
@@ -103,6 +121,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       darkBgTo: 'dark:to-violet-500/70',
       darkHoverFrom: 'dark:hover:from-violet-400/80',
       darkHoverTo: 'dark:hover:to-violet-600/80',
+      badgeBg: 'bg-violet-600 dark:bg-violet-500',
+      badgeText: 'text-white',
     },
     classic: {
       bgColor: 'bg-white/30 dark:bg-gray-800/30',
@@ -110,6 +130,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       textColor: 'text-gray-800 dark:text-white',
       iconBg: 'bg-white/20 backdrop-blur-sm',
       hoverIconBg: 'group-hover:bg-purple-100/50 dark:group-hover:bg-purple-900/30',
+      badgeBg: 'bg-gray-800/80 dark:bg-gray-700/80',
+      badgeText: 'text-white',
     },
   },
   purchase: {
@@ -124,6 +146,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       darkBgTo: 'dark:to-orange-500/70',
       darkHoverFrom: 'dark:hover:from-orange-400/80',
       darkHoverTo: 'dark:hover:to-orange-600/80',
+      badgeBg: 'bg-orange-600 dark:bg-orange-500',
+      badgeText: 'text-white',
     },
     classic: {
       bgColor: 'bg-white/30 dark:bg-gray-800/30',
@@ -131,6 +155,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       textColor: 'text-gray-800 dark:text-white',
       iconBg: 'bg-white/20 backdrop-blur-sm',
       hoverIconBg: 'group-hover:bg-orange-100/50 dark:group-hover:bg-orange-900/30',
+      badgeBg: 'bg-gray-800/80 dark:bg-gray-700/80',
+      badgeText: 'text-white',
     },
   },
   'ai-email': {
@@ -145,6 +171,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       darkBgTo: 'dark:to-indigo-500/70',
       darkHoverFrom: 'dark:hover:from-indigo-400/80',
       darkHoverTo: 'dark:hover:to-indigo-600/80',
+      badgeBg: 'bg-indigo-600 dark:bg-indigo-500',
+      badgeText: 'text-white',
     },
     classic: {
       bgColor: 'bg-white/30 dark:bg-gray-800/30',
@@ -152,6 +180,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       textColor: 'text-gray-800 dark:text-white',
       iconBg: 'bg-white/20 backdrop-blur-sm',
       hoverIconBg: 'group-hover:bg-indigo-100/50 dark:group-hover:bg-indigo-900/30',
+      badgeBg: 'bg-gray-800/80 dark:bg-gray-700/80',
+      badgeText: 'text-white',
     },
   },
   history: {
@@ -166,6 +196,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       darkBgTo: 'dark:to-pink-500/70',
       darkHoverFrom: 'dark:hover:from-pink-400/80',
       darkHoverTo: 'dark:hover:to-pink-600/80',
+      badgeBg: 'bg-pink-600 dark:bg-pink-500',
+      badgeText: 'text-white',
     },
     classic: {
       bgColor: 'bg-white/30 dark:bg-gray-800/30',
@@ -173,6 +205,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       textColor: 'text-gray-800 dark:text-white',
       iconBg: 'bg-white/20 backdrop-blur-sm',
       hoverIconBg: 'group-hover:bg-pink-100/50 dark:group-hover:bg-pink-900/30',
+      badgeBg: 'bg-gray-800/80 dark:bg-gray-700/80',
+      badgeText: 'text-white',
     },
   },
   customer: {
@@ -187,6 +221,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       darkBgTo: 'dark:to-fuchsia-500/70',
       darkHoverFrom: 'dark:hover:from-fuchsia-400/80',
       darkHoverTo: 'dark:hover:to-fuchsia-600/80',
+      badgeBg: 'bg-fuchsia-600 dark:bg-fuchsia-500',
+      badgeText: 'text-white',
     },
     classic: {
       bgColor: 'bg-white/30 dark:bg-gray-800/30',
@@ -194,6 +230,8 @@ export const moduleColorMap: { [key: string]: ModuleColorConfig } = {
       textColor: 'text-gray-800 dark:text-white',
       iconBg: 'bg-white/20 backdrop-blur-sm',
       hoverIconBg: 'group-hover:bg-fuchsia-100/50 dark:group-hover:bg-fuchsia-900/30',
+      badgeBg: 'bg-gray-800/80 dark:bg-gray-700/80',
+      badgeText: 'text-white',
     },
   },
 };
@@ -220,6 +258,8 @@ export const getModuleColors = (moduleId: string, theme: ButtonTheme = 'colorful
         darkBgTo: 'dark:to-gray-500/70',
         darkHoverFrom: 'dark:hover:from-gray-400/80',
         darkHoverTo: 'dark:hover:to-gray-600/80',
+        badgeBg: 'bg-gray-600 dark:bg-gray-500',
+        badgeText: 'text-white',
       },
       classic: {
         bgColor: 'bg-white/30 dark:bg-gray-800/30',
@@ -227,6 +267,8 @@ export const getModuleColors = (moduleId: string, theme: ButtonTheme = 'colorful
         textColor: 'text-gray-800 dark:text-white',
         iconBg: 'bg-white/20 backdrop-blur-sm',
         hoverIconBg: 'group-hover:bg-gray-100/50 dark:group-hover:bg-gray-900/30',
+        badgeBg: 'bg-gray-800/80 dark:bg-gray-700/80',
+        badgeText: 'text-white',
       },
     }[theme];
   }
