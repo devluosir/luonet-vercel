@@ -211,6 +211,11 @@ export default function QuotationPage() {
       // 使用 URL 中的 ID 或现有的 editId
       const id = pathname?.startsWith('/quotation/edit/') ? pathname.split('/').pop() : editId;
       
+      // 确保confirmation类型的数据有正确的contractNo
+      if (safeActiveTab === 'confirmation' && !data.contractNo) {
+        data.contractNo = data.quotationNo || `SC${Date.now()}`;
+      }
+      
       const result = await saveQuotationHistory(safeActiveTab, data, id);
       if (result) {
         // 更新 editId，确保后续的保存操作会更新同一条记录
@@ -237,6 +242,11 @@ export default function QuotationPage() {
     try {
       const { recordCustomerUsage } = await import('@/utils/customerUsageTracker');
       
+      // 确保confirmation类型的数据有正确的contractNo
+      if (safeActiveTab === 'confirmation' && !data.contractNo) {
+        data.contractNo = data.quotationNo || `SC${Date.now()}`;
+      }
+      
       // 并行执行保存和PDF生成
       const [saveResult] = await Promise.all([
         saveQuotationHistory(safeActiveTab, data, editId),
@@ -252,8 +262,9 @@ export default function QuotationPage() {
       }
 
       // 记录使用情况
-      if (data.quotationNo) {
-        recordCustomerUsage(data.to.split('\n')[0].trim(), safeActiveTab, data.quotationNo);
+      const documentNo = safeActiveTab === 'confirmation' ? (data.contractNo || data.quotationNo) : data.quotationNo;
+      if (documentNo) {
+        recordCustomerUsage(data.to.split('\n')[0].trim(), safeActiveTab, documentNo);
       }
 
       setGeneratingProgress(80);
@@ -267,7 +278,10 @@ export default function QuotationPage() {
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${safeActiveTab === 'quotation' ? 'QTN' : 'SC'}_${data.quotationNo || 'draft'}.pdf`;
+      const fileName = safeActiveTab === 'confirmation' 
+        ? `SC_${data.contractNo || data.quotationNo || 'draft'}.pdf`
+        : `QTN_${data.quotationNo || 'draft'}.pdf`;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -297,7 +311,7 @@ export default function QuotationPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         customerName: data.to || 'Unknown',
-        quotationNo: data.quotationNo || 'N/A',
+        quotationNo: safeActiveTab === 'confirmation' ? (data.contractNo || data.quotationNo || 'N/A') : (data.quotationNo || 'N/A'),
         totalAmount: totalAmount,
         currency: data.currency,
         type: safeActiveTab,

@@ -22,6 +22,12 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
       if (index !== -1) {
         // 保留原始创建时间
         const originalCreatedAt = history[index].createdAt;
+        
+        // 确保confirmation类型有正确的contractNo
+        if (type === 'confirmation' && !data.contractNo) {
+          data.contractNo = data.quotationNo || `SC${Date.now()}`;
+        }
+        
         const updatedHistory: QuotationHistory = {
           id: existingId,
           createdAt: originalCreatedAt,
@@ -49,6 +55,12 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
 
     // 如果没有提供ID或找不到记录，创建新记录
     const newId = existingId || generateId();
+    
+    // 确保confirmation类型有正确的contractNo
+    if (type === 'confirmation' && !data.contractNo) {
+      data.contractNo = data.quotationNo || `SC${Date.now()}`;
+    }
+    
     const newHistory: QuotationHistory = {
       id: newId,
       createdAt: new Date().toISOString(),

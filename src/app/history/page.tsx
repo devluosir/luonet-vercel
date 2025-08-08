@@ -289,7 +289,9 @@ export default function HistoryManagementPage() {
         // 类型过滤
         if (filters.type !== 'all') {
           if (activeTab === 'quotation' || activeTab === 'confirmation') {
-            return (item as QuotationHistory).type === filters.type;
+            // 确保类型匹配
+            const itemType = (item as QuotationHistory).type;
+            return itemType === filters.type;
           }
           // 对于发票和采购单，类型过滤不适用
           return true;
@@ -375,10 +377,12 @@ export default function HistoryManagementPage() {
       
       switch (activeTab) {
         case 'quotation':
-          results = getQuotationHistory();
+          // 只获取type为'quotation'的记录
+          results = getQuotationHistory().filter(item => item.type === 'quotation');
           break;
         case 'confirmation':
-          results = getQuotationHistory();
+          // 只获取type为'confirmation'的记录
+          results = getQuotationHistory().filter(item => item.type === 'confirmation');
           break;
         case 'invoice':
           results = getInvoiceHistory();
@@ -427,6 +431,7 @@ export default function HistoryManagementPage() {
       switch (activeTab) {
         case 'quotation':
         case 'confirmation':
+          // 对于quotation和confirmation，都使用deleteQuotationHistory
           success = deleteQuotationHistory(id);
           break;
         case 'invoice':
@@ -477,6 +482,7 @@ export default function HistoryManagementPage() {
         switch (activeTab) {
           case 'quotation':
           case 'confirmation':
+            // 对于quotation和confirmation，都使用deleteQuotationHistory
             success = deleteQuotationHistory(id);
             break;
           case 'invoice':
@@ -523,6 +529,7 @@ export default function HistoryManagementPage() {
       switch (activeTab) {
         case 'quotation':
         case 'confirmation':
+          // 对于quotation和confirmation，都从quotation_history中查找
           item = getQuotationHistory().find(item => item.id === id);
           if (item) {
             router.push(`/quotation/edit/${id}`);
@@ -564,6 +571,7 @@ export default function HistoryManagementPage() {
       switch (activeTab) {
         case 'quotation':
         case 'confirmation':
+          // 对于quotation和confirmation，都跳转到quotation页面
           router.push(`/quotation/copy/${id}`);
           break;
         case 'invoice':
@@ -863,6 +871,7 @@ export default function HistoryManagementPage() {
       switch (activeTab) {
         case 'quotation':
         case 'confirmation':
+          // 对于quotation和confirmation，都从quotation_history中查找
           item = getQuotationHistory().find(item => item.id === id);
           break;
         case 'invoice':
@@ -962,7 +971,9 @@ export default function HistoryManagementPage() {
         // 类型过滤（对于报价单和确认书）
         if (filters.type !== 'all') {
           if (tabType === 'quotation' || tabType === 'confirmation') {
-            if ((item as QuotationHistory).type !== filters.type) {
+            // 确保类型匹配
+            const itemType = (item as QuotationHistory).type;
+            if (itemType !== filters.type) {
               return false;
             }
           }

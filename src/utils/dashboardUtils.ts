@@ -23,9 +23,17 @@ export const emitPermissionChanged = (message = '权限已更新') => {
 
 // 文档加载工具函数
 export const getDocumentsByType = (type: DocumentType): DocumentWithType[] => {
-  const storageKey = `${type}_history`;
-  const docs = getSafeLocalStorage(storageKey) || [];
-  return docs.map((doc: HistoryItem) => ({ ...doc, type }));
+  if (type === 'confirmation') {
+    // confirmation类型的数据存储在quotation_history中
+    const quotationHistory = getSafeLocalStorage('quotation_history') || [];
+    return quotationHistory
+      .filter((doc: any) => doc.type === 'confirmation')
+      .map((doc: any) => ({ ...doc, type: 'confirmation' as DocumentType }));
+  } else {
+    const storageKey = `${type}_history`;
+    const docs = getSafeLocalStorage(storageKey) || [];
+    return docs.map((doc: HistoryItem) => ({ ...doc, type }));
+  }
 };
 
 // 时间筛选工具函数
@@ -66,7 +74,16 @@ export const loadAllDocumentsByPermissions = (permissionMap: any): DocumentWithT
   DOCUMENT_TYPES.forEach(type => {
     const permissionKey = type === 'confirmation' ? 'quotation' : type;
     if (permissionMap.documentTypePermissions[permissionKey]) {
-      allDocuments.push(...getDocumentsByType(type));
+      // 对于confirmation类型，需要从quotation_history中筛选出type为'confirmation'的记录
+      if (type === 'confirmation') {
+        const quotationHistory = getSafeLocalStorage('quotation_history') || [];
+        const confirmationDocs = quotationHistory
+          .filter((doc: any) => doc.type === 'confirmation')
+          .map((doc: any) => ({ ...doc, type: 'confirmation' as DocumentType }));
+        allDocuments.push(...confirmationDocs);
+      } else {
+        allDocuments.push(...getDocumentsByType(type));
+      }
     }
   });
   
