@@ -4,6 +4,19 @@ import { PurchaseOrderData } from '@/types/purchase';
 import { getBankInfo } from '@/utils/bankInfo';
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 
+/**
+ * 统一字体设置工具 - 确保大小写一致且带兜底
+ */
+function setCnFont(doc: jsPDF, style: 'normal'|'bold'|'italic'|'bolditalic' = 'normal') {
+  const s = (style || 'normal').toLowerCase() as any;
+  try {
+    doc.setFont('NotoSansSC', s);
+  } catch (e) {
+    console.warn('[PDF] 中文字体设置失败，回退:', e);
+    doc.setFont('helvetica', s === 'bold' ? 'bold' : 'normal');
+  }
+}
+
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
   lastAutoTable: {
@@ -51,6 +64,16 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
   // 添加中文字体
   await ensurePdfFont(doc);
 
+  // 开发期自检断言
+  if (process.env.NODE_ENV === 'development') {
+    const fonts = doc.getFontList();
+    if (!fonts['NotoSansSC'] || !fonts['NotoSansSC']?.includes('normal')) {
+      console.error('[PDF] NotoSansSC 未在当前 doc 注册完整', fonts);
+    } else {
+      console.log('[PDF] 采购单字体注册验证通过:', fonts['NotoSansSC']);
+    }
+  }
+
   const pageWidth = doc.internal.pageSize.width;
   const margin = 20;  // 页面边距
   let startY = margin;  // 初始化起始位置
@@ -80,7 +103,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
         imgHeight
       );
       doc.setFontSize(14);
-      doc.setFont('NotoSansSC', 'bold');
+      setCnFont(doc, 'bold');
       const title = 'PURCHASE ORDER';
       const titleWidth = doc.getTextWidth(title);
       const titleY = margin + imgHeight + 5;  // 标题Y坐标
@@ -90,7 +113,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       console.error('Error processing header:', error);
       // 使用默认布局
       doc.setFontSize(14);
-      doc.setFont('NotoSansSC', 'bold');
+      setCnFont(doc, 'bold');
       const title = 'PURCHASE ORDER';
       const titleWidth = doc.getTextWidth(title);
       const titleY = margin + 5;  // 标题Y坐标
@@ -100,7 +123,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
 
     // 设置字体和样式
     doc.setFontSize(9);
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     
     let currentY = startY;
     const leftMargin = 20;
@@ -125,9 +148,9 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     // 绘制左侧基本信息
     leftInfoItems.forEach((item, index) => {
       const y = startY + (index * 5);
-      doc.setFont('NotoSansSC', 'bold');
+      setCnFont(doc, 'bold');
       doc.text(item.label, leftMargin, y);
-      doc.setFont('NotoSansSC', 'normal');
+      setCnFont(doc, 'normal');
       const labelWidth = doc.getTextWidth(item.label);
       const valueX = leftMargin + labelWidth + 2;
       const valueText = item.value || '';
@@ -147,7 +170,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       const y = startY + (index * 5); // 统一行间距
       
       // 绘制标签 (黑色, 加粗)
-      doc.setFont('NotoSansSC', 'bold');
+      setCnFont(doc, 'bold');
       doc.setTextColor(0, 0, 0);
       const labelWidth = doc.getTextWidth(item.label);
       const labelX = rightValuesX - labelWidth - 2;
@@ -155,10 +178,10 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       
       // 绘制值
       if (item.label === 'Order No.:') {
-        doc.setFont('NotoSansSC', 'bold');
+        setCnFont(doc, 'bold');
         doc.setTextColor(0, 0, 255); // Blue
       } else {
-        doc.setFont('NotoSansSC', 'normal');
+        setCnFont(doc, 'normal');
         doc.setTextColor(0, 0, 0); // Black
       }
 
@@ -173,25 +196,25 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     });
 
     // 重置样式
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     doc.setTextColor(0, 0, 0);
 
     currentY += 10;
 
     // 1. 供货范围和成交价格
     currentY = checkAndAddPage(currentY, 25);
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     doc.text('1. 供货范围和成交价格：', leftMargin, currentY);
     currentY += 6;
     
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     doc.setFontSize(9);
     
     let currentX = contentMargin;
 
     // Helper to draw text parts with different styles
     const drawPart = (text: string, style: 'normal' | 'bold', color: [number, number, number]) => {
-      doc.setFont('NotoSansSC', style);
+      setCnFont(doc, style);
       doc.setTextColor(color[0], color[1], color[2]);
       doc.text(text, currentX, currentY);
       currentX += doc.getTextWidth(text);
@@ -204,7 +227,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     drawPart(data.yourRef, 'bold', [0, 0, 255]);
 
     // Handle the rest of the text with wrapping
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     doc.setTextColor(0, 0, 0);
     const suffix = ' 报价提供的项目价格、规格和交货条件；';
     const remainingWidth = pageWidth - margin - currentX;
@@ -222,7 +245,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
 
     const line2Text = '该订单的合同价款是：';
     doc.text(line2Text, contentMargin, currentY);
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     doc.setTextColor(0, 0, 255);
     const line2TextWidth = doc.getTextWidth(line2Text);
     const amount = parseFloat(data.contractAmount) || 0;
@@ -231,14 +254,14 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     doc.text(fullContractAmount, contentMargin + line2TextWidth + 1, currentY);
     currentY += 5;
 
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     doc.setTextColor(0, 0, 0);
     doc.text('客户确认订单时对于项目的', contentMargin, currentY);
     const specDescText = '规格描述';
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     doc.setTextColor(0, 0, 255);
     doc.text(specDescText, contentMargin + doc.getTextWidth('客户确认订单时对于项目的'), currentY);
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     doc.setTextColor(0, 0, 0);
     doc.text('供你们参考；', contentMargin + doc.getTextWidth('客户确认订单时对于项目的规格描述'), currentY);
 
@@ -263,13 +286,13 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
 
     // 2. 付款条件
     currentY = checkAndAddPage(currentY);
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     doc.setTextColor(0, 0, 0);
     const paymentTitle = '2. 付款条件：';
     doc.text(paymentTitle, leftMargin, currentY);
     const paymentTitleWidth = doc.getTextWidth(paymentTitle);
     
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     const paymentText = data.paymentTerms || '交货后30天；';
     const paymentContentX = leftMargin + paymentTitleWidth;
     const wrappedPaymentText = doc.splitTextToSize(paymentText, maxWidth - paymentTitleWidth);
@@ -280,13 +303,13 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
 
     // 3. 发票要求
     currentY = checkAndAddPage(currentY);
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     doc.setTextColor(0, 0, 0);
     const invoiceTitle = '3. 发票要求：';
     doc.text(invoiceTitle, leftMargin, currentY);
     const invoiceTitleWidth = doc.getTextWidth(invoiceTitle);
     
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     const invoiceText = data.invoiceRequirements || '请在发票开具前与我司财务确认；';
     const invoiceContentX = leftMargin + invoiceTitleWidth;
     const wrappedInvoiceText = doc.splitTextToSize(invoiceText, maxWidth - invoiceTitleWidth);
@@ -302,9 +325,9 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       
       bankInfo.forEach((line, index) => {
         if (index === 0) {
-          doc.setFont('NotoSansSC', 'bold');
+          setCnFont(doc, 'bold');
         } else {
-          doc.setFont('NotoSansSC', 'normal');
+          setCnFont(doc, 'normal');
         }
         doc.text(line, contentMargin, currentY + (index * 4));
       });
@@ -316,12 +339,12 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
 
     // 4. 关于交货
     currentY = checkAndAddPage(currentY);
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text('4. 关于交货：', leftMargin, currentY);
     currentY += 5;
     
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     doc.setTextColor(0, 0, 255);
     doc.text('收货人信息如下：', contentMargin, currentY);
     currentY += 5;
@@ -330,7 +353,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     const deliveryText = data.deliveryInfo || 'TBD';
     const wrappedDeliveryText = doc.splitTextToSize(deliveryText, contentMaxWidth);
     currentY = checkAndAddPage(currentY, wrappedDeliveryText.length * 4);
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     doc.setTextColor(0, 0, 0);
     wrappedDeliveryText.forEach((line: string) => {
       doc.text(line, contentMargin, currentY);
@@ -341,12 +364,12 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
 
     // 5. 客户的订单号码
     currentY = checkAndAddPage(currentY);
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text('5. 客户的订单号码如下，请在交货时写在交货文件中和包装箱外部：', leftMargin, currentY);
     currentY += 5;
     
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     doc.setTextColor(0, 0, 255);
     const orderNumbersText = data.orderNumbers || 'TBD';
     const wrappedOrderNumbersText = doc.splitTextToSize(orderNumbersText, contentMaxWidth);
@@ -400,7 +423,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     }
     
     // 2. 结尾确认语，后绘制（使其位于上层）
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text(confirmationText, leftMargin, textY);
 
@@ -413,7 +436,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
-      doc.setFont('NotoSansSC', 'normal');
+      setCnFont(doc, 'normal');
       const pageText = `Page ${i} of ${pageCount}`;
       const pageTextWidth = doc.getTextWidth(pageText);
       const pageHeight = doc.internal.pageSize.height;

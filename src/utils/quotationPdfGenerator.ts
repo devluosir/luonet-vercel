@@ -5,6 +5,19 @@ import { ensurePdfFont } from './pdfFontRegistry';
 import { getHeaderImage } from './imageCache';
 import { startTimer, endTimer } from './performanceMonitor';
 
+/**
+ * 统一字体设置工具 - 确保大小写一致且带兜底
+ */
+function setCnFont(doc: jsPDF, style: 'normal'|'bold'|'italic'|'bolditalic' = 'normal') {
+  const s = (style || 'normal').toLowerCase() as any;
+  try {
+    doc.setFont('NotoSansSC', s);
+  } catch (e) {
+    console.warn('[PDF] 中文字体设置失败，回退:', e);
+    doc.setFont('helvetica', s === 'bold' ? 'bold' : 'normal');
+  }
+}
+
 // 扩展jsPDF类型以支持autotable
 interface ExtendedJsPDF extends jsPDF {
   autoTable: (options: any) => void;
@@ -39,7 +52,7 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
 
     // 验证字体设置
     const fontVerificationId = startTimer('font-verification');
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     if (process.env.NODE_ENV === 'development') {
       const fontInfo = doc.getFont();
       console.log('当前字体信息:', fontInfo);
@@ -93,7 +106,7 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
     // 添加标题
     const titleSetupId = startTimer('title-setup');
     doc.setFontSize(14);
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     const title = 'QUOTATION';
     const titleWidth = doc.getTextWidth(title);
     const titleX = margin + (contentWidth - titleWidth) / 2;
@@ -104,7 +117,7 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
     // 添加客户信息
     const customerInfoId = startTimer('customer-info');
     doc.setFontSize(8);
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     
     let currentY = yPosition;
     const startY = yPosition; // 保存起始Y位置作为基准
@@ -114,7 +127,7 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
     const rightInfoY = startY;
     const colonX = rightMargin - 20;  // 冒号的固定位置，向左移5px
     
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     
     // Quotation No.
     doc.text('Quotation No.', colonX - 2, rightInfoY, { align: 'right' });
@@ -182,7 +195,7 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
     }
     
     // 恢复普通字体
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     
     // 添加感谢语，增加与上方Inquiry No.的间距
     currentY = Math.max(currentY + 8, startY + 20);  // 设置最小起始位置
@@ -216,7 +229,7 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
 
       // 显示总金额
       doc.setFontSize(10);
-      doc.setFont('NotoSansSC', 'bold');
+      setCnFont(doc, 'bold');
       const totalAmountLabel = 'Total Amount:';
       const totalAmountValue = `$${totalAmount.toFixed(2)}`;
       const valueX = pageWidth - margin - 5;
@@ -240,11 +253,11 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
       }
 
       doc.setFontSize(8);
-      doc.setFont('NotoSansSC', 'bold');
+      setCnFont(doc, 'bold');
       doc.text('Notes:', margin, yPosition);
       
       // 设置普通字体用于条款内容
-      doc.setFont('NotoSansSC', 'normal');
+      setCnFont(doc, 'normal');
       
       const numberWidth = doc.getTextWidth('10.'); // 预留序号宽度
       const contentMaxWidth = pageWidth - margin - margin - numberWidth - 5; // 内容最大宽度

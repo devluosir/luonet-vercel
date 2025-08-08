@@ -3,6 +3,7 @@ import 'jspdf-autotable';
 import { UserOptions, RowInput, CellInput } from 'jspdf-autotable';
 import { embeddedResources } from '@/lib/embedded-resources';
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
+import { setCnFont, validateFontRegistration } from '@/utils/pdfFontUtils';
 
 // 扩展 jsPDF 类型
 interface ExtendedJsPDF extends jsPDF {
@@ -88,6 +89,9 @@ export async function generatePackingListPDF(
   try {
     // 确保字体在当前 doc 实例注册
     await ensurePdfFont(doc);
+    
+    // 验证字体注册
+    validateFontRegistration(doc, '装箱单');
 
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
@@ -116,7 +120,7 @@ export async function generatePackingListPDF(
             'FAST'  // 使用快速压缩
           );
           doc.setFontSize(14);
-          doc.setFont('NotoSansSC', 'bold');
+          setCnFont(doc, 'bold');
           const title = getPackingListTitle(data);
           const titleWidth = doc.getTextWidth(title);
           const titleY = margin + imgHeight + 5;  // 标题Y坐标
@@ -197,19 +201,19 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
   // 添加 SHIP'S SPARES IN TRANSIT（如果选中）- 放在Consignee上方
   if (data.remarkOptions.shipsSpares) {
     doc.setFontSize(8);
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     const text = '"SHIP\'S SPARES IN TRANSIT"';
     doc.text(text, margin, currentY);
     currentY += 5; // 项目间距5px
   }
 
   doc.setFontSize(8);
-  doc.setFont('NotoSansSC', 'normal');
+  setCnFont(doc, 'normal');
 
   // 左侧：收货人信息
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   doc.text('Consignee:', margin, currentY);
-  doc.setFont('NotoSansSC', 'normal');
+  setCnFont(doc, 'normal');
   
   let leftY = currentY;
   if (data.consignee.name.trim()) {
@@ -224,9 +228,9 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
 
   // 左侧：Order No. - 只在有值时才显示
   if (data.orderNo && data.orderNo.trim()) {
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     doc.text('Order No.:', margin, leftY);
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     doc.setTextColor(0, 0, 255); // 设置为蓝色
     const orderNoText = data.orderNo.trim();
     const orderNoLines = doc.splitTextToSize(orderNoText, 130);
@@ -243,10 +247,10 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
   const colonX = rightStartX + 30;
 
   // Invoice No. - 始终显示
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   doc.text('Invoice No.', colonX - 2, rightY, { align: 'right' });
   doc.text(':', colonX, rightY);
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   doc.setTextColor(255, 0, 0); // 设置为红色，与发票一致
   
   // 处理 Invoice No. 换行
@@ -259,19 +263,19 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
   doc.setTextColor(0, 0, 0); // 重置为黑色
   rightY += Math.max(5, invoiceNoLines.length * 4); // 根据行数调整间距
 
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   doc.text('Date', colonX - 2, rightY, { align: 'right' });
   doc.text(':', colonX, rightY);
-  doc.setFont('NotoSansSC', 'normal');
+  setCnFont(doc, 'normal');
   doc.text(data.date, colonX + 3, rightY);
 
   // 如果显示价格，则显示币种
   if (data.showPrice) {
     rightY += 5; // 项目间距5px
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     doc.text('Currency', colonX - 2, rightY, { align: 'right' });
     doc.text(':', colonX, rightY);
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     doc.text(data.currency, colonX + 3, rightY);
   }
 
@@ -292,14 +296,14 @@ function renderRemarks(doc: ExtendedJsPDF, data: PackingData, startY: number, pa
   }
   
   doc.setFontSize(10);
-  doc.setFont('NotoSansSC', 'normal');
+  setCnFont(doc, 'normal');
   
   // 显示Notes标题和编号
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   doc.text('Notes:', margin, currentY);
   currentY += 5;
   
-  doc.setFont('NotoSansSC', 'normal');
+  setCnFont(doc, 'normal');
   
   // 添加自定义备注（按行分割）
   if (hasCustomRemarks) {
@@ -327,7 +331,7 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
     doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
     
     doc.setFontSize(8);
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
   }
 }
@@ -335,7 +339,7 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
 // 处理表头错误的情况
 function handleHeaderError(doc: ExtendedJsPDF, data: PackingData, margin: number, pageWidth: number): number {
   doc.setFontSize(14);
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   const title = getPackingListTitle(data);
   const titleWidth = doc.getTextWidth(title);
   const titleY = margin + 5;
@@ -346,7 +350,7 @@ function handleHeaderError(doc: ExtendedJsPDF, data: PackingData, margin: number
 // 处理无表头的情况
 function handleNoHeader(doc: ExtendedJsPDF, data: PackingData, margin: number, pageWidth: number): number {
   doc.setFontSize(14);
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   const title = getPackingListTitle(data);
   const titleWidth = doc.getTextWidth(title);
   const titleY = margin + 5;
@@ -746,7 +750,7 @@ async function renderPackingTable(
         if (data.remarkOptions.customsPurpose) {
           const text = 'FOR CUSTOMS PURPOSE ONLY';
           const fontSize = 8;
-          doc.setFont('NotoSansSC', 'bold');
+          setCnFont(doc, 'bold');
           doc.setFontSize(fontSize);
           doc.text(text, margin +5, tableData.cursor?.y ? tableData.cursor.y + 6 : startY + 6);
         }

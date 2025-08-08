@@ -140,8 +140,8 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
           }
           
           return {
-            name: supplier.name.split('\n')[0].trim(), // 只取第一行作为显示名称
-            attn: supplierInfo
+            name: (supplier.name || '').split('\n')[0].trim() || '未命名供应商', // 只取第一行作为显示名称，添加安全检查
+            attn: supplierInfo || ''
           };
         });
 
@@ -159,7 +159,10 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
 
   // 根据输入内容过滤供应商
   useEffect(() => {
-    if (!data.attn.trim()) {
+    // 安全检查：确保 data.attn 存在且为字符串
+    const attnValue = data.attn || '';
+    
+    if (!attnValue.trim()) {
       // 如果输入框为空，显示所有供应商
       setFilteredSuppliers(savedSuppliers);
       setShowSavedSuppliers(false);
@@ -167,9 +170,10 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
     } else {
       // 根据输入内容过滤供应商
       const filtered = savedSuppliers.filter(supplier => {
-        const inputLower = data.attn.toLowerCase();
-        const nameLower = supplier.name.toLowerCase();
-        const attnLower = supplier.attn.toLowerCase();
+        // 安全检查：确保所有字段都存在且为字符串
+        const inputLower = attnValue.toLowerCase();
+        const nameLower = (supplier.name || '').toLowerCase();
+        const attnLower = (supplier.attn || '').toLowerCase();
         
         return nameLower.includes(inputLower) || attnLower.includes(inputLower);
       });
@@ -228,11 +232,11 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
         <div className="relative">
           <label className={labelClassName}>供应商 Attn:</label>
           <textarea
-            value={data.attn}
+            value={data.attn || ''}
             onChange={e => {
               onChange({ ...data, attn: e.target.value });
               // 当用户开始输入时，重置选择状态
-              if (e.target.value !== data.attn) {
+              if (e.target.value !== (data.attn || '')) {
                 setHasSelectedSupplier(false);
               }
             }}
@@ -294,7 +298,7 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
           <label className={labelClassName}>报价号码 Your ref:</label>
           <input
             className={inputClassName}
-            value={data.yourRef}
+            value={data.yourRef || ''}
             onChange={e => onChange({ ...data, yourRef: e.target.value })}
           />
         </div>
@@ -305,7 +309,7 @@ export function SupplierInfoSection({ data, onChange }: SupplierInfoSectionProps
           <input
             type="date"
             className={dateInputClassName}
-            value={data.supplierQuoteDate}
+            value={data.supplierQuoteDate || ''}
             onChange={e => onChange({ ...data, supplierQuoteDate: e.target.value })}
           />
         </div>

@@ -112,7 +112,17 @@ export default function PurchaseOrderPage() {
     
     // 优先使用全局数据（编辑模式）
     if (win.__PURCHASE_DATA__) {
-      setData(win.__PURCHASE_DATA__);
+      // 确保所有字段都有有效值，避免 undefined 导致的受控组件问题
+      const sanitizedData: PurchaseOrderData = {
+        ...defaultData,
+        ...win.__PURCHASE_DATA__,
+        // 确保这些关键字段是字符串
+        attn: win.__PURCHASE_DATA__.attn || '',
+        yourRef: win.__PURCHASE_DATA__.yourRef || '',
+        supplierQuoteDate: win.__PURCHASE_DATA__.supplierQuoteDate || defaultData.supplierQuoteDate,
+      };
+      
+      setData(sanitizedData);
       setEditId(win.__EDIT_ID__);
       setIsEditMode(win.__EDIT_MODE__ || false);
       
@@ -128,7 +138,16 @@ export default function PurchaseOrderPage() {
       const draft = localStorage.getItem('draftPurchase');
       if (draft) {
         const parsed = JSON.parse(draft);
-        setData(parsed);
+        // 同样需要清理草稿数据，确保所有字段都有有效值
+        const sanitizedDraft: PurchaseOrderData = {
+          ...defaultData,
+          ...parsed,
+          // 确保这些关键字段是字符串
+          attn: parsed.attn || '',
+          yourRef: parsed.yourRef || '',
+          supplierQuoteDate: parsed.supplierQuoteDate || defaultData.supplierQuoteDate,
+        };
+        setData(sanitizedDraft);
         return;
       }
     } catch (error) {
