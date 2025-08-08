@@ -23,13 +23,15 @@ import dynamic from 'next/dynamic';
 // 动态导入PDF预览组件
 const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { 
   ssr: false,
-  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg h-64"></div>
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg h-64"></div>,
+  suspense: false
 });
 
 // 动态导入PaymentTermsSection
 const DynamicPaymentTermsSection = dynamic(() => import('@/components/quotation/PaymentTermsSection').then(mod => ({ default: mod.PaymentTermsSection })), {
   ssr: false,
-  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg h-8"></div>
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg h-8"></div>,
+  suspense: false
 });
 
 // 导入现有组件

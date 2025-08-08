@@ -28,21 +28,21 @@ export const NOTES_TEMPLATES_BILINGUAL = {
     "Price Basis: EXW Shanghai, China. / 价格基础：工厂交货，上海，中国。",
     "Delivery Terms: As stated above, subject to prior sale. / 交货条款：同上，以未售出为条件。",
     "Payment Term: 30 days. / 付款条件：货到后30天内付款。",
-    "Validity: This quotation is valid for 10 days from the date of issue. / 报价有效期：自出具之日起10天内有效。"
+    "Validity: 10 days. / 报价有效期：10天。"
   ],
   fob: [
     "Delivery Time: As stated in Remarks. / 交货期：见备注。",
     "Price Basis: FOB Shanghai, China. / 价格基础：离岸价，上海，中国。",
     "Delivery Terms: As stated above, subject to prior sale. / 交货条款：同上，以未售出为条件。",
     "Payment Term: 30% advance payment, 70% before shipment. / 付款条件：预付30%，发货前支付70%。",
-    "Validity: This quotation is valid for 30 days from the date of issue. / 报价有效期：自出具之日起30天内有效。"
+    "Validity: 30 days. / 报价有效期：30天。"
   ],
   cif: [
     "Delivery Time: As stated in Remarks. / 交货期：见备注。",
     "Price Basis: CIF [Destination Port]. / 价格基础：到岸价，[目的港]。",
     "Delivery Terms: As stated above, subject to prior sale. / 交货条款：同上，以未售出为条件。",
     "Payment Term: 100% T/T in advance. / 付款条件：预付100%电汇。",
-    "Validity: This quotation is valid for 15 days from the date of issue. / 报价有效期：自出具之日起15天内有效。"
+    "Validity: 15 days. / 报价有效期：15天。"
   ]
 };
 

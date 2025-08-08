@@ -118,44 +118,37 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
 
       {/* 配置面板 */}
       {showConfig && (
-        <div className="bg-gray-50 dark:bg-[#2C2C2E] rounded-lg p-3 space-y-3">
-          {/* 快速模板 */}
-          <div>
-            <h4 className="text-xs font-medium text-gray-700 dark:text-[#F5F5F7] mb-2">快速模板</h4>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => applyTemplate('exw')}
-                className="px-3 py-2 text-sm bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-900/30 transition-colors"
-              >
-                EXW工厂交货
-              </button>
-              <button
-                type="button"
-                onClick={() => applyTemplate('fob')}
-                className="px-3 py-2 text-sm bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-colors"
-              >
-                FOB离岸价
-              </button>
-              <button
-                type="button"
-                onClick={() => applyTemplate('cif')}
-                className="px-3 py-2 text-sm bg-teal-100 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded hover:bg-teal-200 dark:hover:bg-teal-900/30 transition-colors"
-              >
-                CIF到岸价
-              </button>
-            </div>
-          </div>
-
-          {/* 新增条款按钮 */}
-          <div>
+        <div className="bg-gray-50 dark:bg-[#2C2C2E] rounded-lg p-2 sm:p-3">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => applyTemplate('exw')}
+              className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-900/30 transition-colors"
+            >
+              EXW工厂交货
+            </button>
+            <button
+              type="button"
+              onClick={() => applyTemplate('fob')}
+              className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-colors"
+            >
+              FOB离岸价
+            </button>
+            <button
+              type="button"
+              onClick={() => applyTemplate('cif')}
+              className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm bg-teal-100 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded hover:bg-teal-200 dark:hover:bg-teal-900/30 transition-colors"
+            >
+              CIF到岸价
+            </button>
             <button
               type="button"
               onClick={addNote}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-900/30 transition-colors"
+              className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-900/30 transition-colors"
             >
-              <Plus className="w-4 h-4" />
-              新增条款
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">新增条款</span>
+              <span className="sm:hidden">新增</span>
             </button>
           </div>
         </div>
@@ -304,7 +297,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
             
             {/* 内容区域 */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2">
                 {/* 内容区域 */}
                 <div className="flex-1 min-w-0">
                   {isEditing ? (
@@ -333,7 +326,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
           </div>
           
           {/* 右侧：操作按钮 */}
-          <div className="flex items-center space-x-2 flex-shrink-0 ml-3">
+          <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 ml-2 sm:ml-3">
             {/* 特殊Notes的下拉选择 */}
             {isSpecialNote && (
               <select
@@ -346,7 +339,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
                     }
                   }
                 }}
-                className="text-xs border border-gray-300 dark:border-[#3A3A3C] rounded px-1 py-0.5 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-1 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF]"
+                className="text-xs border border-gray-300 dark:border-[#3A3A3C] rounded px-1 py-0.5 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-1 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] min-w-16"
                 title={note.id === 'payment_terms' ? '选择付款方式' : '选择交货时间'}
               >
                 <option value="">选择...</option>
