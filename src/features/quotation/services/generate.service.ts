@@ -1,6 +1,6 @@
 import { usePdfGenerator } from '@/hooks/usePdfGenerator';
 import type { QuotationData } from '@/types/quotation';
-import { NOTES_CONTENT_MAP, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS, NOTES_TEMPLATES_BILINGUAL, extractEnglishContent } from '../types/notes';
+
 import { sanitizeQuotation } from '@/utils/sanitizeQuotation';
 
 // PDF生成服务Hook
@@ -26,57 +26,22 @@ export function useGenerateService() {
         .filter(note => note.visible)
         .sort((a, b) => a.order - b.order)
         .map(note => {
-          // 特殊Notes（付款方式和交货时间）
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          if (note.id === 'payment_terms' && (note as any).selectedOption) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const selectedOptionId = (note as any).selectedOption;
-            // 检查是否为自定义编辑的内容
-            if (selectedOptionId.startsWith('custom_')) {
-              return `Payment Terms: ${selectedOptionId.replace('custom_', '')}`;
-            }
-            const selectedOption = PAYMENT_TERMS_OPTIONS.find(opt => opt.id === selectedOptionId);
-            return selectedOption ? `Payment Terms: ${selectedOption.english}` : '';
-          }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          if (note.id === 'delivery_time' && (note as any).selectedOption) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const selectedOptionId = (note as any).selectedOption;
-            // 检查是否为自定义编辑的内容
-            if (selectedOptionId.startsWith('custom_')) {
-              return `Delivery Time: ${selectedOptionId.replace('custom_', '')}`;
-            }
-            const selectedOption = DELIVERY_TERMS_OPTIONS.find(opt => opt.id === selectedOptionId);
-            return selectedOption ? `Delivery Time: ${selectedOption.english}` : '';
+          // 使用note.content作为主要内容
+          if (note.content && note.content.trim()) {
+            return note.content;
           }
           
-          // 自定义Notes从data中获取
-          if (note.id === 'custom_note_1' && data.notes && data.notes[0]) {
-            return data.notes[0];
-          }
-          if (note.id === 'custom_note_2' && data.notes && data.notes[1]) {
-            return data.notes[1];
-          }
+          // 如果没有content，使用默认值
+          const defaultTitles: Record<string, string> = {
+            'delivery_time': 'Delivery Time',
+            'price_based_on': 'Price Basis',
+            'delivery_terms': 'Delivery Terms',
+            'payment_terms': 'Payment Term',
+            'validity': 'Validity'
+          };
           
-          // 新增的Notes类型处理
-          if (note.id === 'delivery_time') {
-            return NOTES_CONTENT_MAP[note.id] || extractEnglishContent(NOTES_TEMPLATES_BILINGUAL.fob[0]);
-          }
-          if (note.id === 'price_based_on') {
-            return NOTES_CONTENT_MAP[note.id] || extractEnglishContent(NOTES_TEMPLATES_BILINGUAL.fob[1]);
-          }
-          if (note.id === 'validity') {
-            return NOTES_CONTENT_MAP[note.id] || extractEnglishContent(NOTES_TEMPLATES_BILINGUAL.fob[4]);
-          }
-          if (note.id === 'quality_terms') {
-            return NOTES_CONTENT_MAP[note.id] || 'Quality Terms: According to customer requirements';
-          }
-          if (note.id === 'warranty_terms') {
-            return NOTES_CONTENT_MAP[note.id] || 'Warranty: 12 months from delivery date';
-          }
-          
-          // 默认Notes从映射中获取
-          return NOTES_CONTENT_MAP[note.id] || '';
+          const title = defaultTitles[note.id];
+          return title ? `${title}: [待填写]` : 'Custom Note: [待填写]';
         })
         .filter(content => content && typeof content === 'string' && content.trim() !== ''); // 过滤空内容和无效内容
 

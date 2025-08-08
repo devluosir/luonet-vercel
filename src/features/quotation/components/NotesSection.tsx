@@ -19,9 +19,9 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { EyeOff, GripVertical, Settings, ChevronDown } from 'lucide-react';
+import { EyeOff, GripVertical, Settings, Plus, X } from 'lucide-react';
 import { useQuotationStore } from '../state/useQuotationStore';
-import { NOTES_CONTENT_MAP, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS, DEFAULT_NOTES_CONFIG } from '../types/notes';
+import { NOTES_TEMPLATES_BILINGUAL, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS, DEFAULT_NOTES_CONFIG, extractEnglishContent } from '../types/notes';
 import type { NoteConfig } from '../types/notes';
 
 interface NotesSectionProps {
@@ -31,8 +31,8 @@ interface NotesSectionProps {
   onChange: (data: any) => void;
 }
 
-export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) => {
-  const { notesConfig, updateNoteVisibility, updateNoteOrder, updateSpecialNoteOption } = useQuotationStore();
+export const NotesSection: React.FC<NotesSectionProps> = () => {
+  const { notesConfig, updateNoteVisibility, updateNoteOrder, updateNoteContent, addNote, removeNote } = useQuotationStore();
   const [showConfig, setShowConfig] = useState(false);
 
   // 配置传感器
@@ -77,6 +77,24 @@ export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) =>
     updateNoteVisibility(noteId, !currentVisible);
   };
 
+  // 应用模板
+  const applyTemplate = (templateKey: 'exw' | 'fob' | 'cif') => {
+    const template = NOTES_TEMPLATES_BILINGUAL[templateKey];
+    const { setNotesConfig } = useQuotationStore.getState();
+    
+    // 重置为默认配置
+    setNotesConfig(DEFAULT_NOTES_CONFIG);
+    
+    // 应用模板内容
+    setTimeout(() => {
+      updateNoteContent('delivery_time', extractEnglishContent(template[0]));
+      updateNoteContent('price_based_on', extractEnglishContent(template[1]));
+      updateNoteContent('delivery_terms', extractEnglishContent(template[2]));
+      updateNoteContent('payment_terms', extractEnglishContent(template[3]));
+      updateNoteContent('validity', extractEnglishContent(template[4]));
+    }, 100);
+  };
+
   return (
     <div className="space-y-3">
       {/* 标题和设置按钮 */}
@@ -98,145 +116,47 @@ export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) =>
         </button>
       </div>
 
-      {/* 批量操作条 */}
+      {/* 配置面板 */}
       {showConfig && (
-        <div className="bg-gray-50 dark:bg-[#2C2C2E] rounded-lg p-3 space-y-2">
-          <h4 className="text-xs font-medium text-gray-700 dark:text-[#F5F5F7]">
-            批量操作
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                notesConfig.forEach(note => {
-                  if (!note.visible) {
-                    handleVisibilityToggle(note.id, note.visible);
-                  }
-                });
-              }}
-              className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors"
-            >
-              全选
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                notesConfig.forEach(note => {
-                  if (note.visible) {
-                    handleVisibilityToggle(note.id, note.visible);
-                  }
-                });
-              }}
-              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            >
-              全不选
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                // 仅显示常用条款
-                notesConfig.forEach(note => {
-                  const isCommon = ['delivery_time', 'price_based_on', 'delivery_terms', 'payment_terms', 'validity'].includes(note.id);
-                  if (note.visible !== isCommon) {
-                    handleVisibilityToggle(note.id, note.visible);
-                  }
-                });
-              }}
-              className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-900/30 transition-colors"
-            >
-              仅常用
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                // 恢复默认顺序
-                const { setNotesConfig } = useQuotationStore.getState();
-                setNotesConfig(DEFAULT_NOTES_CONFIG);
-              }}
-              className="px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded hover:bg-orange-200 dark:hover:bg-orange-900/30 transition-colors"
-            >
-              恢复默认
-            </button>
-          </div>
-          
-          {/* 模板选择 */}
-          <div className="mt-2">
-            <h5 className="text-xs font-medium text-gray-700 dark:text-[#F5F5F7] mb-2">快速模板</h5>
+        <div className="bg-gray-50 dark:bg-[#2C2C2E] rounded-lg p-3 space-y-3">
+          {/* 快速模板 */}
+          <div>
+            <h4 className="text-xs font-medium text-gray-700 dark:text-[#F5F5F7] mb-2">快速模板</h4>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  // EXW模板
-                  const { setNotesConfig, updateSpecialNoteOption } = useQuotationStore.getState();
-                  const template = [
-                    { id: 'delivery_time', visible: true, order: 0 },
-                    { id: 'price_based_on', visible: true, order: 1 },
-                    { id: 'delivery_terms', visible: true, order: 2 },
-                    { id: 'payment_terms', visible: true, order: 3 },
-                    { id: 'validity', visible: true, order: 4 },
-                    { id: 'quality_terms', visible: false, order: 5 },
-                    { id: 'warranty_terms', visible: false, order: 6 },
-                    { id: 'custom_note_1', visible: false, order: 7 },
-                    { id: 'custom_note_2', visible: false, order: 8 },
-                  ];
-                  setNotesConfig(template);
-                  // 设置EXW模板内容
-                  updateSpecialNoteOption('payment_terms', 'custom_30 days net.');
-                  updateSpecialNoteOption('delivery_time', 'custom_As stated above, subject to prior sale.');
-                }}
-                className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-900/30 transition-colors"
+                onClick={() => applyTemplate('exw')}
+                className="px-3 py-2 text-sm bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-900/30 transition-colors"
               >
                 EXW工厂交货
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  // FOB模板
-                  const { setNotesConfig, updateSpecialNoteOption } = useQuotationStore.getState();
-                  const template = [
-                    { id: 'delivery_time', visible: true, order: 0 },
-                    { id: 'price_based_on', visible: true, order: 1 },
-                    { id: 'delivery_terms', visible: true, order: 2 },
-                    { id: 'payment_terms', visible: true, order: 3 },
-                    { id: 'validity', visible: true, order: 4 },
-                    { id: 'quality_terms', visible: true, order: 5 },
-                    { id: 'warranty_terms', visible: false, order: 6 },
-                    { id: 'custom_note_1', visible: false, order: 7 },
-                    { id: 'custom_note_2', visible: false, order: 8 },
-                  ];
-                  setNotesConfig(template);
-                  updateSpecialNoteOption('payment_terms', 'custom_30% advance payment, 70% before shipment.');
-                  updateSpecialNoteOption('delivery_time', 'custom_As stated above, subject to prior sale.');
-                }}
-                className="px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-colors"
+                onClick={() => applyTemplate('fob')}
+                className="px-3 py-2 text-sm bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-colors"
               >
                 FOB离岸价
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  // CIF模板
-                  const { setNotesConfig, updateSpecialNoteOption } = useQuotationStore.getState();
-                  const template = [
-                    { id: 'delivery_time', visible: true, order: 0 },
-                    { id: 'price_based_on', visible: true, order: 1 },
-                    { id: 'delivery_terms', visible: true, order: 2 },
-                    { id: 'payment_terms', visible: true, order: 3 },
-                    { id: 'validity', visible: true, order: 4 },
-                    { id: 'quality_terms', visible: false, order: 5 },
-                    { id: 'warranty_terms', visible: false, order: 6 },
-                    { id: 'custom_note_1', visible: false, order: 7 },
-                    { id: 'custom_note_2', visible: false, order: 8 },
-                  ];
-                  setNotesConfig(template);
-                  updateSpecialNoteOption('payment_terms', 'custom_100% T/T in advance.');
-                  updateSpecialNoteOption('delivery_time', 'custom_As stated above, subject to prior sale.');
-                }}
-                className="px-2 py-1 text-xs bg-teal-100 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded hover:bg-teal-200 dark:hover:bg-teal-900/30 transition-colors"
+                onClick={() => applyTemplate('cif')}
+                className="px-3 py-2 text-sm bg-teal-100 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded hover:bg-teal-200 dark:hover:bg-teal-900/30 transition-colors"
               >
                 CIF到岸价
               </button>
             </div>
+          </div>
+
+          {/* 新增条款按钮 */}
+          <div>
+            <button
+              type="button"
+              onClick={addNote}
+              className="flex items-center gap-2 px-3 py-2 text-sm bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-900/30 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              新增条款
+            </button>
           </div>
         </div>
       )}
@@ -257,10 +177,9 @@ export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) =>
                 <SortableNote
                   key={note.id}
                   note={note}
-                  data={data}
                   onVisibilityToggle={handleVisibilityToggle}
-                  onUpdateSpecialOption={updateSpecialNoteOption}
-                  onChange={onChange}
+                  onUpdateContent={updateNoteContent}
+                  onRemove={removeNote}
                 />
               ))}
             </div>
@@ -277,20 +196,15 @@ export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) =>
   );
 };
 
-
-
 // 可拖拽的Note组件
 interface SortableNoteProps {
   note: NoteConfig;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
   onVisibilityToggle: (noteId: string, currentVisible: boolean) => void;
-  onUpdateSpecialOption: (noteId: string, optionId: string) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onChange: (data: any) => void;
+  onUpdateContent: (noteId: string, content: string) => void;
+  onRemove: (noteId: string) => void;
 }
 
-const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityToggle, onUpdateSpecialOption, onChange }) => {
+const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, onUpdateContent, onRemove }) => {
   const {
     attributes,
     listeners,
@@ -308,11 +222,8 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
   // 检查是否为特殊Notes（支持选项选择）
   const isSpecialNote = note.id === 'payment_terms' || note.id === 'delivery_time';
   const options = note.id === 'payment_terms' ? PAYMENT_TERMS_OPTIONS : DELIVERY_TERMS_OPTIONS;
-  const selectedOptionId = (note as NoteConfig & { selectedOption?: string }).selectedOption;
-  const selectedOption = options.find(opt => opt.id === selectedOptionId);
-  const [showOptions, setShowOptions] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState('');
+  const [editValue, setEditValue] = useState(note.content || '');
 
   // 获取当前Note在可见列表中的序号
   const { notesConfig } = useQuotationStore();
@@ -324,26 +235,17 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
   // 编辑相关函数
   const handleStartEdit = () => {
     setIsEditing(true);
-    setEditValue(getNoteContent(note.id, data, selectedOption));
+    setEditValue(note.content || '');
   };
 
   const handleSaveEdit = () => {
-    if (isSpecialNote) {
-      // 特殊Notes - 保存自定义内容
-      onUpdateSpecialOption(note.id, `custom_${editValue}`);
-    } else {
-      // 普通Notes - 更新data.notes
-      const noteIndex = note.id === 'custom_note_1' ? 0 : 1;
-      const newNotes = [...(data.notes || [])];
-      newNotes[noteIndex] = editValue;
-      onChange({ ...data, notes: newNotes });
-    }
+    onUpdateContent(note.id, editValue);
     setIsEditing(false);
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
-    setEditValue('');
+    setEditValue(note.content || '');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -356,6 +258,8 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
     }
   };
 
+
+
   return (
     <div
       ref={setNodeRef}
@@ -363,26 +267,24 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
       className={`transition-all duration-300 hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded-lg border ${
         isDragging ? 'shadow-lg scale-105 bg-gray-100 dark:bg-[#3A3A3C]' : ''
       } ${
-        showOptions 
-          ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800 shadow-md' 
-          : isEditing
+        isEditing
           ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800'
           : 'border-gray-100 dark:border-[#3A3A3C]'
       }`}
     >
-      {/* 主行：开关 + 序号 + 内容 + 操作 */}
+      {/* 主行：开关 + 序号 + 标题 + 内容 + 操作 */}
       <div className="p-3">
         <div className="flex items-center justify-between">
-          {/* 左侧：开关 + 序号 + 内容 */}
+          {/* 左侧：开关 + 序号 + 标题 + 内容 */}
           <div className="flex items-center space-x-3 flex-1 min-w-0">
             {/* 序号开关合并 */}
             <div className="flex-shrink-0">
-        <button
+              <button
                 type="button"
-          onClick={(e) => {
+                onClick={(e) => {
                   e.stopPropagation();
-            onVisibilityToggle(note.id, note.visible);
-          }}
+                  onVisibilityToggle(note.id, note.visible);
+                }}
                 className={`inline-flex items-center justify-center w-6 h-6 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
                   note.visible 
                     ? 'bg-[#007AFF] dark:bg-[#0A84FF] border-[#007AFF] dark:border-[#0A84FF] text-white shadow-md hover:bg-red-500 dark:hover:bg-red-600 hover:border-red-500 dark:hover:border-red-600' 
@@ -397,69 +299,34 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 )}
-        </button>
-      </div>
-      
-            {/* 内容区域 - 分离拖拽和编辑 */}
+              </button>
+            </div>
+            
+            {/* 内容区域 */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2">
                 {/* 内容区域 */}
-                <div className="flex items-center space-x-2 flex-1 min-w-0">
-                  <div className="flex-1 min-w-0">
-                    {isSpecialNote ? (
-                      // 特殊Notes：显示选择的内容或自定义内容
-                      isEditing ? (
-                        <textarea
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          onBlur={handleSaveEdit}
-                          className="w-full text-sm border border-gray-300 dark:border-[#3A3A3C] rounded px-2 py-1 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] resize-none"
-                          rows={1}
-                          placeholder="输入自定义内容..."
-                          autoFocus
-                        />
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <div 
-                            className="text-sm text-gray-600 dark:text-[#98989D] cursor-text hover:bg-gray-100 dark:hover:bg-[#3A3A3C] px-2 py-1 rounded -mx-2 flex-1"
-                            onClick={handleStartEdit}
-                            title="点击编辑自定义内容"
-                          >
-                            {selectedOption ? selectedOption.english : getNoteContent(note.id, data, selectedOption) || '点击编辑自定义内容...'}
-                          </div>
-                          {/* 收缩态标签提示 */}
-                          {selectedOption && !showOptions && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 flex-shrink-0">
-                              {selectedOption.chinese}
-                            </span>
-                          )}
-                        </div>
-                      )
-                    ) : (
-                      // 普通Notes：可编辑文本框
-                      isEditing ? (
-                        <textarea
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          onBlur={handleSaveEdit}
-                          className="w-full text-sm border border-gray-300 dark:border-[#3A3A3C] rounded px-2 py-1 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] resize-none"
-                          rows={1}
-                          placeholder="输入条款内容..."
-                          autoFocus
-                        />
-                      ) : (
-                        <div 
-                          className="text-sm text-gray-600 dark:text-[#98989D] cursor-text hover:bg-gray-100 dark:hover:bg-[#3A3A3C] px-2 py-1 rounded -mx-2"
-                          onClick={handleStartEdit}
-                          title="双击编辑"
-                        >
-                          {getNoteContent(note.id, data, selectedOption) || '点击编辑...'}
-                        </div>
-                      )
-                    )}
-                  </div>
+                <div className="flex-1 min-w-0">
+                  {isEditing ? (
+                    <textarea
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      onBlur={handleSaveEdit}
+                      className="w-full text-sm border border-gray-300 dark:border-[#3A3A3C] rounded px-2 py-1 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] resize-none"
+                      rows={1}
+                      placeholder="输入条款内容..."
+                      autoFocus
+                    />
+                  ) : (
+                    <div 
+                      className="text-sm text-gray-600 dark:text-[#98989D] cursor-text hover:bg-gray-100 dark:hover:bg-[#3A3A3C] px-2 py-1 rounded -mx-2"
+                      onClick={handleStartEdit}
+                      title="点击编辑"
+                    >
+                      {note.content || '点击编辑...'}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -467,23 +334,43 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
           
           {/* 右侧：操作按钮 */}
           <div className="flex items-center space-x-2 flex-shrink-0 ml-3">
-            {/* 特殊Notes的展开/收缩按钮 */}
-      {isSpecialNote && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowOptions(!showOptions);
-              }}
-                className={`p-1 rounded transition-all duration-200 ${
-                  showOptions 
-                    ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white' 
-                    : 'hover:bg-gray-100 dark:hover:bg-[#3A3A3C] text-gray-400'
-                }`}
+            {/* 特殊Notes的下拉选择 */}
+            {isSpecialNote && (
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    const selectedOption = options.find(opt => opt.id === e.target.value);
+                    if (selectedOption) {
+                      onUpdateContent(note.id, selectedOption.english);
+                    }
+                  }
+                }}
+                className="text-xs border border-gray-300 dark:border-[#3A3A3C] rounded px-1 py-0.5 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-1 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF]"
                 title={note.id === 'payment_terms' ? '选择付款方式' : '选择交货时间'}
               >
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showOptions ? 'rotate-180' : ''}`} />
-            </button>
+                <option value="">选择...</option>
+                {options.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.chinese}
+                  </option>
+                ))}
+              </select>
+            )}
+            
+            {/* 删除按钮 - 仅对自定义条款显示 */}
+            {note.id.startsWith('custom_note_') && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(note.id);
+                }}
+                className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 transition-colors"
+                title="删除条款"
+              >
+                <X className="w-4 h-4" />
+              </button>
             )}
             
             {/* 拖拽句柄 - 只在非编辑状态下可用 */}
@@ -501,166 +388,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
         </div>
       </div>
       
-      {/* 展开选项面板（特殊Notes） */}
-      {isSpecialNote && showOptions && (
-        <div className="border-t border-gray-200 dark:border-[#3A3A3C] bg-gray-50 dark:bg-[#2C2C2E]">
-          <div className="p-3">
-            {/* 搜索框 */}
-            <div className="mb-3">
-              <input
-                type="text"
-                placeholder="搜索选项..."
-                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#3A3A3C] rounded-lg bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF]"
-                onChange={(_e) => {
-                  // TODO: 实现搜索过滤功能
-                }}
-              />
-            </div>
-            
-            {/* 分组选项 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* 常用选项组 */}
-              <div>
-                <h4 className="text-xs font-medium text-gray-500 dark:text-[#98989D] mb-2 uppercase tracking-wide">
-                  📅 常用选项
-                </h4>
-                <div className="space-y-1">
-                  {options.slice(0, 5).map((option) => (
-                    <button
-                      type="button"
-                      key={option.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onUpdateSpecialOption(note.id, option.id);
-                        setShowOptions(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                        selectedOptionId === option.id
-                          ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
-                          : 'text-gray-700 dark:text-[#F5F5F7] hover:bg-gray-100 dark:hover:bg-[#3A3A3C]'
-                      }`}
-                      title={option.english}
-                    >
-                      <div className="font-medium">{option.chinese}</div>
-                      <div className="text-xs opacity-75 mt-0.5">{option.english}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              {/* 其他选项组 */}
-              <div>
-                <h4 className="text-xs font-medium text-gray-500 dark:text-[#98989D] mb-2 uppercase tracking-wide">
-                  ⚡ 其他选项
-                </h4>
-                <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {options.slice(5).map((option) => (
-                <button
-                  type="button"
-                  key={option.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onUpdateSpecialOption(note.id, option.id);
-                    setShowOptions(false);
-                  }}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                    selectedOptionId === option.id
-                      ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
-                          : 'text-gray-700 dark:text-[#F5F5F7] hover:bg-gray-100 dark:hover:bg-[#3A3A3C]'
-                  }`}
-                  title={option.english}
-                >
-                      <div className="font-medium">{option.chinese}</div>
-                      <div className="text-xs opacity-75 mt-0.5">{option.english}</div>
-                </button>
-              ))}
-                </div>
-              </div>
-            </div>
-            
-            {/* 操作按钮 */}
-            <div className="flex justify-end space-x-2 mt-3 pt-3 border-t border-gray-200 dark:border-[#3A3A3C]">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  setShowOptions(false);
-                  }}
-                className="px-3 py-1.5 text-sm text-gray-600 dark:text-[#98989D] hover:text-gray-800 dark:hover:text-[#F5F5F7] transition-colors"
-                >
-                取消
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  setShowOptions(false);
-                  }}
-                className="px-3 py-1.5 text-sm bg-[#007AFF] dark:bg-[#0A84FF] text-white rounded-lg hover:bg-[#0056CC] dark:hover:bg-[#0066CC] transition-colors"
-                >
-                确定
-                </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* 空值防御提示 */}
-      {note.visible && !getNoteContent(note.id, data, selectedOption).trim() && (
-        <div className="px-3 pb-3">
-          <div className="px-2 py-1 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded text-xs text-red-600 dark:text-red-400">
-            ⚠️ 此条款可见但内容为空，建议填写内容或隐藏条款
-          </div>
-      </div>
-      )}
+
     </div>
   );
 };
-
-// 获取Note内容
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getNoteContent(noteId: string, data: any, selectedOption?: any): string {
-  // 特殊Notes（付款方式和交货时间）
-  if (noteId === 'payment_terms' && selectedOption) {
-    // 检查是否为自定义编辑的内容
-    if (selectedOption.id && selectedOption.id.startsWith('custom_')) {
-      return selectedOption.id.replace('custom_', '');
-    }
-    return selectedOption.english || '';
-  }
-  if (noteId === 'delivery_time' && selectedOption) {
-    // 检查是否为自定义编辑的内容
-    if (selectedOption.id && selectedOption.id.startsWith('custom_')) {
-      return selectedOption.id.replace('custom_', '');
-    }
-    return selectedOption.english || '';
-  }
-  
-  // 自定义Notes从data中获取
-  if (noteId === 'custom_note_1' && data.notes && data.notes[0]) {
-    return data.notes[0];
-  }
-  if (noteId === 'custom_note_2' && data.notes && data.notes[1]) {
-    return data.notes[1];
-  }
-  
-  // 新增的Notes类型处理
-  if (noteId === 'delivery_time') {
-    return NOTES_CONTENT_MAP[noteId] || 'Delivery Time: 30-45 days after order confirmation';
-  }
-  if (noteId === 'price_based_on') {
-    return NOTES_CONTENT_MAP[noteId] || 'Price Based On: FOB Shanghai, China';
-  }
-  if (noteId === 'validity') {
-    return NOTES_CONTENT_MAP[noteId] || 'Validity: This quotation is valid for 30 days';
-  }
-  if (noteId === 'quality_terms') {
-    return NOTES_CONTENT_MAP[noteId] || 'Quality Terms: According to customer requirements';
-  }
-  if (noteId === 'warranty_terms') {
-    return NOTES_CONTENT_MAP[noteId] || 'Warranty: 12 months from delivery date';
-  }
-  
-  // 默认Notes从映射中获取
-  return NOTES_CONTENT_MAP[noteId] || '';
-}

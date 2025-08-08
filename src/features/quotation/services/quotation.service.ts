@@ -55,12 +55,24 @@ export function initDataFromSources(): QuotationData {
     }
   }
 
-  // 2. 其次使用草稿数据
+  // 2. 其次使用草稿数据，但确保合并预设值
   try {
     const draft = localStorage.getItem('draftQuotation');
     if (draft) {
       const parsed = JSON.parse(draft);
-      return parsed;
+      // 获取预设值作为基础
+      const defaultData = getInitialQuotationData();
+      // 合并草稿数据和预设值，确保关键字段不会丢失
+      return {
+        ...defaultData,
+        ...parsed,
+        // 确保notes字段有内容
+        notes: parsed.notes && parsed.notes.length > 0 ? parsed.notes : defaultData.notes,
+        // 确保from字段有内容
+        from: parsed.from || defaultData.from,
+        // 确保items至少有一个空项
+        items: parsed.items && parsed.items.length > 0 ? parsed.items : defaultData.items
+      };
     }
   } catch (error) {
     console.warn('读取草稿失败:', error);

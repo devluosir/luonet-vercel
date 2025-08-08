@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
 import type { NoteConfig } from '../types/notes';
 import { DEFAULT_NOTES_CONFIG } from '../types/notes';
+import { getInitialQuotationData } from '@/utils/quotationInitialData';
 
 type Tab = 'quotation' | 'confirmation';
 
@@ -56,42 +57,15 @@ interface QuotationState {
   setNotesConfig: (config: NoteConfig[]) => void;
   updateNoteVisibility: (id: string, visible: boolean) => void;
   updateNoteOrder: (fromIndex: number, toIndex: number) => void;
-  updateSpecialNoteOption: (noteId: string, optionId: string) => void;
+  updateNoteContent: (noteId: string, content: string) => void;
+  addNote: () => void;
+  removeNote: (noteId: string) => void;
 }
 
 export const useQuotationStore = create<QuotationState>((set) => ({
   // 初始状态
   tab: 'quotation',
-  data: {
-    quotationNo: '',
-    contractNo: '',
-    date: '',
-    notes: [],
-    from: '',
-    to: '',
-    inquiryNo: '',
-    currency: 'USD',
-    paymentDate: '',
-    items: [],
-    amountInWords: {
-      dollars: '',
-      cents: '',
-      hasDecimals: false
-    },
-    showDescription: true,
-    showRemarks: false,
-    showBank: false,
-    showStamp: false,
-    otherFees: [],
-    customUnits: [],
-    showPaymentTerms: false,
-    showInvoiceReminder: false,
-    additionalPaymentTerms: '',
-    templateConfig: {
-      headerType: 'bilingual',
-      stampType: 'none'
-    }
-  } as QuotationData,
+  data: getInitialQuotationData(), // 使用预设值而不是空值
   editId: undefined,
   isGenerating: false,
   generatingProgress: 0,
@@ -151,11 +125,26 @@ export const useQuotationStore = create<QuotationState>((set) => ({
     
     return { notesConfig: updatedConfig };
   }),
-  updateSpecialNoteOption: (noteId, optionId) => set((state) => ({
+  updateNoteContent: (noteId, content) => set((state) => ({
     notesConfig: state.notesConfig.map(note => 
       note.id === noteId 
-        ? { ...note, selectedOption: optionId }
+        ? { ...note, content }
         : note
     )
+  })),
+  addNote: () => set((state) => {
+    const newOrder = Math.max(...state.notesConfig.map(note => note.order), -1) + 1;
+    const newNote: NoteConfig = {
+      id: `custom_note_${Date.now()}`,
+      visible: true,
+      order: newOrder,
+      content: ''
+    };
+    return {
+      notesConfig: [...state.notesConfig, newNote]
+    };
+  }),
+  removeNote: (noteId) => set((state) => ({
+    notesConfig: state.notesConfig.filter(note => note.id !== noteId)
   })),
 }));
