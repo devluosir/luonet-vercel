@@ -92,7 +92,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   const [showAutoComplete, setShowAutoComplete] = useState(false);
   const [autoCompleteSuggestions, setAutoCompleteSuggestions] = useState<SavedCustomer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<SavedCustomer[]>([]);
-  const [hasSelectedCustomer, setHasSelectedCustomer] = useState(false);
+  const [hasSelectedCustomer, setHasSelectedCustomer] = useState(() => Boolean(data?.to?.trim()));
   
   // 添加 ref 用于检测点击外部区域
   const savedCustomersRef = useRef<HTMLDivElement>(null);
@@ -342,14 +342,14 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
       
       setFilteredCustomers(filtered);
       
-      // 如果有筛选结果，自动显示弹窗
-      if (filtered.length > 0) {
+      // 只有当未选择客户且当前输入为空时，才自动显示弹窗
+      if (!hasSelectedCustomer && !data.to.trim() && filtered.length > 0) {
         setShowSavedCustomers(true);
       } else {
         setShowSavedCustomers(false);
       }
     }
-  }, [data.to, savedCustomers]);
+  }, [data.to, savedCustomers, hasSelectedCustomer]);
 
   // 添加点击外部区域关闭弹窗的功能
   useEffect(() => {
@@ -471,7 +471,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
               value={data.to}
               onChange={(e) => handleCustomerInfoChange(e.target.value)}
               onFocus={() => {
-                // 只有当用户没有选择过客户，或者正在输入内容时才显示弹窗
+                // 与采购页行为一致：未选择时允许展开
                 if (filteredCustomers.length > 0 && !hasSelectedCustomer) {
                   setShowSavedCustomers(true);
                 }

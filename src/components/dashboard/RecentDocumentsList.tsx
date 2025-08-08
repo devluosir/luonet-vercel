@@ -182,13 +182,15 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
           const data = doc.data as Record<string, unknown> | undefined;
           const documentNumber = getDocumentNumber(doc);
           const documentName = getDocumentName(doc);
+          const typeAbbr = getDocumentTypeName(doc.type);
+          const combinedKey = documentNumber ? `${typeAbbr}_${documentNumber}` : typeAbbr;
           
           // 扩展搜索范围，包括data字段中的信息
           const customerName = doc.customerName || (data?.customerName as string) || '';
           const supplierName = doc.supplierName || (data?.supplierName as string) || '';
           const consigneeName = doc.consigneeName || (data?.consigneeName as string) || '';
           
-          const searchText = `${documentNumber} ${documentName} ${customerName} ${supplierName} ${consigneeName}`.toLowerCase();
+          const searchText = `${combinedKey} ${documentNumber} ${documentName} ${customerName} ${supplierName} ${consigneeName}`.toLowerCase();
           return searchText.includes(searchLower);
         } catch (error) {
           console.warn('搜索过滤时出错:', error, doc);
@@ -263,18 +265,18 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     
     const typeText = {
       'all': '所有类型',
-      'quotation': '报价单',
-      'confirmation': '销售确认',
-      'packing': '装箱单',
-      'invoice': '财务发票',
-      'purchase': '采购订单'
+      'quotation': 'QTN',
+      'confirmation': 'SC',
+      'packing': 'PL',
+      'invoice': 'INV',
+      'purchase': 'PO'
     }[typeFilter];
     
     if (searchTerm.trim()) {
-      return `没有找到包含"${searchTerm}"的${typeText}`;
+      return `没有找到包含"${searchTerm}"的${typeText === '所有类型' ? '' : typeText + ' '}文档`;
     }
     
-    return `${timeText}还没有创建或修改的${typeText}`;
+    return `${timeText}暂无 ${typeText} 文档`;
   };
 
   // 获取文档类型图标和颜色
@@ -315,7 +317,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="搜索文档编号、客户名称..."
+            placeholder="搜索 类型简写_单据号（如 QTN_2024-001）或 客户名称..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-10 py-2 text-sm bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400"
@@ -437,7 +439,8 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className={`text-sm font-medium text-gray-900 dark:text-white truncate
                       transition-colors duration-200 ${getColorClasses(doc.type)}`}>
-                      {getDocumentTypeName(doc.type)} - {highlightText(documentNumber, searchTerm)}
+                      <span>{getDocumentTypeName(doc.type)}_</span>
+                      {highlightText(documentNumber, searchTerm)}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5
                       group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors duration-200">
@@ -462,7 +465,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
             {getEmptyStateText()}
           </div>
           <div className="text-xs text-gray-400 dark:text-gray-500">
-            {searchTerm.trim() ? '尝试使用不同的搜索词' : '开始创建第一个单据吧！'}
+            {searchTerm.trim() ? '可尝试按“类型简写_单据号”搜索，如 QTN_2024-001' : '支持按“类型简写_单据号”搜索，例如 QTN_2024-001'}
           </div>
         </div>
       )}
