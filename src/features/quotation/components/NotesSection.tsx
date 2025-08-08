@@ -77,40 +77,40 @@ export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) =>
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* 配置按钮 */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">
+        <h3 className="text-base font-semibold text-gray-800 dark:text-[#F5F5F7]">
           Notes
         </h3>
         <button
           onClick={() => setShowConfig(!showConfig)}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] transition-colors"
+          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-[#3A3A3C] transition-colors"
           title="配置Notes显示"
         >
-          <Settings className="w-4 h-4 text-gray-600 dark:text-[#98989D]" />
+          <Settings className="w-3 h-3 text-gray-600 dark:text-[#98989D]" />
         </button>
       </div>
 
       {/* 配置面板 */}
       {showConfig && (
-        <div className="bg-gray-50 dark:bg-[#3A3A3C] rounded-xl p-4 space-y-3">
-          <h4 className="text-sm font-medium text-gray-700 dark:text-[#F5F5F7] mb-3">
+        <div className="border-t border-gray-200 dark:border-[#3A3A3C] pt-2 space-y-1">
+          <h4 className="text-xs font-medium text-gray-700 dark:text-[#F5F5F7]">
             选择显示的Notes
           </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-1">
             {notesConfig.map((note) => (
               <label
                 key={note.id}
-                className="flex items-center space-x-3 p-3 bg-white dark:bg-[#2C2C2E] rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-[#3A3A3C] transition-colors"
+                className="flex items-center space-x-2 p-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded transition-colors"
               >
                 <input
                   type="checkbox"
                   checked={note.visible}
                   onChange={() => handleVisibilityToggle(note.id, note.visible)}
-                  className="w-4 h-4 text-[#007AFF] bg-gray-100 border-gray-300 rounded focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                  className="w-3 h-3 text-[#007AFF] bg-gray-100 border-gray-300 rounded focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                 />
-                <span className="text-sm text-gray-700 dark:text-[#F5F5F7]">
+                <span className="text-xs text-gray-700 dark:text-[#F5F5F7]">
                   {getNoteDisplayName(note.id)}
                 </span>
               </label>
@@ -130,7 +130,7 @@ export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) =>
             items={visibleNotes.map(note => note.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div>
+            <div className="space-y-2">
               {visibleNotes.map((note) => (
                 <SortableNote
                   key={note.id}
@@ -206,16 +206,16 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
       style={style}
       {...attributes}
       {...listeners}
-      className={`bg-white dark:bg-[#2C2C2E] rounded-xl p-4 border border-[#E5E5EA] dark:border-[#3A3A3C] transition-all duration-200 cursor-grab active:cursor-grabbing mb-3 ${
-        isDragging ? 'shadow-lg scale-105' : ''
+      className={`p-2 transition-all duration-200 cursor-grab active:cursor-grabbing hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded ${
+        isDragging ? 'shadow-lg scale-105 bg-gray-100 dark:bg-[#3A3A3C]' : ''
       }`}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center space-x-1">
           <div className="cursor-grab active:cursor-grabbing">
-            <GripVertical className="w-4 h-4 text-gray-400" />
+            <GripVertical className="w-3 h-3 text-gray-400" />
           </div>
-          <span className="text-sm font-medium text-gray-700 dark:text-[#F5F5F7]">
+          <span className="text-xs font-medium text-gray-700 dark:text-[#F5F5F7]">
             {getNoteDisplayName(note.id)}
           </span>
         </div>
@@ -227,13 +227,13 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
           className="p-1 rounded hover:bg-gray-100 dark:hover:bg-[#3A3A3C] transition-colors"
           title="隐藏此Note"
         >
-          <EyeOff className="w-4 h-4 text-gray-400" />
+          <EyeOff className="w-3 h-3 text-gray-400" />
         </button>
       </div>
       
       {/* 特殊Notes的选项选择器 */}
       {isSpecialNote && (
-        <div className="mb-2">
+        <div className="mb-1">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-gray-500 dark:text-[#98989D]">
               当前选择：
@@ -250,7 +250,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
             </button>
           </div>
           {showOptions && (
-            <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto p-1 bg-gray-50 dark:bg-[#3A3A3C] rounded">
+            <div className="flex flex-wrap gap-1 max-h-12 overflow-y-auto">
               {(showAllOptions ? options : options.slice(0, 8)).map((option) => (
                 <button
                   type="button"
@@ -264,7 +264,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
                   className={`px-2 py-1 rounded text-xs transition-colors whitespace-nowrap ${
                     selectedOptionId === option.id
                       ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
-                      : 'bg-white dark:bg-[#2C2C2E] text-gray-700 dark:text-[#F5F5F7] hover:bg-gray-100 dark:hover:bg-[#4A4A4C]'
+                      : 'text-gray-600 dark:text-[#98989D] hover:bg-gray-100 dark:hover:bg-[#4A4A4C]'
                   }`}
                   title={option.english}
                 >
@@ -300,7 +300,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
         </div>
       )}
       
-      <div className="text-sm text-gray-600 dark:text-[#98989D]">
+      <div className="text-xs text-gray-600 dark:text-[#98989D]">
         <textarea
           value={getNoteContent(note.id, data, selectedOption)}
           onChange={(e) => {
@@ -317,8 +317,8 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
               onChange({ ...data, notes: newNotes });
             }
           }}
-          className="w-full p-2 text-sm border border-gray-300 dark:border-[#3A3A3C] rounded bg-white dark:bg-[#2C2C2E] text-gray-800 dark:text-[#F5F5F7] resize-none"
-          rows={2}
+          className="w-full p-1 text-xs border-0 bg-transparent text-gray-800 dark:text-[#F5F5F7] resize-none focus:outline-none focus:ring-0"
+          rows={1}
           placeholder="输入条款内容..."
         />
       </div>

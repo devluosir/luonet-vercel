@@ -169,7 +169,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     
     // 处理订单号自动换行，使用相同的最大宽度
     if (data.inquiryNo) {
-      const wrappedOrderNo = doc.splitTextToSize(data.inquiryNo.trim(), maxWidth);
+      const wrappedOrderNo = doc.splitTextToSize(data.inquiryNo?.trim() || '', maxWidth);
       wrappedOrderNo.forEach((line: string, index: number) => {
         // 设置订单号为蓝色
         doc.setTextColor(0, 0, 255);
@@ -257,7 +257,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         paymentTermsHeight += estimatedLineHeight;
       }
       if (data.additionalPaymentTerms) {
-        const terms = data.additionalPaymentTerms.split('\n').filter(term => term.trim());
+        const terms = data.additionalPaymentTerms?.split('\n').filter(term => term?.trim()) || [];
         terms.forEach(term => {
           const wrappedText = doc.splitTextToSize(term, pageWidth - (margin * 2) - doc.getTextWidth('1. '));
           paymentTermsHeight += wrappedText.length * estimatedLineHeight;
@@ -333,7 +333,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
       const notesMaxWidth = pageWidth - (margin * 2);
       
       // 过滤掉空行，并重新计算序号
-      const validNotes = data.notes.filter(line => line.trim() !== '');
+      const validNotes = data.notes?.filter(line => line?.trim() !== '') || [];
       
       validNotes.forEach((line: string, index: number) => {
         // 添加编号
@@ -395,8 +395,8 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
       // 计算条款总数
       let totalTerms = 0;
       if (data.showPaymentTerms) totalTerms++;
-      if (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) {
-        totalTerms += data.additionalPaymentTerms.trim().split('\n').filter(line => line.trim()).length;
+          if (data.additionalPaymentTerms && data.additionalPaymentTerms?.trim()) {
+      totalTerms += data.additionalPaymentTerms?.trim().split('\n').filter(line => line?.trim()).length || 0;
       }
       if (data.showInvoiceReminder) totalTerms++;
 
@@ -436,7 +436,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
           currentY += 5;
         } else if (data.additionalPaymentTerms) {
           // 显示额外的付款条款
-          const additionalTerm = data.additionalPaymentTerms.trim();
+          const additionalTerm = data.additionalPaymentTerms?.trim() || '';
           const titleWidth = doc.getTextWidth('Payment Term:');
           const spacing = 5; // 设置合适的间距
           doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
@@ -502,7 +502,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
 
         // 显示额外的付款条款
         if (data.additionalPaymentTerms) {
-          const terms = data.additionalPaymentTerms.split('\n').filter(term => term.trim());
+          const terms = data.additionalPaymentTerms?.split('\n').filter(term => term?.trim()) || [];
           terms.forEach(term => {
             const numberText = `${termIndex}. `;
             const numberWidth = doc.getTextWidth(numberText);
