@@ -89,6 +89,18 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
     history: 'text-pink-600 dark:text-pink-500',
   };
 
+  // 徽章背景颜色兜底，避免某些构建情况下动态类名未被捕获
+  const fallbackBadgeBgByModule: Record<string, string> = {
+    quotation: 'bg-blue-600 dark:bg-blue-500',
+    confirmation: 'bg-emerald-600 dark:bg-emerald-500',
+    packing: 'bg-cyan-600 dark:bg-cyan-500',
+    invoice: 'bg-violet-600 dark:bg-violet-500',
+    purchase: 'bg-orange-600 dark:bg-orange-500',
+    'ai-email': 'bg-indigo-600 dark:bg-indigo-500',
+    history: 'bg-pink-600 dark:bg-pink-500',
+    customer: 'bg-fuchsia-600 dark:bg-fuchsia-500',
+  };
+
   return (
     <button
       className={`
@@ -119,11 +131,11 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
       {/* 数量徽章 */}
       {showBadge && (
         <div
-          className={`absolute top-3 right-3 min-w-[20px] h-5 px-1.5 rounded-full
-            flex items-center justify-center text-xs font-medium
+          className={`absolute top-3 right-3 min-w-[22px] h-5 px-2 rounded-full
+            flex items-center justify-center text-[11px] font-semibold tracking-tight
             transition-all duration-300 z-10
             group-hover:scale-110 group-hover:rotate-6
-            backdrop-blur-sm shadow-sm ${c.badgeBg} ${c.badgeText}`}
+            shadow-sm ring-1 ring-white/50 dark:ring-white/20 mix-blend-normal ${c.badgeBg} ${fallbackBadgeBgByModule[module.id] ?? ''} ${c.badgeText} !text-white`}
         >
           <span>{count > 9999 ? '9999+' : count}</span>
         </div>
