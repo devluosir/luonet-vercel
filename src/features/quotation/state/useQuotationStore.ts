@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
+import type { NoteConfig } from '../types/notes';
+import { DEFAULT_NOTES_CONFIG } from '../types/notes';
 
 type Tab = 'quotation' | 'confirmation';
 
@@ -15,6 +17,7 @@ interface QuotationState {
   showSettings: boolean;
   showPreview: boolean;
   isPasteDialogOpen: boolean;
+  notesConfig: NoteConfig[]; // 新增：Notes配置
   previewItem: {
     id: string;
     createdAt: string;
@@ -44,9 +47,14 @@ interface QuotationState {
   updateItems: (items: LineItem[]) => void;
   updateOtherFees: (fees: OtherFee[]) => void;
   updateData: (updates: Partial<QuotationData>) => void;
+  
+  // 新增：Notes配置相关actions
+  setNotesConfig: (config: NoteConfig[]) => void;
+  updateNoteVisibility: (id: string, visible: boolean) => void;
+  updateNoteOrder: (fromIndex: number, toIndex: number) => void;
 }
 
-export const useQuotationStore = create<QuotationState>((set, get) => ({
+export const useQuotationStore = create<QuotationState>((set) => ({
   // 初始状态
   tab: 'quotation',
   data: {
@@ -87,6 +95,7 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
   showSettings: false,
   showPreview: false,
   isPasteDialogOpen: false,
+  notesConfig: DEFAULT_NOTES_CONFIG, // 新增：默认Notes配置
   previewItem: null,
 
   // Actions
@@ -112,4 +121,25 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
   updateData: (updates) => set((state) => ({ 
     data: { ...state.data, ...updates } 
   })),
+  
+  // 新增：Notes配置相关actions
+  setNotesConfig: (config) => set({ notesConfig: config }),
+  updateNoteVisibility: (id, visible) => set((state) => ({
+    notesConfig: state.notesConfig.map(note => 
+      note.id === id ? { ...note, visible } : note
+    )
+  })),
+  updateNoteOrder: (fromIndex, toIndex) => set((state) => {
+    const newConfig = [...state.notesConfig];
+    const [movedItem] = newConfig.splice(fromIndex, 1);
+    newConfig.splice(toIndex, 0, movedItem);
+    
+    // 重新计算order值
+    const updatedConfig = newConfig.map((note, index) => ({
+      ...note,
+      order: index
+    }));
+    
+    return { notesConfig: updatedConfig };
+  }),
 }));

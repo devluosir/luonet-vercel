@@ -36,7 +36,7 @@ const DynamicPaymentTermsSection = dynamic(() => import('@/components/quotation/
 import { TabButton } from '@/components/quotation/TabButton';
 import { CustomerInfoSection } from '@/components/quotation/CustomerInfoSection';
 import { ItemsTable } from '@/components/quotation/ItemsTable';
-import { NotesSection } from '@/components/quotation/NotesSection';
+import { NotesSection } from '../components/NotesSection';
 import { SettingsPanel } from '@/components/quotation/SettingsPanel';
 import { ImportDataButton } from '@/components/quotation/ImportDataButton';
 import { PasteDialog } from '@/components/quotation/PasteDialog';
@@ -59,6 +59,7 @@ export default function QuotationPage() {
     showPreview,
     isPasteDialogOpen,
     previewItem,
+    notesConfig,
     // actions
     setTab,
     setEditId,
@@ -107,7 +108,7 @@ export default function QuotationPage() {
     if (!data) return;
 
     try {
-      const result = await saveOrUpdate(activeTab, data, editId);
+                   const result = await saveOrUpdate(activeTab, data, notesConfig, editId);
       if (result) {
         if (!editId) {
           setEditId(result.id);
@@ -131,7 +132,7 @@ export default function QuotationPage() {
     try {
       // 并行执行保存和PDF生成
       const [saveResult] = await Promise.all([
-        saveOrUpdate(activeTab, data, editId),
+                     saveOrUpdate(activeTab, data, notesConfig, editId),
         new Promise(resolve => setTimeout(resolve, 100))
       ]);
 
@@ -152,7 +153,7 @@ export default function QuotationPage() {
       setProgress(80);
 
       // 生成PDF
-      const pdfBlob = await generatePdf(activeTab, data, setProgress);
+                   const pdfBlob = await generatePdf(activeTab, data, notesConfig, setProgress);
       downloadPdf(pdfBlob, activeTab, data);
 
       // 生成成功后清除草稿
@@ -173,7 +174,15 @@ export default function QuotationPage() {
     if (!data) return;
 
     try {
-      const previewData = buildPreviewPayload(activeTab, data, editId, totalAmount);
+      // 使用新的生成服务，包含Notes配置
+      const pdfBlob = await generatePdf(activeTab, data, notesConfig, () => {});
+      
+      // 创建预览数据，包含PDF blob
+      const previewData = {
+        ...buildPreviewPayload(activeTab, data, editId, totalAmount),
+        pdfBlob // 添加PDF blob到预览数据
+      };
+      
       setPreviewItem(previewData);
       setShowPreview(true);
     } catch (error) {

@@ -318,7 +318,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 根据输入内容过滤客户
   useEffect(() => {
-    if (!data.to.trim()) {
+    if (!data.to?.trim()) {
       // 如果输入框为空，显示所有客户
       setFilteredCustomers(savedCustomers);
       setShowSavedCustomers(false);
@@ -343,7 +343,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
       setFilteredCustomers(filtered);
       
       // 只有当未选择客户且当前输入为空时，才自动显示弹窗
-      if (!hasSelectedCustomer && !data.to.trim() && filtered.length > 0) {
+      if (!hasSelectedCustomer && !data.to?.trim() && filtered.length > 0) {
         setShowSavedCustomers(true);
       } else {
         setShowSavedCustomers(false);

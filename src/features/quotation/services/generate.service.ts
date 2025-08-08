@@ -1,5 +1,6 @@
 import { usePdfGenerator } from '@/hooks/usePdfGenerator';
 import type { QuotationData } from '@/types/quotation';
+import { NOTES_CONTENT_MAP } from '../types/notes';
 
 // PDF生成服务Hook
 export function useGenerateService() {
@@ -7,13 +8,37 @@ export function useGenerateService() {
 
   const generatePdf = async (
     tab: 'quotation' | 'confirmation', 
-    data: QuotationData, 
+    data: QuotationData,
+    notesConfig: any[],
     setProgress: (progress: number) => void
   ): Promise<Blob> => {
     setProgress(50);
     
     try {
-      const blob = await generate(tab, data);
+      // 根据notesConfig过滤和排序notes
+      const visibleNotes = notesConfig
+        .filter(note => note.visible)
+        .sort((a, b) => a.order - b.order)
+        .map(note => {
+          // 自定义Notes从data中获取
+          if (note.id === 'custom_note_1' && data.notes && data.notes[0]) {
+            return data.notes[0];
+          }
+          if (note.id === 'custom_note_2' && data.notes && data.notes[1]) {
+            return data.notes[1];
+          }
+          // 默认Notes从映射中获取
+          return NOTES_CONTENT_MAP[note.id] || '';
+        })
+        .filter(content => content.trim() !== ''); // 过滤空内容
+
+      // 创建包含配置后notes的数据副本
+      const dataWithConfiguredNotes = {
+        ...data,
+        notes: visibleNotes
+      };
+
+      const blob = await generate(tab, dataWithConfiguredNotes);
       setProgress(100);
       return blob;
     } catch (error) {

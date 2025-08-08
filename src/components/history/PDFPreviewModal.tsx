@@ -14,6 +14,7 @@ interface PreviewHistoryItem {
   quotationNo?: string;
   invoiceNo?: string;
   orderNo?: string;
+  pdfBlob?: Blob; // 新增：直接传递的PDF blob
 }
 
 interface PDFPreviewModalProps {
@@ -111,27 +112,32 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
     try {
       let pdfUrl: string | null = null;
 
-      // 根据记录类型生成对应的PDF
-      if (itemType === 'quotation') {
-        // @ts-ignore - 历史记录数据可能来自不同来源
-        const pdfBlob = await generateQuotationPDF(item.data, true);
-        pdfUrl = URL.createObjectURL(pdfBlob);
-      } else if (itemType === 'confirmation') {
-        // @ts-ignore - 历史记录数据可能来自不同来源
-        const pdfBlob = await generateOrderConfirmationPDF(item.data, true);
-        pdfUrl = URL.createObjectURL(pdfBlob);
-      } else if (itemType === 'invoice') {
-        // @ts-ignore - 历史记录数据可能来自不同来源
-        const pdfBlob = await generateInvoicePDF(item.data);
-        pdfUrl = URL.createObjectURL(pdfBlob);
-      } else if (itemType === 'purchase') {
-        // @ts-ignore - 历史记录数据可能来自不同来源
-        const pdfBlob = await generatePurchaseOrderPDF(item.data, true);
-        pdfUrl = URL.createObjectURL(pdfBlob);
-      } else if (itemType === 'packing') {
-        // @ts-ignore - 历史记录数据可能来自不同来源
-        const pdfBlob = await generatePackingListPDF(item.data);
-        pdfUrl = URL.createObjectURL(pdfBlob);
+      // 如果item中已经包含pdfBlob，直接使用
+      if (item.pdfBlob) {
+        pdfUrl = URL.createObjectURL(item.pdfBlob);
+      } else {
+        // 根据记录类型生成对应的PDF
+        if (itemType === 'quotation') {
+          // @ts-ignore - 历史记录数据可能来自不同来源
+          const pdfBlob = await generateQuotationPDF(item.data, true);
+          pdfUrl = URL.createObjectURL(pdfBlob);
+        } else if (itemType === 'confirmation') {
+          // @ts-ignore - 历史记录数据可能来自不同来源
+          const pdfBlob = await generateOrderConfirmationPDF(item.data, true);
+          pdfUrl = URL.createObjectURL(pdfBlob);
+        } else if (itemType === 'invoice') {
+          // @ts-ignore - 历史记录数据可能来自不同来源
+          const pdfBlob = await generateInvoicePDF(item.data);
+          pdfUrl = URL.createObjectURL(pdfBlob);
+        } else if (itemType === 'purchase') {
+          // @ts-ignore - 历史记录数据可能来自不同来源
+          const pdfBlob = await generatePurchaseOrderPDF(item.data, true);
+          pdfUrl = URL.createObjectURL(pdfBlob);
+        } else if (itemType === 'packing') {
+          // @ts-ignore - 历史记录数据可能来自不同来源
+          const pdfBlob = await generatePackingListPDF(item.data);
+          pdfUrl = URL.createObjectURL(pdfBlob);
+        }
       }
 
       if (pdfUrl) {
@@ -159,63 +165,57 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
 
     setIsGeneratingPdf(true);
     try {
-      // 根据记录类型生成对应的PDF并下载
-      if (itemType === 'quotation') {
-        // @ts-ignore - 历史记录数据可能来自不同来源
-        const pdfBlob = await generateQuotationPDF(item.data, false);
-        const url = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `QTN_${item.quotationNo || 'export'}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      } else if (itemType === 'confirmation') {
-        // @ts-ignore - 历史记录数据可能来自不同来源
-        const pdfBlob = await generateOrderConfirmationPDF(item.data, false);
-        const url = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `SC_${item.quotationNo || 'export'}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      } else if (itemType === 'invoice') {
-        // @ts-ignore - 历史记录数据可能来自不同来源
-        const pdfBlob = await generateInvoicePDF(item.data);
-        const url = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `INV_${item.invoiceNo || 'export'}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      } else if (itemType === 'purchase') {
-        // @ts-ignore - 历史记录数据可能来自不同来源
-        const pdfBlob = await generatePurchaseOrderPDF(item.data, false);
-        const url = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `PO_${item.orderNo || 'export'}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      } else if (itemType === 'packing') {
-        // @ts-ignore - 历史记录数据可能来自不同来源
-        const pdfBlob = await generatePackingListPDF(item.data);
-        const url = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `PL_${item.invoiceNo || 'export'}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+      let pdfBlob: Blob;
+
+      // 如果item中已经包含pdfBlob，直接使用
+      if (item.pdfBlob) {
+        pdfBlob = item.pdfBlob;
+      } else {
+        // 根据记录类型生成对应的PDF
+        if (itemType === 'quotation') {
+          // @ts-ignore - 历史记录数据可能来自不同来源
+          pdfBlob = await generateQuotationPDF(item.data, false);
+        } else if (itemType === 'confirmation') {
+          // @ts-ignore - 历史记录数据可能来自不同来源
+          pdfBlob = await generateOrderConfirmationPDF(item.data, false);
+        } else if (itemType === 'invoice') {
+          // @ts-ignore - 历史记录数据可能来自不同来源
+          pdfBlob = await generateInvoicePDF(item.data);
+        } else if (itemType === 'purchase') {
+          // @ts-ignore - 历史记录数据可能来自不同来源
+          pdfBlob = await generatePurchaseOrderPDF(item.data, false);
+        } else if (itemType === 'packing') {
+          // @ts-ignore - 历史记录数据可能来自不同来源
+          pdfBlob = await generatePackingListPDF(item.data);
+        } else {
+          throw new Error('未知的文档类型');
+        }
       }
+
+      // 下载PDF
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // 根据类型设置文件名
+      let fileName = 'export.pdf';
+      if (itemType === 'quotation') {
+        fileName = `QTN_${item.quotationNo || 'export'}.pdf`;
+      } else if (itemType === 'confirmation') {
+        fileName = `SC_${item.quotationNo || 'export'}.pdf`;
+      } else if (itemType === 'invoice') {
+        fileName = `INV_${item.invoiceNo || 'export'}.pdf`;
+      } else if (itemType === 'purchase') {
+        fileName = `PO_${item.orderNo || 'export'}.pdf`;
+      } else if (itemType === 'packing') {
+        fileName = `PL_${item.orderNo || 'export'}.pdf`;
+      }
+      
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('PDF下载失败:', error);
       alert('PDF下载失败，请重试');

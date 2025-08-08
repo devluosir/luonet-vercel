@@ -1,18 +1,22 @@
 import { saveQuotationHistory } from '@/utils/quotationHistory';
 import { getInitialQuotationData } from '@/utils/quotationInitialData';
 import type { QuotationData } from '@/types/quotation';
+import type { NoteConfig } from '../types/notes';
+import { DEFAULT_NOTES_CONFIG } from '../types/notes';
 
 interface CustomWindow extends Window {
   __QUOTATION_DATA__?: QuotationData | null;
   __EDIT_MODE__?: boolean;
   __EDIT_ID__?: string;
   __QUOTATION_TYPE__?: 'quotation' | 'confirmation';
+  __NOTES_CONFIG__?: NoteConfig[] | null;
 }
 
 // 保存或更新报价数据
 export async function saveOrUpdate(
   tab: 'quotation' | 'confirmation', 
-  data: QuotationData, 
+  data: QuotationData,
+  notesConfig: any[],
   editId?: string
 ): Promise<{ id: string } | null> {
   try {
@@ -27,7 +31,13 @@ export async function saveOrUpdate(
       };
     }
     
-    const result = await saveQuotationHistory(tab, workingData, editId);
+    // 保存时包含notesConfig
+    const dataWithConfig = {
+      ...workingData,
+      notesConfig
+    };
+    
+    const result = await saveQuotationHistory(tab, dataWithConfig, editId);
     return result;
   } catch (error) {
     console.error('Error saving quotation:', error);
@@ -58,6 +68,33 @@ export function initDataFromSources(): QuotationData {
 
   // 3. 最后使用默认数据
   return getInitialQuotationData();
+}
+
+// 从多个数据源初始化Notes配置
+export function initNotesConfigFromSources(): NoteConfig[] {
+  // 1. 优先使用全局注入的配置
+  if (typeof window !== 'undefined') {
+    const win = window as unknown as CustomWindow;
+    if (win.__NOTES_CONFIG__) {
+      return win.__NOTES_CONFIG__;
+    }
+  }
+
+  // 2. 其次使用草稿数据中的配置
+  try {
+    const draft = localStorage.getItem('draftQuotation');
+    if (draft) {
+      const parsed = JSON.parse(draft);
+      if (parsed.notesConfig) {
+        return parsed.notesConfig;
+      }
+    }
+  } catch (error) {
+    console.warn('读取Notes配置失败:', error);
+  }
+
+  // 3. 最后使用默认配置
+  return DEFAULT_NOTES_CONFIG;
 }
 
 // 获取编辑ID
