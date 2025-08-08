@@ -22,7 +22,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Eye, EyeOff, GripVertical, Settings, ChevronDown, Check } from 'lucide-react';
 import { useQuotationStore } from '../state/useQuotationStore';
-import { NOTES_CONTENT_MAP, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS } from '../types/notes';
+import { NOTES_CONTENT_MAP, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS, DEFAULT_NOTES_CONFIG, NOTES_TEMPLATES_BILINGUAL, extractEnglishContent } from '../types/notes';
 import type { NoteConfig } from '../types/notes';
 
 interface NotesSectionProps {
@@ -77,14 +77,19 @@ export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) =>
   };
 
   return (
-    <div className="space-y-2">
-      {/* 配置按钮 */}
+    <div className="space-y-3">
+      {/* 标题和设置按钮 */}
       <div className="flex items-center justify-between">
         <h3 className="text-base font-semibold text-gray-800 dark:text-[#F5F5F7]">
           Notes
         </h3>
         <button
-          onClick={() => setShowConfig(!showConfig)}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowConfig(!showConfig);
+          }}
           className="p-1 rounded hover:bg-gray-100 dark:hover:bg-[#3A3A3C] transition-colors"
           title="配置Notes显示"
         >
@@ -92,29 +97,145 @@ export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) =>
         </button>
       </div>
 
-      {/* 配置面板 */}
+      {/* 批量操作条 */}
       {showConfig && (
-        <div className="border-t border-gray-200 dark:border-[#3A3A3C] pt-2 space-y-1">
+        <div className="bg-gray-50 dark:bg-[#2C2C2E] rounded-lg p-3 space-y-2">
           <h4 className="text-xs font-medium text-gray-700 dark:text-[#F5F5F7]">
-            选择显示的Notes
+            批量操作
           </h4>
-          <div className="grid grid-cols-2 gap-1">
-            {notesConfig.map((note) => (
-              <label
-                key={note.id}
-                className="flex items-center space-x-2 p-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded transition-colors"
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                notesConfig.forEach(note => {
+                  if (!note.visible) {
+                    handleVisibilityToggle(note.id, note.visible);
+                  }
+                });
+              }}
+              className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors"
+            >
+              全选
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                notesConfig.forEach(note => {
+                  if (note.visible) {
+                    handleVisibilityToggle(note.id, note.visible);
+                  }
+                });
+              }}
+              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              全不选
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // 仅显示常用条款
+                notesConfig.forEach(note => {
+                  const isCommon = ['delivery_time', 'price_based_on', 'delivery_terms', 'payment_terms', 'validity'].includes(note.id);
+                  if (note.visible !== isCommon) {
+                    handleVisibilityToggle(note.id, note.visible);
+                  }
+                });
+              }}
+              className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-900/30 transition-colors"
+            >
+              仅常用
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // 恢复默认顺序
+                const { setNotesConfig } = useQuotationStore.getState();
+                setNotesConfig(DEFAULT_NOTES_CONFIG);
+              }}
+              className="px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded hover:bg-orange-200 dark:hover:bg-orange-900/30 transition-colors"
+            >
+              恢复默认
+            </button>
+          </div>
+          
+          {/* 模板选择 */}
+          <div className="mt-2">
+            <h5 className="text-xs font-medium text-gray-700 dark:text-[#F5F5F7] mb-2">快速模板</h5>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  // EXW模板
+                  const { setNotesConfig, updateSpecialNoteOption } = useQuotationStore.getState();
+                  const template = [
+                    { id: 'delivery_time', visible: true, order: 0 },
+                    { id: 'price_based_on', visible: true, order: 1 },
+                    { id: 'delivery_terms', visible: true, order: 2 },
+                    { id: 'payment_terms', visible: true, order: 3 },
+                    { id: 'validity', visible: true, order: 4 },
+                    { id: 'quality_terms', visible: false, order: 5 },
+                    { id: 'warranty_terms', visible: false, order: 6 },
+                    { id: 'custom_note_1', visible: false, order: 7 },
+                    { id: 'custom_note_2', visible: false, order: 8 },
+                  ];
+                  setNotesConfig(template);
+                  // 设置EXW模板内容
+                  updateSpecialNoteOption('payment_terms', 'custom_30 days net.');
+                  updateSpecialNoteOption('delivery_terms', 'custom_As stated above, subject to prior sale.');
+                }}
+                className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-900/30 transition-colors"
               >
-                <input
-                  type="checkbox"
-                  checked={note.visible}
-                  onChange={() => handleVisibilityToggle(note.id, note.visible)}
-                  className="w-3 h-3 text-[#007AFF] bg-gray-100 border-gray-300 rounded focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                />
-                <span className="text-xs text-gray-700 dark:text-[#F5F5F7]">
-                  {getNoteDisplayName(note.id)}
-                </span>
-              </label>
-            ))}
+                EXW工厂交货
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // FOB模板
+                  const { setNotesConfig, updateSpecialNoteOption } = useQuotationStore.getState();
+                  const template = [
+                    { id: 'delivery_time', visible: true, order: 0 },
+                    { id: 'price_based_on', visible: true, order: 1 },
+                    { id: 'delivery_terms', visible: true, order: 2 },
+                    { id: 'payment_terms', visible: true, order: 3 },
+                    { id: 'validity', visible: true, order: 4 },
+                    { id: 'quality_terms', visible: true, order: 5 },
+                    { id: 'warranty_terms', visible: false, order: 6 },
+                    { id: 'custom_note_1', visible: false, order: 7 },
+                    { id: 'custom_note_2', visible: false, order: 8 },
+                  ];
+                  setNotesConfig(template);
+                  updateSpecialNoteOption('payment_terms', 'custom_30% advance payment, 70% before shipment.');
+                  updateSpecialNoteOption('delivery_terms', 'custom_As stated above, subject to prior sale.');
+                }}
+                className="px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-colors"
+              >
+                FOB离岸价
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // CIF模板
+                  const { setNotesConfig, updateSpecialNoteOption } = useQuotationStore.getState();
+                  const template = [
+                    { id: 'delivery_time', visible: true, order: 0 },
+                    { id: 'price_based_on', visible: true, order: 1 },
+                    { id: 'delivery_terms', visible: true, order: 2 },
+                    { id: 'payment_terms', visible: true, order: 3 },
+                    { id: 'validity', visible: true, order: 4 },
+                    { id: 'quality_terms', visible: false, order: 5 },
+                    { id: 'warranty_terms', visible: false, order: 6 },
+                    { id: 'custom_note_1', visible: false, order: 7 },
+                    { id: 'custom_note_2', visible: false, order: 8 },
+                  ];
+                  setNotesConfig(template);
+                  updateSpecialNoteOption('payment_terms', 'custom_100% T/T in advance.');
+                  updateSpecialNoteOption('delivery_terms', 'custom_As stated above, subject to prior sale.');
+                }}
+                className="px-2 py-1 text-xs bg-teal-100 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded hover:bg-teal-200 dark:hover:bg-teal-900/30 transition-colors"
+              >
+                CIF到岸价
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -158,8 +279,11 @@ export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) =>
 // 获取Note显示名称
 function getNoteDisplayName(noteId: string): string {
   const displayNames: Record<string, string> = {
-    payment_terms: 'Payment Terms',
+    delivery_time: 'Delivery Time',
+    price_based_on: 'Price Based On',
     delivery_terms: 'Delivery Terms',
+    payment_terms: 'Payment Terms',
+    validity: 'Validity',
     quality_terms: 'Quality Terms',
     warranty_terms: 'Warranty Terms',
     custom_note_1: 'Custom Note 1',
@@ -200,6 +324,13 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
   const [showOptions, setShowOptions] = useState(false);
   const [showAllOptions, setShowAllOptions] = useState(false);
 
+  // 获取当前Note在可见列表中的序号
+  const { notesConfig } = useQuotationStore();
+  const visibleNotes = notesConfig
+    .filter(n => n.visible)
+    .sort((a, b) => a.order - b.order);
+  const noteIndex = visibleNotes.findIndex(n => n.id === note.id) + 1;
+
   return (
     <div
       ref={setNodeRef}
@@ -211,32 +342,53 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
       }`}
     >
       <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center space-x-2">
+          {/* 可视化开关 */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onVisibilityToggle(note.id, note.visible);
+            }}
+            className={`w-4 h-4 rounded border-2 transition-colors ${
+              note.visible 
+                ? 'bg-[#007AFF] dark:bg-[#0A84FF] border-[#007AFF] dark:border-[#0A84FF]' 
+                : 'bg-transparent border-gray-300 dark:border-gray-600'
+            }`}
+            title={note.visible ? '隐藏条款' : '显示条款'}
+          >
+            {note.visible && (
+              <svg className="w-2 h-2 text-white mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
+          
+          {/* 序号显示（仅对可见项编号） */}
+          <div className="flex items-center space-x-1">
+            <span className="text-xs font-medium text-gray-500 dark:text-[#98989D] min-w-[20px]">
+              {note.visible ? `${noteIndex}.` : ''}
+            </span>
+            <span className={`text-xs font-medium ${note.visible ? 'text-gray-700 dark:text-[#F5F5F7]' : 'text-gray-400 dark:text-[#6B6B6B]'}`}>
+              {getNoteDisplayName(note.id)}
+            </span>
+          </div>
+        </div>
+        
         <div className="flex items-center space-x-1">
+          {/* 拖拽句柄 */}
           <div className="cursor-grab active:cursor-grabbing">
             <GripVertical className="w-3 h-3 text-gray-400" />
           </div>
-          <span className="text-xs font-medium text-gray-700 dark:text-[#F5F5F7]">
-            {getNoteDisplayName(note.id)}
-          </span>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation(); // 防止触发拖拽
-            onVisibilityToggle(note.id, note.visible);
-          }}
-          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-[#3A3A3C] transition-colors"
-          title="隐藏此Note"
-        >
-          <EyeOff className="w-3 h-3 text-gray-400" />
-        </button>
       </div>
       
-      {/* 特殊Notes的选项选择器 */}
+      {/* 内联选择器 */}
       {isSpecialNote && (
-        <div className="mb-1">
+        <div className="mb-2">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-gray-500 dark:text-[#98989D]">
-              当前选择：
+              选择选项：
             </span>
             <button
               type="button"
@@ -244,14 +396,16 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
                 e.stopPropagation();
                 setShowOptions(!showOptions);
               }}
-              className="text-xs text-[#007AFF] dark:text-[#0A84FF] hover:underline"
+              className="text-xs text-[#007AFF] dark:text-[#0A84FF] hover:underline flex items-center gap-1"
             >
-              {selectedOption ? selectedOption.chinese : '点击选择'}
+              {selectedOption ? selectedOption.chinese : '选择选项'}
+              <ChevronDown className={`w-3 h-3 transition-transform ${showOptions ? 'rotate-180' : ''}`} />
             </button>
           </div>
           {showOptions && (
-            <div className="flex flex-wrap gap-1 max-h-12 overflow-y-auto">
-              {(showAllOptions ? options : options.slice(0, 8)).map((option) => (
+            <div className="bg-white dark:bg-[#2C2C2E] border border-gray-200 dark:border-[#3A3A3C] rounded-lg p-2 max-h-32 overflow-y-auto">
+              <div className="space-y-1">
+                {options.map((option) => (
                 <button
                   type="button"
                   key={option.id}
@@ -259,42 +413,19 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
                     e.stopPropagation();
                     onUpdateSpecialOption(note.id, option.id);
                     setShowOptions(false);
-                    setShowAllOptions(false);
                   }}
-                  className={`px-2 py-1 rounded text-xs transition-colors whitespace-nowrap ${
+                    className={`w-full text-left px-2 py-1 rounded text-xs transition-colors ${
                     selectedOptionId === option.id
                       ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
-                      : 'text-gray-600 dark:text-[#98989D] hover:bg-gray-100 dark:hover:bg-[#4A4A4C]'
+                        : 'text-gray-700 dark:text-[#F5F5F7] hover:bg-gray-100 dark:hover:bg-[#3A3A3C]'
                   }`}
                   title={option.english}
                 >
-                  {option.chinese}
+                    <div className="font-medium">{option.chinese}</div>
+                    <div className="text-xs opacity-75">{option.english}</div>
                 </button>
               ))}
-              {options.length > 8 && !showAllOptions && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowAllOptions(true);
-                  }}
-                  className="px-2 py-1 rounded text-xs bg-white dark:bg-[#2C2C2E] text-gray-500 dark:text-[#98989D] hover:bg-gray-100 dark:hover:bg-[#4A4A4C]"
-                >
-                  +{options.length - 8}更多
-                </button>
-              )}
-              {showAllOptions && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowAllOptions(false);
-                  }}
-                  className="px-2 py-1 rounded text-xs bg-white dark:bg-[#2C2C2E] text-gray-500 dark:text-[#98989D] hover:bg-gray-100 dark:hover:bg-[#4A4A4C]"
-                >
-                  收起
-                </button>
-              )}
+              </div>
             </div>
           )}
         </div>
@@ -321,6 +452,13 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
           rows={1}
           placeholder="输入条款内容..."
         />
+        
+        {/* 空值防御提示 */}
+        {note.visible && !getNoteContent(note.id, data, selectedOption).trim() && (
+          <div className="mt-1 px-2 py-1 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded text-xs text-red-600 dark:text-red-400">
+            ⚠️ 此条款可见但内容为空，建议填写内容或隐藏条款
+          </div>
+        )}
       </div>
     </div>
   );
@@ -350,6 +488,23 @@ function getNoteContent(noteId: string, data: any, selectedOption?: any): string
   }
   if (noteId === 'custom_note_2' && data.notes && data.notes[1]) {
     return data.notes[1];
+  }
+  
+  // 新增的Notes类型处理
+  if (noteId === 'delivery_time') {
+    return NOTES_CONTENT_MAP[noteId] || 'Delivery Time: 30-45 days after order confirmation';
+  }
+  if (noteId === 'price_based_on') {
+    return NOTES_CONTENT_MAP[noteId] || 'Price Based On: FOB Shanghai, China';
+  }
+  if (noteId === 'validity') {
+    return NOTES_CONTENT_MAP[noteId] || 'Validity: This quotation is valid for 30 days';
+  }
+  if (noteId === 'quality_terms') {
+    return NOTES_CONTENT_MAP[noteId] || 'Quality Terms: According to customer requirements';
+  }
+  if (noteId === 'warranty_terms') {
+    return NOTES_CONTENT_MAP[noteId] || 'Warranty: 12 months from delivery date';
   }
   
   // 默认Notes从映射中获取

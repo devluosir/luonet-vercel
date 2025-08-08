@@ -132,18 +132,18 @@ export const generateTableConfig = (
 ): UserOptions => {
   // 获取计算后的列宽度配置
   const columnStyles = calculateColumnWidths(
-    data.showDescription,
-    data.showRemarks,
+    data.showDescription ?? true,
+    data.showRemarks ?? false,
     pageWidth,
     margin
   );
 
   return {
     startY: currentY,
-    head: [['No.', 'Part Name', ...(data.showDescription ? ['Description'] : []), 'Q\'TY', 'Unit', 'U/Price', 'Amount', ...(data.showRemarks ? ['Remarks'] : [])]],
+    head: [['No.', 'Part Name', ...((data.showDescription ?? true) ? ['Description'] : []), 'Q\'TY', 'Unit', 'U/Price', 'Amount', ...((data.showRemarks ?? false) ? ['Remarks'] : [])]],
     body: [
       // 常规商品行
-      ...data.items.map((item, index) => [
+      ...(data.items || []).map((item, index) => [
         {
           content: (index + 1).toString(),
           styles: { halign: 'center' as const }
@@ -152,7 +152,7 @@ export const generateTableConfig = (
           content: item.partName,
           styles: item.highlight?.partName ? { textColor: [255, 0, 0] } : {}
         },
-        ...(data.showDescription ? [{
+        ...((data.showDescription ?? true) ? [{
           content: item.description || '',
           styles: item.highlight?.description ? { textColor: [255, 0, 0] } : {}
         }] : []),
@@ -184,7 +184,7 @@ export const generateTableConfig = (
             ...(item.highlight?.amount ? { textColor: [255, 0, 0] } : {})
           }
         },
-        ...(data.showRemarks ? [{
+        ...((data.showRemarks ?? false) ? [{
           content: item.remarks || '',
           styles: item.highlight?.remarks ? { textColor: [255, 0, 0] } : {}
         }] : [])
@@ -193,7 +193,7 @@ export const generateTableConfig = (
       ...(data.otherFees || []).map(fee => [
         {
           content: fee.description,
-          colSpan: data.showDescription ? 6 : 5,
+          colSpan: (data.showDescription ?? true) ? 6 : 5,
           styles: { 
             halign: 'center' as const,
             ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {})
@@ -206,7 +206,7 @@ export const generateTableConfig = (
             ...(fee.highlight?.amount ? { textColor: [255, 0, 0] } : {})
           }
         },
-        ...(data.showRemarks ? [{
+        ...((data.showRemarks ?? false) ? [{
           content: fee.remarks || '',
           styles: {
             halign: 'center' as const,

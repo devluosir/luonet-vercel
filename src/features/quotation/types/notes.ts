@@ -11,20 +11,26 @@ export interface NoteItem {
   type: 'default' | 'custom';
 }
 
-// 默认Notes配置
+// 默认Notes配置 - 按照用户要求的排序
 export const DEFAULT_NOTES_CONFIG: NoteConfig[] = [
-  { id: 'payment_terms', visible: true, order: 0 },
-  { id: 'delivery_terms', visible: true, order: 1 },
-  { id: 'quality_terms', visible: true, order: 2 },
-  { id: 'warranty_terms', visible: true, order: 3 },
-  { id: 'custom_note_1', visible: true, order: 4 },
-  { id: 'custom_note_2', visible: true, order: 5 },
+  { id: 'delivery_time', visible: true, order: 0 },      // 1. Delivery time
+  { id: 'price_based_on', visible: true, order: 1 },    // 2. Price based on
+  { id: 'delivery_terms', visible: true, order: 2 },     // 3. Delivery terms
+  { id: 'payment_terms', visible: true, order: 3 },      // 4. Payment term
+  { id: 'validity', visible: true, order: 4 },           // 5. Validity
+  { id: 'quality_terms', visible: false, order: 5 },     // 6. Quality terms (默认隐藏)
+  { id: 'warranty_terms', visible: false, order: 6 },    // 7. Warranty terms (默认隐藏)
+  { id: 'custom_note_1', visible: false, order: 7 },     // 8. Custom note 1 (默认隐藏)
+  { id: 'custom_note_2', visible: false, order: 8 },     // 9. Custom note 2 (默认隐藏)
 ];
 
-// Notes内容映射
+// Notes内容映射 - 使用双语模板的英文部分
 export const NOTES_CONTENT_MAP: Record<string, string> = {
-  payment_terms: 'Payment Terms: 30% advance payment, 70% before shipment',
-  delivery_terms: 'Delivery Terms: FOB Shanghai, China',
+  delivery_time: 'Delivery Time: As stated in Remarks.',
+  price_based_on: 'Price Basis: FOB Shanghai, China.',
+  delivery_terms: 'Delivery Terms: As stated above, subject to prior sale.',
+  payment_terms: 'Payment Term: 30% advance payment, 70% before shipment.',
+  validity: 'Validity: This quotation is valid for 30 days from the date of issue.',
   quality_terms: 'Quality Terms: According to customer requirements',
   warranty_terms: 'Warranty: 12 months from delivery date',
   custom_note_1: '',
@@ -52,6 +58,43 @@ export const PAYMENT_TERMS_OPTIONS = [
   { id: 'open_account', chinese: '赊账结算', english: 'Open Account / Net 30-90 days', remark: '完全基于信用' },
   { id: 'escrow', chinese: '第三方托管', english: 'Escrow / Third-party payment', remark: 'PayPal、支付宝担保交易等' }
 ];
+
+// 提取英文内容的工具函数
+export const extractEnglishContent = (bilingualText: string): string => {
+  const parts = bilingualText.split(' / ');
+  return parts[0] || bilingualText;
+};
+
+// 提取中文内容的工具函数
+export const extractChineseContent = (bilingualText: string): string => {
+  const parts = bilingualText.split(' / ');
+  return parts[1] || bilingualText;
+};
+
+// 双语Notes模板库
+export const NOTES_TEMPLATES_BILINGUAL = {
+  exw: [
+    "Delivery Time: As stated in Remarks. / 交货期：见备注。",
+    "Price Basis: EXW Shanghai, China. / 价格基础：工厂交货，上海，中国。",
+    "Delivery Terms: As stated above, subject to prior sale. / 交货条款：同上，以未售出为条件。",
+    "Payment Term: 30 days net. / 付款条件：货到后30天内付款。",
+    "Validity: This quotation is valid for 10 days from the date of issue. / 报价有效期：自出具之日起10天内有效。"
+  ],
+  fob: [
+    "Delivery Time: As stated in Remarks. / 交货期：见备注。",
+    "Price Basis: FOB Shanghai, China. / 价格基础：离岸价，上海，中国。",
+    "Delivery Terms: As stated above, subject to prior sale. / 交货条款：同上，以未售出为条件。",
+    "Payment Term: 30% advance payment, 70% before shipment. / 付款条件：预付30%，发货前支付70%。",
+    "Validity: This quotation is valid for 30 days from the date of issue. / 报价有效期：自出具之日起30天内有效。"
+  ],
+  cif: [
+    "Delivery Time: As stated in Remarks. / 交货期：见备注。",
+    "Price Basis: CIF [Destination Port]. / 价格基础：到岸价，[目的港]。",
+    "Delivery Terms: As stated above, subject to prior sale. / 交货条款：同上，以未售出为条件。",
+    "Payment Term: 100% T/T in advance. / 付款条件：预付100%电汇。",
+    "Validity: This quotation is valid for 15 days from the date of issue. / 报价有效期：自出具之日起15天内有效。"
+  ]
+};
 
 // 交货期选项（用于Notes中的delivery_terms）
 export const DELIVERY_TERMS_OPTIONS = [

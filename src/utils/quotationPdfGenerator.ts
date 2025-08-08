@@ -134,11 +134,13 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
       doc.setFont('NotoSansSC', 'normal');
       doc.text(':', colonX + 1, y);
       
+      // 确保value是有效的字符串
+      const value = item.value ? String(item.value) : '';
       // 设置文本颜色
       if (item.valueColor) {
         doc.setTextColor(item.valueColor[0], item.valueColor[1], item.valueColor[2]);
       }
-      doc.text(item.value, colonX + 3, y);
+      doc.text(value, colonX + 3, y);
       // 重置回黑色
       if (item.valueColor) {
         doc.setTextColor(0, 0, 0);
@@ -159,7 +161,7 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     const customerInfoStartY = currentY;
     
     // 处理客户信息自动换行
-    const toText = data.to.trim();
+    const toText = data.to ? String(data.to).trim() : '';
     if (toText) {
       const wrappedLines = doc.splitTextToSize(toText, maxWidth);
       wrappedLines.forEach((line: string) => {
@@ -178,7 +180,7 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     doc.setFont('NotoSansSC', 'normal');
     const inquiryNoX = leftMargin + doc.getTextWidth('Inquiry No.: ') + 2;
 
-    const inquiryNoText = data.inquiryNo ? data.inquiryNo.trim() : '';
+    const inquiryNoText = data.inquiryNo ? String(data.inquiryNo).trim() : '';
     const wrappedInquiryNo = doc.splitTextToSize(inquiryNoText, maxWidth);
     wrappedInquiryNo.forEach((line: string, index: number) => {
       // 设置询价编号为蓝色
@@ -233,7 +235,7 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     currentY += 10;
 
     // 过滤有效的备注
-    const validNotes = data.notes?.filter(note => note.trim() !== '') || [];
+    const validNotes = data.notes?.filter(note => note?.trim() !== '') || [];
 
     // 添加备注
     if (validNotes.length > 0) {
@@ -260,15 +262,19 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
         // 显示序号
         doc.text(`${index + 1}.`, leftMargin, currentY);
         
-        // 处理长文本自动换行
-        const wrappedText = doc.splitTextToSize(note.trim(), contentMaxWidth);
-        wrappedText.forEach((line: string, lineIndex: number) => {
-          const lineY = currentY + (lineIndex * 4);
-          doc.text(line, leftMargin + numberWidth, lineY);
-        });
-        
-        // 更新Y坐标，确保下一条款在当前条款所有行之后
-        currentY += (wrappedText.length - 1) * 4;
+        // 确保note是有效的字符串
+        const noteText = typeof note === 'string' ? note.trim() : '';
+        if (noteText) {
+          // 处理长文本自动换行
+          const wrappedText = doc.splitTextToSize(noteText, contentMaxWidth);
+          wrappedText.forEach((line: string, lineIndex: number) => {
+            const lineY = currentY + (lineIndex * 4);
+            doc.text(line, leftMargin + numberWidth, lineY);
+          });
+          
+          // 更新Y坐标，确保下一条款在当前条款所有行之后
+          currentY += (wrappedText.length - 1) * 4;
+        }
       });
     }
 

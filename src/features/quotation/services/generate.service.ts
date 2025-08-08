@@ -1,6 +1,6 @@
 import { usePdfGenerator } from '@/hooks/usePdfGenerator';
 import type { QuotationData } from '@/types/quotation';
-import { NOTES_CONTENT_MAP, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS } from '../types/notes';
+import { NOTES_CONTENT_MAP, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS, NOTES_TEMPLATES_BILINGUAL, extractEnglishContent } from '../types/notes';
 
 // PDF生成服务Hook
 export function useGenerateService() {
@@ -47,10 +47,28 @@ export function useGenerateService() {
           if (note.id === 'custom_note_2' && data.notes && data.notes[1]) {
             return data.notes[1];
           }
+          
+          // 新增的Notes类型处理
+          if (note.id === 'delivery_time') {
+            return NOTES_CONTENT_MAP[note.id] || extractEnglishContent(NOTES_TEMPLATES_BILINGUAL.fob[0]);
+          }
+          if (note.id === 'price_based_on') {
+            return NOTES_CONTENT_MAP[note.id] || extractEnglishContent(NOTES_TEMPLATES_BILINGUAL.fob[1]);
+          }
+          if (note.id === 'validity') {
+            return NOTES_CONTENT_MAP[note.id] || extractEnglishContent(NOTES_TEMPLATES_BILINGUAL.fob[4]);
+          }
+          if (note.id === 'quality_terms') {
+            return NOTES_CONTENT_MAP[note.id] || 'Quality Terms: According to customer requirements';
+          }
+          if (note.id === 'warranty_terms') {
+            return NOTES_CONTENT_MAP[note.id] || 'Warranty: 12 months from delivery date';
+          }
+          
           // 默认Notes从映射中获取
           return NOTES_CONTENT_MAP[note.id] || '';
         })
-        .filter(content => content.trim() !== ''); // 过滤空内容
+        .filter(content => content && typeof content === 'string' && content.trim() !== ''); // 过滤空内容和无效内容
 
       // 创建包含配置后notes的数据副本
       const dataWithConfiguredNotes = {
