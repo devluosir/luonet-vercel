@@ -38,8 +38,11 @@ const calculateColumnWidths = (
   pageWidth: number,
   margin: number
 ): { [key: string]: ExtendedStyles } => {
-  // 计算表格可用总宽度（减去左右边距，但增加两边各5px的扩展）
-  const availableWidth = pageWidth - (margin * 2) + 10;
+  // 计算页面可用宽度
+  const pageWidth_mm = pageWidth;
+  const left = margin;
+  const right = margin;
+  const usable = pageWidth_mm - left - right;
   
   // 定义基础权重配置 - 调整以确保某些列不会换行
   const baseWeights = {
@@ -71,7 +74,7 @@ const calculateColumnWidths = (
   }
 
   // 计算单位权重对应的实际宽度
-  const unitWidth = availableWidth / totalWeight;
+  const unitWidth = usable / totalWeight;
 
   // 返回列宽度配置，添加容错机制
   return {
@@ -146,6 +149,12 @@ export const generateTableConfig = (
   margin: number,
   pageWidth: number
 ): UserOptions => {
+  // 计算页面可用宽度
+  const pageWidth_mm = pageWidth;
+  const left = margin;
+  const right = margin;
+  const usable = pageWidth_mm - left - right;
+  
   // 获取计算后的列宽度配置
   const columnStyles = calculateColumnWidths(
     data.showDescription ?? true,
@@ -232,8 +241,8 @@ export const generateTableConfig = (
       ])
     ] as unknown as RowInput[],
     columnStyles,
-    margin: { left: margin - 5, right: margin - 5, bottom: 20 }, // 向两边扩展5px
-    tableWidth: pageWidth - (margin * 2) + 10, // 增加10px的总宽度
+    margin: { left: margin, right: margin, bottom: 20 },
+    tableWidth: Math.min(usable, 555), // 限制表格总宽 <= 可用宽
     theme: 'plain',
     showHead: 'everyPage',
     styles: {
@@ -243,13 +252,15 @@ export const generateTableConfig = (
       lineWidth: 0.1,
       textColor: [0, 0, 0],
       font: 'NotoSansSC',
+      fontStyle: 'normal', // 明确指定normal
       valign: 'middle',
       minCellHeight: 6,
-      overflow: 'linebreak' as const // 确保内容会自动换行
+      overflow: 'linebreak' as const, // 确保内容会自动换行
+      cellWidth: 'auto' // 自动调整列宽
     },
     headStyles: {
       fontSize: 8,
-      fontStyle: 'bold',
+      fontStyle: 'bold', // 明确指定bold
       halign: 'center',
       font: 'NotoSansSC',
       valign: 'middle',
@@ -265,6 +276,11 @@ export const generateTableConfig = (
           data.cursor && 
           (data.cell.y + data.cell.height) > (pageHeight - bottomMargin)) {
         data.cursor.y = 0;
+      }
+      
+      // 对异常长词（无空格）做软断（中文一般没问题）
+      if (data.cell.raw && typeof data.cell.raw === 'string') {
+        data.cell.text = [data.cell.raw.replace(/(\S{24})/g, '$1\u200b')];
       }
     },
     didDrawPage: (data) => {

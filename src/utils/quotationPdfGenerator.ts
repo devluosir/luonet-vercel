@@ -2,8 +2,8 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
 import { addChineseFontsToPDF } from './fontLoader';
-import { getHeaderImage } from './imageLoader';
-import { monitorLoading, monitorRegistration, monitorGeneration, performanceMonitor } from './performance';
+import { getHeaderImage } from './imageCache';
+import { startTimer, endTimer } from './performanceMonitor';
 
 // 扩展jsPDF类型以支持autotable
 interface ExtendedJsPDF extends jsPDF {
@@ -16,52 +16,51 @@ interface ExtendedJsPDF extends jsPDF {
 }
 
 export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
-  const totalStart = monitorGeneration('PDF生成总耗时');
+  const totalId = startTimer('pdf-generation');
   
   try {
     // 数据验证和准备
-    const dataValidation = monitorGeneration('数据验证');
+    const dataValidationId = startTimer('data-validation');
     if (!rawData || typeof rawData !== 'object') {
       throw new Error('无效的数据格式');
     }
     const data = rawData as QuotationData;
-    performanceMonitor.end(dataValidation);
+    endTimer(dataValidationId, 'data-validation');
 
     // 创建PDF文档
-    const docCreation = monitorGeneration('创建PDF文档');
+    const docCreationId = startTimer('doc-creation');
     const doc = new jsPDF() as ExtendedJsPDF;
-    performanceMonitor.end(docCreation);
+    endTimer(docCreationId, 'doc-creation');
 
     // 加载字体
-    const fontLoading = monitorLoading('加载字体');
+    const fontLoadingId = startTimer('font-loading');
     await addChineseFontsToPDF(doc);
-    performanceMonitor.end(fontLoading);
+    endTimer(fontLoadingId, 'font-loading');
 
     // 验证字体设置
-    const fontVerification = monitorRegistration('验证字体设置');
+    const fontVerificationId = startTimer('font-verification');
     doc.setFont('NotoSansSC', 'normal');
     if (process.env.NODE_ENV === 'development') {
       const fontInfo = doc.getFont();
       console.log('当前字体信息:', fontInfo);
     }
-    performanceMonitor.end(fontVerification);
+    endTimer(fontVerificationId, 'font-verification');
 
     // 设置页面参数
-    const pageSetup = monitorGeneration('设置页面参数');
+    const pageSetupId = startTimer('page-setup');
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 20;
     const contentWidth = pageWidth - (margin * 2);
-    performanceMonitor.end(pageSetup);
+    endTimer(pageSetupId, 'page-setup');
 
     let yPosition = margin;
 
     // 添加头部图片
     const headerType = data.templateConfig?.headerType || 'none';
     if (headerType !== 'none') {
-      const headerLoading = monitorLoading('加载头部图片');
+      const headerLoadingId = startTimer('header-loading');
       try {
-        const headerImageBase64 = await getHeaderImage(headerType as 'bilingual' | 'english');
-        const headerImage = `data:image/png;base64,${headerImageBase64}`;
+        const headerImage = await getHeaderImage(headerType as 'bilingual' | 'english');
         
         // 计算图片尺寸
         const img = new Image();
@@ -84,15 +83,15 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
         const xPosition = margin + (contentWidth - imgWidth) / 2;
         doc.addImage(headerImage, 'PNG', xPosition, yPosition, imgWidth, imgHeight);
         yPosition += imgHeight + 10;
-        performanceMonitor.end(headerLoading);
+        endTimer(headerLoadingId, 'header-loading');
       } catch (error) {
         console.error('头部图片加载失败，跳过:', error);
-        performanceMonitor.end(headerLoading);
+        endTimer(headerLoadingId, 'header-loading');
       }
     }
 
     // 添加标题
-    const titleSetup = monitorGeneration('设置标题');
+    const titleSetupId = startTimer('title-setup');
     doc.setFontSize(14);
     doc.setFont('NotoSansSC', 'bold');
     const title = 'QUOTATION';
@@ -100,10 +99,10 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
     const titleX = margin + (contentWidth - titleWidth) / 2;
     doc.text(title, titleX, yPosition);
     yPosition += 10;
-    performanceMonitor.end(titleSetup);
+    endTimer(titleSetupId, 'title-setup');
 
     // 添加客户信息
-    const customerInfo = monitorGeneration('添加客户信息');
+    const customerInfoId = startTimer('customer-info');
     doc.setFontSize(8);
     doc.setFont('NotoSansSC', 'normal');
     
@@ -194,10 +193,10 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
     currentY += 3;
     
     yPosition = currentY;
-    performanceMonitor.end(customerInfo);
+    endTimer(customerInfoId, 'customer-info');
 
     // 添加表格
-    const tableSetup = monitorGeneration('生成表格');
+    const tableSetupId = startTimer('table-generation');
     if (data.items && data.items.length > 0) {
       // 使用共享的表格配置
       const { generateTableConfig } = await import('./pdfTableGenerator');
@@ -206,10 +205,10 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
       doc.autoTable(tableConfig);
       yPosition = doc.lastAutoTable.finalY + 10;
     }
-    performanceMonitor.end(tableSetup);
+    endTimer(tableSetupId, 'table-generation');
 
     // 添加总计
-    const totalSetup = monitorGeneration('计算总计');
+    const totalSetupId = startTimer('total-calculation');
     if (data.items && data.items.length > 0) {
       const itemsTotal = data.items.reduce((sum, item) => sum + (item.amount || 0), 0);
       const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + (fee.amount || 0), 0);
@@ -227,10 +226,10 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
       doc.text(totalAmountValue, valueX, yPosition, { align: 'right' });
       yPosition += 10;
     }
-    performanceMonitor.end(totalSetup);
+    endTimer(totalSetupId, 'total-calculation');
 
     // 添加备注
-    const notesSetup = monitorGeneration('添加备注');
+    const notesSetupId = startTimer('notes-setup');
     if (data.notes && data.notes.length > 0) {
       // 检查剩余空间是否足够显示 Notes
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -271,18 +270,18 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
         }
       });
     }
-    performanceMonitor.end(notesSetup);
+    endTimer(notesSetupId, 'notes-setup');
 
     // 生成PDF
-    const pdfGeneration = monitorGeneration('生成PDF Blob');
+    const pdfGenerationId = startTimer('pdf-blob-generation');
     const pdfBlob = doc.output('blob');
-    performanceMonitor.end(pdfGeneration);
+    endTimer(pdfGenerationId, 'pdf-blob-generation');
 
-    performanceMonitor.end(totalStart);
+    endTimer(totalId, 'pdf-generation');
     return pdfBlob;
   } catch (error) {
     console.error('PDF生成失败:', error);
-    performanceMonitor.end(totalStart);
+    endTimer(totalId, 'pdf-generation');
     throw error;
   }
 }; 

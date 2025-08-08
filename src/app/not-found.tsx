@@ -5,6 +5,11 @@ import { Gamepad2, Square, RotateCcw, Play, Pause, SkipForward, Brain } from 'lu
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 export default function NotFound() {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
   const _router = useRouter();
   const [activeTab, setActiveTab] = useState<'gomoku' | 'game2048'>('gomoku');
   // const [score, setScore] = useState(0);
@@ -1239,7 +1244,7 @@ export default function NotFound() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-2 sm:p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-2 sm:p-4" suppressHydrationWarning>
       {/* 顶部标题栏 - 移动端优化 */}
       <div className="absolute top-2 sm:top-6 left-2 sm:left-6 right-2 sm:right-6 flex items-center justify-between">
         <button

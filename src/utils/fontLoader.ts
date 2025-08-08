@@ -1,30 +1,36 @@
 import jsPDF from 'jspdf';
+import { registerChineseFonts, warmupFontRegistration } from './pdfFontRegistry';
+import { getChineseFontBytes } from './fontCache';
 
 // 全局单例Promise，只加载一次
-let fontBytesPromise: Promise<{regular: string; bold: string}> | null = null;
+let fontBytesPromise: Promise<{regular: Uint8Array; bold: Uint8Array}> | null = null;
+// 预热字体的 single-flight 锁
+let inflight: Promise<void> | null = null;
 
-// 字体版本控制
-const FONT_VERSION = '1.0.0';
-const CACHE_KEY = `PDF_FONT_v${FONT_VERSION}`;
-
-// 获取字体字节串（只加载一次）
+// 获取字体字节（只加载一次）
 async function getFontBytesOnce() {
   if (!fontBytesPromise) {
-    fontBytesPromise = (async () => {
-      // 只加载一次，后续内存命中
-      const { embeddedResources } = await import('@/lib/embedded-resources');
-      return {
-        regular: embeddedResources.notoSansSCRegular,
-        bold: embeddedResources.notoSansSCBold
-      };
-    })();
+    fontBytesPromise = getChineseFontBytes();
   }
   return fontBytesPromise; // 微秒级返回
 }
 
-// 模块级预热函数
+// 模块级预热函数（带防并发）
 export function preloadFonts() {
-  getFontBytesOnce().catch(console.error);
+  if (inflight) return inflight;
+  inflight = (async () => {
+    console.time('[fontLoader] 预热');
+    try {
+      const { regular, bold } = await getChineseFontBytes();
+      console.log(`[fontLoader] 预热完成: regular ${regular.byteLength} bytes, bold ${bold.byteLength} bytes`);
+    } catch (error) {
+      console.error('[fontLoader] 预热失败:', error);
+      throw error;
+    } finally {
+      console.timeEnd('[fontLoader] 预热');
+    }
+  })().finally(() => { inflight = null; });
+  return inflight;
 }
 
 // 性能监控
@@ -54,22 +60,10 @@ export async function addChineseFontsToPDF(doc: jsPDF): Promise<void> {
       return;
     }
 
-    // 获取字体字节串
-    const fontLoading = performanceMonitor.start('获取字体字节串');
-    const fonts = await getFontBytesOnce();
-    performanceMonitor.end(fontLoading);
-
-    // 注册字体到PDF
-    const fontRegistration = performanceMonitor.start('注册字体到VFS');
-    doc.addFileToVFS('NotoSansSC-Regular.ttf', fonts.regular);
-    doc.addFileToVFS('NotoSansSC-Bold.ttf', fonts.bold);
+    // 使用新的硬化注册器（直接传入doc）
+    const fontRegistration = performanceMonitor.start('硬化字体注册');
+    await registerChineseFonts(doc);
     performanceMonitor.end(fontRegistration);
-
-    // 设置字体
-    const fontSetting = performanceMonitor.start('设置字体');
-    doc.addFont('NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
-    doc.addFont('NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
-    performanceMonitor.end(fontSetting);
 
     // 标记为已注册
     fontRegistrationCache.set(doc, true);
@@ -83,4 +77,7 @@ export async function addChineseFontsToPDF(doc: jsPDF): Promise<void> {
 }
 
 // 导出字体字节串获取函数（用于测试）
-export { getFontBytesOnce }; 
+export { getFontBytesOnce };
+
+// 导出预热函数
+export { warmupFontRegistration }; 

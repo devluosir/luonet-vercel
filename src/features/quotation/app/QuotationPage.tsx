@@ -89,13 +89,9 @@ export default function QuotationPage() {
   
   // PDF生成服务
   const { generatePdf } = useGenerateService();
-  const warmup = usePdfWarmup();
   
-  // 页面首次空闲预热PDF模块
-  useEffect(() => {
-    const id = window.requestIdleCallback?.(() => warmup()) ?? setTimeout(warmup, 600);
-    return () => (window.cancelIdleCallback ? window.cancelIdleCallback(id as number) : clearTimeout(id as number));
-  }, [warmup]);
+  // PDF预热（自动执行，无需手动调用）
+  usePdfWarmup();
   
   // 计算衍生状态
   const itemsTotal = data.items?.reduce((sum, item) => sum + item.amount, 0) || 0;
@@ -482,8 +478,6 @@ export default function QuotationPage() {
                     <button
                       type="button"
                       onClick={handleGenerate}
-                      onMouseEnter={warmup}
-                      onFocus={warmup}
                       disabled={isGenerating}
                       className={`px-4 py-2 rounded-xl text-sm font-medium 
                         transition-all duration-300
@@ -533,8 +527,6 @@ export default function QuotationPage() {
                   <button
                     type="button"
                     onClick={handlePreview}
-                    onMouseEnter={warmup}
-                    onFocus={warmup}
                     disabled={isPreviewing || isGenerating}
                     className={`px-4 py-2 rounded-xl text-sm font-medium 
                       transition-all duration-300

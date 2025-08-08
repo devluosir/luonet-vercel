@@ -310,8 +310,9 @@ export function Header({
               aria-label="用户菜单"
             >
               <Avatar name={user.name} />
-              <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform duration-200" 
-                          style={{ transform: showDropdown ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+              <ChevronDown className={`h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${
+                showDropdown ? 'rotate-180' : 'rotate-0'
+              }`} />
             </button>
 
             {showDropdown && (
@@ -476,7 +477,7 @@ export function Header({
                         {isPreloading && (
                           <div 
                             className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-300 dark:from-blue-700/40 dark:to-blue-600/50 transition-all duration-300 ease-out"
-                            style={{ width: `${preloadProgress}%` }}
+                            style={{ width: `${Math.max(0, Math.min(100, preloadProgress))}%` }}
                           />
                         )}
                         
@@ -484,7 +485,7 @@ export function Header({
                         {isPreloading && (
                           <div 
                             className="absolute inset-0 border-r-2 border-blue-400 dark:border-blue-300 transition-all duration-300 ease-out"
-                            style={{ width: `${preloadProgress}%` }}
+                            style={{ width: `${Math.max(0, Math.min(100, preloadProgress))}%` }}
                           />
                         )}
                         

@@ -1,0 +1,56 @@
+name: PDF Font Health Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  pdf-healthcheck:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build project
+      run: npm run build
+    
+    - name: Run PDF Font Health Check
+      run: |
+        # 创建健康检查脚本
+        cat > healthcheck.js << 'EOF'
+        const { runHealthcheckInCI } = require('./dist/utils/pdfFontHealthcheck');
+        
+        runHealthcheckInCI()
+          .then(() => {
+            console.log('✅ PDF字体健康检查通过');
+            process.exit(0);
+          })
+          .catch((error) => {
+            console.error('❌ PDF字体健康检查失败:', error.message);
+            process.exit(1);
+          });
+        EOF
+        
+        # 运行健康检查
+        node healthcheck.js
+    
+    - name: Check for font warnings
+      run: |
+        # 检查构建日志中是否有字体警告
+        if grep -i "unable to look up font label" build.log 2>/dev/null; then
+          echo "❌ 发现字体注册警告"
+          exit 1
+        else
+          echo "✅ 未发现字体注册警告"
+        fi

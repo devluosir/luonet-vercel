@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -34,6 +34,11 @@ interface NotesSectionProps {
 export const NotesSection: React.FC<NotesSectionProps> = () => {
   const { notesConfig, updateNoteVisibility, updateNoteOrder, updateNoteContent, addNote, removeNote } = useQuotationStore();
   const [showConfig, setShowConfig] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 配置传感器
   const sensors = useSensors(
@@ -156,28 +161,43 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
 
       {/* Notes列表 */}
       {visibleNotes.length > 0 ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={visibleNotes.map(note => note.id)}
-            strategy={verticalListSortingStrategy}
+        mounted ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
-            <div className="space-y-2">
-              {visibleNotes.map((note) => (
-                <SortableNote
-                  key={note.id}
-                  note={note}
-                  onVisibilityToggle={handleVisibilityToggle}
-                  onUpdateContent={updateNoteContent}
-                  onRemove={removeNote}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+            <SortableContext
+              items={visibleNotes.map(note => note.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2">
+                {visibleNotes.map((note) => (
+                  <SortableNote
+                    key={note.id}
+                    note={note}
+                    onVisibilityToggle={handleVisibilityToggle}
+                    onUpdateContent={updateNoteContent}
+                    onRemove={removeNote}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        ) : (
+          // SSR 阶段显示静态列表，避免 hydration 不匹配
+          <div className="space-y-2">
+            {visibleNotes.map((note) => (
+              <SortableNote
+                key={note.id}
+                note={note}
+                onVisibilityToggle={handleVisibilityToggle}
+                onUpdateContent={updateNoteContent}
+                onRemove={removeNote}
+              />
+            ))}
+          </div>
+        )
       ) : (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
           <EyeOff className="w-8 h-8 mx-auto mb-2 opacity-50" />

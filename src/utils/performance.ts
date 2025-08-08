@@ -17,6 +17,13 @@ export class PerformanceMonitor {
   private metrics: Map<string, { startTime: number; category: string }> = new Map();
   private categories: Map<string, number[]> = new Map();
 
+  // 性能阈值配置
+  private thresholds = {
+    loading: 50,      // 加载阶段 > 50ms 警告（首次 ≤ 120ms 可告警不拦截）
+    registration: 15,  // 注册阶段 > 15ms 警告（首次 ≤ 40ms）
+    generation: 200    // 生成阶段 > 200ms 警告（表格复杂场景 ≤ 350ms）
+  };
+
   private constructor() {}
 
   static getInstance(): PerformanceMonitor {
@@ -44,6 +51,12 @@ export class PerformanceMonitor {
     const endTime = performance.now();
     const duration = endTime - metric.startTime;
     
+    // 检查是否超过阈值
+    const threshold = this.thresholds[metric.category];
+    if (duration > threshold) {
+      console.warn(`⚠️ 性能警告 [${metric.category}] [${id}]: ${duration.toFixed(2)}ms (阈值: ${threshold}ms)`);
+    }
+    
     // 记录到分类统计
     if (!this.categories.has(metric.category)) {
       this.categories.set(metric.category, []);
@@ -60,16 +73,17 @@ export class PerformanceMonitor {
   }
 
   // 获取分类统计
-  getCategoryStats(): Record<string, { count: number; avg: number; min: number; max: number }> {
-    const stats: Record<string, { count: number; avg: number; min: number; max: number }> = {};
+  getCategoryStats(): Record<string, { count: number; avg: number; min: number; max: number; threshold: number }> {
+    const stats: Record<string, { count: number; avg: number; min: number; max: number; threshold: number }> = {};
     
     this.categories.forEach((durations, category) => {
       const count = durations.length;
       const avg = durations.reduce((sum, d) => sum + d, 0) / count;
       const min = Math.min(...durations);
       const max = Math.max(...durations);
+      const threshold = this.thresholds[category as keyof typeof this.thresholds];
       
-      stats[category] = { count, avg, min, max };
+      stats[category] = { count, avg, min, max, threshold };
     });
     
     return stats;
@@ -81,14 +95,20 @@ export class PerformanceMonitor {
     console.log('=== PDF性能监控报告 ===');
     
     Object.entries(stats).forEach(([category, stat]) => {
-      console.log(`${category}:`);
+      const thresholdStatus = stat.avg > stat.threshold ? '⚠️ 超阈值' : '✅ 正常';
+      console.log(`${category} ${thresholdStatus}:`);
       console.log(`  执行次数: ${stat.count}`);
-      console.log(`  平均耗时: ${stat.avg.toFixed(2)}ms`);
+      console.log(`  平均耗时: ${stat.avg.toFixed(2)}ms (阈值: ${stat.threshold}ms)`);
       console.log(`  最小耗时: ${stat.min.toFixed(2)}ms`);
       console.log(`  最大耗时: ${stat.max.toFixed(2)}ms`);
     });
     
     console.log('=======================');
+  }
+
+  // 设置阈值
+  setThreshold(category: 'loading' | 'registration' | 'generation', threshold: number): void {
+    this.thresholds[category] = threshold;
   }
 
   // 清理所有数据
