@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useThemeSettings, ButtonTheme } from '@/hooks/useThemeSettings';
+import { getModuleColors } from '@/constants/colorMap';
 
 // 定义模块接口
 interface Module {
@@ -6,9 +8,6 @@ interface Module {
   name: string;
   path: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  bgColor: string;  // 改为必需字段
-  textColor?: string;
-  titleColor?: string;
 }
 
 interface ModuleButtonProps {
@@ -32,10 +31,26 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
   packingCount = 0,
   purchaseCount = 0
 }) => {
+  const { settings } = useThemeSettings();
+  const [currentTheme, setCurrentTheme] = useState<ButtonTheme>(settings.buttonTheme);
   const Icon = module.icon;
 
-  // 直接使用模块配置的颜色（已通过 ...moduleColorMap[xxx] 注入）
-  const bgColor = module.bgColor;
+  // 监听主题变化
+  useEffect(() => {
+    setCurrentTheme(settings.buttonTheme);
+  }, [settings.buttonTheme]);
+
+  // 监听全局主题变化事件
+  useEffect(() => {
+    const handleThemeChange = (event: CustomEvent) => {
+      setCurrentTheme(event.detail.buttonTheme);
+    };
+
+    window.addEventListener('themeSettingsChanged', handleThemeChange as EventListener);
+    return () => {
+      window.removeEventListener('themeSettingsChanged', handleThemeChange as EventListener);
+    };
+  }, []);
 
   const getCountForModule = (moduleId: string): number => {
     switch (moduleId) {
@@ -50,48 +65,93 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
 
   const count = getCountForModule(module.id);
   const showBadge = count > 0;
+  
+  // 获取当前主题的颜色配置
+  const colors = getModuleColors(module.id, currentTheme);
 
-  return (
-    <button
-      className="group relative overflow-hidden rounded-3xl h-24 w-full
-        transition-all duration-300 ease-in-out
-        hover:-translate-y-1 active:translate-y-0 cursor-pointer
-        bg-white/30 border border-white/40 backdrop-blur-md
-        shadow-md hover:shadow-lg"
-      onClick={() => onClick(module)}
-      onMouseEnter={() => onHover?.(module)}
-    >
-      {/* 悬停时的渐变背景层 */}
-      <div className={`absolute inset-0 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${bgColor}`} />
-
-      {/* 主体内容层 - 提升到z-20 */}
-      <div className="relative z-20 flex items-center justify-start gap-4 px-6 py-5 h-full">
-        {/* 图标容器 - Apple 风格 */}
-        <div className="w-10 h-10 flex items-center justify-center rounded-full bg-white/20 group-hover:bg-gradient-to-tr group-hover:from-white/40 group-hover:to-white/10 transition-all duration-300">
+  // 根据主题渲染不同的按钮样式
+  if (currentTheme === 'classic') {
+    // 经典白色主题
+    return (
+      <button
+        className={`
+          flex items-center justify-start gap-3 px-5 py-4 rounded-3xl shadow-md transition-all duration-300
+          h-24 w-full relative overflow-hidden group cursor-pointer
+          backdrop-blur-md border border-white/40 dark:border-gray-800/40
+          ${colors.bgColor} ${colors.hoverBgColor}
+          hover:shadow-lg hover:-translate-y-1
+          active:translate-y-0 active:shadow-md
+        `}
+        onClick={() => onClick(module)}
+        onMouseEnter={() => onHover?.(module)}
+      >
+        {/* 图标容器 - 经典风格 */}
+        <div className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 ${colors.iconBg} ${colors.hoverIconBg} group-hover:scale-105`}>
           <Icon
-            className={`w-6 h-6 text-gray-800 dark:text-white 
-              transition-all duration-300 group-hover:scale-105`}
+            className={`w-5 h-5 transition-all duration-300 ${colors.textColor}`}
           />
         </div>
 
-        {/* 中文标题 - Apple 风格 */}
-        <h3
-          className={`text-[16px] font-medium leading-tight truncate
-            text-gray-800 dark:text-white
-            transition-all duration-200`}
-        >
+        {/* 文字标题 */}
+        <div className={`text-[16px] font-medium leading-tight truncate transition-all duration-200 ${colors.textColor}`}>
           {module.name}
-        </h3>
+        </div>
+
+        {/* 数量徽章 */}
+        {showBadge && (
+          <div
+            className="absolute top-3 right-3 min-w-[20px] h-5 px-1.5 rounded-full
+              flex items-center justify-center text-xs font-medium
+              transition-all duration-300 z-10
+              group-hover:scale-110 group-hover:rotate-6
+              bg-gray-800/80 text-white backdrop-blur-sm shadow-sm"
+          >
+            <span>
+              {count > 9999 ? '9999+' : count}
+            </span>
+          </div>
+        )}
+      </button>
+    );
+  }
+
+  // 彩色主题
+  return (
+    <button
+      className={`
+        flex items-center justify-start gap-3 px-5 py-4 rounded-3xl shadow-md transition-all duration-300
+        h-24 w-full relative overflow-hidden group cursor-pointer
+        bg-gradient-to-br
+        ${colors.bgFrom} ${colors.bgTo} 
+        ${colors.darkBgFrom} ${colors.darkBgTo}
+        ${colors.hoverFrom} ${colors.hoverTo} 
+        ${colors.darkHoverFrom} ${colors.darkHoverTo}
+        hover:shadow-lg hover:-translate-y-1
+        active:translate-y-0 active:shadow-md
+      `}
+      onClick={() => onClick(module)}
+      onMouseEnter={() => onHover?.(module)}
+    >
+      {/* 图标容器 - Apple 风格圆形背景 */}
+      <div className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 ${colors.iconBg} group-hover:scale-105`}>
+        <Icon
+          className={`w-5 h-5 transition-all duration-300 ${colors.textColor}`}
+        />
       </div>
 
-      {/* 各模块的数量徽章 - Apple 风格 */}
+      {/* 文字标题 - Apple 风格排版 */}
+      <div className={`text-[16px] font-medium leading-tight truncate transition-all duration-200 ${colors.textColor}`}>
+        {module.name}
+      </div>
+
+      {/* 数量徽章 - Apple 风格 */}
       {showBadge && (
         <div
-          className={`absolute top-3 right-3 min-w-[20px] h-5 px-1.5 rounded-full
+          className="absolute top-3 right-3 min-w-[20px] h-5 px-1.5 rounded-full
             flex items-center justify-center text-xs font-medium
-            group-hover:scale-110 transition-all duration-300
-            group-hover:rotate-6 group-hover:animate-pulse z-50 pointer-events-none 
-            bg-gray-800/80 text-white backdrop-blur-sm shadow-sm`}
+            transition-all duration-300 z-10
+            group-hover:scale-110 group-hover:rotate-6
+            bg-gray-800/80 text-white backdrop-blur-sm shadow-sm"
         >
           <span>
             {count > 9999 ? '9999+' : count}
@@ -100,4 +160,4 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
       )}
     </button>
   );
-}; 
+};

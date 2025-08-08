@@ -7,9 +7,12 @@ import {
   Shield,
   Edit,
   Eye,
-  EyeOff
+  EyeOff,
+  Palette,
+  Settings
 } from 'lucide-react';
 import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
+import { useThemeSettings, ButtonTheme } from '@/hooks/useThemeSettings';
 
 interface Permission {
   id: string;
@@ -57,6 +60,9 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     
     return user;
   });
+
+  // 主题设置
+  const { settings, setButtonTheme } = useThemeSettings();
 
   // 获取最新的用户信息
   const fetchUserInfo = async () => {
@@ -282,6 +288,48 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
                     </button>
                   </>
                 )}
+              </div>
+            </div>
+
+            {/* 主题设置 */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-3">
+                <Palette className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">按钮主题</span>
+              </div>
+              
+              <div className="ml-7 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setButtonTheme('colorful')}
+                  className={`px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 border ${
+                    settings.buttonTheme === 'colorful'
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white border-transparent shadow-md'
+                      : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-400 to-purple-400"></div>
+                    <span>彩色渐变</span>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => setButtonTheme('classic')}
+                  className={`px-3 py-2 rounded-xl text-xs font-medium transition-all duration-200 border ${
+                    settings.buttonTheme === 'classic'
+                      ? 'bg-gray-600 text-white border-transparent shadow-md'
+                      : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-white border border-gray-300"></div>
+                    <span>经典白色</span>
+                  </div>
+                </button>
+              </div>
+              
+              <div className="ml-7 text-xs text-gray-500 dark:text-gray-400">
+                {settings.buttonTheme === 'colorful' ? '使用 Apple 风格的彩色渐变按钮' : '使用传统的白色半透明按钮'}
               </div>
             </div>
 

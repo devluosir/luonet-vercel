@@ -7,7 +7,6 @@ import {
   Archive, 
   Users, 
 } from 'lucide-react';
-import { moduleColorMap } from './colorMap';
 
 // 快速创建单据的模块
 export const QUICK_CREATE_MODULES = [
@@ -15,36 +14,31 @@ export const QUICK_CREATE_MODULES = [
     id: 'quotation', 
     name: '新报价单', 
     path: '/quotation?tab=quotation',
-    icon: FileText,
-    ...moduleColorMap.quotation
+    icon: FileText
   },
   { 
     id: 'confirmation', 
     name: '销售确认', 
     path: '/quotation?tab=confirmation',
-    icon: FileText,
-    ...moduleColorMap.confirmation
+    icon: FileText
   },
   { 
     id: 'packing', 
     name: '箱单发票', 
     path: '/packing',
-    icon: Package,
-    ...moduleColorMap.packing
+    icon: Package
   },
   { 
     id: 'invoice', 
     name: '财务发票', 
     path: '/invoice',
-    icon: Receipt,
-    ...moduleColorMap.invoice
+    icon: Receipt
   },
   { 
     id: 'purchase', 
     name: '采购订单', 
     path: '/purchase',
-    icon: ShoppingCart,
-    ...moduleColorMap.purchase
+    icon: ShoppingCart
   }
 ];
 
@@ -54,8 +48,7 @@ export const TOOL_MODULES = [
     id: 'ai-email', 
     name: 'AI邮件助手', 
     path: '/mail',
-    icon: Mail,
-    ...moduleColorMap['ai-email']
+    icon: Mail
   }
 ];
 
@@ -65,15 +58,13 @@ export const TOOLS_MODULES = [
     id: 'history', 
     name: '单据管理', 
     path: '/history',
-    icon: Archive,
-    ...moduleColorMap.history
+    icon: Archive
   },
   { 
     id: 'customer', 
     name: '客户管理', 
     path: '/customer',
-    icon: Users,
-    ...moduleColorMap.customer
+    icon: Users
   }
 ];
 
