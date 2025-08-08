@@ -11,7 +11,6 @@ import {
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
-import { DOCUMENT_TYPES } from '@/constants/dashboardModules';
 
 
 
@@ -102,28 +101,30 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     return availableTypes;
   };
 
-  // 获取文档类型名称
-  const getDocumentTypeName = (type: string) => {
-    return DOCUMENT_TYPES[type as keyof typeof DOCUMENT_TYPES]?.label || 'DOC';
-  };
-
   // 获取文档编号
   const getDocumentNumber = (doc: Document) => {
     const data = doc.data as Record<string, unknown> | undefined;
+    let num = '';
     switch (doc.type) {
       case 'quotation': 
-        return doc.quotationNo || (data?.quotationNo as string) || '';
+        num = doc.quotationNo || (data?.quotationNo as string) || '';
+        break;
       case 'confirmation': 
-        return doc.contractNo || (data?.contractNo as string) || doc.quotationNo || (data?.quotationNo as string) || '';
+        num = doc.contractNo || (data?.contractNo as string) || doc.quotationNo || (data?.quotationNo as string) || '';
+        break;
       case 'invoice': 
-        return doc.invoiceNo || (data?.invoiceNo as string) || '';
+        num = doc.invoiceNo || (data?.invoiceNo as string) || '';
+        break;
       case 'purchase': 
-        return doc.orderNo || (data?.orderNo as string) || '';
+        num = doc.orderNo || (data?.orderNo as string) || '';
+        break;
       case 'packing': 
-        return doc.invoiceNo || (data?.invoiceNo as string) || doc.orderNo || (data?.orderNo as string) || '';
+        num = doc.invoiceNo || (data?.invoiceNo as string) || doc.orderNo || (data?.orderNo as string) || '';
+        break;
       default: 
-        return doc.id;
+        num = doc.id;
     }
+    return num || doc.id;
   };
 
   // 获取文档名称
@@ -182,15 +183,13 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
           const data = doc.data as Record<string, unknown> | undefined;
           const documentNumber = getDocumentNumber(doc);
           const documentName = getDocumentName(doc);
-          const typeAbbr = getDocumentTypeName(doc.type);
-          const combinedKey = documentNumber ? `${typeAbbr}_${documentNumber}` : typeAbbr;
           
           // 扩展搜索范围，包括data字段中的信息
           const customerName = doc.customerName || (data?.customerName as string) || '';
           const supplierName = doc.supplierName || (data?.supplierName as string) || '';
           const consigneeName = doc.consigneeName || (data?.consigneeName as string) || '';
           
-          const searchText = `${combinedKey} ${documentNumber} ${documentName} ${customerName} ${supplierName} ${consigneeName}`.toLowerCase();
+          const searchText = `${documentNumber} ${documentName} ${customerName} ${supplierName} ${consigneeName}`.toLowerCase();
           return searchText.includes(searchLower);
         } catch (error) {
           console.warn('搜索过滤时出错:', error, doc);
@@ -317,7 +316,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="搜索 类型简写_单据号（如 QTN_2024-001）或 客户名称..."
+            placeholder="搜索 单据号 或 客户名称..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-10 py-2 text-sm bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400"
@@ -439,7 +438,6 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className={`text-sm font-medium text-gray-900 dark:text-white truncate
                       transition-colors duration-200 ${getColorClasses(doc.type)}`}>
-                      <span>{getDocumentTypeName(doc.type)}_</span>
                       {highlightText(documentNumber, searchTerm)}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5
@@ -465,7 +463,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
             {getEmptyStateText()}
           </div>
           <div className="text-xs text-gray-400 dark:text-gray-500">
-            {searchTerm.trim() ? '可尝试按“类型简写_单据号”搜索，如 QTN_2024-001' : '支持按“类型简写_单据号”搜索，例如 QTN_2024-001'}
+            {searchTerm.trim() ? '可尝试按“单据号”或“名称”搜索' : '支持按“单据号”或“名称”搜索，例如 2024-001'}
           </div>
         </div>
       )}
