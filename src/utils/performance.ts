@@ -11,89 +11,100 @@ const safeRequestIdleCallback = (
   }
 };
 
-// 性能监控工具
+// 性能监控指标分级系统
+export class PerformanceMonitor {
+  private static instance: PerformanceMonitor;
+  private metrics: Map<string, { startTime: number; category: string }> = new Map();
+  private categories: Map<string, number[]> = new Map();
 
-interface PerformanceMetric {
-  name: string;
-  startTime: number;
-  endTime?: number;
-  duration?: number;
-}
+  private constructor() {}
 
-class PerformanceMonitor {
-  private metrics: Map<string, PerformanceMetric> = new Map();
-  private enabled: boolean = process.env.NODE_ENV === 'development';
-
-  /**
-   * 开始性能监控
-   */
-  start(name: string): void {
-    if (!this.enabled) return;
-    
-    this.metrics.set(name, {
-      name,
-      startTime: performance.now()
-    });
+  static getInstance(): PerformanceMonitor {
+    if (!PerformanceMonitor.instance) {
+      PerformanceMonitor.instance = new PerformanceMonitor();
+    }
+    return PerformanceMonitor.instance;
   }
 
-  /**
-   * 结束性能监控
-   */
-  end(name: string): number | undefined {
-    if (!this.enabled) return;
-    
-    const metric = this.metrics.get(name);
+  // 开始监控
+  start(name: string, category: 'loading' | 'registration' | 'generation'): string {
+    const id = `${category}_${name}_${Date.now()}`;
+    this.metrics.set(id, { startTime: performance.now(), category });
+    return id;
+  }
+
+  // 结束监控
+  end(id: string): number {
+    const metric = this.metrics.get(id);
     if (!metric) {
-      console.warn(`性能监控指标 "${name}" 未找到`);
-      return;
+      console.warn(`性能监控指标未找到: ${id}`);
+      return 0;
     }
 
-    metric.endTime = performance.now();
-    metric.duration = metric.endTime - metric.startTime;
+    const endTime = performance.now();
+    const duration = endTime - metric.startTime;
     
-    console.log(`性能监控 [${name}]: ${metric.duration.toFixed(2)}ms`);
-    return metric.duration;
-  }
-
-  /**
-   * 监控异步函数性能
-   */
-  async monitor<T>(name: string, fn: () => Promise<T>): Promise<T> {
-    this.start(name);
-    try {
-      const result = await fn();
-      this.end(name);
-      return result;
-    } catch (error) {
-      this.end(name);
-      throw error;
+    // 记录到分类统计
+    if (!this.categories.has(metric.category)) {
+      this.categories.set(metric.category, []);
     }
+    this.categories.get(metric.category)!.push(duration);
+
+    // 输出监控日志
+    console.log(`性能监控 [${metric.category}] [${id}]: ${duration.toFixed(2)}ms`);
+    
+    // 清理指标
+    this.metrics.delete(id);
+    
+    return duration;
   }
 
-  /**
-   * 获取所有性能指标
-   */
-  getMetrics(): PerformanceMetric[] {
-    return Array.from(this.metrics.values());
+  // 获取分类统计
+  getCategoryStats(): Record<string, { count: number; avg: number; min: number; max: number }> {
+    const stats: Record<string, { count: number; avg: number; min: number; max: number }> = {};
+    
+    this.categories.forEach((durations, category) => {
+      const count = durations.length;
+      const avg = durations.reduce((sum, d) => sum + d, 0) / count;
+      const min = Math.min(...durations);
+      const max = Math.max(...durations);
+      
+      stats[category] = { count, avg, min, max };
+    });
+    
+    return stats;
   }
 
-  /**
-   * 清除性能指标
-   */
+  // 输出性能报告
+  printReport(): void {
+    const stats = this.getCategoryStats();
+    console.log('=== PDF性能监控报告 ===');
+    
+    Object.entries(stats).forEach(([category, stat]) => {
+      console.log(`${category}:`);
+      console.log(`  执行次数: ${stat.count}`);
+      console.log(`  平均耗时: ${stat.avg.toFixed(2)}ms`);
+      console.log(`  最小耗时: ${stat.min.toFixed(2)}ms`);
+      console.log(`  最大耗时: ${stat.max.toFixed(2)}ms`);
+    });
+    
+    console.log('=======================');
+  }
+
+  // 清理所有数据
   clear(): void {
     this.metrics.clear();
-  }
-
-  /**
-   * 启用/禁用性能监控
-   */
-  setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
+    this.categories.clear();
   }
 }
 
-// 创建全局性能监控实例
-export const performanceMonitor = new PerformanceMonitor();
+// 便捷函数
+export const performanceMonitor = PerformanceMonitor.getInstance();
+
+// 分类监控函数
+export const monitorLoading = (name: string) => performanceMonitor.start(name, 'loading');
+export const monitorRegistration = (name: string) => performanceMonitor.start(name, 'registration');
+export const monitorGeneration = (name: string) => performanceMonitor.start(name, 'generation');
 
 /**
  * 性能监控装饰器
@@ -118,6 +129,26 @@ export async function monitorPdfGeneration<T>(
   fn: () => Promise<T>
 ): Promise<T> {
   return performanceMonitor.monitor(`PDF生成-${name}`, fn);
+}
+
+/**
+ * 监控字体字节串加载性能
+ */
+export async function monitorFontBytesLoading<T>(
+  name: string, 
+  fn: () => Promise<T>
+): Promise<T> {
+  return performanceMonitor.monitor(`字体字节串加载-${name}`, fn);
+}
+
+/**
+ * 监控字体注册性能
+ */
+export async function monitorFontRegistration<T>(
+  name: string, 
+  fn: () => Promise<T>
+): Promise<T> {
+  return performanceMonitor.monitor(`字体注册-${name}`, fn);
 }
 
 // 性能优化工具

@@ -123,7 +123,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     // 右上角信息区域
     const rightMargin = pageWidth - 20;
     const rightInfoY = startY;
-    const colonX = rightMargin - 15;  // 冒号的固定位置
+    const colonX = rightMargin - 20;  // 冒号的固定位置，向左移5px
     
     doc.setFont('NotoSansSC', 'bold');
     

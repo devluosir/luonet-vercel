@@ -1,107 +1,86 @@
-// 字体加载工具 - 用于PDF生成时按需加载字体
-import { embeddedResources } from '@/lib/embedded-resources';
+import jsPDF from 'jspdf';
 
-// 缓存机制
-let cachedFonts: any = null;
-let fontsLoading = false;
-let fontsLoadPromise: Promise<any> | null = null;
+// 全局单例Promise，只加载一次
+let fontBytesPromise: Promise<{regular: string; bold: string}> | null = null;
 
-/**
- * 按需加载字体资源
- */
-export async function loadFontsOnDemand() {
-  // 如果已经有缓存的字体，直接返回
-  if (cachedFonts) {
-    return cachedFonts;
-  }
+// 字体版本控制
+const FONT_VERSION = '1.0.0';
+const CACHE_KEY = `PDF_FONT_v${FONT_VERSION}`;
 
-  // 如果正在加载，返回现有的Promise
-  if (fontsLoading && fontsLoadPromise) {
-    return fontsLoadPromise;
-  }
-
-  // 开始加载字体
-  fontsLoading = true;
-  fontsLoadPromise = new Promise(async (resolve, reject) => {
-    try {
-      // 动态导入字体资源
+// 获取字体字节串（只加载一次）
+async function getFontBytesOnce() {
+  if (!fontBytesPromise) {
+    fontBytesPromise = (async () => {
+      // 只加载一次，后续内存命中
       const { embeddedResources } = await import('@/lib/embedded-resources');
-      
-      const fonts = {
-        notoSansSCRegular: embeddedResources.notoSansSCRegular,
-        notoSansSCBold: embeddedResources.notoSansSCBold
+      return {
+        regular: embeddedResources.notoSansSCRegular,
+        bold: embeddedResources.notoSansSCBold
       };
-      
-      // 缓存字体资源
-      cachedFonts = fonts;
-      resolve(fonts);
-    } catch (error) {
-      console.error('字体加载失败:', error);
-      reject(error);
-    } finally {
-      fontsLoading = false;
-    }
-  });
-
-  return fontsLoadPromise;
+    })();
+  }
+  return fontBytesPromise; // 微秒级返回
 }
 
-/**
- * 为PDF文档添加中文字体
- * @param doc jsPDF文档实例
- */
-export async function addChineseFontsToPDF(doc: any) {
+// 模块级预热函数
+export function preloadFonts() {
+  getFontBytesOnce().catch(console.error);
+}
+
+// 性能监控
+const performanceMonitor = {
+  start: (name: string) => {
+    const startTime = performance.now();
+    return { name, startTime };
+  },
+  end: (metric: { name: string; startTime: number }) => {
+    const endTime = performance.now();
+    const duration = endTime - metric.startTime;
+    console.log(`字体加载监控 [${metric.name}]: ${duration.toFixed(2)}ms`);
+    return duration;
+  }
+};
+
+// 文档级WeakMap缓存，避免重复注册
+const fontRegistrationCache = new WeakMap<jsPDF, boolean>();
+
+export async function addChineseFontsToPDF(doc: jsPDF): Promise<void> {
+  const totalStart = performanceMonitor.start('字体注册总耗时');
+  
   try {
-    // 按需加载字体
-    const fonts = await loadFontsOnDemand();
-    
-    // 添加字体文件到虚拟文件系统
-    doc.addFileToVFS('NotoSansSC-Regular.ttf', fonts.notoSansSCRegular);
+    // 检查是否已注册
+    if (fontRegistrationCache.has(doc)) {
+      console.log('字体已注册，跳过重复注册');
+      return;
+    }
+
+    // 获取字体字节串
+    const fontLoading = performanceMonitor.start('获取字体字节串');
+    const fonts = await getFontBytesOnce();
+    performanceMonitor.end(fontLoading);
+
+    // 注册字体到PDF
+    const fontRegistration = performanceMonitor.start('注册字体到VFS');
+    doc.addFileToVFS('NotoSansSC-Regular.ttf', fonts.regular);
+    doc.addFileToVFS('NotoSansSC-Bold.ttf', fonts.bold);
+    performanceMonitor.end(fontRegistration);
+
+    // 设置字体
+    const fontSetting = performanceMonitor.start('设置字体');
     doc.addFont('NotoSansSC-Regular.ttf', 'NotoSansSC', 'normal');
-    doc.addFileToVFS('NotoSansSC-Bold.ttf', fonts.notoSansSCBold);
     doc.addFont('NotoSansSC-Bold.ttf', 'NotoSansSC', 'bold');
+    performanceMonitor.end(fontSetting);
+
+    // 标记为已注册
+    fontRegistrationCache.set(doc, true);
     
-    // 设置默认字体
-    doc.setFont('NotoSansSC', 'normal');
+    performanceMonitor.end(totalStart);
   } catch (error) {
-    console.error('添加中文字体失败:', error);
+    console.error('字体加载失败:', error);
+    performanceMonitor.end(totalStart);
     throw error;
   }
 }
 
-/**
- * 预热字体资源
- */
-export async function preloadFonts() {
-  try {
-    await loadFontsOnDemand();
-    console.log('字体资源预热完成');
-  } catch (error) {
-    console.error('字体资源预热失败:', error);
-  }
-}
-
-/**
- * 清除字体缓存
- */
-export function clearFontCache() {
-  cachedFonts = null;
-  fontsLoading = false;
-  fontsLoadPromise = null;
-  console.log('字体缓存已清除');
-}
-
-/**
- * 检查字体是否已加载
- * @param doc jsPDF文档实例
- * @returns 是否已加载字体
- */
-export function isChineseFontsLoaded(doc: any): boolean {
-  try {
-    // 尝试获取字体信息，如果失败说明字体未加载
-    const fontInfo = doc.getFont();
-    return fontInfo.fontName === 'NotoSansSC';
-  } catch {
-    return false;
-  }
-} 
+// 导出字体字节串获取函数（用于测试）
+export { getFontBytesOnce }; 

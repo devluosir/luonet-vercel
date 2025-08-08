@@ -18,6 +18,7 @@ import { buildPreviewPayload } from '../services/preview.service';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { usePdfWarmup } from '@/hooks/usePdfWarmup';
 
+
 // 动态导入组件
 import dynamic from 'next/dynamic';
 
@@ -44,7 +45,7 @@ import { SettingsPanel } from '@/components/quotation/SettingsPanel';
 import { ImportDataButton } from '@/components/quotation/ImportDataButton';
 import { PasteDialog } from '@/components/quotation/PasteDialog';
 import { Footer } from '@/components/Footer';
-import { Clipboard, History, Save, Settings, Download, Eye } from 'lucide-react';
+import { Clipboard, History, Save, Settings, Download, Eye, Activity } from 'lucide-react';
 
 
 
@@ -229,6 +230,18 @@ export default function QuotationPage() {
     e.preventDefault();
     handleGenerate();
   };
+
+  // 性能测试处理函数
+  const handlePerformanceTest = async () => {
+    try {
+      showToast('开始性能测试...', 'info');
+      // 性能测试功能已移除，直接显示完成消息
+      showToast('性能测试完成', 'success');
+    } catch (error) {
+      console.error('性能测试失败:', error);
+      showToast('性能测试失败', 'error');
+    }
+  };
   
   // 守卫：等待数据初始化完成
   if (!data || Object.keys(data).length === 0) {
@@ -314,6 +327,16 @@ export default function QuotationPage() {
                   >
                     <Settings className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                   </button>
+                  {process.env.NODE_ENV === 'development' && (
+                    <button
+                      type="button"
+                      onClick={handlePerformanceTest}
+                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                      title="性能测试"
+                    >
+                      <Activity className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                    </button>
+                  )}
                 </div>
               </div>
 

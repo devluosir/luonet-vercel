@@ -1,13 +1,24 @@
-import './globals.css'
-import { Providers } from './providers'
-import type { Metadata } from 'next'
-import { getLayoutIcons } from '@/lib/logo-config'
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import { Providers } from './providers';
+import { preloadFonts } from '@/utils/fontLoader';
+import { preloadImages } from '@/utils/imageLoader';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Luo & Company',
-  description: '专业的报价和订单确认系统',
-  manifest: '/static/manifest.json',
-  icons: getLayoutIcons()
+  title: 'MLUONET - 企业管理系统',
+  description: '现代化的企业管理系统，提供完整的业务管理解决方案',
+};
+
+// 在应用初始化时预热PDF资源
+if (typeof window !== 'undefined') {
+  // 预热字体资源
+  preloadFonts();
+  
+  // 预热图片资源
+  preloadImages();
 }
 
 export default function RootLayout({
@@ -16,17 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Luo & Company" />
-        <meta httpEquiv="Content-Language" content="zh-CN" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-      </head>
-      <body className="font-sans" suppressHydrationWarning>
+    <html lang="zh-CN">
+      <body className={inter.className}>
         <Providers>
           {children}
         </Providers>

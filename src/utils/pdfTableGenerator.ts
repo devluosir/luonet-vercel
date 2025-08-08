@@ -1,4 +1,9 @@
 import { UserOptions, RowInput, Styles } from 'jspdf-autotable';
+
+// 扩展Styles类型以支持maxCellWidth
+interface ExtendedStyles extends Partial<Styles> {
+  maxCellWidth?: number;
+}
 import { QuotationData } from '@/types/quotation';
 import jsPDF from 'jspdf';
 
@@ -32,7 +37,7 @@ const calculateColumnWidths = (
   showRemarks: boolean,
   pageWidth: number,
   margin: number
-): { [key: string]: Partial<Styles> } => {
+): { [key: string]: ExtendedStyles } => {
   // 计算表格可用总宽度（减去左右边距，但增加两边各5px的扩展）
   const availableWidth = pageWidth - (margin * 2) + 10;
   
@@ -68,23 +73,28 @@ const calculateColumnWidths = (
   // 计算单位权重对应的实际宽度
   const unitWidth = availableWidth / totalWeight;
 
-  // 返回列宽度配置
+  // 返回列宽度配置，添加容错机制
   return {
     '0': { 
       halign: 'center' as const, 
       cellWidth: weights.no * unitWidth,
       minCellWidth: 8, // 增加最小宽度确保"No."不换行
+      maxCellWidth: 12, // 添加最大宽度限制
       cellPadding: { left: 1, right: 1, top: 2, bottom: 2 }
     },
     '1': { 
       halign: 'center' as const, 
       cellWidth: weights.partName * unitWidth,
+      minCellWidth: 40, // 品名列最小宽度
+      maxCellWidth: 80, // 品名列最大宽度，防止过长
       cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
     },
     ...(showDescription ? {
       '2': { 
         halign: 'center' as const, 
         cellWidth: weights.description * unitWidth,
+        minCellWidth: 50, // 描述列最小宽度
+        maxCellWidth: 100, // 描述列最大宽度
         cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
       }
     } : {}),
@@ -92,30 +102,36 @@ const calculateColumnWidths = (
       halign: 'center' as const, 
       cellWidth: weights.qty * unitWidth,
       minCellWidth: 12, // 增加最小宽度确保"Q'TY"不换行
+      maxCellWidth: 20, // 数量列最大宽度
       cellPadding: { left: 1, right: 1, top: 2, bottom: 2 }
     },
     [showDescription ? '4' : '3']: { 
       halign: 'center' as const, 
       cellWidth: weights.unit * unitWidth,
       minCellWidth: 12, // 确保单位列最小宽度
+      maxCellWidth: 18, // 单位列最大宽度
       cellPadding: { left: 1, right: 1, top: 2, bottom: 2 }
     },
     [showDescription ? '5' : '4']: { 
       halign: 'center' as const, 
       cellWidth: weights.price * unitWidth,
       minCellWidth: 12, // 确保价格列最小宽度
+      maxCellWidth: 25, // 价格列最大宽度
       cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
     },
     [showDescription ? '6' : '5']: { 
       halign: 'center' as const, 
       cellWidth: weights.amount * unitWidth,
       minCellWidth: 18, // 确保金额列最小宽度
+      maxCellWidth: 30, // 金额列最大宽度
       cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
     },
     ...(showRemarks ? {
       [showDescription ? '7' : '6']: { 
         halign: 'center' as const, 
         cellWidth: weights.remarks * unitWidth,
+        minCellWidth: 30, // 备注列最小宽度
+        maxCellWidth: 60, // 备注列最大宽度
         cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
       }
     } : {})
