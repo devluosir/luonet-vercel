@@ -22,7 +22,7 @@ export function PermissionGuard({
   fastCheck = true, // 默认使用快速验证
   showLoading = true // ✅ 默认显示加载状态
 }: PermissionGuardProps) {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const { user, isLoading, hasPermission } = usePermissionStore();
 
