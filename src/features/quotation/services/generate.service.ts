@@ -9,7 +9,9 @@ export function useGenerateService() {
 
   const generatePdf = async (
     tab: 'quotation' | 'confirmation', 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     notesConfig: any[],
     setProgress: (progress: number) => void
   ): Promise<Blob> => {
@@ -25,7 +27,9 @@ export function useGenerateService() {
         .sort((a, b) => a.order - b.order)
         .map(note => {
           // 特殊Notes（付款方式和交货时间）
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if (note.id === 'payment_terms' && (note as any).selectedOption) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const selectedOptionId = (note as any).selectedOption;
             // 检查是否为自定义编辑的内容
             if (selectedOptionId.startsWith('custom_')) {
@@ -34,7 +38,9 @@ export function useGenerateService() {
             const selectedOption = PAYMENT_TERMS_OPTIONS.find(opt => opt.id === selectedOptionId);
             return selectedOption ? `Payment Terms: ${selectedOption.english}` : '';
           }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if (note.id === 'delivery_time' && (note as any).selectedOption) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const selectedOptionId = (note as any).selectedOption;
             // 检查是否为自定义编辑的内容
             if (selectedOptionId.startsWith('custom_')) {
