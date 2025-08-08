@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-
-interface Permission {
-  id: string;
-  moduleId: string;
-  canAccess: boolean;
-}
+import type { Permission } from '@/types/permissions';
 
 export async function POST(request: NextRequest) {
   try {
@@ -92,10 +87,10 @@ export async function POST(request: NextRequest) {
           if (Array.isArray(session.user.permissions)) {
             // 对象数组格式
             permissions = session.user.permissions
-              .map((perm: Record<string, unknown>) => ({
-                id: (perm.id as string) || `session-${perm.moduleId as string}`,
-                moduleId: perm.moduleId as string,
-                canAccess: !!(perm.canAccess as boolean)
+              .map((perm: Permission) => ({
+                id: perm.id || `session-${perm.moduleId}`,
+                moduleId: perm.moduleId,
+                canAccess: !!perm.canAccess
               }));
           } else if (typeof session.user.permissions === 'object') {
             // 对象格式

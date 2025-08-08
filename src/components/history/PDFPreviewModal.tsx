@@ -9,8 +9,8 @@ import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
 import { generatePackingListPDF } from '@/utils/packingPdfGenerator';
 import { getDeviceInfo, handlePDFPreview, openPDFInNewTab } from '@/utils/pdfHelpers';
 
-interface HistoryItem {
-  data: Record<string, unknown>;
+interface PreviewHistoryItem {
+  data: unknown;
   quotationNo?: string;
   invoiceNo?: string;
   orderNo?: string;
@@ -19,7 +19,7 @@ interface HistoryItem {
 interface PDFPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  item: HistoryItem;
+  item: PreviewHistoryItem | null;
   itemType: 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
 }
 

@@ -142,6 +142,16 @@ export default {
     'text-gray-100', 'dark:text-gray-100',
     'text-gray-50', 'dark:text-gray-50',
 
+    // 📝 文本颜色 - 模块主色（用于彩色主题图标）
+    'text-blue-600', 'dark:text-blue-500',
+    'text-emerald-600', 'dark:text-emerald-500',
+    'text-cyan-600', 'dark:text-cyan-500',
+    'text-violet-600', 'dark:text-violet-500',
+    'text-orange-600', 'dark:text-orange-500',
+    'text-indigo-600', 'dark:text-indigo-500',
+    'text-pink-600', 'dark:text-pink-500',
+    'text-fuchsia-600', 'dark:text-fuchsia-500',
+
     // 🎨 筛选器按钮颜色 - 动态生成
     {
       pattern: /(bg|text)-(blue|green|teal|purple|orange)-(100|700|900\/30)/,

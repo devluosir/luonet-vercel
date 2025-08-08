@@ -81,6 +81,12 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
     badgeBg: string;
     badgeText: string;
     hoverIconBg?: string;
+    iconColor?: string; // Added iconColor
+  };
+
+  const explicitIconColorByModule: Record<string, string> = {
+    confirmation: 'text-emerald-600 dark:text-emerald-500',
+    history: 'text-pink-600 dark:text-pink-500',
   };
 
   return (
@@ -102,7 +108,7 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
     >
       {/* 图标容器 */}
       <div className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 ${c.iconBg} ${c.hoverIconBg ?? ''} group-hover:scale-105`}>
-        <Icon className={`w-5 h-5 transition-all duration-300 ${c.textColor}`} />
+        <Icon className={`w-5 h-5 transition-all duration-300 ${c.iconColor ?? c.textColor} ${explicitIconColorByModule[module.id] ?? ''}`} />
       </div>
 
       {/* 文字标题 */}
