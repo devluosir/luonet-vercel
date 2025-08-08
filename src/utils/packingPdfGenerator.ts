@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { UserOptions, RowInput, CellInput } from 'jspdf-autotable';
 import { embeddedResources } from '@/lib/embedded-resources';
-import { addChineseFontsToPDF } from '@/utils/fontLoader';
+import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 
 // 扩展 jsPDF 类型
 interface ExtendedJsPDF extends jsPDF {
@@ -86,8 +86,8 @@ export async function generatePackingListPDF(
   }) as unknown as ExtendedJsPDF;
 
   try {
-    // 添加中文字体
-    addChineseFontsToPDF(doc);
+    // 确保字体在当前 doc 实例注册
+    await ensurePdfFont(doc);
 
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;

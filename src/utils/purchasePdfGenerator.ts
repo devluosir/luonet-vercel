@@ -2,7 +2,7 @@ import jsPDF, { GState, ImageProperties } from 'jspdf';
 import { UserOptions } from 'jspdf-autotable';
 import { PurchaseOrderData } from '@/types/purchase';
 import { getBankInfo } from '@/utils/bankInfo';
-import { addChineseFontsToPDF } from '@/utils/fontLoader';
+import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
@@ -49,7 +49,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
   }) as ExtendedJsPDF;
 
   // 添加中文字体
-  addChineseFontsToPDF(doc);
+  await ensurePdfFont(doc);
 
   const pageWidth = doc.internal.pageSize.width;
   const margin = 20;  // 页面边距

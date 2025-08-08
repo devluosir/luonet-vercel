@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
-import { addChineseFontsToPDF } from './fontLoader';
+import { ensurePdfFont } from './pdfFontRegistry';
 import { getHeaderImage } from './imageCache';
 import { startTimer, endTimer } from './performanceMonitor';
 
@@ -32,9 +32,9 @@ export const generateQuotationPDF = async (rawData: unknown): Promise<Blob> => {
     const doc = new jsPDF() as ExtendedJsPDF;
     endTimer(docCreationId, 'doc-creation');
 
-    // 加载字体
+    // 确保字体在当前 doc 实例注册
     const fontLoadingId = startTimer('font-loading');
-    await addChineseFontsToPDF(doc);
+    await ensurePdfFont(doc);
     endTimer(fontLoadingId, 'font-loading');
 
     // 验证字体设置

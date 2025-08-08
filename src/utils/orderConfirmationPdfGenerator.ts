@@ -4,7 +4,7 @@ import { QuotationData } from '@/types/quotation';
 import { UserOptions } from 'jspdf-autotable';
 import { generateTableConfig } from './pdfTableGenerator';
 import { ensureCnFonts } from '@/utils/pdfFonts';
-import { addChineseFontsToPDF } from './fontLoader';
+import { ensurePdfFont } from './pdfFontRegistry';
 import { getHeaderImage } from './imageLoader';
 import { sanitizeQuotation } from './sanitizeQuotation';
 
@@ -66,7 +66,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
   }) as ExtendedJsPDF;
 
   // 确保中文字体正确注册（使用按需加载）
-  await addChineseFontsToPDF(doc);
+  await ensurePdfFont(doc);
 
   const pageWidth = doc.internal.pageSize.width;
   const margin = 20;

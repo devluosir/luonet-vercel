@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { UserOptions } from 'jspdf-autotable';
-import { addChineseFontsToPDF } from '@/utils/fontLoader';
+import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 
 // 扩展 jsPDF 类型
 interface ExtendedJsPDF extends jsPDF {
@@ -31,7 +31,7 @@ export async function generateShippingMarksPDF(
 
   try {
     // 添加中文字体
-    addChineseFontsToPDF(doc);
+    await ensurePdfFont(doc);
     doc.setFont('NotoSansSC', fontStyle);
 
     // 设置文字颜色

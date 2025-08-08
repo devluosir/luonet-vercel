@@ -2,7 +2,20 @@ import jsPDF, { ImageProperties } from 'jspdf';
 import 'jspdf-autotable';
 import { PDFGeneratorData } from '@/types/pdf';
 import { getInvoiceTitle } from '@/utils/pdfHelpers';
-import { addChineseFontsToPDF } from '@/utils/fontLoader';
+import { ensurePdfFont } from '@/utils/pdfFontRegistry';
+
+/**
+ * 统一字体设置工具 - 确保大小写一致且带兜底
+ */
+function setCnFont(doc: jsPDF, style: 'normal'|'bold'|'italic'|'bolditalic' = 'normal') {
+  const s = (style || 'normal').toLowerCase() as any;
+  try {
+    doc.setFont('NotoSansSC', s);
+  } catch (e) {
+    console.warn('[PDF] 中文字体设置失败，回退:', e);
+    doc.setFont('helvetica', s === 'bold' ? 'bold' : 'normal');
+  }
+}
 
 interface AutoTableOptions {
   startY: number;
@@ -137,8 +150,18 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
   }) as ExtendedJsPDF;
 
   try {
-    // 添加中文字体
-    addChineseFontsToPDF(doc);
+    // 确保字体在当前 doc 实例注册（带回退保护）
+    await ensurePdfFont(doc);
+
+    // 开发期自检断言
+    if (process.env.NODE_ENV === 'development') {
+      const fonts = doc.getFontList();
+      if (!fonts['NotoSansSC'] || !fonts['NotoSansSC']?.includes('normal')) {
+        console.error('[PDF] NotoSansSC 未在当前 doc 注册完整', fonts);
+      } else {
+        console.log('[PDF] 字体注册验证通过:', fonts['NotoSansSC']);
+      }
+    }
 
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
@@ -164,7 +187,7 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
           'FAST'  // 使用快速压缩
         );
         doc.setFontSize(14);
-        doc.setFont('NotoSansSC', 'bold');
+        setCnFont(doc, 'bold');
         const title = getInvoiceTitle(data);
         const titleWidth = doc.getTextWidth(title);
         const titleY = margin + imgHeight + 5;  // 标题Y坐标
@@ -180,7 +203,7 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
 
     // 设置字体和样式
     doc.setFontSize(8);
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     
     // 客户信息区域
     startY = await renderCustomerInfo(doc, data, startY, pageWidth);
@@ -213,7 +236,7 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
 // 处理表头错误的情况
 function handleHeaderError(doc: ExtendedJsPDF, data: PDFGeneratorData, margin: number): number {
   doc.setFontSize(14);
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   const title = getInvoiceTitle(data);
   const titleWidth = doc.getTextWidth(title);
   const titleY = margin + 5;
@@ -224,7 +247,7 @@ function handleHeaderError(doc: ExtendedJsPDF, data: PDFGeneratorData, margin: n
 // 处理无表头的情况
 function handleNoHeader(doc: ExtendedJsPDF, data: PDFGeneratorData, margin: number): number {
   doc.setFontSize(14);
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   const title = getInvoiceTitle(data);
   const titleWidth = doc.getTextWidth(title);
   const titleY = margin + 5;
@@ -243,7 +266,7 @@ async function renderCustomerInfo(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   const rightInfoY = startY;
   const colonX = rightMargin - 15;  // 冒号的固定位置
   
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   
   // Invoice No.
   doc.text('Invoice No.', colonX - 2, rightInfoY, { align: 'right' });
@@ -263,7 +286,7 @@ async function renderCustomerInfo(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   doc.text(data.currency === 'USD' ? 'USD' : 'CNY', colonX + 3, rightInfoY + 10);
 
   // To 信息
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   doc.text('To:', leftMargin, currentY);
   const toTextWidth = doc.getTextWidth('To: ');
   
@@ -277,7 +300,7 @@ async function renderCustomerInfo(doc: ExtendedJsPDF, data: PDFGeneratorData, st
 
   // Order No.
   currentY = Math.max(currentY + 2, startY + 10); // 确保最小起始位置
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   doc.text('Order No.:', leftMargin, currentY);
   const orderNoX = leftMargin + doc.getTextWidth('Order No.: ');
   
@@ -489,14 +512,14 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   const valueX = pageWidth - margin - 5;
   const labelX = valueX - doc.getTextWidth(totalAmountValue) - 28;
 
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   doc.text('Total Amount:', labelX, finalY + 8);
   doc.text(totalAmountValue, valueX, finalY + 8, { align: 'right' });
-  doc.setFont('NotoSansSC', 'normal');
+  setCnFont(doc, 'normal');
 
   // 显示大写金额
   doc.setFontSize(8);
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   const amountInWords = `SAY TOTAL ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${data.amountInWords.dollars}${data.amountInWords.hasDecimals ? ` AND ${data.amountInWords.cents}` : ' ONLY'}`;
   const lines = doc.splitTextToSize(amountInWords, pageWidth - (margin * 2));
   lines.forEach((line: string, index: number) => {
@@ -511,9 +534,9 @@ async function renderBankAndPaymentInfo(doc: ExtendedJsPDF, data: PDFGeneratorDa
   let currentY = startY;
 
   if (data.showBank) {
-    doc.setFont('NotoSansSC', 'bold');
+    setCnFont(doc, 'bold');
     doc.text('Bank Information:', margin, currentY);
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     currentY += 5;
 
     // 硬编码银行信息，与UI保持一致
@@ -547,12 +570,12 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   let termCount = 1;
 
   // 标题使用粗体
-  doc.setFont('NotoSansSC', 'bold');
+  setCnFont(doc, 'bold');
   doc.text('Payment Terms:', margin, currentY);
   currentY += 5;
 
   // 其他内容使用普通字体
-  doc.setFont('NotoSansSC', 'normal');
+  setCnFont(doc, 'normal');
 
   if (data.showPaymentTerms && data.paymentDate) {
     const termNumber = `${termCount}.`;
@@ -658,7 +681,7 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
     doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
     
     doc.setFontSize(8);
-    doc.setFont('NotoSansSC', 'normal');
+    setCnFont(doc, 'normal');
     doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
   }
 } 
