@@ -315,17 +315,28 @@ export default function QuotationPage() {
   // 优化全局粘贴处理
   const handleGlobalPaste = useCallback(async (text: string) => {
     try {
-      const items = parseExcelData(text);
-      if (items.length > 0) {
-        const convertedItems = convertExcelToLineItems(items);
-        updateItems(convertedItems);
-        showToast(`成功导入 ${items.length} 个商品条目`, 'success');
+      if (!text || !text.trim()) {
+        showToast('粘贴内容为空', 'info');
+        return;
+      }
+
+      const rows = parseExcelData(text);
+      console.log('解析的行数据:', rows); // 调试信息
+      
+      if (rows.length > 0) {
+        const convertedItems = convertExcelToLineItems(rows);
+        if (convertedItems.length > 0) {
+          updateItems(convertedItems);
+          showToast(`成功导入 ${convertedItems.length} 个商品条目`, 'success');
+        } else {
+          showToast('没有找到有效的商品数据，请检查格式', 'info');
+        }
       } else {
-        showToast('未检测到有效的Excel数据', 'info');
+        showToast('未检测到有效的Excel数据格式', 'info');
       }
     } catch (error) {
       console.error('Error parsing pasted data:', error);
-      showToast('数据解析失败，请检查格式', 'error');
+      showToast('数据解析失败，请检查Excel数据格式是否正确', 'error');
     }
   }, [updateItems, showToast]);
 

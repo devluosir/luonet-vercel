@@ -4,68 +4,78 @@
  * 1. 普通单元格用制表符（\t）分隔
  * 2. 引号内的所有内容（包括换行符）被视为同一个单元格的内容
  * 3. 引号仅作为边界标识，不作为内容的一部分
+ * 4. 单元格内的软回车（Alt+Enter产生的\n）保留在单元格内
  */
 export const parseExcelData = (text: string): string[][] => {
   const rows: string[][] = [];
   let currentRow: string[] = [];
   let currentCell = '';
   let inQuotes = false;
-  let lastChar = '';
+  
+  // 先预处理文本，将\r\n统一为\n
+  const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   
   // 遍历每个字符
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
+  for (let i = 0; i < normalizedText.length; i++) {
+    const char = normalizedText[i];
+    const nextChar = normalizedText[i + 1];
+    const prevChar = normalizedText[i - 1];
     
-    // 处理引号 - 只有成对的引号才处理，单独的引号(如英寸符号)忽略
-    if (char === '"' && lastChar !== '\\') {
-      // 检查是否是Excel格式的引号对（引号后面跟制表符或行尾）
-      const nextChar = text[i + 1];
-      const prevChar = text[i - 1];
-      
-      // 只有在引号前后是制表符、换行符或字符串开头/结尾时才处理
-      if (
-        (!inQuotes && (i === 0 || prevChar === '\t' || prevChar === '\n' || prevChar === '\r')) ||
-        (inQuotes && (nextChar === '\t' || nextChar === '\n' || nextChar === '\r' || nextChar === undefined))
-      ) {
-        inQuotes = !inQuotes;
+    // 处理引号 - 检测Excel的引号边界
+    if (char === '"') {
+      // 开始引号：前面是制表符、换行符或字符串开头
+      if (!inQuotes && (i === 0 || prevChar === '\t' || prevChar === '\n')) {
+        inQuotes = true;
+        continue;
+      }
+      // 结束引号：后面是制表符、换行符或字符串结尾
+      else if (inQuotes && (nextChar === '\t' || nextChar === '\n' || nextChar === undefined)) {
+        inQuotes = false;
+        continue;
+      }
+      // 引号内的双引号转义（""表示一个引号字符）
+      else if (inQuotes && nextChar === '"') {
+        currentCell += '"';
+        i++; // 跳过下一个引号
         continue;
       }
     }
     
-    // 处理制表符（仅在引号外有效）
+    // 处理制表符（仅在引号外有效，表示单元格分隔）
     if (char === '\t' && !inQuotes) {
-      currentRow.push(currentCell.trim());
+      currentRow.push(currentCell);
       currentCell = '';
       continue;
     }
     
     // 处理换行符
-    if ((char === '\n' || char === '\r') && !inQuotes) {
-      // 在引号外，换行符标志着新行的开始
-      if (char === '\r' && text[i + 1] === '\n') {
-        i++; // 跳过 \r\n 中的 \n
+    if (char === '\n') {
+      if (inQuotes) {
+        // 引号内的换行符是单元格内的软回车，保留
+        currentCell += char;
+      } else {
+        // 引号外的换行符表示行结束
+        currentRow.push(currentCell);
+        
+        // 只有非空行才添加到结果中
+        if (currentRow.some(cell => cell.trim())) {
+          rows.push([...currentRow]);
+        }
+        
+        // 重置当前行和单元格
+        currentRow = [];
+        currentCell = '';
       }
-      
-      // 保存当前单元格和行
-      currentRow.push(currentCell.trim());
-      if (currentRow.some(cell => cell.trim())) {
-        rows.push([...currentRow]);
-      }
-      
-      // 重置当前行和单元格
-      currentRow = [];
-      currentCell = '';
-    } else {
-      // 收集单元格内容
-      currentCell += char;
+      continue;
     }
     
-    lastChar = char;
+    // 收集单元格内容
+    currentCell += char;
   }
   
   // 处理最后一个单元格和行
-  if (currentCell || currentRow.length > 0) {
-    currentRow.push(currentCell.trim());
+  if (currentCell !== '' || currentRow.length > 0) {
+    currentRow.push(currentCell);
     if (currentRow.some(cell => cell.trim())) {
       rows.push(currentRow);
     }
@@ -98,6 +108,9 @@ export const convertExcelToLineItems = (rows: string[][], existingItems: ExcelLi
       continue;
     }
 
+    // 清理单元格内容，移除首尾空白但保留软回车
+    const cleanRow = row.map(cell => cell.trim());
+
     let partName = '';
     let description = '';
     let quantity = 0;
@@ -105,33 +118,33 @@ export const convertExcelToLineItems = (rows: string[][], existingItems: ExcelLi
     let unitPrice = 0;
 
     // 根据列数和数字列位置处理不同格式
-    if (row.length === 3) {
+    if (cleanRow.length === 3) {
       // 如果最后一列是数字，那就是 名称 描述 数量 格式
-      if (isNumeric(row[2])) {
-        partName = row[0].trim();
-        description = row[1].trim();
-        quantity = parseInt(row[2]) || 0;
+      if (isNumeric(cleanRow[2])) {
+        partName = cleanRow[0];
+        description = cleanRow[1];
+        quantity = parseInt(cleanRow[2]) || 0;
       }
       // 如果中间列是数字，那就是 名称 数量 单价 格式
-      else if (isNumeric(row[1])) {
-        partName = row[0].trim();
-        quantity = parseInt(row[1]) || 0;
-        unitPrice = parseFloat(row[2]) || 0;
+      else if (isNumeric(cleanRow[1])) {
+        partName = cleanRow[0];
+        quantity = parseInt(cleanRow[1]) || 0;
+        unitPrice = parseFloat(cleanRow[2]) || 0;
       }
-    } else if (row.length === 2) {
+    } else if (cleanRow.length === 2) {
       // 2列格式：名称 数量
-      partName = row[0].trim();
-      quantity = parseInt(row[1]) || 0;
-    } else if (row.length >= 4) {
+      partName = cleanRow[0];
+      quantity = parseInt(cleanRow[1]) || 0;
+    } else if (cleanRow.length >= 4) {
       // 智能识别4列格式
-      if (row.length === 4) {
+      if (cleanRow.length === 4) {
         // 检查是否是 "名称 数量 单位 单价" 格式
         // 判断逻辑：第2列是数字（数量），第4列是数字或空（单价）
-        if (isNumeric(row[1]) && (isNumeric(row[3]) || row[3]?.trim() === '' || row[3]?.trim() === '0')) {
+        if (isNumeric(cleanRow[1]) && (isNumeric(cleanRow[3]) || cleanRow[3] === '' || cleanRow[3] === '0')) {
           // 4列格式：名称 数量 单位 单价
-          partName = row[0].trim();
-          quantity = parseInt(row[1]) || 0;
-          const copiedUnit = row[2]?.trim() || '';
+          partName = cleanRow[0];
+          quantity = parseInt(cleanRow[1]) || 0;
+          const copiedUnit = cleanRow[2] || '';
           if (copiedUnit) {
             // 转换为小写并移除前后空格
             const normalizedUnit = copiedUnit.toLowerCase();
@@ -146,13 +159,13 @@ export const convertExcelToLineItems = (rows: string[][], existingItems: ExcelLi
               unit = copiedUnit; // 如果不是默认单位，保持原样
             }
           }
-          unitPrice = parseFloat(row[3]) || 0;
+          unitPrice = parseFloat(cleanRow[3]) || 0;
         } else {
           // 4列格式：名称 描述 数量 单位 [单价]
-          partName = row[0].trim();
-          description = row[1].trim();
-          quantity = parseInt(row[2]) || 0;
-          const copiedUnit = row[3]?.trim() || '';
+          partName = cleanRow[0];
+          description = cleanRow[1];
+          quantity = parseInt(cleanRow[2]) || 0;
+          const copiedUnit = cleanRow[3] || '';
           if (copiedUnit) {
             // 转换为小写并移除前后空格
             const normalizedUnit = copiedUnit.toLowerCase();
@@ -167,14 +180,14 @@ export const convertExcelToLineItems = (rows: string[][], existingItems: ExcelLi
               unit = copiedUnit; // 如果不是默认单位，保持原样
             }
           }
-          unitPrice = parseFloat(row[4]) || 0;
+          unitPrice = parseFloat(cleanRow[4]) || 0;
         }
       } else {
         // 5列或更多：名称 描述 数量 单位 [单价]
-        partName = row[0].trim();
-        description = row[1].trim();
-        quantity = parseInt(row[2]) || 0;
-        const copiedUnit = row[3]?.trim() || '';
+        partName = cleanRow[0];
+        description = cleanRow[1];
+        quantity = parseInt(cleanRow[2]) || 0;
+        const copiedUnit = cleanRow[3] || '';
         if (copiedUnit) {
           // 转换为小写并移除前后空格
           const normalizedUnit = copiedUnit.toLowerCase();
@@ -189,11 +202,11 @@ export const convertExcelToLineItems = (rows: string[][], existingItems: ExcelLi
             unit = copiedUnit; // 如果不是默认单位，保持原样
           }
         }
-        unitPrice = parseFloat(row[4]) || 0;
+        unitPrice = parseFloat(cleanRow[4]) || 0;
       }
     } else {
       // 单列：只有名称
-      partName = row[0].trim();
+      partName = cleanRow[0];
     }
 
     const newItem = {
