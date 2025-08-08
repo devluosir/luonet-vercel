@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
-import type { NoteConfig } from '../types/notes';
-import { DEFAULT_NOTES_CONFIG } from '../types/notes';
+import type { NoteConfig, SpecialNoteConfig } from '../types/notes';
+import { DEFAULT_NOTES_CONFIG, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS } from '../types/notes';
 
 type Tab = 'quotation' | 'confirmation';
 
@@ -52,6 +52,7 @@ interface QuotationState {
   setNotesConfig: (config: NoteConfig[]) => void;
   updateNoteVisibility: (id: string, visible: boolean) => void;
   updateNoteOrder: (fromIndex: number, toIndex: number) => void;
+  updateSpecialNoteOption: (noteId: string, optionId: string) => void;
 }
 
 export const useQuotationStore = create<QuotationState>((set) => ({
@@ -142,4 +143,11 @@ export const useQuotationStore = create<QuotationState>((set) => ({
     
     return { notesConfig: updatedConfig };
   }),
+  updateSpecialNoteOption: (noteId, optionId) => set((state) => ({
+    notesConfig: state.notesConfig.map(note => 
+      note.id === noteId 
+        ? { ...note, selectedOption: optionId }
+        : note
+    )
+  })),
 }));

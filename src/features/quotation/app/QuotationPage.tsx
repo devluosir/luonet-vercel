@@ -43,6 +43,8 @@ import { PasteDialog } from '@/components/quotation/PasteDialog';
 import { Footer } from '@/components/Footer';
 import { Clipboard, History, Save, Settings, Download, Eye } from 'lucide-react';
 
+
+
 export default function QuotationPage() {
   const pathname = usePathname();
   const { showToast } = useToast();
@@ -303,6 +305,8 @@ export default function QuotationPage() {
                   type={activeTab}
                 />
               </div>
+
+
 
               {/* 商品表格区域 */}
               <div className="px-0 sm:px-6 py-4">

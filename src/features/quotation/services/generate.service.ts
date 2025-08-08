@@ -1,6 +1,6 @@
 import { usePdfGenerator } from '@/hooks/usePdfGenerator';
 import type { QuotationData } from '@/types/quotation';
-import { NOTES_CONTENT_MAP } from '../types/notes';
+import { NOTES_CONTENT_MAP, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS } from '../types/notes';
 
 // PDF生成服务Hook
 export function useGenerateService() {
@@ -20,6 +20,26 @@ export function useGenerateService() {
         .filter(note => note.visible)
         .sort((a, b) => a.order - b.order)
         .map(note => {
+          // 特殊Notes（付款方式和交货期）
+          if (note.id === 'payment_terms' && (note as any).selectedOption) {
+            const selectedOptionId = (note as any).selectedOption;
+            // 检查是否为自定义编辑的内容
+            if (selectedOptionId.startsWith('custom_')) {
+              return `Payment Terms: ${selectedOptionId.replace('custom_', '')}`;
+            }
+            const selectedOption = PAYMENT_TERMS_OPTIONS.find(opt => opt.id === selectedOptionId);
+            return selectedOption ? `Payment Terms: ${selectedOption.english}` : '';
+          }
+          if (note.id === 'delivery_terms' && (note as any).selectedOption) {
+            const selectedOptionId = (note as any).selectedOption;
+            // 检查是否为自定义编辑的内容
+            if (selectedOptionId.startsWith('custom_')) {
+              return `Delivery Terms: ${selectedOptionId.replace('custom_', '')}`;
+            }
+            const selectedOption = DELIVERY_TERMS_OPTIONS.find(opt => opt.id === selectedOptionId);
+            return selectedOption ? `Delivery Terms: ${selectedOption.english}` : '';
+          }
+          
           // 自定义Notes从data中获取
           if (note.id === 'custom_note_1' && data.notes && data.notes[0]) {
             return data.notes[0];

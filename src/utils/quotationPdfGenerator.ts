@@ -189,6 +189,8 @@ export const generateQuotationPDF = async (data: QuotationData, preview = false)
     });
     currentY += (wrappedInquiryNo.length * 3.5);
 
+
+
     // 添加感谢语
     currentY += 5;  // 增加一些间距
     doc.setFont('NotoSansSC', 'normal');

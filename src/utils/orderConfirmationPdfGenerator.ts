@@ -153,7 +153,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     const maxWidth = rightColumnStart - leftMargin - toTextWidth - 5; // 5mm作为安全间距
     
     // 处理客户信息自动换行
-    const toText = data.to.trim();
+    const toText = data.to?.trim() || '';
     if (toText) {
       const wrappedLines = doc.splitTextToSize(toText, maxWidth);
       wrappedLines.forEach((line: string) => {
@@ -181,13 +181,16 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     }
    // 恢复普通字体
    doc.setFont('NotoSansSC', 'normal');
-    // 添加确认文本，增加与上方Order No.的间距
-    currentY = Math.max(currentY + 8, startY + 20);  // 设置最小起始位置为startY + 25
-    doc.setFontSize(8);
-    doc.text('We hereby confirm having sold to you the following goods on terms and condition as specified below:', leftMargin, currentY);
+   
+   
+   
+   // 添加确认文本，增加与上方Order No.的间距
+   currentY = Math.max(currentY + 8, startY + 20);  // 设置最小起始位置为startY + 25
+   doc.setFontSize(8);
+   doc.text('We hereby confirm having sold to you the following goods on terms and condition as specified below:', leftMargin, currentY);
 
-    // 确保表格与确认文本有3mm的固定间距
-    currentY += 3;
+   // 确保表格与确认文本有3mm的固定间距
+   currentY += 3;
 
     // 使用共享的表格配置
     doc.autoTable(generateTableConfig(data, doc, currentY, margin, pageWidth));

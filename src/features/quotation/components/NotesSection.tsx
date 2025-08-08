@@ -20,9 +20,9 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Eye, EyeOff, GripVertical, Settings } from 'lucide-react';
+import { Eye, EyeOff, GripVertical, Settings, ChevronDown, Check } from 'lucide-react';
 import { useQuotationStore } from '../state/useQuotationStore';
-import { NOTES_CONTENT_MAP } from '../types/notes';
+import { NOTES_CONTENT_MAP, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS } from '../types/notes';
 import type { NoteConfig } from '../types/notes';
 
 interface NotesSectionProps {
@@ -31,7 +31,7 @@ interface NotesSectionProps {
 }
 
 export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) => {
-  const { notesConfig, updateNoteVisibility, updateNoteOrder } = useQuotationStore();
+  const { notesConfig, updateNoteVisibility, updateNoteOrder, updateSpecialNoteOption } = useQuotationStore();
   const [showConfig, setShowConfig] = useState(false);
 
   // 配置传感器
@@ -137,6 +137,8 @@ export const NotesSection: React.FC<NotesSectionProps> = ({ data, onChange }) =>
                   note={note}
                   data={data}
                   onVisibilityToggle={handleVisibilityToggle}
+                  onUpdateSpecialOption={updateSpecialNoteOption}
+                  onChange={onChange}
                 />
               ))}
             </div>
@@ -171,9 +173,11 @@ interface SortableNoteProps {
   note: NoteConfig;
   data: any;
   onVisibilityToggle: (noteId: string, currentVisible: boolean) => void;
+  onUpdateSpecialOption: (noteId: string, optionId: string) => void;
+  onChange: (data: any) => void;
 }
 
-const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityToggle }) => {
+const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityToggle, onUpdateSpecialOption, onChange }) => {
   const {
     attributes,
     listeners,
@@ -188,7 +192,13 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
     transition,
   };
 
-
+  // 检查是否为特殊Notes（支持选项选择）
+  const isSpecialNote = note.id === 'payment_terms' || note.id === 'delivery_terms';
+  const options = note.id === 'payment_terms' ? PAYMENT_TERMS_OPTIONS : DELIVERY_TERMS_OPTIONS;
+  const selectedOptionId = (note as any).selectedOption;
+  const selectedOption = options.find(opt => opt.id === selectedOptionId);
+  const [showOptions, setShowOptions] = useState(false);
+  const [showAllOptions, setShowAllOptions] = useState(false);
 
   return (
     <div
@@ -220,15 +230,120 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, data, onVisibilityTog
           <EyeOff className="w-4 h-4 text-gray-400" />
         </button>
       </div>
+      
+      {/* 特殊Notes的选项选择器 */}
+      {isSpecialNote && (
+        <div className="mb-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-500 dark:text-[#98989D]">
+              当前选择：
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowOptions(!showOptions);
+              }}
+              className="text-xs text-[#007AFF] dark:text-[#0A84FF] hover:underline"
+            >
+              {selectedOption ? selectedOption.chinese : '点击选择'}
+            </button>
+          </div>
+          {showOptions && (
+            <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto p-1 bg-gray-50 dark:bg-[#3A3A3C] rounded">
+              {(showAllOptions ? options : options.slice(0, 8)).map((option) => (
+                <button
+                  type="button"
+                  key={option.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpdateSpecialOption(note.id, option.id);
+                    setShowOptions(false);
+                    setShowAllOptions(false);
+                  }}
+                  className={`px-2 py-1 rounded text-xs transition-colors whitespace-nowrap ${
+                    selectedOptionId === option.id
+                      ? 'bg-[#007AFF] dark:bg-[#0A84FF] text-white'
+                      : 'bg-white dark:bg-[#2C2C2E] text-gray-700 dark:text-[#F5F5F7] hover:bg-gray-100 dark:hover:bg-[#4A4A4C]'
+                  }`}
+                  title={option.english}
+                >
+                  {option.chinese}
+                </button>
+              ))}
+              {options.length > 8 && !showAllOptions && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAllOptions(true);
+                  }}
+                  className="px-2 py-1 rounded text-xs bg-white dark:bg-[#2C2C2E] text-gray-500 dark:text-[#98989D] hover:bg-gray-100 dark:hover:bg-[#4A4A4C]"
+                >
+                  +{options.length - 8}更多
+                </button>
+              )}
+              {showAllOptions && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAllOptions(false);
+                  }}
+                  className="px-2 py-1 rounded text-xs bg-white dark:bg-[#2C2C2E] text-gray-500 dark:text-[#98989D] hover:bg-gray-100 dark:hover:bg-[#4A4A4C]"
+                >
+                  收起
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      
       <div className="text-sm text-gray-600 dark:text-[#98989D]">
-        {getNoteContent(note.id, data)}
+        <textarea
+          value={getNoteContent(note.id, data, selectedOption)}
+          onChange={(e) => {
+            // 直接更新条款内容
+            const newContent = e.target.value;
+            if (isSpecialNote) {
+              // 特殊Notes（付款方式和交货期）
+              onUpdateSpecialOption(note.id, `custom_${newContent}`);
+            } else {
+              // 普通Notes，更新data.notes
+              const noteIndex = note.id === 'custom_note_1' ? 0 : 1;
+              const newNotes = [...(data.notes || [])];
+              newNotes[noteIndex] = newContent;
+              onChange({ ...data, notes: newNotes });
+            }
+          }}
+          className="w-full p-2 text-sm border border-gray-300 dark:border-[#3A3A3C] rounded bg-white dark:bg-[#2C2C2E] text-gray-800 dark:text-[#F5F5F7] resize-none"
+          rows={2}
+          placeholder="输入条款内容..."
+        />
       </div>
     </div>
   );
 };
 
 // 获取Note内容
-function getNoteContent(noteId: string, data: any): string {
+function getNoteContent(noteId: string, data: any, selectedOption?: any): string {
+  // 特殊Notes（付款方式和交货期）
+  if (noteId === 'payment_terms' && selectedOption) {
+    // 检查是否为自定义编辑的内容
+    if (selectedOption.id && selectedOption.id.startsWith('custom_')) {
+      return selectedOption.id.replace('custom_', '');
+    }
+    return selectedOption.english || '';
+  }
+  if (noteId === 'delivery_terms' && selectedOption) {
+    // 检查是否为自定义编辑的内容
+    if (selectedOption.id && selectedOption.id.startsWith('custom_')) {
+      return selectedOption.id.replace('custom_', '');
+    }
+    return selectedOption.english || '';
+  }
+  
   // 自定义Notes从data中获取
   if (noteId === 'custom_note_1' && data.notes && data.notes[0]) {
     return data.notes[0];
