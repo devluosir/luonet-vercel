@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
         let userData;
         if (backendData.users && Array.isArray(backendData.users)) {
           // 通过用户名查找用户
-          userData = backendData.users.find((user: any) => 
-            user.username?.toLowerCase() === userName.toLowerCase() || 
+          userData = backendData.users.find((user: Record<string, unknown>) => 
+            (user.username as string)?.toLowerCase() === userName.toLowerCase() || 
             user.id === userId
           );
         } else if (backendData.id) {
@@ -58,10 +58,10 @@ export async function POST(request: NextRequest) {
         if (userData && userData.permissions && Array.isArray(userData.permissions)) {
           // 转换后端权限格式
           permissions = userData.permissions
-            .map((perm: any) => ({
-              id: perm.id || `backend-${perm.moduleId}`,
-              moduleId: perm.moduleId,
-              canAccess: !!perm.canAccess
+            .map((perm: Record<string, unknown>) => ({
+              id: (perm.id as string) || `backend-${perm.moduleId as string}`,
+              moduleId: perm.moduleId as string,
+              canAccess: !!(perm.canAccess as boolean)
             }));
           
           userEmail = userData.email || null;
@@ -92,10 +92,10 @@ export async function POST(request: NextRequest) {
           if (Array.isArray(session.user.permissions)) {
             // 对象数组格式
             permissions = session.user.permissions
-              .map((perm: any) => ({
-                id: perm.id || `session-${perm.moduleId}`,
-                moduleId: perm.moduleId,
-                canAccess: !!perm.canAccess
+              .map((perm: Record<string, unknown>) => ({
+                id: (perm.id as string) || `session-${perm.moduleId as string}`,
+                moduleId: perm.moduleId as string,
+                canAccess: !!(perm.canAccess as boolean)
               }));
           } else if (typeof session.user.permissions === 'object') {
             // 对象格式

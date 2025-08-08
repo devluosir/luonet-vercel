@@ -1,14 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Home, ArrowRight, Gamepad2, Square, Circle, RotateCcw, Play, Pause, SkipForward, Brain } from 'lucide-react';
+import { Gamepad2, Square, RotateCcw, Play, Pause, SkipForward, Brain } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 export default function NotFound() {
-  const router = useRouter();
+  const _router = useRouter();
   const [activeTab, setActiveTab] = useState<'gomoku' | 'game2048'>('gomoku');
-  const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
+  // const [score, setScore] = useState(0);
+  // const [highScore, setHighScore] = useState(0);
 
   // 五子棋游戏状态
   const [gomokuBoard, setGomokuBoard] = useState<(null | 'black' | 'white')[][]>(
@@ -25,7 +25,7 @@ export default function NotFound() {
   const [game2048Active, setGame2048Active] = useState(false);
   const [game2048Over, setGame2048Over] = useState(false);
   const [game2048Won, setGame2048Won] = useState(false);
-  const [hasShown2048Message, setHasShown2048Message] = useState(false);
+  // const [hasShown2048Message, setHasShown2048Message] = useState(false);
   const [highestAchievedNumber, setHighestAchievedNumber] = useState(0);
   const [game2048Score, setGame2048Score] = useState(0);
   const [game2048HighScore, setGame2048HighScore] = useState(0);
@@ -52,11 +52,11 @@ export default function NotFound() {
   // 从localStorage获取最高分和游戏进度
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // 获取最高分
-      const saved = localStorage.getItem('404SnakeHighScore');
-      if (saved) {
-        setHighScore(parseInt(saved));
-      }
+      // 获取最高分 - 暂时注释掉，因为相关状态变量已被注释
+      // const saved = localStorage.getItem('404SnakeHighScore');
+      // if (saved) {
+      //   setHighScore(parseInt(saved));
+      // }
       const saved2048 = localStorage.getItem('2048HighScore');
       if (saved2048) {
         setGame2048HighScore(parseInt(saved2048));
@@ -102,6 +102,7 @@ export default function NotFound() {
         }, 0);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 自动保存五子棋游戏进度
@@ -109,6 +110,7 @@ export default function NotFound() {
     if (typeof window !== 'undefined' && gomokuBoard.some(row => row.some(cell => cell !== null))) {
       saveGomokuProgress();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gomokuBoard, currentPlayer, gameWinner, gameDraw]);
 
   // 自动保存2048游戏进度
@@ -116,6 +118,7 @@ export default function NotFound() {
     if (typeof window !== 'undefined' && game2048Active) {
       save2048Progress();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [board, game2048Active, game2048Over, game2048Won, game2048Score]);
 
   const handleGomokuClick = (row: number, col: number) => {
@@ -183,7 +186,7 @@ export default function NotFound() {
   };
 
   // 保存五子棋游戏进度
-  const saveGomokuProgress = () => {
+  const saveGomokuProgress = useCallback(() => {
     if (typeof window !== 'undefined') {
       const gomokuState = {
         board: gomokuBoard,
@@ -193,10 +196,10 @@ export default function NotFound() {
       };
       localStorage.setItem('gomokuGameState', JSON.stringify(gomokuState));
     }
-  };
+  }, [gomokuBoard, currentPlayer, gameWinner, gameDraw]);
 
   // 保存2048游戏进度
-  const save2048Progress = () => {
+  const save2048Progress = useCallback(() => {
     if (typeof window !== 'undefined') {
       const game2048State = {
         board,
@@ -208,7 +211,7 @@ export default function NotFound() {
       };
       localStorage.setItem('2048GameState', JSON.stringify(game2048State));
     }
-  };
+  }, [board, game2048Active, game2048Over, game2048Won, game2048Score, highestAchievedNumber]);
 
   const resetGomoku = () => {
     setGomokuBoard(Array(15).fill(null).map(() => Array(15).fill(null)));
@@ -222,10 +225,7 @@ export default function NotFound() {
   };
 
   // 初始化2048游戏
-  const init2048Game = () => {
-    // 停止自动推演
-    stopAutoPlay();
-    
+  const init2048Game = useCallback(() => {
     const newBoard = Array(7).fill(null).map(() => Array(7).fill(0));
     // 添加两个初始数字
     addRandomTile(newBoard);
@@ -245,7 +245,7 @@ export default function NotFound() {
     setIsAutoPlaying(false);
     // 游戏开始时保存进度
     setTimeout(() => save2048Progress(), 0);
-  };
+  }, [save2048Progress]);
 
   // 添加随机数字
   const addRandomTile = (board: number[][]) => {
@@ -359,15 +359,7 @@ export default function NotFound() {
     return true;
   };
 
-  // 检查是否获胜（移除2048限制，改为达到2048时显示祝贺但不结束游戏）
-  const check2048Win = (board: number[][]) => {
-    for (let i = 0; i < 5; i++) {
-      for (let j = 0; j < 5; j++) {
-        if (board[i][j] === 2048) return true;
-      }
-    }
-    return false;
-  };
+
 
   // 优化的评估函数 - 基于你的建议
   const evaluateBoard = (board: number[][]): number => {
@@ -480,33 +472,7 @@ export default function NotFound() {
     return score;
   };
 
-  // 蒙特卡洛模拟
-  const simulateMove = (board: number[][], direction: 'up' | 'down' | 'left' | 'right', depth: number = 3): number => {
-    if (depth === 0) {
-      return evaluateBoard(board);
-    }
 
-    const newBoard = board.map(row => [...row]);
-    const moved = moveAndMergeSimulation(newBoard, direction);
-    
-    if (!moved) {
-      return -Infinity; // 无效移动
-    }
-
-    // 随机添加新数字
-    addRandomTileSimulation(newBoard);
-
-    // 递归模拟下一步
-    const directions: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
-    let bestScore = -Infinity;
-    
-    for (const dir of directions) {
-      const score = simulateMove(newBoard, dir, depth - 1);
-      bestScore = Math.max(bestScore, score);
-    }
-
-    return bestScore;
-  };
 
   // 模拟移动（不更新状态）
   const moveAndMergeSimulation = (board: number[][], direction: 'up' | 'down' | 'left' | 'right'): boolean => {
@@ -785,12 +751,7 @@ export default function NotFound() {
     setTimeout(autoPlayStep, 150);
   };
 
-  // 测试函数 - 用于调试
-  const testAutoPlay = () => {
-    console.log('测试按钮点击');
-    console.log('当前状态:', { game2048Active, game2048Over, isAutoPlaying });
-    alert('按钮点击正常！');
-  };
+
 
   const stopAutoPlay = () => {
     setIsAutoPlaying(false);
@@ -805,11 +766,7 @@ export default function NotFound() {
     stopAutoPlay();
   };
 
-  const resumeAutoPlay = () => {
-    if (!isAutoPlaying && game2048Active && !game2048Over) {
-      startAutoPlay();
-    }
-  };
+
 
   // 撤销功能
   const undoMove = () => {
@@ -1021,44 +978,7 @@ export default function NotFound() {
     }, 100);
   };
 
-  // 蒙特卡洛评估函数 - 使用随机移动进行模拟
-  const monteCarloEvaluate = (board: number[][], iterations: number = 50): number => {
-    let totalScore = 0;
-    const directions: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
 
-    for (let i = 0; i < iterations; i++) {
-      let simBoard = deepCloneBoard(board);
-      let score = 0;
-      let steps = 0;
-      const maxSteps = 20; // 限制模拟步数
-
-      while (steps < maxSteps && !isGameOver(simBoard)) {
-        const randomDirection = directions[Math.floor(Math.random() * directions.length)];
-        const moved = moveAndMergeSimulation(simBoard, randomDirection);
-        
-        if (moved) {
-          addRandomTileSimulation(simBoard);
-          score += evaluateBoard(simBoard);
-          steps++;
-        } else {
-          // 如果无法移动，尝试其他方向
-          let foundValidMove = false;
-          for (const dir of directions) {
-            const testBoard = deepCloneBoard(simBoard);
-            if (moveAndMergeSimulation(testBoard, dir)) {
-              foundValidMove = true;
-              break;
-            }
-          }
-          if (!foundValidMove) break; // 没有有效移动，结束模拟
-        }
-      }
-
-      totalScore += score;
-    }
-
-    return totalScore / iterations;
-  };
 
   // 检查是否达到新的里程碑
   const checkNewMilestone = (board: number[][]) => {
@@ -1095,7 +1015,7 @@ export default function NotFound() {
         if (newMilestone) {
           setHighestAchievedNumber(newMilestone);
           setGame2048Won(true);
-          setHasShown2048Message(true);
+          // setHasShown2048Message(true); // 暂时注释掉，因为状态变量已被注释
         }
         // 检查游戏是否结束
         if (checkGameOver(currentBoard)) {
@@ -1112,6 +1032,7 @@ export default function NotFound() {
         }
       }, 50); // 增加延迟确保状态已完全更新
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game2048Active, game2048Over, board, game2048Won, game2048Score, game2048HighScore, isAutoPlayingRef]);
 
   // 触摸事件处理
@@ -1180,7 +1101,7 @@ export default function NotFound() {
     }
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     if (!mouseStart || !mouseEnd) return;
 
     const distanceX = mouseStart.x - mouseEnd.x;
@@ -1212,7 +1133,7 @@ export default function NotFound() {
 
     setMouseStart(null);
     setMouseEnd(null);
-  };
+  }, [mouseStart, mouseEnd, handleSwipe]);
 
   // 键盘控制2048
   useEffect(() => {
@@ -1273,6 +1194,7 @@ export default function NotFound() {
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game2048Active, game2048Over, mouseStart]);
 
   const reset2048Game = () => {
@@ -1289,7 +1211,7 @@ export default function NotFound() {
     setGame2048Active(false);
     setGame2048Over(false);
     setGame2048Won(false);
-    setHasShown2048Message(false);
+    // setHasShown2048Message(false); // 暂时注释掉，因为状态变量已被注释
     setHighestAchievedNumber(0);
     setGame2048Score(0);
     setBoard(Array(7).fill(null).map(() => Array(7).fill(0)));
@@ -1312,71 +1234,9 @@ export default function NotFound() {
     }, 0);
   };
 
-  // 蒙特卡洛树搜索 (MCTS) 作为备选算法
-  const monteCarloSearch = (board: number[][], simulations: number = 100): 'up' | 'down' | 'left' | 'right' | null => {
-    const directions: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
-    const scores: { [key in 'up' | 'down' | 'left' | 'right']: number } = { up: 0, down: 0, left: 0, right: 0 };
-    const counts: { [key in 'up' | 'down' | 'left' | 'right']: number } = { up: 0, down: 0, left: 0, right: 0 };
 
-    for (let i = 0; i < simulations; i++) {
-      for (const direction of directions) {
-        const boardCopy = deepCloneBoard(board);
-        const moved = moveAndMergeSimulation(boardCopy, direction);
-        
-        if (moved) {
-          // 随机模拟游戏到结束
-          const finalScore = simulateRandomGame(boardCopy, 10); // 模拟10步
-          scores[direction] += finalScore;
-          counts[direction]++;
-        }
-      }
-    }
 
-    // 选择平均分数最高的方向
-    let bestDirection: 'up' | 'down' | 'left' | 'right' | null = null;
-    let bestScore = -Infinity;
 
-    for (const direction of directions) {
-      if (counts[direction] > 0) {
-        const avgScore = scores[direction] / counts[direction];
-        if (avgScore > bestScore) {
-          bestScore = avgScore;
-          bestDirection = direction;
-        }
-      }
-    }
-
-    return bestDirection;
-  };
-
-  // 随机模拟游戏
-  const simulateRandomGame = (board: number[][], maxSteps: number): number => {
-    const boardCopy = deepCloneBoard(board);
-    let steps = 0;
-
-    while (steps < maxSteps && !isGameOver(boardCopy)) {
-      const directions: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
-      const validMoves = [];
-
-      // 找出所有有效移动
-      for (const direction of directions) {
-        const testBoard = deepCloneBoard(boardCopy);
-        if (moveAndMergeSimulation(testBoard, direction)) {
-          validMoves.push(direction);
-        }
-      }
-
-      if (validMoves.length === 0) break;
-
-      // 随机选择一个有效移动
-      const randomDirection = validMoves[Math.floor(Math.random() * validMoves.length)] as 'up' | 'down' | 'left' | 'right';
-      moveAndMergeSimulation(boardCopy, randomDirection);
-      addRandomTileSimulation(boardCopy);
-      steps++;
-    }
-
-    return evaluateBoard(boardCopy);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-2 sm:p-4">

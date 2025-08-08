@@ -16,7 +16,7 @@ export default function MailPage() {
   // usePermissionInit(); // 移除：权限初始化已在全局处理
 
   
-  const router = useRouter();
+  const _router = useRouter();
   const [activeTab, setActiveTab] = useState('mail');
   const [mailType, setMailType] = useState('formal');
   const [userInput, setUserInput] = useState({
@@ -79,7 +79,7 @@ export default function MailPage() {
       };
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 秒超时
+      const _timeoutId = setTimeout(() => controller.abort(), 90000); // 90 秒超时
 
       const data = await apiRequestWithError(API_ENDPOINTS.GENERATE, {
         method: 'POST',

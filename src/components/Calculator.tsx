@@ -1,6 +1,6 @@
 'use client'
 
-import { Calculator as CalculatorIcon, X, Move, ChevronDown, ChevronUp, History } from 'lucide-react';
+import { Calculator as CalculatorIcon, X, Move, ChevronUp, History } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 
 interface CalculatorProps {
@@ -17,7 +17,7 @@ interface HistoryItem {
 export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const [display, setDisplay] = useState('0');
   const [expression, setExpression] = useState(''); // 存储完整算式
-  const [waitingForOperand, setWaitingForOperand] = useState(false);
+  // const [waitingForOperand, setWaitingForOperand] = useState(false);
   const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });

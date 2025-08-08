@@ -21,7 +21,7 @@ interface LazyPDFGeneratorProps {
   pdfUrl: string | null;
   onClose: () => void;
   title?: string;
-  data?: any;
+  data?: Record<string, unknown>;
   itemType?: 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
   showDownloadButton?: boolean;
   showOpenInNewTab?: boolean;
@@ -50,9 +50,9 @@ export default function LazyPDFGenerator({
     return () => clearTimeout(timer);
   }, []);
 
-  const handleLoad = () => {
-    setIsLoaded(true);
-  };
+  // const handleLoad = () => {
+  //   setIsLoaded(true);
+  // };
 
   if (!showGenerator) {
     return (

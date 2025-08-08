@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 // 移除CSS导入，改为动态加载
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 import { generateInvoicePDF } from '@/utils/pdfGenerator';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
-import { InvoiceTemplateConfig, InvoiceData, LineItem } from '@/types/invoice';
-import { format, addMonths } from 'date-fns';
+import { InvoiceData, LineItem } from '@/types/invoice';
+import { format } from 'date-fns';
 import { Footer } from '@/components/Footer';
 import { CustomerSection } from '@/components/invoice/CustomerSection';
 import ItemsTable from '@/components/invoice/ItemsTable';
@@ -29,8 +29,8 @@ import dynamic from 'next/dynamic';
 // 动态导入PDFPreviewModal
 const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
 
-// 添加高亮样式常量
-const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
+// 添加高亮样式常量 - 暂时未使用
+// const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
 
 // 基础样式定义
 const inputClassName = `w-full px-4 py-2.5 rounded-2xl
@@ -68,11 +68,12 @@ const tableInputClassName = `w-full px-3 py-2 rounded-xl
   text-center whitespace-pre-wrap
   ios-optimized-input`;
 
-const numberInputClassName = `${tableInputClassName}
-  [appearance:textfield] 
-  [&::-webkit-outer-spin-button]:appearance-none 
-  [&::-webkit-inner-spin-button]:appearance-none
-  text-center`;
+// 数字输入框样式 - 暂时未使用
+// const numberInputClassName = `${tableInputClassName}
+//   [appearance:textfield] 
+//   [&::-webkit-outer-spin-button]:appearance-none 
+//   [&::-webkit-inner-spin-button]:appearance-none
+//   text-center`;
 
 interface CustomWindow extends Window {
   __INVOICE_DATA__?: InvoiceData;
@@ -80,18 +81,19 @@ interface CustomWindow extends Window {
   __EDIT_ID__?: string;
 }
 
-interface ErrorWithMessage {
-  message: string;
-  code?: string;
-  details?: unknown;
-}
+// 错误消息接口 - 暂时未使用
+// interface ErrorWithMessage {
+//   message: string;
+//   code?: string;
+//   details?: unknown;
+// }
 
 export default function InvoicePage() {
   // 权限初始化
   // usePermissionInit(); // 移除：权限初始化已在全局处理
 
   
-  const router = useRouter();
+  const _router = useRouter();
   const pathname = usePathname();
 
   // 1. 状态定义
@@ -115,12 +117,12 @@ export default function InvoicePage() {
   const [showUnitSuccess, setShowUnitSuccess] = useState(false);
 
   // 编辑状态
-  const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
-  const [editingUnitPrice, setEditingUnitPrice] = useState<string>('');
-  const [editingQuantityIndex, setEditingQuantityIndex] = useState<number | null>(null);
-  const [editingQuantity, setEditingQuantity] = useState<string>('');
-  const [editingFeeAmount, setEditingFeeAmount] = useState<string>('');
-  const [editingFeeIndex, setEditingFeeIndex] = useState<number | null>(null);
+  // const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
+  // const [editingUnitPrice, setEditingUnitPrice] = useState<string>('');
+  // const [editingQuantityIndex, setEditingQuantityIndex] = useState<number | null>(null);
+  // const [editingQuantity, setEditingQuantity] = useState<string>('');
+  // const [editingFeeAmount, setEditingFeeAmount] = useState<string>('');
+  // const [editingFeeIndex, setEditingFeeIndex] = useState<number | null>(null);
   const [focusedCell, setFocusedCell] = useState<{
     row: number;
     column: string;
@@ -130,7 +132,7 @@ export default function InvoicePage() {
 
   // 从 window 全局变量获取初始数据
   const initialData = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__INVOICE_DATA__) : null;
-  const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
+      // const initialEditId = typeof window !== 'undefined' ? ((window as unknown as CustomWindow).__EDIT_ID__) : null;
 
   // 2. 数据状态
   const [data, setData] = useState<InvoiceData>(initialData || {

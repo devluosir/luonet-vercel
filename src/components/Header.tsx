@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ChevronDown, LogOut, Settings, User, RefreshCw, Download, CheckCircle } from 'lucide-react';
+import { ChevronDown, LogOut, Settings, User, Download } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { Avatar } from './Avatar';
 import { PermissionRefreshButton } from './PermissionRefreshButton';

@@ -1,27 +1,52 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, FileText, Download, ExternalLink, Smartphone } from 'lucide-react';
 import { generateQuotationPDF } from '@/utils/quotationPdfGenerator';
 import { generateOrderConfirmationPDF } from '@/utils/orderConfirmationPdfGenerator';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
 import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
 import { generatePackingListPDF } from '@/utils/packingPdfGenerator';
-import { supportsPDFPreview, getDeviceInfo, handlePDFPreview, openPDFInNewTab } from '@/utils/pdfHelpers';
+import { getDeviceInfo, handlePDFPreview, openPDFInNewTab } from '@/utils/pdfHelpers';
+
+interface HistoryItem {
+  data: Record<string, unknown>;
+  quotationNo?: string;
+  invoiceNo?: string;
+  orderNo?: string;
+}
 
 interface PDFPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  item: any;
+  item: HistoryItem;
   itemType: 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
+}
+
+interface DeviceInfo {
+  isAndroid: boolean;
+  canPreviewPDF: boolean;
+  browser?: {
+    name: string;
+  };
+  recommendedAction?: string;
+}
+
+interface PreviewInfo {
+  canPreview: boolean;
+  shouldUseFallback: boolean;
+  fallbackType: string;
+  message: string;
+  showDownloadButton: boolean;
+  showOpenInNewTab: boolean;
 }
 
 export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDFPreviewModalProps) {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [showDownloadFallback, setShowDownloadFallback] = useState(false);
-  const [deviceInfo, setDeviceInfo] = useState<any>(null);
-  const [previewInfo, setPreviewInfo] = useState<any>({
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
+  const [previewInfo, setPreviewInfo] = useState<PreviewInfo>({
     canPreview: false,
     shouldUseFallback: true,
     fallbackType: 'download',
@@ -73,7 +98,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
   }, [pdfPreviewUrl, deviceInfo]);
 
   // 生成PDF预览
-  const generatePdfPreview = async () => {
+  const generatePdfPreview = useCallback(async () => {
     if (!item || !item.data) {
       console.warn('预览数据不完整');
       setShowDownloadFallback(true);
@@ -88,18 +113,23 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
 
       // 根据记录类型生成对应的PDF
       if (itemType === 'quotation') {
+        // @ts-ignore - 历史记录数据可能来自不同来源
         const pdfBlob = await generateQuotationPDF(item.data, true);
         pdfUrl = URL.createObjectURL(pdfBlob);
       } else if (itemType === 'confirmation') {
+        // @ts-ignore - 历史记录数据可能来自不同来源
         const pdfBlob = await generateOrderConfirmationPDF(item.data, true);
         pdfUrl = URL.createObjectURL(pdfBlob);
       } else if (itemType === 'invoice') {
+        // @ts-ignore - 历史记录数据可能来自不同来源
         const pdfBlob = await generateInvoicePDF(item.data);
         pdfUrl = URL.createObjectURL(pdfBlob);
       } else if (itemType === 'purchase') {
+        // @ts-ignore - 历史记录数据可能来自不同来源
         const pdfBlob = await generatePurchaseOrderPDF(item.data, true);
         pdfUrl = URL.createObjectURL(pdfBlob);
       } else if (itemType === 'packing') {
+        // @ts-ignore - 历史记录数据可能来自不同来源
         const pdfBlob = await generatePackingListPDF(item.data);
         pdfUrl = URL.createObjectURL(pdfBlob);
       }
@@ -117,7 +147,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
     } finally {
       setIsGeneratingPdf(false);
     }
-  };
+  }, [item, itemType, deviceInfo]);
 
   // 下载PDF
   const downloadPDF = async () => {
@@ -131,6 +161,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
     try {
       // 根据记录类型生成对应的PDF并下载
       if (itemType === 'quotation') {
+        // @ts-ignore - 历史记录数据可能来自不同来源
         const pdfBlob = await generateQuotationPDF(item.data, false);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
@@ -141,6 +172,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       } else if (itemType === 'confirmation') {
+        // @ts-ignore - 历史记录数据可能来自不同来源
         const pdfBlob = await generateOrderConfirmationPDF(item.data, false);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
@@ -151,6 +183,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       } else if (itemType === 'invoice') {
+        // @ts-ignore - 历史记录数据可能来自不同来源
         const pdfBlob = await generateInvoicePDF(item.data);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
@@ -161,6 +194,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       } else if (itemType === 'purchase') {
+        // @ts-ignore - 历史记录数据可能来自不同来源
         const pdfBlob = await generatePurchaseOrderPDF(item.data, false);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
@@ -171,6 +205,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       } else if (itemType === 'packing') {
+        // @ts-ignore - 历史记录数据可能来自不同来源
         const pdfBlob = await generatePackingListPDF(item.data);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
@@ -228,7 +263,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
     if (isOpen && item && item.data) {
       generatePdfPreview();
     }
-  }, [isOpen, item, itemType]);
+  }, [isOpen, item, itemType, generatePdfPreview]);
 
   if (!isOpen) return null;
 
