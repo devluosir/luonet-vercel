@@ -395,7 +395,8 @@ export default function DashboardPage() {
         <Header 
           user={{
             name: user?.username || session?.user?.username || session?.user?.name || '用户',
-            isAdmin: user?.isAdmin ?? session?.user?.isAdmin ?? false
+            isAdmin: user?.isAdmin ?? session?.user?.isAdmin ?? false,
+            email: user?.email || session?.user?.email || null
           }}
           onLogout={handleLogout}
           onProfile={() => setShowProfileModal(true)}
@@ -403,15 +404,7 @@ export default function DashboardPage() {
           showWelcome={true}
         />
 
-        <ProfileModal
-          isOpen={showProfileModal}
-          onClose={() => setShowProfileModal(false)}
-          user={{
-            username: user?.username || session?.user?.username || session?.user?.name || '',
-            email: user?.email || session?.user?.email || null,
-            permissions: user?.permissions || session?.user?.permissions || []
-          }}
-        />
+        {/* 个人信息弹窗已取消 */}
 
         {/* Dashboard内容区域 - 设置独立背景层，防止父级背景污染 */}
         <div className="relative z-0 bg-transparent isolation isolate">

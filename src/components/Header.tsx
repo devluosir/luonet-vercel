@@ -3,18 +3,20 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ChevronDown, LogOut, Settings, User, Download } from 'lucide-react';
+import { ChevronDown, LogOut, Settings, User, Download, Palette } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { Avatar } from './Avatar';
 import { PermissionRefreshButton } from './PermissionRefreshButton';
 import { format } from 'date-fns';
 import { preloadManager } from '@/utils/preloadUtils';
 import { LOGO_CONFIG } from '@/lib/logo-config';
+import { useThemeSettings } from '@/hooks/useThemeSettings';
 
 interface HeaderProps {
   user: {
     name: string;
     isAdmin: boolean;
+    email?: string | null;
   };
   onLogout: () => void;
   onProfile: () => void;
@@ -30,12 +32,14 @@ export function Header({
   showWelcome = false
 }: HeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [openSubmenu, setOpenSubmenu] = useState<'profile' | null>(null);
   const [isPreloading, setIsPreloading] = useState(false);
   const [preloadProgress, setPreloadProgress] = useState(0);
   const [preloadStage, setPreloadStage] = useState('');
   const [isPreloaded, setIsPreloaded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { settings, setButtonTheme } = useThemeSettings();
 
   // 检查预加载状态
   const checkPreloadStatus = useCallback(() => {
@@ -232,15 +236,73 @@ export function Header({
             </button>
 
             {showDropdown && (
-              <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-[#2c2c2e] ring-1 ring-black ring-opacity-5 dark:ring-white/10 z-[9999] animate-in fade-in-0 zoom-in-95">
-                <div className="py-1">
+              <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-lg bg-white dark:bg-[#2c2c2e] ring-1 ring-black ring-opacity-5 dark:ring-white/10 z-[9999] animate-in fade-in-0 zoom-in-95"
+                   onMouseLeave={() => setOpenSubmenu(null)}>
+                <div className="py-1 relative">
                   <button
-                    onClick={onProfile}
-                    className="flex items-center px-4 py-2 text-sm w-full text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors duration-200"
+                    onMouseEnter={() => setOpenSubmenu('profile')}
+                    className="flex items-center px-4 py-2 text-sm w-full text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors duration-200 group relative"
                   >
                     <User className="h-4 w-4 mr-2" />
                     个人信息
+                    {/* 把子菜单做成可悬停桥接区域，避免移出时闪跳 */}
+                    {openSubmenu === 'profile' && (
+                      <span className="absolute inset-y-0 right-full w-2" />
+                    )}
                   </button>
+                  {openSubmenu === 'profile' && (
+                    <div
+                      onMouseEnter={() => setOpenSubmenu('profile')}
+                      onMouseLeave={() => setOpenSubmenu(null)}
+                      className="absolute top-0 right-full mr-0 -translate-x-[2px] w-72 rounded-xl shadow-xl bg-white dark:bg-[#2c2c2e] ring-1 ring-black/5 dark:ring-white/10 p-4"
+                    >
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex items-center flex-wrap gap-2">
+                            <span className="text-base font-semibold text-gray-900 dark:text-white leading-tight truncate max-w-[11rem]">{user.name}</span>
+                            <button
+                              onClick={onProfile}
+                              className="text-[11px] text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline underline-offset-2"
+                            >
+                              修改密码
+                            </button>
+                          </div>
+                          {user.email && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</div>
+                          )}
+                        </div>
+
+                        <div className="pt-1 border-t border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center text-xs text-gray-600 dark:text-gray-300 mb-2">
+                            <Palette className="w-3.5 h-3.5 mr-1.5" />
+                            <span className="mr-2">主题</span>
+                            <div className="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+                              <button
+                                onClick={() => setButtonTheme('colorful')}
+                                className={`px-2.5 py-1 text-[11px] transition-colors ${
+                                  settings.buttonTheme === 'colorful'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/40'
+                                }`}
+                              >
+                                彩色
+                              </button>
+                              <button
+                                onClick={() => setButtonTheme('classic')}
+                                className={`px-2.5 py-1 text-[11px] transition-colors border-l border-gray-200 dark:border-gray-700 ${
+                                  settings.buttonTheme === 'classic'
+                                    ? 'bg-gray-700 text-white'
+                                    : 'bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/40'
+                                }`}
+                              >
+                                简洁
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* ✅ 使用新的权限刷新按钮 */}
                   <PermissionRefreshButton />
