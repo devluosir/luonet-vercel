@@ -291,11 +291,13 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
           });
         });
 
-        console.log('客户数据统计:', {
-          total: formattedCustomers.length,
-          unique: uniqueCustomers.length,
-          customers: uniqueCustomers.map(c => ({ name: c.name, to: c.to.substring(0, 50) }))
-        });
+        if (uniqueCustomers.length > 0) {
+          console.log('客户数据统计:', {
+            total: formattedCustomers.length,
+            unique: uniqueCustomers.length,
+            customers: uniqueCustomers.map(c => ({ name: c.name, to: c.to.substring(0, 50) }))
+          });
+        }
 
         setSavedCustomers(uniqueCustomers);
       }
@@ -410,13 +412,16 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
     setHasSelectedCustomer(true);
   }, [data, onChange]);
 
-  // 添加调试信息
+  // 弹窗状态日志
   useEffect(() => {
-    console.log('弹窗状态:', {
-      showSavedCustomers,
-      filteredCustomersLength: filteredCustomers.length,
-      filteredCustomers: filteredCustomers.map(c => ({ name: c.name, to: c.to.substring(0, 30) }))
-    });
+    // ✅ 优化：只在有客户数据时输出日志
+    if (filteredCustomers.length > 0 || showSavedCustomers) {
+      console.log('弹窗状态:', {
+        showSavedCustomers,
+        filteredCustomersLength: filteredCustomers.length,
+        filteredCustomers: filteredCustomers.map(c => ({ name: c.name, to: c.to.substring(0, 50) }))
+      });
+    }
   }, [showSavedCustomers, filteredCustomers]);
 
   // 使用useMemo优化询价单号更新

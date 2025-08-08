@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -16,6 +16,7 @@ import { useGenerateService } from '../services/generate.service';
 import { downloadPdf } from '../services/generate.service';
 import { buildPreviewPayload } from '../services/preview.service';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
+import { usePdfWarmup } from '@/hooks/usePdfWarmup';
 
 // 动态导入组件
 import dynamic from 'next/dynamic';
@@ -85,6 +86,16 @@ export default function QuotationPage() {
   // 初始化
   useInitQuotation();
   
+  // PDF生成服务
+  const { generatePdf } = useGenerateService();
+  const warmup = usePdfWarmup();
+  
+  // 页面首次空闲预热PDF模块
+  useEffect(() => {
+    const id = window.requestIdleCallback?.(() => warmup()) ?? setTimeout(warmup, 600);
+    return () => (window.cancelIdleCallback ? window.cancelIdleCallback(id as number) : clearTimeout(id as number));
+  }, [warmup]);
+  
   // 计算衍生状态
   const itemsTotal = data.items?.reduce((sum, item) => sum + item.amount, 0) || 0;
   const feesTotal = data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
@@ -101,9 +112,6 @@ export default function QuotationPage() {
     delay: 2000,
     enabled: !editId
   });
-  
-  // PDF生成服务
-  const { generatePdf } = useGenerateService();
   
   // 处理标签切换 - 同值不set，减少无谓渲染
   const handleTabChange = useCallback((tab: 'quotation' | 'confirmation') => {
@@ -135,16 +143,14 @@ export default function QuotationPage() {
     if (!data) return;
 
     setGenerating(true);
-    setProgress(0);
+    setProgress(5);
 
     try {
-      // 并行执行保存和PDF生成
-      const [saveResult] = await Promise.all([
-                     saveOrUpdate(activeTab, data, notesConfig, editId),
-        new Promise(resolve => setTimeout(resolve, 100))
+      // 并行执行保存和PDF生成，去掉无意义的100ms延迟
+      const [saveResult, pdfBlob] = await Promise.all([
+        saveOrUpdate(activeTab, data, notesConfig, editId),
+        generatePdf(activeTab, data, notesConfig, setProgress, { mode: 'final' })
       ]);
-
-      setProgress(50);
 
       if (saveResult && !editId) {
         setEditId(saveResult.id);
@@ -158,10 +164,6 @@ export default function QuotationPage() {
         recordCustomerUsage(data.to.split('\n')[0].trim(), activeTab, documentNo);
       }
 
-      setProgress(80);
-
-      // 生成PDF
-                   const pdfBlob = await generatePdf(activeTab, data, notesConfig, setProgress);
       downloadPdf(pdfBlob, activeTab, data);
 
       // 生成成功后清除草稿
@@ -181,26 +183,36 @@ export default function QuotationPage() {
   const handlePreview = async () => {
     if (!data) return;
 
+    const startTime = performance.now();
     setPreviewing(true);
     setPreviewProgress(0);
 
     try {
-      setPreviewProgress(20);
+      setPreviewProgress(10); // 开始准备资源
+      console.log('开始预览PDF生成...');
       
-      // 使用新的生成服务，包含Notes配置
-      const pdfBlob = await generatePdf(activeTab, data, notesConfig, setPreviewProgress);
+      // 使用新的生成服务，包含Notes配置，预览模式
+      const pdfBlob = await generatePdf(activeTab, data, notesConfig, (progress) => {
+        // 将生成进度映射到预览进度（10-90%）
+        const mappedProgress = 10 + (progress * 0.8);
+        setPreviewProgress(mappedProgress);
+      }, { mode: 'preview' });
       
-      setPreviewProgress(90);
+      setPreviewProgress(90); // 创建预览数据
       
-      // 创建预览数据，包含PDF blob
+      // 创建预览数据，包含PDF URL而不是blob
+      const pdfUrl = URL.createObjectURL(pdfBlob);
       const previewData = {
         ...buildPreviewPayload(activeTab, data, editId, totalAmount),
-        pdfBlob // 添加PDF blob到预览数据
+        pdfUrl // 使用URL而不是blob，避免大对象传递
       };
       
       setPreviewItem(previewData);
       setShowPreview(true);
-      setPreviewProgress(100);
+      setPreviewProgress(100); // 完成
+      
+      const endTime = performance.now();
+      console.log(`PDF预览生成完成，耗时: ${(endTime - startTime).toFixed(2)}ms`);
       
       showToast('预览生成成功', 'success');
     } catch (error) {
@@ -447,6 +459,8 @@ export default function QuotationPage() {
                     <button
                       type="button"
                       onClick={handleGenerate}
+                      onMouseEnter={warmup}
+                      onFocus={warmup}
                       disabled={isGenerating}
                       className={`px-4 py-2 rounded-xl text-sm font-medium 
                         transition-all duration-300
@@ -496,6 +510,8 @@ export default function QuotationPage() {
                   <button
                     type="button"
                     onClick={handlePreview}
+                    onMouseEnter={warmup}
+                    onFocus={warmup}
                     disabled={isPreviewing || isGenerating}
                     className={`px-4 py-2 rounded-xl text-sm font-medium 
                       transition-all duration-300
@@ -518,7 +534,13 @@ export default function QuotationPage() {
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
-                          <span>Generating...</span>
+                          <span>
+                            {previewProgress < 30 ? '准备资源...' :
+                             previewProgress < 50 ? '加载字体...' :
+                             previewProgress < 70 ? '加载图片...' :
+                             previewProgress < 90 ? '生成PDF...' :
+                             '创建预览...'}
+                          </span>
                         </>
                       ) : (
                         <>

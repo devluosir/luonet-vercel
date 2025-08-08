@@ -1,5 +1,6 @@
 import { usePdfGenerator } from '@/hooks/usePdfGenerator';
 import type { QuotationData } from '@/types/quotation';
+import { monitorPdfGeneration } from '@/utils/performance';
 
 import { sanitizeQuotation } from '@/utils/sanitizeQuotation';
 
@@ -13,52 +14,56 @@ export function useGenerateService() {
     rawData: any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     notesConfig: any[],
-    setProgress: (progress: number) => void
+    setProgress: (progress: number) => void,
+    opts?: { mode?: 'preview' | 'final' }
   ): Promise<Blob> => {
-    setProgress(20);
-    
-    try {
-      // 净化数据
-      const data = sanitizeQuotation(rawData);
-      setProgress(40);
-      // 根据notesConfig过滤和排序notes
-      const visibleNotes = notesConfig
-        .filter(note => note.visible)
-        .sort((a, b) => a.order - b.order)
-        .map(note => {
-          // 使用note.content作为主要内容
-          if (note.content && note.content.trim()) {
-            return note.content;
-          }
-          
-          // 如果没有content，使用默认值
-          const defaultTitles: Record<string, string> = {
-            'delivery_time': 'Delivery Time',
-            'price_based_on': 'Price Basis',
-            'delivery_terms': 'Delivery Terms',
-            'payment_terms': 'Payment Term',
-            'validity': 'Validity'
-          };
-          
-          const title = defaultTitles[note.id];
-          return title ? `${title}: [待填写]` : 'Custom Note: [待填写]';
-        })
-        .filter(content => content && typeof content === 'string' && content.trim() !== ''); // 过滤空内容和无效内容
+    return monitorPdfGeneration(`${tab}-${opts?.mode || 'final'}`, async () => {
+      setProgress(20);
+      
+      try {
+        // 净化数据
+        const data = sanitizeQuotation(rawData);
+        setProgress(40);
+        
+        // 根据notesConfig过滤和排序notes
+        const visibleNotes = notesConfig
+          .filter(note => note.visible)
+          .sort((a, b) => a.order - b.order)
+          .map(note => {
+            // 使用note.content作为主要内容
+            if (note.content && note.content.trim()) {
+              return note.content;
+            }
+            
+            // 如果没有content，使用默认值
+            const defaultTitles: Record<string, string> = {
+              'delivery_time': 'Delivery Time',
+              'price_based_on': 'Price Basis',
+              'delivery_terms': 'Delivery Terms',
+              'payment_terms': 'Payment Term',
+              'validity': 'Validity'
+            };
+            
+            const title = defaultTitles[note.id];
+            return title ? `${title}: [待填写]` : 'Custom Note: [待填写]';
+          })
+          .filter(content => content && typeof content === 'string' && content.trim() !== ''); // 过滤空内容和无效内容
 
-      // 创建包含配置后notes的数据副本
-      const dataWithConfiguredNotes = {
-        ...data,
-        notes: visibleNotes
-      };
+        // 创建包含配置后notes的数据副本
+        const dataWithConfiguredNotes = {
+          ...data,
+          notes: visibleNotes
+        };
 
-      setProgress(80);
-      const blob = await generate(tab, dataWithConfiguredNotes);
-      setProgress(100);
-      return blob;
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      throw error;
-    }
+        setProgress(80);
+        const blob = await generate(tab, dataWithConfiguredNotes, opts);
+        setProgress(100);
+        return blob;
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        throw error;
+      }
+    });
   };
 
   return { generatePdf };

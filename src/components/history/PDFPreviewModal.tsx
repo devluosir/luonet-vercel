@@ -14,7 +14,8 @@ interface PreviewHistoryItem {
   quotationNo?: string;
   invoiceNo?: string;
   orderNo?: string;
-  pdfBlob?: Blob; // 新增：直接传递的PDF blob
+  pdfBlob?: Blob; // 直接传递的PDF blob
+  pdfUrl?: string; // 新增：直接传递的PDF URL
 }
 
 interface PDFPreviewModalProps {
@@ -112,11 +113,14 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
     try {
       let pdfUrl: string | null = null;
 
-      // 如果item中已经包含pdfBlob，直接使用
-      if (item.pdfBlob) {
+      // 优先使用已传递的pdfUrl，避免重复生成
+      if (item.pdfUrl) {
+        pdfUrl = item.pdfUrl;
+      } else if (item.pdfBlob) {
+        // 如果有pdfBlob，转换为URL
         pdfUrl = URL.createObjectURL(item.pdfBlob);
       } else {
-        // 根据记录类型生成对应的PDF
+        // 最后才根据记录类型生成对应的PDF
         if (itemType === 'quotation') {
           // @ts-ignore - 历史记录数据可能来自不同来源
           const pdfBlob = await generateQuotationPDF(item.data, true);

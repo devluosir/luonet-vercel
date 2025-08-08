@@ -1,9 +1,9 @@
 import jsPDF, { ImageProperties } from 'jspdf';
 import 'jspdf-autotable';
 import { UserOptions } from 'jspdf-autotable';
-import { embeddedResources } from '@/lib/embedded-resources';
 import { generateTableConfig } from './pdfTableGenerator';
-import { addChineseFontsToPDF } from '@/utils/fontLoader';
+import { addChineseFontsToPDF } from './fontLoader';
+import { getHeaderImage } from './imageLoader';
 import { sanitizeQuotation } from './sanitizeQuotation';
 
 // 扩展jsPDF类型
@@ -51,8 +51,8 @@ export const generateQuotationPDF = async (rawData: unknown, preview = false): P
     format: 'a4'
   }) as ExtendedJsPDF;
 
-  // 添加中文字体
-  addChineseFontsToPDF(doc);
+  // 确保中文字体正确注册（使用按需加载）
+  await addChineseFontsToPDF(doc);
 
   const pageWidth = doc.internal.pageSize.width;
   const margin = 20;  // 页面边距
@@ -63,29 +63,28 @@ export const generateQuotationPDF = async (rawData: unknown, preview = false): P
     try {
       const headerType = data.templateConfig?.headerType || 'none';
       if (headerType !== 'none') {
-        const headerImage = `data:image/png;base64,${
-          headerType === 'bilingual' 
-            ? embeddedResources.headerImage 
-            : embeddedResources.headerEnglish
-        }`;
-      const imgProperties = doc.getImageProperties(headerImage);
-      const imgWidth = pageWidth - 30;  // 左右各留15mm
-      const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
-      doc.addImage(
-        headerImage,
-        'PNG',
-        15,  // 左边距15mm
-        15,  // 上边距15mm
-        imgWidth,
-        imgHeight
-      );
-      doc.setFontSize(14);
-      doc.setFont('NotoSansSC', 'bold');
-      const title = 'QUOTATION';
-      const titleWidth = doc.getTextWidth(title);
-      const titleY = margin + imgHeight + 5;  // 标题Y坐标
-      doc.text(title, (pageWidth - titleWidth) / 2, titleY);  // 标题位置
-      startY = titleY + 10;  // 主体内容从标题下方开始
+        // 使用按需加载获取表头图片
+        const headerImageBase64 = await getHeaderImage(headerType);
+        const headerImage = `data:image/png;base64,${headerImageBase64}`;
+        
+        const imgProperties = doc.getImageProperties(headerImage);
+        const imgWidth = pageWidth - 30;  // 左右各留15mm
+        const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
+        doc.addImage(
+          headerImage,
+          'PNG',
+          15,  // 左边距15mm
+          15,  // 上边距15mm
+          imgWidth,
+          imgHeight
+        );
+        doc.setFontSize(14);
+        doc.setFont('NotoSansSC', 'bold');
+        const title = 'QUOTATION';
+        const titleWidth = doc.getTextWidth(title);
+        const titleY = margin + imgHeight + 5;  // 标题Y坐标
+        doc.text(title, (pageWidth - titleWidth) / 2, titleY);  // 标题位置
+        startY = titleY + 10;  // 主体内容从标题下方开始
       } else {
         // 无表头时使用默认布局
         doc.setFontSize(14);

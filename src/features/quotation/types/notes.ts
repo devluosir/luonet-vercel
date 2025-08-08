@@ -17,7 +17,7 @@ export const DEFAULT_NOTES_CONFIG: NoteConfig[] = [
   { id: 'delivery_time', visible: true, order: 0, content: 'Delivery Time: 30 days.' },      // 1. Delivery time
   { id: 'price_based_on', visible: true, order: 1, content: 'Price Basis: EXW Shanghai, China.' },    // 2. Price based on
   { id: 'delivery_terms', visible: true, order: 2, content: 'Delivery Terms: As stated above, subject to prior sale.' },     // 3. Delivery terms
-  { id: 'payment_terms', visible: true, order: 3, content: 'Payment Term: 30 days.' },      // 4. Payment term
+  { id: 'payment_terms', visible: true, order: 3, content: 'Payment Term: 100% T/T in advance.' },      // 4. Payment term
   { id: 'validity', visible: true, order: 4, content: 'Validity: 10 days.' },           // 5. Validity
 ];
 
@@ -66,7 +66,7 @@ export const PAYMENT_TERMS_OPTIONS = [
     { id: 'tt_50_50', chinese: '50%定金，50%装船前付清', english: 'Payment Term: 50% deposit, 50% before shipment', remark: '我司常见比例，风险与现金流平衡' },
     { id: 'tt_30_70', chinese: '30%定金，70%装船前付清', english: 'Payment Term: 30% deposit, 70% before shipment', remark: '最常见比例，风险与现金流平衡' },
     { id: 'tt_100_before_shipment', chinese: '装船前全额付款', english: 'Payment Term: 100% before shipment', remark: '与全额预付类似，发货前结清' },
-    { id: 'tt_100_advance', chinese: '全额预付', english: 'Payment Term: 100% T/T in advance', remark: '小额/样品/首次交易' },
+    { id: 'tt_100_advance', chinese: '全额预付', english: 'Payment Term: 100% T/T in advance.', remark: '小额/样品/首次交易' },
     { id: 'open_account', chinese: '30天', english: 'Payment Term: 30 days', remark: '老客户/长期合作' },
     { id: 'lc_at_sight', chinese: '即期信用证', english: 'Payment Term: Irrevocable L/C at sight', remark: '银行信用，见单即付' },
     { id: 'lc_usance', chinese: '远期信用证', english: 'Payment Term: Usance L/C (e.g. 60 days)', remark: '账期由信用证承担' },

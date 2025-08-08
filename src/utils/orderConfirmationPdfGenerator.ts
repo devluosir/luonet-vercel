@@ -3,7 +3,10 @@ import 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
 import { UserOptions } from 'jspdf-autotable';
 import { generateTableConfig } from './pdfTableGenerator';
-import { addChineseFontsToPDF } from '@/utils/fontLoader';
+import { ensureCnFonts } from '@/utils/pdfFonts';
+import { addChineseFontsToPDF } from './fontLoader';
+import { getHeaderImage } from './imageLoader';
+import { sanitizeQuotation } from './sanitizeQuotation';
 
 // 扩展jsPDF类型
 type ExtendedJsPDF = jsPDF & {
@@ -24,6 +27,18 @@ const currencySymbols: { [key: string]: string } = {
   USD: '$',
   EUR: '€',
   CNY: '¥'
+};
+
+// 默认单位列表（需要单复数变化的单位）
+const defaultUnits = ['pc', 'set', 'length'];
+
+// 处理单位的单复数
+const _getUnitDisplay = (baseUnit: string, quantity: number) => {
+  const singularUnit = baseUnit.replace(/s$/, '');
+  if (defaultUnits.includes(singularUnit)) {
+    return quantity > 1 ? `${singularUnit}s` : singularUnit;
+  }
+  return baseUnit; // 自定义单位不变化单复数
 };
 
 // 获取印章图片的简化版本
@@ -50,8 +65,8 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     format: 'a4'
   }) as ExtendedJsPDF;
 
-  // 添加中文字体
-  addChineseFontsToPDF(doc);
+  // 确保中文字体正确注册（使用按需加载）
+  await addChineseFontsToPDF(doc);
 
   const pageWidth = doc.internal.pageSize.width;
   const margin = 20;
@@ -62,24 +77,22 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     try {
       const headerType = data.templateConfig?.headerType || 'none';
       if (headerType !== 'none') {
-        const { embeddedResources } = await import('@/lib/embedded-resources');
-        const headerImage = `data:image/png;base64,${
-          headerType === 'bilingual' 
-            ? embeddedResources.headerImage 
-            : embeddedResources.headerEnglish
-        }`;
-      const imgProperties = doc.getImageProperties(headerImage);
-      const imgWidth = pageWidth - 30;
-      const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
-      doc.addImage(headerImage, 'PNG', 15, 15, imgWidth, imgHeight);
-      
-      doc.setFontSize(14);
-      doc.setFont('NotoSansSC', 'bold');
-      const title = 'SALES CONFIRMATION';
-      const titleWidth = doc.getTextWidth(title);
-      const titleY = margin + imgHeight + 5;
-      doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-      startY = titleY + 10;
+        // 使用按需加载获取表头图片
+        const headerImageBase64 = await getHeaderImage(headerType);
+        const headerImage = `data:image/png;base64,${headerImageBase64}`;
+        
+        const imgProperties = doc.getImageProperties(headerImage);
+        const imgWidth = pageWidth - 30;
+        const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
+        doc.addImage(headerImage, 'PNG', 15, 15, imgWidth, imgHeight);
+        
+        doc.setFontSize(14);
+        doc.setFont('NotoSansSC', 'bold');
+        const title = 'SALES CONFIRMATION';
+        const titleWidth = doc.getTextWidth(title);
+        const titleY = margin + imgHeight + 5;
+        doc.text(title, (pageWidth - titleWidth) / 2, titleY);
+        startY = titleY + 10;
       } else {
         // 无表头时使用默认布局
         doc.setFontSize(14);

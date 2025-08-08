@@ -63,6 +63,13 @@ export class PreloadManager {
         return cached.result as boolean;
       }
       
+      // ✅ 优化：如果权限数据为空，不触发预加载
+      if (formPages.length === 0) {
+        // 缓存结果
+        this.permissionCheckCache.set(cacheKey, { result: false, timestamp: now });
+        return false;
+      }
+      
       if (this.lastPermissionsHash === currentHash) {
         // ✅ 优化：进一步减少重复日志
         if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) { // 降低到1%
@@ -90,7 +97,7 @@ export class PreloadManager {
       return true;
     } catch (error) {
       console.error('检查权限变化失败:', error);
-      return true; // 出错时保守地重新预加载
+      return false; // 出错时不重新预加载，避免无限循环
     }
   }
 
@@ -401,6 +408,13 @@ export class PreloadManager {
         } catch (error) {
           console.error('从Store获取权限数据失败:', error);
         }
+      }
+      
+      // ✅ 优化：如果权限数据为空，直接返回空数组，不输出日志
+      if (permissions.length === 0) {
+        // 缓存空结果
+        this.permissionCheckCache.set(cacheKey, { result: [], timestamp: now });
+        return [];
       }
       
       // 过滤出有访问权限的模块

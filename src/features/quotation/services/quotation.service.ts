@@ -16,7 +16,7 @@ interface CustomWindow extends Window {
 export async function saveOrUpdate(
   tab: 'quotation' | 'confirmation', 
   data: QuotationData,
-  notesConfig: any[],
+  notesConfig: NoteConfig[],
   editId?: string
 ): Promise<{ id: string } | null> {
   try {

@@ -12,111 +12,112 @@ const safeRequestIdleCallback = (
 };
 
 // 性能监控工具
+
+interface PerformanceMetric {
+  name: string;
+  startTime: number;
+  endTime?: number;
+  duration?: number;
+}
+
 class PerformanceMonitor {
-  private timers: Map<string, number> = new Map();
-  private metrics: Map<string, any> = new Map();
-  private isMonitoring: boolean = false;
+  private metrics: Map<string, PerformanceMetric> = new Map();
+  private enabled: boolean = process.env.NODE_ENV === 'development';
 
-  startTimer(name: string) {
-    this.timers.set(name, performance.now());
-  }
-
-  endTimer(name: string): number {
-    const startTime = this.timers.get(name);
-    if (!startTime) {
-      console.warn(`Timer ${name} was not started`);
-      return 0;
-    }
+  /**
+   * 开始性能监控
+   */
+  start(name: string): void {
+    if (!this.enabled) return;
     
-    const duration = performance.now() - startTime;
-    this.timers.delete(name);
-    this.metrics.set(name, duration);
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`⏱️ ${name}: ${duration.toFixed(2)}ms`);
-    }
-    
-    return duration;
-  }
-
-  getPageLoadMetrics() {
-    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-    if (!navigation) return {};
-    
-    return {
-      dns: navigation.domainLookupEnd - navigation.domainLookupStart,
-      tcp: navigation.connectEnd - navigation.connectStart,
-      ttfb: navigation.responseStart - navigation.requestStart,
-      download: navigation.responseEnd - navigation.responseStart,
-      domContentLoaded: navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
-      load: navigation.loadEventEnd - navigation.loadEventStart,
-      total: navigation.loadEventEnd - navigation.fetchStart,
-    };
-  }
-
-  monitorResourceLoading() {
-    // 避免重复监控
-    if (this.isMonitoring) return;
-    this.isMonitoring = true;
-
-    const observer = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        if (entry.entryType === 'resource') {
-          const resource = entry as PerformanceResourceTiming;
-          // 只监控真正慢的资源，避免字体等正常资源的误报
-          if (resource.duration > 5000) { // 提高到5秒，只监控真正的问题
-            console.warn(`🐌 慢资源加载: ${resource.name} (${resource.duration.toFixed(2)}ms)`);
-          }
-        }
-      }
+    this.metrics.set(name, {
+      name,
+      startTime: performance.now()
     });
+  }
+
+  /**
+   * 结束性能监控
+   */
+  end(name: string): number | undefined {
+    if (!this.enabled) return;
     
-    observer.observe({ entryTypes: ['resource'] });
+    const metric = this.metrics.get(name);
+    if (!metric) {
+      console.warn(`性能监控指标 "${name}" 未找到`);
+      return;
+    }
+
+    metric.endTime = performance.now();
+    metric.duration = metric.endTime - metric.startTime;
+    
+    console.log(`性能监控 [${name}]: ${metric.duration.toFixed(2)}ms`);
+    return metric.duration;
   }
 
-  monitorApiCalls() {
-    // 避免重复包装fetch
-    if (window.fetch.toString().includes('originalFetch')) return;
+  /**
+   * 监控异步函数性能
+   */
+  async monitor<T>(name: string, fn: () => Promise<T>): Promise<T> {
+    this.start(name);
+    try {
+      const result = await fn();
+      this.end(name);
+      return result;
+    } catch (error) {
+      this.end(name);
+      throw error;
+    }
+  }
 
-    const originalFetch = window.fetch;
-    window.fetch = async (...args) => {
-      const startTime = performance.now();
-      let url = '';
-      
-      // 正确处理不同类型的fetch参数
-      if (typeof args[0] === 'string') {
-        url = args[0];
-      } else if (args[0] instanceof Request) {
-        url = args[0].url;
-      } else if (args[0] instanceof URL) {
-        url = args[0].toString();
-      } else {
-        url = 'unknown';
-      }
-      
-      try {
-        const response = await originalFetch(...args);
-        const duration = performance.now() - startTime;
-        
-        // 过滤Next.js编译请求和只监控真正慢的API调用
-        const isNextCompilation = url.includes('_rsc=') || url.includes('/_next/');
-        const isRealSlowCall = duration > 5000; // 提高到5秒
-        
-        if (isRealSlowCall && !isNextCompilation) {
-          console.warn(`🐌 慢API调用: ${url} (${duration.toFixed(2)}ms)`);
-        } else if (isNextCompilation && duration > 8000) {
-          // 只报告超过8秒的编译时间
-          console.info(`⏱️ 页面编译耗时: ${url} (${duration.toFixed(2)}ms)`);
-        }
-        
-        return response;
-      } catch (error) {
-        const duration = performance.now() - startTime;
-        console.error(`❌ API调用失败: ${url} (${duration.toFixed(2)}ms)`, error);
-        throw error;
-      }
+  /**
+   * 获取所有性能指标
+   */
+  getMetrics(): PerformanceMetric[] {
+    return Array.from(this.metrics.values());
+  }
+
+  /**
+   * 清除性能指标
+   */
+  clear(): void {
+    this.metrics.clear();
+  }
+
+  /**
+   * 启用/禁用性能监控
+   */
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+  }
+}
+
+// 创建全局性能监控实例
+export const performanceMonitor = new PerformanceMonitor();
+
+/**
+ * 性能监控装饰器
+ */
+export function monitor(name: string) {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+    const originalMethod = descriptor.value;
+    
+    descriptor.value = async function (...args: any[]) {
+      return performanceMonitor.monitor(name, () => originalMethod.apply(this, args));
     };
-  }
+    
+    return descriptor;
+  };
+}
+
+/**
+ * 监控PDF生成性能
+ */
+export async function monitorPdfGeneration<T>(
+  name: string, 
+  fn: () => Promise<T>
+): Promise<T> {
+  return performanceMonitor.monitor(`PDF生成-${name}`, fn);
 }
 
 // 性能优化工具
@@ -198,6 +199,5 @@ class PerformanceOptimizer {
   }
 }
 
-export const performanceMonitor = new PerformanceMonitor();
 export const optimizePerformance = new PerformanceOptimizer();
 export { safeRequestIdleCallback }; 

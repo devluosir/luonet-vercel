@@ -52,7 +52,10 @@ export function useAutoSave<T>({ data, key, delay = 1000, enabled = true }: UseA
       try {
         safeSet(key, draft);
         lastSavedRef.current = serializedData;
-        console.log(`自动保存到 ${key}`);
+        // ✅ 优化：减少自动保存日志输出
+        if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
+          console.log(`自动保存到 ${key}`);
+        }
       } catch (error: any) {
         if (error?.name === 'QuotaExceededError' || /too large/i.test(error?.message)) {
           console.warn('存储空间不足，尝试清理后重试');

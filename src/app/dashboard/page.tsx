@@ -230,11 +230,14 @@ export default function DashboardPage() {
         const permissionsChanged = lastPermissionsHash !== currentPermissionsHash;
         
         if (permissionsChanged) {
-          console.log('检测到权限变化，需要重新预加载', {
-            oldHash: lastPermissionsHash,
-            newHash: currentPermissionsHash,
-            permissions: state.user.permissions.map((p: Permission) => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
-          });
+          // ✅ 优化：只在权限数据不为空时输出日志
+          if (state.user.permissions && state.user.permissions.length > 0) {
+            console.log('检测到权限变化，需要重新预加载', {
+              oldHash: lastPermissionsHash,
+              newHash: currentPermissionsHash,
+              permissions: state.user.permissions.map((p: Permission) => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
+            });
+          }
           
           lastPermissionsHash = currentPermissionsHash;
           
