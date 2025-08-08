@@ -164,7 +164,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
       
       {/* 移动端卡片视图 - 中屏以下显示 */}
       <div className="block lg:hidden space-y-4">
-        {data.items.map((item, index) => (
+        {(data.items || []).map((item, index) => (
           <div key={item.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
             {/* 卡片头部 */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5EA] dark:border-[#2C2C2E]">
@@ -548,10 +548,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white/90 dark:bg-[#1C1C1E]/90">
-                  {data.items.map((item, index) => (
+                  {(data.items || []).map((item, index) => (
                     <tr key={item.id} className="border-t border-[#E5E5EA] dark:border-[#2C2C2E]">
                       <td className={`sticky left-0 z-10 w-12 px-2 py-2 text-center text-sm bg-white/90 dark:bg-[#1C1C1E]/90
-                        ${index === data.items.length - 1 && !data.otherFees?.length ? 'rounded-bl-2xl' : ''}`}>
+                        ${index === (data.items || []).length - 1 && !data.otherFees?.length ? 'rounded-bl-2xl' : ''}`}>
                         <span 
                           className="flex items-center justify-center w-5 h-5 rounded-full 
                             text-xs text-gray-400
@@ -722,7 +722,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                         />
                       </td>
                       <td className={`w-28 px-2 py-2
-                        ${!data.showRemarks && index === data.items.length - 1 && !data.otherFees?.length ? 'rounded-br-2xl' : ''}`}>
+                        ${!data.showRemarks && index === (data.items || []).length - 1 && !data.otherFees?.length ? 'rounded-br-2xl' : ''}`}>
                         <input
                           type="text"
                           value={item.amount.toFixed(2)}
@@ -741,7 +741,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
                       </td>
                       {data.showRemarks && (
                         <td className={`w-1/5 px-2 py-2
-                          ${index === data.items.length - 1 && !data.otherFees?.length ? 'rounded-br-2xl' : ''}`}>
+                          ${index === (data.items || []).length - 1 && !data.otherFees?.length ? 'rounded-br-2xl' : ''}`}>
                           <textarea
                             value={item.remarks}
                             onChange={(e) => {
