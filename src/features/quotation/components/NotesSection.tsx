@@ -19,7 +19,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { EyeOff, GripVertical, Settings, Plus, X } from 'lucide-react';
+import { EyeOff, GripVertical, Plus, MoreHorizontal, Truck, Ship, Globe } from 'lucide-react';
 import { useQuotationStore } from '../state/useQuotationStore';
 import { NOTES_TEMPLATES_BILINGUAL, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS, DEFAULT_NOTES_CONFIG, extractEnglishContent } from '../types/notes';
 import type { NoteConfig } from '../types/notes';
@@ -33,7 +33,6 @@ interface NotesSectionProps {
 
 export const NotesSection: React.FC<NotesSectionProps> = () => {
   const { notesConfig, updateNoteVisibility, updateNoteOrder, updateNoteContent, addNote, removeNote } = useQuotationStore();
-  const [showConfig, setShowConfig] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -102,62 +101,46 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
 
   return (
     <div className="space-y-3">
-      {/* 标题和设置按钮 */}
+      {/* 标题 + 精简操作按钮 */}
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold text-gray-800 dark:text-[#F5F5F7]">
-          Notes
-        </h3>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setShowConfig(!showConfig);
-          }}
-          className="p-1 rounded hover:bg-gray-100 dark:hover:bg-[#3A3A3C] transition-colors"
-          title="配置Notes显示"
-        >
-          <Settings className="w-3 h-3 text-gray-600 dark:text-[#98989D]" />
-        </button>
-      </div>
-
-      {/* 配置面板 */}
-      {showConfig && (
-        <div className="bg-gray-50 dark:bg-[#2C2C2E] rounded-lg p-2 sm:p-3">
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1 sm:gap-2">
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-semibold text-gray-800 dark:text-[#F5F5F7]">Notes</h3>
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => applyTemplate('exw')}
-              className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-900/30 transition-colors"
+              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-300"
+              title="套用 EXW 模板"
             >
-              EXW工厂交货
+              <Truck className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={() => applyTemplate('fob')}
-              className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-colors"
+              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300"
+              title="套用 FOB 模板"
             >
-              FOB离岸价
+              <Ship className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={() => applyTemplate('cif')}
-              className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm bg-teal-100 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded hover:bg-teal-200 dark:hover:bg-teal-900/30 transition-colors"
+              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 text-teal-600 dark:text-teal-300"
+              title="套用 CIF 模板"
             >
-              CIF到岸价
+              <Globe className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={addNote}
-              className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-900/30 transition-colors"
+              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 dark:text-green-300"
+              title="新增条款"
             >
-              <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">新增条款</span>
-              <span className="sm:hidden">新增</span>
+              <Plus className="w-4 h-4" />
             </button>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Notes列表 */}
       {visibleNotes.length > 0 ? (
@@ -171,7 +154,7 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
               items={visibleNotes.map(note => note.id)}
               strategy={verticalListSortingStrategy}
             >
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {visibleNotes.map((note) => (
                   <SortableNote
                     key={note.id}
@@ -186,7 +169,7 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
           </DndContext>
         ) : (
           // SSR 阶段显示静态列表，避免 hydration 不匹配
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {visibleNotes.map((note) => (
               <SortableNote
                 key={note.id}
@@ -237,6 +220,19 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
   const options = note.id === 'payment_terms' ? PAYMENT_TERMS_OPTIONS : DELIVERY_TERMS_OPTIONS;
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(note.content || '');
+  const [showOptions, setShowOptions] = useState(false);
+  const optionsRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (optionsRef.current && !optionsRef.current.contains(e.target as Node)) {
+        setShowOptions(false);
+      }
+    };
+    if (showOptions) {
+      document.addEventListener('mousedown', handleClickOutside, true);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside, true);
+  }, [showOptions]);
 
   // 获取当前Note在可见列表中的序号
   const { notesConfig } = useQuotationStore();
@@ -286,7 +282,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
       }`}
     >
       {/* 主行：开关 + 序号 + 标题 + 内容 + 操作 */}
-      <div className="p-3">
+      <div className="p-2.5">
         <div className="flex items-center justify-between">
           {/* 左侧：开关 + 序号 + 标题 + 内容 */}
           <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -326,14 +322,20 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
                       onChange={(e) => setEditValue(e.target.value)}
                       onKeyDown={handleKeyDown}
                       onBlur={handleSaveEdit}
-                      className="w-full text-sm border border-gray-300 dark:border-[#3A3A3C] rounded px-2 py-1 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] resize-none"
+                      className="w-full h-auto min-h-8 max-h-32 box-border text-sm leading-5 border border-gray-300 dark:border-[#3A3A3C] rounded px-2 py-1 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-1 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] resize-none overflow-auto"
                       rows={1}
                       placeholder="输入条款内容..."
                       autoFocus
+                      onInput={(e) => {
+                        const el = e.currentTarget;
+                        el.style.height = 'auto';
+                        const capped = Math.min(el.scrollHeight, 128); // ~ max-h-32
+                        el.style.height = `${capped}px`;
+                      }}
                     />
                   ) : (
                     <div 
-                      className="text-sm text-gray-600 dark:text-[#98989D] cursor-text hover:bg-gray-100 dark:hover:bg-[#3A3A3C] px-2 py-1 rounded -mx-2"
+                      className="min-h-8 box-border text-sm leading-5 text-gray-600 dark:text-[#98989D] cursor-text hover:bg-gray-100 dark:hover:bg-[#3A3A3C] px-2 py-1 rounded -mx-2 border border-transparent whitespace-pre-wrap break-words"
                       onClick={handleStartEdit}
                       title="点击编辑"
                     >
@@ -347,43 +349,35 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
           
           {/* 右侧：操作按钮 */}
           <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 ml-2 sm:ml-3">
-            {/* 特殊Notes的下拉选择 */}
+            {/* 特殊Notes的选项按钮（与 PaymentTermsSection 风格统一） */}
             {isSpecialNote && (
-              <select
-                value=""
-                onChange={(e) => {
-                  if (e.target.value) {
-                    const selectedOption = options.find(opt => opt.id === e.target.value);
-                    if (selectedOption) {
-                      onUpdateContent(note.id, selectedOption.english);
-                    }
-                  }
-                }}
-                className="text-xs border border-gray-300 dark:border-[#3A3A3C] rounded px-1 py-0.5 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-1 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] min-w-16"
-                title={note.id === 'payment_terms' ? '选择付款方式' : '选择交货时间'}
-              >
-                <option value="">选择...</option>
-                {options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.chinese}
-                  </option>
-                ))}
-              </select>
-            )}
-            
-            {/* 删除按钮 - 仅对自定义条款显示 */}
-            {note.id.startsWith('custom_note_') && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove(note.id);
-                }}
-                className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400 transition-colors"
-                title="删除条款"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="relative" ref={optionsRef}>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-gray-700 dark:text-gray-300"
+                  onClick={() => setShowOptions((v) => !v)}
+                  title={note.id === 'payment_terms' ? '选择付款方式' : '选择交货时间'}
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+                {showOptions && (
+                  <div className="absolute right-0 z-10 mt-2 w-64 sm:w-72 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-1 shadow-md">
+                    {options.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        className="w-full truncate text-left text-xs px-2 py-1 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200"
+                        onClick={() => {
+                          onUpdateContent(note.id, opt.english);
+                          setShowOptions(false);
+                        }}
+                      >
+                        {opt.chinese}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
             
             {/* 拖拽句柄 - 只在非编辑状态下可用 */}

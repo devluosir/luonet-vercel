@@ -162,7 +162,7 @@ export default function BaseInfoCompact({
       <div className="grid grid-cols-12 gap-3">
         {/* 客户信息 */}
         {fields.customer && (
-          <div className="col-span-12 lg:col-span-7">
+          <div className="col-span-12 md:col-span-7 lg:col-span-7">
             <CustomerField
               label={labels.customer!}
               value={value.customer || ''}
@@ -174,7 +174,7 @@ export default function BaseInfoCompact({
 
         {/* 供应商信息 */}
         {fields.supplierInfo && (
-          <div className="col-span-12 lg:col-span-7">
+          <div className="col-span-12 md:col-span-7 lg:col-span-7">
             <Field label={labels.supplierInfo!}>
               <textarea
                 rows={2}
@@ -189,7 +189,7 @@ export default function BaseInfoCompact({
 
         {/* 收货人信息 */}
         {fields.consigneeName && (
-          <div className="col-span-12 lg:col-span-7">
+          <div className="col-span-12 md:col-span-7 lg:col-span-7">
             <Field label={labels.consigneeName!}>
               <textarea
                 rows={2}
@@ -203,7 +203,7 @@ export default function BaseInfoCompact({
         )}
 
         {/* 右侧：根据页面类型显示不同布局 */}
-        <div className="col-span-12 lg:col-span-5 space-y-[10px]">
+        <div className="col-span-12 md:col-span-5 lg:col-span-5 space-y-[10px]">
           {/* 报价单模式 */}
           {config.type === 'quotation' && (
             <>
