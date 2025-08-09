@@ -125,6 +125,9 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 处理客户信息输入变化
   const handleCustomerInfoChange = useCallback((newTo: string) => {
+    // 如果值没有变化，不执行任何操作
+    if (newTo === data.to) return;
+    
     // 如果输入内容变化，显示自动完成建议
     if (newTo.trim() && savedCustomers.length > 0) {
       const suggestions = getAutoCompleteSuggestions(newTo);
@@ -135,9 +138,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
     }
     
     // 当用户开始输入时，重置选择状态
-    if (newTo !== data.to) {
-      setHasSelectedCustomer(false);
-    }
+    setHasSelectedCustomer(false);
     
     onChange({
       ...data,
@@ -147,6 +148,8 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 选择自动完成建议
   const handleAutoCompleteSelect = useCallback((customer: SavedCustomer) => {
+    if (customer.to === data.to) return; // 相同值不更新
+    
     setShowAutoComplete(false);
     setHasSelectedCustomer(true);
     onChange({
@@ -398,6 +401,8 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 加载客户信息
   const handleLoad = useCallback((customer: SavedCustomer) => {
+    if (customer.to === data.to) return; // 相同值不更新
+    
     onChange({
       ...data,
       to: customer.to
@@ -426,6 +431,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 使用useMemo优化询价单号更新
   const handleInquiryNoChange = useCallback((newInquiryNo: string) => {
+    if (newInquiryNo === data.inquiryNo) return;
     onChange({
       ...data,
       inquiryNo: newInquiryNo
@@ -434,6 +440,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 使用useMemo优化报价单号更新
   const handleQuotationNoChange = useCallback((newQuotationNo: string) => {
+    if (newQuotationNo === data.quotationNo) return;
     onChange({
       ...data,
       quotationNo: newQuotationNo
@@ -442,6 +449,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 使用useMemo优化合同号更新
   const handleContractNoChange = useCallback((newContractNo: string) => {
+    if (newContractNo === data.contractNo) return;
     onChange({
       ...data,
       contractNo: newContractNo
@@ -450,6 +458,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 使用useMemo优化日期更新
   const handleDateChange = useCallback((newDate: string) => {
+    if (newDate === data.date) return;
     onChange({
       ...data,
       date: newDate
@@ -473,7 +482,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
           <div className="relative">
             <textarea
               ref={customerInputRef}
-              value={data.to}
+              value={data.to ?? ''}
               onChange={(e) => handleCustomerInfoChange(e.target.value)}
               onFocus={() => {
                 // 与采购页行为一致：未选择时允许展开
@@ -568,7 +577,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
             </label>
             <input
               type="text"
-              value={data.inquiryNo}
+              value={data.inquiryNo ?? ''}
               onChange={(e) => handleInquiryNoChange(e.target.value)}
               placeholder="Inquiry No."
               className={inputClassName}
@@ -591,7 +600,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                 </label>
                 <input
                   type="text"
-                  value={data.quotationNo}
+                  value={data.quotationNo ?? ''}
                   onChange={(e) => handleQuotationNoChange(e.target.value)}
                   placeholder="Quotation No. *"
                   className={`${inputClassName} [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 font-medium text-[#007AFF] dark:text-[#0A84FF]`}
@@ -606,7 +615,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                 </label>
                 <input
                   type="date"
-                  value={data.date}
+                  value={data.date ?? ''}
                   onChange={(e) => handleDateChange(e.target.value)}
                   className={dateInputClassName}
                   style={iosCaretStyle}
@@ -623,7 +632,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                 </label>
                 <input
                   type="text"
-                  value={data.contractNo}
+                  value={data.contractNo ?? ''}
                   onChange={(e) => handleContractNoChange(e.target.value)}
                   placeholder="Contract No."
                   className={`${inputClassName} [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 font-medium text-[#007AFF] dark:text-[#0A84FF]`}
@@ -638,7 +647,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                 </label>
                 <input
                   type="date"
-                  value={data.date}
+                  value={data.date ?? ''}
                   onChange={(e) => handleDateChange(e.target.value)}
                   className={dateInputClassName}
                   style={iosCaretStyle}
@@ -652,7 +661,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                 </label>
                 <input
                   type="text"
-                  value={data.quotationNo}
+                  value={data.quotationNo ?? ''}
                   onChange={(e) => handleQuotationNoChange(e.target.value)}
                   placeholder="Quotation No."
                   className={inputClassName}

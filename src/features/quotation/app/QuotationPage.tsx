@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useQuotationStore } from '../state/useQuotationStore';
+import { shallow } from 'zustand/shallow';
 // 移除选择器导入，直接使用store
 import { useInitQuotation } from '../hooks/useInitQuotation';
 import { useClipboardImport } from '../hooks/useClipboardImport';
@@ -53,36 +54,37 @@ export default function QuotationPage() {
   const pathname = usePathname();
   const { showToast } = useToast();
   
-  // 直接从store获取所有状态和actions，避免选择器循环
-  const {
-    // 状态
-    tab: activeTab,
-    data,
-    editId,
-    isGenerating,
-    generatingProgress,
-    isPreviewing,
-    previewProgress,
-    showSettings,
-    showPreview,
-    isPasteDialogOpen,
-    previewItem,
-    notesConfig,
-    // actions
-    setTab,
-    setEditId,
-    setGenerating,
-    setProgress,
-    setPreviewing,
-    setPreviewProgress,
-    setShowSettings,
-    setShowPreview,
-    setPasteDialogOpen,
-    setPreviewItem,
-    updateItems,
-    updateOtherFees,
-    updateData
-  } = useQuotationStore();
+  // 拆分selector，避免每次创建新对象引用
+  // 状态 selectors
+  const activeTab = useQuotationStore(s => s.tab);
+  const data = useQuotationStore(s => s.data, shallow);
+  const editId = useQuotationStore(s => s.editId);
+  const isGenerating = useQuotationStore(s => s.isGenerating);
+  const generatingProgress = useQuotationStore(s => s.generatingProgress);
+  const isPreviewing = useQuotationStore(s => s.isPreviewing);
+  const previewProgress = useQuotationStore(s => s.previewProgress);
+  const showSettings = useQuotationStore(s => s.showSettings);
+  const showPreview = useQuotationStore(s => s.showPreview);
+  const isPasteDialogOpen = useQuotationStore(s => s.isPasteDialogOpen);
+  const previewItem = useQuotationStore(s => s.previewItem);
+  const notesConfig = useQuotationStore(s => s.notesConfig, shallow);
+  
+  // Action selectors（actions是稳定引用，不需要shallow）
+  const setTab = useQuotationStore(s => s.setTab);
+  const setEditId = useQuotationStore(s => s.setEditId);
+  const setGenerating = useQuotationStore(s => s.setGenerating);
+  const setProgress = useQuotationStore(s => s.setProgress);
+  const setPreviewing = useQuotationStore(s => s.setPreviewing);
+  const setPreviewProgress = useQuotationStore(s => s.setPreviewProgress);
+  const setShowSettings = useQuotationStore(s => s.setShowSettings);
+  const setShowPreview = useQuotationStore(s => s.setShowPreview);
+  const setPasteDialogOpen = useQuotationStore(s => s.setPasteDialogOpen);
+  const setPreviewItem = useQuotationStore(s => s.setPreviewItem);
+  const updateItems = useQuotationStore(s => s.updateItems);
+  const updateOtherFees = useQuotationStore(s => s.updateOtherFees);
+  const updateData = useQuotationStore(s => s.updateData);
+  const updateFrom = useQuotationStore(s => s.updateFrom);
+  const updateCurrency = useQuotationStore(s => s.updateCurrency);
   
   // 初始化
   useInitQuotation();
@@ -93,11 +95,23 @@ export default function QuotationPage() {
   // PDF预热（自动执行，无需手动调用）
   usePdfWarmup();
   
-  // 计算衍生状态
-  const itemsTotal = data.items?.reduce((sum, item) => sum + item.amount, 0) || 0;
-  const feesTotal = data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
-  const totalAmount = itemsTotal + feesTotal;
-  const currencySymbol = data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥';
+  // 使用useMemo缓存衍生状态，避免重复计算
+  const itemsTotal = useMemo(() => 
+    data.items?.reduce((sum, item) => sum + item.amount, 0) || 0, 
+    [data.items]
+  );
+  const feesTotal = useMemo(() => 
+    data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0, 
+    [data.otherFees]
+  );
+  const totalAmount = useMemo(() => 
+    itemsTotal + feesTotal, 
+    [itemsTotal, feesTotal]
+  );
+  const currencySymbol = useMemo(() => 
+    data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥', 
+    [data.currency]
+  );
   
   // 剪贴板导入
   const { handleClipboardButtonClick, handleGlobalPaste } = useClipboardImport();
@@ -115,6 +129,44 @@ export default function QuotationPage() {
     if (activeTab === tab) return;
     setTab(tab);
   }, [activeTab, setTab]);
+
+  // 智能路由适配器 - 将SettingsPanel的onChange路由到细粒度actions
+  const handleSettingsChange = useCallback((patch: Partial<QuotationData>) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[handleSettingsChange]', patch);
+    }
+    
+    if (!patch || Object.keys(patch).length === 0) return;
+
+    // 逐字段对比，避免"值相同但对象新建"带来的无效写入
+    const shouldUpdateFrom = typeof patch.from === 'string' && patch.from !== data.from;
+    const shouldUpdateCurrency = !!patch.currency && patch.currency !== data.currency;
+
+    if (shouldUpdateFrom) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[updateFrom]', patch.from);
+      }
+      updateFrom(patch.from as string);
+    }
+    
+    if (shouldUpdateCurrency) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[updateCurrency]', patch.currency);
+      }
+      updateCurrency(patch.currency);
+    }
+
+    // 3) 剩余字段（排除已处理字段 & UI不该直接改的字段）
+    const { from, currency, notes, ...rest } = patch;
+    const restEntries = Object.entries(rest).filter(([k, v]) => (data as any)[k] !== v);
+    
+    if (restEntries.length > 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[updateData]', Object.fromEntries(restEntries));
+      }
+      updateData(Object.fromEntries(restEntries));
+    }
+  }, [data, updateFrom, updateCurrency, updateData]);
   
   // 处理保存
   const handleSave = async () => {
@@ -341,7 +393,7 @@ export default function QuotationPage() {
                 <div className="overflow-hidden transition-all duration-300 ease-in-out opacity-100 px-4 sm:px-6 py-2 h-auto mb-8">
                   <SettingsPanel 
                     data={data}
-                    onChange={updateData}
+                    onChange={handleSettingsChange}
                     activeTab={activeTab}
                   />
                 </div>

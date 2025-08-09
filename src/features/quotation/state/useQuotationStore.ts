@@ -3,6 +3,17 @@ import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
 import type { NoteConfig } from '../types/notes';
 import { DEFAULT_NOTES_CONFIG } from '../types/notes';
 import { getInitialQuotationData } from '@/utils/quotationInitialData';
+import { getDefaultNotes } from '@/utils/getDefaultNotes';
+
+// 浅比较工具函数
+const shallowEqual = (a: any, b: any) => {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const ka = Object.keys(a), kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  for (const k of ka) if (a[k] !== b[k]) return false;
+  return true;
+};
 
 type Tab = 'quotation' | 'confirmation';
 
@@ -52,6 +63,8 @@ interface QuotationState {
   updateItems: (items: LineItem[]) => void;
   updateOtherFees: (fees: OtherFee[]) => void;
   updateData: (updates: Partial<QuotationData>) => void;
+  updateFrom: (from: string) => void;
+  updateCurrency: (currency: 'USD' | 'EUR' | 'CNY') => void;
   
   // 新增：Notes配置相关actions
   setNotesConfig: (config: NoteConfig[]) => void;
@@ -60,6 +73,10 @@ interface QuotationState {
   updateNoteContent: (noteId: string, content: string) => void;
   addNote: () => void;
   removeNote: (noteId: string) => void;
+}
+
+if (process.env.NODE_ENV === 'development') {
+  console.log('[Store Init] useQuotationStore created');
 }
 
 export const useQuotationStore = create<QuotationState>((set) => ({
@@ -101,9 +118,44 @@ export const useQuotationStore = create<QuotationState>((set) => ({
   updateOtherFees: (fees) => set((state) => ({ 
     data: { ...state.data, otherFees: fees } 
   })),
-  updateData: (updates) => set((state) => ({ 
-    data: { ...state.data, ...updates } 
-  })),
+  updateData: (updates) => set((state) => {
+    const next = { ...state.data, ...updates };
+    if (shallowEqual(next, state.data)) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[updateData] 无变化，跳过更新', updates);
+      }
+      return {}; // 无变化不set
+    }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[updateData] 应用更新', updates);
+    }
+    return { data: next };
+  }),
+  updateFrom: (from) => set((state) => {
+    if (from === state.data.from) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[updateFrom] from相同，跳过更新', from);
+      }
+      return {};
+    }
+    const nextNotes = getDefaultNotes(from, state.tab);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[updateFrom] 更新from和notes', { from, notes: nextNotes });
+    }
+    return { data: { ...state.data, from, notes: nextNotes } };
+  }),
+  updateCurrency: (currency) => set((state) => {
+    if (currency === state.data.currency) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[updateCurrency] currency相同，跳过更新', currency);
+      }
+      return {};
+    }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[updateCurrency] 更新currency', currency);
+    }
+    return { data: { ...state.data, currency } };
+  }),
   
   // 新增：Notes配置相关actions
   setNotesConfig: (config) => set({ notesConfig: config }),
