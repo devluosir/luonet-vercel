@@ -1,3 +1,4 @@
+import 'jspdf-autotable';
 import { UserOptions, RowInput, Styles } from 'jspdf-autotable';
 
 // 扩展Styles类型以支持maxCellWidth
@@ -327,7 +328,7 @@ export const generateTableConfig = (
  * AutoTable选项标准化函数 - 防回归保险丝
  * 自动将任何顶层的overflow选项移动到styles中，避免deprecated警告
  */
-type AutoTableOptions = Parameters<typeof import('jspdf').jsPDF.prototype.autoTable>[0];
+type AutoTableOptions = UserOptions;
 
 export function normalizeAutoTableOptions(opts: AutoTableOptions): AutoTableOptions {
   const { overflow, styles, headStyles, bodyStyles, ...rest } = opts as any;

@@ -59,7 +59,7 @@ function devAuditPatch(patch: Partial<QuotationData>, source = 'unknown'): Parti
 
 type Tab = 'quotation' | 'confirmation';
 
-interface QuotationState {
+export interface QuotationState {
   // 核心状态
   tab: Tab;
   data: QuotationData;

@@ -26,7 +26,7 @@ export const SETTINGS_ALLOWED_KEYS = new Set([
   'additionalPaymentTerms',
   'showMainPaymentTerm',
   'paymentDate',
-] as const);
+]);
 
 /**
  * 检查字段是否在允许的设置字段列表中

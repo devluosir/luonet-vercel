@@ -281,7 +281,7 @@ export default function QuotationPage() {
     const restFiltered = Object.fromEntries(
       Object.entries(rest)
         .filter(([key]) => isAllowedSettingsKey(key))
-        .filter(([key, value]) => hasChanged(value, (data as Record<string, unknown>)[key], key))
+        .filter(([key, value]) => hasChanged(value, (data as any)[key], key))
     );
 
     if (Object.keys(restFiltered).length > 0) {
