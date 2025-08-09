@@ -262,7 +262,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       </div>
       
       {/* 移动端卡片视图 - 中屏以下显示 */}
-      <div className="block lg:hidden space-y-4">
+      <div className="block md:hidden space-y-4">
         {(data.items || []).map((item, index) => (
           <div key={item.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
             {/* 卡片头部 */}
@@ -608,7 +608,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       </div>
 
       {/* 桌面端表格视图 - 中屏及以上显示 */}
-      <div className="hidden lg:block">
+      <div className="hidden md:block">
         <div className="overflow-x-auto">
           <div className="inline-block min-w-full align-middle">
             <div className={`border border-[#E5E5EA] dark:border-[#2C2C2E]

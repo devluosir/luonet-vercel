@@ -74,7 +74,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
         </div>
 
         {/* 分隔线 */}
-        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+        <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
         {/* 第二组：币种 */}
         <div className="flex items-center gap-1.5">
@@ -102,7 +102,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
         </div>
 
         {/* 分隔线 */}
-        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+        <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
         {/* 第三组：Header */}
         <div className="flex items-center gap-1.5">
@@ -136,7 +136,7 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
         </div>
 
         {/* 分隔线 */}
-        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+        <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
         {/* 换行控制：小屏换行，中屏不换行 */}
         <div className="w-full sm:w-auto"></div>
@@ -211,9 +211,9 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
         {/* 分隔线 - 只在确认订单模式显示 */}
         {activeTab === 'confirmation' && (
           <>
-            <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+            <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
             {/* 换行控制：小屏和中屏换行，大屏不换行 */}
-            <div className="w-full lg:w-auto"></div>
+            <div className="w-full md:w-auto"></div>
           </>
         )}
 
