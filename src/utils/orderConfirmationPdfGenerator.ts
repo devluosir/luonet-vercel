@@ -59,6 +59,14 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     throw new Error('PDF generation is only available in client-side environment');
   }
 
+  // 读取页面列显示偏好，与页面表格保持一致
+  let visibleCols: string[] | undefined;
+  try {
+    visibleCols = JSON.parse(localStorage.getItem('qt.visibleCols') || 'null');
+  } catch (e) {
+    console.warn('Failed to read table column preferences:', e);
+  }
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -206,7 +214,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
    currentY += 3;
 
     // 使用共享的表格配置
-    doc.autoTable(generateTableConfig(data, doc, currentY, margin, pageWidth));
+    doc.autoTable(generateTableConfig(data, doc, currentY, margin, pageWidth, 'export', visibleCols));
 
     // 获取表格结束的Y坐标
     const finalY = doc.lastAutoTable.finalY || currentY;

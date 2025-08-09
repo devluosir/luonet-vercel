@@ -1,6 +1,42 @@
-// 轻量智能解析：多分隔符、表头识别、2~5列容错、货币/小数逗号、单位规范化
+// 增强智能解析：自适应列识别 + 数据质量警告
+import { enhancedColumnDetection, validateRow, sampleBasedColumnDetection, batchProjectByMapping } from './enhancedColumnDetection';
+import { parseMetrics, getFeatureFlags } from './parseMetrics';
+
 const SEP = /[\t,;]|\s{2,}/; // tab, comma, semicolon, 或 2+ spaces
 const HEADER_HINTS = /line\s*no|item|part\s*no|description|qty|quantity|unit|price|amount|u\/price|单价|数量|名称|单位|序号|编号|no\.|num|index|#|line|part|desc/i;
+
+// === 新增类型定义 ===
+export type ColumnField = 'name' | 'desc' | 'qty' | 'unit' | 'price' | 'ignore';
+
+export interface ColumnEvidence {
+  rule: string;
+  weight: number;
+  hit: number;
+  score: number;
+}
+
+export interface ColumnInference {
+  mapping: ColumnField[];
+  confidence: number;
+  evidence: Array<ColumnEvidence>;
+  mixedFormat: boolean;
+}
+
+export type ValidationWarningType = 
+  | 'large_quantity' 
+  | 'tiny_price' 
+  | 'suspicious_unit' 
+  | 'zero_qty_or_price' 
+  | 'mixed_currency' 
+  | 'name_too_short'
+  | 'amount_mismatch';
+
+export interface ValidationWarning {
+  type: ValidationWarningType;
+  field?: string;
+  message: string;
+  severity: 'error' | 'warning' | 'info';
+}
 
 const UNIT_MAP: Record<string, string> = {
   pcs: 'pc', 
@@ -17,7 +53,35 @@ const UNIT_MAP: Record<string, string> = {
   公斤: 'kg',
   克: 'g',
   磅: 'lb',
+  箱: 'box',
+  盒: 'box',
+  包: 'pack',
+  卷: 'roll',
+  张: 'sheet',
+  根: 'root',
+  条: 'strip',
+  块: 'block',
+  片: 'piece',
+  只: 'pc',
+  支: 'pc',
 };
+
+// 单位词典集合 (用于识别)
+const UNIT_DICT = new Set([
+  'pc', 'pcs', 'piece', 'pieces', 'set', 'sets', 'pair', 'pairs', 
+  'box', 'boxes', 'pack', 'packs', 'roll', 'rolls', 'sheet', 'sheets',
+  'root', 'roots', 'strip', 'strips', 'block', 'blocks',
+  'm', 'meter', 'meters', 'cm', 'mm', 'km', 'inch', 'ft', 'yard',
+  'kg', 'kilogram', 'g', 'gram', 'lb', 'pound', 'oz', 'ton',
+  'l', 'liter', 'ml', 'gallon', 'qt', 'quart',
+  '个', '件', '套', '台', '套件', '对', '组', '箱', '盒', '包', 
+  '卷', '张', '根', '条', '块', '片', '只', '支', '米', '厘米', 
+  '毫米', '公斤', '克', '磅', '升', '毫升'
+]);
+
+// 货币符号检测
+const CURRENCY_SYMBOLS = /[$€¥£₹₩¢₨₽₡₪₦₨]/;
+const CURRENCY_CODES = /\b(USD|EUR|CNY|JPY|GBP|CAD|AUD|CHF|HKD|SGD|RMB)\b/i;
 
 function cleanTextContent(s?: string) {
   if (!s) return '';
@@ -187,6 +251,13 @@ export interface ParseResult {
   skipped: number;
   confidence: number;
   detectedFormat?: string;
+  // === 新增字段 ===
+  inference: ColumnInference;
+  stats: {
+    toInsert: number;
+    toSkip: number;
+    warnings: ValidationWarning[];
+  };
 }
 
 function parseCSVLikeText(text: string): string[] {
@@ -277,9 +348,25 @@ function parseRowCells(line: string): string[] {
 }
 
 export function quickSmartParse(text: string): ParseResult {
+  // 获取特性开关配置
+  const featureFlags = getFeatureFlags();
+  
+  // 开始性能计时
+  parseMetrics.startTiming();
+  
   const lines = parseCSVLikeText(text);
   let skipped = 0;
-  if (lines.length === 0) return { rows: [], skipped, confidence: 0 };
+  if (lines.length === 0) {
+    parseMetrics.recordInsertResult(0, 0, 'legacy');
+    parseMetrics.send();
+    return { 
+      rows: [], 
+      skipped, 
+      confidence: 0, 
+      inference: { mapping: [], confidence: 0, evidence: [], mixedFormat: false },
+      stats: { toInsert: 0, toSkip: 0, warnings: [] }
+    };
+  }
 
   // 表头识别：若首行含关键字则跳过
   const maybeHeader = HEADER_HINTS.test(lines[0]);
@@ -315,7 +402,7 @@ export function quickSmartParse(text: string): ParseResult {
     sequenceDetected = true;
   }
 
-  const rows: ParsedRow[] = [];
+  let rows: ParsedRow[] = [];
 
   // 只处理数据行，跳过表头和说明行
   for (let i = 0; i < dataRowCells.length; i++) {
@@ -429,6 +516,102 @@ export function quickSmartParse(text: string): ParseResult {
     }
   }
 
+  // === 新增：增强列推断与管线集成 ===
+  
+  // 采样进行列推断（大数据集优化）
+  const sampleSize = Math.min(featureFlags.maxSampleSize, dataRowCells.length);
+  const inference = featureFlags.enhancedInferenceEnabled 
+    ? sampleBasedColumnDetection(dataRowCells, sampleSize)
+    : { mapping: [], confidence: 0, evidence: [], mixedFormat: false };
+  
+  // 记录推断指标
+  if (featureFlags.enhancedInferenceEnabled) {
+    const mappingRecord: Record<string, number> = {};
+    inference.mapping.forEach((field, index) => {
+      if (field !== 'ignore') {
+        mappingRecord[field] = index;
+      }
+    });
+    
+    parseMetrics.recordInference(
+      inference.confidence,
+      dataRowCells.length,
+      Math.max(...dataRowCells.map(r => r.length)),
+      inference.mixedFormat,
+      mappingRecord
+    );
+    
+    parseMetrics.recordMappingDistribution(inference.mapping);
+  }
+  
+  // 基于推断结果重新解析行数据
+  let enhancedRows: ParsedRow[] = [];
+  let enhancedSkipped = 0;
+  const allWarnings: ValidationWarning[] = [];
+  
+  if (featureFlags.enhancedInferenceEnabled && inference.confidence >= featureFlags.autoInsertThreshold) {
+    // 高置信度：使用新的投影方式
+    const projectedRows = batchProjectByMapping(dataRowCells, inference.mapping);
+    
+    for (const projected of projectedRows) {
+      if (projected.partName && projected.partName.trim()) {
+        // 计算金额
+        const quantity = projected.quantity || 0;
+        const unitPrice = projected.unitPrice || 0;
+        const completeRow: ParsedRow = {
+          ...projected,
+          partName: projected.partName,
+          description: projected.description || '',
+          quantity,
+          unit: projected.unit || 'pc',
+          unitPrice,
+        };
+        
+        enhancedRows.push(completeRow);
+        
+        // 数据质量检查
+        const warnings = validateRow(completeRow);
+        allWarnings.push(...warnings);
+      } else {
+        enhancedSkipped++;
+      }
+    }
+    
+    // 使用增强结果替换原结果
+    rows = enhancedRows;
+    skipped = enhancedSkipped;
+    
+    // 记录成功使用增强解析
+    parseMetrics.recordInsertResult(rows.length, skipped, 'enhanced');
+  } else {
+    // 低置信度：回退到原有逻辑，但仍做质量检查
+    for (const row of rows) {
+      const warnings = validateRow(row);
+      allWarnings.push(...warnings);
+    }
+    
+    // 记录使用传统解析
+    parseMetrics.recordInsertResult(rows.length, skipped, 'legacy');
+    
+    // 记录回退原因
+    if (featureFlags.enhancedInferenceEnabled) {
+      let reason: 'low_confidence' | 'mixed_format' | 'too_many_columns' = 'low_confidence';
+      if (inference.mixedFormat) reason = 'mixed_format';
+      if (inference.mapping.filter(f => f === 'ignore').length >= 2) reason = 'too_many_columns';
+      
+      parseMetrics.recordPreviewReason(reason, {
+        confidence: inference.confidence,
+        rowCount: dataRowCells.length,
+        colCount: Math.max(...dataRowCells.map(r => r.length))
+      });
+    }
+  }
+  
+  // 记录警告统计
+  if (featureFlags.showWarnings && allWarnings.length > 0) {
+    parseMetrics.recordWarnings(allWarnings);
+  }
+
   // 简单"置信度"估算：成功率 * 结构稳定性
   const ok = rows.length;
   const total = ok + skipped;
@@ -446,12 +629,26 @@ export function quickSmartParse(text: string): ParseResult {
   // 说明行检测加分（说明表格格式规范）
   const descriptionBonus = detectedFormat.includes('desc-') ? 0.1 : 0;
   
-  const confidence = Math.min(1, 0.42 * rate + 0.2 * structureBonus + headerBonus + excelBonus + sequenceBonus + descriptionBonus);
+  // 使用增强列推断的置信度（已经是百分比），否则使用原有算法
+  const enhancedConfidence = inference.confidence / 100; // 转换为0-1范围
+  const originalConfidence = Math.min(1, 0.42 * rate + 0.2 * structureBonus + headerBonus + excelBonus + sequenceBonus + descriptionBonus);
+  
+  // 如果增强推断可用且置信度更高，使用增强结果
+  const confidence = inference.confidence >= 65 ? enhancedConfidence : originalConfidence;
 
+  // 发送指标数据
+  parseMetrics.send();
+  
   return { 
     rows, 
     skipped, 
     confidence, 
-    detectedFormat: detectedFormat || 'unknown' 
+    detectedFormat: detectedFormat || 'unknown',
+    inference,
+    stats: {
+      toInsert: ok,
+      toSkip: skipped,
+      warnings: allWarnings
+    }
   };
 }

@@ -5,8 +5,6 @@
 
 export const SETTINGS_ALLOWED_KEYS = new Set([
   // 显示控制开关
-  'showRemarks',
-  'showDescription', 
   'showBank',
   'showStamp',
   'showPaymentTerms',

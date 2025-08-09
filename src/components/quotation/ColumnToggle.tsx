@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTablePrefs } from '@/features/quotation/state/useTablePrefs';
+import { useTablePrefsHydrated } from '@/features/quotation/state/useTablePrefs';
 
 const ALL_COLS: { key: any; label: string }[] = [
   { key: 'partName', label: 'Name' },
@@ -12,7 +12,7 @@ const ALL_COLS: { key: any; label: string }[] = [
 ];
 
 export function ColumnToggle() {
-  const { visibleCols, toggleCol } = useTablePrefs();
+  const { visibleCols, toggleCol } = useTablePrefsHydrated();
   const [open, setOpen] = useState(false);
 
   return (

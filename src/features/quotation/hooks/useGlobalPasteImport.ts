@@ -51,8 +51,8 @@ export function useGlobalPasteImport(opts: Opts = {}) {
       const parsed = quickSmartParse(text);
       if (parsed.rows.length === 0) return;
 
-      // 3) Shift+Paste => 替换；否则追加
-      const replace = e.shiftKey === true;
+      // 3) 默认追加模式（Shift+替换功能留待后续完善）
+      const replace = false;
 
       // 4) 决策：直接插入 or 预览
       const confident = parsed.confidence >= minConfidence;

@@ -150,7 +150,8 @@ export const generateTableConfig = (
   currentY: number,
   margin: number,
   pageWidth: number,
-  mode: 'preview' | 'export' = 'export'
+  mode: 'preview' | 'export' = 'export',
+  visibleCols?: string[] // 新增可选参数：从页面列偏好读取
 ): UserOptions => {
   // 计算页面可用宽度，表格左右边距向外扩展5mm
   const pageWidth_mm = pageWidth;
@@ -160,17 +161,25 @@ export const generateTableConfig = (
   const right = adjustedMargin;
   const usable = pageWidth_mm - left - right;
   
+  // 确定显示的列（优先使用页面偏好，回退到数据字段）
+  const showDescription = visibleCols 
+    ? visibleCols.includes('description')
+    : (data.showDescription ?? true);
+  const showRemarks = visibleCols 
+    ? visibleCols.includes('remarks')
+    : (data.showRemarks ?? false);
+
   // 获取计算后的列宽度配置，使用调整后的边距
   const columnStyles = calculateColumnWidths(
-    data.showDescription ?? true,
-    data.showRemarks ?? false,
+    showDescription,
+    showRemarks,
     pageWidth,
     adjustedMargin
   );
 
   return {
     startY: currentY,
-    head: [['No.', 'Part Name', ...((data.showDescription ?? true) ? ['Description'] : []), 'Q\'TY', 'Unit', 'U/Price', 'Amount', ...((data.showRemarks ?? false) ? ['Remarks'] : [])]],
+    head: [['No.', 'Part Name', ...(showDescription ? ['Description'] : []), 'Q\'TY', 'Unit', 'U/Price', 'Amount', ...(showRemarks ? ['Remarks'] : [])]],
     body: [
       // 常规商品行
       ...(data.items || []).map((item, index) => [
@@ -182,7 +191,7 @@ export const generateTableConfig = (
           content: item.partName,
           styles: item.highlight?.partName ? { textColor: [255, 0, 0] } : {}
         },
-        ...((data.showDescription ?? true) ? [{
+        ...(showDescription ? [{
           content: item.description || '',
           styles: item.highlight?.description ? { textColor: [255, 0, 0] } : {}
         }] : []),
@@ -214,7 +223,7 @@ export const generateTableConfig = (
             ...(item.highlight?.amount ? { textColor: [255, 0, 0] } : {})
           }
         },
-        ...((data.showRemarks ?? false) ? [{
+        ...(showRemarks ? [{
           content: item.remarks || '',
           styles: item.highlight?.remarks ? { textColor: [255, 0, 0] } : {}
         }] : [])
@@ -223,7 +232,7 @@ export const generateTableConfig = (
       ...(data.otherFees || []).map(fee => [
         {
           content: fee.description,
-          colSpan: (data.showDescription ?? true) ? 6 : 5,
+          colSpan: showDescription ? 6 : 5,
           styles: { 
             halign: 'center' as const,
             ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {})
@@ -236,7 +245,7 @@ export const generateTableConfig = (
             ...(fee.highlight?.amount ? { textColor: [255, 0, 0] } : {})
           }
         },
-        ...((data.showRemarks ?? false) ? [{
+        ...(showRemarks ? [{
           content: fee.remarks || '',
           styles: {
             halign: 'center' as const,

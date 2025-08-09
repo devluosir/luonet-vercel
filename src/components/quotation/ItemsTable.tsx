@@ -3,7 +3,7 @@ import { ImportDataButton } from './ImportDataButton';
 import { ColumnToggle } from './ColumnToggle';
 import { CellErrorDot } from './CellErrorDot';
 import { QuickImport } from './QuickImport';
-import { useTablePrefs } from '@/features/quotation/state/useTablePrefs';
+import { useTablePrefsHydrated } from '@/features/quotation/state/useTablePrefs';
 import { validateRow } from '@/features/quotation/utils/rowValidate';
 import { useGlobalPasteImport } from '@/features/quotation/hooks/useGlobalPasteImport';
 import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
@@ -42,8 +42,11 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   onOtherFeesChange, 
   onChange 
 }) => {
-  // 可见列配置
-  const { visibleCols } = useTablePrefs();
+  // 可见列配置（使用水化版本）
+  const { visibleCols, isHydrated } = useTablePrefsHydrated();
+  
+  // 确保水化前使用默认列配置，避免水化错误
+  const effectiveVisibleCols = isHydrated ? visibleCols : ['partName', 'quantity', 'unit', 'unitPrice', 'amount'];
   
   // 可用单位列表
   const availableUnits = [...defaultUnits, ...(data.customUnits || [])] as const;
@@ -213,9 +216,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   };
 
   // 处理快速导入插入
-  const handleInsertImported = (rows: any[]) => {
+  const handleInsertImported = (rows: any[], replaceMode: boolean = false) => {
     // 生成 id、补 amount
-    let maxId = (data.items || []).reduce((m, it) => Math.max(m, it.id), 0);
+    let maxId = replaceMode ? 0 : (data.items || []).reduce((m, it) => Math.max(m, it.id), 0);
     const mapped = rows.map(r => {
       const quantity = Number(r.quantity) || 0;
       const unitPrice = Number(r.unitPrice) || 0;
@@ -230,7 +233,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
         remarks: '',
       };
     });
-    updateItems([...(data.items || []), ...mapped]);
+    
+    // 根据模式决定替换还是追加
+    const finalItems = replaceMode ? mapped : [...(data.items || []), ...mapped];
+    updateItems(finalItems);
   };
 
   return (
@@ -302,7 +308,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               </div>
 
               {/* Description */}
-              {data.showDescription && (
+              {effectiveVisibleCols.includes('description') && (
                 <div>
                   <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
                   <textarea
@@ -445,9 +451,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               </div>
 
               {/* Remarks */}
-              {data.showRemarks && (
-                <div>
-                  <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Remarks</label>
+                                  {effectiveVisibleCols.includes('remarks') && (
+                      <div>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Remarks</label>
                   <textarea
                     value={item.remarks}
                     onChange={(e) => {
@@ -566,7 +572,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         placeholder="0.00"
                       />
                     </div>
-                    {data.showRemarks && (
+                    {effectiveVisibleCols.includes('remarks') && (
                       <div>
                         <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Remarks</label>
                         <textarea
@@ -616,29 +622,29 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     <th className={`left-0 z-10 w-12 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
                       bg-[#F5F5F7] dark:bg-[#3A3A3C]
                       ${(data.otherFees ?? []).length === 0 ? 'rounded-tl-2xl' : ''}`}>No.</th>
-                    {visibleCols.includes('partName') && (
+                    {effectiveVisibleCols.includes('partName') && (
                       <th className="px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap min-w-[120px]">Part Name</th>
                     )}
-                    {visibleCols.includes('description') && (
+                    {effectiveVisibleCols.includes('description') && (
                       <th className="px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] min-w-[120px]">Description</th>
                     )}
-                    {visibleCols.includes('quantity') && (
+                    {effectiveVisibleCols.includes('quantity') && (
                       <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
                     )}
-                    {visibleCols.includes('unit') && (
+                    {effectiveVisibleCols.includes('unit') && (
                       <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
                     )}
-                    {visibleCols.includes('unitPrice') && (
+                    {effectiveVisibleCols.includes('unitPrice') && (
                       <th className="w-32 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
                     )}
-                    {visibleCols.includes('amount') && (
+                    {effectiveVisibleCols.includes('amount') && (
                       <th className="w-28 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
                     )}
-                    {visibleCols.includes('remarks') && (
+                    {effectiveVisibleCols.includes('remarks') && (
                       <th className={`min-w-[120px] px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
                         ${(data.otherFees ?? []).length === 0 ? 'rounded-tr-2xl' : ''}`}>Remarks</th>
                     )}
-                    {(!visibleCols.includes('remarks') || visibleCols.length === 0) && (
+                    {(!effectiveVisibleCols.includes('remarks') || visibleCols.length === 0) && (
                       <th className={`w-12 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
                         ${(data.otherFees ?? []).length === 0 ? 'rounded-tr-2xl' : ''}`}></th>
                     )}
@@ -662,7 +668,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           {index + 1}
                         </span>
                       </td>
-                      {visibleCols.includes('partName') && (
+                      {effectiveVisibleCols.includes('partName') && (
                         <td className="px-2 py-2 bg-white/90 dark:bg-[#1C1C1E]/90">
                           <div className="flex items-center">
                             <textarea
@@ -691,7 +697,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           </div>
                         </td>
                       )}
-                      {visibleCols.includes('description') && (
+                      {effectiveVisibleCols.includes('description') && (
                         <td className="px-2 py-2">
                           <textarea
                             value={item.description}
@@ -717,7 +723,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           />
                         </td>
                       )}
-                      {visibleCols.includes('quantity') && (
+                      {effectiveVisibleCols.includes('quantity') && (
                         <td className="w-24 px-2 py-2">
                           <div className="flex items-center">
                             <input
@@ -759,7 +765,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           </div>
                         </td>
                       )}
-                      {visibleCols.includes('unit') && (
+                      {effectiveVisibleCols.includes('unit') && (
                         <td className="w-24 px-2 py-2">
                           <select
                             value={item.unit}
@@ -789,7 +795,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           </select>
                         </td>
                       )}
-                      {visibleCols.includes('unitPrice') && (
+                      {effectiveVisibleCols.includes('unitPrice') && (
                         <td className="w-32 px-2 py-2">
                           <div className="flex items-center">
                             <input
@@ -831,7 +837,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           </div>
                         </td>
                       )}
-                      {visibleCols.includes('amount') && (
+                      {effectiveVisibleCols.includes('amount') && (
                         <td className="w-28 px-2 py-2">
                           <input
                             type="text"
@@ -850,7 +856,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           />
                         </td>
                       )}
-                      {visibleCols.includes('remarks') && (
+                      {effectiveVisibleCols.includes('remarks') && (
                         <td className="px-2 py-2">
                           <textarea
                             value={item.remarks}
@@ -904,7 +910,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             ×
                           </span>
                         </td>
-                        <td colSpan={data.showDescription ? 6 : 5} className="px-2 py-2">
+                        <td colSpan={effectiveVisibleCols.includes('description') ? 6 : 5} className="px-2 py-2">
                           <textarea
                             value={fee.description}
                             onChange={(e) => {
@@ -929,7 +935,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           />
                         </td>
                         <td className={`w-28 px-2 py-2
-                          ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}>
+                          ${index === (data.otherFees ?? []).length - 1 && !effectiveVisibleCols.includes('remarks') ? 'rounded-br-2xl' : ''}`}>
                           <input
                             type="text"
                             inputMode="decimal"
@@ -966,7 +972,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             placeholder="0.00"
                           />
                         </td>
-                        {data.showRemarks && (
+                        {effectiveVisibleCols.includes('remarks') && (
                           <td className={`w-1/5 px-2 py-2
                             ${index === (data.otherFees ?? []).length - 1 ? 'rounded-br-2xl' : ''}`}>
                             <textarea

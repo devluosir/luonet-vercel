@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { quickParseTSV } from '@/features/quotation/utils/quickParse';
 import { quickSmartParse, type ParseResult } from '@/features/quotation/utils/quickSmartParse';
+import { getFeatureFlags } from '@/features/quotation/utils/parseMetrics';
+import { ConfidenceBadge } from '@/components/quickimport/ConfidenceBadge';
+import { WarningChips, type WarningChip } from '@/components/quickimport/WarningChips';
+import { InferenceStatsBar } from '@/components/quickimport/InferenceStatsBar';
+import { CheckCircle2, Eye, AlertCircle, Upload } from 'lucide-react';
 
 export function QuickImport({ 
   onInsert,
@@ -8,7 +13,7 @@ export function QuickImport({
   presetParsed,
   onClosePreset,
 }: { 
-  onInsert: (items: any[]) => void;
+  onInsert: (items: any[], replaceMode?: boolean) => void;
   presetRaw?: string;
   presetParsed?: ParseResult;
   onClosePreset?: () => void;
@@ -19,6 +24,11 @@ export function QuickImport({
   const [skipped, setSkipped] = useState(0);
   const [confidence, setConfidence] = useState(0);
   const [detectedFormat, setDetectedFormat] = useState('');
+  const [parseResult, setParseResult] = useState<ParseResult | null>(null);
+  const [replaceMode, setReplaceMode] = useState(false);
+  
+  // 获取特性开关
+  const featureFlags = getFeatureFlags();
 
   // 处理预设数据（从全局粘贴回退而来）
   useEffect(() => {
@@ -28,6 +38,7 @@ export function QuickImport({
       setSkipped(presetParsed?.skipped || 0);
       setConfidence(presetParsed?.confidence || 0);
       setDetectedFormat(presetParsed?.detectedFormat || '');
+      setParseResult(presetParsed || null);
       setOpen(true);
     }
   }, [presetRaw, presetParsed]);
@@ -40,6 +51,7 @@ export function QuickImport({
       setSkipped(smartResult.skipped);
       setConfidence(smartResult.confidence);
       setDetectedFormat(smartResult.detectedFormat || '');
+      setParseResult(smartResult);
     } else {
       // 回退到原解析器
       const res = quickParseTSV(raw);
@@ -48,6 +60,7 @@ export function QuickImport({
       setSkipped(res.skipped || 0);
       setConfidence(0.5); // 中等置信度
       setDetectedFormat('legacy');
+      setParseResult(null);
     }
   };
 
@@ -58,24 +71,55 @@ export function QuickImport({
     setSkipped(0);
     setConfidence(0);
     setDetectedFormat('');
+    setParseResult(null);
+    setReplaceMode(false);
     onClosePreset?.();
   };
 
   const handleInsert = () => {
-    if (preview?.length) onInsert(preview);
+    if (preview?.length) {
+      // 通知父组件插入，包含替换模式信息
+      onInsert(preview, replaceMode);
+    }
     closeAll();
   };
+  
+  const handleAutoInsert = () => {
+    if (preview?.length) {
+      onInsert(preview, replaceMode);
+    }
+    closeAll();
+  };
+  
+  const openPreviewOnly = () => {
+    // 保持弹窗打开，让用户查看详细预览
+    // 这里可以扩展为打开更详细的预览表格
+  };
+
+  // 判断是否显示红点：置信度过低或格式混杂
+  const showWarningDot = parseResult && (
+    Math.round(confidence * 100) < featureFlags.autoInsertThreshold || 
+    parseResult.inference.mixedFormat ||
+    parseResult.stats.warnings.length > 0
+  );
 
   return (
     <div className="relative">
       <button 
         type="button"
-        className="px-3 py-1.5 rounded-lg border border-[#E5E5EA] dark:border-[#2C2C2E] 
+        className="relative px-3 py-1.5 rounded-lg border border-[#E5E5EA] dark:border-[#2C2C2E] 
                    bg-white/90 dark:bg-[#1C1C1E]/90 text-sm text-[#1D1D1F] dark:text-[#F5F5F7]
                    hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 transition-colors"
         onClick={()=>setOpen(true)}
       >
+        <Upload className="h-4 w-4 inline mr-1" />
         导入
+        {showWarningDot && (
+          <span 
+            className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#1C1C1E]"
+            title="检测到需要注意的数据质量问题"
+          />
+        )}
       </button>
       {open && (
         <div className="absolute right-0 mt-2 w-[28rem] rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
@@ -93,50 +137,100 @@ export function QuickImport({
                          focus:border-transparent resize-none"
             />
           </div>
-          <div className="flex items-center gap-3">
-            <button 
-              type="button"
-              className="px-3 py-1.5 border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg text-sm
-                         text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50"
-              onClick={handlePreview}
-            >
-              预览
-            </button>
-            {preview && (
-              <>
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm text-[#86868B] dark:text-[#86868B]">
-                    将插入 {preview.length} 行
-                  </span>
-                  {skipped > 0 && (
-                    <span className="text-sm text-amber-600 dark:text-amber-400">
-                      跳过 {skipped} 行
-                    </span>
-                  )}
-                  {confidence > 0 && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className={`${confidence >= 0.7 ? 'text-green-600' : confidence >= 0.5 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        置信度: {Math.round(confidence * 100)}%
-                      </span>
-                      {detectedFormat && detectedFormat !== 'unknown' && (
-                        <span className="text-[#86868B] dark:text-[#86868B]">
-                          格式: {detectedFormat}
-                        </span>
-                      )}
-                    </div>
-                  )}
+          {/* Day 3 新UI集成区域 */}
+          {preview && parseResult && (
+            <div className="space-y-3 mt-4">
+              {/* 顶部资讯条 */}
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <ConfidenceBadge 
+                  value={Math.round(confidence * 100)} 
+                  threshold={featureFlags.autoInsertThreshold} 
+                />
+                <div className="md:text-right">
+                  <InferenceStatsBar
+                    rowCount={parseResult.stats.toInsert}
+                    colCount={parseResult.inference.mapping.length}
+                    ignoreCount={parseResult.inference.mapping.filter(m => m === 'ignore').length}
+                    mixedFormat={parseResult.inference.mixedFormat}
+                  />
                 </div>
-                <button 
-                  type="button"
-                  className="ml-auto px-4 py-1.5 rounded-lg bg-[#007AFF] dark:bg-[#0A84FF] text-white text-sm
-                             hover:bg-[#0056CC] dark:hover:bg-[#0870DD] transition-colors"
-                  onClick={handleInsert}
-                >
-                  插入
-                </button>
-              </>
-            )}
-          </div>
+              </div>
+              
+              {/* 警告列举 */}
+              {parseResult.stats.warnings.length > 0 && (
+                <WarningChips 
+                  warnings={parseResult.stats.warnings.map(w => ({
+                    type: w.type as WarningChip['type'],
+                    message: w.message
+                  }))} 
+                />
+              )}
+              
+              {/* 替换模式开关 */}
+              <label className="inline-flex items-center gap-2 select-none">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-[#E5E5EA] dark:border-[#2C2C2E]"
+                  checked={replaceMode}
+                  onChange={(e) => setReplaceMode(e.target.checked)}
+                />
+                <span className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">替换已有行</span>
+              </label>
+              
+              {/* 动作按钮区 */}
+              <div className="flex items-center justify-end gap-2 pt-2">
+                {Math.round(confidence * 100) >= featureFlags.autoInsertThreshold && !parseResult.inference.mixedFormat ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleAutoInsert}
+                      className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-green-200 bg-green-600 text-white hover:bg-green-700"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      一键插入
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openPreviewOnly}
+                      className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-slate-200 bg-white hover:bg-slate-50 text-[#1D1D1F] dark:bg-[#2C2C2E] dark:text-[#F5F5F7] dark:hover:bg-[#3C3C3E]"
+                    >
+                      <Eye className="h-4 w-4" />
+                      预览后再插
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 ring-1 ring-amber-200 bg-amber-50 text-amber-700">
+                      <AlertCircle className="h-4 w-4" />
+                      置信度不足，建议预览
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleInsert}
+                      className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-slate-200 bg-white hover:bg-slate-50 text-[#1D1D1F] dark:bg-[#2C2C2E] dark:text-[#F5F5F7] dark:hover:bg-[#3C3C3E]"
+                    >
+                      <Eye className="h-4 w-4" />
+                      插入数据
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* 传统预览按钮（无解析结果时） */}
+          {!preview && (
+            <div className="flex items-center gap-3">
+              <button 
+                type="button"
+                className="px-3 py-1.5 border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg text-sm
+                           text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50"
+                onClick={handlePreview}
+              >
+                预览
+              </button>
+            </div>
+          )}
         </div>
       )}
       {/* 点击外部关闭 */}
