@@ -6,6 +6,8 @@ const PUBLIC_ROUTES = [
   '/',
   '/api/auth',
   '/test-login',
+  // Next.js 内部的 not-found 路由在构建与运行时需要放行
+  '/_not-found',
 ];
 
 // 定义静态资源路径

@@ -18,6 +18,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       defaultTheme="light"
       enableSystem={false}
       disableTransitionOnChange
+      storageKey="theme"
+      nonce={undefined}
     >
       <SessionProvider>
         <ToastProvider>

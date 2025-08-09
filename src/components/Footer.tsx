@@ -9,6 +9,14 @@ import { DateCalculator } from './DateCalculator';
 export function Footer() {
   const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+
+  // 增强的主题切换函数，同时写 Cookie 确保 SSR 一致性
+  const handleThemeToggle = () => {
+    const nextTheme = resolvedTheme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    // 同时写 Cookie，确保 SSR 能读取到正确的主题
+    document.cookie = `theme=${nextTheme};path=/;max-age=31536000`;
+  };
   const [showCalculator, setShowCalculator] = useState(false);
   const [showDateCalculator, setShowDateCalculator] = useState(false);
   const calculatorButtonRef = useRef<HTMLButtonElement>(null);
@@ -76,7 +84,7 @@ export function Footer() {
 
             {mounted && (
               <button
-                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                onClick={handleThemeToggle}
                 className="p-2 rounded-lg bg-gray-100/80 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400
                          hover:bg-gray-200/80 dark:hover:bg-gray-700/50 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 aria-label="切换主题模式"

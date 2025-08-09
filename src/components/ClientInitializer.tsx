@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { devExtensionWarning } from '@/utils/preHydrationCleanup';
 
 export default function ClientInitializer() {
   useEffect(() => {
@@ -51,9 +50,6 @@ export default function ClientInitializer() {
           
           if (!cancelled) {
             console.log('[ClientInitializer] PDF资源预热完成');
-            
-            // 开发环境下检测和警告可能影响 hydration 的浏览器扩展
-            devExtensionWarning();
           }
         } catch (err) {
           // 吞掉错误，避免冒泡到 ErrorBoundary
