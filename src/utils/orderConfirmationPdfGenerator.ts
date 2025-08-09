@@ -264,9 +264,9 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
 
     // 更准确地估算付款条款高度
     let paymentTermsHeight = 0;
-    if (data.showPaymentTerms || data.additionalPaymentTerms || data.showInvoiceReminder) {
+    if (data.showMainPaymentTerm || data.additionalPaymentTerms || data.showInvoiceReminder) {
       paymentTermsHeight = 10; // 标题高度
-      if (data.showPaymentTerms) {
+      if (data.showMainPaymentTerm) {
         paymentTermsHeight += estimatedLineHeight;
       }
       if (data.additionalPaymentTerms) {
@@ -398,7 +398,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
     }
 
     // 添加付款条款
-    if (data.showPaymentTerms || data.additionalPaymentTerms || data.showInvoiceReminder) {
+    if (data.showMainPaymentTerm || data.additionalPaymentTerms || data.showInvoiceReminder) {
       // 检查剩余空间，如果不足则添加新页面
       if (pageHeight - currentY < 40) {
         doc.addPage();
@@ -407,7 +407,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
 
       // 计算条款总数
       let totalTerms = 0;
-      if (data.showPaymentTerms) totalTerms++;
+      if (data.showMainPaymentTerm) totalTerms++;
           if (data.additionalPaymentTerms && data.additionalPaymentTerms?.trim()) {
       totalTerms += data.additionalPaymentTerms?.trim().split('\n').filter(line => line?.trim()).length || 0;
       }
@@ -427,8 +427,17 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
 
       if (totalTerms === 1) {
         // 单条付款条款的情况，使用单行格式
-        if (data.showPaymentTerms) {
-          const term1Text = `Full paid not later than ${data.paymentDate} by telegraphic transfer.`;
+        if (data.showMainPaymentTerm) {
+          // 构建付款方式文本
+          const methodMap: Record<string, string> = {
+            'T/T': 'telegraphic transfer (T/T)',
+            'L/C': 'irrevocable L/C at sight',
+            'D/P': 'D/P (Documents against Payment)',
+            'D/A': 'D/A (Documents against Acceptance)',
+            'Open Account': 'open account'
+          };
+          const paymentMethodText = methodMap[data.paymentMethod || 'T/T'] || 'telegraphic transfer (T/T)';
+          const term1Text = `Full payment not later than ${data.paymentDate} by ${paymentMethodText}.`;
           const term1Parts = term1Text.split(data.paymentDate);
           const firstPartWidth = doc.getTextWidth(term1Parts[0]);
           
@@ -488,12 +497,21 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
         const termSpacing = 5;  // 条款之间的固定间距
 
         // 显示标准付款条款
-        if (data.showPaymentTerms) {
+        if (data.showMainPaymentTerm) {
           // 绘制条款编号
           doc.text(`${termIndex}.`, margin, currentY);
           
           // 绘制第一部分文本
-          const term1Text = `Full paid not later than ${data.paymentDate} by telegraphic transfer.`;
+          // 构建付款方式文本
+          const methodMap: Record<string, string> = {
+            'T/T': 'telegraphic transfer (T/T)',
+            'L/C': 'irrevocable L/C at sight',
+            'D/P': 'D/P (Documents against Payment)',
+            'D/A': 'D/A (Documents against Acceptance)',
+            'Open Account': 'open account'
+          };
+          const paymentMethodText = methodMap[data.paymentMethod || 'T/T'] || 'telegraphic transfer (T/T)';
+          const term1Text = `Full payment not later than ${data.paymentDate} by ${paymentMethodText}.`;
           const term1Parts = term1Text.split(data.paymentDate);
           const firstPartWidth = doc.getTextWidth(term1Parts[0]);
           

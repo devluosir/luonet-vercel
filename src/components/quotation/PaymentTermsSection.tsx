@@ -1,123 +1,301 @@
-import { QuotationData } from '@/types/quotation';
+'use client';
+
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { MoreHorizontal, Copy } from 'lucide-react';
+import type { QuotationData } from '@/types/quotation';
+
+
 
 interface PaymentTermsSectionProps {
   data: QuotationData;
-  onChange: (data: QuotationData) => void;
+  onChange: (data: Partial<QuotationData>) => void;
 }
 
-// 参考invoice页面的简洁样式 - iOS兼容性更好
-const inputClassName = `w-full px-4 py-2.5 rounded-2xl
-  bg-white/95 dark:bg-[#1c1c1e]/95
-  border border-[#007AFF]/10 dark:border-[#0A84FF]/10
-  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
-  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
-  text-[15px] leading-relaxed text-gray-800 dark:text-gray-100
-  transition-all duration-300 ease-out
-  hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
-  shadow-sm hover:shadow-md
-  ios-optimized-input`;
+const PRESETS = [
+  '100% T/T in advance.',
+  '100% before shipment',
+  '30% deposit, 70% before shipment',
+  '50% deposit, 50% before shipment',
+  'D/P (Documents against Payment)',
+  'D/A (Documents against Acceptance)',
+];
 
-// iOS光标优化样式 - 简化版本
-const iosCaretStyle = {
-  caretColor: '#007AFF',
-  WebkitCaretColor: '#007AFF',
-} as React.CSSProperties;
+function addDays(iso: string, d: number): string {
+  const base = new Date(iso || new Date().toISOString().slice(0, 10));
+  base.setDate(base.getDate() + d);
+  return base.toISOString().slice(0, 10);
+}
+
+// 解析附加条款字符串为数组
+function parseAdditionalTerms(text: string): string[] {
+  if (!text?.trim()) return [];
+  return text.split('\n').map(line => line.trim()).filter(Boolean);
+}
+
+// 数组转换为字符串
+function termsToString(terms: string[]): string {
+  return terms.join('\n');
+}
 
 export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps) {
+  const {
+    showPaymentTerms = false,
+    paymentDate = '',
+    additionalPaymentTerms = '',
+    showInvoiceReminder = false,
+    contractNo = '',
+    date = '' // 报价日期作为基准
+  } = data;
+
+  const [showMainTerm, setShowMainTerm] = useState(showPaymentTerms);
+  const [extra, setExtra] = useState('');
+  const [showPresets, setShowPresets] = useState(false);
+  const presetsRef = useRef<HTMLDivElement>(null);
+
+  // 解析附加条款为数组
+  const additionalTermsArray = useMemo(() => parseAdditionalTerms(additionalPaymentTerms), [additionalPaymentTerms]);
+
+  // 更新函数
+  const updateData = useCallback((patch: Partial<QuotationData>) => {
+    onChange(patch);
+  }, [onChange]);
+
+  const quotationDate = date || new Date().toISOString().slice(0, 10);
+  const contractNoExternal = contractNo;
+
+  const dateISO = paymentDate || new Date().toISOString().slice(0, 10);
+  const main = `Full payment not later than ${dateISO} by telegraphic transfer (T/T).`;
+  const contractHint = (showInvoiceReminder && contractNoExternal?.trim())
+    ? `Please state our contract no. "${contractNoExternal.trim()}" on your payment documents.`
+    : '';
+
+  // 同步showMainTerm到data，使用不同的字段名避免冲突
+  React.useEffect(() => {
+    // 使用一个新的字段来控制PDF中主条款的显示
+    updateData({ showMainPaymentTerm: showMainTerm });
+  }, [showMainTerm, updateData]);
+
+  // 点击外部关闭预设弹窗
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (presetsRef.current && !presetsRef.current.contains(event.target as Node)) {
+        setShowPresets(false);
+      }
+    };
+
+    if (showPresets) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showPresets]);
+
+  const preview = useMemo(() => {
+    const items: { index: number; content: React.ReactNode }[] = [];
+    let termIndex = 1;
+    
+    // 1. 主条款（与PDF逻辑保持一致）
+    if (showMainTerm) {
+      // 将日期部分高亮为红色
+      const mainWithRedDate = main.replace(
+        dateISO, 
+        `<span style="color: #ef4444">${dateISO}</span>`
+      );
+      items.push({
+        index: termIndex,
+        content: <span dangerouslySetInnerHTML={{ __html: `${termIndex}. ${mainWithRedDate}` }} />
+      });
+      termIndex++;
+    }
+    
+    // 2. 附加条款（按行拆分，每行一个条款）
+    additionalTermsArray.forEach(term => {
+      if (term.trim()) {
+        items.push({
+          index: termIndex,
+          content: `${termIndex}. ${term.trim()}`
+        });
+        termIndex++;
+      }
+    });
+    
+    // 3. 发票号提醒（合同号显示为红色）
+    if (contractHint && contractNoExternal) {
+      const hintWithRedContract = contractHint.replace(
+        `"${contractNoExternal}"`,
+        `"<span style="color: #ef4444">${contractNoExternal}</span>"`
+      );
+      items.push({
+        index: termIndex,
+        content: <span dangerouslySetInnerHTML={{ __html: `${termIndex}. ${hintWithRedContract}` }} />
+      });
+    }
+    
+    return items;
+  }, [showMainTerm, main, dateISO, additionalTermsArray, contractHint, contractNoExternal]);
+
+  if (!showPaymentTerms) {
+    return null;
+  }
+
   return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Payment Terms:</h3>
-      
-      <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/20">
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={data.showPaymentTerms}
-              onChange={(e) => {
-                onChange({
-                  ...data,
-                  showPaymentTerms: e.target.checked
-                });
-              }}
-              className="w-4 h-4 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
-                checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
-                focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
-                relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
-                before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
-                checked:before:scale-100 before:transition-transform before:duration-200"
-              style={{
-                WebkitAppearance: 'none',
-                MozAppearance: 'none'
-              }}
-            />
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Full paid not later than</span>
-              <input
-                type="date"
-                value={data.paymentDate}
-                onChange={e => onChange({
-                  ...data,
-                  paymentDate: e.target.value
-                })}
-                className={`px-3 py-1 rounded-2xl
-                  bg-white/95 dark:bg-[#1c1c1e]/95
-                  border border-[#007AFF]/10 dark:border-[#0A84FF]/10
-                  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
-                  text-red-500 dark:text-red-400
-                  text-[14px]
-                  transition-all duration-300 ease-out
-                  shadow-sm hover:shadow-md
-                  ios-optimized-input
-                  w-[150px] sm:w-[150px] md:w-[160px] flex-shrink-0`}
-                style={{ 
-                  colorScheme: 'light dark',
-                  ...iosCaretStyle
-                } as React.CSSProperties}
-                pattern="\d{4}-\d{2}-\d{2}"
-              />
-              <span className="text-sm text-gray-600 dark:text-gray-400">by telegraphic transfer.</span>
-            </div>
+    <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 md:p-4 space-y-3">
+      {/* 顶部行：标题 */}
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium text-gray-800 dark:text-gray-200">Payment Terms</h3>
+      </div>
+
+      {/* 行1：主条款（内联控件） */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input
+            type="checkbox"
+            checked={showMainTerm}
+            onChange={(e) => setShowMainTerm(e.target.checked)}
+            className="h-4 w-4 accent-black dark:accent-white"
+          />
+          <span>Full payment not later than</span>
+          <input
+            type="date"
+            className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            value={dateISO}
+            onChange={(e) => updateData({ paymentDate: e.target.value })}
+          />
+          <div className="inline-flex overflow-hidden rounded border border-gray-300 dark:border-gray-600">
+            {[3, 7, 30].map(d => (
+              <button 
+                key={d}
+                type="button"
+                className="border-r border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs last:border-r-0 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                onClick={() => {
+                  const nextDate = addDays(quotationDate, d);
+                  updateData({ paymentDate: nextDate });
+                }}
+              >
+                +{d}d
+              </button>
+            ))}
           </div>
-          <div className="flex items-center gap-2">
-            <textarea
-              value={data.additionalPaymentTerms}
-              onChange={(e) => onChange({
-                ...data,
-                additionalPaymentTerms: e.target.value
-              })}
-              placeholder="Enter additional remarks (each line will be a new payment term)"
-              className={inputClassName}
-              style={iosCaretStyle}
-              rows={2}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={data.showInvoiceReminder}
-              onChange={e => onChange({
-                ...data,
-                showInvoiceReminder: e.target.checked
-              })}
-              className="flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
-                checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
-                focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
-                relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
-                before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
-                checked:before:scale-100 before:transition-transform before:duration-200
-                w-4 h-4"
-              style={{
-                WebkitAppearance: 'none',
-                MozAppearance: 'none'
-              }}
-            />
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Please state our contract no. <span className="text-red-500">&quot;{data.contractNo}&quot;</span> on your payment documents.
-            </div>
-          </div>
+          <span>by telegraphic transfer (T/T).</span>
         </div>
       </div>
-    </div>
+
+      {/* 行2：附加条款 + 预设 */}
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <input
+            placeholder="Additional term… (Enter to add)"
+            className="flex-1 rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+            value={extra}
+            onChange={(e) => setExtra(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && extra.trim()) {
+                const newTerms = Array.from(new Set([...additionalTermsArray, extra.trim()]));
+                updateData({ additionalPaymentTerms: termsToString(newTerms) });
+                setExtra('');
+              }
+            }}
+          />
+          <div className="relative" ref={presetsRef}>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-gray-700 dark:text-gray-300"
+              onClick={() => setShowPresets(!showPresets)}
+            >
+              <MoreHorizontal size={14} />
+            </button>
+            {showPresets && (
+              <div className="absolute right-0 z-10 mt-2 w-72 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-1 shadow-md">
+                {PRESETS.map(p => (
+                  <button 
+                    key={p}
+                    type="button"
+                    className="w-full truncate text-left text-xs px-2 py-1 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200"
+                    onClick={() => {
+                      const newTerms = Array.from(new Set([...additionalTermsArray, p]));
+                      updateData({ additionalPaymentTerms: termsToString(newTerms) });
+                      setShowPresets(false); // 选择后自动关闭
+                    }}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        {!!additionalTermsArray.length && (
+          <div className="flex flex-wrap gap-2">
+            {additionalTermsArray.map((t, i) => (
+              <span 
+                key={i} 
+                className="group inline-flex items-center gap-1 rounded-full border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+              >
+                {t}
+                <button 
+                  type="button"
+                  className="opacity-60 group-hover:opacity-100 hover:text-red-500"
+                  onClick={() => {
+                    const newTerms = additionalTermsArray.filter((_, idx) => idx !== i);
+                    updateData({ additionalPaymentTerms: termsToString(newTerms) });
+                  }}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 行3：合同提醒（只读展示外部号） */}
+      <div className="flex items-center justify-between text-sm">
+        <label className="inline-flex items-center gap-2 text-gray-700 dark:text-gray-300">
+          <input
+            type="checkbox"
+            checked={showInvoiceReminder}
+            onChange={(e) => updateData({ showInvoiceReminder: e.target.checked })}
+            className="h-4 w-4 accent-black dark:accent-white"
+          />
+          Show contract reminder
+        </label>
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          Contract No: {contractNoExternal?.trim() || 'N/A'}
+        </span>
+      </div>
+
+      {/* 预览（底部一行卡片） */}
+      <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-neutral-50 dark:bg-gray-800/30 p-2">
+        <div className="mb-1 flex items-center justify-between">
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Preview</span>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded border border-gray-300 dark:border-gray-600 px-2 py-0.5 text-[11px] hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            onClick={() => {
+              // 生成纯文本版本用于复制
+              const textVersion = preview.map(item => {
+                if (typeof item.content === 'string') {
+                  return item.content;
+                } else {
+                  // 从HTML中提取纯文本
+                  const div = document.createElement('div');
+                  div.innerHTML = (item.content as any).props.dangerouslySetInnerHTML.__html;
+                  return div.textContent || div.innerText || '';
+                }
+              }).join('\n');
+              navigator.clipboard.writeText(textVersion);
+            }}
+          >
+            <Copy size={12} /> Copy
+          </button>
+        </div>
+        <div className="whitespace-pre-wrap rounded bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 p-2 text-[11px] leading-5 text-gray-900 dark:text-gray-100 font-mono">
+          {preview.map((item, index) => (
+            <div key={index}>
+              {typeof item.content === 'string' ? item.content : item.content}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
-} 
+}

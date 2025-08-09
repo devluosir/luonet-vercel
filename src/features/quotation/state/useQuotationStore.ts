@@ -10,7 +10,7 @@ import { eventSampler } from '../utils/eventLogger';
 const KNOWN_KEYS = new Set<keyof QuotationData>([
   'quotationNo', 'contractNo', 'date', 'notes', 'from', 'to', 'inquiryNo', 'currency',
   'paymentDate', 'items', 'amountInWords', 'showDescription', 'showRemarks', 'showBank', 
-  'showStamp', 'otherFees', 'customUnits', 'showPaymentTerms', 'showInvoiceReminder',
+  'showStamp', 'otherFees', 'customUnits', 'showPaymentTerms', 'showMainPaymentTerm', 'showInvoiceReminder',
   'additionalPaymentTerms', 'templateConfig'
 ]);
 

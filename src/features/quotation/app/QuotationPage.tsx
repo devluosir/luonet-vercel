@@ -113,7 +113,9 @@ export default function QuotationPage() {
       // 单据信息
       'inquiryNo', 'quotationNo', 'contractNo', 'date',
       // 其他必要字段
-      'notes', 'currency', 'from', 'amountInWords', 'paymentDate'
+      'notes', 'currency', 'from', 'amountInWords', 'paymentDate',
+      // 支付条款字段
+      'additionalPaymentTerms'
     ]);
     
     // 合并 SETTINGS_ALLOWED_KEYS

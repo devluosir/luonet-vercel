@@ -53,8 +53,10 @@ export interface QuotationData {
   otherFees?: OtherFee[];
   customUnits?: string[];
   showPaymentTerms?: boolean;
+  showMainPaymentTerm?: boolean;
   showInvoiceReminder?: boolean;
   additionalPaymentTerms?: string;
+  paymentMethod?: 'T/T' | 'L/C' | 'D/P' | 'D/A' | 'Open Account';
   templateConfig?: {
     headerType: 'none' | 'bilingual' | 'english';
     stampType?: 'none' | 'shanghai' | 'hongkong';

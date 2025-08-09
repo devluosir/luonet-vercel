@@ -24,6 +24,8 @@ export const SETTINGS_ALLOWED_KEYS = new Set([
   
   // 支付条款
   'additionalPaymentTerms',
+  'showMainPaymentTerm',
+  'paymentDate',
 ] as const);
 
 /**
