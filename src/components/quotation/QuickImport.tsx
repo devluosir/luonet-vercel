@@ -5,7 +5,10 @@ import { getFeatureFlags } from '@/features/quotation/utils/parseMetrics';
 import { ConfidenceBadge } from '@/components/quickimport/ConfidenceBadge';
 import { WarningChips, type WarningChip } from '@/components/quickimport/WarningChips';
 import { InferenceStatsBar } from '@/components/quickimport/InferenceStatsBar';
-import { CheckCircle2, Eye, AlertCircle, Upload } from 'lucide-react';
+import { CheckCircle2, Eye, AlertCircle, Upload, Wrench } from 'lucide-react';
+import { validateRows, DEFAULT_VALIDATOR_CONFIG, type ValidationWarning } from '@/components/quickimport/validators';
+import { generateAutoFixes, applyFixes, DEFAULT_AUTOFIX, type FixReport as FixReportType } from '@/components/quickimport/autofix';
+import { FixReport } from '@/components/quickimport/FixReport';
 
 export function QuickImport({ 
   onInsert,
@@ -26,6 +29,9 @@ export function QuickImport({
   const [detectedFormat, setDetectedFormat] = useState('');
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [replaceMode, setReplaceMode] = useState(false);
+  const [customWarnings, setCustomWarnings] = useState<ValidationWarning[]>([]);
+  const [fixReport, setFixReport] = useState<FixReportType | null>(null);
+  const [showFixReport, setShowFixReport] = useState(false);
   
   // 获取特性开关
   const featureFlags = getFeatureFlags();
@@ -52,6 +58,22 @@ export function QuickImport({
       setConfidence(smartResult.confidence);
       setDetectedFormat(smartResult.detectedFormat || '');
       setParseResult(smartResult);
+      
+      // Day 4 新增：额外的数据质量校验
+      if (featureFlags.showWarnings) {
+        const warnings = validateRows(smartResult.rows, {
+          ...DEFAULT_VALIDATOR_CONFIG,
+          tinyPrice: featureFlags.tinyPrice ?? 0.01,
+          largeQty: featureFlags.largeQty ?? 1_000_000,
+          minNameLen: featureFlags.minNameLen ?? 2,
+          requireUnit: true,
+        });
+        setCustomWarnings(warnings);
+      }
+      
+      // 重置修复状态
+      setFixReport(null);
+      setShowFixReport(false);
     } else {
       // 回退到原解析器
       const res = quickParseTSV(raw);
@@ -61,6 +83,9 @@ export function QuickImport({
       setConfidence(0.5); // 中等置信度
       setDetectedFormat('legacy');
       setParseResult(null);
+      setCustomWarnings([]);
+      setFixReport(null);
+      setShowFixReport(false);
     }
   };
 
@@ -73,6 +98,9 @@ export function QuickImport({
     setDetectedFormat('');
     setParseResult(null);
     setReplaceMode(false);
+    setCustomWarnings([]);
+    setFixReport(null);
+    setShowFixReport(false);
     onClosePreset?.();
   };
 
@@ -95,12 +123,59 @@ export function QuickImport({
     // 保持弹窗打开，让用户查看详细预览
     // 这里可以扩展为打开更详细的预览表格
   };
+  
+  // Day 4 新增：一键修复功能
+  const handleAutoFix = () => {
+    if (!preview || !featureFlags.autoFixEnabled) return;
+    
+    const originalWarningCount = customWarnings.length;
+    
+    // 生成修复补丁
+    const { patches, report } = generateAutoFixes(preview, {
+      ...DEFAULT_AUTOFIX,
+      defaultUnit: featureFlags.defaultUnit ?? 'pc',
+      roundPriceTo: featureFlags.roundPriceTo ?? 2,
+      mergeDuplicates: featureFlags.mergeDuplicates ?? true,
+      cleanNumbers: featureFlags.cleanNumbers ?? true,
+    });
+    
+    // 应用修复
+    const fixed = applyFixes(preview, patches);
+    setPreview(fixed);
+    setFixReport(report);
+    setShowFixReport(true);
+    
+    // 重新校验修复后的数据
+    if (featureFlags.showWarnings) {
+      const newWarnings = validateRows(fixed, {
+        ...DEFAULT_VALIDATOR_CONFIG,
+        tinyPrice: featureFlags.tinyPrice ?? 0.01,
+        largeQty: featureFlags.largeQty ?? 1_000_000,
+        minNameLen: featureFlags.minNameLen ?? 2,
+        requireUnit: true,
+      });
+      setCustomWarnings(newWarnings);
+      
+      // 记录修复指标
+      if (typeof window !== 'undefined' && (window as any).parseMetrics) {
+        (window as any).parseMetrics.recordAutoFix?.(
+          originalWarningCount,
+          newWarnings.length,
+          report.droppedRows,
+          report.mergedRows,
+          report.fixedUnits,
+          report.fixedNumbers
+        );
+      }
+    }
+  };
 
-  // 判断是否显示红点：置信度过低或格式混杂
+  // 判断是否显示红点：置信度过低或格式混杂或有未修复警告
   const showWarningDot = parseResult && (
     Math.round(confidence * 100) < featureFlags.autoInsertThreshold || 
     parseResult.inference.mixedFormat ||
-    parseResult.stats.warnings.length > 0
+    parseResult.stats.warnings.length > 0 ||
+    customWarnings.length > 0
   );
 
   return (
@@ -156,13 +231,24 @@ export function QuickImport({
                 </div>
               </div>
               
+              {/* 修复报告 */}
+              {showFixReport && fixReport && (
+                <FixReport report={fixReport} />
+              )}
+              
               {/* 警告列举 */}
-              {parseResult.stats.warnings.length > 0 && (
+              {(parseResult.stats.warnings.length > 0 || customWarnings.length > 0) && (
                 <WarningChips 
-                  warnings={parseResult.stats.warnings.map(w => ({
-                    type: w.type as WarningChip['type'],
-                    message: w.message
-                  }))} 
+                  warnings={[
+                    ...parseResult.stats.warnings.map(w => ({
+                      type: w.type as WarningChip['type'],
+                      message: w.message
+                    })),
+                    ...customWarnings.map(w => ({
+                      type: w.type as WarningChip['type'],
+                      message: w.message
+                    }))
+                  ]} 
                 />
               )}
               
@@ -178,42 +264,60 @@ export function QuickImport({
               </label>
               
               {/* 动作按钮区 */}
-              <div className="flex items-center justify-end gap-2 pt-2">
-                {Math.round(confidence * 100) >= featureFlags.autoInsertThreshold && !parseResult.inference.mixedFormat ? (
-                  <>
+              <div className="flex items-center justify-between pt-2">
+                {/* 左侧：修复按钮 */}
+                <div className="flex items-center gap-2">
+                  {featureFlags.autoFixEnabled && (parseResult.stats.warnings.length > 0 || customWarnings.length > 0) && (
                     <button
                       type="button"
-                      onClick={handleAutoInsert}
-                      className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-green-200 bg-green-600 text-white hover:bg-green-700"
+                      onClick={handleAutoFix}
+                      className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-blue-200 bg-blue-600 text-white hover:bg-blue-700"
+                      title="规范单位/数量/价格，合并重复项"
                     >
-                      <CheckCircle2 className="h-4 w-4" />
-                      一键插入
+                      <Wrench className="h-4 w-4" />
+                      一键修复
                     </button>
-                    <button
-                      type="button"
-                      onClick={openPreviewOnly}
-                      className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-slate-200 bg-white hover:bg-slate-50 text-[#1D1D1F] dark:bg-[#2C2C2E] dark:text-[#F5F5F7] dark:hover:bg-[#3C3C3E]"
-                    >
-                      <Eye className="h-4 w-4" />
-                      预览后再插
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 ring-1 ring-amber-200 bg-amber-50 text-amber-700">
-                      <AlertCircle className="h-4 w-4" />
-                      置信度不足，建议预览
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleInsert}
-                      className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-slate-200 bg-white hover:bg-slate-50 text-[#1D1D1F] dark:bg-[#2C2C2E] dark:text-[#F5F5F7] dark:hover:bg-[#3C3C3E]"
-                    >
-                      <Eye className="h-4 w-4" />
-                      插入数据
-                    </button>
-                  </>
-                )}
+                  )}
+                </div>
+                
+                {/* 右侧：主要操作按钮 */}
+                <div className="flex items-center gap-2">
+                  {Math.round(confidence * 100) >= featureFlags.autoInsertThreshold && !parseResult.inference.mixedFormat && customWarnings.length === 0 ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleAutoInsert}
+                        className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-green-200 bg-green-600 text-white hover:bg-green-700"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        一键插入
+                      </button>
+                      <button
+                        type="button"
+                        onClick={openPreviewOnly}
+                        className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-slate-200 bg-white hover:bg-slate-50 text-[#1D1D1F] dark:bg-[#2C2C2E] dark:text-[#F5F5F7] dark:hover:bg-[#3C3C3E]"
+                      >
+                        <Eye className="h-4 w-4" />
+                        预览后再插
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 ring-1 ring-amber-200 bg-amber-50 text-amber-700">
+                        <AlertCircle className="h-4 w-4" />
+                        {customWarnings.length > 0 ? '数据质量问题' : '置信度不足，建议预览'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleInsert}
+                        className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-slate-200 bg-white hover:bg-slate-50 text-[#1D1D1F] dark:bg-[#2C2C2E] dark:text-[#F5F5F7] dark:hover:bg-[#3C3C3E]"
+                      >
+                        <Eye className="h-4 w-4" />
+                        插入数据
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )}

@@ -41,6 +41,17 @@ export interface ParseMetrics {
     count: number;
     severity: 'error' | 'warning' | 'info';
   }[];
+  
+  // Day 4 新增：自动修复统计
+  qi_autofix_stats: {
+    originalWarnings: number;
+    fixedWarnings: number;
+    droppedRows: number;
+    mergedRows: number;
+    fixedUnits: number;
+    fixedNumbers: number;
+    fixSuccessRate: number;
+  };
 }
 
 // 特性开关配置
@@ -65,6 +76,16 @@ export interface ParseFeatureFlags {
   
   // 大数据集阈值
   largeDatasetThreshold: number;
+  
+  // Day 4 新增：数据质量校验
+  tinyPrice?: number;       // 最小价格阈值，默认 0.01
+  largeQty?: number;        // 大数量阈值，默认 1e6
+  minNameLen?: number;      // 最小名称长度，默认 2
+  defaultUnit?: string;     // 默认单位，默认 'pc'
+  roundPriceTo?: number;    // 价格小数位，默认 2
+  mergeDuplicates?: boolean;// 是否合并重复项，默认 true
+  autoFixEnabled?: boolean; // 是否启用自动修复，默认 true
+  cleanNumbers?: boolean;   // 是否清洗数字格式，默认 true
 }
 
 export const DEFAULT_FEATURE_FLAGS: ParseFeatureFlags = {
@@ -75,6 +96,15 @@ export const DEFAULT_FEATURE_FLAGS: ParseFeatureFlags = {
   enableCaching: true,
   maxSampleSize: 50,
   largeDatasetThreshold: 1000,
+  // Day 4 默认值
+  tinyPrice: 0.01,
+  largeQty: 1_000_000,
+  minNameLen: 2,
+  defaultUnit: 'pc',
+  roundPriceTo: 2,
+  mergeDuplicates: true,
+  autoFixEnabled: true,
+  cleanNumbers: true,
 };
 
 // 指标收集器
@@ -147,6 +177,27 @@ class MetricsCollector {
       count: data.count,
       severity: data.severity
     }));
+  }
+  
+  recordAutoFix(
+    originalWarnings: number, 
+    fixedWarnings: number, 
+    droppedRows: number, 
+    mergedRows: number,
+    fixedUnits: number,
+    fixedNumbers: number
+  ): void {
+    const fixSuccessRate = originalWarnings > 0 ? (originalWarnings - fixedWarnings) / originalWarnings : 1;
+    
+    this.metrics.qi_autofix_stats = {
+      originalWarnings,
+      fixedWarnings,
+      droppedRows,
+      mergedRows,
+      fixedUnits,
+      fixedNumbers,
+      fixSuccessRate: Math.round(fixSuccessRate * 100) / 100
+    };
   }
   
   flush(): Partial<ParseMetrics> {
