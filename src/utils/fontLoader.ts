@@ -1,3 +1,5 @@
+'use client';
+
 import jsPDF from 'jspdf';
 import { registerChineseFonts, warmupFontRegistration } from './pdfFontRegistry';
 import { getChineseFontBytes } from './fontCache';

@@ -1,10 +1,67 @@
-import { get, set, del } from 'idb-keyval';
+'use client';
+
 import { gunzip } from './gunzip';
 import { logCacheHit, logCacheMiss } from './pdfLogger';
 
 // 字体版本控制
 const FONT_VERSION = '1.0.0';
 const ASSET_PREFIX = process.env.NEXT_PUBLIC_ASSET_PREFIX ?? '';
+
+// 安全的 IndexedDB 检查
+const hasIDB = () =>
+  typeof window !== 'undefined' && 'indexedDB' in window;
+
+// 动态导入 idb-keyval 并提供降级
+async function idb() {
+  if (!hasIDB()) {
+    // 提供最小降级实现，避免服务器/无IDB环境爆炸
+    return {
+      async get() { return undefined; },
+      async set() { /* noop */ },
+      async del() { /* noop */ },
+    };
+  }
+  try {
+    const m = await import('idb-keyval');
+    return { get: m.get, set: m.set, del: m.del };
+  } catch (error) {
+    console.warn('[fontCache] idb-keyval 加载失败，使用降级方案:', error);
+    return {
+      async get() { return undefined; },
+      async set() { /* noop */ },
+      async del() { /* noop */ },
+    };
+  }
+}
+
+// 安全的缓存操作封装
+export async function cacheGet<T>(key: string): Promise<T | undefined> {
+  const { get } = await idb();
+  try { 
+    return await get(key); 
+  } catch (error) {
+    console.warn(`[fontCache] 缓存读取失败 ${key}:`, error);
+    return undefined; 
+  }
+}
+
+export async function cacheSet<T>(key: string, val: T) {
+  const { set } = await idb();
+  try { 
+    await set(key, val); 
+  } catch (error) {
+    console.warn(`[fontCache] 缓存写入失败 ${key}:`, error);
+  }
+}
+
+export async function cacheDel(key: string) {
+  const { del } = await idb();
+  try { 
+    await del(key); 
+  } catch (error) {
+    console.warn(`[fontCache] 缓存删除失败 ${key}:`, error);
+  }
+}
 
 // 缓存键定义
 const CACHE_KEYS = {
@@ -23,7 +80,7 @@ async function fetchBytes(url: string) {
 }
 
 export async function getFontBytes(cacheKey: string, urlGz: string, urlTtfFallback: string): Promise<Uint8Array> {
-  const cached = await get<Uint8Array>(cacheKey);
+  const cached = await cacheGet<Uint8Array>(cacheKey);
   if (cached?.byteLength) {
     logCacheHit(cacheKey, cached.byteLength);
     return cached;
@@ -35,7 +92,7 @@ export async function getFontBytes(cacheKey: string, urlGz: string, urlTtfFallba
   try {
     const gz = await fetchBytes(gzUrl);
     const bytes = await gunzip(gz);
-    await set(cacheKey, bytes);
+    await cacheSet(cacheKey, bytes);
     const endTime = performance.now();
     logCacheMiss(`${cacheKey}[gz]`, endTime - startTime);
     return bytes;
@@ -44,7 +101,7 @@ export async function getFontBytes(cacheKey: string, urlGz: string, urlTtfFallba
     const ttfUrl = ASSET_PREFIX + urlTtfFallback;
     const fallbackStart = performance.now();
     const bytes = await fetchBytes(ttfUrl);
-    await set(cacheKey, bytes);
+    await cacheSet(cacheKey, bytes);
     const fallbackEnd = performance.now();
     logCacheMiss(`${cacheKey}[ttf-fallback]`, fallbackEnd - fallbackStart);
     return bytes;
@@ -72,7 +129,7 @@ export async function getChineseFontBytes(): Promise<{ regular: Uint8Array; bold
  */
 export async function getFontBase64(bytesKey: string, b64Key: string, urlGz: string, urlTtfFallback: string): Promise<string> {
   // 1) 先查 Base64 缓存
-  const cachedB64 = await get<string>(b64Key);
+  const cachedB64 = await cacheGet<string>(b64Key);
   if (cachedB64) {
     logCacheHit(`${b64Key}[b64]`, cachedB64.length);
     return cachedB64;
@@ -85,7 +142,7 @@ export async function getFontBase64(bytesKey: string, b64Key: string, urlGz: str
   const startTime = performance.now();
   const { bytesToBase64 } = await import('./pdfFontRegistry');
   const b64 = bytesToBase64(bytes);
-  await set(b64Key, b64);
+  await cacheSet(b64Key, b64);
   const endTime = performance.now();
   
   logCacheMiss(`${b64Key}[b64-encode]`, endTime - startTime);
@@ -119,10 +176,10 @@ export async function getChineseFontBase64(): Promise<{ regular: string; bold: s
 export async function clearFontCache(): Promise<void> {
   try {
     await Promise.all([
-      del(CACHE_KEYS.regular),
-      del(CACHE_KEYS.bold),
-      del(CACHE_KEYS.regularB64),
-      del(CACHE_KEYS.boldB64)
+      cacheDel(CACHE_KEYS.regular),
+      cacheDel(CACHE_KEYS.bold),
+      cacheDel(CACHE_KEYS.regularB64),
+      cacheDel(CACHE_KEYS.boldB64)
     ]);
     console.log('[字体缓存] 缓存已清除（包含 Base64）');
   } catch (error) {
@@ -142,10 +199,10 @@ export async function getFontCacheStatus(): Promise<{
 }> {
   try {
     const [regular, bold, regularB64, boldB64] = await Promise.all([
-      get<Uint8Array>(CACHE_KEYS.regular),
-      get<Uint8Array>(CACHE_KEYS.bold),
-      get<string>(CACHE_KEYS.regularB64),
-      get<string>(CACHE_KEYS.boldB64)
+      cacheGet<Uint8Array>(CACHE_KEYS.regular),
+      cacheGet<Uint8Array>(CACHE_KEYS.bold),
+      cacheGet<string>(CACHE_KEYS.regularB64),
+      cacheGet<string>(CACHE_KEYS.boldB64)
     ]);
 
     return {
