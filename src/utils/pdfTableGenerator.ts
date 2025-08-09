@@ -151,18 +151,20 @@ export const generateTableConfig = (
   pageWidth: number,
   mode: 'preview' | 'export' = 'export'
 ): UserOptions => {
-  // 计算页面可用宽度
+  // 计算页面可用宽度，表格左右边距向外扩展5mm
   const pageWidth_mm = pageWidth;
-  const left = margin;
-  const right = margin;
+  const tableMarginReduction = 5; // 向外扩展5mm
+  const adjustedMargin = margin - tableMarginReduction;
+  const left = adjustedMargin;
+  const right = adjustedMargin;
   const usable = pageWidth_mm - left - right;
   
-  // 获取计算后的列宽度配置
+  // 获取计算后的列宽度配置，使用调整后的边距
   const columnStyles = calculateColumnWidths(
     data.showDescription ?? true,
     data.showRemarks ?? false,
     pageWidth,
-    margin
+    adjustedMargin
   );
 
   return {
@@ -242,8 +244,8 @@ export const generateTableConfig = (
         }] : [])
       ])
     ] as unknown as RowInput[],
-    margin: { left: margin, right: margin, bottom: 20 },
-    tableWidth: 'wrap' as const, // 自动换行表格布局
+    margin: { left: margin - 5, right: margin - 5, bottom: 20 }, // 左右边距向外扩展5mm
+    tableWidth: pageWidth - ((margin - 5) * 2), // 使用调整后的边距计算表格宽度
     theme: 'plain',
     showHead: 'everyPage',
     styles: {
@@ -257,7 +259,7 @@ export const generateTableConfig = (
       valign: 'middle' as const,
       minCellHeight: 6,
       overflow: 'linebreak' as const, // 确保内容会自动换行
-      cellWidth: 'auto' as const // 自动调整列宽
+      cellWidth: 'wrap' as const // 内容自动换行
     },
     headStyles: {
       fontSize: 8,
@@ -269,21 +271,8 @@ export const generateTableConfig = (
       cellPadding: { left: 2, right: 2, top: 2, bottom: 2 },
       overflow: 'visible' as const // 防止标题文字被截断
     },
-    // 增强列样式配置
-    columnStyles: {
-      ...columnStyles,
-      // 确保所有列都有最小宽度
-      ...Object.fromEntries(
-        Array.from({ length: 8 }, (_, i) => [
-          i.toString(),
-          {
-            ...columnStyles[i.toString()] || {},
-            cellWidth: 'auto' as const,
-            minCellWidth: 20
-          }
-        ])
-      )
-    },
+    // 使用精确计算的列样式配置
+    columnStyles: columnStyles,
     didParseCell: (data) => {
       const pageHeight = data.doc.internal.pageSize.height;
       const bottomMargin = 25;
