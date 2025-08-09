@@ -61,6 +61,7 @@ export function PasteDialog({ isOpen, onClose, onConfirm }: PasteDialogProps) {
             粘贴数据
           </h3>
           <button
+            type="button"
             onClick={onClose}
             className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] transition-colors"
           >
@@ -93,6 +94,7 @@ export function PasteDialog({ isOpen, onClose, onConfirm }: PasteDialogProps) {
         {/* 按钮组 */}
         <div className="flex items-center justify-between mt-6">
           <button
+            type="button"
             onClick={handlePaste}
             className="flex items-center gap-2 px-3 py-2 text-sm text-[#007AFF] dark:text-[#0A84FF] 
                      hover:bg-[#007AFF]/[0.08] dark:hover:bg-[#0A84FF]/[0.08] 
@@ -104,6 +106,7 @@ export function PasteDialog({ isOpen, onClose, onConfirm }: PasteDialogProps) {
           
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={onClose}
               className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 
                        hover:bg-gray-100 dark:hover:bg-[#3A3A3C] rounded-lg transition-colors"
@@ -111,6 +114,7 @@ export function PasteDialog({ isOpen, onClose, onConfirm }: PasteDialogProps) {
               取消
             </button>
             <button
+              type="button"
               onClick={handleConfirm}
               disabled={!text.trim()}
               className="px-4 py-2 text-sm bg-[#007AFF] dark:bg-[#0A84FF] 
