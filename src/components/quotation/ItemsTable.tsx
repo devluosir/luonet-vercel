@@ -247,7 +247,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
           <ImportDataButton onImport={handleImport} />
           <div className="text-sm text-gray-500 dark:text-gray-400">
             <div>提示：双击单元格可以切换红色高亮显示</div>
-            <div className="mt-1">快捷：直接 Ctrl+V 粘贴表格数据，Shift+Ctrl+V 替换全部</div>
+            {/* 已移除快捷粘贴提示 */}
           </div>
         </div>
         <div className="flex items-center gap-2">
