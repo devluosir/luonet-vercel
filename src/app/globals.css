@@ -85,3 +85,142 @@ body {
   animation-duration: 0.3s;
   animation-timing-function: ease-out;
 }
+
+/* BaseInfoCompact 紧凑模式样式 */
+.field-input {
+  @apply w-full rounded-xl border border-slate-200/60 dark:border-gray-700/50 
+         bg-white/60 dark:bg-gray-800/50
+         px-3 py-2 text-sm leading-6
+         outline-none ring-0
+         focus:border-slate-400 dark:focus:border-gray-500
+         focus:bg-white dark:focus:bg-gray-800
+         transition-all duration-200
+         placeholder:text-gray-400 dark:placeholder:text-gray-500;
+}
+
+/* 更紧凑的输入高度：单行输入 h-9；多行用 rows 控制 */
+.field-input:not(textarea) { 
+  height: 2.25rem; /* h-9 */
+}
+
+/* 主要信息输入框 - 客户/供应商信息 */
+.field-input-primary {
+  @apply w-full rounded-xl border-0 
+         bg-white/80 dark:bg-gray-800/80
+         px-4 py-3 text-sm leading-6
+         outline-none ring-2 ring-transparent
+         focus:ring-blue-500/30 dark:focus:ring-blue-400/30
+         focus:bg-white dark:focus:bg-gray-800
+         transition-all duration-200
+         placeholder:text-gray-400 dark:placeholder:text-gray-500
+         shadow-sm;
+}
+
+/* 重要单据号输入框 - 突出显示 */
+.field-input-highlight {
+  @apply w-full rounded-lg border border-blue-200 dark:border-blue-700/50 
+         bg-blue-50/50 dark:bg-blue-900/20
+         px-3 py-2 text-sm font-medium leading-6
+         outline-none ring-0
+         focus:border-blue-400 dark:focus:border-blue-500
+         focus:bg-blue-50 dark:focus:bg-blue-900/30
+         focus:ring-2 focus:ring-blue-500/20
+         transition-all duration-200
+         placeholder:text-blue-600/60 dark:placeholder:text-blue-400/60;
+}
+
+/* 次要信息输入框 - 参考信息 */
+.field-input-secondary {
+  @apply w-full rounded-lg border border-gray-200/60 dark:border-gray-600/50 
+         bg-gray-50/50 dark:bg-gray-700/30
+         px-2.5 py-2 text-xs leading-5
+         outline-none ring-0
+         focus:border-gray-400 dark:focus:border-gray-500
+         focus:bg-white dark:focus:bg-gray-700
+         transition-all duration-200
+         placeholder:text-gray-400 dark:placeholder:text-gray-500;
+}
+
+/* 日期输入框 - 紧凑样式 */
+.field-input-date {
+  @apply w-full rounded-lg border border-orange-200/60 dark:border-orange-700/50 
+         bg-orange-50/30 dark:bg-orange-900/20
+         px-2 py-2 text-xs leading-5
+         outline-none ring-0
+         focus:border-orange-400 dark:focus:border-orange-500
+         focus:bg-orange-50 dark:focus:bg-orange-900/30
+         transition-all duration-200
+         text-orange-700 dark:text-orange-300;
+}
+
+/* 输入框高度控制 */
+.field-input-highlight:not(textarea) { 
+  height: 2.25rem; /* h-9 */
+}
+
+.field-input-secondary:not(textarea) { 
+  height: 2rem; /* h-8 */
+}
+
+.field-input-date:not(textarea) { 
+  height: 2rem; /* h-8 */
+}
+
+/* 新的统一紧凑样式系统 */
+.fi {
+  @apply w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 px-3 py-2 text-sm leading-6
+         outline-none focus:border-slate-400 dark:focus:border-gray-500 transition-all duration-200;
+  height: 2.25rem; /* h-9：统一小尺寸输入高度 */
+}
+
+.fi-multiline { 
+  @apply w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 px-3 py-2 text-sm leading-6
+         outline-none focus:border-slate-400 dark:focus:border-gray-500 transition-all duration-200; 
+}
+
+/* 浮动标签样式增强 */
+.field-input:focus + .floating-label,
+.field-input:not(:placeholder-shown) + .floating-label {
+  @apply -translate-y-1/2 scale-90 text-slate-600 dark:text-gray-400;
+}
+
+/* iOS兼容性优化 */
+.ios-optimized-input {
+  -webkit-appearance: none;
+  -webkit-border-radius: 0.75rem;
+}
+
+/* 紧凑模式特定的间距调整 */
+.compact-mode {
+  @apply space-y-3;
+}
+
+.compact-mode .field-group {
+  @apply mb-3;
+}
+
+.compact-mode .field-row {
+  @apply grid grid-cols-12 gap-3;
+}
+
+/* 大屏优化 - 更紧凑的字段间距 */
+@screen xl {
+  .field-input {
+    @apply px-2.5 py-1.5; /* 更紧凑的内边距 */
+  }
+  
+  .compact-mode {
+    @apply space-y-2; /* 更小的垂直间距 */
+  }
+  
+  .compact-mode .field-row {
+    @apply gap-2; /* 更小的字段间距 */
+  }
+}
+
+/* 2XL屏幕进一步优化 */
+@screen 2xl {
+  .field-input:not(textarea) { 
+    height: 2rem; /* h-8 更紧凑 */
+  }
+}

@@ -43,7 +43,7 @@ const DynamicPaymentTermsSection = dynamic(() => import('@/components/quotation/
 
 // 导入现有组件
 import { TabButton } from '@/components/quotation/TabButton';
-import { CustomerInfoSection } from '@/components/quotation/CustomerInfoSection';
+import { CustomerInfoCompact } from '@/components/quotation/CustomerInfoCompact';
 import { ItemsTable } from '@/components/quotation/ItemsTable';
 import { NotesSection } from '../components/NotesSection';
 import { SettingsPanel } from '@/components/quotation/SettingsPanel';
@@ -548,7 +548,7 @@ export default function QuotationPage() {
 
               {/* 设置面板 */}
               {showSettings && (
-                <div className="overflow-hidden transition-all duration-300 ease-in-out opacity-100 px-4 sm:px-6 py-2 h-auto mb-8">
+                <div className="overflow-hidden transition-all duration-300 ease-in-out opacity-100 px-4 sm:px-6 py-3 mb-4">
                   <SettingsPanel 
                     data={data}
                     onChange={handleSettingsChange}
@@ -558,18 +558,18 @@ export default function QuotationPage() {
               )}
 
               {/* 客户信息区域 */}
-              <div className="px-4 sm:px-6 py-4">
-                <CustomerInfoSection 
+              <div className={`px-4 sm:px-6 ${
+                showSettings ? 'py-2' : 'py-4'
+              }`}>
+                <CustomerInfoCompact 
                   data={data}
                   onChange={updateData}
                   type={activeTab}
                 />
               </div>
 
-
-
               {/* 商品表格区域 */}
-              <div className="px-0 sm:px-6 py-4">
+              <div className={`px-0 sm:px-6 py-2`}>
                 <div className="space-y-4">
                   <div className="px-4 sm:px-0">
                     <ImportDataButton onImport={updateItems} />

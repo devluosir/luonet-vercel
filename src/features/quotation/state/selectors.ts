@@ -27,6 +27,7 @@ export const sel = {
   isPasteDialogOpen: (s: QuotationState) => s.isPasteDialogOpen,
   previewItem: (s: QuotationState) => s.previewItem,
   notesConfig: (s: QuotationState) => s.notesConfig,
+  compactMode: (s: QuotationState) => s.compactMode,
   
   // 数据子字段选择器（优先使用这些而不是整块data）
   currency: (s: QuotationState) => s.data.currency,
@@ -55,6 +56,7 @@ export const sel = {
   setShowPreview: (s: QuotationState) => s.setShowPreview,
   setPasteDialogOpen: (s: QuotationState) => s.setPasteDialogOpen,
   setPreviewItem: (s: QuotationState) => s.setPreviewItem,
+  setCompactMode: (s: QuotationState) => s.setCompactMode,
   updateItems: (s: QuotationState) => s.updateItems,
   updateOtherFees: (s: QuotationState) => s.updateOtherFees,
   updateData: (s: QuotationState) => s.updateData,
