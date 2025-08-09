@@ -94,7 +94,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </div>
 
           {/* 分隔线 - 在大屏显示 */}
-          <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+          <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
           {/* 第二组：表头模板 */}
           <div className="flex items-center gap-1.5">
@@ -122,7 +122,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </div>
 
           {/* 分隔线 - 在大屏显示 */}
-          <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+          <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
           {/* 换行控制：小屏换行，中屏不换行 */}
           <div className="w-full sm:w-auto"></div>
@@ -276,10 +276,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </div>
 
           {/* 分隔线 - 在大屏显示 */}
-          <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+          <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
           {/* 换行控制：小屏和中屏换行，大屏不换行 */}
-          <div className="w-full lg:w-auto"></div>
+          <div className="w-full md:w-auto"></div>
 
           {/* 第四组：自定义单位 */}
           <div className="flex flex-wrap items-center gap-3">

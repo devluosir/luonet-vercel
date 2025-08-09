@@ -43,7 +43,7 @@ const DynamicPaymentTermsSection = dynamic(() => import('@/components/quotation/
 
 // 导入现有组件
 import { TabButton } from '@/components/quotation/TabButton';
-import { CustomerInfoSection } from '@/components/quotation/CustomerInfoSection';
+import { CustomerInfoCompact } from '@/components/quotation/CustomerInfoCompact';
 import { ItemsTable } from '@/components/quotation/ItemsTable';
 import { NotesSection } from '../components/NotesSection';
 import { SettingsPanel } from '@/components/quotation/SettingsPanel';
@@ -461,7 +461,7 @@ export default function QuotationPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
       <main className="flex-1">
-        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
+        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-3 sm:py-6">
           {/* 返回按钮 */}
           <Link 
             href={
@@ -476,7 +476,7 @@ export default function QuotationPage() {
           </Link>
 
           {/* 标签切换 */}
-          <div className="flex justify-center gap-2 sm:gap-4 mt-4 sm:mt-6 mb-6 sm:mb-8">
+          <div className="flex justify-center gap-1.5 sm:gap-3 mt-3 sm:mt-4 mb-4 sm:mb-6">
             <TabButton 
               active={activeTab === 'quotation'}
               onClick={() => handleTabChange('quotation')}
@@ -495,24 +495,24 @@ export default function QuotationPage() {
           <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl sm:rounded-3xl shadow-lg">
             <form onSubmit={handleSubmit}>
               {/* 标题和设置按钮 */}
-              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 dark:border-[#3A3A3C]">
-                <div className="flex items-center gap-4">
+              <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-100 dark:border-[#3A3A3C]">
+                <div className="flex items-center gap-3">
                   <h1 className="text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]">
                     Generate {activeTab === 'quotation' ? 'Quotation' : 'Order'}
                   </h1>
                   <button
                     type="button"
                     onClick={handleClipboardButtonClick}
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
                     title="Paste from clipboard"
                   >
                     <Clipboard className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                   </button>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <Link
                     href={`/history?tab=${activeTab}`}
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
                     title="历史记录"
                   >
                     <History className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
@@ -520,7 +520,7 @@ export default function QuotationPage() {
                   <button
                     type="button"
                     onClick={handleSave}
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0 relative"
+                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0 relative"
                     title={editId ? '保存修改' : '保存新记录'}
                   >
                     <Save className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
@@ -528,7 +528,7 @@ export default function QuotationPage() {
                   <button
                     type="button"
                     onClick={() => setShowSettings(!showSettings)}
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
                     title="Settings"
                   >
                     <Settings className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
@@ -537,7 +537,7 @@ export default function QuotationPage() {
                     <button
                       type="button"
                       onClick={handlePerformanceTest}
-                      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                      className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
                       title="性能测试"
                     >
                       <Activity className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
@@ -548,7 +548,7 @@ export default function QuotationPage() {
 
               {/* 设置面板 */}
               {showSettings && (
-                <div className="overflow-hidden transition-all duration-300 ease-in-out opacity-100 px-4 sm:px-6 py-2 h-auto mb-8">
+                <div className="overflow-hidden transition-all duration-300 ease-in-out opacity-100 px-4 sm:px-6 py-3 mb-4">
                   <SettingsPanel 
                     data={data}
                     onChange={handleSettingsChange}
@@ -558,18 +558,18 @@ export default function QuotationPage() {
               )}
 
               {/* 客户信息区域 */}
-              <div className="px-4 sm:px-6 py-4">
-                <CustomerInfoSection 
+              <div className={`px-4 sm:px-6 ${
+                showSettings ? 'py-2' : 'py-4'
+              }`}>
+                <CustomerInfoCompact 
                   data={data}
                   onChange={updateData}
                   type={activeTab}
                 />
               </div>
 
-
-
               {/* 商品表格区域 */}
-              <div className="px-0 sm:px-6 py-4">
+              <div className={`px-0 sm:px-6 py-2`}>
                 <div className="space-y-4">
                   <div className="px-4 sm:px-0">
                     <ImportDataButton onImport={updateItems} />

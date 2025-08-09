@@ -341,8 +341,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
   return (
     <div className="space-y-0">
-      {/* 移动端和平板卡片视图 - 调整断点为 xl (1280px) */}
-      <div className="block lg:hidden space-y-4">
+      {/* 移动端和平板卡片视图 - 中屏以下显示 */}
+      <div className="block md:hidden space-y-4">
         {data.items.map((item, index) => {
           // 检查当前项目是否在组内
           const isInGroup = !!item.groupId;
@@ -828,7 +828,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
         {/* Other Fees 表格 - 移动端视图 */}
         {data.showPrice && data.otherFees && data.otherFees.length > 0 && (
-          <div className="lg:hidden mt-4">
+          <div className="md:hidden mt-4">
             <div className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
               <h3 className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-3">Other Fees</h3>
               <div className="space-y-4">
@@ -952,7 +952,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       </div>
 
       {/* 桌面端表格视图 - 中屏及以上显示 */}
-      <div className="hidden lg:block overflow-x-auto rounded-2xl border border-gray-200/30 dark:border-white/10
+      <div className="hidden md:block overflow-x-auto rounded-2xl border border-gray-200/30 dark:border-white/10
                     bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl shadow-lg">
         <div className="min-w-[800px] lg:min-w-[1000px] xl:min-w-[1200px]">
           <table className="w-full">

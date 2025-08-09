@@ -59,7 +59,7 @@ export default function ItemsTable({
   return (
     <div className="space-y-2">
       {/* 移动端卡片视图 - 中屏以下显示 */}
-      <div className="block lg:hidden space-y-4">
+      <div className="block md:hidden space-y-4">
         {invoiceData.items.map((item, index) => (
           <div key={item.lineNo} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
             {/* 卡片头部 */}
@@ -345,7 +345,7 @@ export default function ItemsTable({
       </div>
 
       {/* 桌面端表格视图 - 中屏及以上显示 */}
-      <div className="hidden lg:block overflow-x-auto rounded-2xl border border-gray-200/30 dark:border-white/10
+      <div className="hidden md:block overflow-x-auto rounded-2xl border border-gray-200/30 dark:border-white/10
                     bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl shadow-lg">
         <div className="min-w-[600px]">
           <table className="w-full">

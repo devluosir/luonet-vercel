@@ -37,7 +37,7 @@ export default function SettingsPanel({ config, onChange }: SettingsPanelProps) 
         </div>
 
         {/* 分隔线 */}
-        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+        <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
         {/* 第二组：Invoice Type */}
         <div className="flex items-center gap-1.5">
@@ -64,7 +64,7 @@ export default function SettingsPanel({ config, onChange }: SettingsPanelProps) 
         </div>
 
         {/* 分隔线 */}
-        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+        <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
         {/* 第三组：Company Stamp */}
         <div className="flex items-center gap-1.5">

@@ -7,6 +7,7 @@ interface TabButtonProps {
 export function TabButton({ active, onClick, children }: TabButtonProps) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={`px-8 py-3 rounded-2xl text-sm font-medium transition-all duration-300
         ${active 

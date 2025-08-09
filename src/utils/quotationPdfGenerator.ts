@@ -28,6 +28,17 @@ export const generateQuotationPDF = async (rawData: unknown, mode: 'preview' | '
       throw new Error('无效的数据格式');
     }
     const data = rawData as QuotationData;
+    
+    // 读取页面列显示偏好，与页面表格保持一致
+    let visibleCols: string[] | undefined;
+    if (typeof window !== 'undefined') {
+      try {
+        visibleCols = JSON.parse(localStorage.getItem('qt.visibleCols') || 'null');
+      } catch (e) {
+        console.warn('Failed to read table column preferences:', e);
+      }
+    }
+    
     endTimer(dataValidationId, 'data-validation');
 
     // 创建PDF文档
@@ -211,7 +222,7 @@ export const generateQuotationPDF = async (rawData: unknown, mode: 'preview' | '
     if (data.items && data.items.length > 0) {
       // 使用共享的表格配置
       const { generateTableConfig } = await import('./pdfTableGenerator');
-      const tableConfig = generateTableConfig(data, doc, yPosition, margin, pageWidth, mode);
+      const tableConfig = generateTableConfig(data, doc, yPosition, margin, pageWidth, mode, visibleCols);
       
       doc.autoTable(tableConfig);
       yPosition = doc.lastAutoTable.finalY + 10;

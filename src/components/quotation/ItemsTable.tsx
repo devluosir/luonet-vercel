@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ImportDataButton } from './ImportDataButton';
+import { ColumnToggle } from './ColumnToggle';
+import { CellErrorDot } from './CellErrorDot';
+import { QuickImport } from './QuickImport';
+import { useTablePrefsHydrated } from '@/features/quotation/state/useTablePrefs';
+import { validateRow } from '@/features/quotation/utils/rowValidate';
+import { useGlobalPasteImport } from '@/features/quotation/hooks/useGlobalPasteImport';
 import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
+import type { ParseResult } from '@/features/quotation/utils/quickSmartParse';
 
 interface ItemsTableProps {
   data: QuotationData;
@@ -35,6 +42,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   onOtherFeesChange, 
   onChange 
 }) => {
+  // 可见列配置（使用水化版本）
+  const { visibleCols, isHydrated } = useTablePrefsHydrated();
+  
+  // 确保水化前使用默认列配置，避免水化错误
+  const effectiveVisibleCols = isHydrated ? visibleCols : ['partName', 'quantity', 'unit', 'unitPrice', 'amount'];
+  
   // 可用单位列表
   const availableUnits = [...defaultUnits, ...(data.customUnits || [])] as const;
 
@@ -70,6 +83,19 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   const [editingOtherFeeIndex, setEditingOtherFeeIndex] = useState<number | null>(null);
   const [editingOtherFeeAmount, setEditingOtherFeeAmount] = useState<string>('');
   const [isDarkMode, setIsDarkMode] = useState(false);
+  
+  // 全局粘贴预设数据状态
+  const [importPreset, setImportPreset] = useState<{raw: string, parsed: ParseResult} | null>(null);
+
+  // 注册全局粘贴功能
+  useGlobalPasteImport({
+    enabled: true,
+    maxDirectInsert: 80,
+    minConfidence: 0.7,
+    onFallbackPreview: (raw, parsed) => {
+      setImportPreset({ raw, parsed });
+    },
+  });
 
   // 检测暗色模式
   useEffect(() => {
@@ -189,15 +215,54 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     updateItems(processedItems);
   };
 
+  // 处理快速导入插入
+  const handleInsertImported = (rows: any[], replaceMode: boolean = false) => {
+    // 生成 id、补 amount
+    let maxId = replaceMode ? 0 : (data.items || []).reduce((m, it) => Math.max(m, it.id), 0);
+    const mapped = rows.map(r => {
+      const quantity = Number(r.quantity) || 0;
+      const unitPrice = Number(r.unitPrice) || 0;
+      return {
+        id: ++maxId,
+        partName: r.partName || '',
+        description: r.description || '',
+        quantity,
+        unit: r.unit || 'pc',
+        unitPrice,
+        amount: quantity * unitPrice,
+        remarks: '',
+      };
+    });
+    
+    // 根据模式决定替换还是追加
+    const finalItems = replaceMode ? mapped : [...(data.items || []), ...mapped];
+    updateItems(finalItems);
+  };
+
   return (
     <div className="space-y-0">
-      <ImportDataButton onImport={handleImport} />
-      <div className="text-sm text-gray-500 dark:text-gray-400 mb-2 px-1">
-        提示：双击单元格可以切换红色高亮显示
+      {/* 表格工具栏 */}
+      <div className="flex items-center justify-between mb-4 px-1">
+        <div className="flex items-center gap-2">
+          <ImportDataButton onImport={handleImport} />
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div>提示：双击单元格可以切换红色高亮显示</div>
+            {/* 已移除快捷粘贴提示 */}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <ColumnToggle />
+          <QuickImport 
+            onInsert={handleInsertImported}
+            presetRaw={importPreset?.raw}
+            presetParsed={importPreset?.parsed}
+            onClosePreset={() => setImportPreset(null)}
+          />
+        </div>
       </div>
       
       {/* 移动端卡片视图 - 中屏以下显示 */}
-      <div className="block lg:hidden space-y-4">
+      <div className="block md:hidden space-y-4">
         {(data.items || []).map((item, index) => (
           <div key={item.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
             {/* 卡片头部 */}
@@ -206,6 +271,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 Item #{index + 1}
               </div>
               <button
+                type="button"
                 onClick={() => handleSoftDelete(index)}
                 className="text-gray-400 hover:text-red-500 transition-colors p-1"
                 title="删除此项"
@@ -242,7 +308,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               </div>
 
               {/* Description */}
-              {data.showDescription && (
+              {effectiveVisibleCols.includes('description') && (
                 <div>
                   <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
                   <textarea
@@ -385,9 +451,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               </div>
 
               {/* Remarks */}
-              {data.showRemarks && (
-                <div>
-                  <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Remarks</label>
+                                  {effectiveVisibleCols.includes('remarks') && (
+                      <div>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Remarks</label>
                   <textarea
                     value={item.remarks}
                     onChange={(e) => {
@@ -428,6 +494,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     Other Fee #{index + 1}
                   </div>
                   <button
+                    type="button"
                     onClick={() => handleOtherFeeSoftDelete(index)}
                     className="text-gray-400 hover:text-red-500 transition-colors p-1"
                     title="删除此项"
@@ -505,7 +572,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         placeholder="0.00"
                       />
                     </div>
-                    {data.showRemarks && (
+                    {effectiveVisibleCols.includes('remarks') && (
                       <div>
                         <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Remarks</label>
                         <textarea
@@ -541,7 +608,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       </div>
 
       {/* 桌面端表格视图 - 中屏及以上显示 */}
-      <div className="hidden lg:block">
+      <div className="hidden md:block">
         <div className="overflow-x-auto">
           <div className="inline-block min-w-full align-middle">
             <div className={`border border-[#E5E5EA] dark:border-[#2C2C2E]
@@ -555,34 +622,38 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     <th className={`left-0 z-10 w-12 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
                       bg-[#F5F5F7] dark:bg-[#3A3A3C]
                       ${(data.otherFees ?? []).length === 0 ? 'rounded-tl-2xl' : ''}`}>No.</th>
-                    <th className={`px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap ${
-                      data.showDescription && data.showRemarks 
-                        ? 'w-1/5' 
-                        : data.showDescription || data.showRemarks
-                        ? 'w-1/3'
-                        : 'w-1/2'
-                    }`}>Part Name</th>
-                    {data.showDescription && (
-                      <th className={`px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] ${
-                        data.showRemarks ? 'w-1/5' : 'w-1/3'
-                      }`}>Description</th>
+                    {effectiveVisibleCols.includes('partName') && (
+                      <th className="px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap min-w-[120px]">Part Name</th>
                     )}
-                    <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
-                    <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
-                    <th className="w-32 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
-                    <th className="w-28 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
-                    {data.showRemarks && (
-                      <th className={`w-1/5 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
+                    {effectiveVisibleCols.includes('description') && (
+                      <th className="px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] min-w-[120px]">Description</th>
+                    )}
+                    {effectiveVisibleCols.includes('quantity') && (
+                      <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
+                    )}
+                    {effectiveVisibleCols.includes('unit') && (
+                      <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
+                    )}
+                    {effectiveVisibleCols.includes('unitPrice') && (
+                      <th className="w-32 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
+                    )}
+                    {effectiveVisibleCols.includes('amount') && (
+                      <th className="w-28 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
+                    )}
+                    {effectiveVisibleCols.includes('remarks') && (
+                      <th className={`min-w-[120px] px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
                         ${(data.otherFees ?? []).length === 0 ? 'rounded-tr-2xl' : ''}`}>Remarks</th>
                     )}
-                    {!data.showRemarks && (
+                    {(!effectiveVisibleCols.includes('remarks') || visibleCols.length === 0) && (
                       <th className={`w-12 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]
                         ${(data.otherFees ?? []).length === 0 ? 'rounded-tr-2xl' : ''}`}></th>
                     )}
                   </tr>
                 </thead>
                 <tbody className="bg-white/90 dark:bg-[#1C1C1E]/90">
-                  {(data.items || []).map((item, index) => (
+                  {(data.items || []).map((item, index) => {
+                    const err = validateRow(item);
+                    return (
                     <tr key={item.id} className="border-t border-[#E5E5EA] dark:border-[#2C2C2E]">
                       <td className={`sticky left-0 z-10 w-12 px-2 py-2 text-center text-sm bg-white/90 dark:bg-[#1C1C1E]/90
                         ${index === (data.items || []).length - 1 && !data.otherFees?.length ? 'rounded-bl-2xl' : ''}`}>
@@ -597,38 +668,37 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           {index + 1}
                         </span>
                       </td>
-                      <td className={`px-2 py-2 bg-white/90 dark:bg-[#1C1C1E]/90 ${
-                        data.showDescription && data.showRemarks 
-                          ? 'w-1/5'
-                          : data.showDescription || data.showRemarks
-                          ? 'w-1/3'
-                          : 'w-1/2'
-                      }`}>
-                        <textarea
-                          value={item.partName}
-                          onChange={(e) => {
-                            handleItemChange(index, 'partName', e.target.value);
-                            e.target.style.height = '28px';
-                            e.target.style.height = `${e.target.scrollHeight}px`;
-                          }}
-                          onDoubleClick={() => handleDoubleClick(index, 'partName')}
-                          onFocus={handleIOSInputFocus}
-                          className={`w-full px-3 py-1.5 bg-transparent border border-transparent
-                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                            hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
-                            ios-optimized-input
-                            ${item.highlight?.partName ? highlightClass : ''}`}
-                          style={{ 
-                            height: '28px',
-                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                          }}
-                        />
-                      </td>
-                      {data.showDescription && (
-                        <td className={`px-2 py-2 ${data.showRemarks ? 'w-1/5' : 'w-1/3'}`}>
+                      {effectiveVisibleCols.includes('partName') && (
+                        <td className="px-2 py-2 bg-white/90 dark:bg-[#1C1C1E]/90">
+                          <div className="flex items-center">
+                            <textarea
+                              value={item.partName}
+                              onChange={(e) => {
+                                handleItemChange(index, 'partName', e.target.value);
+                                e.target.style.height = '28px';
+                                e.target.style.height = `${e.target.scrollHeight}px`;
+                              }}
+                              onDoubleClick={() => handleDoubleClick(index, 'partName')}
+                              onFocus={handleIOSInputFocus}
+                              className={`w-full px-3 py-1.5 bg-transparent border border-transparent
+                                focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                                hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                                text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                                placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                                transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden
+                                ios-optimized-input
+                                ${item.highlight?.partName ? highlightClass : ''}`}
+                              style={{ 
+                                height: '28px',
+                                ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                              }}
+                            />
+                            {err?.field === 'partName' && <CellErrorDot title={err.msg} />}
+                          </div>
+                        </td>
+                      )}
+                      {effectiveVisibleCols.includes('description') && (
+                        <td className="px-2 py-2">
                           <textarea
                             value={item.description}
                             onChange={(e) => {
@@ -653,129 +723,141 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           />
                         </td>
                       )}
-                      <td className="w-24 px-2 py-2">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={editingQtyIndex === index ? editingQtyAmount : item.quantity.toString()}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (/^\d*$/.test(value)) {
-                              setEditingQtyAmount(value);
-                              handleItemChange(index, 'quantity', value === '' ? 0 : parseInt(value));
-                            }
-                          }}
-                          onFocus={(e) => {
-                            setEditingQtyIndex(index);
-                            setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
-                            e.target.select();
-                            handleIOSInputFocus(e);
-                          }}
-                          onBlur={() => {
-                            setEditingQtyIndex(null);
-                            setEditingQtyAmount('');
-                          }}
-                          onDoubleClick={() => handleDoubleClick(index, 'quantity')}
-                          className={`w-full px-3 py-1.5 bg-transparent border border-transparent
-                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                            hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            transition-all duration-200 text-center
-                            [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                            ios-optimized-input
-                            ${item.highlight?.quantity ? highlightClass : ''}`}
-                          style={{
-                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                          }}
-                        />
-                      </td>
-                      <td className="w-24 px-2 py-2">
-                        <select
-                          value={item.unit}
-                          onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
-                          onDoubleClick={() => handleDoubleClick(index, 'unit')}
-                          onFocus={handleIOSInputFocus}
-                          className={`w-full px-3 py-1.5 bg-transparent border border-transparent
-                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                            hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            transition-all duration-200 text-center cursor-pointer
-                            appearance-none ios-optimized-input
-                            ${item.highlight?.unit ? highlightClass : ''}`}
-                          style={{
-                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                          }}
-                        >
-                          {availableUnits.map(unit => {
-                            const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) ? getUnitDisplay(unit, item.quantity) : unit;
-                            return (
-                              <option key={unit} value={displayUnit}>
-                                {displayUnit}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </td>
-                      <td className="w-32 px-2 py-2">
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={editingPriceIndex === index ? editingPriceAmount : item.unitPrice.toFixed(2)}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (/^\d*\.?\d*$/.test(value)) {
-                              setEditingPriceAmount(value);
-                              handleItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
-                            }
-                          }}
-                          onDoubleClick={() => handleDoubleClick(index, 'unitPrice')}
-                          onFocus={(e) => {
-                            setEditingPriceIndex(index);
-                            setEditingPriceAmount(item.unitPrice === 0 ? '' : item.unitPrice.toString());
-                            e.target.select();
-                            handleIOSInputFocus(e);
-                          }}
-                          onBlur={() => {
-                            setEditingPriceIndex(null);
-                            setEditingPriceAmount('');
-                          }}
-                          className={`w-full px-3 py-1.5 bg-transparent border border-transparent
-                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                            hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            transition-all duration-200 text-center
-                            [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
-                            ios-optimized-input
-                            ${item.highlight?.unitPrice ? highlightClass : ''}`}
-                          style={{
-                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                          }}
-                        />
-                      </td>
-                      <td className={`w-28 px-2 py-2
-                        ${!data.showRemarks && index === (data.items || []).length - 1 && !data.otherFees?.length ? 'rounded-br-2xl' : ''}`}>
-                        <input
-                          type="text"
-                          value={item.amount.toFixed(2)}
-                          readOnly
-                          onDoubleClick={() => handleDoubleClick(index, 'amount')}
-                          className={`w-full px-3 py-1.5 bg-transparent
-                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                            transition-all duration-200 text-center
-                            ios-optimized-input
-                            ${item.highlight?.amount ? highlightClass : ''}`}
-                          style={{
-                            ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
-                          }}
-                        />
-                      </td>
-                      {data.showRemarks && (
-                        <td className={`w-1/5 px-2 py-2
-                          ${index === (data.items || []).length - 1 && !data.otherFees?.length ? 'rounded-br-2xl' : ''}`}>
+                      {effectiveVisibleCols.includes('quantity') && (
+                        <td className="w-24 px-2 py-2">
+                          <div className="flex items-center">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={editingQtyIndex === index ? editingQtyAmount : item.quantity.toString()}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (/^\d*$/.test(value)) {
+                                  setEditingQtyAmount(value);
+                                  handleItemChange(index, 'quantity', value === '' ? 0 : parseInt(value));
+                                }
+                              }}
+                              onFocus={(e) => {
+                                setEditingQtyIndex(index);
+                                setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
+                                e.target.select();
+                                handleIOSInputFocus(e);
+                              }}
+                              onBlur={() => {
+                                setEditingQtyIndex(null);
+                                setEditingQtyAmount('');
+                              }}
+                              onDoubleClick={() => handleDoubleClick(index, 'quantity')}
+                              className={`w-full px-3 py-1.5 bg-transparent border border-transparent
+                                focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                                hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                                text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                                placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                                transition-all duration-200 text-center
+                                [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                                ios-optimized-input
+                                ${item.highlight?.quantity ? highlightClass : ''}`}
+                              style={{
+                                ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                              }}
+                            />
+                            {err?.field === 'quantity' && <CellErrorDot title={err.msg} />}
+                          </div>
+                        </td>
+                      )}
+                      {effectiveVisibleCols.includes('unit') && (
+                        <td className="w-24 px-2 py-2">
+                          <select
+                            value={item.unit}
+                            onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
+                            onDoubleClick={() => handleDoubleClick(index, 'unit')}
+                            onFocus={handleIOSInputFocus}
+                            className={`w-full px-3 py-1.5 bg-transparent border border-transparent
+                              focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                              hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                              transition-all duration-200 text-center cursor-pointer
+                              appearance-none ios-optimized-input
+                              ${item.highlight?.unit ? highlightClass : ''}`}
+                            style={{
+                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                            }}
+                          >
+                            {availableUnits.map(unit => {
+                              const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) ? getUnitDisplay(unit, item.quantity) : unit;
+                              return (
+                                <option key={unit} value={displayUnit}>
+                                  {displayUnit}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </td>
+                      )}
+                      {effectiveVisibleCols.includes('unitPrice') && (
+                        <td className="w-32 px-2 py-2">
+                          <div className="flex items-center">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={editingPriceIndex === index ? editingPriceAmount : item.unitPrice.toFixed(2)}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (/^\d*\.?\d*$/.test(value)) {
+                                  setEditingPriceAmount(value);
+                                  handleItemChange(index, 'unitPrice', value === '' ? 0 : parseFloat(value));
+                                }
+                              }}
+                              onDoubleClick={() => handleDoubleClick(index, 'unitPrice')}
+                              onFocus={(e) => {
+                                setEditingPriceIndex(index);
+                                setEditingPriceAmount(item.unitPrice === 0 ? '' : item.unitPrice.toString());
+                                e.target.select();
+                                handleIOSInputFocus(e);
+                              }}
+                              onBlur={() => {
+                                setEditingPriceIndex(null);
+                                setEditingPriceAmount('');
+                              }}
+                              className={`w-full px-3 py-1.5 bg-transparent border border-transparent
+                                focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                                hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                                text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                                placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                                transition-all duration-200 text-center
+                                [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+                                ios-optimized-input
+                                ${item.highlight?.unitPrice ? highlightClass : ''}`}
+                              style={{
+                                ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                              }}
+                            />
+                            {err?.field === 'unitPrice' && <CellErrorDot title={err.msg} />}
+                          </div>
+                        </td>
+                      )}
+                      {effectiveVisibleCols.includes('amount') && (
+                        <td className="w-28 px-2 py-2">
+                          <input
+                            type="text"
+                            value={item.amount.toFixed(2)}
+                            readOnly
+                            onDoubleClick={() => handleDoubleClick(index, 'amount')}
+                            className={`w-full px-3 py-1.5 bg-transparent
+                              text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                              placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                              transition-all duration-200 text-center
+                              ios-optimized-input
+                              ${item.highlight?.amount ? highlightClass : ''}`}
+                            style={{
+                              ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle)
+                            }}
+                          />
+                        </td>
+                      )}
+                      {effectiveVisibleCols.includes('remarks') && (
+                        <td className="px-2 py-2">
                           <textarea
                             value={item.remarks}
                             onChange={(e) => {
@@ -801,7 +883,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         </td>
                       )}
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -827,7 +910,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             ×
                           </span>
                         </td>
-                        <td colSpan={data.showDescription ? 6 : 5} className="px-2 py-2">
+                        <td colSpan={effectiveVisibleCols.includes('description') ? 6 : 5} className="px-2 py-2">
                           <textarea
                             value={fee.description}
                             onChange={(e) => {
@@ -852,7 +935,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           />
                         </td>
                         <td className={`w-28 px-2 py-2
-                          ${index === (data.otherFees ?? []).length - 1 && !data.showRemarks ? 'rounded-br-2xl' : ''}`}>
+                          ${index === (data.otherFees ?? []).length - 1 && !effectiveVisibleCols.includes('remarks') ? 'rounded-br-2xl' : ''}`}>
                           <input
                             type="text"
                             inputMode="decimal"
@@ -889,7 +972,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             placeholder="0.00"
                           />
                         </td>
-                        {data.showRemarks && (
+                        {effectiveVisibleCols.includes('remarks') && (
                           <td className={`w-1/5 px-2 py-2
                             ${index === (data.otherFees ?? []).length - 1 ? 'rounded-br-2xl' : ''}`}>
                             <textarea

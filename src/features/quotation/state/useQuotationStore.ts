@@ -74,6 +74,7 @@ export interface QuotationState {
   showPreview: boolean;
   isPasteDialogOpen: boolean;
   notesConfig: NoteConfig[]; // 新增：Notes配置
+  compactMode: boolean; // 新增：紧凑模式开关
   
   // 🔥 新增：选择态标记
   uiFlags: {
@@ -105,6 +106,7 @@ export interface QuotationState {
   setShowPreview: (show: boolean) => void;
   setPasteDialogOpen: (open: boolean) => void;
   setPreviewItem: (item: QuotationState['previewItem']) => void;
+  setCompactMode: (compact: boolean) => void; // 新增：紧凑模式切换
   
   // 🔥 新增：UI标记控制
   setUIFlags: (flags: Partial<QuotationState['uiFlags']>) => void;
@@ -144,6 +146,7 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
   showPreview: false,
   isPasteDialogOpen: false,
   notesConfig: DEFAULT_NOTES_CONFIG, // 新增：默认Notes配置
+  compactMode: false, // 新增：默认非紧凑模式
   uiFlags: { selectingCustomer: false }, // 🔥 新增：UI标记初始化
   previewItem: null,
 
@@ -161,6 +164,7 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
   setShowPreview: (show) => set({ showPreview: show }),
   setPasteDialogOpen: (open) => set({ isPasteDialogOpen: open }),
   setPreviewItem: (item) => set({ previewItem: item }),
+  setCompactMode: (compact) => set({ compactMode: compact }),
   
   // 🔥 新增：UI标记控制
   setUIFlags: (flags) => set((state) => ({ 
