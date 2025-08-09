@@ -4,6 +4,15 @@ import type { NoteConfig } from '../types/notes';
 import { DEFAULT_NOTES_CONFIG } from '../types/notes';
 import { getInitialQuotationData } from '@/utils/quotationInitialData';
 import { getDefaultNotes } from '@/utils/getDefaultNotes';
+import { eventSampler } from '../utils/eventLogger';
+
+// 已知的QuotationData字段
+const KNOWN_KEYS = new Set<keyof QuotationData>([
+  'quotationNo', 'contractNo', 'date', 'notes', 'from', 'to', 'inquiryNo', 'currency',
+  'paymentDate', 'items', 'amountInWords', 'showDescription', 'showRemarks', 'showBank', 
+  'showStamp', 'otherFees', 'customUnits', 'showPaymentTerms', 'showInvoiceReminder',
+  'additionalPaymentTerms', 'templateConfig'
+]);
 
 // 浅比较工具函数
 const shallowEqual = (a: any, b: any) => {
@@ -14,6 +23,39 @@ const shallowEqual = (a: any, b: any) => {
   for (const k of ka) if (a[k] !== b[k]) return false;
   return true;
 };
+
+/**
+ * 开发模式补丁审计器
+ * 用于定位大补丁来源和清理未知字段
+ */
+function devAuditPatch(patch: Partial<QuotationData>, source = 'unknown'): Partial<QuotationData> {
+  if (process.env.NODE_ENV !== 'development') return patch;
+
+  const keys = Object.keys(patch);
+  
+  // 大补丁警告 + 堆栈追踪
+  if (keys.length > 8) {
+    const stack = new Error().stack?.split('\n').slice(2, 8).join('\n');
+    console.warn(`[PatchAuditor] Large patch (${keys.length} keys) from ${source}`, {
+      keys,
+      source,
+      stack
+    });
+  }
+  
+  // 未知字段清理
+  const unknown = keys.filter(k => !KNOWN_KEYS.has(k as keyof QuotationData));
+  if (unknown.length > 0) {
+    console.warn('[PatchAuditor] Unknown keys dropped:', unknown);
+    const cleaned = { ...patch };
+    for (const k of unknown) {
+      delete (cleaned as any)[k];
+    }
+    return cleaned;
+  }
+  
+  return patch;
+}
 
 type Tab = 'quotation' | 'confirmation';
 
@@ -112,24 +154,51 @@ export const useQuotationStore = create<QuotationState>((set) => ({
   setPreviewItem: (item) => set({ previewItem: item }),
   
   // 业务 Actions
-  updateItems: (items) => set((state) => ({ 
-    data: { ...state.data, items } 
-  })),
-  updateOtherFees: (fees) => set((state) => ({ 
-    data: { ...state.data, otherFees: fees } 
-  })),
+  updateItems: (items) => set((state) => {
+    if (shallowEqual(items, state.data.items)) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[updateItems] items相同，跳过更新');
+      }
+      return {};
+    }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[updateItems] 更新items', items?.length);
+    }
+    return { data: { ...state.data, items, updatedAt: Date.now() } };
+  }),
+  updateOtherFees: (fees) => set((state) => {
+    if (shallowEqual(fees, state.data.otherFees)) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[updateOtherFees] otherFees相同，跳过更新');
+      }
+      return {};
+    }
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[updateOtherFees] 更新otherFees', fees?.length);
+    }
+    return { data: { ...state.data, otherFees: fees, updatedAt: Date.now() } };
+  }),
   updateData: (updates) => set((state) => {
-    const next = { ...state.data, ...updates };
+    // 审计并清理补丁
+    const patch = devAuditPatch(updates, 'updateData');
+    const next = { ...state.data, ...patch };
+    
     if (shallowEqual(next, state.data)) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('[updateData] 无变化，跳过更新', updates);
+        console.log('[updateData] 无变化，跳过更新', patch);
       }
       return {}; // 无变化不set
     }
+    
+    // 有变更时自动更新updatedAt（Store统一管理）
+    const finalData = { ...next, updatedAt: Date.now() };
+    
     if (process.env.NODE_ENV === 'development') {
-      console.log('[updateData] 应用更新', updates);
+      console.log('[updateData] 应用更新+updatedAt', patch);
+      eventSampler.log('updateData', patch);
     }
-    return { data: next };
+    
+    return { data: finalData };
   }),
   updateFrom: (from) => set((state) => {
     if (from === state.data.from) {
@@ -138,11 +207,12 @@ export const useQuotationStore = create<QuotationState>((set) => ({
       }
       return {};
     }
-    const nextNotes = getDefaultNotes(from, state.tab);
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[updateFrom] 更新from和notes', { from, notes: nextNotes });
-    }
-    return { data: { ...state.data, from, notes: nextNotes } };
+          const nextNotes = getDefaultNotes(from, state.tab);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[updateFrom] 更新from和notes', { from, notes: nextNotes });
+        eventSampler.log('updateFrom', { from, notesCount: nextNotes.length });
+      }
+      return { data: { ...state.data, from, notes: nextNotes, updatedAt: Date.now() } };
   }),
   updateCurrency: (currency) => set((state) => {
     if (currency === state.data.currency) {
@@ -153,8 +223,9 @@ export const useQuotationStore = create<QuotationState>((set) => ({
     }
     if (process.env.NODE_ENV === 'development') {
       console.log('[updateCurrency] 更新currency', currency);
+      eventSampler.log('updateCurrency', { currency });
     }
-    return { data: { ...state.data, currency } };
+    return { data: { ...state.data, currency, updatedAt: Date.now() } };
   }),
   
   // 新增：Notes配置相关actions

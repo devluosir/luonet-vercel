@@ -1,17 +1,21 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { unstable_batchedUpdates as batch } from 'react-dom';
 import { useQuotationStore } from '../state/useQuotationStore';
-import { shallow } from 'zustand/shallow';
+import { sel } from '../state/selectors';
+import { isAllowedSettingsKey, SETTINGS_ALLOWED_KEYS } from '../constants/settings-allowed-keys';
+import { smartEqual, hasChanged } from '../utils/smartEquality';
 // 移除选择器导入，直接使用store
 import { useInitQuotation } from '../hooks/useInitQuotation';
 import { useClipboardImport } from '../hooks/useClipboardImport';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { getInitialQuotationData } from '@/utils/quotationInitialData';
 import { useToast } from '@/components/ui/Toast';
+import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
 import { saveOrUpdate } from '../services/quotation.service';
 import { useGenerateService } from '../services/generate.service';
 import { downloadPdf } from '../services/generate.service';
@@ -54,37 +58,134 @@ export default function QuotationPage() {
   const pathname = usePathname();
   const { showToast } = useToast();
   
-  // 拆分selector，避免每次创建新对象引用
-  // 状态 selectors
-  const activeTab = useQuotationStore(s => s.tab);
-  const data = useQuotationStore(s => s.data, shallow);
-  const editId = useQuotationStore(s => s.editId);
-  const isGenerating = useQuotationStore(s => s.isGenerating);
-  const generatingProgress = useQuotationStore(s => s.generatingProgress);
-  const isPreviewing = useQuotationStore(s => s.isPreviewing);
-  const previewProgress = useQuotationStore(s => s.previewProgress);
-  const showSettings = useQuotationStore(s => s.showSettings);
-  const showPreview = useQuotationStore(s => s.showPreview);
-  const isPasteDialogOpen = useQuotationStore(s => s.isPasteDialogOpen);
-  const previewItem = useQuotationStore(s => s.previewItem);
-  const notesConfig = useQuotationStore(s => s.notesConfig, shallow);
+  // 性能调试开关（开发模式）
+  if (process.env.NODE_ENV === 'development') {
+    // 可选：启用why-did-you-render
+    // import('why-did-you-render').then(({ default: wdyr }) => {
+    //   wdyr(React, { trackAllPureComponents: true });
+    // });
+  }
   
-  // Action selectors（actions是稳定引用，不需要shallow）
-  const setTab = useQuotationStore(s => s.setTab);
-  const setEditId = useQuotationStore(s => s.setEditId);
-  const setGenerating = useQuotationStore(s => s.setGenerating);
-  const setProgress = useQuotationStore(s => s.setProgress);
-  const setPreviewing = useQuotationStore(s => s.setPreviewing);
-  const setPreviewProgress = useQuotationStore(s => s.setPreviewProgress);
-  const setShowSettings = useQuotationStore(s => s.setShowSettings);
-  const setShowPreview = useQuotationStore(s => s.setShowPreview);
-  const setPasteDialogOpen = useQuotationStore(s => s.setPasteDialogOpen);
-  const setPreviewItem = useQuotationStore(s => s.setPreviewItem);
-  const updateItems = useQuotationStore(s => s.updateItems);
-  const updateOtherFees = useQuotationStore(s => s.updateOtherFees);
-  const updateData = useQuotationStore(s => s.updateData);
-  const updateFrom = useQuotationStore(s => s.updateFrom);
-  const updateCurrency = useQuotationStore(s => s.updateCurrency);
+  // 使用选择器工具带，简洁且类型安全
+  // 状态 selectors
+  const activeTab = useQuotationStore(sel.tab);
+  const data = useQuotationStore(sel.data);
+  const editId = useQuotationStore(sel.editId);
+  const isGenerating = useQuotationStore(sel.isGenerating);
+  const generatingProgress = useQuotationStore(sel.generatingProgress);
+  const isPreviewing = useQuotationStore(sel.isPreviewing);
+  const previewProgress = useQuotationStore(sel.previewProgress);
+  const showSettings = useQuotationStore(sel.showSettings);
+  const showPreview = useQuotationStore(sel.showPreview);
+  const isPasteDialogOpen = useQuotationStore(sel.isPasteDialogOpen);
+  const previewItem = useQuotationStore(sel.previewItem);
+  const notesConfig = useQuotationStore(sel.notesConfig);
+  
+  // 原子字段 selectors（用于优化依赖）
+  const from = useQuotationStore(sel.from);
+  const currency = useQuotationStore(sel.currency);
+  
+  // Action selectors（actions是稳定引用）
+  const setTab = useQuotationStore(sel.setTab);
+  const setEditId = useQuotationStore(sel.setEditId);
+  const setGenerating = useQuotationStore(sel.setGenerating);
+  const setProgress = useQuotationStore(sel.setProgress);
+  const setPreviewing = useQuotationStore(sel.setPreviewing);
+  const setPreviewProgress = useQuotationStore(sel.setPreviewProgress);
+  const setShowSettings = useQuotationStore(sel.setShowSettings);
+  const setShowPreview = useQuotationStore(sel.setShowPreview);
+  const setPasteDialogOpen = useQuotationStore(sel.setPasteDialogOpen);
+  const setPreviewItem = useQuotationStore(sel.setPreviewItem);
+  const updateItems = useQuotationStore(sel.updateItems);
+  const updateOtherFees = useQuotationStore(sel.updateOtherFees);
+  const _updateData = useQuotationStore(sel.updateData);
+  const updateFrom = useQuotationStore(sel.updateFrom);
+  const _updateCurrency = useQuotationStore(sel.updateCurrency);
+  const updateCurrency = useMemo(() => _updateCurrency ?? (() => {}), [_updateCurrency]); // 空函数兜底
+  
+  // 页面级白名单：覆盖Items & CustomerInfo & AutoSave等所有入口
+  const PAGE_ALLOWED_KEYS = useMemo(() => {
+    const pageKeys = new Set<string>([
+      'items', 'otherFees', 'to', 'inquiryNo', 'quotationNo', 'contractNo', 'date',
+      'notes', 'currency', 'from', 'amountInWords', 'paymentDate'
+    ]);
+    
+    // 合并 SETTINGS_ALLOWED_KEYS
+    SETTINGS_ALLOWED_KEYS.forEach(key => pageKeys.add(key));
+    
+    return pageKeys;
+  }, []);
+
+  // 页面层保险丝：拦截超大补丁 + 白名单过滤
+  const updateData = useCallback((patch: Partial<QuotationData>) => {
+    if (!patch) return;
+
+    // 白名单过滤
+    const filtered = Object.fromEntries(
+      Object.entries(patch).filter(([k]) => PAGE_ALLOWED_KEYS.has(k as keyof QuotationData))
+    );
+
+    if (process.env.NODE_ENV === 'development') {
+      const originalKeys = Object.keys(patch);
+      const filteredKeys = Object.keys(filtered);
+      const dropped = originalKeys.filter(k => !PAGE_ALLOWED_KEYS.has(k as keyof QuotationData));
+      
+      if (dropped.length > 0) {
+        console.warn('[Guard] Dropped unknown page patch keys:', dropped);
+      }
+      
+      if (filteredKeys.length > 8) {
+        console.warn('[Guard] Large patch at page adapter (after filtering)', {
+          originalKeys,
+          filteredKeys,
+          droppedKeys: dropped,
+          caller: 'page-adapter'
+        });
+      }
+    }
+
+    _updateData(filtered);
+  }, [_updateData, PAGE_ALLOWED_KEYS]);
+
+  // Items表格专用适配器：拒绝整包，只写items字段
+  const handleItemsChange = useCallback((
+    nextItems: LineItem[] | ((prev: LineItem[]) => LineItem[])
+  ) => {
+    if (typeof nextItems === 'function') {
+      // 支持函数式更新
+      const prevItems = data.items ?? [];
+      const computed = nextItems(prevItems);
+      updateItems(computed);
+    } else {
+      updateItems(nextItems);
+    }
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[handleItemsChange] 更新items数组', { 
+        count: Array.isArray(nextItems) ? nextItems.length : 'function' 
+      });
+    }
+  }, [data.items, updateItems]);
+
+  // OtherFees表格专用适配器：拒绝整包，只写otherFees字段  
+  const handleOtherFeesChange = useCallback((
+    nextFees: OtherFee[] | ((prev: OtherFee[]) => OtherFee[])
+  ) => {
+    if (typeof nextFees === 'function') {
+      // 支持函数式更新
+      const prevFees = data.otherFees ?? [];
+      const computed = nextFees(prevFees);
+      updateOtherFees(computed);
+    } else {
+      updateOtherFees(nextFees);
+    }
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[handleOtherFeesChange] 更新otherFees数组', { 
+        count: Array.isArray(nextFees) ? nextFees.length : 'function' 
+      });
+    }
+  }, [data.otherFees, updateOtherFees]);
   
   // 初始化
   useInitQuotation();
@@ -95,22 +196,16 @@ export default function QuotationPage() {
   // PDF预热（自动执行，无需手动调用）
   usePdfWarmup();
   
-  // 使用useMemo缓存衍生状态，避免重复计算
-  const itemsTotal = useMemo(() => 
-    data.items?.reduce((sum, item) => sum + item.amount, 0) || 0, 
-    [data.items]
-  );
-  const feesTotal = useMemo(() => 
-    data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0, 
-    [data.otherFees]
-  );
+  // 使用选择器工具带的派生选择器，避免重复计算
+  const itemsTotal = useQuotationStore(sel.itemsTotal);
+  const feesTotal = useQuotationStore(sel.feesTotal);
   const totalAmount = useMemo(() => 
     itemsTotal + feesTotal, 
     [itemsTotal, feesTotal]
   );
   const currencySymbol = useMemo(() => 
-    data.currency === 'USD' ? '$' : data.currency === 'EUR' ? '€' : '¥', 
-    [data.currency]
+    currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '¥', 
+    [currency]
   );
   
   // 剪贴板导入
@@ -130,43 +225,85 @@ export default function QuotationPage() {
     setTab(tab);
   }, [activeTab, setTab]);
 
-  // 智能路由适配器 - 将SettingsPanel的onChange路由到细粒度actions
-  const handleSettingsChange = useCallback((patch: Partial<QuotationData>) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[handleSettingsChange]', patch);
+  // 去重限频的notes警告
+  const warnedNotesRef = useRef(false);
+  const pendingPatchRef = useRef<Partial<QuotationData> | null>(null);
+  
+  // 清理notes并发出警告（去重限频）
+  const guardNotes = useCallback((patch: Partial<QuotationData>) => {
+    if (!('notes' in patch)) return;
+    delete (patch as Record<string, unknown>).notes;
+    if (process.env.NODE_ENV === 'development' && !warnedNotesRef.current) {
+      console.warn('[Guard] UI should not pass `notes` in SettingsPanel.onChange (suppressed next)');
+      warnedNotesRef.current = true;
     }
+  }, []);
+
+  // 单帧合并的补丁刷新
+  const flushPendingPatch = useCallback(() => {
+    if (!pendingPatchRef.current) return;
     
-    if (!patch || Object.keys(patch).length === 0) return;
+    const patch = pendingPatchRef.current;
+    pendingPatchRef.current = null;
 
-    // 逐字段对比，避免"值相同但对象新建"带来的无效写入
-    const shouldUpdateFrom = typeof patch.from === 'string' && patch.from !== data.from;
-    const shouldUpdateCurrency = !!patch.currency && patch.currency !== data.currency;
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[handleSettingsChange] flushing batch:', patch);
+    }
 
-    if (shouldUpdateFrom) {
+    // 清理notes
+    guardNotes(patch);
+
+    // 专用字段优先处理
+    if (typeof patch.from === 'string' && !smartEqual(patch.from, from, 'from')) {
       if (process.env.NODE_ENV === 'development') {
         console.log('[updateFrom]', patch.from);
       }
-      updateFrom(patch.from as string);
+      updateFrom(patch.from);
     }
     
-    if (shouldUpdateCurrency) {
+    if (patch.currency && !smartEqual(patch.currency, currency, 'currency')) {
       if (process.env.NODE_ENV === 'development') {
         console.log('[updateCurrency]', patch.currency);
       }
       updateCurrency(patch.currency);
     }
 
-    // 3) 剩余字段（排除已处理字段 & UI不该直接改的字段）
-    const { from, currency, notes, ...rest } = patch;
-    const restEntries = Object.entries(rest).filter(([k, v]) => (data as any)[k] !== v);
-    
-    if (restEntries.length > 0) {
+    // 过滤剩余字段：仅白名单 + 真变更 + 排除已处理字段
+    const { from: patchFrom, currency: patchCurrency, notes, ...rest } = patch;
+    const restFiltered = Object.fromEntries(
+      Object.entries(rest)
+        .filter(([key]) => isAllowedSettingsKey(key))
+        .filter(([key, value]) => hasChanged(value, (data as Record<string, unknown>)[key], key))
+    );
+
+    if (Object.keys(restFiltered).length > 0) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('[updateData]', Object.fromEntries(restEntries));
+        console.log('[updateData] filtered keys:', Object.keys(restFiltered));
       }
-      updateData(Object.fromEntries(restEntries));
+      updateData(restFiltered);
     }
-  }, [data, updateFrom, updateCurrency, updateData]);
+  }, [from, currency, data, updateFrom, updateCurrency, updateData, guardNotes]);
+
+  // 严控入口的设置变更处理器
+  const handleSettingsChange = useCallback((patch: Partial<QuotationData>) => {
+    if (!patch || Object.keys(patch).length === 0) return;
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[handleSettingsChange] received:', {
+        keys: Object.keys(patch),
+        allowedKeys: Object.keys(patch).filter(isAllowedSettingsKey),
+        rejectedKeys: Object.keys(patch).filter(k => !isAllowedSettingsKey(k))
+      });
+    }
+
+    // 合并到单帧队列
+    pendingPatchRef.current = { ...(pendingPatchRef.current || {}), ...patch };
+    
+    // 用rAF汇聚多次onChange，配合React批处理
+    requestAnimationFrame(() => {
+      batch(() => flushPendingPatch());
+    });
+  }, [flushPendingPatch]);
   
   // 处理保存
   const handleSave = async () => {
@@ -416,10 +553,11 @@ export default function QuotationPage() {
                   <div className="px-4 sm:px-0">
                     <ImportDataButton onImport={updateItems} />
                   </div>
-                  <ItemsTable 
-                    data={data}
-                    onChange={updateData}
-                  />
+                            <ItemsTable 
+            data={data} 
+            onItemsChange={handleItemsChange}
+            onOtherFeesChange={handleOtherFeesChange}
+          />
                 </div>
 
                 {/* 按钮和总金额区域 */}

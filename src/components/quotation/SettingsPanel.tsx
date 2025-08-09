@@ -311,4 +311,9 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
       </div>
     </div>
   );
+}
+
+// 性能调试标记（开发模式下可启用）
+if (process.env.NODE_ENV === 'development') {
+  // SettingsPanel.whyDidYouRender = true;
 } 

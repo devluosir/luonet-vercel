@@ -11,22 +11,18 @@ export default function ClientInitializer() {
           console.info('[ClientInitializer] 开始预热PDF资源...');
           
           // 动态导入，避免首屏同步成本/SSR 参与
-          const { preloadFonts, warmupFontRegistration } = await import('../utils/fontLoader');
+          const { preloadFonts } = await import('../utils/fontLoader');
           const { preloadImages } = await import('../utils/imageLoader');
+          const { initializeGlobalFonts } = await import('../utils/globalFontRegistry');
           
           if (!cancelled) {
-            // 预热字体资源
-            await preloadFonts();
+            // 应用级字体预注册（彻底单例化）
+            await initializeGlobalFonts();
           }
           
           if (!cancelled) {
             // 预热图片资源
             await preloadImages();
-          }
-          
-          if (!cancelled) {
-            // 预热字体注册
-            await warmupFontRegistration();
           }
           
           // 开发环境健康检查

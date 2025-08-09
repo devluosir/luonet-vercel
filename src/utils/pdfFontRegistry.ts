@@ -65,7 +65,7 @@ export function bytesToBase64(buf: ArrayBuffer | Uint8Array): string {
 /**
  * 一次性加载并编码字体数据
  */
-async function loadFontDataOnce(): Promise<{ regB64: string; boldB64: string }> {
+export async function loadFontDataOnce(): Promise<{ regB64: string; boldB64: string }> {
   if (!fontDataPromise) {
     fontDataPromise = (async () => {
       const { regular, bold } = await getChineseFontBase64();

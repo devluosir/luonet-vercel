@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ImportDataButton } from './ImportDataButton';
-import type { QuotationData, LineItem } from '@/types/quotation';
+import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
 
 interface ItemsTableProps {
   data: QuotationData;
-  onChange: (data: QuotationData) => void;
+  // 拆分为专用回调，拒绝整包更新
+  onItemsChange?: (items: LineItem[]) => void;
+  onOtherFeesChange?: (fees: OtherFee[]) => void;
+  // 兼容旧接口（过渡期）
+  onChange?: (data: QuotationData) => void;
 }
 
 // Add highlight class constant
@@ -25,9 +29,39 @@ const iosCaretStyleDark = {
   WebkitCaretColor: '#0A84FF',
 } as React.CSSProperties;
 
-export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
+export const ItemsTable: React.FC<ItemsTableProps> = ({ 
+  data, 
+  onItemsChange, 
+  onOtherFeesChange, 
+  onChange 
+}) => {
   // 可用单位列表
   const availableUnits = [...defaultUnits, ...(data.customUnits || [])] as const;
+
+  // 内部适配器：优先使用专用回调，fallback到旧接口
+  const updateItems = useCallback((newItems: LineItem[]) => {
+    if (onItemsChange) {
+      onItemsChange(newItems);
+    } else if (onChange) {
+      // 兼容旧接口，但会在开发模式警告
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[ItemsTable] 使用deprecated接口onChange，建议迁移到onItemsChange');
+      }
+      updateItems(newItems);
+    }
+  }, [onItemsChange, onChange, data]);
+
+  const updateOtherFees = useCallback((newFees: OtherFee[]) => {
+    if (onOtherFeesChange) {
+      onOtherFeesChange(newFees);
+    } else if (onChange) {
+      // 兼容旧接口，但会在开发模式警告
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[ItemsTable] 使用deprecated接口onChange，建议迁移到onOtherFeesChange');
+      }
+      onChange({ ...data, otherFees: newFees });
+    }
+  }, [onOtherFeesChange, onChange, data]);
 
   const [editingPriceIndex, setEditingPriceIndex] = useState<number | null>(null);
   const [editingPriceAmount, setEditingPriceAmount] = useState<string>('');
@@ -92,13 +126,13 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
     }
 
     newItems[index] = updatedItem;
-    onChange({ ...data, items: newItems });
+    updateItems(newItems);
   };
 
   // 处理软删除
   const handleSoftDelete = (index: number) => {
     const newItems = data.items.filter((_, i) => i !== index);
-    onChange({ ...data, items: newItems });
+    updateItems(newItems);
   };
 
   // 处理双击事件
@@ -111,7 +145,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
         [field]: !newItems[index].highlight?.[field]
       }
     };
-    onChange({ ...data, items: newItems });
+    updateItems(newItems);
   };
 
   // 处理其他费用更改
@@ -120,7 +154,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
     const updatedFee = { ...newOtherFees[index] };
     (updatedFee as any)[field] = value;
     newOtherFees[index] = updatedFee;
-    onChange({ ...data, otherFees: newOtherFees });
+    updateOtherFees(newOtherFees);
   };
 
   // 处理其他费用双击事件
@@ -133,13 +167,13 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
         [field]: !newOtherFees[index].highlight?.[field]
       }
     };
-    onChange({ ...data, otherFees: newOtherFees });
+    updateOtherFees(newOtherFees);
   };
 
   // 处理其他费用软删除
   const handleOtherFeeSoftDelete = (index: number) => {
     const newOtherFees = (data.otherFees || []).filter((_, i) => i !== index);
-    onChange({ ...data, otherFees: newOtherFees });
+    updateOtherFees(newOtherFees);
   };
 
   // 处理导入数据
@@ -152,7 +186,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({ data, onChange }) => {
       };
     });
 
-    onChange({ ...data, items: processedItems });
+    updateItems(processedItems);
   };
 
   return (

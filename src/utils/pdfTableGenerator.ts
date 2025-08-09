@@ -6,6 +6,7 @@ interface ExtendedStyles extends Partial<Styles> {
 }
 import { QuotationData } from '@/types/quotation';
 import jsPDF from 'jspdf';
+import { safeSetFont, getFontName } from './pdf/ensureFont';
 
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
@@ -147,7 +148,8 @@ export const generateTableConfig = (
   doc: ExtendedJsPDF,
   currentY: number,
   margin: number,
-  pageWidth: number
+  pageWidth: number,
+  mode: 'preview' | 'export' = 'export'
 ): UserOptions => {
   // 计算页面可用宽度
   const pageWidth_mm = pageWidth;
@@ -251,7 +253,7 @@ export const generateTableConfig = (
       lineColor: [0, 0, 0],
       lineWidth: 0.1,
       textColor: [0, 0, 0],
-      font: 'NotoSansSC',
+      font: getFontName(mode), // 根据模式选择字体
       fontStyle: 'normal', // 明确指定normal
       valign: 'middle',
       minCellHeight: 6,
@@ -262,7 +264,7 @@ export const generateTableConfig = (
       fontSize: 8,
       fontStyle: 'bold', // 明确指定bold
       halign: 'center',
-      font: 'NotoSansSC',
+      font: getFontName(mode), // 根据模式选择字体
       valign: 'middle',
       minCellHeight: 8,
       cellPadding: { left: 2, right: 2, top: 2, bottom: 2 },
@@ -295,7 +297,7 @@ export const generateTableConfig = (
         const totalPages = doc.getNumberOfPages();
         const str = `Page ${data.pageNumber} of ${totalPages}`;
         doc.setFontSize(8);
-        doc.setFont('NotoSansSC', 'normal');
+        safeSetFont(doc, 'NotoSansSC', 'normal', mode);
         doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
       };
 

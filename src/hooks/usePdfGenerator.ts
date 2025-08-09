@@ -17,7 +17,7 @@ export function usePdfGenerator() {
     const { generateOrderConfirmationPDF } = await import('@/utils/orderConfirmationPdfGenerator');
 
     return type === 'quotation'
-      ? await generateQuotationPDF(data)
+      ? await generateQuotationPDF(data, opts?.mode === 'preview' ? 'preview' : 'export')
       : await generateOrderConfirmationPDF(data, opts?.mode === 'preview');
   }, []);
   

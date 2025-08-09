@@ -10,17 +10,31 @@ const HEALTH_THRESHOLDS = {
   CRITICAL: 2000,   // >1200ms: 失败
 } as const;
 
+// 健康检查结果缓存（开发模式下避免重复检查）
+let healthcheckResult: { 
+  success: boolean; 
+  duration: number; 
+  status: 'excellent' | 'warning' | 'critical';
+  details: string;
+  pdfSize: number;
+} | null = null;
+
 /**
  * PDF字体健康检查 - 带阈值和错误分级
  * 检查字体注册、setFont、AutoTable、Blob生成全链路
  */
-export async function pdfFontHealthcheck(): Promise<{ 
+export async function pdfFontHealthcheck(skipCache = false): Promise<{ 
   success: boolean; 
   duration: number; 
   status: 'excellent' | 'warning' | 'critical';
   details: string;
   pdfSize: number;
 }> {
+  // 开发模式下复用缓存结果，避免重复检查
+  if (!skipCache && healthcheckResult && process.env.NODE_ENV === 'development') {
+    console.log('[healthcheck] 复用缓存结果，跳过重复检查');
+    return healthcheckResult;
+  }
   const t0 = performance.now();
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -124,13 +138,20 @@ export async function pdfFontHealthcheck(): Promise<{
     logHealthcheck(healthStatus, duration, details);
     logPdfGenerated(blob.size, duration);
     
-    return {
+    const result = {
       success,
       duration,
       status,
       details,
       pdfSize
     };
+    
+    // 缓存成功的健康检查结果
+    if (success && process.env.NODE_ENV === 'development') {
+      healthcheckResult = result;
+    }
+    
+    return result;
     
   } catch (error) {
     const duration = performance.now() - t0;

@@ -2,6 +2,8 @@ import React from 'react';
 import type { QuotationData } from '@/types/quotation';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
+import { hasStringChanged, normalizeStringInput } from '@/features/quotation/utils/inputUtils';
+import { useDebounced } from '@/hooks/useDebounced';
 
 interface CustomerInfoSectionProps {
   data: QuotationData;
@@ -94,6 +96,48 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   const [filteredCustomers, setFilteredCustomers] = useState<SavedCustomer[]>([]);
   const [hasSelectedCustomer, setHasSelectedCustomer] = useState(() => Boolean(data?.to?.trim()));
   
+  // 防抖输入状态 - 减少高频更新
+  const [inquiryDraft, setInquiryDraft] = useState(data.inquiryNo ?? '');
+  const [quotationDraft, setQuotationDraft] = useState(data.quotationNo ?? '');
+  const [contractDraft, setContractDraft] = useState(data.contractNo ?? '');
+  
+  // 防抖处理，250ms延迟
+  const debouncedInquiry = useDebounced(inquiryDraft, 250);
+  const debouncedQuotation = useDebounced(quotationDraft, 250);
+  const debouncedContract = useDebounced(contractDraft, 250);
+  
+  // 防抖值变化时更新到store
+  useEffect(() => {
+    if (debouncedInquiry !== (data.inquiryNo ?? '')) {
+      onChange({ inquiryNo: debouncedInquiry });
+    }
+  }, [debouncedInquiry, data.inquiryNo, onChange]);
+  
+  useEffect(() => {
+    if (debouncedQuotation !== (data.quotationNo ?? '')) {
+      onChange({ quotationNo: debouncedQuotation });
+    }
+  }, [debouncedQuotation, data.quotationNo, onChange]);
+  
+  useEffect(() => {
+    if (debouncedContract !== (data.contractNo ?? '')) {
+      onChange({ contractNo: debouncedContract });
+    }
+  }, [debouncedContract, data.contractNo, onChange]);
+  
+  // 外部数据变化时同步到draft状态
+  useEffect(() => {
+    setInquiryDraft(data.inquiryNo ?? '');
+  }, [data.inquiryNo]);
+  
+  useEffect(() => {
+    setQuotationDraft(data.quotationNo ?? '');
+  }, [data.quotationNo]);
+  
+  useEffect(() => {
+    setContractDraft(data.contractNo ?? '');
+  }, [data.contractNo]);
+  
   // 添加 ref 用于检测点击外部区域
   const savedCustomersRef = useRef<HTMLDivElement>(null);
   const buttonsRef = useRef<HTMLDivElement>(null);
@@ -125,8 +169,8 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 处理客户信息输入变化
   const handleCustomerInfoChange = useCallback((newTo: string) => {
-    // 如果值没有变化，不执行任何操作
-    if (newTo === data.to) return;
+    // 规范化后比较，如果值没有变化，不执行任何操作
+    if (!hasStringChanged(newTo, data.to)) return;
     
     // 如果输入内容变化，显示自动完成建议
     if (newTo.trim() && savedCustomers.length > 0) {
@@ -140,10 +184,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
     // 当用户开始输入时，重置选择状态
     setHasSelectedCustomer(false);
     
-    onChange({
-      ...data,
-      to: newTo
-    });
+    onChange({ to: newTo });
   }, [data, onChange, savedCustomers, getAutoCompleteSuggestions]);
 
   // 选择自动完成建议
@@ -429,40 +470,23 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
     }
   }, [showSavedCustomers, filteredCustomers]);
 
-  // 使用useMemo优化询价单号更新
+  // 防抖输入处理函数 - 直接更新draft状态
   const handleInquiryNoChange = useCallback((newInquiryNo: string) => {
-    if (newInquiryNo === data.inquiryNo) return;
-    onChange({
-      ...data,
-      inquiryNo: newInquiryNo
-    });
-  }, [data, onChange]);
+    setInquiryDraft(newInquiryNo);
+  }, []);
 
-  // 使用useMemo优化报价单号更新
   const handleQuotationNoChange = useCallback((newQuotationNo: string) => {
-    if (newQuotationNo === data.quotationNo) return;
-    onChange({
-      ...data,
-      quotationNo: newQuotationNo
-    });
-  }, [data, onChange]);
+    setQuotationDraft(newQuotationNo);
+  }, []);
 
-  // 使用useMemo优化合同号更新
   const handleContractNoChange = useCallback((newContractNo: string) => {
-    if (newContractNo === data.contractNo) return;
-    onChange({
-      ...data,
-      contractNo: newContractNo
-    });
-  }, [data, onChange]);
+    setContractDraft(newContractNo);
+  }, []);
 
   // 使用useMemo优化日期更新
   const handleDateChange = useCallback((newDate: string) => {
     if (newDate === data.date) return;
-    onChange({
-      ...data,
-      date: newDate
-    });
+    onChange({ date: newDate });
   }, [data, onChange]);
 
   // 使用useMemo优化显示名称
@@ -577,7 +601,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
             </label>
             <input
               type="text"
-              value={data.inquiryNo ?? ''}
+              value={inquiryDraft}
               onChange={(e) => handleInquiryNoChange(e.target.value)}
               placeholder="Inquiry No."
               className={inputClassName}
@@ -600,7 +624,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                 </label>
                 <input
                   type="text"
-                  value={data.quotationNo ?? ''}
+                  value={quotationDraft}
                   onChange={(e) => handleQuotationNoChange(e.target.value)}
                   placeholder="Quotation No. *"
                   className={`${inputClassName} [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 font-medium text-[#007AFF] dark:text-[#0A84FF]`}
@@ -632,7 +656,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                 </label>
                 <input
                   type="text"
-                  value={data.contractNo ?? ''}
+                  value={contractDraft}
                   onChange={(e) => handleContractNoChange(e.target.value)}
                   placeholder="Contract No."
                   className={`${inputClassName} [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 font-medium text-[#007AFF] dark:text-[#0A84FF]`}
@@ -661,7 +685,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                 </label>
                 <input
                   type="text"
-                  value={data.quotationNo ?? ''}
+                  value={quotationDraft}
                   onChange={(e) => handleQuotationNoChange(e.target.value)}
                   placeholder="Quotation No."
                   className={inputClassName}
@@ -676,4 +700,9 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   );
 });
 
-CustomerInfoSection.displayName = 'CustomerInfoSection'; 
+CustomerInfoSection.displayName = 'CustomerInfoSection';
+
+// 性能调试标记（开发模式下可启用）
+if (process.env.NODE_ENV === 'development') {
+  // CustomerInfoSection.whyDidYouRender = true;
+} 
