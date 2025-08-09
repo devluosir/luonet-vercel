@@ -185,13 +185,19 @@ export const UltimatePowerNotesSection: React.FC<UltimatePowerNotesSectionProps>
               onUpdateNotes={handleUpdateNotes}
               onBatchUpdate={handleBatchUpdate}
             />
-            <OptimizedNotesSection />
+            <OptimizedNotesSection 
+              data={data} 
+              onChange={onChange || (() => {})} 
+            />
           </div>
         );
         
       case 'desktop':
       default:
-        return <OptimizedNotesSection />;
+        return <OptimizedNotesSection 
+          data={data} 
+          onChange={onChange || (() => {})} 
+        />;
     }
   }, [
     effectiveViewMode,

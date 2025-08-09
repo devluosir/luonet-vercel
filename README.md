@@ -1,5 +1,26 @@
 # MLUONET - 企业管理系统
 
+[![版本](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/mluonet/mluonet)
+[![许可证](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![构建状态](https://github.com/mluonet/mluonet/workflows/CI/badge.svg)](https://github.com/mluonet/mluonet/actions)
+
+## 🚀 包含企业级预水合清理工具
+
+本项目现在包含了一个**生产就绪的预水合清理工具**，专门解决Next.js应用中浏览器扩展导致的hydration警告问题。
+
+### 📦 独立包发布
+
+预水合清理工具已作为独立包发布：
+
+```bash
+npm install @mluonet/pre-hydration-cleanup
+```
+
+- 📚 **完整文档**: [packages/pre-hydration-cleanup/README.md](packages/pre-hydration-cleanup/README.md)
+- 🔧 **使用示例**: [docs/USAGE_EXAMPLES.md](docs/USAGE_EXAMPLES.md)
+- 🛡️ **CSP安全指南**: [docs/CSP_SECURITY_GUIDE.md](docs/CSP_SECURITY_GUIDE.md)
+- 🚨 **故障排除**: [docs/TROUBLESHOOTING_GUIDE.md](docs/TROUBLESHOOTING_GUIDE.md)
+
 ## 项目概述
 
 MLUONET是一个现代化的企业管理系统，提供完整的业务管理解决方案，包括报价、采购、发票、装箱单等核心功能。

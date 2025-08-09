@@ -1,5 +1,7 @@
 // 🚀 Notes功能性能基准测试和对比分析工具
 
+import React from 'react';
+
 interface PerformanceMetric {
   name: string;
   value: number;

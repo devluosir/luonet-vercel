@@ -133,7 +133,9 @@ class SmartSuggestionEngine {
         template,
         matches: text.match(template.pattern),
       }))
-      .filter(result => result.matches)
+      .filter((result): result is { template: TemplatePattern; matches: RegExpMatchArray } => 
+        result.matches !== null
+      )
       .sort((a, b) => b.template.confidence - a.template.confidence);
   }
   

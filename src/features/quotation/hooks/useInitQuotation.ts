@@ -16,11 +16,11 @@ export function useInitQuotation() {
     initialized.current = true;
 
     // 初始化标签页
-    const tab = getTabFromSearchParams(searchParams);
+    const tab = getTabFromSearchParams(searchParams || undefined);
     setTab(tab);
 
     // 初始化编辑ID
-    const editId = getEditIdFromPathname(pathname);
+    const editId = getEditIdFromPathname(pathname || undefined);
     if (editId) {
       setEditId(editId);
     }
@@ -40,7 +40,7 @@ export function useInitQuotation() {
 
   // 更新URL参数以持久化tab状态
   useEffect(() => {
-    const tab = getTabFromSearchParams(searchParams);
+    const tab = getTabFromSearchParams(searchParams || undefined);
     if (typeof window !== 'undefined' && tab) {
       const url = new URL(window.location.href);
       url.searchParams.set('tab', tab);
