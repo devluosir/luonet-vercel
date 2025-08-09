@@ -25,11 +25,26 @@ export default function ClientInitializer() {
             await preloadImages();
           }
           
-          // 开发环境健康检查
+          // 开发环境健康检查（空闲时执行，避免干扰首个预览）
           if (process.env.NODE_ENV === 'development' && !cancelled) {
-            const { runHealthcheckInDev } = await import('../utils/pdfFontHealthcheck');
-            if (typeof runHealthcheckInDev === 'function') {
-              runHealthcheckInDev();
+            const { pdfFontHealthcheck } = await import('../utils/pdfFontHealthcheck');
+            const runHealthcheck = () => {
+              pdfFontHealthcheck().then(result => {
+                if (result.success) {
+                  console.log('[healthcheck] 开发环境健康检查通过:', result.details);
+                } else {
+                  console.error('[healthcheck] 开发环境健康检查失败:', result.details);
+                }
+              }).catch(error => {
+                console.error('[healthcheck] 开发环境健康检查异常:', error);
+              });
+            };
+            
+            // 使用requestIdleCallback空闲执行，避免与用户操作竞争
+            if ((window as any).requestIdleCallback) {
+              (window as any).requestIdleCallback(runHealthcheck, { timeout: 3000 });
+            } else {
+              setTimeout(runHealthcheck, 1200);
             }
           }
           

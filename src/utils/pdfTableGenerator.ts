@@ -242,9 +242,8 @@ export const generateTableConfig = (
         }] : [])
       ])
     ] as unknown as RowInput[],
-    columnStyles,
     margin: { left: margin, right: margin, bottom: 20 },
-    tableWidth: Math.min(usable, 555), // 限制表格总宽 <= 可用宽
+    tableWidth: 'wrap' as const, // 自动换行表格布局
     theme: 'plain',
     showHead: 'everyPage',
     styles: {
@@ -254,21 +253,36 @@ export const generateTableConfig = (
       lineWidth: 0.1,
       textColor: [0, 0, 0],
       font: getFontName(mode), // 根据模式选择字体
-      fontStyle: 'normal', // 明确指定normal
-      valign: 'middle',
+      fontStyle: 'normal' as const, // 明确指定normal
+      valign: 'middle' as const,
       minCellHeight: 6,
       overflow: 'linebreak' as const, // 确保内容会自动换行
-      cellWidth: 'auto' // 自动调整列宽
+      cellWidth: 'auto' as const // 自动调整列宽
     },
     headStyles: {
       fontSize: 8,
-      fontStyle: 'bold', // 明确指定bold
-      halign: 'center',
+      fontStyle: 'bold' as const, // 明确指定bold
+      halign: 'center' as const,
       font: getFontName(mode), // 根据模式选择字体
-      valign: 'middle',
+      valign: 'middle' as const,
       minCellHeight: 8,
       cellPadding: { left: 2, right: 2, top: 2, bottom: 2 },
       overflow: 'visible' as const // 防止标题文字被截断
+    },
+    // 增强列样式配置
+    columnStyles: {
+      ...columnStyles,
+      // 确保所有列都有最小宽度
+      ...Object.fromEntries(
+        Array.from({ length: 8 }, (_, i) => [
+          i.toString(),
+          {
+            ...columnStyles[i.toString()] || {},
+            cellWidth: 'auto' as const,
+            minCellWidth: 20
+          }
+        ])
+      )
     },
     didParseCell: (data) => {
       const pageHeight = data.doc.internal.pageSize.height;
@@ -293,7 +307,7 @@ export const generateTableConfig = (
         doc.setFillColor(255, 255, 255);
         doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
         
-        // 添加页码
+        // 添加页码（使用安全字体设置）
         const totalPages = doc.getNumberOfPages();
         const str = `Page ${data.pageNumber} of ${totalPages}`;
         doc.setFontSize(8);
@@ -318,4 +332,41 @@ export const generateTableConfig = (
       doc.line(cell.x + cell.width, cell.y, cell.x + cell.width, cell.y + cell.height); // 右边框
     }
   };
-}; 
+};
+
+/**
+ * AutoTable选项标准化函数 - 防回归保险丝
+ * 自动将任何顶层的overflow选项移动到styles中，避免deprecated警告
+ */
+type AutoTableOptions = Parameters<typeof import('jspdf').jsPDF.prototype.autoTable>[0];
+
+export function normalizeAutoTableOptions(opts: AutoTableOptions): AutoTableOptions {
+  const { overflow, styles, headStyles, bodyStyles, ...rest } = opts as any;
+  
+  if (overflow && typeof overflow === 'string') {
+    console.warn('[AutoTable] 检测到顶层overflow配置，自动移动到styles中以避免deprecated警告');
+    
+    // 将overflow移动到各个样式配置中
+    const normalizedStyles = { ...(styles || {}), overflow };
+    const normalizedHeadStyles = { ...(headStyles || {}), overflow };
+    const normalizedBodyStyles = { ...(bodyStyles || {}), overflow };
+    
+    return {
+      ...rest,
+      styles: normalizedStyles,
+      headStyles: normalizedHeadStyles,
+      bodyStyles: normalizedBodyStyles
+    };
+  }
+  
+  return opts;
+}
+
+/**
+ * 安全的AutoTable调用包装函数
+ * 使用此函数替代直接调用autoTable，确保配置符合最新标准
+ */
+export function safeAutoTable(doc: any, options: AutoTableOptions): void {
+  const normalizedOptions = normalizeAutoTableOptions(options);
+  doc.autoTable(normalizedOptions);
+} 

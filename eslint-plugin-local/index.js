@@ -53,6 +53,49 @@ module.exports = {
           }
         };
       }
+    },
+    'no-autotable-top-level-overflow': {
+      meta: {
+        type: 'problem',
+        docs: {
+          description: 'Disallow top-level overflow in autoTable options',
+          category: 'Best Practices',
+        },
+        messages: {
+          topLevelOverflow: "AutoTable 顶层 'overflow' 已废弃，请写到 styles/headStyles/bodyStyles 中。"
+        },
+        schema: []
+      },
+      create(context) {
+        return {
+          CallExpression(node) {
+            // 检查 autoTable 调用
+            if (
+              (node.callee.type === 'MemberExpression' && 
+               node.callee.property.name === 'autoTable') ||
+              (node.callee.type === 'Identifier' && 
+               node.callee.name === 'autoTable')
+            ) {
+              // 检查最后一个参数是否为对象，并且包含 overflow 属性
+              const optionsArg = node.arguments[node.arguments.length - 1];
+              if (optionsArg && optionsArg.type === 'ObjectExpression') {
+                const overflowProp = optionsArg.properties.find(prop => 
+                  prop.type === 'Property' && 
+                  prop.key.type === 'Identifier' && 
+                  prop.key.name === 'overflow'
+                );
+                
+                if (overflowProp) {
+                  context.report({
+                    node: overflowProp,
+                    messageId: 'topLevelOverflow'
+                  });
+                }
+              }
+            }
+          }
+        };
+      }
     }
   }
 };

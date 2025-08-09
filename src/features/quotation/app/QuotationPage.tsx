@@ -106,7 +106,13 @@ export default function QuotationPage() {
   // 页面级白名单：覆盖Items & CustomerInfo & AutoSave等所有入口
   const PAGE_ALLOWED_KEYS = useMemo(() => {
     const pageKeys = new Set<string>([
-      'items', 'otherFees', 'to', 'inquiryNo', 'quotationNo', 'contractNo', 'date',
+      // 商品信息
+      'items', 'otherFees',
+      // 客户信息（客户选择只应修改这些字段）
+      'to', 'address', 'contact', 'email', 'phone',
+      // 单据信息
+      'inquiryNo', 'quotationNo', 'contractNo', 'date',
+      // 其他必要字段
       'notes', 'currency', 'from', 'amountInWords', 'paymentDate'
     ]);
     
@@ -234,7 +240,7 @@ export default function QuotationPage() {
     if (!('notes' in patch)) return;
     delete (patch as Record<string, unknown>).notes;
     if (process.env.NODE_ENV === 'development' && !warnedNotesRef.current) {
-      console.warn('[Guard] UI should not pass `notes` in SettingsPanel.onChange (suppressed next)');
+      console.debug('[Guard] UI should not pass `notes` in SettingsPanel.onChange (正确阻断，降噪显示)');
       warnedNotesRef.current = true;
     }
   }, []);
@@ -369,7 +375,6 @@ export default function QuotationPage() {
   const handlePreview = async () => {
     if (!data) return;
 
-    const startTime = performance.now();
     setPreviewing(true);
     setPreviewProgress(0);
 
@@ -377,29 +382,43 @@ export default function QuotationPage() {
       setPreviewProgress(10); // 开始准备资源
       console.log('开始预览PDF生成...');
       
-      // 使用新的生成服务，包含Notes配置，预览模式
+      let pdfUrl: string;
+      
+      // 第一阶段：PDF生成核心（service层已包含监控，避免重复）
       const pdfBlob = await generatePdf(activeTab, data, notesConfig, (progress) => {
-        // 将生成进度映射到预览进度（10-90%）
-        const mappedProgress = 10 + (progress * 0.8);
+        // 将生成进度映射到预览进度（10-80%）
+        const mappedProgress = 10 + (progress * 0.7);
         setPreviewProgress(mappedProgress);
       }, { mode: 'preview' });
       
-      setPreviewProgress(90); // 创建预览数据
+      setPreviewProgress(80); // PDF生成完成，开始挂载预览
       
-      // 创建预览数据，包含PDF URL而不是blob
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      const previewData = {
-        ...buildPreviewPayload(activeTab, data, editId, totalAmount),
-        pdfUrl // 使用URL而不是blob，避免大对象传递
-      };
+      // 第二阶段：预览挂载（独立监控，阈值1200ms）
+      const { monitorPreviewMount } = await import('@/utils/performance');
+      await monitorPreviewMount('setup', async () => {
+        // 先清空预览状态，避免布局抖动
+        setPreviewItem(null);
+        setShowPreview(false);
+        
+        // 创建预览URL
+        pdfUrl = URL.createObjectURL(pdfBlob);
+        
+        // 使用requestAnimationFrame优化UI更新
+        await new Promise<void>(resolve => {
+          requestAnimationFrame(() => {
+            const previewData = {
+              ...buildPreviewPayload(activeTab, data, editId, totalAmount),
+              pdfUrl // 使用URL而不是blob，避免大对象传递
+            };
+            
+            setPreviewItem(previewData);
+            setShowPreview(true);
+            resolve();
+          });
+        });
+      });
       
-      setPreviewItem(previewData);
-      setShowPreview(true);
       setPreviewProgress(100); // 完成
-      
-      const endTime = performance.now();
-      console.log(`PDF预览生成完成，耗时: ${(endTime - startTime).toFixed(2)}ms`);
-      
       showToast('预览生成成功', 'success');
     } catch (error) {
       console.error('Error previewing PDF:', error);

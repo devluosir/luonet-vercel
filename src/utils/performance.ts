@@ -21,7 +21,13 @@ export class PerformanceMonitor {
   private thresholds = {
     loading: 50,      // 加载阶段 > 50ms 警告（首次 ≤ 120ms 可告警不拦截）
     registration: 15,  // 注册阶段 > 15ms 警告（首次 ≤ 40ms）
-    generation: 200    // 生成阶段 > 200ms 警告（表格复杂场景 ≤ 350ms）
+    generation: 200,   // PDF生成核心 > 200ms 警告（表格复杂场景 ≤ 350ms）
+    'preview-mount': 1200  // 预览挂载 > 1200ms 警告（首次预览可能较慢）
+  };
+
+  // 冷启动检测状态
+  private coldStartDetected = {
+    generation: true  // 首次生成视为冷启动
   };
 
   private constructor() {}
@@ -34,14 +40,33 @@ export class PerformanceMonitor {
   }
 
   // 开始监控
-  start(name: string, category: 'loading' | 'registration' | 'generation'): string {
+  start(name: string, category: 'loading' | 'registration' | 'generation' | 'preview-mount'): string {
     const id = `${category}_${name}_${Date.now()}`;
     this.metrics.set(id, { startTime: performance.now(), category });
     return id;
   }
 
-  // 结束监控
-  end(id: string): number {
+  // 动态阈值计算（支持模式和冷启动）
+  private getThreshold(category: string, context?: { mode?: 'preview' | 'export' | 'final'; operation?: string }): number {
+    const baseThreshold = this.thresholds[category as keyof typeof this.thresholds] || 1000;
+    
+    if (category === 'generation' && context) {
+      const isColdStart = this.coldStartDetected.generation;
+      const mode = context.mode || 'preview';
+      
+      // 分模式阈值策略
+      if (mode === 'preview') {
+        return isColdStart ? 250 : 200; // 预览模式：冷启动250ms，热启动200ms
+      } else if (mode === 'export' || mode === 'final') {
+        return isColdStart ? 400 : 300; // 导出模式：冷启动400ms，热启动300ms
+      }
+    }
+    
+    return baseThreshold;
+  }
+
+  // 结束监控（支持上下文信息）
+  end(id: string, context?: { mode?: 'preview' | 'export' | 'final'; operation?: string }): number {
     const metric = this.metrics.get(id);
     if (!metric) {
       console.warn(`性能监控指标未找到: ${id}`);
@@ -50,25 +75,29 @@ export class PerformanceMonitor {
 
     const endTime = performance.now();
     const duration = endTime - metric.startTime;
-    
-    // 检查是否超过阈值
-    const threshold = this.thresholds[metric.category as keyof typeof this.thresholds];
-    if (duration > threshold) {
-      console.warn(`⚠️ 性能警告 [${metric.category}] [${id}]: ${duration.toFixed(2)}ms (阈值: ${threshold}ms)`);
-    }
-    
-    // 记录到分类统计
-    if (!this.categories.has(metric.category)) {
-      this.categories.set(metric.category, []);
-    }
-    this.categories.get(metric.category)!.push(duration);
+    const category = metric.category;
+    const threshold = this.getThreshold(category, context);
 
-    // 输出监控日志
-    console.log(`性能监控 [${metric.category}] [${id}]: ${duration.toFixed(2)}ms`);
-    
-    // 清理指标
+    // 标记冷启动完成
+    if (category === 'generation' && this.coldStartDetected.generation) {
+      this.coldStartDetected.generation = false;
+    }
+
+    // 记录到分类统计
+    if (!this.categories.has(category)) {
+      this.categories.set(category, []);
+    }
+    this.categories.get(category)!.push(duration);
+
+    // 性能告警（带上下文信息）
+    const contextInfo = context ? ` [${context.mode || 'default'}${this.coldStartDetected.generation ? ',冷启动' : ''}]` : '';
+    if (duration > threshold) {
+      console.warn(`⚠️ 性能告警 [${id}]${contextInfo}: ${duration.toFixed(2)}ms > ${threshold}ms 阈值`);
+    } else {
+      console.log(`✅ 性能正常 [${id}]${contextInfo}: ${duration.toFixed(2)}ms`);
+    }
+
     this.metrics.delete(id);
-    
     return duration;
   }
 
@@ -107,7 +136,7 @@ export class PerformanceMonitor {
   }
 
   // 设置阈值
-  setThreshold(category: 'loading' | 'registration' | 'generation', threshold: number): void {
+  setThreshold(category: 'loading' | 'registration' | 'generation' | 'preview-mount', threshold: number): void {
     this.thresholds[category] = threshold;
   }
 
@@ -157,15 +186,20 @@ export class PerformanceMonitor {
     return pageMetrics;
   }
 
-  // 监控异步函数执行时间
-  async monitor<T>(name: string, fn: () => Promise<T>): Promise<T> {
-    const id = this.start(name, 'generation');
+  // 监控异步函数执行时间（支持上下文）
+  async monitor<T>(
+    name: string, 
+    fn: () => Promise<T>, 
+    category: 'loading' | 'registration' | 'generation' | 'preview-mount' = 'generation',
+    context?: { mode?: 'preview' | 'export' | 'final'; operation?: string }
+  ): Promise<T> {
+    const id = this.start(name, category);
     try {
       const result = await fn();
-      this.end(id);
+      this.end(id, context);
       return result;
     } catch (error) {
-      this.end(id);
+      this.end(id, context);
       throw error;
     }
   }
@@ -195,13 +229,24 @@ export function monitor(name: string) {
 }
 
 /**
- * 监控PDF生成性能
+ * 监控PDF生成核心性能（只包含PDF生成，不包含UI挂载）
  */
 export async function monitorPdfGeneration<T>(
   name: string, 
+  fn: () => Promise<T>,
+  context?: { mode?: 'preview' | 'export' | 'final'; operation?: string }
+): Promise<T> {
+  return performanceMonitor.monitor(`PDF生成核心-${name}`, fn, 'generation', context);
+}
+
+/**
+ * 监控PDF预览挂载性能（包含UI渲染、iframe/object挂载等）
+ */
+export async function monitorPreviewMount<T>(
+  name: string, 
   fn: () => Promise<T>
 ): Promise<T> {
-  return performanceMonitor.monitor(`PDF生成-${name}`, fn);
+  return performanceMonitor.monitor(`预览挂载-${name}`, fn, 'preview-mount');
 }
 
 /**

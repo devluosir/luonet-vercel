@@ -74,6 +74,11 @@ interface QuotationState {
   showPreview: boolean;
   isPasteDialogOpen: boolean;
   notesConfig: NoteConfig[]; // 新增：Notes配置
+  
+  // 🔥 新增：选择态标记
+  uiFlags: {
+    selectingCustomer: boolean;
+  };
   previewItem: {
     id: string;
     createdAt: string;
@@ -101,6 +106,9 @@ interface QuotationState {
   setPasteDialogOpen: (open: boolean) => void;
   setPreviewItem: (item: QuotationState['previewItem']) => void;
   
+  // 🔥 新增：UI标记控制
+  setUIFlags: (flags: Partial<QuotationState['uiFlags']>) => void;
+  
   // 业务 Actions
   updateItems: (items: LineItem[]) => void;
   updateOtherFees: (fees: OtherFee[]) => void;
@@ -121,7 +129,7 @@ if (process.env.NODE_ENV === 'development') {
   console.log('[Store Init] useQuotationStore created');
 }
 
-export const useQuotationStore = create<QuotationState>((set) => ({
+export const useQuotationStore = create<QuotationState>((set, get) => ({
   // 初始状态
   tab: 'quotation',
   data: getInitialQuotationData(), // 使用预设值而不是空值
@@ -136,6 +144,7 @@ export const useQuotationStore = create<QuotationState>((set) => ({
   showPreview: false,
   isPasteDialogOpen: false,
   notesConfig: DEFAULT_NOTES_CONFIG, // 新增：默认Notes配置
+  uiFlags: { selectingCustomer: false }, // 🔥 新增：UI标记初始化
   previewItem: null,
 
   // Actions
@@ -152,6 +161,11 @@ export const useQuotationStore = create<QuotationState>((set) => ({
   setShowPreview: (show) => set({ showPreview: show }),
   setPasteDialogOpen: (open) => set({ isPasteDialogOpen: open }),
   setPreviewItem: (item) => set({ previewItem: item }),
+  
+  // 🔥 新增：UI标记控制
+  setUIFlags: (flags) => set((state) => ({ 
+    uiFlags: { ...state.uiFlags, ...flags } 
+  })),
   
   // 业务 Actions
   updateItems: (items) => set((state) => {
@@ -179,13 +193,31 @@ export const useQuotationStore = create<QuotationState>((set) => ({
     return { data: { ...state.data, otherFees: fees, updatedAt: Date.now() } };
   }),
   updateData: (updates) => set((state) => {
+    // 🚫 0号热补丁：在选择态下，严禁把 to 写成空串（抖动/清空都挡掉）
+    const { selectingCustomer } = state.uiFlags;
+    let patch = updates;
+    
+    if (
+      Object.prototype.hasOwnProperty.call(patch, 'to') &&
+      typeof patch.to === 'string' &&
+      patch.to.trim() === '' &&
+      selectingCustomer
+    ) {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[Guard] 阻止选择态下的空值to写入');
+      }
+      const { to, ...rest } = patch;
+      patch = rest as any; // 删除 to
+      if (Object.keys(patch).length === 0) return {}; // 没别的 key 就直接忽略
+    }
+    
     // 审计并清理补丁
-    const patch = devAuditPatch(updates, 'updateData');
-    const next = { ...state.data, ...patch };
+    const cleanedPatch = devAuditPatch(patch, 'updateData');
+    const next = { ...state.data, ...cleanedPatch };
     
     if (shallowEqual(next, state.data)) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('[updateData] 无变化，跳过更新', patch);
+        console.log('[updateData] 无变化，跳过更新', cleanedPatch);
       }
       return {}; // 无变化不set
     }
@@ -194,8 +226,8 @@ export const useQuotationStore = create<QuotationState>((set) => ({
     const finalData = { ...next, updatedAt: Date.now() };
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('[updateData] 应用更新+updatedAt', patch);
-      eventSampler.log('updateData', patch);
+      console.log('[updateData] 应用更新+updatedAt', cleanedPatch);
+      eventSampler.log('updateData', cleanedPatch);
     }
     
     return { data: finalData };

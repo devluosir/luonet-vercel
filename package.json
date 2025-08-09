@@ -7,7 +7,9 @@
     "build": "node scripts/embed-resources.js && next build",
     "start": "next start",
     "lint": "next lint",
-    "compress-stamps": "node scripts/compress-stamps.js"
+    "compress-stamps": "node scripts/compress-stamps.js",
+    "check:autotable": "grep -r \"autoTable.*overflow\" src/ && echo '❌ Found deprecated AutoTable overflow' || echo '✅ No deprecated AutoTable overflow found'",
+    "check:regression": "npm run check:autotable && npm run lint"
   },
   "dependencies": {
     "@auth/core": "^0.34.2",
