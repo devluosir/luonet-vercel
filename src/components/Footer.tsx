@@ -4,10 +4,10 @@ import { Sun, Moon, Calculator, CalendarDays } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { Calculator as CalculatorComponent } from './Calculator';
 import { DateCalculator } from './DateCalculator';
-import { useThemeManager } from '@/hooks/useThemeManager';
+import { useThemeContext } from '@/contexts/ThemeContext';
 
 export function Footer() {
-  const { mode, toggleMode, isDark } = useThemeManager();
+  const { mode, toggleMode, isDark } = useThemeContext();
   const [mounted, setMounted] = useState(false);
 
   // 使用统一的自定义主题管理系统

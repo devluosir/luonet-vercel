@@ -129,17 +129,15 @@ export class ThemeManager {
   private static instance: ThemeManager;
   private config: ThemeConfig = DEFAULT_THEME;
   private listeners: Set<(config: ThemeConfig) => void> = new Set();
+  private isInitialized = false;
+  private applyThemeDebounceTimer: NodeJS.Timeout | null = null;
+  private lastAppliedConfig: string = '';
 
   private constructor() {
-    this.loadFromStorage();
-    this.applyTheme();
-    
-    // 确保在客户端环境下正确初始化
+    // 只在客户端环境下初始化
     if (typeof window !== 'undefined') {
-      // 延迟应用主题，确保DOM已准备好
-      setTimeout(() => {
-        this.applyTheme();
-      }, 0);
+      this.loadFromStorage();
+      this.initializeTheme();
     }
   }
 
@@ -148,6 +146,28 @@ export class ThemeManager {
       ThemeManager.instance = new ThemeManager();
     }
     return ThemeManager.instance;
+  }
+
+  /**
+   * 初始化主题
+   */
+  private initializeTheme(): void {
+    if (this.isInitialized) return;
+    
+    this.applyTheme();
+    this.isInitialized = true;
+    
+    // 确保在DOM准备好后再次应用主题
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        this.applyTheme();
+      });
+    } else {
+      // DOM已经准备好，延迟应用确保所有样式都已加载
+      setTimeout(() => {
+        this.applyTheme();
+      }, 0);
+    }
   }
 
   /**
@@ -161,16 +181,35 @@ export class ThemeManager {
    * 更新主题配置
    */
   updateConfig(updates: Partial<ThemeConfig>): void {
-    console.log('🔄 更新主题配置:', { 当前: this.config, 更新: updates });
-    
     const oldConfig = { ...this.config };
     this.config = { ...this.config, ...updates };
     
+    // 检查配置是否真的发生了变化
+    const newConfigString = JSON.stringify(this.config);
+    if (newConfigString === this.lastAppliedConfig) {
+      return; // 配置没有变化，跳过更新
+    }
+    
+    console.log('🔄 更新主题配置:', { 当前: this.config, 更新: updates });
     console.log('🔄 配置已更新:', { 之前: oldConfig, 之后: this.config });
     
     this.saveToStorage();
-    this.applyTheme();
+    this.debouncedApplyTheme();
     this.notifyListeners();
+  }
+
+  /**
+   * 防抖应用主题
+   */
+  private debouncedApplyTheme(): void {
+    if (this.applyThemeDebounceTimer) {
+      clearTimeout(this.applyThemeDebounceTimer);
+    }
+    
+    this.applyThemeDebounceTimer = setTimeout(() => {
+      this.applyTheme();
+      this.applyThemeDebounceTimer = null;
+    }, 50); // 50ms 防抖
   }
 
   /**
@@ -210,6 +249,12 @@ export class ThemeManager {
     if (typeof window === 'undefined') return;
 
     const root = document.documentElement;
+    const configString = JSON.stringify(this.config);
+    
+    // 检查是否已经应用了相同的配置
+    if (configString === this.lastAppliedConfig) {
+      return;
+    }
     
     console.log('🔄 应用主题到DOM:', this.config);
     
@@ -234,6 +279,8 @@ export class ThemeManager {
     // 设置CSS变量
     this.setCSSVariables();
     
+    // 记录已应用的配置
+    this.lastAppliedConfig = configString;
     console.log('🔄 当前HTML类名:', root.className);
   }
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sun, Moon, Palette, Settings } from 'lucide-react';
-import { useThemeManager } from '@/hooks/useThemeManager';
+import { useThemeContext } from '@/contexts/ThemeContext';
 
 interface ThemeToggleProps {
   variant?: 'button' | 'dropdown' | 'compact';
@@ -20,7 +20,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
     setButtonTheme,
     isDark,
     isColorful 
-  } = useThemeManager();
+  } = useThemeContext();
   
   const [showDropdown, setShowDropdown] = useState(false);
 

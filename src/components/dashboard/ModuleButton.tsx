@@ -1,5 +1,5 @@
 import React from 'react';
-import { useThemeManager } from '@/hooks/useThemeManager';
+import { useThemeContext } from '@/contexts/ThemeContext';
 
 // 定义模块接口
 interface Module {
@@ -30,7 +30,7 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
   packingCount = 0,
   purchaseCount = 0
 }) => {
-  const { buttonTheme, getModuleColors } = useThemeManager();
+  const { buttonTheme, getModuleColors } = useThemeContext();
   const Icon = module.icon;
 
   const getCountForModule = (moduleId: string): number => {

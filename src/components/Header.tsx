@@ -10,7 +10,7 @@ import { PermissionRefreshButton } from './PermissionRefreshButton';
 import { format } from 'date-fns';
 import { preloadManager } from '@/utils/preloadUtils';
 import { LOGO_CONFIG } from '@/lib/logo-config';
-import { useThemeManager } from '@/hooks/useThemeManager';
+import { useThemeContext } from '@/contexts/ThemeContext';
 import { ThemeCompactToggle } from './ThemeToggle';
 import { apiRequestWithError, API_ENDPOINTS } from '@/lib/api-config';
 
@@ -49,7 +49,7 @@ export function Header({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const submenuHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
-  const { buttonTheme, setButtonTheme } = useThemeManager();
+  const { buttonTheme, setButtonTheme } = useThemeContext();
 
   // 检查预加载状态
   const checkPreloadStatus = useCallback(() => {

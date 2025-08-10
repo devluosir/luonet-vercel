@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { themeManager } from '@/utils/themeUtils';
-import '@/utils/themeDebug';
+import { ThemeProvider as ThemeContextProvider } from '@/contexts/ThemeContext';
 
 interface ThemeProviderProps {
   children: React.ReactNode;
@@ -42,7 +42,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     }
   }, []);
 
-  return <>{children}</>;
+  return (
+    <ThemeContextProvider>
+      {children}
+    </ThemeContextProvider>
+  );
 };
 
 /**

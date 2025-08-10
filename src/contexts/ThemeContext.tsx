@@ -1,43 +1,49 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+'use client';
+
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { themeManager, ThemeConfig, ThemeMode, ButtonTheme } from '@/utils/themeUtils';
 
-/**
- * 主题管理Hook
- * 提供响应式的主题状态和操作方法
- */
-export function useThemeManager() {
+// 主题上下文接口
+interface ThemeContextType {
+  config: ThemeConfig;
+  isLoading: boolean;
+  mode: ThemeMode;
+  buttonTheme: ButtonTheme;
+  updateConfig: (updates: Partial<ThemeConfig>) => void;
+  toggleMode: () => void;
+  toggleButtonTheme: () => void;
+  setMode: (mode: ThemeMode) => void;
+  setButtonTheme: (buttonTheme: ButtonTheme) => void;
+  getModuleColors: (moduleId: string, theme?: ButtonTheme) => any;
+  isDark: boolean;
+  isLight: boolean;
+  isColorful: boolean;
+  isClassic: boolean;
+}
+
+// 创建上下文
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+// 主题提供者组件
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<ThemeConfig>(themeManager.getConfig());
   const [isLoading, setIsLoading] = useState(true);
-  const listenerRef = useRef<(() => void) | null>(null);
-  const isInitializedRef = useRef(false);
 
   // 监听主题变化
   useEffect(() => {
-    // 防止重复设置监听器
-    if (isInitializedRef.current) {
-      return;
-    }
-
-    console.log('🔄 useThemeManager: 设置监听器');
+    console.log('🔄 ThemeProvider: 设置监听器');
     
     const unsubscribe = themeManager.addListener((newConfig) => {
-      console.log('🔄 useThemeManager: 收到配置更新:', newConfig);
+      console.log('🔄 ThemeProvider: 收到配置更新:', newConfig);
       setConfig(newConfig);
     });
-
-    listenerRef.current = unsubscribe;
-    isInitializedRef.current = true;
 
     // 初始化完成
     setIsLoading(false);
 
     return () => {
-      if (listenerRef.current) {
-        console.log('🔄 useThemeManager: 清理监听器');
-        listenerRef.current();
-        listenerRef.current = null;
-        isInitializedRef.current = false;
-      }
+      console.log('🔄 ThemeProvider: 清理监听器');
+      unsubscribe();
     };
   }, []);
 
@@ -71,52 +77,58 @@ export function useThemeManager() {
     return themeManager.getModuleColors(moduleId, theme || config.buttonTheme);
   }, [config.buttonTheme]);
 
-  return {
-    // 状态
+  const contextValue: ThemeContextType = {
     config,
     isLoading,
     mode: config.mode,
     buttonTheme: config.buttonTheme,
-    
-    // 操作方法
     updateConfig,
     toggleMode,
     toggleButtonTheme,
     setMode,
     setButtonTheme,
     getModuleColors,
-    
-    // 便捷属性
     isDark: config.mode === 'dark',
     isLight: config.mode === 'light',
     isColorful: config.buttonTheme === 'colorful',
     isClassic: config.buttonTheme === 'classic',
   };
+
+  return (
+    <ThemeContext.Provider value={contextValue}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
-/**
- * 简化的主题Hook - 只返回当前主题状态
- */
+// 使用主题的Hook
+export function useThemeContext() {
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error('useThemeContext must be used within a ThemeProvider');
+  }
+  return context;
+}
+
+// 简化的主题Hook
 export function useTheme() {
-  const { config, isLoading } = useThemeManager();
+  const { config, isLoading, mode, buttonTheme, isDark, isLight, isColorful, isClassic } = useThemeContext();
   
   return {
     theme: config,
     isLoading,
-    mode: config.mode,
-    buttonTheme: config.buttonTheme,
-    isDark: config.mode === 'dark',
-    isLight: config.mode === 'light',
-    isColorful: config.buttonTheme === 'colorful',
-    isClassic: config.buttonTheme === 'classic',
+    mode,
+    buttonTheme,
+    isDark,
+    isLight,
+    isColorful,
+    isClassic,
   };
 }
 
-/**
- * 主题切换Hook - 只提供切换功能
- */
+// 主题切换Hook
 export function useThemeToggle() {
-  const { toggleMode, toggleButtonTheme, setMode, setButtonTheme } = useThemeManager();
+  const { toggleMode, toggleButtonTheme, setMode, setButtonTheme } = useThemeContext();
   
   return {
     toggleMode,
