@@ -363,19 +363,19 @@ const MobileNoteItem = memo<MobileNoteItemProps>(({
           <button
             type="button"
             onClick={onToggleVisibility}
-            className={`flex items-center justify-center rounded-full border-2 transition-all duration-200 ${
+            className={`flex items-center justify-center transition-all duration-200 ${
               isMobile ? 'w-8 h-8' : 'w-6 h-6'
             } ${
               note.visible 
-                ? 'bg-[#007AFF] dark:bg-[#0A84FF] border-[#007AFF] dark:border-[#0A84FF] text-white shadow-md' 
-                : 'bg-transparent border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500'
+                ? 'text-gray-400 hover:text-red-600 dark:hover:text-red-400' 
+                : 'text-gray-400'
             }`}
             style={{ 
               minWidth: isMobile ? 32 : 24, 
               minHeight: isMobile ? 32 : 24 
             }}
           >
-            <span className={`font-bold ${isMobile ? 'text-sm' : 'text-xs'}`}>
+            <span className={`${isMobile ? 'text-sm' : 'text-xs'}`}>
               {index}
             </span>
           </button>

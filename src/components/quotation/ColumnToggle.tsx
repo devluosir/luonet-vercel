@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Columns } from 'lucide-react';
+import { Columns, ChevronLeft } from 'lucide-react';
 import { useTablePrefsHydrated } from '@/features/quotation/state/useTablePrefs';
 
 const ALL_COLS: { key: any; label: string }[] = [
@@ -12,40 +12,38 @@ export function ColumnToggle() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative">
+    <div className="flex items-center gap-0.5">
+      {/* 列切换按钮组 - 展开时显示 */}
+      {open && (
+        <div className="flex items-center gap-0.5 transition-all duration-300">
+          {ALL_COLS.map(c => (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => toggleCol(c.key)}
+              className={`px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
+                visibleCols.includes(c.key)
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 列切换开关按钮 */}
       <button 
         type="button"
         className="px-3 py-1.5 rounded-lg border border-[#E5E5EA] dark:border-[#2C2C2E] 
                    bg-white/90 dark:bg-[#1C1C1E]/90 text-sm text-[#1D1D1F] dark:text-[#F5F5F7]
-                   hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 transition-colors"
+                   hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 transition-colors
+                   flex items-center gap-2"
         onClick={()=>setOpen(o=>!o)}
       >
-        <Columns className="h-4 w-4 inline mr-1" />
-        列
+        <Columns className={`h-4 w-4 transition-all duration-200 ${open ? 'text-gray-400 dark:text-gray-500' : 'text-blue-600 dark:text-blue-400'}`} />
       </button>
-      {open && (
-        <div className="absolute right-0 mt-2 w-44 rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
-                        bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl shadow-lg p-3 z-20">
-          {ALL_COLS.map(c=>(
-            <label key={c.key} className="flex items-center gap-2 py-1.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={visibleCols.includes(c.key)}
-                onChange={()=>toggleCol(c.key)}
-                className="rounded border-[#E5E5EA] dark:border-[#2C2C2E]"
-              />
-              <span className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">{c.label}</span>
-            </label>
-          ))}
-        </div>
-      )}
-      {/* 点击外部关闭 */}
-      {open && (
-        <div 
-          className="fixed inset-0 z-10" 
-          onClick={() => setOpen(false)}
-        />
-      )}
     </div>
   );
 }

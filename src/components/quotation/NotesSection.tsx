@@ -72,7 +72,7 @@ export function NotesSection({ data, onChange }: NotesSectionProps) {
         {data.notes.map((note, index) => (
           <div key={index} className="flex items-start gap-3 group">
             <div 
-              className="mt-[11px] text-[13px] font-medium text-[#86868B] dark:text-[#98989D] w-5 flex-shrink-0 text-center
+              className="mt-[11px] text-xs text-gray-400 w-5 flex-shrink-0 text-center
                 group-hover:text-[#FF3B30] dark:group-hover:text-[#FF453A]
                 group-hover:bg-[#FF3B30]/10 dark:group-hover:bg-[#FF453A]/10
                 cursor-pointer select-none transition-all duration-200 rounded"

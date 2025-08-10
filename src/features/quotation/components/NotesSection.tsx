@@ -294,15 +294,15 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
                   e.stopPropagation();
                   onVisibilityToggle(note.id, note.visible);
                 }}
-                className={`inline-flex items-center justify-center w-6 h-6 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                className={`inline-flex items-center justify-center w-6 h-6 transition-all duration-200 ${
                   note.visible 
-                    ? 'bg-[#007AFF] dark:bg-[#0A84FF] border-[#007AFF] dark:border-[#0A84FF] text-white shadow-md hover:bg-red-500 dark:hover:bg-red-600 hover:border-red-500 dark:hover:border-red-600' 
-                    : 'bg-transparent border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-gray-400 dark:hover:border-gray-500'
+                    ? 'text-gray-400 hover:text-red-600 dark:hover:text-red-400' 
+                    : 'text-gray-400'
                 }`}
                 title={note.visible ? `隐藏条款 (当前序号: ${noteIndex})` : '显示条款'}
               >
                 {note.visible ? (
-                  <span className="text-xs font-bold">{noteIndex}</span>
+                  <span className="text-xs">{noteIndex}</span>
                 ) : (
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
