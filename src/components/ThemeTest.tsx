@@ -49,7 +49,7 @@ export const ThemeTest: React.FC = () => {
         {/* 测试按钮网格 */}
         <div>
           <p className="text-sm font-medium mb-4">模块按钮测试:</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
             {testModules.map((module) => {
               const Icon = module.icon;
               return (

@@ -69,38 +69,31 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
 
   return (
     <button
-      className="module-button dashboard-module-button flex items-center justify-start gap-3 px-5 py-4 rounded-3xl shadow-md transition-all duration-300 h-24 w-full relative overflow-hidden group cursor-pointer bg-gradient-to-br hover:shadow-lg hover:-translate-y-1 active:translate-y-0 active:shadow-md border border-white/40 dark:border-gray-800/40"
+      className="module-button dashboard-module-button flex items-center justify-start gap-3 sm:gap-4 px-4 sm:px-5 py-4 sm:py-5 h-[80px] w-full relative group cursor-pointer"
       style={{
-        '--bg-gradient': `linear-gradient(to bottom right, var(--${module.id}-from), var(--${module.id}-to))`,
-        '--bg-gradient-hover': `linear-gradient(to bottom right, var(--${module.id}-hover-from), var(--${module.id}-hover-to))`,
+        '--bg-gradient': `linear-gradient(135deg, var(--${module.id}-from), var(--${module.id}-to))`,
+        '--bg-gradient-hover': `linear-gradient(135deg, var(--${module.id}-hover-from), var(--${module.id}-hover-to))`,
         '--text-color': 'var(--text-primary)',
         '--icon-color': `var(--${module.id}-icon-color)`,
-        '--icon-bg': 'var(--icon-bg-color)',
         '--badge-bg': `var(--${module.id}-badge-bg)`,
         '--badge-text': 'var(--badge-text-color)',
-        '--transform-hover': 'translateY(-4px)',
-        '--transform-active': 'translateY(0)',
-        '--shadow-hover': '0 10px 25px -3px rgba(0, 0, 0, 0.1)',
-        '--shadow-active': '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
       } as React.CSSProperties}
       onClick={() => onClick(module)}
       onMouseEnter={() => onHover?.(module)}
     >
       {/* 图标容器 */}
-      <div className="icon-container w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 group-hover:scale-105">
-        <Icon className="icon w-5 h-5 transition-all duration-300" />
+      <div className="icon-container w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 flex items-center justify-center flex-shrink-0">
+        <Icon className="icon w-5 h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6" />
       </div>
 
       {/* 文字标题 */}
-      <div className="text-[16px] font-medium leading-tight truncate transition-all duration-200">
+      <div className="text-sm sm:text-base md:text-base font-semibold leading-tight truncate flex-1 min-w-0 text-left pl-0">
         {module.name}
       </div>
 
       {/* 数量徽章 */}
       {showBadge && (
-        <div
-          className="badge absolute top-3 right-3 min-w-[22px] h-5 px-2 rounded-full flex items-center justify-center text-[11px] font-semibold tracking-tight transition-all duration-300 z-10 group-hover:scale-110 group-hover:rotate-6 shadow-sm ring-1 ring-white/50 dark:ring-white/20 mix-blend-normal"
-        >
+        <div className="badge absolute top-2 right-2 sm:top-2.5 sm:right-2.5 md:top-3 md:right-3 min-w-[18px] h-4.5 sm:min-w-[20px] sm:h-5 md:min-w-[22px] md:h-5.5 px-1.5 sm:px-2 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] md:text-[11px] font-bold tracking-wide z-10">
           <span>{count > 9999 ? '9999+' : count}</span>
         </div>
       )}

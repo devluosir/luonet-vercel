@@ -312,7 +312,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       {/* ✅ 筛选器区域 */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-4">
         {/* ✅ 搜索框：中大屏可见，中屏时收缩 */}
-        <div className="relative hidden md:block w-full lg:max-w-md md:max-w-xs xl:max-w-lg">
+        <div className="relative hidden md:block w-full lg:max-w-xs md:max-w-xs xl:max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
@@ -333,17 +333,17 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
         </div>
 
         {/* ✅ 筛选按钮组：小屏&大屏均展示 */}
-        <div className="flex items-center justify-between w-full md:w-auto gap-1 flex-wrap">
+        <div className="flex items-center w-full md:w-auto gap-0.5 flex-wrap justify-end">
           {/* 📌 文档类型按钮组（右侧 ALL 开关 + 类型） */}
-          <div className="flex items-center gap-1 ml-auto">
+          <div className="flex items-center gap-0.5">
             {/* 类型按钮：展开时显示 */}
             {showAllFilters && (
-              <div className="flex items-center gap-1 transition-all duration-300">
+              <div className="flex items-center gap-0.5 transition-all duration-300">
                 {getAvailableDocumentTypes().map(({ label, value, color }) => (
                   <button
                     key={value}
                     onClick={() => onTypeFilterChange(value as 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase')}
-                    className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
+                    className={`px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
                       typeFilter === value
                         ? `bg-${color}-100 dark:bg-${color}-900/30 text-${color}-700 dark:text-${color}-300`
                         : `text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-${color}-50 dark:hover:bg-${color}-800/50`
@@ -364,7 +364,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
                 }
                 onShowAllFiltersChange(!showAllFilters);
               }}
-              className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 flex items-center gap-1 ${
+              className={`px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 flex items-center gap-0.5 ${
                 typeFilter === 'all' && !showAllFilters
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'
@@ -380,7 +380,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
           </div>
 
           {/* 📅 时间筛选器 */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             {[
               { label: '1D', value: 'today' },
               { label: '3D', value: '3days' },
@@ -390,7 +390,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
               <button
                 key={value}
                 onClick={() => onTimeFilterChange(value as 'today' | '3days' | 'week' | 'month')}
-                className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
+                className={`px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
                   timeFilter === value
                     ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'
@@ -404,7 +404,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
           {/* 📂 管理按钮 */}
           <button
             onClick={() => router.push('/history')}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50 rounded-lg"
+            className="flex items-center gap-0.5 px-1.5 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50 rounded-lg"
           >
             <Archive className="w-4 h-4" />
             <span className="hidden sm:inline">管理</span>
@@ -414,7 +414,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
       {/* 文档列表 */}
       {filteredDocuments.length > 0 ? (
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] md:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 lg:gap-4 w-full max-w-none">
           {filteredDocuments.map((doc) => {
             const { Icon, bgColor, textColor } = getDocumentTypeInfo(doc.type);
             const documentNumber = getDocumentNumber(doc);
@@ -422,7 +422,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
             
             return (
               <div
-                key={doc.id}
+                key={`${doc.type}-${doc.id}-${doc.updatedAt || doc.createdAt}`}
                 onClick={() => handleDocumentClick(doc)}
                 className={`group bg-white dark:bg-[#1c1c1e] rounded-xl shadow-md border border-gray-200/50 dark:border-gray-800/50
                   p-3 sm:p-4 md:p-5 cursor-pointer transition-all duration-200 ease-in-out hover:shadow-lg hover:-translate-y-1

@@ -45,45 +45,19 @@ export const DashboardModules: React.FC<DashboardModulesProps> = ({
                     toolModules.length > 0 || 
                     toolsModules.length > 0;
 
+  // 合并所有模块
+  const allModules = [...quickCreateModules, ...toolsModules, ...toolModules];
+
   if (!hasModules) {
     return null;
   }
 
   return (
     <div className="mb-8">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-        {/* 新建单据按钮 */}
-        {quickCreateModules.map((module) => (
-          <ModuleButton 
-            key={module.id}
-            module={module}
-            onClick={onModuleClick}
-            onHover={onModuleHover}
-            quotationCount={documentCounts.quotation}
-            confirmationCount={documentCounts.confirmation}
-            invoiceCount={documentCounts.invoice}
-            packingCount={documentCounts.packing}
-            purchaseCount={documentCounts.purchase}
-          />
-        ))}
-        
-        {/* 管理中心按钮 */}
-        {toolsModules.slice(0, 4).map((module) => (
-          <ModuleButton 
-            key={module.id}
-            module={module}
-            onClick={onModuleClick}
-            onHover={onModuleHover}
-            quotationCount={documentCounts.quotation}
-            confirmationCount={documentCounts.confirmation}
-            invoiceCount={documentCounts.invoice}
-            packingCount={documentCounts.packing}
-            purchaseCount={documentCounts.purchase}
-          />
-        ))}
-        
-        {/* 实用工具按钮 */}
-        {toolModules.map((module) => (
+      
+      {/* 所有模块统一显示 */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 md:gap-4 lg:gap-5 xl:gap-6">
+        {allModules.map((module) => (
           <ModuleButton 
             key={module.id}
             module={module}

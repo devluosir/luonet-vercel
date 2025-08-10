@@ -41,68 +41,68 @@
   --transition-normal: 0.3s ease-out;
   --transition-slow: 0.5s ease-out;
 
-  /* 🎨 模块按钮颜色变量 - 彩色主题 */
+  /* 🎨 模块按钮颜色变量 - 彩色主题 (Apple风格) */
   /* 报价单 - 蓝色 */
-  --quotation-from: #dbeafe;
-  --quotation-to: #bfdbfe;
-  --quotation-hover-from: #bfdbfe;
-  --quotation-hover-to: #93c5fd;
+  --quotation-from: rgba(59, 130, 246, 0.08);
+  --quotation-to: rgba(59, 130, 246, 0.12);
+  --quotation-hover-from: rgba(59, 130, 246, 0.12);
+  --quotation-hover-to: rgba(59, 130, 246, 0.18);
   --quotation-icon-color: #2563eb;
   --quotation-badge-bg: #2563eb;
 
   /* 销售确认 - 绿色 */
-  --confirmation-from: #d1fae5;
-  --confirmation-to: #a7f3d0;
-  --confirmation-hover-from: #a7f3d0;
-  --confirmation-hover-to: #6ee7b7;
+  --confirmation-from: rgba(5, 150, 105, 0.08);
+  --confirmation-to: rgba(5, 150, 105, 0.12);
+  --confirmation-hover-from: rgba(5, 150, 105, 0.12);
+  --confirmation-hover-to: rgba(5, 150, 105, 0.18);
   --confirmation-icon-color: #059669;
   --confirmation-badge-bg: #059669;
 
   /* 装箱单 - 青色 */
-  --packing-from: #cffafe;
-  --packing-to: #a5f3fc;
-  --packing-hover-from: #a5f3fc;
-  --packing-hover-to: #67e8f9;
+  --packing-from: rgba(8, 145, 178, 0.08);
+  --packing-to: rgba(8, 145, 178, 0.12);
+  --packing-hover-from: rgba(8, 145, 178, 0.12);
+  --packing-hover-to: rgba(8, 145, 178, 0.18);
   --packing-icon-color: #0891b2;
   --packing-badge-bg: #0891b2;
 
   /* 发票 - 紫色 */
-  --invoice-from: #ede9fe;
-  --invoice-to: #ddd6fe;
-  --invoice-hover-from: #ddd6fe;
-  --invoice-hover-to: #c4b5fd;
+  --invoice-from: rgba(124, 58, 237, 0.08);
+  --invoice-to: rgba(124, 58, 237, 0.12);
+  --invoice-hover-from: rgba(124, 58, 237, 0.12);
+  --invoice-hover-to: rgba(124, 58, 237, 0.18);
   --invoice-icon-color: #7c3aed;
   --invoice-badge-bg: #7c3aed;
 
   /* 采购 - 橙色 */
-  --purchase-from: #fed7aa;
-  --purchase-to: #fdba74;
-  --purchase-hover-from: #fdba74;
-  --purchase-hover-to: #fb923c;
+  --purchase-from: rgba(234, 88, 12, 0.08);
+  --purchase-to: rgba(234, 88, 12, 0.12);
+  --purchase-hover-from: rgba(234, 88, 12, 0.12);
+  --purchase-hover-to: rgba(234, 88, 12, 0.18);
   --purchase-icon-color: #ea580c;
   --purchase-badge-bg: #ea580c;
 
   /* AI邮件 - 靛蓝 */
-  --ai-email-from: #e0e7ff;
-  --ai-email-to: #c7d2fe;
-  --ai-email-hover-from: #c7d2fe;
-  --ai-email-hover-to: #a5b4fc;
+  --ai-email-from: rgba(79, 70, 229, 0.08);
+  --ai-email-to: rgba(79, 70, 229, 0.12);
+  --ai-email-hover-from: rgba(79, 70, 229, 0.12);
+  --ai-email-hover-to: rgba(79, 70, 229, 0.18);
   --ai-email-icon-color: #4f46e5;
   --ai-email-badge-bg: #4f46e5;
 
   /* 历史 - 粉色 */
-  --history-from: #fce7f3;
-  --history-to: #fbcfe8;
-  --history-hover-from: #fbcfe8;
-  --history-hover-to: #f9a8d4;
+  --history-from: rgba(219, 39, 119, 0.08);
+  --history-to: rgba(219, 39, 119, 0.12);
+  --history-hover-from: rgba(219, 39, 119, 0.12);
+  --history-hover-to: rgba(219, 39, 119, 0.18);
   --history-icon-color: #db2777;
   --history-badge-bg: #db2777;
 
   /* 客户 - 紫红 */
-  --customer-from: #fae8ff;
-  --customer-to: #f5d0fe;
-  --customer-hover-from: #f5d0fe;
-  --customer-hover-to: #f0abfc;
+  --customer-from: rgba(162, 28, 175, 0.08);
+  --customer-to: rgba(162, 28, 175, 0.12);
+  --customer-hover-from: rgba(162, 28, 175, 0.12);
+  --customer-hover-to: rgba(162, 28, 175, 0.18);
   --customer-icon-color: #a21caf;
   --customer-badge-bg: #a21caf;
 
@@ -133,204 +133,204 @@ html.dark {
   --border-primary: rgba(75, 85, 99, 0.5);
   --border-secondary: rgba(31, 41, 55, 0.4);
 
-  /* 🎨 深色模式模块按钮颜色变量 */
+  /* 🎨 深色模式模块按钮颜色变量 (Apple风格) */
   /* 报价单 - 蓝色 */
-  --quotation-from: rgba(59, 130, 246, 0.7);
-  --quotation-to: rgba(37, 99, 235, 0.7);
-  --quotation-hover-from: rgba(96, 165, 250, 0.8);
-  --quotation-hover-to: rgba(59, 130, 246, 0.8);
+  --quotation-from: rgba(59, 130, 246, 0.15);
+  --quotation-to: rgba(59, 130, 246, 0.25);
+  --quotation-hover-from: rgba(59, 130, 246, 0.25);
+  --quotation-hover-to: rgba(59, 130, 246, 0.35);
   --quotation-icon-color: #60a5fa;
   --quotation-badge-bg: #3b82f6;
 
   /* 销售确认 - 绿色 */
-  --confirmation-from: rgba(16, 185, 129, 0.7);
-  --confirmation-to: rgba(5, 150, 105, 0.7);
-  --confirmation-hover-from: rgba(52, 211, 153, 0.8);
-  --confirmation-hover-to: rgba(16, 185, 129, 0.8);
+  --confirmation-from: rgba(16, 185, 129, 0.15);
+  --confirmation-to: rgba(16, 185, 129, 0.25);
+  --confirmation-hover-from: rgba(16, 185, 129, 0.25);
+  --confirmation-hover-to: rgba(16, 185, 129, 0.35);
   --confirmation-icon-color: #34d399;
   --confirmation-badge-bg: #10b981;
 
   /* 装箱单 - 青色 */
-  --packing-from: rgba(6, 182, 212, 0.7);
-  --packing-to: rgba(8, 145, 178, 0.7);
-  --packing-hover-from: rgba(34, 211, 238, 0.8);
-  --packing-hover-to: rgba(6, 182, 212, 0.8);
+  --packing-from: rgba(6, 182, 212, 0.15);
+  --packing-to: rgba(6, 182, 212, 0.25);
+  --packing-hover-from: rgba(6, 182, 212, 0.25);
+  --packing-hover-to: rgba(6, 182, 212, 0.35);
   --packing-icon-color: #22d3ee;
   --packing-badge-bg: #06b6d4;
 
   /* 发票 - 紫色 */
-  --invoice-from: rgba(139, 92, 246, 0.7);
-  --invoice-to: rgba(124, 58, 237, 0.7);
-  --invoice-hover-from: rgba(167, 139, 250, 0.8);
-  --invoice-hover-to: rgba(139, 92, 246, 0.8);
+  --invoice-from: rgba(139, 92, 246, 0.15);
+  --invoice-to: rgba(139, 92, 246, 0.25);
+  --invoice-hover-from: rgba(139, 92, 246, 0.25);
+  --invoice-hover-to: rgba(139, 92, 246, 0.35);
   --invoice-icon-color: #a78bfa;
   --invoice-badge-bg: #8b5cf6;
 
   /* 采购 - 橙色 */
-  --purchase-from: rgba(249, 115, 22, 0.7);
-  --purchase-to: rgba(234, 88, 12, 0.7);
-  --purchase-hover-from: rgba(251, 146, 60, 0.8);
-  --purchase-hover-to: rgba(249, 115, 22, 0.8);
+  --purchase-from: rgba(249, 115, 22, 0.15);
+  --purchase-to: rgba(249, 115, 22, 0.25);
+  --purchase-hover-from: rgba(249, 115, 22, 0.25);
+  --purchase-hover-to: rgba(249, 115, 22, 0.35);
   --purchase-icon-color: #fb923c;
   --purchase-badge-bg: #f97316;
 
   /* AI邮件 - 靛蓝 */
-  --ai-email-from: rgba(99, 102, 241, 0.7);
-  --ai-email-to: rgba(79, 70, 229, 0.7);
-  --ai-email-hover-from: rgba(129, 140, 248, 0.8);
-  --ai-email-hover-to: rgba(99, 102, 241, 0.8);
+  --ai-email-from: rgba(99, 102, 241, 0.15);
+  --ai-email-to: rgba(99, 102, 241, 0.25);
+  --ai-email-hover-from: rgba(99, 102, 241, 0.25);
+  --ai-email-hover-to: rgba(99, 102, 241, 0.35);
   --ai-email-icon-color: #818cf8;
   --ai-email-badge-bg: #6366f1;
 
   /* 历史 - 粉色 */
-  --history-from: rgba(236, 72, 153, 0.7);
-  --history-to: rgba(219, 39, 119, 0.7);
-  --history-hover-from: rgba(244, 114, 182, 0.8);
-  --history-hover-to: rgba(236, 72, 153, 0.8);
+  --history-from: rgba(236, 72, 153, 0.15);
+  --history-to: rgba(236, 72, 153, 0.25);
+  --history-hover-from: rgba(236, 72, 153, 0.25);
+  --history-hover-to: rgba(236, 72, 153, 0.35);
   --history-icon-color: #f472b6;
   --history-badge-bg: #ec4899;
 
   /* 客户 - 紫红 */
-  --customer-from: rgba(192, 38, 211, 0.7);
-  --customer-to: rgba(162, 28, 175, 0.7);
-  --customer-hover-from: rgba(217, 70, 239, 0.8);
-  --customer-hover-to: rgba(192, 38, 211, 0.8);
+  --customer-from: rgba(192, 38, 211, 0.15);
+  --customer-to: rgba(192, 38, 211, 0.25);
+  --customer-hover-from: rgba(192, 38, 211, 0.25);
+  --customer-hover-to: rgba(192, 38, 211, 0.35);
   --customer-icon-color: #d946ef;
   --customer-badge-bg: #c026d3;
 }
 
-/* 🎨 Classic主题的CSS变量 - 浅色模式 */
+/* 🎨 Classic主题的CSS变量 - 浅色模式 (三星风格) */
 html.classic-theme {
-  /* 报价单 - 经典白色背景，蓝色悬停 */
-  --quotation-from: rgba(255, 255, 255, 0.8);
-  --quotation-to: rgba(255, 255, 255, 0.8);
-  --quotation-hover-from: rgba(219, 234, 254, 1);
-  --quotation-hover-to: rgba(191, 219, 254, 1);
-  --quotation-icon-color: #2563eb;
-  --quotation-badge-bg: #2563eb;
+  /* 报价单 - 三星蓝色渐变 */
+  --quotation-from: #1428a0;
+  --quotation-to: #1e40af;
+  --quotation-hover-from: #1e40af;
+  --quotation-hover-to: #2563eb;
+  --quotation-icon-color: #ffffff;
+  --quotation-badge-bg: #1428a0;
 
-  /* 销售确认 - 经典白色背景，绿色悬停 */
-  --confirmation-from: rgba(255, 255, 255, 0.8);
-  --confirmation-to: rgba(255, 255, 255, 0.8);
-  --confirmation-hover-from: rgba(209, 250, 229, 1);
-  --confirmation-hover-to: rgba(167, 243, 208, 1);
-  --confirmation-icon-color: #059669;
+  /* 销售确认 - 三星绿色渐变 */
+  --confirmation-from: #059669;
+  --confirmation-to: #10b981;
+  --confirmation-hover-from: #10b981;
+  --confirmation-hover-to: #34d399;
+  --confirmation-icon-color: #ffffff;
   --confirmation-badge-bg: #059669;
 
-  /* 装箱单 - 经典白色背景，青色悬停 */
-  --packing-from: rgba(255, 255, 255, 0.8);
-  --packing-to: rgba(255, 255, 255, 0.8);
-  --packing-hover-from: rgba(207, 250, 254, 1);
-  --packing-hover-to: rgba(165, 243, 252, 1);
-  --packing-icon-color: #0891b2;
+  /* 装箱单 - 三星青色渐变 */
+  --packing-from: #0891b2;
+  --packing-to: #06b6d4;
+  --packing-hover-from: #06b6d4;
+  --packing-hover-to: #22d3ee;
+  --packing-icon-color: #ffffff;
   --packing-badge-bg: #0891b2;
 
-  /* 发票 - 经典白色背景，紫色悬停 */
-  --invoice-from: rgba(255, 255, 255, 0.8);
-  --invoice-to: rgba(255, 255, 255, 0.8);
-  --invoice-hover-from: rgba(237, 233, 254, 1);
-  --invoice-hover-to: rgba(221, 214, 254, 1);
-  --invoice-icon-color: #7c3aed;
+  /* 发票 - 三星紫色渐变 */
+  --invoice-from: #7c3aed;
+  --invoice-to: #8b5cf6;
+  --invoice-hover-from: #8b5cf6;
+  --invoice-hover-to: #a78bfa;
+  --invoice-icon-color: #ffffff;
   --invoice-badge-bg: #7c3aed;
 
-  /* 采购 - 经典白色背景，橙色悬停 */
-  --purchase-from: rgba(255, 255, 255, 0.8);
-  --purchase-to: rgba(255, 255, 255, 0.8);
-  --purchase-hover-from: rgba(254, 215, 170, 1);
-  --purchase-hover-to: rgba(253, 186, 116, 1);
-  --purchase-icon-color: #ea580c;
+  /* 采购 - 三星橙色渐变 */
+  --purchase-from: #ea580c;
+  --purchase-to: #f97316;
+  --purchase-hover-from: #f97316;
+  --purchase-hover-to: #fb923c;
+  --purchase-icon-color: #ffffff;
   --purchase-badge-bg: #ea580c;
 
-  /* AI邮件 - 经典白色背景，靛蓝悬停 */
-  --ai-email-from: rgba(255, 255, 255, 0.8);
-  --ai-email-to: rgba(255, 255, 255, 0.8);
-  --ai-email-hover-from: rgba(224, 231, 255, 1);
-  --ai-email-hover-to: rgba(199, 210, 254, 1);
-  --ai-email-icon-color: #4f46e5;
+  /* AI邮件 - 三星靛蓝渐变 */
+  --ai-email-from: #4f46e5;
+  --ai-email-to: #6366f1;
+  --ai-email-hover-from: #6366f1;
+  --ai-email-hover-to: #818cf8;
+  --ai-email-icon-color: #ffffff;
   --ai-email-badge-bg: #4f46e5;
 
-  /* 历史 - 经典白色背景，粉色悬停 */
-  --history-from: rgba(255, 255, 255, 0.8);
-  --history-to: rgba(255, 255, 255, 0.8);
-  --history-hover-from: rgba(252, 231, 243, 1);
-  --history-hover-to: rgba(251, 207, 232, 1);
-  --history-icon-color: #db2777;
+  /* 历史 - 三星粉色渐变 */
+  --history-from: #db2777;
+  --history-to: #ec4899;
+  --history-hover-from: #ec4899;
+  --history-hover-to: #f472b6;
+  --history-icon-color: #ffffff;
   --history-badge-bg: #db2777;
 
-  /* 客户 - 经典白色背景，紫红悬停 */
-  --customer-from: rgba(255, 255, 255, 0.8);
-  --customer-to: rgba(255, 255, 255, 0.8);
-  --customer-hover-from: rgba(250, 232, 255, 1);
-  --customer-hover-to: rgba(245, 208, 254, 1);
-  --customer-icon-color: #a21caf;
+  /* 客户 - 三星紫红渐变 */
+  --customer-from: #a21caf;
+  --customer-to: #c026d3;
+  --customer-hover-from: #c026d3;
+  --customer-hover-to: #d946ef;
+  --customer-icon-color: #ffffff;
   --customer-badge-bg: #a21caf;
 }
 
-/* 🎨 Classic主题的CSS变量 - 深色模式 */
+/* 🎨 Classic主题的CSS变量 - 深色模式 (三星风格) */
 html.dark.classic-theme {
-  /* 报价单 - 经典深色背景，蓝色悬停 */
-  --quotation-from: rgba(31, 41, 55, 0.8);
-  --quotation-to: rgba(31, 41, 55, 0.8);
-  --quotation-hover-from: rgba(59, 130, 246, 0.8);
-  --quotation-hover-to: rgba(37, 99, 235, 0.8);
-  --quotation-icon-color: #60a5fa;
-  --quotation-badge-bg: #3b82f6;
+  /* 报价单 - 三星深色蓝色渐变 */
+  --quotation-from: #1e3a8a;
+  --quotation-to: #1e40af;
+  --quotation-hover-from: #1e40af;
+  --quotation-hover-to: #3b82f6;
+  --quotation-icon-color: #ffffff;
+  --quotation-badge-bg: #1e3a8a;
 
-  /* 销售确认 - 经典深色背景，绿色悬停 */
-  --confirmation-from: rgba(31, 41, 55, 0.8);
-  --confirmation-to: rgba(31, 41, 55, 0.8);
-  --confirmation-hover-from: rgba(16, 185, 129, 0.8);
-  --confirmation-hover-to: rgba(5, 150, 105, 0.8);
-  --confirmation-icon-color: #34d399;
-  --confirmation-badge-bg: #10b981;
+  /* 销售确认 - 三星深色绿色渐变 */
+  --confirmation-from: #047857;
+  --confirmation-to: #059669;
+  --confirmation-hover-from: #059669;
+  --confirmation-hover-to: #10b981;
+  --confirmation-icon-color: #ffffff;
+  --confirmation-badge-bg: #047857;
 
-  /* 装箱单 - 经典深色背景，青色悬停 */
-  --packing-from: rgba(31, 41, 55, 0.8);
-  --packing-to: rgba(31, 41, 55, 0.8);
-  --packing-hover-from: rgba(6, 182, 212, 0.8);
-  --packing-hover-to: rgba(8, 145, 178, 0.8);
-  --packing-icon-color: #22d3ee;
-  --packing-badge-bg: #06b6d4;
+  /* 装箱单 - 三星深色青色渐变 */
+  --packing-from: #0e7490;
+  --packing-to: #0891b2;
+  --packing-hover-from: #0891b2;
+  --packing-hover-to: #06b6d4;
+  --packing-icon-color: #ffffff;
+  --packing-badge-bg: #0e7490;
 
-  /* 发票 - 经典深色背景，紫色悬停 */
-  --invoice-from: rgba(31, 41, 55, 0.8);
-  --invoice-to: rgba(31, 41, 55, 0.8);
-  --invoice-hover-from: rgba(139, 92, 246, 0.8);
-  --invoice-hover-to: rgba(124, 58, 237, 0.8);
-  --invoice-icon-color: #a78bfa;
-  --invoice-badge-bg: #8b5cf6;
+  /* 发票 - 三星深色紫色渐变 */
+  --invoice-from: #6d28d9;
+  --invoice-to: #7c3aed;
+  --invoice-hover-from: #7c3aed;
+  --invoice-hover-to: #8b5cf6;
+  --invoice-icon-color: #ffffff;
+  --invoice-badge-bg: #6d28d9;
 
-  /* 采购 - 经典深色背景，橙色悬停 */
-  --purchase-from: rgba(31, 41, 55, 0.8);
-  --purchase-to: rgba(31, 41, 55, 0.8);
-  --purchase-hover-from: rgba(249, 115, 22, 0.8);
-  --purchase-hover-to: rgba(234, 88, 12, 0.8);
-  --purchase-icon-color: #fb923c;
-  --purchase-badge-bg: #f97316;
+  /* 采购 - 三星深色橙色渐变 */
+  --purchase-from: #c2410c;
+  --purchase-to: #ea580c;
+  --purchase-hover-from: #ea580c;
+  --purchase-hover-to: #f97316;
+  --purchase-icon-color: #ffffff;
+  --purchase-badge-bg: #c2410c;
 
-  /* AI邮件 - 经典深色背景，靛蓝悬停 */
-  --ai-email-from: rgba(31, 41, 55, 0.8);
-  --ai-email-to: rgba(31, 41, 55, 0.8);
-  --ai-email-hover-from: rgba(99, 102, 241, 0.8);
-  --ai-email-hover-to: rgba(79, 70, 229, 0.8);
-  --ai-email-icon-color: #818cf8;
-  --ai-email-badge-bg: #6366f1;
+  /* AI邮件 - 三星深色靛蓝渐变 */
+  --ai-email-from: #4338ca;
+  --ai-email-to: #4f46e5;
+  --ai-email-hover-from: #4f46e5;
+  --ai-email-hover-to: #6366f1;
+  --ai-email-icon-color: #ffffff;
+  --ai-email-badge-bg: #4338ca;
 
-  /* 历史 - 经典深色背景，粉色悬停 */
-  --history-from: rgba(31, 41, 55, 0.8);
-  --history-to: rgba(31, 41, 55, 0.8);
-  --history-hover-from: rgba(236, 72, 153, 0.8);
-  --history-hover-to: rgba(219, 39, 119, 0.8);
-  --history-icon-color: #f472b6;
-  --history-badge-bg: #ec4899;
+  /* 历史 - 三星深色粉色渐变 */
+  --history-from: #be185d;
+  --history-to: #db2777;
+  --history-hover-from: #db2777;
+  --history-hover-to: #ec4899;
+  --history-icon-color: #ffffff;
+  --history-badge-bg: #be185d;
 
-  /* 客户 - 经典深色背景，紫红悬停 */
-  --customer-from: rgba(31, 41, 55, 0.8);
-  --customer-to: rgba(31, 41, 55, 0.8);
-  --customer-hover-from: rgba(192, 38, 211, 0.8);
-  --customer-hover-to: rgba(162, 28, 175, 0.8);
-  --customer-icon-color: #d946ef;
-  --customer-badge-bg: #c026d3;
+  /* 客户 - 三星深色紫红渐变 */
+  --customer-from: #86198f;
+  --customer-to: #a21caf;
+  --customer-hover-from: #a21caf;
+  --customer-hover-to: #c026d3;
+  --customer-icon-color: #ffffff;
+  --customer-badge-bg: #86198f;
 }
 
 /* 主题切换动画 */
@@ -340,11 +340,11 @@ html.dark.classic-theme {
               color var(--transition-normal);
 }
 
-/* 🎨 模块按钮专用样式 - 确保不被全局样式覆盖 */
+/* 🎨 模块按钮专用样式 - Apple风格高级效果 */
 .module-button,
 .dashboard-module-button {
   /* 重置全局过渡动画，避免冲突 */
-  transition: all var(--transition-normal) !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
   
   /* 确保背景色不被覆盖 */
   background-image: var(--bg-gradient) !important;
@@ -358,34 +358,71 @@ html.dark.classic-theme {
   
   /* 确保阴影不被覆盖 */
   box-shadow: var(--shadow-style) !important;
+  
+  /* Apple风格高级效果 */
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-radius: 20px !important;
+  position: relative !important;
+  overflow: hidden !important;
 }
 
 /* 模块按钮悬停状态 */
 .module-button:hover,
 .dashboard-module-button:hover {
   background-image: var(--bg-gradient-hover) !important;
-  transform: var(--transform-hover) !important;
-  box-shadow: var(--shadow-hover) !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
 }
 
 /* 模块按钮激活状态 */
 .module-button:active,
 .dashboard-module-button:active {
-  transform: var(--transform-active) !important;
-  box-shadow: var(--shadow-active) !important;
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+  transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* 模块按钮图标容器 */
 .module-button .icon-container,
 .dashboard-module-button .icon-container {
-  background-color: var(--icon-bg) !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
   color: var(--icon-color) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 模块按钮悬停时图标容器 */
+.module-button:hover .icon-container,
+.dashboard-module-button:hover .icon-container {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  transform: scale(1.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
 }
 
 /* 模块按钮图标 */
 .module-button .icon,
 .dashboard-module-button .icon {
   color: var(--icon-color) !important;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1)) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 模块按钮悬停时图标 */
+.module-button:hover .icon,
+.dashboard-module-button:hover .icon {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)) !important;
 }
 
 /* 模块按钮徽章 */
@@ -393,6 +430,197 @@ html.dark.classic-theme {
 .dashboard-module-button .badge {
   background-color: var(--badge-bg) !important;
   color: var(--badge-text) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 模块按钮悬停时徽章 */
+.module-button:hover .badge,
+.dashboard-module-button:hover .badge {
+  transform: scale(1.15) rotate(3deg) !important;
+  box-shadow: 
+    0 6px 8px -1px rgba(0, 0, 0, 0.15),
+    0 3px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 响应式图标尺寸 */
+@media (min-width: 640px) {
+  .sm\:w-5\.5 {
+    width: 1.375rem !important;
+  }
+  .sm\:h-5\.5 {
+    height: 1.375rem !important;
+  }
+}
+
+@media (min-width: 640px) {
+  .sm\:h-5\.5 {
+    height: 1.375rem !important;
+  }
+}
+
+/* 3xl断点支持 */
+@media (min-width: 1920px) {
+  .3xl\:grid-cols-6 {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+}
+
+/* 深色模式特殊样式 */
+html.dark .module-button,
+html.dark .dashboard-module-button {
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.2),
+    0 2px 4px -1px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+html.dark .module-button:hover,
+html.dark .dashboard-module-button:hover {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.3),
+    0 10px 10px -5px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark .module-button .icon-container,
+html.dark .dashboard-module-button .icon-container {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+html.dark .module-button:hover .icon-container,
+html.dark .dashboard-module-button:hover .icon-container {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* 🎨 三星风格经典主题特殊样式 */
+html.classic-theme .module-button,
+html.classic-theme .dashboard-module-button {
+  /* 三星风格边框 */
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+  position: relative !important;
+  
+  /* 三星风格阴影 */
+  box-shadow: 
+    0 8px 16px -4px rgba(0, 0, 0, 0.15),
+    0 4px 8px -2px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  
+  /* 三星风格动画 */
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+
+/* 三星风格悬停效果 */
+html.classic-theme .module-button:hover,
+html.classic-theme .dashboard-module-button:hover {
+  transform: translateY(-3px) scale(1.03) !important;
+  box-shadow: 
+    0 16px 32px -8px rgba(0, 0, 0, 0.25),
+    0 8px 16px -4px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* 三星风格图标容器 */
+html.classic-theme .module-button .icon-container,
+html.classic-theme .dashboard-module-button .icon-container {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+/* 三星风格悬停时图标容器 */
+html.classic-theme .module-button:hover .icon-container,
+html.classic-theme .dashboard-module-button:hover .icon-container {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.2)) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  transform: scale(1.15) !important;
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* 三星风格图标 */
+html.classic-theme .module-button .icon,
+html.classic-theme .dashboard-module-button .icon {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)) !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+
+/* 三星风格悬停时图标 */
+html.classic-theme .module-button:hover .icon,
+html.classic-theme .dashboard-module-button:hover .icon {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) !important;
+  transform: scale(1.1) !important;
+}
+
+/* 三星风格徽章 */
+html.classic-theme .module-button .badge,
+html.classic-theme .dashboard-module-button .badge {
+  background: linear-gradient(135deg, var(--badge-bg), color-mix(in srgb, var(--badge-bg) 80%, white)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* 三星风格悬停时徽章 */
+html.classic-theme .module-button:hover .badge,
+html.classic-theme .dashboard-module-button:hover .badge {
+  transform: scale(1.2) rotate(5deg) !important;
+  box-shadow: 
+    0 6px 12px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* 三星风格深色模式特殊样式 */
+html.dark.classic-theme .module-button,
+html.dark.classic-theme .dashboard-module-button {
+  border: 2px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 
+    0 8px 16px -4px rgba(0, 0, 0, 0.4),
+    0 4px 8px -2px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark.classic-theme .module-button:hover,
+html.dark.classic-theme .dashboard-module-button:hover {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 
+    0 16px 32px -8px rgba(0, 0, 0, 0.5),
+    0 8px 16px -4px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+html.dark.classic-theme .module-button .icon-container,
+html.dark.classic-theme .dashboard-module-button .icon-container {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+html.dark.classic-theme .module-button:hover .icon-container,
+html.dark.classic-theme .dashboard-module-button:hover .icon-container {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.1)) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
 }
 
 /* 全局样式 */
