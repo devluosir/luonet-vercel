@@ -79,8 +79,17 @@ function analyzeColumnPatterns(rows: string[][]): ColumnStats[] {
   const maxCols = Math.max(...rows.map(r => r.length));
   const stats: ColumnStats[] = [];
   
+  // 检查是否有表头行
+  const hasHeader = rows.length > 0 && rows[0].some(cell => {
+    const header = cell.toLowerCase().trim();
+    return /^(item|part\s*no|description|qty|quantity|unit|u\/p|item\s*total|remark|序号|编号|名称|数量|单位|单价|总价|备注)$/.test(header);
+  });
+  
+  // 如果有表头，从第二行开始分析数据
+  const dataRows = hasHeader ? rows.slice(1) : rows;
+  
   for (let colIndex = 0; colIndex < maxCols; colIndex++) {
-    const samples = rows.map(r => r[colIndex] || '').filter(s => s.trim());
+    const samples = dataRows.map(r => r[colIndex] || '').filter(s => s.trim());
     const cleanSamples = samples.map(s => cleanTextContent(s));
     
     let numericCount = 0;
@@ -152,7 +161,7 @@ function scoreColumns(stats: ColumnStats[]): Map<number, Map<ColumnField, Column
       });
     }
     
-    // 价格列检测
+    // 价格列检测 - 支持带货币符号和纯数字
     if (colStat.numericRatio >= 0.8 && colStat.positiveRatio >= 0.8) {
       const priceScore = colStat.numericRatio * colStat.positiveRatio * 
         (colStat.currencyRatio > 0 ? 1.3 : 1) * 
@@ -201,12 +210,27 @@ function scoreColumns(stats: ColumnStats[]): Map<number, Map<ColumnField, Column
   return scores;
 }
 
-function chooseBestMapping(colScores: Map<number, Map<ColumnField, ColumnEvidence>>): ColumnField[] {
+function chooseBestMapping(colScores: Map<number, Map<ColumnField, ColumnEvidence>>, rows?: string[][]): ColumnField[] {
   const numCols = colScores.size;
   if (numCols === 0) return [];
   
+  // 如果有表头行，优先使用表头映射
+  if (rows && rows.length > 0) {
+    const headerRow = rows[0];
+    const headerMapping = mapHeadersToFields(headerRow);
+    // 检查是否有标准表头
+    const hasStandardHeaders = headerRow.some(cell => {
+      const header = cell.toLowerCase().trim();
+      return /^(item|part\s*no|description|qty|quantity|unit|u\/p|item\s*total|remark|序号|编号|名称|数量|单位|单价|总价|备注)$/.test(header);
+    });
+    
+    if (hasStandardHeaders) {
+      return headerMapping;
+    }
+  }
+  
   // 构建得分矩阵 [列][字段]
-  const fields: ColumnField[] = ['name', 'desc', 'qty', 'unit', 'price'];
+  const fields: ColumnField[] = ['name', 'desc', 'qty', 'unit', 'price', 'remark'];
   const scoreMatrix: number[][] = [];
   
   for (let colIndex = 0; colIndex < numCols; colIndex++) {
@@ -238,6 +262,57 @@ function chooseBestMapping(colScores: Map<number, Map<ColumnField, ColumnEvidenc
   return mapping;
 }
 
+function mapHeadersToFields(headers: string[]): ColumnField[] {
+  const mapping: ColumnField[] = [];
+  
+  for (const header of headers) {
+    const headerLower = header.toLowerCase().trim();
+    
+    // 序号列
+    if (/^(item|序号|编号|no\.|num|index|#|line|line\s*no\.?)$/.test(headerLower)) {
+      mapping.push('ignore'); // 序号列忽略
+    }
+    // Part No. 列
+    else if (/^(part\s*no\.?|part\s*number|partno|partnumber)$/.test(headerLower)) {
+      mapping.push('ignore'); // Part No. 列忽略
+    }
+    // 描述列
+    else if (/^(description|desc|描述|规格|specification|spec)$/.test(headerLower)) {
+      mapping.push('name'); // Description列映射为name，因为这是主要的产品信息
+    }
+    // 数量列
+    else if (/^(qty|quantity|数量|q'ty)$/.test(headerLower)) {
+      mapping.push('qty');
+    }
+    // 单位列
+    else if (/^(unit|单位|uom)$/.test(headerLower)) {
+      mapping.push('unit');
+    }
+    // 单价列
+    else if (/^(u\/p|u\/price|unit\s*price|单价|price|u\.p)$/.test(headerLower)) {
+      mapping.push('price');
+    }
+    // 总价列
+    else if (/^(item\s*total|total|amount|总价|金额)$/.test(headerLower)) {
+      mapping.push('ignore'); // 总价列忽略，系统会自动计算
+    }
+    // 交货时间列
+    else if (/^(d\/t|delivery\s*time|交货时间|交期)$/.test(headerLower)) {
+      mapping.push('ignore'); // 交货时间列忽略
+    }
+    // 备注列
+    else if (/^(remark|remarks|备注|note|notes)$/.test(headerLower)) {
+      mapping.push('remark'); // 备注列映射为remark
+    }
+    // 默认作为名称列
+    else {
+      mapping.push('name');
+    }
+  }
+  
+  return mapping;
+}
+
 function detectMixedFormats(rows: string[][], mapping: ColumnField[]): boolean {
   // 检测同一列在不同行中的格式是否一致
   const colVariances: number[] = [];
@@ -260,8 +335,22 @@ function detectMixedFormats(rows: string[][], mapping: ColumnField[]): boolean {
   return colVariances.some(v => v > 100);
 }
 
-function calcConfidence(colScores: Map<number, Map<ColumnField, ColumnEvidence>>, rowCount: number, mixed: boolean): number {
+function calcConfidence(colScores: Map<number, Map<ColumnField, ColumnEvidence>>, rowCount: number, mixed: boolean, rows?: string[][]): number {
   if (colScores.size === 0) return 0;
+  
+  // 检查是否有表头，如果有表头则给予高置信度
+  if (rows && rows.length > 0) {
+    const headerRow = rows[0];
+    const hasStandardHeaders = headerRow.some(cell => {
+      const header = cell.toLowerCase().trim();
+      return /^(item|part\s*no|description|qty|quantity|unit|u\/p|item\s*total|remark|序号|编号|名称|数量|单位|单价|总价|备注)$/.test(header);
+    });
+    
+    if (hasStandardHeaders) {
+      // 如果有标准表头，给予高置信度
+      return 85; // 85% 置信度
+    }
+  }
   
   // 构建得分数组便于统计
   const allScores: number[] = [];
@@ -309,11 +398,18 @@ export function enhancedColumnDetection(rows: string[][]): ColumnInference {
     };
   }
   
+  // 检查是否有表头行
+  const hasHeader = rows.length > 0 && rows[0].some(cell => {
+    const header = cell.toLowerCase().trim();
+    return /^(item|part\s*no|description|qty|quantity|unit|u\/p|item\s*total|remark|序号|编号|名称|数量|单位|单价|总价|备注)$/.test(header);
+  });
+  
   const colStats = analyzeColumnPatterns(rows);
   const colScores = scoreColumns(colStats);
-  const mapping = chooseBestMapping(colScores);
+  const mapping = chooseBestMapping(colScores, rows);
+  
   const mixed = detectMixedFormats(rows, mapping);
-  const confidence = calcConfidence(colScores, rows.length, mixed);
+  const confidence = calcConfidence(colScores, rows.length, mixed, rows);
   
   // 生成证据链
   const evidence: ColumnEvidence[] = [];
@@ -402,7 +498,13 @@ export function projectByMapping(row: string[], mapping: ColumnField[]): Partial
     const field = mapping[i];
     const value = row[i]?.trim();
     
-    if (!value || field === 'ignore') continue;
+    if (field === 'ignore') {
+      continue;
+    }
+    
+    if (!value) {
+      continue;
+    }
     
     switch (field) {
       case 'name':
@@ -410,6 +512,10 @@ export function projectByMapping(row: string[], mapping: ColumnField[]): Partial
         break;
       case 'desc':
         result.description = cleanTextContent(value);
+        // 如果还没有partName，将desc作为partName
+        if (!result.partName) {
+          result.partName = cleanTextContent(value);
+        }
         break;
       case 'qty':
         result.quantity = parseQuantity(value);
@@ -419,6 +525,9 @@ export function projectByMapping(row: string[], mapping: ColumnField[]): Partial
         break;
       case 'price':
         result.unitPrice = parsePrice(value);
+        break;
+      case 'remark':
+        result.remark = cleanTextContent(value);
         break;
     }
   }
@@ -482,7 +591,8 @@ export function batchProjectByMapping(rows: string[][], mapping: ColumnField[]):
         description: projected.description || '',
         quantity: projected.quantity || 0,
         unit: projected.unit || 'pc',
-        unitPrice: projected.unitPrice || 0
+        unitPrice: projected.unitPrice || 0,
+        remark: projected.remark || ''
       });
     }
   }
@@ -532,4 +642,22 @@ export function quickHash(text: string): string {
     hash = hash & hash; // Convert to 32-bit integer
   }
   return hash.toString(36);
+}
+
+/**
+ * 测试函数：验证表头识别功能
+ */
+export function testHeaderRecognition() {
+  const testHeaders = [
+    ['Item', 'Part No.', 'Description', 'Qty', 'Unit', 'U/P', 'Item Total', 'Remark'],
+    ['序号', '编号', '名称', '数量', '单位', '单价', '总价', '备注'],
+    ['No.', 'Part Number', 'Desc', 'Quantity', 'Unit', 'Price', 'Amount', 'Notes']
+  ];
+  
+  for (const headers of testHeaders) {
+    const mapping = mapHeadersToFields(headers);
+    console.log('Headers:', headers);
+    console.log('Mapping:', mapping);
+    console.log('---');
+  }
 }

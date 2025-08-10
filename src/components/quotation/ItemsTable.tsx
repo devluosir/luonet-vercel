@@ -245,7 +245,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       <div className="flex items-center justify-between mb-4 px-1">
         <div className="flex items-center gap-2">
           <ImportDataButton onImport={handleImport} />
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="hidden md:block text-sm text-gray-500 dark:text-gray-400">
             <div>提示：双击单元格可以切换红色高亮显示</div>
             {/* 已移除快捷粘贴提示 */}
           </div>

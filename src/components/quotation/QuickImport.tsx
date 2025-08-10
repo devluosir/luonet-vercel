@@ -213,7 +213,7 @@ export function QuickImport({
             />
           </div>
           {/* Day 3 新UI集成区域 */}
-          {preview && parseResult && (
+          {preview && (
             <div className="space-y-3 mt-4">
               {/* 顶部资讯条 */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -221,14 +221,16 @@ export function QuickImport({
                   value={Math.round(confidence * 100)} 
                   threshold={featureFlags.autoInsertThreshold} 
                 />
-                <div className="md:text-right">
-                  <InferenceStatsBar
-                    rowCount={parseResult.stats.toInsert}
-                    colCount={parseResult.inference.mapping.length}
-                    ignoreCount={parseResult.inference.mapping.filter(m => m === 'ignore').length}
-                    mixedFormat={parseResult.inference.mixedFormat}
-                  />
-                </div>
+                {parseResult && (
+                  <div className="md:text-right">
+                    <InferenceStatsBar
+                      rowCount={parseResult.stats.toInsert}
+                      colCount={parseResult.inference.mapping.length}
+                      ignoreCount={parseResult.inference.mapping.filter(m => m === 'ignore').length}
+                      mixedFormat={parseResult.inference.mixedFormat}
+                    />
+                  </div>
+                )}
               </div>
               
               {/* 修复报告 */}
@@ -237,13 +239,13 @@ export function QuickImport({
               )}
               
               {/* 警告列举 */}
-              {(parseResult.stats.warnings.length > 0 || customWarnings.length > 0) && (
+              {((parseResult?.stats.warnings.length || 0) > 0 || customWarnings.length > 0) && (
                 <WarningChips 
                   warnings={[
-                    ...parseResult.stats.warnings.map(w => ({
+                    ...(parseResult?.stats.warnings.map(w => ({
                       type: w.type as WarningChip['type'],
                       message: w.message
-                    })),
+                    })) || []),
                     ...customWarnings.map(w => ({
                       type: w.type as WarningChip['type'],
                       message: w.message
@@ -267,7 +269,7 @@ export function QuickImport({
               <div className="flex items-center justify-between pt-2">
                 {/* 左侧：修复按钮 */}
                 <div className="flex items-center gap-2">
-                  {featureFlags.autoFixEnabled && (parseResult.stats.warnings.length > 0 || customWarnings.length > 0) && (
+                  {featureFlags.autoFixEnabled && ((parseResult?.stats.warnings.length || 0) > 0 || customWarnings.length > 0) && (
                     <button
                       type="button"
                       onClick={handleAutoFix}
@@ -282,7 +284,7 @@ export function QuickImport({
                 
                 {/* 右侧：主要操作按钮 */}
                 <div className="flex items-center gap-2">
-                  {Math.round(confidence * 100) >= featureFlags.autoInsertThreshold && !parseResult.inference.mixedFormat && customWarnings.length === 0 ? (
+                  {Math.round(confidence * 100) >= featureFlags.autoInsertThreshold && !parseResult?.inference.mixedFormat && customWarnings.length === 0 ? (
                     <>
                       <button
                         type="button"

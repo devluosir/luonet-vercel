@@ -6,7 +6,7 @@ const SEP = /[\t,;]|\s{2,}/; // tab, comma, semicolon, 或 2+ spaces
 const HEADER_HINTS = /line\s*no|item|part\s*no|description|qty|quantity|unit|price|amount|u\/price|单价|数量|名称|单位|序号|编号|no\.|num|index|#|line|part|desc/i;
 
 // === 新增类型定义 ===
-export type ColumnField = 'name' | 'desc' | 'qty' | 'unit' | 'price' | 'ignore';
+export type ColumnField = 'name' | 'desc' | 'qty' | 'unit' | 'price' | 'remark' | 'ignore';
 
 export interface ColumnEvidence {
   rule: string;
@@ -244,6 +244,7 @@ export interface ParsedRow {
   quantity: number;
   unit?: string;
   unitPrice: number;
+  remark?: string;
 }
 
 export interface ParseResult {
@@ -344,7 +345,7 @@ function parseRowCells(line: string): string[] {
   // 添加最后一个单元格
   cells.push(currentCell.trim());
   
-  return cells.filter(cell => cell.length > 0 || cells.length <= 1); // 保留空单元格，但过滤完全空的行
+  return cells; // 保留所有单元格，包括空单元格
 }
 
 export function quickSmartParse(text: string): ParseResult {
@@ -519,9 +520,11 @@ export function quickSmartParse(text: string): ParseResult {
   // === 新增：增强列推断与管线集成 ===
   
   // 采样进行列推断（大数据集优化）
-  const sampleSize = Math.min(featureFlags.maxSampleSize, dataRowCells.length);
+  // 使用包含表头的完整行数据，让表头识别能够工作
+  const fullRows = maybeHeader ? allRowCells : dataRowCells;
+  const sampleSize = Math.min(featureFlags.maxSampleSize, fullRows.length);
   const inference = featureFlags.enhancedInferenceEnabled 
-    ? sampleBasedColumnDetection(dataRowCells, sampleSize)
+    ? sampleBasedColumnDetection(fullRows, sampleSize)
     : { mapping: [], confidence: 0, evidence: [], mixedFormat: false };
   
   // 记录推断指标
@@ -551,7 +554,9 @@ export function quickSmartParse(text: string): ParseResult {
   
   if (featureFlags.enhancedInferenceEnabled && inference.confidence >= featureFlags.autoInsertThreshold) {
     // 高置信度：使用新的投影方式
-    const projectedRows = batchProjectByMapping(dataRowCells, inference.mapping);
+    // 如果有表头，需要跳过表头行进行投影
+    const rowsToProject = maybeHeader ? dataRowCells : dataRowCells;
+    const projectedRows = batchProjectByMapping(rowsToProject, inference.mapping);
     
     for (const projected of projectedRows) {
       if (projected.partName && projected.partName.trim()) {

@@ -1,13 +1,9 @@
 import { useState } from 'react';
+import { Columns } from 'lucide-react';
 import { useTablePrefsHydrated } from '@/features/quotation/state/useTablePrefs';
 
 const ALL_COLS: { key: any; label: string }[] = [
-  { key: 'partName', label: 'Name' },
-  { key: 'description', label: 'Desc' },
-  { key: 'quantity', label: 'Qty' },
-  { key: 'unit', label: 'Unit' },
-  { key: 'unitPrice', label: 'Unit Price' },
-  { key: 'amount', label: 'Amount' },
+  { key: 'description', label: 'Description' },
   { key: 'remarks', label: 'Remarks' },
 ];
 
@@ -24,6 +20,7 @@ export function ColumnToggle() {
                    hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 transition-colors"
         onClick={()=>setOpen(o=>!o)}
       >
+        <Columns className="h-4 w-4 inline mr-1" />
         列
       </button>
       {open && (

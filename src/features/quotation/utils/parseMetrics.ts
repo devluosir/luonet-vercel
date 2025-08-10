@@ -90,7 +90,7 @@ export interface ParseFeatureFlags {
 
 export const DEFAULT_FEATURE_FLAGS: ParseFeatureFlags = {
   enhancedInferenceEnabled: true,
-  autoInsertThreshold: 70,
+  autoInsertThreshold: 50, // 降低阈值，让表头识别更容易触发
   showWarnings: true,
   useHungarianMatching: true,
   enableCaching: true,
