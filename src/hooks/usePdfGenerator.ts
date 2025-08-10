@@ -11,14 +11,37 @@ export function usePdfGenerator() {
     ]);
   }, []);
 
-  const generate = useCallback(async (type: 'quotation' | 'confirmation', data: QuotationData, opts?: { mode?: 'preview' | 'final' }) => {
-    // 动态导入PDF生成函数
-    const { generateQuotationPDF } = await import('@/utils/quotationPdfGenerator');
-    const { generateOrderConfirmationPDF } = await import('@/utils/orderConfirmationPdfGenerator');
-
-    return type === 'quotation'
-      ? await generateQuotationPDF(data, opts?.mode === 'preview' ? 'preview' : 'export')
-      : await generateOrderConfirmationPDF(data, opts?.mode === 'preview');
+  const generate = useCallback(async (
+    type: 'quotation' | 'confirmation', 
+    data: QuotationData, 
+    opts?: { 
+      mode?: 'preview' | 'final'; 
+      descriptionMergeMode?: 'auto' | 'manual';
+      remarksMergeMode?: 'auto' | 'manual';
+    }
+  ) => {
+    try {
+      if (type === 'quotation') {
+        const { generateQuotationPDF } = await import('@/utils/quotationPdfGenerator');
+        return await generateQuotationPDF(
+          data, 
+          opts?.mode === 'preview' ? 'preview' : 'export', 
+          opts?.descriptionMergeMode,
+          opts?.remarksMergeMode
+        );
+      } else {
+        const { generateOrderConfirmationPDF } = await import('@/utils/orderConfirmationPdfGenerator');
+        return await generateOrderConfirmationPDF(
+          data, 
+          opts?.mode === 'preview', 
+          opts?.descriptionMergeMode,
+          opts?.remarksMergeMode
+        );
+      }
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      throw error;
+    }
   }, []);
   
   return { generate, warmUp };

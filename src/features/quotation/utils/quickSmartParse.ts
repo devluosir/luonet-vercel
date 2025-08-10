@@ -244,7 +244,14 @@ export interface ParsedRow {
   quantity: number;
   unit?: string;
   unitPrice: number;
-  remark?: string;
+  remarks?: string;
+}
+
+export interface MergedCell {
+  column: 'remarks' | 'description';
+  startRow: number; // 相对数据区第一行的0基索引
+  endRow: number;   // 相对数据区第一行的0基索引（含）
+  content: string;  // 合并单元格文本
 }
 
 export interface ParseResult {
@@ -259,6 +266,13 @@ export interface ParseResult {
     toSkip: number;
     warnings: ValidationWarning[];
   };
+  // === 合并单元格元数据 ===
+  dataStartRow: number;       // 原始行号用于调试
+  remarkCol: number;          // 去序号列后的"备注列"索引
+  descCol: number;            // 去序号列后的"描述列"索引
+  mergedRemarks: MergedCell[];// UI可直接使用的备注合并定义
+  mergedDescriptions: MergedCell[];// UI可直接使用的描述合并定义
+  colMap: Record<string, number>; // 去序号列后的列映射
 }
 
 function parseCSVLikeText(text: string): string[] {
@@ -355,6 +369,10 @@ export function quickSmartParse(text: string): ParseResult {
   // 开始性能计时
   parseMetrics.startTiming();
   
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[QuickSmartParse] 开始解析文本，长度:', text.length);
+  }
+  
   const lines = parseCSVLikeText(text);
   let skipped = 0;
   if (lines.length === 0) {
@@ -365,7 +383,13 @@ export function quickSmartParse(text: string): ParseResult {
       skipped, 
       confidence: 0, 
       inference: { mapping: [], confidence: 0, evidence: [], mixedFormat: false },
-      stats: { toInsert: 0, toSkip: 0, warnings: [] }
+      stats: { toInsert: 0, toSkip: 0, warnings: [] },
+      dataStartRow: 0,
+      remarkCol: 7,
+      descCol: 0, // 修复：Description 应该是 0，不是 1
+      mergedRemarks: [],
+      mergedDescriptions: [],
+      colMap: {}
     };
   }
 
@@ -373,6 +397,12 @@ export function quickSmartParse(text: string): ParseResult {
   const maybeHeader = HEADER_HINTS.test(lines[0]);
   const headerRowIndex = maybeHeader ? 0 : -1;
   let detectedFormat = '';
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[QuickSmartParse] 原始行数:', lines.length);
+    console.log('[QuickSmartParse] 检测到表头:', maybeHeader);
+    console.log('[QuickSmartParse] 前几行:', lines.slice(0, 3));
+  }
 
   // 预处理：解析所有行的单元格
   const allRowCells: string[][] = [];
@@ -393,6 +423,11 @@ export function quickSmartParse(text: string): ParseResult {
   if (maybeHeader && dataStartRow > headerRowIndex + 1) {
     detectedFormat += 'desc-';
   }
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[QuickSmartParse] 数据开始行:', dataStartRow);
+    console.log('[QuickSmartParse] 所有行单元格:', allRowCells);
+  }
 
   // 只对数据行检测序号列
   const dataRowCells = allRowCells.slice(dataStartRow);
@@ -402,27 +437,282 @@ export function quickSmartParse(text: string): ParseResult {
     detectedFormat += sequenceColIndex === 0 ? 'seq-' : `col${sequenceColIndex}seq-`;
     sequenceDetected = true;
   }
+  
+  // 修复：在数据预处理阶段统一移除序号列，确保所有行的一致性
+  const processedDataRowCells = dataRowCells.map(row => {
+    if (sequenceColIndex !== null && row.length > sequenceColIndex) {
+      const newRow = row.slice(); // 复制数组
+      newRow.splice(sequenceColIndex, 1); // 移除序号列
+      return newRow;
+    }
+    return row;
+  });
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[QuickSmartParse] 处理后的数据行:', processedDataRowCells.map((row, idx) => ({
+      row: idx,
+      length: row.length,
+      remarks: row.length > 7 ? cleanTextContent(row[7]) : 'N/A'
+    })));
+  }
 
   let rows: ParsedRow[] = [];
+  
+  // 续行合并逻辑
+  let currentItem: ParsedRow | null = null;
+  let prevHasStarted = false; // 标记上一条是否已经开始
+  
+  // 辅助函数：判断是否为金额
+  function looksLikeMoney(v?: string) {
+    return !!v && /^-?\d{1,3}(,\d{3})*(\.\d+)?$/.test(v.trim());
+  }
+  
+  // 辅助函数：判断是否为数量
+  function looksLikeQty(v?: string) {
+    return !!v && /^\d+(\.\d+)?$/.test(v.trim());
+  }
+  
+  // 辅助函数：判断是否为单位
+  function looksLikeUnit(v?: string) {
+    return !!v && /^[A-Z]{2,6}$/.test(v.trim()); // PCS/SET/EA…
+  }
+  
+  // 辅助函数：判断是否为总计行
+  function isTotalLine(c0?: string, c1?: string, c2?: string, c3?: string) {
+    const text = [c0, c1, c2].filter(Boolean).join(' ').toUpperCase();
+    return /TOTAL\s+AMOUNT|TOTAL\b/.test(text) && looksLikeMoney(c3);
+  }
+  
+  // 辅助函数：判断是否为服务费用
+  function isServiceFee(desc?: string) {
+    const t = (desc || '').toLowerCase();
+    return /(packing|handling|service|bank|admin|documentation)\b/.test(t);
+  }
+  
+  // 检测是否为续行
+  function isContinuationRow(cells: string[]): boolean {
+    if (cells.length < 2) return false;
+    
+    const [c0, c1, c2, c3, c4, c5] = cells.map(s => (s || '').trim()); // 0:Desc, 1:?, 2:Qty, 3:Unit, 4:Price(可能)
+    
+    // 修复：在续行检测中，cells已经移除了序号列，所以c0是描述列
+    // 我们需要检查是否有数量、单位、价格来判断是否为独立行
+    const hasQty = looksLikeQty(c2);
+    const hasUnit = looksLikeUnit(c3);
+    const hasMoney = looksLikeMoney(c4);
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[QuickSmartParse] 续行检测: c0="${c0}", hasQty=${hasQty}, hasUnit=${hasUnit}, hasMoney=${hasMoney}`);
+    }
+    
+    // 1) 明确新条目的强信号：有数量且(有单价或有单位)
+    if (hasQty && (hasUnit || hasMoney)) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[QuickSmartParse] 有数量+单价/单位，不是续行`);
+      }
+      return false;
+    }
+
+    // 2) 总计行一律不是续行
+    if (isTotalLine(c0, c1, c2, cells[cells.length - 1])) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[QuickSmartParse] 是总计行，不是续行`);
+      }
+      return false;
+    }
+
+    // 3) 服务/费用行：如果有数量/单价/单位，则单独成行
+    if (isServiceFee(c0) && (hasQty || hasUnit || hasMoney)) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[QuickSmartParse] 是服务费用行且有数量/单价/单位，不是续行`);
+      }
+      return false;
+    }
+
+    // 4) 仅当"无数量/单价/单位"且上一条已开始时，才认为是描述续行
+    const looksLikeBareDesc = !hasQty && !hasUnit && !hasMoney;
+    const result = prevHasStarted && looksLikeBareDesc;
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[QuickSmartParse] 续行判断: prevHasStarted=${prevHasStarted}, looksLikeBareDesc=${looksLikeBareDesc}, result=${result}`);
+    }
+    
+    return result;
+  }
+  
+  // 检测是否为服务项
+  function isServiceLike(desc: string): boolean {
+    return /(packing|handling|service|fee|charge|银行费|手续费)/i.test(desc || '');
+  }
+  
+  // 检测是否为合计行
+  function isTotalRow(cells: string[]): boolean {
+    const text = cells.join(' ').toLowerCase();
+    return /^(grand\s*)?total\b|total amount\b|合计/.test(text);
+  }
+
+  // 合并块检测（鲁棒实现）
+  function detectMergedBlocks(
+    processed: string[][],       // 去序号列后的数据区
+    dataStartRow: number,
+    remarkCol: number,
+    descCol: number,
+    rawCellCounts?: number[]     // 原始行的 cells.length（含表头/标题）
+  ): MergedCell[] {
+    const merged: MergedCell[] = [];
+    const n = processed.length;
+
+    const isServiceLike = (desc: string) =>
+      /^packing|handling|charge|fee|subtotal|total/i.test(desc.trim());
+
+    // 检测备注列合并
+    let i = 0;
+    while (i < n) {
+      const remark = processed[i]?.[remarkCol]?.trim() ?? '';
+      if (!remark) { 
+        i++; 
+        continue; 
+      }
+
+      const baseRawLen = rawCellCounts?.[i] ?? 0;
+      let j = i + 1;
+
+      while (j < n) {
+        const nextRemark = processed[j]?.[remarkCol]?.trim() ?? '';
+
+        if (nextRemark) break; // 新锚点，停止吞并
+
+        const desc = processed[j]?.[descCol] ?? '';
+        if (isServiceLike(desc)) break; // 服务/费用行，视为分隔
+
+        const rawLen = rawCellCounts?.[j] ?? baseRawLen;
+        if (rawLen + 2 <= baseRawLen) break; // 结构突降，谨慎停
+
+        j++;
+      }
+
+      if (j - i >= 2) {
+        merged.push({ 
+          column: 'remarks', 
+          startRow: i, 
+          endRow: j - 1, 
+          content: remark 
+        });
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[QuickSmartParse] 检测到备注合并块: ${i}-${j-1}, 内容: "${remark.substring(0, 50)}..."`);
+        }
+      }
+      i = j;
+    }
+
+    // 检测描述列合并
+    i = 0;
+    while (i < n) {
+      const desc = processed[i]?.[descCol]?.trim() ?? '';
+      if (!desc) { 
+        i++; 
+        continue; 
+      }
+
+      const baseRawLen = rawCellCounts?.[i] ?? 0;
+      let j = i + 1;
+
+      while (j < n) {
+        const nextDesc = processed[j]?.[descCol]?.trim() ?? '';
+
+        if (nextDesc) break; // 新锚点，停止吞并
+
+        // 检查当前行的其他列是否有服务/费用标识
+        const currentRowDesc = processed[j]?.[descCol] ?? '';
+        const currentRowName = processed[j]?.[0] ?? ''; // 检查名称列
+        if (isServiceLike(currentRowName)) break; // 服务/费用行，视为分隔
+
+        const rawLen = rawCellCounts?.[j] ?? baseRawLen;
+        if (rawLen + 2 <= baseRawLen) break; // 结构突降，谨慎停
+
+        j++;
+      }
+
+      if (j - i >= 2) {
+        merged.push({ 
+          column: 'description', 
+          startRow: i, 
+          endRow: j - 1, 
+          content: desc 
+        });
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[QuickSmartParse] 检测到描述合并块: ${i}-${j-1}, 内容: "${desc.substring(0, 50)}..."`);
+        }
+      }
+      i = j;
+    }
+    
+    return merged;
+  }
 
   // 只处理数据行，跳过表头和说明行
-  for (let i = 0; i < dataRowCells.length; i++) {
-    let cells = dataRowCells[i];
+  for (let i = 0; i < processedDataRowCells.length; i++) {
+    let cells = processedDataRowCells[i];
     
-    // 如果检测到序号列，跳过它
-    if (sequenceColIndex !== null) {
-      cells = cells.slice(); // 复制数组
-      cells.splice(sequenceColIndex, 1); // 移除序号列
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[QuickSmartParse] 处理第${i}行:`, cells);
     }
     
     if (cells.length < 2) { 
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[QuickSmartParse] 第${i}行跳过：列数不足`);
+      }
       skipped++; 
       continue; 
     }
 
     const [c0, c1, c2, c3, c4] = cells;
-    const name = cleanTextContent(c0);
+    // 修复：根据是否有行号来确定名称字段位置
+    const hasLineNo = !!c0 && /^\d+$/.test(c0.trim()) && c0.trim() !== '';
+    const name = hasLineNo ? cleanTextContent(c1) : cleanTextContent(c0);
+    
+    // 跳过合计行 - 使用更严格的判断
+    if (isTotalLine(c0, c1, c2, cells[cells.length - 1])) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[QuickSmartParse] 第${i}行跳过：总计行`);
+      }
+      skipped++;
+      continue;
+    }
+    
+    // 检查是否为续行
+    if (isContinuationRow(cells) && currentItem) {
+      const line = cells.join(' ').trim();
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[QuickSmartParse] 第${i}行识别为续行，合并到上一条:`, line);
+      }
+      
+      // 根据内容把续行追加到更合适的字段
+      if (/^\*?NFC|VEGA|V52|model|part\s*no/i.test(line)) {
+        // 型号信息，追加到描述
+        currentItem.description = currentItem.description
+          ? `${currentItem.description}\n${line}`
+          : line;
+      } else if (/(obsolete|replacement|建议|替代|note|kindly)/i.test(line)) {
+        // 备注信息，追加到备注
+        currentItem.remarks = currentItem.remarks
+          ? `${currentItem.remarks}\n${line}`
+          : line;
+      } else if (line.length > 0) {
+        // 其他信息，追加到描述
+        currentItem.description = currentItem.description
+          ? `${currentItem.description}\n${line}`
+          : line;
+      }
+      continue;
+    }
+    
     if (!name) { 
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[QuickSmartParse] 第${i}行跳过：名称为空`);
+      }
       skipped++; 
       continue; 
     }
@@ -439,31 +729,43 @@ export function quickSmartParse(text: string): ParseResult {
       const c2IsUnitLike = c2 && c2.length <= 8 && !/^\d+\.?\d*$/.test(c2);
       const price3 = parseNumberLike(c3);
       
-      if (qty1 > 0 && c2IsUnitLike && (price3 > 0 || c3 === '' || c3 === undefined)) {
-        rows.push({ 
-          partName: name, 
-          quantity: qty1, 
-          unit: normUnit(c2), 
-          unitPrice: price3 || 0, 
-          description: cleanTextContent(c4)
-        });
-        if (!detectedFormat) detectedFormat = 'name-qty-unit-price';
-        matched = true;
+          if (qty1 > 0 && c2IsUnitLike && (price3 > 0 || c3 === '' || c3 === undefined)) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[QuickSmartParse] 第${i}行匹配模式1: name-qty-unit-price`);
       }
+      const newItem = { 
+        partName: name, 
+        quantity: qty1, 
+        unit: normUnit(c2), 
+        unitPrice: price3 || 0, 
+        description: cleanTextContent(c4)
+      };
+      rows.push(newItem);
+      currentItem = newItem;
+      prevHasStarted = true; // 标记已开始新条目
+      if (!detectedFormat) detectedFormat = 'name-qty-unit-price';
+      matched = true;
+    }
       // 模式2: name, desc, qty, unit, price (5列)
       else if (cells.length >= 5) {
         const qty2 = parseNumberLike(c2);
         const c3IsUnitLike = c3 && c3.length <= 8 && !/^\d+\.?\d*$/.test(c3);
         const price4 = parseNumberLike(c4);
         
-        if (qty2 > 0 && c3IsUnitLike) {
-          rows.push({ 
+        if (qty2 > 0 && c3IsUnitLike && cleanTextContent(c1)) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[QuickSmartParse] 第${i}行匹配模式2: name-desc-qty-unit-price`);
+          }
+          const newItem = { 
             partName: name, 
             description: cleanTextContent(c1),
             quantity: qty2, 
             unit: normUnit(c3), 
             unitPrice: price4 || 0 
-          });
+          };
+          rows.push(newItem);
+          currentItem = newItem;
+          prevHasStarted = true; // 标记已开始新条目
           if (!detectedFormat) detectedFormat = 'name-desc-qty-unit-price';
           matched = true;
         }
@@ -471,7 +773,10 @@ export function quickSmartParse(text: string): ParseResult {
       // 模式3: name, desc, qty, price (4列，无单位)
       if (!matched) {
         const price3 = parseNumberLike(c3);
-        if (qty2 > 0) {
+        if (qty2 > 0 && cleanTextContent(c1) && (!c3 || c3 === '' || /^\d+\.?\d*$/.test(c3))) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log(`[QuickSmartParse] 第${i}行匹配模式3: name-desc-qty-price`);
+          }
           rows.push({ 
             partName: name, 
             description: cleanTextContent(c1),
@@ -489,6 +794,9 @@ export function quickSmartParse(text: string): ParseResult {
     if (!matched && cells.length === 3) {
       const price2 = parseNumberLike(c2);
       if (qty1 > 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[QuickSmartParse] 第${i}行匹配模式4: name-qty-price`);
+        }
         rows.push({ 
           partName: name, 
           quantity: qty1, 
@@ -502,6 +810,9 @@ export function quickSmartParse(text: string): ParseResult {
 
     // 情况 C：2 列：name, qty
     if (!matched && cells.length === 2 && qty1 >= 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[QuickSmartParse] 第${i}行匹配模式5: name-qty`);
+      }
       rows.push({ 
         partName: name, 
         quantity: qty1, 
@@ -513,6 +824,89 @@ export function quickSmartParse(text: string): ParseResult {
     }
 
     if (!matched) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[QuickSmartParse] 第${i}行尝试特殊格式匹配`);
+      }
+      
+      // 新增：处理特殊格式的表格（如您的表格）
+      // 动态检测序号列，然后确定数量字段位置
+      let qtyIndex, unitIndex, priceIndex;
+      
+      // 检查第1列是否是序号
+      const hasLineNo = !!cells[0] && /^\d+$/.test(cells[0]?.trim()) && cells[0]?.trim() !== '';
+      if (cells.length > 3 && hasLineNo) {
+        // 有序号列：序号, 描述, 空, 数量, 单位, 价格, ...
+        qtyIndex = 3; // 第4列（0-based index）
+        unitIndex = 4; // 第5列
+        priceIndex = 5; // 第6列
+      } else {
+        // 无序号列：名称, 空, 数量, 单位, 价格, ...
+        qtyIndex = 2; // 第3列（0-based index）
+        unitIndex = 3; // 第4列
+        priceIndex = 4; // 第5列
+      }
+      
+      if (cells.length > qtyIndex) {
+        const qty = parseNumberLike(cells[qtyIndex]);
+        const unit = cells.length > unitIndex ? cells[unitIndex] : '';
+        const price = cells.length > priceIndex ? parseNumberLike(cells[priceIndex]) : 0;
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[QuickSmartParse] 第${i}行特殊匹配: qty=${qty}, unit=${unit}, price=${price}`);
+        }
+        
+        if (qty > 0 && !name.toLowerCase().includes('total')) {
+          // 修复：根据是否有行号来确定描述字段位置
+          const description = hasLineNo ? cleanTextContent(cells[1]) : cleanTextContent(cells[0]);
+          const isService = isServiceLike(description);
+          
+          // 服务项：允许0单价；普通项：允许0单价（停产/替代建议场景）
+          const shouldAccept = isService || true; // 暂时允许所有0单价
+          
+          if (shouldAccept) {
+            // 处理备注内容
+            const remarks = cells.length > 7 ? cleanTextContent(cells[7]) : '';
+            
+            const newItem = { 
+              partName: name, 
+              description: '', // 修复：不重复设置描述，只保留在partName中
+              quantity: qty, 
+              unit: normUnit(unit), 
+              unitPrice: price,
+              remarks: remarks
+            };
+            
+            rows.push(newItem);
+            currentItem = newItem; // 更新当前项，用于续行合并
+            prevHasStarted = true; // 标记已开始新条目
+            
+            if (!detectedFormat) detectedFormat = 'table-format';
+            matched = true;
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`[QuickSmartParse] 第${i}行特殊匹配成功${isService ? '(服务项)' : ''}`);
+              console.log(`[QuickSmartParse] 第${i}行备注提取: cells.length=${cells.length}, remark="${cells.length > 7 ? cleanTextContent(cells[7]) : ''}"`);
+              console.log(`[QuickSmartParse] 第${i}行完整数据:`, {
+                partName: name,
+                quantity: qty,
+                unit: normUnit(unit),
+                unitPrice: price,
+                remarks: remarks
+              });
+            }
+          } else if (process.env.NODE_ENV === 'development') {
+            console.log(`[QuickSmartParse] 第${i}行特殊匹配失败: 0单价被过滤`);
+          }
+        } else if (process.env.NODE_ENV === 'development') {
+          console.log(`[QuickSmartParse] 第${i}行特殊匹配失败: qty=${qty}, name包含total=${name.toLowerCase().includes('total')}`);
+        }
+      }
+    }
+    
+    if (!matched) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[QuickSmartParse] 第${i}行跳过：不匹配任何模式`);
+      }
       skipped++;
     }
   }
@@ -552,13 +946,25 @@ export function quickSmartParse(text: string): ParseResult {
   let enhancedSkipped = 0;
   const allWarnings: ValidationWarning[] = [];
   
-  if (featureFlags.enhancedInferenceEnabled && inference.confidence >= featureFlags.autoInsertThreshold) {
+  if (false && featureFlags.enhancedInferenceEnabled && inference.confidence >= featureFlags.autoInsertThreshold) {
     // 高置信度：使用新的投影方式
     // 如果有表头，需要跳过表头行进行投影
     const rowsToProject = maybeHeader ? dataRowCells : dataRowCells;
     const projectedRows = batchProjectByMapping(rowsToProject, inference.mapping);
     
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[QuickSmartParse] 增强解析结果:', {
+        projectedRows: projectedRows.length,
+        inference: inference.mapping,
+        confidence: inference.confidence
+      });
+    }
+    
     for (const projected of projectedRows) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[QuickSmartParse] 投影行:', projected);
+      }
+      
       if (projected.partName && projected.partName.trim()) {
         // 计算金额
         const quantity = projected.quantity || 0;
@@ -578,6 +984,9 @@ export function quickSmartParse(text: string): ParseResult {
         const warnings = validateRow(completeRow);
         allWarnings.push(...warnings);
       } else {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[QuickSmartParse] 跳过投影行，partName为空:', projected.partName);
+        }
         enhancedSkipped++;
       }
     }
@@ -644,6 +1053,44 @@ export function quickSmartParse(text: string): ParseResult {
   // 发送指标数据
   parseMetrics.send();
   
+  // 生成列映射
+  const colMap: Record<string, number> = {};
+  if (processedDataRowCells.length > 0) {
+    const maxCols = Math.max(...processedDataRowCells.map(row => row.length));
+    // 根据列数推断列映射（移除序号列后的索引）
+    if (maxCols >= 8) {
+      colMap.partName = 0;
+      colMap.description = 0; // 修复：Description 应该是 0，不是 1
+      colMap.quantity = 2;
+      colMap.unit = 3;
+      colMap.unitPrice = 4;
+      colMap.amount = 5;
+      colMap.deliveryTime = 6;
+      colMap.remarks = 7;
+    }
+  }
+  
+  // 检测合并单元格
+  const remarkCol = colMap.remarks ?? 7;
+  const descCol = colMap.description ?? 0; // 修复：Description 应该是 0，不是 1
+  const rawCellCounts = allRowCells.map(row => row.length).slice(dataStartRow);
+  const mergedCells = detectMergedBlocks(processedDataRowCells, 0, remarkCol, descCol, rawCellCounts);
+  
+  // 分离备注和描述的合并信息
+  const mergedRemarks = mergedCells.filter(cell => cell.column === 'remarks');
+  const mergedDescriptions = mergedCells.filter(cell => cell.column === 'description');
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Parse:merged]', { 
+      dataStartRow, 
+      remarkCol,
+      descCol,
+      mergedRemarks,
+      mergedDescriptions,
+      colMap 
+    });
+  }
+  
   return { 
     rows, 
     skipped, 
@@ -654,6 +1101,12 @@ export function quickSmartParse(text: string): ParseResult {
       toInsert: ok,
       toSkip: skipped,
       warnings: allWarnings
-    }
+    },
+    dataStartRow,
+    remarkCol,
+    descCol,
+    mergedRemarks,
+    mergedDescriptions,
+    colMap
   };
 }

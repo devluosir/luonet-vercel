@@ -5,7 +5,7 @@ import { UserOptions, RowInput, Styles } from 'jspdf-autotable';
 interface ExtendedStyles extends Partial<Styles> {
   maxCellWidth?: number;
 }
-import { QuotationData } from '@/types/quotation';
+import { QuotationData, LineItem } from '@/types/quotation';
 import jsPDF from 'jspdf';
 import { safeSetFont, getFontName } from './pdf/ensureFont';
 
@@ -17,6 +17,114 @@ interface ExtendedJsPDF extends jsPDF {
   autoTable: (options: UserOptions) => void;
   getNumberOfPages: () => number;
 }
+
+// 添加合并单元格相关的类型定义
+interface MergedCellInfo {
+  startRow: number;
+  endRow: number;
+  content: string;
+  isMerged: boolean;
+}
+
+// 计算合并单元格信息（与 ItemsTable 中的逻辑保持一致）
+const calculateMergedCells = (
+  items: LineItem[], 
+  mode: 'auto' | 'manual' = 'auto', 
+  column: 'remarks' | 'description' = 'remarks',
+  manualMergedCells?: MergedCellInfo[]
+): MergedCellInfo[] => {
+  const mergedCells: MergedCellInfo[] = [];
+  
+  if (items.length === 0) {
+    return mergedCells;
+  }
+  
+  if (mode === 'manual') {
+    // 手动模式：先创建所有独立单元格
+    items.forEach((item, index) => {
+      mergedCells.push({
+        startRow: index,
+        endRow: index,
+        content: column === 'remarks' ? (item.remarks || '') : (item.description || ''),
+        isMerged: false
+      });
+    });
+    
+    // 如果有手动合并数据，应用合并
+    if (manualMergedCells && manualMergedCells.length > 0) {
+      // 移除被合并的独立单元格
+      manualMergedCells.forEach(manualCell => {
+        for (let i = manualCell.startRow; i <= manualCell.endRow; i++) {
+          const existingIndex = mergedCells.findIndex(cell => cell.startRow === i);
+          if (existingIndex !== -1) {
+            mergedCells.splice(existingIndex, 1);
+          }
+        }
+        // 添加合并的单元格
+        mergedCells.push(manualCell);
+      });
+    }
+    
+    return mergedCells;
+  }
+  
+  // 自动模式：相同内容的相邻行自动合并
+  let currentStart = 0;
+  let currentContent = column === 'remarks' ? (items[0]?.remarks || '') : (items[0]?.description || '');
+
+  for (let i = 1; i <= items.length; i++) {
+    const currentItem = items[i];
+    const prevItem = items[i - 1];
+    
+    const prevContent = column === 'remarks' ? (prevItem.remarks || '') : (prevItem.description || '');
+    const currentContentValue = currentItem ? (column === 'remarks' ? (currentItem.remarks || '') : (currentItem.description || '')) : '';
+    
+    // 检查是否需要结束当前合并
+    const shouldEndMerge = !currentItem || 
+                          currentContentValue !== prevContent ||
+                          !currentContentValue ||
+                          !prevContent;
+
+    if (shouldEndMerge) {
+      // 结束当前合并组
+      if (i - 1 > currentStart) {
+        // 有合并的单元格
+        mergedCells.push({
+          startRow: currentStart,
+          endRow: i - 1,
+          content: currentContent,
+          isMerged: true
+        });
+      } else {
+        // 单个单元格
+        mergedCells.push({
+          startRow: currentStart,
+          endRow: currentStart,
+          content: currentContent,
+          isMerged: false
+        });
+      }
+
+      if (currentItem) {
+        // 开始新的合并组
+        currentStart = i;
+        currentContent = currentContentValue;
+      }
+    }
+  }
+
+  return mergedCells;
+};
+
+// 检查指定行是否应该渲染 remark 单元格
+const shouldRenderRemarkCell = (rowIndex: number, mergedCells: MergedCellInfo[]): boolean => {
+  return mergedCells.some(cell => cell.startRow === rowIndex);
+};
+
+// 获取指定行的合并信息
+const getMergedCellInfo = (rowIndex: number, mergedCells: MergedCellInfo[]): MergedCellInfo | null => {
+  return mergedCells.find(cell => cell.startRow === rowIndex) || null;
+};
 
 // 默认单位列表（需要单复数变化的单位）
 const defaultUnits = ['pc', 'set', 'length'];
@@ -151,8 +259,19 @@ export const generateTableConfig = (
   margin: number,
   pageWidth: number,
   mode: 'preview' | 'export' = 'export',
-  visibleCols?: string[] // 新增可选参数：从页面列偏好读取
+  visibleCols?: string[], // 新增可选参数：从页面列偏好读取
+  descriptionMergeMode: 'auto' | 'manual' = 'auto', // Description列合并模式
+  remarksMergeMode: 'auto' | 'manual' = 'auto', // Remarks列合并模式
+  manualMergedCells?: {
+    description: MergedCellInfo[];
+    remarks: MergedCellInfo[];
+  } // 手动合并数据
 ): UserOptions => {
+  // 检查字体是否可用
+  const fontList = doc.getFontList();
+  const notoSansSC = fontList['NotoSansSC'];
+  const useChineseFont = notoSansSC && notoSansSC.includes('normal');
+  const fontName = useChineseFont ? 'NotoSansSC' : 'helvetica';
   // 计算页面可用宽度，表格左右边距向外扩展5mm
   const pageWidth_mm = pageWidth;
   const tableMarginReduction = 5; // 向外扩展5mm
@@ -177,62 +296,132 @@ export const generateTableConfig = (
     adjustedMargin
   );
 
+  // 计算合并单元格信息
+  const mergedRemarksCells = calculateMergedCells(
+    data.items || [], 
+    remarksMergeMode, 
+    'remarks',
+    manualMergedCells?.remarks
+  );
+  const mergedDescriptionCells = calculateMergedCells(
+    data.items || [], 
+    descriptionMergeMode, 
+    'description',
+    manualMergedCells?.description
+  );
+
+  // 调试日志
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[PDF] Description合并模式:', descriptionMergeMode);
+    console.log('[PDF] 手动合并数据:', manualMergedCells?.description);
+    console.log('[PDF] 计算后的Description合并单元格:', mergedDescriptionCells);
+  }
+
+  // 检查指定行是否应该渲染 description 单元格
+  const shouldRenderDescriptionCell = (rowIndex: number, mergedCells: MergedCellInfo[]): boolean => {
+    return mergedCells.some(cell => cell.startRow === rowIndex);
+  };
+
+  // 获取指定行的 description 合并信息
+  const getMergedDescriptionCellInfo = (rowIndex: number, mergedCells: MergedCellInfo[]): MergedCellInfo | null => {
+    return mergedCells.find(cell => cell.startRow === rowIndex) || null;
+  };
+
+
   return {
     startY: currentY,
     head: [['No.', 'Part Name', ...(showDescription ? ['Description'] : []), 'Q\'TY', 'Unit', 'U/Price', 'Amount', ...(showRemarks ? ['Remarks'] : [])]],
     body: [
-      // 常规商品行
-      ...(data.items || []).map((item, index) => [
-        {
-          content: (index + 1).toString(),
-          styles: { halign: 'center' as const }
-        },
-        {
-          content: item.partName,
-          styles: item.highlight?.partName ? { textColor: [255, 0, 0] } : {}
-        },
-        ...(showDescription ? [{
-          content: item.description || '',
-          styles: item.highlight?.description ? { textColor: [255, 0, 0] } : {}
-        }] : []),
-        {
-          content: item.quantity.toString(),
-          styles: { 
-            halign: 'center' as const,
-            ...(item.highlight?.quantity ? { textColor: [255, 0, 0] } : {})
+      // 常规商品行（支持合并单元格）
+      ...(data.items || []).map((item, index) => {
+        const row: any[] = [
+          {
+            content: (index + 1).toString(),
+            styles: { halign: 'center' as const }
+          },
+          {
+            content: item.partName,
+            styles: item.highlight?.partName ? { textColor: [255, 0, 0] } : {}
+          },
+          {
+            content: item.quantity.toString(),
+            styles: { 
+              halign: 'center' as const,
+              ...(item.highlight?.quantity ? { textColor: [255, 0, 0] } : {})
+            }
+          },
+          {
+            content: getUnitDisplay(item.unit || '', item.quantity || 0, data.customUnits || []),
+            styles: { 
+              halign: 'center' as const,
+              ...(item.highlight?.unit ? { textColor: [255, 0, 0] } : {})
+            }
+          },
+          {
+            content: item.unitPrice.toFixed(2),
+            styles: { 
+              halign: 'center' as const,
+              ...(item.highlight?.unitPrice ? { textColor: [255, 0, 0] } : {})
+            }
+          },
+          {
+            content: item.amount.toFixed(2),
+            styles: { 
+              halign: 'center' as const,
+              ...(item.highlight?.amount ? { textColor: [255, 0, 0] } : {})
+            }
           }
-        },
-        {
-          content: getUnitDisplay(item.unit || '', item.quantity || 0, data.customUnits || []),
-          styles: { 
-            halign: 'center' as const,
-            ...(item.highlight?.unit ? { textColor: [255, 0, 0] } : {})
-          }
-        },
-        {
-          content: item.unitPrice.toFixed(2),
-          styles: { 
-            halign: 'center' as const,
-            ...(item.highlight?.unitPrice ? { textColor: [255, 0, 0] } : {})
-          }
-        },
-        {
-          content: item.amount.toFixed(2),
-          styles: { 
-            halign: 'center' as const,
-            ...(item.highlight?.amount ? { textColor: [255, 0, 0] } : {})
-          }
-        },
-        ...(showRemarks ? [{
-          content: item.remarks || '',
-          styles: item.highlight?.remarks ? { textColor: [255, 0, 0] } : {}
-        }] : [])
-      ]),
+        ];
+
+        // 添加 description 列（支持合并单元格）
+        if (showDescription && shouldRenderDescriptionCell(index, mergedDescriptionCells)) {
+          const mergedInfo = getMergedDescriptionCellInfo(index, mergedDescriptionCells);
+          const rowSpan = mergedInfo ? mergedInfo.endRow - mergedInfo.startRow + 1 : 1;
+          const isMerged = mergedInfo?.isMerged || false;
+          
+          // 在Part Name之后插入Description列
+          row.splice(2, 0, {
+            content: mergedInfo?.content || '',
+            rowSpan: isMerged ? rowSpan : undefined,
+            styles: {
+              halign: 'center' as const,
+              ...(item.highlight?.description ? { textColor: [255, 0, 0] } : {})
+            }
+          });
+        }
+
+        // 添加 remarks 列（支持合并单元格）
+        if (showRemarks && shouldRenderRemarkCell(index, mergedRemarksCells)) {
+          const mergedInfo = getMergedCellInfo(index, mergedRemarksCells);
+          const rowSpan = mergedInfo ? mergedInfo.endRow - mergedInfo.startRow + 1 : 1;
+          const isMerged = mergedInfo?.isMerged || false;
+          
+          row.push({
+            content: mergedInfo?.content || '',
+            rowSpan: isMerged ? rowSpan : undefined,
+            styles: {
+              halign: 'center' as const,
+              ...(item.highlight?.remarks ? { textColor: [255, 0, 0] } : {}),
+              // 移除合并单元格的特殊样式，保持与普通单元格完全一致
+              // ...(isMerged ? { 
+              //   fillColor: [240, 248, 255], // 浅蓝色背景
+              //   // 移除蓝色边框，保持与普通单元格一致的黑色边框
+              //   // lineColor: [59, 130, 246],  // 蓝色边框
+              //   // lineWidth: 0.5
+              // } : {})
+            }
+          });
+        }
+
+
+
+        return row;
+      }),
       // Other Fees 行
       ...(data.otherFees || []).map(fee => [
         {
           content: fee.description,
-          colSpan: showDescription ? 6 : 5,
+          colSpan: showDescription ? 7 : 6,
           styles: { 
             halign: 'center' as const,
             ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {})
@@ -264,7 +453,7 @@ export const generateTableConfig = (
       lineColor: [0, 0, 0],
       lineWidth: 0.1,
       textColor: [0, 0, 0],
-      font: getFontName(mode), // 根据模式选择字体
+      font: fontName, // 使用实际可用的字体
       fontStyle: 'normal' as const, // 明确指定normal
       valign: 'middle' as const,
       minCellHeight: 6,
@@ -275,7 +464,7 @@ export const generateTableConfig = (
       fontSize: 8,
       fontStyle: 'bold' as const, // 明确指定bold
       halign: 'center' as const,
-      font: getFontName(mode), // 根据模式选择字体
+      font: fontName, // 使用实际可用的字体
       valign: 'middle' as const,
       minCellHeight: 8,
       cellPadding: { left: 2, right: 2, top: 2, bottom: 2 },
@@ -284,6 +473,11 @@ export const generateTableConfig = (
     // 使用精确计算的列样式配置
     columnStyles: columnStyles,
     didParseCell: (data) => {
+      // 确保每个单元格都使用正确的字体
+      if (fontName === 'NotoSansSC') {
+        data.doc.setFont('NotoSansSC', 'normal');
+      }
+      
       const pageHeight = data.doc.internal.pageSize.height;
       const bottomMargin = 25;
       
@@ -299,6 +493,11 @@ export const generateTableConfig = (
       }
     },
     didDrawPage: (data) => {
+      // 确保每页都使用正确的字体
+      if (fontName === 'NotoSansSC') {
+        doc.setFont('NotoSansSC', 'normal');
+      }
+      
       // 清除页面底部区域并添加页码的通用函数
       const addPageNumber = () => {
         const pageHeight = doc.internal.pageSize.height;

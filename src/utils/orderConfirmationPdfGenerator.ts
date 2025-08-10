@@ -8,6 +8,7 @@ import { ensurePdfFont } from './pdfFontRegistry';
 import { getHeaderImage } from './imageLoader';
 import { sanitizeQuotation } from './sanitizeQuotation';
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
+import { safeSetCnFont } from './pdf/ensureFont';
 
 // 扩展jsPDF类型
 type ExtendedJsPDF = jsPDF & {
@@ -54,171 +55,150 @@ async function getStampImage(stampType: string): Promise<string> {
 }
 
 // 生成订单确认PDF
-export const generateOrderConfirmationPDF = async (data: QuotationData, preview = false): Promise<Blob> => {
+export const generateOrderConfirmationPDF = async (
+  data: QuotationData, 
+  preview = false, 
+  descriptionMergeMode: 'auto' | 'manual' = 'auto',
+  remarksMergeMode: 'auto' | 'manual' = 'auto',
+  manualMergedCells?: {
+    description: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+    remarks: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+  }
+): Promise<Blob> => {
   // 检查是否在客户端环境
   if (typeof window === 'undefined') {
     throw new Error('PDF generation is only available in client-side environment');
   }
 
-  // 读取页面列显示偏好，与页面表格保持一致
-  let visibleCols: string[] | undefined;
-  visibleCols = getLocalStorageJSON('qt.visibleCols', []);
-
+  // 创建 PDF 文档
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: 'a4'
+    format: 'a4',
+    putOnlyUsedFonts: true,
+    floatPrecision: 16
   }) as ExtendedJsPDF;
 
-  // 确保中文字体正确注册（使用按需加载）
-  await ensurePdfFont(doc);
-
-  const pageWidth = doc.internal.pageSize.width;
-  const margin = 20;
-  let startY = margin;
-
   try {
-    // 添加表头
-    try {
-      const headerType = data.templateConfig?.headerType || 'none';
-      if (headerType !== 'none') {
-        // 使用按需加载获取表头图片
-        const headerImageBase64 = await getHeaderImage(headerType);
-        const headerImage = `data:image/png;base64,${headerImageBase64}`;
-        
-        const imgProperties = doc.getImageProperties(headerImage);
-        const imgWidth = pageWidth - 30;
-        const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
-        doc.addImage(headerImage, 'PNG', 15, 15, imgWidth, imgHeight);
-        
-        doc.setFontSize(14);
-        doc.setFont('NotoSansSC', 'bold');
-        const title = 'SALES CONFIRMATION';
-        const titleWidth = doc.getTextWidth(title);
-        const titleY = margin + imgHeight + 5;
-        doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-        startY = titleY + 10;
+    // 确保字体在当前 doc 实例注册（带回退保护）
+    await ensurePdfFont(doc);
+
+    // 开发期自检断言
+    if (process.env.NODE_ENV === 'development') {
+      const fonts = doc.getFontList();
+      if (!fonts['NotoSansSC'] || !fonts['NotoSansSC']?.includes('normal')) {
+        console.error('[PDF] NotoSansSC 未在当前 doc 注册完整', fonts);
       } else {
-        // 无表头时使用默认布局
-        doc.setFontSize(14);
-        doc.setFont('NotoSansSC', 'bold');
-        const title = 'SALES CONFIRMATION';
-        const titleWidth = doc.getTextWidth(title);
-        const titleY = margin + 5;
-        doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-        startY = titleY + 10;
+        console.log('[PDF] 字体注册验证通过:', fonts['NotoSansSC']);
       }
-    } catch (error) {
-      console.error('Error processing header:', error);
-      doc.setFontSize(14);
-      doc.setFont('NotoSansSC', 'bold');
-      const title = 'SALES CONFIRMATION';
-      const titleWidth = doc.getTextWidth(title);
-      const titleY = margin + 5;
-      doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-      startY = titleY + 10;
     }
 
-    // 设置字体和样式
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 20;  // 页面边距
+    let startY = margin;
+
+    // 读取页面列显示偏好，与页面表格保持一致
+    let visibleCols: string[] | undefined;
+    try {
+      visibleCols = JSON.parse(localStorage.getItem('qt.visibleCols') || 'null');
+    } catch (e) {
+      console.warn('Failed to read table column preferences:', e);
+    }
+
+    // 添加标题
+    doc.setFontSize(14);
+    safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
+    const title = 'ORDER CONFIRMATION';
+    const titleWidth = doc.getTextWidth(title);
+    const titleX = margin + (pageWidth - 2 * margin - titleWidth) / 2;
+    doc.text(title, titleX, startY);
+    startY += 10;
+
+    // 添加客户信息
     doc.setFontSize(8);
-    doc.setFont('NotoSansSC', 'normal');
+    safeSetCnFont(doc, 'normal', preview ? 'preview' : 'export');
     
     let currentY = startY;
-
-    // 右上角信息区域
+    const leftMargin = 20;
     const rightMargin = pageWidth - 20;
-    const rightInfoY = startY;
-    const colonX = rightMargin - 20;  // 冒号的固定位置，向左移5px
+    const colonX = rightMargin - 20;  // 冒号的固定位置
     
-    doc.setFont('NotoSansSC', 'bold');
+    // 右上角信息区域
+    safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
     
     // Contract No.
-    doc.text('Contract No.', colonX - 2, rightInfoY, { align: 'right' });
-    doc.text(':', colonX, rightInfoY);
+    doc.text('Contract No.', colonX - 2, currentY, { align: 'right' });
+    doc.text(':', colonX, currentY);
     doc.setTextColor(255, 0, 0); // 设置文字颜色为红色
-    doc.text(data.contractNo || '', colonX + 3, rightInfoY);
+    doc.text(data.contractNo || '', colonX + 3, currentY);
     doc.setTextColor(0, 0, 0); // 恢复文字颜色为黑色
     
     // Date
-    doc.text('Date', colonX - 2, rightInfoY + 5, { align: 'right' });
-    doc.text(':', colonX, rightInfoY + 5);
-    doc.text(data.date || '', colonX + 3, rightInfoY + 5);
+    doc.text('Date', colonX - 2, currentY + 5, { align: 'right' });
+    doc.text(':', colonX, currentY + 5);
+    doc.text(data.date || '', colonX + 3, currentY + 5);
 
     // From
-    doc.text('From', colonX - 2, rightInfoY + 10, { align: 'right' });
-    doc.text(':', colonX, rightInfoY + 10);
-    // 确保报价人信息显示，如果为空则显示默认值
-    const fromText = data.from && data.from.trim() ? data.from.trim() : 'Roger';
-    doc.text(fromText, colonX + 3, rightInfoY + 10);
+    doc.text('From', colonX - 2, currentY + 10, { align: 'right' });
+    doc.text(':', colonX, currentY + 10);
+    doc.text(data.from || '', colonX + 3, currentY + 10);
     
     // Currency
-    doc.text('Currency', colonX - 2, rightInfoY + 15, { align: 'right' });
-    doc.text(':', colonX, rightInfoY + 15);
-    doc.text(data.currency || '', colonX + 3, rightInfoY + 15);
+    doc.text('Currency', colonX - 2, currentY + 15, { align: 'right' });
+    doc.text(':', colonX, currentY + 15);
+    doc.text(data.currency || '', colonX + 3, currentY + 15);
 
     // 客户信息区域
-    const leftMargin = 20;
-    
-    // To: 区域
     doc.text('To:', leftMargin, currentY);
     const toTextWidth = doc.getTextWidth('To: ');
     
-    // 计算右侧信息区域的起始位置（从右边缘减去合适的宽度）
-    const rightColumnWidth = 50; // 右侧信息列的宽度（mm）
-    const rightColumnStart = pageWidth - rightColumnWidth - margin;
+    // 处理To字段的多行文本
+    const toLines = (data.to || '').split('\n');
+    toLines.forEach((line, index) => {
+      const lineY = currentY + (index * 4);
+      doc.text(line, leftMargin + toTextWidth, lineY);
+    });
+    currentY += Math.max(toLines.length * 4, 8);
 
-    // 计算左侧文本的最大宽度（考虑右侧信息区域）
-    const maxWidth = rightColumnStart - leftMargin - toTextWidth - 5; // 5mm作为安全间距
-    
-    // 处理客户信息自动换行
-    const toText = data.to?.trim() || '';
-    if (toText) {
-      const wrappedLines = doc.splitTextToSize(toText, maxWidth);
-      wrappedLines.forEach((line: string) => {
-        doc.text(line, leftMargin + toTextWidth, currentY);
-        currentY += 3.5;
-      });
+    currentY = Math.max(currentY + 8, startY + 20);  // 设置最小起始位置
+    doc.setFontSize(8);
+    doc.text('Thank you for your order. We confirm the following details:', leftMargin, currentY);
+
+    // 确保表格与感谢语有3mm的固定间距
+    currentY += 3;
+
+    // 添加表格
+    if (data.items && data.items.length > 0) {
+      doc.autoTable(generateTableConfig(
+        data, 
+        doc, 
+        currentY, 
+        margin, 
+        pageWidth, 
+        'export', 
+        visibleCols, 
+        descriptionMergeMode,
+        remarksMergeMode,
+        manualMergedCells
+      ));
     }
-
-    // Order No. 区域 - 设置固定的起始位置
-    currentY = Math.max(currentY + 2, startY + 10);  // 确保最小起始位置
-    doc.text('Order No.:', leftMargin, currentY);
-    const orderNoX = leftMargin + doc.getTextWidth('Order No.: ');
-    
-    // 处理订单号自动换行，使用相同的最大宽度
-    if (data.inquiryNo) {
-      const wrappedOrderNo = doc.splitTextToSize(data.inquiryNo?.trim() || '', maxWidth);
-      wrappedOrderNo.forEach((line: string, index: number) => {
-        // 设置订单号为蓝色
-        doc.setTextColor(0, 0, 255);
-        doc.text(line, orderNoX, currentY + (index * 3.5));
-        // 恢复黑色
-        doc.setTextColor(0, 0, 0);
-      });
-      currentY += (wrappedOrderNo.length - 1) * 3.5;
-    }
-   // 恢复普通字体
-   doc.setFont('NotoSansSC', 'normal');
-   
-   
-   
-   // 添加确认文本，增加与上方Order No.的间距
-   currentY = Math.max(currentY + 8, startY + 20);  // 设置最小起始位置为startY + 25
-   doc.setFontSize(8);
-   doc.text('We hereby confirm having sold to you the following goods on terms and condition as specified below:', leftMargin, currentY);
-
-   // 确保表格与确认文本有3mm的固定间距
-   currentY += 3;
-
-    // 使用共享的表格配置
-    doc.autoTable(generateTableConfig(data, doc, currentY, margin, pageWidth, 'export', visibleCols));
 
     // 获取表格结束的Y坐标
     const finalY = doc.lastAutoTable.finalY || currentY;
     currentY = finalY + 10;
 
     // 检查剩余空间是否足够显示总金额
-    const pageHeight = doc.internal.pageSize.height;
     const requiredSpace = 20; // 显示总金额所需的最小空间(mm)
     
     // 如果当前页剩余空间不足，添加新页面

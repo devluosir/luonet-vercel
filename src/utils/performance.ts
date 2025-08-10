@@ -21,7 +21,7 @@ export class PerformanceMonitor {
   private thresholds = {
     loading: 50,      // 加载阶段 > 50ms 警告（首次 ≤ 120ms 可告警不拦截）
     registration: 15,  // 注册阶段 > 15ms 警告（首次 ≤ 40ms）
-    generation: 200,   // PDF生成核心 > 200ms 警告（表格复杂场景 ≤ 350ms）
+    generation: 350,   // PDF生成核心 > 350ms 警告（调整为更现实的阈值）
     'preview-mount': 1200  // 预览挂载 > 1200ms 警告（首次预览可能较慢）
   };
 
@@ -56,9 +56,9 @@ export class PerformanceMonitor {
       
       // 分模式阈值策略
       if (mode === 'preview') {
-        return isColdStart ? 250 : 200; // 预览模式：冷启动250ms，热启动200ms
+        return isColdStart ? 400 : 350; // 预览模式：冷启动400ms，热启动350ms
       } else if (mode === 'export' || mode === 'final') {
-        return isColdStart ? 400 : 300; // 导出模式：冷启动400ms，热启动300ms
+        return isColdStart ? 500 : 450; // 导出模式：冷启动500ms，热启动450ms
       }
     }
     

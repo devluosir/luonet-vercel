@@ -19,7 +19,26 @@ interface ExtendedJsPDF extends jsPDF {
   getNumberOfPages: () => number;
 }
 
-export const generateQuotationPDF = async (rawData: unknown, mode: 'preview' | 'export' = 'export'): Promise<Blob> => {
+export const generateQuotationPDF = async (
+  rawData: unknown, 
+  mode: 'preview' | 'export' = 'export', 
+  descriptionMergeMode: 'auto' | 'manual' = 'auto',
+  remarksMergeMode: 'auto' | 'manual' = 'auto',
+  manualMergedCells?: {
+    description: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+    remarks: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+  }
+): Promise<Blob> => {
   const totalId = startTimer('pdf-generation');
   
   try {
@@ -43,26 +62,29 @@ export const generateQuotationPDF = async (rawData: unknown, mode: 'preview' | '
     const doc = new jsPDF() as ExtendedJsPDF;
     endTimer(docCreationId, 'doc-creation');
 
-    // 字体策略：预览走Helvetica（零成本），导出走中文字体
+    // 字体策略：预览和导出都使用中文字体，确保中文正常显示
     const fontLoadingId = startTimer('font-loading');
-    if (mode === 'preview') {
-      // 预览模式：使用系统内置字体，零注册成本
-      doc.setFont('helvetica', 'normal');
-      console.log('[PDF] 预览模式使用Helvetica字体，跳过中文字体注册');
-    } else {
-      // 导出模式：使用中文字体
+    try {
       await fastRegisterFonts(doc);
-      console.log('[PDF] 导出模式使用中文字体');
+      
+      // 验证字体注册是否成功
+      const fontList = doc.getFontList();
+      const notoSansSC = fontList['NotoSansSC'];
+      if (!notoSansSC || !notoSansSC.includes('normal')) {
+        console.warn('[PDF] 中文字体注册失败，回退到 Helvetica');
+        doc.setFont('helvetica', 'normal');
+      } else {
+        doc.setFont('NotoSansSC', 'normal');
+      }
+    } catch (error) {
+      console.error('[PDF] 字体注册失败，回退到 Helvetica:', error);
+      doc.setFont('helvetica', 'normal');
     }
     endTimer(fontLoadingId, 'font-loading');
 
     // 验证字体设置
     const fontVerificationId = startTimer('font-verification');
     safeSetCnFont(doc, 'normal', mode);
-    if (process.env.NODE_ENV === 'development') {
-      const fontInfo = doc.getFont();
-      console.log('当前字体信息:', fontInfo);
-    }
     endTimer(fontVerificationId, 'font-verification');
 
     // 设置页面参数
@@ -164,46 +186,14 @@ export const generateQuotationPDF = async (rawData: unknown, mode: 'preview' | '
     doc.text('To:', leftMargin, currentY);
     const toTextWidth = doc.getTextWidth('To: ');
     
-    // 计算右侧信息区域的起始位置（从右边缘减去合适的宽度）
-    const rightColumnWidth = 50; // 右侧信息列的宽度（mm）
-    const rightColumnStart = pageWidth - rightColumnWidth - margin;
+    // 处理To字段的多行文本
+    const toLines = (data.to || '').split('\n');
+    toLines.forEach((line, index) => {
+      const lineY = currentY + (index * 4);
+      doc.text(line, leftMargin + toTextWidth, lineY);
+    });
+    currentY += Math.max(toLines.length * 4, 8);
 
-    // 计算左侧文本的最大宽度（考虑右侧信息区域）
-    const maxWidth = rightColumnStart - leftMargin - toTextWidth - 5; // 5mm作为安全间距
-    
-    // 处理客户信息自动换行
-    const toText = data.to?.trim() || '';
-    if (toText) {
-      const wrappedLines = doc.splitTextToSize(toText, maxWidth);
-      wrappedLines.forEach((line: string) => {
-        doc.text(line, leftMargin + toTextWidth, currentY);
-        currentY += 3.5;
-      });
-    }
-
-    // Inquiry No. 区域 - 设置固定的起始位置
-    currentY = Math.max(currentY + 2, startY + 10);  // 确保最小起始位置
-    doc.text('Inquiry No.:', leftMargin, currentY);
-    const inquiryNoX = leftMargin + doc.getTextWidth('Inquiry No.: ');
-    
-    // 处理询价编号自动换行，使用相同的最大宽度
-    const inquiryNoText = data.inquiryNo?.trim() || '';
-    if (inquiryNoText) {
-      const wrappedInquiryNo = doc.splitTextToSize(inquiryNoText, maxWidth);
-      wrappedInquiryNo.forEach((line: string, index: number) => {
-        // 设置询价编号为蓝色
-        doc.setTextColor(0, 0, 255);
-        doc.text(line, inquiryNoX, currentY + (index * 3.5));
-        // 恢复黑色
-        doc.setTextColor(0, 0, 0);
-      });
-      currentY += (wrappedInquiryNo.length - 1) * 3.5;
-    }
-    
-    // 恢复普通字体
-    safeSetCnFont(doc, 'normal', mode);
-    
-    // 添加感谢语，增加与上方Inquiry No.的间距
     currentY = Math.max(currentY + 8, startY + 20);  // 设置最小起始位置
     doc.setFontSize(8);
     doc.text('Thanks for your inquiry, and our best offer is as follows:', leftMargin, currentY);
@@ -219,7 +209,18 @@ export const generateQuotationPDF = async (rawData: unknown, mode: 'preview' | '
     if (data.items && data.items.length > 0) {
       // 使用共享的表格配置
       const { generateTableConfig } = await import('./pdfTableGenerator');
-      const tableConfig = generateTableConfig(data, doc, yPosition, margin, pageWidth, mode, visibleCols);
+      const tableConfig = generateTableConfig(
+        data, 
+        doc, 
+        yPosition, 
+        margin, 
+        pageWidth, 
+        mode, 
+        visibleCols, 
+        descriptionMergeMode,
+        remarksMergeMode,
+        manualMergedCells
+      );
       
       doc.autoTable(tableConfig);
       yPosition = doc.lastAutoTable.finalY + 10;

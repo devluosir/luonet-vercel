@@ -20,6 +20,7 @@ export function useGlobalPasteImport(opts: Opts = {}) {
   } = opts;
   
   const updateItems = useQuotationStore(s => s.updateItems);
+  const updateFromParse = useQuotationStore(s => s.updateFromParse);
   const items = useQuotationStore(s => s.data.items);
   const { showToast } = useToast();
 
@@ -51,8 +52,8 @@ export function useGlobalPasteImport(opts: Opts = {}) {
       const parsed = quickSmartParse(text);
       if (parsed.rows.length === 0) return;
 
-      // 3) 默认追加模式（Shift+替换功能留待后续完善）
-      const replace = false;
+      // 3) 默认替换模式（避免空行干扰合并检测）
+      const replace = true;
 
       // 4) 决策：直接插入 or 预览
       const confident = parsed.confidence >= minConfidence;
@@ -78,8 +79,19 @@ export function useGlobalPasteImport(opts: Opts = {}) {
           };
         });
 
-        const next = replace ? mapped : [...items, ...mapped];
-        updateItems(next);
+        if (replace) {
+          // 使用解析器的完整结果，包括合并信息
+          updateFromParse({
+            rows: mapped,
+            mergedRemarks: parsed.mergedRemarks,
+            mergedDescriptions: parsed.mergedDescriptions
+          });
+        } else {
+          // 追加模式：需要处理合并信息的偏移
+          const next = [...items, ...mapped];
+          updateItems(next);
+          // TODO: 如果需要追加模式下的合并信息，需要在这里处理偏移
+        }
 
         // Toast 提示
         const action = replace ? '已替换' : '已追加';

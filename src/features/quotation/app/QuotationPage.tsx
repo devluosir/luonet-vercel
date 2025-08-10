@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -332,6 +332,42 @@ export default function QuotationPage() {
     }
   };
   
+  // 合并模式状态 - 分别管理两列
+  const [descriptionMergeMode, setDescriptionMergeMode] = useState<'auto' | 'manual'>('auto');
+  const [remarksMergeMode, setRemarksMergeMode] = useState<'auto' | 'manual'>('auto');
+  
+  // 手动合并数据状态
+  const [manualMergedCells, setManualMergedCells] = useState<{
+    description: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+    remarks: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+  }>({
+    description: [],
+    remarks: []
+  });
+
+  // 调试日志：监听手动合并数据变化 - 添加去重逻辑
+  const lastMergeRef = useRef<{remarks: any[]; description: any[]}>({remarks:[], description:[]});
+
+  const handleManualMergeChange = useCallback((next: typeof manualMergedCells) => {
+    const prev = lastMergeRef.current;
+    if (JSON.stringify(prev) === JSON.stringify(next)) return; // 相等就不setState
+    lastMergeRef.current = next;
+    setManualMergedCells(next);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[QuotationPage] 手动合并数据更新:', next);
+    }
+  }, []);
+
   // 处理生成PDF
   const handleGenerate = async () => {
     if (!data) return;
@@ -343,7 +379,12 @@ export default function QuotationPage() {
       // 并行执行保存和PDF生成，去掉无意义的100ms延迟
       const [saveResult, pdfBlob] = await Promise.all([
         saveOrUpdate(activeTab, data, notesConfig, editId),
-        generatePdf(activeTab, data, notesConfig, setProgress, { mode: 'final' })
+        generatePdf(activeTab, data, notesConfig, setProgress, { 
+          mode: 'final', 
+          descriptionMergeMode,
+          remarksMergeMode,
+          manualMergedCells
+        })
       ]);
 
       if (saveResult && !editId) {
@@ -387,11 +428,16 @@ export default function QuotationPage() {
       let pdfUrl: string;
       
       // 第一阶段：PDF生成核心（service层已包含监控，避免重复）
-      const pdfBlob = await generatePdf(activeTab, data, notesConfig, (progress) => {
+      const blob = await generatePdf(activeTab, data, notesConfig, (progress) => {
         // 将生成进度映射到预览进度（10-80%）
         const mappedProgress = 10 + (progress * 0.7);
         setPreviewProgress(mappedProgress);
-      }, { mode: 'preview' });
+      }, { 
+        mode: 'preview', 
+        descriptionMergeMode,
+        remarksMergeMode,
+        manualMergedCells
+      });
       
       setPreviewProgress(80); // PDF生成完成，开始挂载预览
       
@@ -403,7 +449,7 @@ export default function QuotationPage() {
         setShowPreview(false);
         
         // 创建预览URL
-        pdfUrl = URL.createObjectURL(pdfBlob);
+        pdfUrl = URL.createObjectURL(blob);
         
         // 使用requestAnimationFrame优化UI更新
         await new Promise<void>(resolve => {
@@ -575,10 +621,15 @@ export default function QuotationPage() {
                     <ImportDataButton onImport={updateItems} />
                   </div>
                             <ItemsTable 
-            data={data} 
-            onItemsChange={handleItemsChange}
-            onOtherFeesChange={handleOtherFeesChange}
-          />
+                  data={data} 
+                  onItemsChange={handleItemsChange}
+                  onOtherFeesChange={handleOtherFeesChange}
+                  onDescriptionMergeModeChange={setDescriptionMergeMode}
+                  onRemarksMergeModeChange={setRemarksMergeMode}
+                  onManualMergedCellsChange={handleManualMergeChange}
+                  mergedRemarks={data.mergedRemarks}
+                  mergedDescriptions={data.mergedDescriptions}
+                />
                 </div>
 
                 {/* 按钮和总金额区域 */}

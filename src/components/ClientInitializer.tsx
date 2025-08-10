@@ -33,7 +33,12 @@ export default function ClientInitializer() {
                 if (result.success) {
                   console.log('[healthcheck] 开发环境健康检查通过:', result.details);
                 } else {
-                  console.error('[healthcheck] 开发环境健康检查失败:', result.details);
+                  // 只在真正失败时显示错误，警告级别只显示信息
+                  if (result.status === 'critical') {
+                    console.error('[healthcheck] 开发环境健康检查失败:', result.details);
+                  } else {
+                    console.warn('[healthcheck] 开发环境健康检查警告:', result.details);
+                  }
                 }
               }).catch(error => {
                 console.error('[healthcheck] 开发环境健康检查异常:', error);

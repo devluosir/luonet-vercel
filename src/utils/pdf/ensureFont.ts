@@ -17,13 +17,7 @@ export function safeSetFont(
   style: string, 
   mode: 'preview' | 'export'
 ): void {
-  if (mode === 'preview') {
-    // 预览一律走 Helvetica，避免查无中文字体的告警
-    doc.setFont('helvetica', style === 'bold' ? 'bold' : 'normal');
-    return;
-  }
-  
-  // 导出模式：检查字体是否可用
+  // 预览和导出模式都尝试使用指定字体，确保中文正常显示
   try {
     const list = doc.getFontList?.() as Record<string, string[]> | undefined;
     const available = !!list && list[name]?.includes(style);
@@ -62,5 +56,6 @@ export function safeSetCnFont(
  * @returns 字体名称
  */
 export function getFontName(mode: 'preview' | 'export', chineseFont = 'NotoSansSC'): string {
-  return mode === 'preview' ? 'helvetica' : chineseFont;
+  // 预览和导出模式都使用中文字体，确保中文正常显示
+  return chineseFont;
 }

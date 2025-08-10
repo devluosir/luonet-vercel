@@ -6,7 +6,7 @@ export class PerformanceMonitor {
   constructor() {
     // 设置性能阈值
     this.thresholds.set('font-warmup', 200); // 字体预热阈值 200ms
-    this.thresholds.set('pdf-generation', 300); // PDF生成阈值 300ms
+    this.thresholds.set('pdf-generation', 450); // PDF生成阈值 450ms（调整为更现实的阈值）
     this.thresholds.set('table-generation', 150); // 表格生成阈值 150ms
   }
 

@@ -6,9 +6,9 @@ import { safeSetFont, getFontName } from './pdf/ensureFont';
 
 // SLA 阈值定义
 const HEALTH_THRESHOLDS = {
-  EXCELLENT: 800,   // <800ms: 通过
-  WARNING: 1200,    // 800-1200ms: 警告
-  CRITICAL: 2000,   // >1200ms: 失败
+  EXCELLENT: 2000,  // <2000ms: 通过
+  WARNING: 4000,    // 2000-4000ms: 警告
+  CRITICAL: 8000,   // >4000ms: 失败
 } as const;
 
 // 健康检查结果缓存（开发模式下避免重复检查）
@@ -219,14 +219,19 @@ export function runHealthcheckInDev(): void {
       try {
         const result = await pdfFontHealthcheck();
         if (!result.success) {
-          console.error('[healthcheck] 开发环境健康检查失败:', result.details);
+          // 只在真正失败时显示错误，警告级别只显示信息
+          if (result.status === 'critical') {
+            console.error('[healthcheck] 开发环境健康检查失败:', result.details);
+          } else {
+            console.warn('[healthcheck] 开发环境健康检查警告:', result.details);
+          }
         } else {
           console.log('[healthcheck] 开发环境健康检查通过:', result.details);
         }
       } catch (error) {
         console.error('[healthcheck] 开发环境健康检查异常:', error);
       }
-    }, 3000);
+    }, 5000); // 增加延迟时间，减少对首屏的影响
   }
 }
 

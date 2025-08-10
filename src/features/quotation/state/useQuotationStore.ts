@@ -113,6 +113,11 @@ export interface QuotationState {
   
   // 业务 Actions
   updateItems: (items: LineItem[]) => void;
+  updateFromParse: (parseResult: { 
+    rows: LineItem[]; 
+    mergedRemarks?: { startRow: number; endRow: number; content: string; column: 'remarks' }[];
+    mergedDescriptions?: { startRow: number; endRow: number; content: string; column: 'description' }[];
+  }) => void;
   updateOtherFees: (fees: OtherFee[]) => void;
   updateData: (updates: Partial<QuotationData>) => void;
   updateFrom: (from: string) => void;
@@ -183,6 +188,35 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
       console.log('[updateItems] 更新items', items?.length);
     }
     return { data: { ...state.data, items, updatedAt: Date.now() } };
+  }),
+  updateFromParse: (parseResult) => set((state) => {
+    // ✅ 字段统一 + 严禁在流转时清空描述/备注
+    const normalized = parseResult.rows.map(it => ({
+      ...it,
+      // 统一：对外一律使用 description/remarks
+      description: (it as any).description ?? (it as any).partName ?? '',
+      remarks: (it as any).remarks ?? (it as any).remark ?? '',
+    }));
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[updateFromParse] 从解析结果更新:', {
+        items: normalized.length,
+        mergedRemarks: parseResult.mergedRemarks?.length,
+        mergedDescriptions: parseResult.mergedDescriptions?.length
+      });
+      // 关键：不要在这里清空非起始行的 remarks/description
+      console.info('[store:updateFromParse:first]', normalized[0]);
+    }
+    
+    return { 
+      data: { 
+        ...state.data, 
+        items: normalized, 
+        mergedRemarks: parseResult.mergedRemarks || [],
+        mergedDescriptions: parseResult.mergedDescriptions || [],
+        updatedAt: Date.now() 
+      } 
+    };
   }),
   updateOtherFees: (fees) => set((state) => {
     if (shallowEqual(fees, state.data.otherFees)) {
