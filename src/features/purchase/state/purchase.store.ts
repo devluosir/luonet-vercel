@@ -53,6 +53,7 @@ interface PurchaseState {
   showPreview: boolean;
   generatingProgress: number;
   isEditMode: boolean;
+  pageMode: 'create' | 'edit' | 'copy';
   
   // 预览数据
   previewItem: {
@@ -84,6 +85,7 @@ interface PurchaseState {
   setGeneratingProgress: (progress: number) => void;
   setIsEditMode: (isEditMode: boolean) => void;
   setPreviewItem: (item: any) => void;
+  setPageMode: (mode: 'create' | 'edit' | 'copy') => void;
   
   // 业务方法
   init: (data?: Partial<PurchaseOrderData> | Partial<PurchaseDraft>) => void;
@@ -147,6 +149,7 @@ export const usePurchaseStore = create<PurchaseState>()(
       showPreview: false,
       generatingProgress: 0,
       isEditMode: false,
+      pageMode: 'create' as const,
       previewItem: null,
       
       // 基础设置方法 - 新格式
@@ -205,6 +208,7 @@ export const usePurchaseStore = create<PurchaseState>()(
       setGeneratingProgress: (generatingProgress) => set({ generatingProgress }),
       setIsEditMode: (isEditMode) => set({ isEditMode }),
       setPreviewItem: (previewItem) => set({ previewItem }),
+      setPageMode: (pageMode) => set({ pageMode }),
       
       // 业务方法
       init: (data) => {
@@ -212,7 +216,8 @@ export const usePurchaseStore = create<PurchaseState>()(
           // 新格式 PurchaseDraft
           set({ 
             draft: { ...defaultDraft, ...data },
-            isEditMode: !!data
+            isEditMode: !!data,
+            pageMode: 'create'
           });
         } else if (data) {
           // 旧格式 PurchaseOrderData
@@ -220,14 +225,16 @@ export const usePurchaseStore = create<PurchaseState>()(
           set({ 
             draft,
             data: { ...defaultData, ...data },
-            isEditMode: !!data
+            isEditMode: !!data,
+            pageMode: 'create'
           });
         } else {
           // 默认数据
           set({ 
             draft: defaultDraft,
             data: defaultData,
-            isEditMode: false
+            isEditMode: false,
+            pageMode: 'create'
           });
         }
       },
@@ -241,6 +248,7 @@ export const usePurchaseStore = create<PurchaseState>()(
         showPreview: false,
         generatingProgress: 0,
         isEditMode: false,
+        pageMode: 'create',
         previewItem: null,
       }),
       
@@ -265,11 +273,12 @@ export const usePurchaseStore = create<PurchaseState>()(
       })),
     }),
     {
-      name: 'purchase-draft-v5',
-      version: 5,
+      name: 'purchase-draft-v6',
+      version: 6,
       partialize: (state) => ({ 
         draft: state.draft,
-        data: state.data 
+        data: state.data,
+        pageMode: state.pageMode
       }),
     }
   )

@@ -8,8 +8,12 @@ import { format } from 'date-fns';
 
 export default function EditPurchasePage({ params }: { params: { id: string } }) {
   const init = usePurchaseStore(s => s.init);
+  const setPageMode = usePurchaseStore(s => s.setPageMode);
 
   useEffect(() => {
+    // 设置页面模式为编辑
+    setPageMode('edit');
+    
     (async () => {
       try {
         const data = await PurchaseService.load(params.id);
@@ -44,7 +48,7 @@ export default function EditPurchasePage({ params }: { params: { id: string } })
         init();
       }
     })();
-  }, [params.id, init]);
+  }, [params.id, init, setPageMode]);
 
   return <PurchasePage />;
 } 

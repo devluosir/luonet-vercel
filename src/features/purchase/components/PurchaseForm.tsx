@@ -2,7 +2,7 @@
 import React, { useRef } from 'react';
 import { SettingsPanel } from '@/components/purchase/SettingsPanel';
 import { BankInfoSection } from '@/components/purchase/BankInfoSection';
-import { SupplierInfoSection } from '@/components/purchase/SupplierInfoSection';
+import PurchaseBaseInfo from '@/components/purchase/PurchaseBaseInfo';
 import { usePurchaseStore } from '../state/purchase.store';
 import { useAutoResizeTextareas } from '@/hooks/useAutoResizeTextareas';
 
@@ -12,7 +12,8 @@ export default function PurchaseForm() {
     showSettings, 
     updateData, 
     toggleBank, 
-    changeCurrency 
+    changeCurrency,
+    pageMode 
   } = usePurchaseStore();
 
   const projectSpecificationRef = useRef<HTMLTextAreaElement>(null);
@@ -46,53 +47,38 @@ export default function PurchaseForm() {
 
       {/* 主内容区域 */}
       <div className="p-4 sm:p-6 space-y-6">
-        {/* 基本信息 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* 供应商信息组 */}
-          <SupplierInfoSection
-            data={{
-              attn: data.attn,
-              yourRef: data.yourRef,
-              supplierQuoteDate: data.supplierQuoteDate
-            }}
-            onChange={(supplierData) => updateData({
-              attn: supplierData.attn,
-              yourRef: supplierData.yourRef,
-              supplierQuoteDate: supplierData.supplierQuoteDate
-            })}
-          />
-
-          {/* 订单信息组 */}
-          <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
-            <div className="space-y-3">
-              <div>
-                <label className={labelClass}>订单号 Order No.:</label>
-                <input
-                  className={inputClass}
-                  value={data.orderNo}
-                  onChange={e => updateData({ orderNo: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>询价号码 Our ref:</label>
-                <input
-                  className={inputClass}
-                  value={data.ourRef}
-                  onChange={e => updateData({ ourRef: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>采购订单日期 Date:</label>
-                <input
-                  type="date"
-                  className={dateInputClass}
-                  value={data.date}
-                  onChange={e => updateData({ date: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* 基本信息 - 使用动态标题组件 */}
+        <PurchaseBaseInfo
+          value={{
+            attn: data.attn,
+            yourRef: data.yourRef,
+            supplierQuoteDate: data.supplierQuoteDate,
+            orderNo: data.orderNo,
+            ourRef: data.ourRef,
+            date: data.date,
+          }}
+          onChange={(value) => {
+            updateData({
+              attn: value.attn,
+              yourRef: value.yourRef,
+              supplierQuoteDate: value.supplierQuoteDate,
+              orderNo: value.orderNo,
+              ourRef: value.ourRef,
+              date: value.date,
+            });
+          }}
+          config={{
+            type: pageMode,
+            labels: {
+              attn: '供应商信息 Supplier Information',
+              yourRef: 'Your Ref',
+              supplierQuoteDate: '报价日期 Quote Date',
+              orderNo: '订单号 Order No.',
+              ourRef: '询价号码 Our ref',
+              date: '日期 Date',
+            },
+          }}
+        />
 
         {/* 1. 供货范围和成交价格 */}
         <div className="space-y-3">

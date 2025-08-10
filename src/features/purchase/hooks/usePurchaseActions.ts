@@ -16,13 +16,20 @@ interface CustomWindow extends Window {
 // 初始化逻辑
 export const usePurchaseInit = () => {
   const { data: session } = useSession();
-  const { data, editId, init, updateData } = usePurchaseStore();
+  const { data, editId, init, updateData, setPageMode } = usePurchaseStore();
   const initializedRef = useRef(false);
   
   // 初始化数据 - 只执行一次
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
+    
+    // 清除旧的localStorage数据以确保使用新版本
+    try {
+      localStorage.removeItem('purchase-draft-v5');
+    } catch (e) {
+      // 忽略错误
+    }
     
     const win = window as CustomWindow;
     
@@ -36,6 +43,7 @@ export const usePurchaseInit = () => {
       };
       
       init(sanitizedData);
+      setPageMode('edit'); // 设置编辑模式
       
       // 清理全局变量
       delete win.__PURCHASE_DATA__;
@@ -89,7 +97,8 @@ export const usePurchaseInit = () => {
 
     // 最后使用默认数据
     init();
-  }, [init]); // 只依赖 init 函数
+    setPageMode('create'); // 设置创建模式
+  }, [init, setPageMode]); // 依赖 init 和 setPageMode 函数
 
   // 设置用户信息
   useEffect(() => {

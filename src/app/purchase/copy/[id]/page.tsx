@@ -8,8 +8,12 @@ import { format } from 'date-fns';
 
 export default function CopyPurchasePage({ params }: { params: { id: string } }) {
   const init = usePurchaseStore(s => s.init);
+  const setPageMode = usePurchaseStore(s => s.setPageMode);
 
   useEffect(() => {
+    // 设置页面模式为复制
+    setPageMode('copy');
+    
     (async () => {
       try {
         const source = await PurchaseService.load(params.id);
@@ -44,7 +48,7 @@ export default function CopyPurchasePage({ params }: { params: { id: string } })
         init();
       }
     })();
-  }, [params.id, init]);
+  }, [params.id, init, setPageMode]);
 
   return <PurchasePage />;
 } 

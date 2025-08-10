@@ -28,10 +28,9 @@ export default function PurchasePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
       <main className="flex-1">
         <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
-          <PurchaseHeader />
-          
           {/* 主卡片容器内容 */}
           <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl sm:rounded-3xl shadow-lg">
+            <PurchaseHeader />
             <PurchaseForm />
             <PurchaseActions />
           </div>

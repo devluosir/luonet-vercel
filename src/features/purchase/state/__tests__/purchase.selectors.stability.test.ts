@@ -11,6 +11,13 @@ import {
 
 // 模拟初始状态
 const mockInitialState = {
+  draft: {
+    supplier: { name: '', attn: '' },
+    bank: {},
+    settings: { poNo: '', currency: 'USD', date: '2024-01-01', purchaser: '' },
+    items: [],
+    notes: ''
+  },
   data: {
     attn: 'Test Supplier',
     yourRef: 'REF001',
@@ -26,6 +33,8 @@ const mockInitialState = {
     showBank: false,
     deliveryInfo: 'Test delivery',
     orderNumbers: 'ON001',
+    showStamp: false,
+    stampType: 'none',
     from: 'Test Purchaser',
   },
   isGenerating: false,
@@ -34,6 +43,7 @@ const mockInitialState = {
   showPreview: false,
   generatingProgress: 0,
   isEditMode: false,
+  pageMode: 'create' as const,
   previewItem: null,
 };
 
