@@ -7,7 +7,7 @@ import { usePurchaseValidation } from '../hooks/usePurchaseValidation';
 import { showToast } from './Toast';
 
 export default function QuickActions() {
-  const draft = usePurchaseStore(s => s.draft);
+  const data = usePurchaseStore(s => s.data);
   const { isValid } = usePurchaseValidation();
   const { generatePdf, canGenerate } = usePurchasePdf();
   const [busy, setBusy] = useState(false);
@@ -15,7 +15,7 @@ export default function QuickActions() {
   const onSave = useCallback(async () => {
     try {
       setBusy(true);
-      await PurchaseService.save(draft);
+      await PurchaseService.save(data);
       // 轻量 toast
       console.info('Saved');
       showToast('保存成功', 'success');
@@ -25,17 +25,17 @@ export default function QuickActions() {
     } finally {
       setBusy(false);
     }
-  }, [draft]);
+  }, [data]);
 
   const onExport = useCallback(async () => {
-    const blob = new Blob([JSON.stringify(draft, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; 
-    a.download = `PO-${draft?.settings?.poNo || 'draft'}.json`; 
+    a.download = `PO-${data?.orderNo || 'draft'}.json`; 
     a.click();
     URL.revokeObjectURL(url);
-  }, [draft]);
+  }, [data]);
 
   // Cmd/Ctrl+S 保存
   useEffect(() => {

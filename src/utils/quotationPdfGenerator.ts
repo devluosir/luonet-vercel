@@ -33,7 +33,7 @@ export const generateQuotationPDF = async (rawData: unknown, mode: 'preview' | '
     // 读取页面列显示偏好，与页面表格保持一致
     let visibleCols: string[] | undefined;
     if (typeof window !== 'undefined') {
-      visibleCols = getLocalStorageJSON('qt.visibleCols', null);
+      visibleCols = getLocalStorageJSON('qt.visibleCols', []);
     }
     
     endTimer(dataValidationId, 'data-validation');

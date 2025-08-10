@@ -62,7 +62,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
 
   // 读取页面列显示偏好，与页面表格保持一致
   let visibleCols: string[] | undefined;
-  visibleCols = getLocalStorageJSON('qt.visibleCols', null);
+  visibleCols = getLocalStorageJSON('qt.visibleCols', []);
 
   const doc = new jsPDF({
     orientation: 'portrait',

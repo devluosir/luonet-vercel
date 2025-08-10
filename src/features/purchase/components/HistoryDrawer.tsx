@@ -2,7 +2,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { PurchaseService } from '../services/purchase.service';
 import { usePurchaseStore } from '../state/purchase.store';
-import type { PurchaseDraft } from '../utils/types';
+import type { PurchaseOrderData } from '@/types/purchase';
+import { format } from 'date-fns';
 
 export default function HistoryDrawer() {
   const [list, setList] = useState<any[]>([]);
@@ -39,21 +40,25 @@ export default function HistoryDrawer() {
     try {
       const data = await PurchaseService.load(id);
       if (data) {
-        // 转换旧格式到新格式
-        const converted: PurchaseDraft = {
-          supplier: {
-            name: data.attn || '',
-            attn: data.attn
-          },
-          bank: {},
-          settings: {
-            poNo: data.orderNo || '',
-            currency: data.currency || 'USD',
-            date: data.date,
-            purchaser: data.from
-          },
-          items: [],
-          notes: data.projectSpecification
+        // 转换为 PurchaseOrderData 格式
+        const converted: Partial<PurchaseOrderData> = {
+          attn: data.attn || '',
+          ourRef: data.ourRef || '',
+          yourRef: data.yourRef || '',
+          orderNo: data.orderNo || '',
+          date: data.date || format(new Date(), 'yyyy-MM-dd'),
+          supplierQuoteDate: data.supplierQuoteDate || format(new Date(), 'yyyy-MM-dd'),
+          contractAmount: data.contractAmount || '',
+          projectSpecification: data.projectSpecification || '',
+          paymentTerms: data.paymentTerms || '交货后30天',
+          invoiceRequirements: data.invoiceRequirements || '如前；',
+          deliveryInfo: data.deliveryInfo || '',
+          orderNumbers: data.orderNumbers || '',
+          showStamp: data.showStamp || false,
+          showBank: data.showBank || false,
+          currency: data.currency || 'USD',
+          stampType: data.stampType || 'none',
+          from: data.from || ''
         };
         init(converted);
       } else {

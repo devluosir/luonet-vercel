@@ -168,7 +168,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
           let customerInfo = customer.name;
           
           // 尝试从历史记录中获取完整的客户信息
-          const allHistory = [
+          const allHistory: any[] = [
             ...quotationHistory,
             ...packingHistory,
             ...invoiceHistory

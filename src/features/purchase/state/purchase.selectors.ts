@@ -19,6 +19,10 @@ const useDeliveryInfo = () => usePurchaseStore(s => s.data.deliveryInfo);
 const useOrderNumbers = () => usePurchaseStore(s => s.data.orderNumbers);
 const useFrom = () => usePurchaseStore(s => s.data.from);
 
+// 新格式选择器
+const useDraftItems = () => usePurchaseStore(s => s.draft.items);
+const useDraftSettings = () => usePurchaseStore(s => s.draft.settings);
+
 // UI状态原子选择器
 const useIsGenerating = () => usePurchaseStore(s => s.isGenerating);
 const useShowSettings = () => usePurchaseStore(s => s.showSettings);
@@ -124,6 +128,21 @@ export const useOrderNumbersData = () => useOrderNumbers();
 
 // 获取采购员信息
 export const usePurchaserInfo = () => useFrom();
+
+// 获取订单汇总信息（新格式）
+export const useTotals = () => {
+  const items = useDraftItems();
+  
+  return useMemo(() => {
+    const subtotal = items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+    const count = items.length;
+    
+    return {
+      subtotal,
+      count
+    };
+  }, [items]);
+};
 
 // ========== 新增：PDF相关选择器 ==========
 

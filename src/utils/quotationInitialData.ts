@@ -19,7 +19,7 @@ const getCachedLocalStorage = (key: string) => {
 export function getInitialQuotationData(): QuotationData {
   const username = (() => {
     try {
-      const userInfo = getCachedLocalStorage('userInfo');
+      const userInfo = getCachedLocalStorage('userInfo') as { username?: string } | null;
       if (userInfo) return userInfo.username || 'Roger';
       
       // 使用安全的字符串获取函数

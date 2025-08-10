@@ -157,10 +157,10 @@ export const usePurchasePdfActions = () => {
     try {
       // 启动进度条动画
       progressInterval = setInterval(() => {
-        setGeneratingProgress(prev => {
-          const increment = Math.max(1, (90 - prev) / 10);
-          return prev >= 90 ? prev : prev + increment;
-        });
+        const currentProgress = usePurchaseStore.getState().generatingProgress;
+        const increment = Math.max(1, (90 - currentProgress) / 10);
+        const newProgress = currentProgress >= 90 ? currentProgress : currentProgress + increment;
+        setGeneratingProgress(newProgress);
       }, 100);
 
       // 并行执行保存和PDF生成
