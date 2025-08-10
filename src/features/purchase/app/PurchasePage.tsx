@@ -6,6 +6,7 @@ import PurchaseHeader from '../components/PurchaseHeader';
 import PurchaseForm from '../components/PurchaseForm';
 import PurchaseActions from '../components/PurchaseActions';
 import { usePurchaseInit } from '../hooks/usePurchaseActions';
+import { useRenderLoopGuard } from '@/debug/useRenderLoopGuard';
 import { usePurchaseStore } from '../state/purchase.store';
 
 // 动态导入PDFPreviewModal
@@ -19,6 +20,9 @@ export default function PurchasePage() {
   
   // 初始化逻辑
   usePurchaseInit();
+  
+  // 开发期循环哨兵
+  useRenderLoopGuard('PurchasePage');
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">

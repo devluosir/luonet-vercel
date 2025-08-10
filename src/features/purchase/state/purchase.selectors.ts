@@ -1,13 +1,45 @@
 import { useMemo } from 'react';
 import { usePurchaseStore } from './purchase.store';
+import type { PurchaseOrderData } from '@/types/purchase';
+
+// ========== 原子选择器（仅返回原始切片/原始值，绝不在这里拼对象/数组） ==========
+const useContractAmount = () => usePurchaseStore(s => s.data.contractAmount);
+const useCurrency = () => usePurchaseStore(s => s.data.currency);
+const useAttn = () => usePurchaseStore(s => s.data.attn);
+const useYourRef = () => usePurchaseStore(s => s.data.yourRef);
+const useSupplierQuoteDate = () => usePurchaseStore(s => s.data.supplierQuoteDate);
+const useOrderNo = () => usePurchaseStore(s => s.data.orderNo);
+const useOurRef = () => usePurchaseStore(s => s.data.ourRef);
+const useDate = () => usePurchaseStore(s => s.data.date);
+const useProjectSpecification = () => usePurchaseStore(s => s.data.projectSpecification);
+const usePaymentTerms = () => usePurchaseStore(s => s.data.paymentTerms);
+const useInvoiceRequirements = () => usePurchaseStore(s => s.data.invoiceRequirements);
+const useShowBank = () => usePurchaseStore(s => s.data.showBank);
+const useDeliveryInfo = () => usePurchaseStore(s => s.data.deliveryInfo);
+const useOrderNumbers = () => usePurchaseStore(s => s.data.orderNumbers);
+const useFrom = () => usePurchaseStore(s => s.data.from);
+
+// UI状态原子选择器
+const useIsGenerating = () => usePurchaseStore(s => s.isGenerating);
+const useShowSettings = () => usePurchaseStore(s => s.showSettings);
+const useEditId = () => usePurchaseStore(s => s.editId);
+const useShowPreview = () => usePurchaseStore(s => s.showPreview);
+const useGeneratingProgress = () => usePurchaseStore(s => s.generatingProgress);
+const useIsEditMode = () => usePurchaseStore(s => s.isEditMode);
+const usePreviewItem = () => usePurchaseStore(s => s.previewItem);
+
+// ========== 工具函数（纯函数，不依赖外部状态） ==========
+function calcContractAmountNumber(contractAmount: string): number {
+  return parseFloat(contractAmount) || 0;
+}
+
+// ========== 派生 Hook（在 hook 内用 useMemo 合成对象，稳定引用） ==========
 
 // 获取合同金额数字
 export const useContractAmountNumber = () => {
-  const contractAmount = usePurchaseStore(s => s.data.contractAmount);
+  const contractAmount = useContractAmount();
   
-  return useMemo(() => {
-    return parseFloat(contractAmount) || 0;
-  }, [contractAmount]);
+  return useMemo(() => calcContractAmountNumber(contractAmount), [contractAmount]);
 };
 
 // 获取基础数据
@@ -15,15 +47,15 @@ export const usePurchaseData = () => usePurchaseStore(s => s.data);
 
 // 获取UI状态
 export const usePurchaseUI = () => {
-  const isGenerating = usePurchaseStore(s => s.isGenerating);
-  const showSettings = usePurchaseStore(s => s.showSettings);
-  const editId = usePurchaseStore(s => s.editId);
-  const showPreview = usePurchaseStore(s => s.showPreview);
-  const generatingProgress = usePurchaseStore(s => s.generatingProgress);
-  const isEditMode = usePurchaseStore(s => s.isEditMode);
-  const previewItem = usePurchaseStore(s => s.previewItem);
+  const isGenerating = useIsGenerating();
+  const showSettings = useShowSettings();
+  const editId = useEditId();
+  const showPreview = useShowPreview();
+  const generatingProgress = useGeneratingProgress();
+  const isEditMode = useIsEditMode();
+  const previewItem = usePreviewItem();
   
-  return {
+  return useMemo(() => ({
     isGenerating,
     showSettings,
     editId,
@@ -31,60 +63,121 @@ export const usePurchaseUI = () => {
     generatingProgress,
     isEditMode,
     previewItem,
-  };
+  }), [isGenerating, showSettings, editId, showPreview, generatingProgress, isEditMode, previewItem]);
 };
 
 // 获取供应商信息
 export const useSupplierInfo = () => {
-  const data = usePurchaseStore(s => s.data);
+  const attn = useAttn();
+  const yourRef = useYourRef();
+  const supplierQuoteDate = useSupplierQuoteDate();
   
   return useMemo(() => ({
-    attn: data.attn,
-    yourRef: data.yourRef,
-    supplierQuoteDate: data.supplierQuoteDate,
-  }), [data.attn, data.yourRef, data.supplierQuoteDate]);
+    attn,
+    yourRef,
+    supplierQuoteDate,
+  }), [attn, yourRef, supplierQuoteDate]);
 };
 
 // 获取订单信息
 export const useOrderInfo = () => {
-  const data = usePurchaseStore(s => s.data);
+  const orderNo = useOrderNo();
+  const ourRef = useOurRef();
+  const date = useDate();
   
   return useMemo(() => ({
-    orderNo: data.orderNo,
-    ourRef: data.ourRef,
-    date: data.date,
-  }), [data.orderNo, data.ourRef, data.date]);
+    orderNo,
+    ourRef,
+    date,
+  }), [orderNo, ourRef, date]);
 };
 
 // 获取合同信息
 export const useContractInfo = () => {
-  const data = usePurchaseStore(s => s.data);
+  const contractAmount = useContractAmount();
+  const currency = useCurrency();
+  const projectSpecification = useProjectSpecification();
   
   return useMemo(() => ({
-    contractAmount: data.contractAmount,
-    currency: data.currency,
-    projectSpecification: data.projectSpecification,
-  }), [data.contractAmount, data.currency, data.projectSpecification]);
+    contractAmount,
+    currency,
+    projectSpecification,
+  }), [contractAmount, currency, projectSpecification]);
 };
 
-// 获取付款条件
-export const usePaymentTerms = () => usePurchaseStore(s => s.data.paymentTerms);
-
 // 获取发票要求
-export const useInvoiceRequirements = () => {
-  const data = usePurchaseStore(s => s.data);
+export const useInvoiceRequirementsInfo = () => {
+  const invoiceRequirements = useInvoiceRequirements();
+  const showBank = useShowBank();
   
   return useMemo(() => ({
-    invoiceRequirements: data.invoiceRequirements,
-    showBank: data.showBank,
-  }), [data.invoiceRequirements, data.showBank]);
+    invoiceRequirements,
+    showBank,
+  }), [invoiceRequirements, showBank]);
 };
 
 // 获取交货信息
-export const useDeliveryInfo = () => usePurchaseStore(s => s.data.deliveryInfo);
+export const useDeliveryInfoData = () => useDeliveryInfo();
 
 // 获取订单号码
-export const useOrderNumbers = () => usePurchaseStore(s => s.data.orderNumbers);
+export const useOrderNumbersData = () => useOrderNumbers();
 
 // 获取采购员信息
-export const usePurchaserInfo = () => usePurchaseStore(s => s.data.from);
+export const usePurchaserInfo = () => useFrom();
+
+// ========== 新增：PDF相关选择器 ==========
+
+// 检查是否可以生成PDF
+export const useCanGeneratePdf = () => {
+  const attn = useAttn();
+  const contractAmount = useContractAmount();
+  
+  return useMemo(() => {
+    const hasSupplier = attn.trim().length > 0;
+    const hasAmount = parseFloat(contractAmount) > 0;
+    return hasSupplier && hasAmount;
+  }, [attn, contractAmount]);
+};
+
+// 获取PDF负载数据（不包含时间戳，时间戳在生成时添加）
+export const usePdfPayload = () => {
+  const data = usePurchaseData();
+  const contractAmountNumber = useContractAmountNumber();
+  
+  return useMemo(() => {
+    return {
+      ...data,
+      contractAmountNumber,
+    };
+  }, [data, contractAmountNumber]);
+};
+
+// ========== 新增：验证状态选择器 ==========
+
+// 获取表单验证状态
+export const useValidationState = () => {
+  const attn = useAttn();
+  const contractAmount = useContractAmount();
+  const orderNo = useOrderNo();
+  
+  return useMemo(() => {
+    const errors: string[] = [];
+    
+    if (!attn.trim()) {
+      errors.push('供应商名称不能为空');
+    }
+    
+    if (!contractAmount || parseFloat(contractAmount) <= 0) {
+      errors.push('合同金额必须大于0');
+    }
+    
+    if (!orderNo.trim()) {
+      errors.push('订单号不能为空');
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }, [attn, contractAmount, orderNo]);
+};

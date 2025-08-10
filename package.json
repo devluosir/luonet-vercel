@@ -14,7 +14,9 @@
     "check:production": "node scripts/pre-production-check.js",
     "check:production:full": "node scripts/pre-production-check.js --full",
     "check:autotable": "grep -r \"autoTable.*overflow\" src/ && echo '❌ Found deprecated AutoTable overflow' || echo '✅ No deprecated AutoTable overflow found'",
-    "check:regression": "npm run check:autotable && npm run lint"
+    "check:regression": "npm run check:autotable && npm run lint",
+    "check:selectors": "node scripts/pre-release-check.js",
+    "pre-release": "npm run check:selectors && npm run test && npm run lint"
   },
   "dependencies": {
     "@auth/core": "^0.34.2",

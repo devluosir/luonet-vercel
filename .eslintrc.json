@@ -10,5 +10,15 @@
     }],
     "@typescript-eslint/no-explicit-any": "warn",
     "./eslint-plugin-local/no-spread-in-onchange": "warn"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/features/**/state/*.selectors.ts"],
+      "rules": {
+        "no-new-object": "error",
+        "no-array-constructor": "error",
+        "@typescript-eslint/no-object-literal-type-assertion": "error"
+      }
+    }
+  ]
 } 

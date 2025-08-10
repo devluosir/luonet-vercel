@@ -96,6 +96,135 @@ MLUONET是一个现代化的企业管理系统，提供完整的业务管理解�
 - **代码复用**: 提取公共逻辑到工具函数
 - **可维护性**: 清晰的代码结构和注释
 
+## 稳定性防回归机制
+
+### 🛡️ 完整防护体系
+
+项目建立了完整的"稳定引用 + 原子订阅"防回归机制，确保代码质量和性能稳定性：
+
+#### 1. 循环哨兵监控
+- **文件**: `src/debug/useRenderLoopGuard.ts`
+- **功能**: 开发环境监控组件渲染次数
+- **使用**: 在容器组件中调用 `useRenderLoopGuard('ComponentName', 80)`
+
+#### 2. 稳定性测试
+- **文件**: `src/features/purchase/state/__tests__/purchase.selectors.stability.test.ts`
+- **覆盖**: 所有关键派生Hook的引用稳定性测试
+- **验证**: 两次渲染引用相等，依赖变化时引用更新
+
+#### 3. ESLint规则守护
+- **文件**: `.eslintrc.json`
+- **规则**: 
+  - `no-new-object`: 禁止在selector中创建新对象
+  - `no-array-constructor`: 禁止在selector中创建新数组
+  - `@typescript-eslint/no-object-literal-type-assertion`: 禁止对象字面量断言
+
+#### 4. 发版前自检脚本
+- **文件**: `scripts/pre-release-check.js`
+- **检查项**:
+  - Selector中的时间戳生成
+  - useEffect依赖中的现拼对象
+  - 对象返回selector的shallow使用
+  - useEffect依赖中的匿名函数
+  - Selector中的Math.random
+  - 稳定性测试通过
+
+#### 5. 防回归指南
+- **文件**: `docs/STABILITY_GUARDRAILS.md`
+- **内容**: 6个复发点检查清单、最佳实践、故障排除
+
+### 🔧 使用方式
+
+#### 开发时
+```bash
+# 运行稳定性测试
+npm test -- --testPathPattern=purchase.selectors.stability.test.ts
+
+# 运行ESLint检查
+npm run lint
+
+# 在组件中使用循环哨兵
+import { useRenderLoopGuard } from '@/debug/useRenderLoopGuard';
+useRenderLoopGuard('ComponentName');
+```
+
+#### 发版前
+```bash
+# 运行完整自检
+npm run check:selectors
+
+# 或运行完整预发布检查
+npm run pre-release
+```
+
+### 📋 6个"复发点"防护
+
+1. **Selector中的时间戳生成** ❌
+   ```ts
+   // 错误: useStore(s => Date.now())
+   // 正确: 传参或在触发时生成
+   ```
+
+2. **Selector中的map/filter返回新数组** ❌
+   ```ts
+   // 错误: useStore(s => s.items.filter(...))
+   // 正确: 原子订阅 + useMemo
+   ```
+
+3. **useEffect依赖中的现拼对象** ❌
+   ```ts
+   // 错误: useEffect(() => {}, [{ id: 1 }])
+   // 正确: useMemo稳定化
+   ```
+
+4. **对象返回selector未使用shallow** ❌
+   ```ts
+   // 错误: useStore(s => ({ a: s.a, b: s.b }))
+   // 正确: useStore(s => ({ a: s.a, b: s.b }), shallow)
+   ```
+
+5. **PDF相关selector中的易变数据** ❌
+   ```ts
+   // 错误: selector中生成时间戳
+   // 正确: 在触发动作时生成
+   ```
+
+6. **Selector中的字符串拼接** ❌
+   ```ts
+   // 错误: useStore(s => `$${s.amount}`)
+   // 正确: 在展示层格式化
+   ```
+
+### 🎯 最佳实践
+
+#### 原子订阅原则
+```ts
+// ✅ 原子订阅
+const items = useStore(s => s.items);
+const currency = useStore(s => s.currency);
+
+// ❌ 复合订阅
+const { items, currency } = useStore(s => ({ items: s.items, currency: s.currency }));
+```
+
+#### 派生数据使用useMemo
+```ts
+const useTotals = () => {
+  const items = useStore(s => s.items);
+  return useMemo(() => {
+    return items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  }, [items]);
+};
+```
+
+#### 复杂对象使用shallow
+```ts
+const { buyer, seller } = useStore(s => ({
+  buyer: s.buyer,
+  seller: s.seller
+}), shallow);
+```
+
 ## 2048游戏推演功能
 
 ### 功能特点
