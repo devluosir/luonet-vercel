@@ -1,12 +1,18 @@
 import { shallow } from 'zustand/shallow';
+import { useMemo } from 'react';
 import { usePurchaseStore } from './purchase.store';
 
-// 计算合计信息
-export const useTotals = (): { subtotal: number; count: number } => usePurchaseStore(s => {
-  const subtotal = s.draft.items.reduce((acc, it) => acc + it.qty * it.price, 0);
-  const count = s.draft.items.length;
-  return { subtotal, count };
-});
+// 计算合计信息 - 修复：分片订阅 + useMemo 合成
+export const useTotals = (): { subtotal: number; count: number; qtyTotal: number } => {
+  const items = usePurchaseStore(s => s.draft.items);
+  
+  return useMemo(() => {
+    const subtotal = items.reduce((acc, it) => acc + it.qty * it.price, 0);
+    const count = items.length;
+    const qtyTotal = items.reduce((acc, it) => acc + it.qty, 0);
+    return { subtotal, count, qtyTotal };
+  }, [items]);
+};
 
 // 获取供应商信息
 export const useSupplier = () => usePurchaseStore(s => s.draft.supplier);
@@ -23,61 +29,81 @@ export const useItems = () => usePurchaseStore(s => s.draft.items);
 // 获取备注
 export const useNotes = () => usePurchaseStore(s => s.draft.notes);
 
-// 检查是否可以生成PDF
-export const useCanGeneratePdf = () => usePurchaseStore(s => {
-  const hasSupplier = s.draft.supplier.name.trim().length > 0;
-  const hasItems = s.draft.items.length > 0;
-  const hasValidItems = s.draft.items.every(item => 
-    item.name.trim().length > 0 && item.qty > 0 && item.price > 0
-  );
-  return hasSupplier && hasItems && hasValidItems;
-});
+// 检查是否可以生成PDF - 修复：分片订阅 + useMemo 合成
+export const useCanGeneratePdf = () => {
+  const supplier = usePurchaseStore(s => s.draft.supplier);
+  const items = usePurchaseStore(s => s.draft.items);
+  
+  return useMemo(() => {
+    const hasSupplier = supplier.name.trim().length > 0;
+    const hasItems = items.length > 0;
+    const hasValidItems = items.every(item => 
+      item.name.trim().length > 0 && item.qty > 0 && item.price > 0
+    );
+    return hasSupplier && hasItems && hasValidItems;
+  }, [supplier, items]);
+};
 
-// 获取表单验证状态
-export const useValidationState = (): { isValid: boolean; errors: string[] } => usePurchaseStore(s => {
-  const errors: string[] = [];
+// 获取表单验证状态 - 修复：分片订阅 + useMemo 合成
+export const useValidationState = (): { isValid: boolean; errors: string[] } => {
+  const supplier = usePurchaseStore(s => s.draft.supplier);
+  const items = usePurchaseStore(s => s.draft.items);
   
-  if (!s.draft.supplier.name.trim()) {
-    errors.push('供应商名称不能为空');
-  }
-  
-  if (s.draft.items.length === 0) {
-    errors.push('至少需要添加一个商品');
-  } else {
-    s.draft.items.forEach((item, index) => {
-      if (!item.name.trim()) {
-        errors.push(`商品 ${index + 1} 名称不能为空`);
-      }
-      if (item.qty <= 0) {
-        errors.push(`商品 ${index + 1} 数量必须大于0`);
-      }
-      if (item.price <= 0) {
-        errors.push(`商品 ${index + 1} 价格必须大于0`);
-      }
-    });
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-});
+  return useMemo(() => {
+    const errors: string[] = [];
+    
+    if (!supplier.name.trim()) {
+      errors.push('供应商名称不能为空');
+    }
+    
+    if (items.length === 0) {
+      errors.push('至少需要添加一个商品');
+    } else {
+      items.forEach((item, index) => {
+        if (!item.name.trim()) {
+          errors.push(`商品 ${index + 1} 名称不能为空`);
+        }
+        if (item.qty <= 0) {
+          errors.push(`商品 ${index + 1} 数量必须大于0`);
+        }
+        if (item.price <= 0) {
+          errors.push(`商品 ${index + 1} 价格必须大于0`);
+        }
+      });
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }, [supplier, items]);
+};
 
-// PDF负载选择器 - 集中确定导出数据结构
-export const usePdfPayload = () => usePurchaseStore(s => {
-  const d = s.draft;
-  return {
-    supplier: d.supplier,
-    bank: d.bank,
-    settings: d.settings,
-    items: d.items.map(x => ({ 
+// PDF负载选择器 - 修复：分片订阅 + useMemo 合成
+export const usePdfPayload = () => {
+  const supplier = usePurchaseStore(s => s.draft.supplier);
+  const bank = usePurchaseStore(s => s.draft.bank);
+  const settings = usePurchaseStore(s => s.draft.settings);
+  const items = usePurchaseStore(s => s.draft.items);
+  const notes = usePurchaseStore(s => s.draft.notes);
+  
+  return useMemo(() => {
+    const mappedItems = items.map(x => ({ 
       name: x.name, 
       qty: x.qty, 
       unit: x.unit, 
       price: x.price, 
       amount: x.qty * x.price 
-    })),
-    subtotal: d.items.reduce((a, it) => a + it.qty * it.price, 0),
-    notes: d.notes,
-  };
-});
+    }));
+    const subtotal = items.reduce((a, it) => a + it.qty * it.price, 0);
+    
+    return {
+      supplier,
+      bank,
+      settings,
+      items: mappedItems,
+      subtotal,
+      notes,
+    };
+  }, [supplier, bank, settings, items, notes]);
+};
