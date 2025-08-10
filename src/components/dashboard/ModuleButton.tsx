@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useThemeSettings, ButtonTheme } from '@/hooks/useThemeSettings';
-import { getModuleColors } from '@/constants/colorMap';
+import React from 'react';
+import { useThemeManager } from '@/hooks/useThemeManager';
 
 // 定义模块接口
 interface Module {
@@ -31,26 +30,8 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
   packingCount = 0,
   purchaseCount = 0
 }) => {
-  const { settings } = useThemeSettings();
-  const [currentTheme, setCurrentTheme] = useState<ButtonTheme>(settings.buttonTheme);
+  const { buttonTheme, getModuleColors } = useThemeManager();
   const Icon = module.icon;
-
-  // 监听主题变化
-  useEffect(() => {
-    setCurrentTheme(settings.buttonTheme);
-  }, [settings.buttonTheme]);
-
-  // 监听全局主题变化事件
-  useEffect(() => {
-    const handleThemeChange = (event: CustomEvent) => {
-      setCurrentTheme(event.detail.buttonTheme);
-    };
-
-    window.addEventListener('themeSettingsChanged', handleThemeChange as EventListener);
-    return () => {
-      window.removeEventListener('themeSettingsChanged', handleThemeChange as EventListener);
-    };
-  }, []);
 
   const getCountForModule = (moduleId: string): number => {
     switch (moduleId) {
@@ -66,23 +47,8 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
   const count = getCountForModule(module.id);
   const showBadge = count > 0;
 
-  // 统一获取当前主题的颜色配置（classic 与 colorful 结构一致）
-  const c = getModuleColors(module.id, currentTheme) as unknown as {
-    bgFrom: string;
-    bgTo: string;
-    hoverFrom: string;
-    hoverTo: string;
-    textColor: string;
-    iconBg: string;
-    darkBgFrom: string;
-    darkBgTo: string;
-    darkHoverFrom: string;
-    darkHoverTo: string;
-    badgeBg: string;
-    badgeText: string;
-    hoverIconBg?: string;
-    iconColor?: string; // Added iconColor
-  };
+  // 获取当前主题的颜色配置
+  const c = getModuleColors(module.id, buttonTheme);
 
   const explicitIconColorByModule: Record<string, string> = {
     confirmation: 'text-emerald-600 dark:text-emerald-500',
@@ -103,39 +69,37 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
 
   return (
     <button
-      className={`
-        flex items-center justify-start gap-3 px-5 py-4 rounded-3xl shadow-md transition-all duration-300
-        h-24 w-full relative overflow-hidden group cursor-pointer
-        bg-gradient-to-br
-        ${c.bgFrom} ${c.bgTo}
-        ${c.darkBgFrom} ${c.darkBgTo}
-        ${c.hoverFrom} ${c.hoverTo}
-        ${c.darkHoverFrom} ${c.darkHoverTo}
-        hover:shadow-lg hover:-translate-y-1
-        active:translate-y-0 active:shadow-md
-        border border-white/40 dark:border-gray-800/40
-      `}
+      className="module-button dashboard-module-button flex items-center justify-start gap-3 px-5 py-4 rounded-3xl shadow-md transition-all duration-300 h-24 w-full relative overflow-hidden group cursor-pointer bg-gradient-to-br hover:shadow-lg hover:-translate-y-1 active:translate-y-0 active:shadow-md border border-white/40 dark:border-gray-800/40"
+      style={{
+        '--bg-gradient': `linear-gradient(to bottom right, var(--${module.id}-from), var(--${module.id}-to))`,
+        '--bg-gradient-hover': `linear-gradient(to bottom right, var(--${module.id}-hover-from), var(--${module.id}-hover-to))`,
+        '--text-color': 'var(--text-primary)',
+        '--icon-color': `var(--${module.id}-icon-color)`,
+        '--icon-bg': 'var(--icon-bg-color)',
+        '--badge-bg': `var(--${module.id}-badge-bg)`,
+        '--badge-text': 'var(--badge-text-color)',
+        '--transform-hover': 'translateY(-4px)',
+        '--transform-active': 'translateY(0)',
+        '--shadow-hover': '0 10px 25px -3px rgba(0, 0, 0, 0.1)',
+        '--shadow-active': '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      } as React.CSSProperties}
       onClick={() => onClick(module)}
       onMouseEnter={() => onHover?.(module)}
     >
       {/* 图标容器 */}
-      <div className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 ${c.iconBg} ${c.hoverIconBg ?? ''} group-hover:scale-105`}>
-        <Icon className={`w-5 h-5 transition-all duration-300 ${c.iconColor ?? c.textColor} ${explicitIconColorByModule[module.id] ?? ''}`} />
+      <div className="icon-container w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 group-hover:scale-105">
+        <Icon className="icon w-5 h-5 transition-all duration-300" />
       </div>
 
       {/* 文字标题 */}
-      <div className={`text-[16px] font-medium leading-tight truncate transition-all duration-200 ${c.textColor}`}>
+      <div className="text-[16px] font-medium leading-tight truncate transition-all duration-200">
         {module.name}
       </div>
 
       {/* 数量徽章 */}
       {showBadge && (
         <div
-          className={`absolute top-3 right-3 min-w-[22px] h-5 px-2 rounded-full
-            flex items-center justify-center text-[11px] font-semibold tracking-tight
-            transition-all duration-300 z-10
-            group-hover:scale-110 group-hover:rotate-6
-            shadow-sm ring-1 ring-white/50 dark:ring-white/20 mix-blend-normal ${c.badgeBg} ${fallbackBadgeBgByModule[module.id] ?? ''} ${c.badgeText} !text-white`}
+          className="badge absolute top-3 right-3 min-w-[22px] h-5 px-2 rounded-full flex items-center justify-center text-[11px] font-semibold tracking-tight transition-all duration-300 z-10 group-hover:scale-110 group-hover:rotate-6 shadow-sm ring-1 ring-white/50 dark:ring-white/20 mix-blend-normal"
         >
           <span>{count > 9999 ? '9999+' : count}</span>
         </div>

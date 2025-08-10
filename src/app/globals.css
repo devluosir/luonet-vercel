@@ -3,18 +3,408 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 删除所有可能干扰背景色的CSS规则 */
+/* 🎨 CSS变量系统 - 主题管理 */
+:root {
+  /* 基础颜色变量 */
+  --primary-blue: #2563eb;
+  --primary-emerald: #059669;
+  --primary-cyan: #0891b2;
+  --primary-violet: #7c3aed;
+  --primary-orange: #ea580c;
+  --primary-indigo: #4f46e5;
+  --primary-pink: #db2777;
+  --primary-fuchsia: #a21caf;
+  --primary-gray: #6b7280;
+
+  /* 背景色变量 */
+  --bg-primary: #f7f7f7;
+  --bg-secondary: #ffffff;
+  --bg-card: rgba(255, 255, 255, 0.8);
+  --bg-card-hover: rgba(255, 255, 255, 0.9);
+  
+  /* 文本颜色变量 */
+  --text-primary: #171717;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  
+  /* 边框颜色变量 */
+  --border-primary: rgba(229, 231, 235, 0.6);
+  --border-secondary: rgba(255, 255, 255, 0.4);
+  
+  /* 阴影变量 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  
+  /* 动画变量 */
+  --transition-fast: 0.15s ease-out;
+  --transition-normal: 0.3s ease-out;
+  --transition-slow: 0.5s ease-out;
+
+  /* 🎨 模块按钮颜色变量 - 彩色主题 */
+  /* 报价单 - 蓝色 */
+  --quotation-from: #dbeafe;
+  --quotation-to: #bfdbfe;
+  --quotation-hover-from: #bfdbfe;
+  --quotation-hover-to: #93c5fd;
+  --quotation-icon-color: #2563eb;
+  --quotation-badge-bg: #2563eb;
+
+  /* 销售确认 - 绿色 */
+  --confirmation-from: #d1fae5;
+  --confirmation-to: #a7f3d0;
+  --confirmation-hover-from: #a7f3d0;
+  --confirmation-hover-to: #6ee7b7;
+  --confirmation-icon-color: #059669;
+  --confirmation-badge-bg: #059669;
+
+  /* 装箱单 - 青色 */
+  --packing-from: #cffafe;
+  --packing-to: #a5f3fc;
+  --packing-hover-from: #a5f3fc;
+  --packing-hover-to: #67e8f9;
+  --packing-icon-color: #0891b2;
+  --packing-badge-bg: #0891b2;
+
+  /* 发票 - 紫色 */
+  --invoice-from: #ede9fe;
+  --invoice-to: #ddd6fe;
+  --invoice-hover-from: #ddd6fe;
+  --invoice-hover-to: #c4b5fd;
+  --invoice-icon-color: #7c3aed;
+  --invoice-badge-bg: #7c3aed;
+
+  /* 采购 - 橙色 */
+  --purchase-from: #fed7aa;
+  --purchase-to: #fdba74;
+  --purchase-hover-from: #fdba74;
+  --purchase-hover-to: #fb923c;
+  --purchase-icon-color: #ea580c;
+  --purchase-badge-bg: #ea580c;
+
+  /* AI邮件 - 靛蓝 */
+  --ai-email-from: #e0e7ff;
+  --ai-email-to: #c7d2fe;
+  --ai-email-hover-from: #c7d2fe;
+  --ai-email-hover-to: #a5b4fc;
+  --ai-email-icon-color: #4f46e5;
+  --ai-email-badge-bg: #4f46e5;
+
+  /* 历史 - 粉色 */
+  --history-from: #fce7f3;
+  --history-to: #fbcfe8;
+  --history-hover-from: #fbcfe8;
+  --history-hover-to: #f9a8d4;
+  --history-icon-color: #db2777;
+  --history-badge-bg: #db2777;
+
+  /* 客户 - 紫红 */
+  --customer-from: #fae8ff;
+  --customer-to: #f5d0fe;
+  --customer-hover-from: #f5d0fe;
+  --customer-hover-to: #f0abfc;
+  --customer-icon-color: #a21caf;
+  --customer-badge-bg: #a21caf;
+
+  /* 通用按钮变量 */
+  --icon-bg-color: transparent;
+  --badge-text-color: #ffffff;
+  --text-color: var(--text-primary);
+  --border-style: 1px solid var(--border-secondary);
+  --shadow-style: var(--shadow-md);
+  --customer-badge-bg: #a21caf;
+
+  /* 通用按钮变量 */
+  --icon-bg-color: transparent;
+  --badge-text-color: #ffffff;
+}
+
+/* 深色模式变量 */
+html.dark {
+  --bg-primary: #1f2937;
+  --bg-secondary: #111827;
+  --bg-card: rgba(31, 41, 55, 0.8);
+  --bg-card-hover: rgba(31, 41, 55, 0.9);
+  
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  
+  --border-primary: rgba(75, 85, 99, 0.5);
+  --border-secondary: rgba(31, 41, 55, 0.4);
+
+  /* 🎨 深色模式模块按钮颜色变量 */
+  /* 报价单 - 蓝色 */
+  --quotation-from: rgba(59, 130, 246, 0.7);
+  --quotation-to: rgba(37, 99, 235, 0.7);
+  --quotation-hover-from: rgba(96, 165, 250, 0.8);
+  --quotation-hover-to: rgba(59, 130, 246, 0.8);
+  --quotation-icon-color: #60a5fa;
+  --quotation-badge-bg: #3b82f6;
+
+  /* 销售确认 - 绿色 */
+  --confirmation-from: rgba(16, 185, 129, 0.7);
+  --confirmation-to: rgba(5, 150, 105, 0.7);
+  --confirmation-hover-from: rgba(52, 211, 153, 0.8);
+  --confirmation-hover-to: rgba(16, 185, 129, 0.8);
+  --confirmation-icon-color: #34d399;
+  --confirmation-badge-bg: #10b981;
+
+  /* 装箱单 - 青色 */
+  --packing-from: rgba(6, 182, 212, 0.7);
+  --packing-to: rgba(8, 145, 178, 0.7);
+  --packing-hover-from: rgba(34, 211, 238, 0.8);
+  --packing-hover-to: rgba(6, 182, 212, 0.8);
+  --packing-icon-color: #22d3ee;
+  --packing-badge-bg: #06b6d4;
+
+  /* 发票 - 紫色 */
+  --invoice-from: rgba(139, 92, 246, 0.7);
+  --invoice-to: rgba(124, 58, 237, 0.7);
+  --invoice-hover-from: rgba(167, 139, 250, 0.8);
+  --invoice-hover-to: rgba(139, 92, 246, 0.8);
+  --invoice-icon-color: #a78bfa;
+  --invoice-badge-bg: #8b5cf6;
+
+  /* 采购 - 橙色 */
+  --purchase-from: rgba(249, 115, 22, 0.7);
+  --purchase-to: rgba(234, 88, 12, 0.7);
+  --purchase-hover-from: rgba(251, 146, 60, 0.8);
+  --purchase-hover-to: rgba(249, 115, 22, 0.8);
+  --purchase-icon-color: #fb923c;
+  --purchase-badge-bg: #f97316;
+
+  /* AI邮件 - 靛蓝 */
+  --ai-email-from: rgba(99, 102, 241, 0.7);
+  --ai-email-to: rgba(79, 70, 229, 0.7);
+  --ai-email-hover-from: rgba(129, 140, 248, 0.8);
+  --ai-email-hover-to: rgba(99, 102, 241, 0.8);
+  --ai-email-icon-color: #818cf8;
+  --ai-email-badge-bg: #6366f1;
+
+  /* 历史 - 粉色 */
+  --history-from: rgba(236, 72, 153, 0.7);
+  --history-to: rgba(219, 39, 119, 0.7);
+  --history-hover-from: rgba(244, 114, 182, 0.8);
+  --history-hover-to: rgba(236, 72, 153, 0.8);
+  --history-icon-color: #f472b6;
+  --history-badge-bg: #ec4899;
+
+  /* 客户 - 紫红 */
+  --customer-from: rgba(192, 38, 211, 0.7);
+  --customer-to: rgba(162, 28, 175, 0.7);
+  --customer-hover-from: rgba(217, 70, 239, 0.8);
+  --customer-hover-to: rgba(192, 38, 211, 0.8);
+  --customer-icon-color: #d946ef;
+  --customer-badge-bg: #c026d3;
+}
+
+/* 🎨 Classic主题的CSS变量 - 浅色模式 */
+html.classic-theme {
+  /* 报价单 - 经典白色背景，蓝色悬停 */
+  --quotation-from: rgba(255, 255, 255, 0.8);
+  --quotation-to: rgba(255, 255, 255, 0.8);
+  --quotation-hover-from: rgba(219, 234, 254, 1);
+  --quotation-hover-to: rgba(191, 219, 254, 1);
+  --quotation-icon-color: #2563eb;
+  --quotation-badge-bg: #2563eb;
+
+  /* 销售确认 - 经典白色背景，绿色悬停 */
+  --confirmation-from: rgba(255, 255, 255, 0.8);
+  --confirmation-to: rgba(255, 255, 255, 0.8);
+  --confirmation-hover-from: rgba(209, 250, 229, 1);
+  --confirmation-hover-to: rgba(167, 243, 208, 1);
+  --confirmation-icon-color: #059669;
+  --confirmation-badge-bg: #059669;
+
+  /* 装箱单 - 经典白色背景，青色悬停 */
+  --packing-from: rgba(255, 255, 255, 0.8);
+  --packing-to: rgba(255, 255, 255, 0.8);
+  --packing-hover-from: rgba(207, 250, 254, 1);
+  --packing-hover-to: rgba(165, 243, 252, 1);
+  --packing-icon-color: #0891b2;
+  --packing-badge-bg: #0891b2;
+
+  /* 发票 - 经典白色背景，紫色悬停 */
+  --invoice-from: rgba(255, 255, 255, 0.8);
+  --invoice-to: rgba(255, 255, 255, 0.8);
+  --invoice-hover-from: rgba(237, 233, 254, 1);
+  --invoice-hover-to: rgba(221, 214, 254, 1);
+  --invoice-icon-color: #7c3aed;
+  --invoice-badge-bg: #7c3aed;
+
+  /* 采购 - 经典白色背景，橙色悬停 */
+  --purchase-from: rgba(255, 255, 255, 0.8);
+  --purchase-to: rgba(255, 255, 255, 0.8);
+  --purchase-hover-from: rgba(254, 215, 170, 1);
+  --purchase-hover-to: rgba(253, 186, 116, 1);
+  --purchase-icon-color: #ea580c;
+  --purchase-badge-bg: #ea580c;
+
+  /* AI邮件 - 经典白色背景，靛蓝悬停 */
+  --ai-email-from: rgba(255, 255, 255, 0.8);
+  --ai-email-to: rgba(255, 255, 255, 0.8);
+  --ai-email-hover-from: rgba(224, 231, 255, 1);
+  --ai-email-hover-to: rgba(199, 210, 254, 1);
+  --ai-email-icon-color: #4f46e5;
+  --ai-email-badge-bg: #4f46e5;
+
+  /* 历史 - 经典白色背景，粉色悬停 */
+  --history-from: rgba(255, 255, 255, 0.8);
+  --history-to: rgba(255, 255, 255, 0.8);
+  --history-hover-from: rgba(252, 231, 243, 1);
+  --history-hover-to: rgba(251, 207, 232, 1);
+  --history-icon-color: #db2777;
+  --history-badge-bg: #db2777;
+
+  /* 客户 - 经典白色背景，紫红悬停 */
+  --customer-from: rgba(255, 255, 255, 0.8);
+  --customer-to: rgba(255, 255, 255, 0.8);
+  --customer-hover-from: rgba(250, 232, 255, 1);
+  --customer-hover-to: rgba(245, 208, 254, 1);
+  --customer-icon-color: #a21caf;
+  --customer-badge-bg: #a21caf;
+}
+
+/* 🎨 Classic主题的CSS变量 - 深色模式 */
+html.dark.classic-theme {
+  /* 报价单 - 经典深色背景，蓝色悬停 */
+  --quotation-from: rgba(31, 41, 55, 0.8);
+  --quotation-to: rgba(31, 41, 55, 0.8);
+  --quotation-hover-from: rgba(59, 130, 246, 0.8);
+  --quotation-hover-to: rgba(37, 99, 235, 0.8);
+  --quotation-icon-color: #60a5fa;
+  --quotation-badge-bg: #3b82f6;
+
+  /* 销售确认 - 经典深色背景，绿色悬停 */
+  --confirmation-from: rgba(31, 41, 55, 0.8);
+  --confirmation-to: rgba(31, 41, 55, 0.8);
+  --confirmation-hover-from: rgba(16, 185, 129, 0.8);
+  --confirmation-hover-to: rgba(5, 150, 105, 0.8);
+  --confirmation-icon-color: #34d399;
+  --confirmation-badge-bg: #10b981;
+
+  /* 装箱单 - 经典深色背景，青色悬停 */
+  --packing-from: rgba(31, 41, 55, 0.8);
+  --packing-to: rgba(31, 41, 55, 0.8);
+  --packing-hover-from: rgba(6, 182, 212, 0.8);
+  --packing-hover-to: rgba(8, 145, 178, 0.8);
+  --packing-icon-color: #22d3ee;
+  --packing-badge-bg: #06b6d4;
+
+  /* 发票 - 经典深色背景，紫色悬停 */
+  --invoice-from: rgba(31, 41, 55, 0.8);
+  --invoice-to: rgba(31, 41, 55, 0.8);
+  --invoice-hover-from: rgba(139, 92, 246, 0.8);
+  --invoice-hover-to: rgba(124, 58, 237, 0.8);
+  --invoice-icon-color: #a78bfa;
+  --invoice-badge-bg: #8b5cf6;
+
+  /* 采购 - 经典深色背景，橙色悬停 */
+  --purchase-from: rgba(31, 41, 55, 0.8);
+  --purchase-to: rgba(31, 41, 55, 0.8);
+  --purchase-hover-from: rgba(249, 115, 22, 0.8);
+  --purchase-hover-to: rgba(234, 88, 12, 0.8);
+  --purchase-icon-color: #fb923c;
+  --purchase-badge-bg: #f97316;
+
+  /* AI邮件 - 经典深色背景，靛蓝悬停 */
+  --ai-email-from: rgba(31, 41, 55, 0.8);
+  --ai-email-to: rgba(31, 41, 55, 0.8);
+  --ai-email-hover-from: rgba(99, 102, 241, 0.8);
+  --ai-email-hover-to: rgba(79, 70, 229, 0.8);
+  --ai-email-icon-color: #818cf8;
+  --ai-email-badge-bg: #6366f1;
+
+  /* 历史 - 经典深色背景，粉色悬停 */
+  --history-from: rgba(31, 41, 55, 0.8);
+  --history-to: rgba(31, 41, 55, 0.8);
+  --history-hover-from: rgba(236, 72, 153, 0.8);
+  --history-hover-to: rgba(219, 39, 119, 0.8);
+  --history-icon-color: #f472b6;
+  --history-badge-bg: #ec4899;
+
+  /* 客户 - 经典深色背景，紫红悬停 */
+  --customer-from: rgba(31, 41, 55, 0.8);
+  --customer-to: rgba(31, 41, 55, 0.8);
+  --customer-hover-from: rgba(192, 38, 211, 0.8);
+  --customer-hover-to: rgba(162, 28, 175, 0.8);
+  --customer-icon-color: #d946ef;
+  --customer-badge-bg: #c026d3;
+}
+
+/* 主题切换动画 */
+* {
+  transition: background-color var(--transition-normal), 
+              border-color var(--transition-normal), 
+              color var(--transition-normal);
+}
+
+/* 🎨 模块按钮专用样式 - 确保不被全局样式覆盖 */
+.module-button,
+.dashboard-module-button {
+  /* 重置全局过渡动画，避免冲突 */
+  transition: all var(--transition-normal) !important;
+  
+  /* 确保背景色不被覆盖 */
+  background-image: var(--bg-gradient) !important;
+  background-color: transparent !important;
+  
+  /* 确保文本颜色不被覆盖 */
+  color: var(--text-color) !important;
+  
+  /* 确保边框不被覆盖 */
+  border: var(--border-style) !important;
+  
+  /* 确保阴影不被覆盖 */
+  box-shadow: var(--shadow-style) !important;
+}
+
+/* 模块按钮悬停状态 */
+.module-button:hover,
+.dashboard-module-button:hover {
+  background-image: var(--bg-gradient-hover) !important;
+  transform: var(--transform-hover) !important;
+  box-shadow: var(--shadow-hover) !important;
+}
+
+/* 模块按钮激活状态 */
+.module-button:active,
+.dashboard-module-button:active {
+  transform: var(--transform-active) !important;
+  box-shadow: var(--shadow-active) !important;
+}
+
+/* 模块按钮图标容器 */
+.module-button .icon-container,
+.dashboard-module-button .icon-container {
+  background-color: var(--icon-bg) !important;
+  color: var(--icon-color) !important;
+}
+
+/* 模块按钮图标 */
+.module-button .icon,
+.dashboard-module-button .icon {
+  color: var(--icon-color) !important;
+}
+
+/* 模块按钮徽章 */
+.module-button .badge,
+.dashboard-module-button .badge {
+  background-color: var(--badge-bg) !important;
+  color: var(--badge-text) !important;
+}
 
 /* 全局样式 */
 html, body {
-  background-color: #f7f7f7; /* 统一的背景色，避免 SSR/客户端不一致 */
+  background-color: var(--bg-primary);
   scroll-behavior: smooth;
 }
 
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #171717;
+  color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 

@@ -10,7 +10,8 @@ import { PermissionRefreshButton } from './PermissionRefreshButton';
 import { format } from 'date-fns';
 import { preloadManager } from '@/utils/preloadUtils';
 import { LOGO_CONFIG } from '@/lib/logo-config';
-import { useThemeSettings } from '@/hooks/useThemeSettings';
+import { useThemeManager } from '@/hooks/useThemeManager';
+import { ThemeCompactToggle } from './ThemeToggle';
 import { apiRequestWithError, API_ENDPOINTS } from '@/lib/api-config';
 
 interface HeaderProps {
@@ -48,7 +49,7 @@ export function Header({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const submenuHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
-  const { settings, setButtonTheme } = useThemeSettings();
+  const { buttonTheme, setButtonTheme } = useThemeManager();
 
   // 检查预加载状态
   const checkPreloadStatus = useCallback(() => {
@@ -424,31 +425,12 @@ export function Header({
                         </div>
 
                         <div className="pt-1 border-t border-gray-200 dark:border-gray-700">
-                          <div className="flex items-center text-xs text-gray-600 dark:text-gray-300 mb-1.5">
-                            <Palette className="w-3.5 h-3.5 mr-1.5" />
-                            <span className="mr-2">主题</span>
-                            <div className="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-                              <button
-                                onClick={() => setButtonTheme('colorful')}
-                                className={`px-2.5 py-1 text-[11px] transition-colors ${
-                                  settings.buttonTheme === 'colorful'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/40'
-                                }`}
-                              >
-                                彩色
-                              </button>
-                              <button
-                                onClick={() => setButtonTheme('classic')}
-                                className={`px-2.5 py-1 text-[11px] transition-colors border-l border-gray-200 dark:border-gray-700 ${
-                                  settings.buttonTheme === 'classic'
-                                    ? 'bg-gray-700 text-white'
-                                    : 'bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/40'
-                                }`}
-                              >
-                                简洁
-                              </button>
+                          <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300 mb-1.5">
+                            <div className="flex items-center">
+                              <Palette className="w-3.5 h-3.5 mr-1.5" />
+                              <span>主题设置</span>
                             </div>
+                            <ThemeCompactToggle />
                           </div>
                         </div>
                       </div>

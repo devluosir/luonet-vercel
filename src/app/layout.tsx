@@ -3,7 +3,8 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import ClientInitializer from '@/components/ClientInitializer';
-import { cookies } from 'next/headers';
+import { ThemeProvider, ThemeInitializer } from '@/components/ThemeProvider';
+
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -20,29 +21,45 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // 从 cookie 读取主题，确保 SSR 和客户端一致
-  const theme = cookies().get('theme')?.value ?? 'light';
-  const htmlClass = `${theme === 'dark' ? 'dark ' : ''}h-full`;
-
   return (
-    <html lang="zh-CN" className={htmlClass} suppressHydrationWarning>
+    <html lang="zh-CN" className="h-full" suppressHydrationWarning>
       <head>
         {/* 预置脚本：在水合前确保 class 一致，避免闪烁与不一致 */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                var t = localStorage.getItem('theme');
-                if (t) document.documentElement.classList.toggle('dark', t === 'dark');
-              } catch (e) {}
+                // 从localStorage读取主题配置
+                var themeConfig = localStorage.getItem('themeConfig');
+                if (themeConfig) {
+                  var config = JSON.parse(themeConfig);
+                  // 应用深色模式类
+                  if (config.mode === 'dark') {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                  // 应用按钮主题类
+                  if (config.buttonTheme === 'classic') {
+                    document.documentElement.classList.add('classic-theme');
+                  } else {
+                    document.documentElement.classList.remove('classic-theme');
+                  }
+                }
+              } catch (e) {
+                console.error('主题预置脚本错误:', e);
+              }
             `,
           }}
         />
       </head>
       <body className={`${inter.className} min-h-screen`}>
         <Providers>
-          <ClientInitializer />
-          {children}
+          <ThemeProvider>
+            <ThemeInitializer />
+            <ClientInitializer />
+            {children}
+          </ThemeProvider>
         </Providers>
       </body>
     </html>

@@ -1,24 +1,6 @@
 import { Permission } from '@/types/permissions';
 
-interface PermissionMap {
-  permissions: {
-    quotation: boolean;
-    packing: boolean;
-    invoice: boolean;
-    purchase: boolean;
-    history: boolean;
-    customer: boolean;
-    'ai-email': boolean;
-  };
-  documentTypePermissions: {
-    quotation: boolean;
-    confirmation: boolean;
-    packing: boolean;
-    invoice: boolean;
-    purchase: boolean;
-  };
-  accessibleDocumentTypes: string[];
-}
+import type { PermissionMap } from '@/features/dashboard/types';
 
 // 使用 Map 加速权限判断
 export const createPermissionMap = (permissions: Permission[]): Map<string, boolean> => {
@@ -55,6 +37,7 @@ export const buildPermissionMap = (
     return {
       permissions: {
         quotation: false,
+        confirmation: false,
         packing: false,
         invoice: false,
         purchase: false,
@@ -79,6 +62,7 @@ export const buildPermissionMap = (
   // 构建权限映射
   const permissionsResult = {
     quotation: permissionMap.get('quotation') === true,
+    confirmation: permissionMap.get('quotation') === true, // 销售确认也属于报价模块
     packing: permissionMap.get('packing') === true,
     invoice: permissionMap.get('invoice') === true,
     purchase: permissionMap.get('purchase') === true,
