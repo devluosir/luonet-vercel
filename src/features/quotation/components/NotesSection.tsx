@@ -34,6 +34,7 @@ interface NotesSectionProps {
 export const NotesSection: React.FC<NotesSectionProps> = () => {
   const { notesConfig, updateNoteVisibility, updateNoteOrder, updateNoteContent, addNote, removeNote } = useQuotationStore();
   const [mounted, setMounted] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<'exw' | 'fob' | 'cif' | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -83,6 +84,9 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
 
   // 应用模板
   const applyTemplate = (templateKey: 'exw' | 'fob' | 'cif') => {
+    // 设置选中的模板
+    setSelectedTemplate(templateKey);
+    
     const template = NOTES_TEMPLATES_BILINGUAL[templateKey];
     const { setNotesConfig } = useQuotationStore.getState();
     
@@ -109,7 +113,11 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
             <button
               type="button"
               onClick={() => applyTemplate('exw')}
-              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-300"
+              className={`p-1.5 rounded border border-gray-300 dark:border-gray-600 transition-colors ${
+                selectedTemplate === 'exw'
+                  ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                  : 'hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-300 text-gray-400 dark:text-gray-500'
+              }`}
               title="套用 EXW 模板"
             >
               <Truck className="w-4 h-4" />
@@ -117,7 +125,11 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
             <button
               type="button"
               onClick={() => applyTemplate('fob')}
-              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300"
+              className={`p-1.5 rounded border border-gray-300 dark:border-gray-600 transition-colors ${
+                selectedTemplate === 'fob'
+                  ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                  : 'hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-300 text-gray-400 dark:text-gray-500'
+              }`}
               title="套用 FOB 模板"
             >
               <Ship className="w-4 h-4" />
@@ -125,7 +137,11 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
             <button
               type="button"
               onClick={() => applyTemplate('cif')}
-              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 text-teal-600 dark:text-teal-300"
+              className={`p-1.5 rounded border border-gray-300 dark:border-gray-600 transition-colors ${
+                selectedTemplate === 'cif'
+                  ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300'
+                  : 'hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-600 dark:hover:text-teal-300 text-gray-400 dark:text-gray-500'
+              }`}
               title="套用 CIF 模板"
             >
               <Globe className="w-4 h-4" />
@@ -133,7 +149,7 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
             <button
               type="button"
               onClick={addNote}
-              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 dark:text-green-300"
+              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-300 text-gray-400 dark:text-gray-500"
               title="新增条款"
             >
               <Plus className="w-4 h-4" />
