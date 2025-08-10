@@ -99,17 +99,29 @@ const calculateMergedCells = (
   return mergedCells;
 };
 
-const shouldRenderRemarkCell = (rowIndex: number, merged: MergedCellInfo[]) =>
-  merged.some((cell) => cell.startRow === rowIndex);
+const shouldRenderRemarkCell = (rowIndex: number, merged: MergedCellInfo[]) => {
+  // 如果没有合并信息，直接返回true（显示所有单元格）
+  if (merged.length === 0) return true;
+  return merged.some((cell) => cell.startRow === rowIndex);
+};
 
-const getMergedCellInfo = (rowIndex: number, merged: MergedCellInfo[]) =>
-  merged.find((cell) => cell.startRow === rowIndex) || null;
+const getMergedCellInfo = (rowIndex: number, merged: MergedCellInfo[]) => {
+  // 如果没有合并信息，直接返回null
+  if (merged.length === 0) return null;
+  return merged.find((cell) => cell.startRow === rowIndex) || null;
+};
 
-const shouldRenderDescriptionCell = (rowIndex: number, merged: MergedCellInfo[]) =>
-  merged.length === 0 || merged.some((cell) => cell.startRow === rowIndex);
+const shouldRenderDescriptionCell = (rowIndex: number, merged: MergedCellInfo[]) => {
+  // 如果没有合并信息，直接返回true（显示所有单元格）
+  if (merged.length === 0) return true;
+  return merged.some((cell) => cell.startRow === rowIndex);
+};
 
-const getMergedDescriptionCellInfo = (rowIndex: number, merged: MergedCellInfo[]) =>
-  merged.find((cell) => cell.startRow === rowIndex) || null;
+const getMergedDescriptionCellInfo = (rowIndex: number, merged: MergedCellInfo[]) => {
+  // 如果没有合并信息，直接返回null
+  if (merged.length === 0) return null;
+  return merged.find((cell) => cell.startRow === rowIndex) || null;
+};
 
 /* =========================================================================
  * Section 3: Small presentational sub-components
@@ -300,12 +312,6 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   const getDesc = (it: any) => (it.description ?? it.partName ?? '').trim();
   const getRemark = (it: any) => (it.remarks ?? it.remark ?? '').trim();
 
-  if (process.env.NODE_ENV === 'development') {
-    console.info('[IT] props merges:', mergedRemarks?.length, mergedDescriptions?.length);
-    console.info('[IT] items[0].remarks]:', getRemark(data.items[0] ?? {}));
-    console.info('[IT] items[0].description]:', getDesc(data.items[0] ?? {}));
-  }
-
   const { visibleCols, isHydrated } = useTablePrefsHydrated();
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -323,7 +329,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     return;
   }, []);
 
-  useEffect(() => onDescriptionMergeModeChange?.(descriptionMergeMode), [descriptionMergeMode, onDescriptionMergeModeChange]);
+  // 暂时禁用description列的合并模式切换功能
+  // useEffect(() => onDescriptionMergeModeChange?.(descriptionMergeMode), [descriptionMergeMode, onDescriptionMergeModeChange]);
   useEffect(() => onRemarksMergeModeChange?.(remarksMergeMode), [remarksMergeMode, onRemarksMergeModeChange]);
 
   const effectiveVisibleCols = isHydrated ? visibleCols : ['partName', 'quantity', 'unit', 'unitPrice', 'amount', 'remarks'];
@@ -368,17 +375,48 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     { remarks: [], description: [] }
   );
 
-  const remarksKey = useMemo(() => buildMergeKey(data.items, 'remarks'), [data.items]);
-  const descKey = useMemo(() => buildMergeKey(data.items, 'description'), [data.items]);
+  // 用于首次渲染检测的refs
+  const isFirstRenderRef = useRef(true);
+  const isFirstRenderRemarksRef = useRef(true);
+
+  // 只在开发环境且首次渲染且有解析器合并信息时显示调试信息
+  if (process.env.NODE_ENV === 'development' && ((mergedRemarks?.length ?? 0) > 0 || (mergedDescriptions?.length ?? 0) > 0)) {
+    if (isFirstRenderRef.current) {
+      console.info('[IT] props merges:', mergedRemarks?.length, mergedDescriptions?.length);
+      console.info('[IT] items[0].remarks]:', getRemark(data.items[0] ?? {}));
+      console.info('[IT] items[0].description]:', getDesc(data.items[0] ?? {}));
+      isFirstRenderRef.current = false;
+    }
+  }
+
+  // 只在有解析器合并信息时才计算合并键
+  const remarksKey = useMemo(() => {
+    if ((mergedRemarks?.length ?? 0) > 0) {
+      return buildMergeKey(data.items, 'remarks');
+    }
+    return '';
+  }, [mergedRemarks?.length ?? 0, data.items]);
+  
+  const descKey = useMemo(() => {
+    if ((mergedDescriptions?.length ?? 0) > 0) {
+      return buildMergeKey(data.items, 'description');
+    }
+    return '';
+  }, [mergedDescriptions?.length ?? 0, data.items]);
 
   const mergedRemarksCells = useMemo(() => {
-    if (mergedRemarks.length > 0) {
+    // 只在有解析器合并信息时才进行合并检测
+    if ((mergedRemarks?.length ?? 0) > 0) {
       if (process.env.NODE_ENV === 'development') console.log('[ItemsTable] 使用解析器合并:', mergedRemarks);
       return mergedRemarks.map((m) => ({ startRow: m.startRow, endRow: m.endRow, content: m.content, isMerged: true }));
     }
-    if (process.env.NODE_ENV === 'development') console.log('[ItemsTable] 解析器合并为空，回退自动合并');
+    
+    // 如果没有解析器合并信息，只在手动模式下进行合并检测
+    const items = data.items || [];
+    if (items.length === 0) return [];
+    
     if (remarksMergeMode === 'manual') {
-      const result = data.items.map((it, idx) => ({ startRow: idx, endRow: idx, content: it.remarks || '', isMerged: false }));
+      const result = items.map((it, idx) => ({ startRow: idx, endRow: idx, content: it.remarks || '', isMerged: false }));
       manualMergedCells.remarks.forEach((cell) => {
         for (let i = cell.startRow; i <= cell.endRow; i++) {
           const k = result.findIndex((r) => r.startRow === i);
@@ -389,38 +427,46 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       // 保持顺序
       return result.sort((a, b) => a.startRow - b.startRow);
     }
-    return calculateMergedCells(data.items, 'auto', 'remarks');
-  }, [mergedRemarks, remarksKey, remarksMergeMode, manualMergedCells.remarks, data.items]);
+    
+    // 自动模式下，如果没有解析器合并信息，返回空数组（不进行自动合并检测）
+    return [];
+  }, [mergedRemarks?.length ?? 0, remarksKey, remarksMergeMode, manualMergedCells.remarks, data.items?.length ?? 0]);
 
   const mergedDescriptionCells = useMemo(() => {
-    if (mergedDescriptions.length > 0) {
-      if (process.env.NODE_ENV === 'development') console.log('[ItemsTable] 使用解析器描述合并:', mergedDescriptions);
-      return mergedDescriptions.map((m) => ({ startRow: m.startRow, endRow: m.endRow, content: m.content, isMerged: true }));
+    // 暂时禁用description列的合并单元格功能
+    // 只在有解析器合并信息时才显示日志
+    if (process.env.NODE_ENV === 'development' && (mergedDescriptions?.length ?? 0) > 0) {
+      if (isFirstRenderRef.current) {
+        console.log('[ItemsTable] 检测到Description解析器合并信息:', mergedDescriptions);
+        console.log('[ItemsTable] Description合并单元格功能已禁用');
+        isFirstRenderRef.current = false;
+      }
     }
-    if (process.env.NODE_ENV === 'development') console.log('[ItemsTable] 描述列严格模式：解析器未提供合并，不进行自动合并');
     return [];
-  }, [mergedDescriptions]);
+  }, [mergedDescriptions?.length ?? 0, data.items?.length ?? 0]);
 
+  // 只在有解析器合并信息时才执行useEffect
   useEffectOncePerChange(`${remarksKey}|${remarksMergeMode}`, () => {
-    if (process.env.NODE_ENV === 'development') {
-      if (remarksMergeMode === 'auto' && mergedRemarks.length === 0) {
-        console.log('[ItemsTable] Remarks自动合并单元格:', mergedRemarksCells);
-        console.log('[ItemsTable] 原始数据remarks字段:', data.items.map((i) => i.remarks));
-      } else if (manualMergedCells.remarks.length > 0) {
-        console.log('[ItemsTable] Remarks手动合并单元格:', mergedRemarksCells);
+    if ((mergedRemarks?.length ?? 0) > 0) {
+      if (process.env.NODE_ENV === 'development' && isFirstRenderRemarksRef.current) {
+        console.log('[ItemsTable] 检测到解析器合并信息:', mergedRemarks);
+        console.log('[ItemsTable] Remarks合并单元格:', mergedRemarksCells);
+        console.log('[ItemsTable] 原始数据remarks字段:', data.items?.map((i) => i.remarks) || []);
+        isFirstRenderRemarksRef.current = false;
       }
     }
   });
 
-  useEffectOncePerChange(`${descKey}|${descriptionMergeMode}`, () => {
-    if (process.env.NODE_ENV === 'development') {
-      if (descriptionMergeMode === 'auto' && mergedDescriptions.length === 0) {
-        console.log('[ItemsTable] Description自动合并单元格:', mergedDescriptionCells);
-      } else if (manualMergedCells.description.length > 0) {
-        console.log('[ItemsTable] Description手动合并单元格:', mergedDescriptionCells);
-      }
-    }
-  });
+  // 暂时禁用description列合并相关的useEffect
+  // useEffectOncePerChange(`${descKey}|${descriptionMergeMode}`, () => {
+  //   if (process.env.NODE_ENV === 'development') {
+  //     if (descriptionMergeMode === 'auto' && (mergedDescriptions?.length ?? 0) === 0) {
+  //       console.log('[ItemsTable] Description自动合并单元格:', mergedDescriptionCells);
+  //     } else if (manualMergedCells.description.length > 0) {
+  //       console.log('[ItemsTable] Description手动合并单元格:', mergedDescriptionCells);
+  //     }
+  //   }
+  // });
 
   const mergedRef = useRef<{ remarks: MergedCellInfo[]; description: MergedCellInfo[] }>({ remarks: [], description: [] });
   useEffect(() => {
@@ -443,7 +489,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       const h = Math.max(28, Math.min(ta.scrollHeight, 200));
       ta.style.height = `${h}px`;
     });
-  }, [data.items, mergedRemarksCells, mergedDescriptionCells]);
+  }, [data.items?.length ?? 0, mergedRemarksCells, mergedDescriptionCells]);
 
   const onFocusIOS = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const el = e.target as HTMLElement & { style: any };
@@ -457,7 +503,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   };
 
   const handleItemChange = (index: number, field: keyof LineItem, value: string | number) => {
-    const newItems = [...data.items];
+    const items = data.items || [];
+    const newItems = [...items];
     const updated = { ...newItems[index] };
 
     if (field === 'quantity' || field === 'unitPrice') {
@@ -648,11 +695,18 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   };
 
   const manualMergeRows = (startRow: number, endRow: number, column: 'remarks' | 'description' = 'remarks') => {
+    // 暂时禁用description列的手动合并功能
+    if (column === 'description') {
+      return;
+    }
+    
     if (startRow === endRow) return;
     const field = column;
     const contents: string[] = [];
     for (let i = startRow; i <= endRow; i++) {
-      const content = ((data.items[i] as any)?.[field] || '').trim();
+      const item = data.items?.[i];
+      if (!item) continue;
+      const content = ((item as any)?.[field] || '').trim();
       if (content) contents.push(content);
     }
     const mergedContent = contents.length > 1 ? contents.join('\n') : (contents[0] || '');
@@ -663,10 +717,14 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
   const splitMergedCell = (rowIndex: number) => {
     const column = contextMenu?.column || 'remarks';
-    const mergedInfo =
-      column === 'description'
-        ? getMergedDescriptionCellInfo(rowIndex, mergedDescriptionCells)
-        : getMergedCellInfo(rowIndex, mergedRemarksCells);
+    
+    // 暂时禁用description列的拆分功能
+    if (column === 'description') {
+      return;
+    }
+    
+    // 由于description列已禁用，这里只处理remarks列
+    const mergedInfo = getMergedCellInfo(rowIndex, mergedRemarksCells);
     if (!mergedInfo || !mergedInfo.isMerged) return;
 
     setManualMergedCells((prev) => ({
@@ -678,6 +736,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
   const mergeToRow = (startRow: number, endRow: number) => {
     const column = contextMenu?.column || 'remarks';
+    
+    // 暂时禁用description列的合并功能
+    if (column === 'description') {
+      return;
+    }
+    
     const rowIndex = contextMenu?.rowIndex ?? 0;
     const existing = findContainingMergedCell(rowIndex, column);
     if (existing) {
@@ -694,53 +758,67 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   };
 
   const handleContextMenu = (e: React.MouseEvent, rowIndex: number, column?: 'description' | 'remarks') => {
+    // 暂时禁用description列的右键菜单合并功能
+    if (column === 'description') {
+      return;
+    }
     e.preventDefault();
     setContextMenu({ visible: true, x: e.clientX, y: e.clientY, rowIndex, column });
   };
   const closeContextMenu = () => setContextMenu(null);
 
   // quantity / unitPrice edit helpers (mobile + desktop)
-  const qtyInputProps = (index: number) => ({
-    value: editingQtyIndex === index ? editingQtyAmount : (data.items[index].quantity === 0 ? '' : String(data.items[index].quantity)),
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-      const v = e.target.value;
-      if (/^\d*$/.test(v)) {
-        setEditingQtyAmount(v);
-        handleItemChange(index, 'quantity', v === '' ? 0 : parseInt(v, 10));
-      }
-    },
-    onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
-      setEditingQtyIndex(index);
-      setEditingQtyAmount(data.items[index].quantity === 0 ? '' : String(data.items[index].quantity));
-      e.target.select();
-      onFocusIOS(e);
-    },
-    onBlur: () => {
-      setEditingQtyIndex(null);
-      setEditingQtyAmount('');
-    },
-  });
+  const qtyInputProps = (index: number) => {
+    const item = data.items?.[index];
+    if (!item) return { value: '', onChange: () => {}, onFocus: () => {}, onBlur: () => {} };
+    
+    return {
+      value: editingQtyIndex === index ? editingQtyAmount : (item.quantity === 0 ? '' : String(item.quantity)),
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+        const v = e.target.value;
+        if (/^\d*$/.test(v)) {
+          setEditingQtyAmount(v);
+          handleItemChange(index, 'quantity', v === '' ? 0 : parseInt(v, 10));
+        }
+      },
+      onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
+        setEditingQtyIndex(index);
+        setEditingQtyAmount(item.quantity === 0 ? '' : String(item.quantity));
+        e.target.select();
+        onFocusIOS(e);
+      },
+      onBlur: () => {
+        setEditingQtyIndex(null);
+        setEditingQtyAmount('');
+      },
+    };
+  };
 
-  const priceInputProps = (index: number) => ({
-    value: editingPriceIndex === index ? editingPriceAmount : data.items[index].unitPrice.toFixed(2),
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-      const v = e.target.value;
-      if (/^\d*\.?\d*$/.test(v)) {
-        setEditingPriceAmount(v);
-        handleItemChange(index, 'unitPrice', v === '' ? 0 : parseFloat(v));
-      }
-    },
-    onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
-      setEditingPriceIndex(index);
-      setEditingPriceAmount(data.items[index].unitPrice === 0 ? '' : String(data.items[index].unitPrice));
-      e.target.select();
-      onFocusIOS(e);
-    },
-    onBlur: () => {
-      setEditingPriceIndex(null);
-      setEditingPriceAmount('');
-    },
-  });
+  const priceInputProps = (index: number) => {
+    const item = data.items?.[index];
+    if (!item) return { value: '', onChange: () => {}, onFocus: () => {}, onBlur: () => {} };
+    
+    return {
+      value: editingPriceIndex === index ? editingPriceAmount : item.unitPrice.toFixed(2),
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+        const v = e.target.value;
+        if (/^\d*\.?\d*$/.test(v)) {
+          setEditingPriceAmount(v);
+          handleItemChange(index, 'unitPrice', v === '' ? 0 : parseFloat(v));
+        }
+      },
+      onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
+        setEditingPriceIndex(index);
+        setEditingPriceAmount(item.unitPrice === 0 ? '' : String(item.unitPrice));
+        e.target.select();
+        onFocusIOS(e);
+      },
+      onBlur: () => {
+        setEditingPriceIndex(null);
+        setEditingPriceAmount('');
+      },
+    };
+  };
 
   /* ---------------------- Global Paste Import ---------------------- */
   // already registered above via useGlobalPasteImport
@@ -777,7 +855,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       {/* Mobile cards */}
       <div className="block md:hidden space-y-4">
         {(data.items || []).map((item, index) => {
-          if (index < 2 && process.env.NODE_ENV === 'development') {
+          // 只在开发环境且有解析器合并信息时才显示调试信息
+          if (index < 2 && process.env.NODE_ENV === 'development' && ((mergedRemarks?.length ?? 0) > 0 || (mergedDescriptions?.length ?? 0) > 0)) {
             console.info('[IT:row', index, '] flags', {
               desc: { hide: !shouldRenderDescriptionCell(index, mergedDescriptionCells), start: !!getMergedDescriptionCellInfo(index, mergedDescriptionCells)?.isMerged },
               remark: { hide: !shouldRenderRemarkCell(index, mergedRemarksCells), start: !!getMergedCellInfo(index, mergedRemarksCells)?.isMerged },
@@ -817,9 +896,6 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 {/* Description */}
                 {effectiveVisibleCols.includes('description') && shouldRenderDescriptionCell(index, mergedDescriptionCells) && (
                   <div data-probe={`desc@row${index}`}>
-                    {process.env.NODE_ENV === 'development' && (
-                      <div style={{ fontSize: 10, opacity: 0.6 }}>{`[desc=${getDesc(item)}][qty=${item.quantity}][unit=${item.unit}]`}</div>
-                    )}
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
                     <AutoGrowTextarea
                       value={descIsMerged ? (descMergedInfo?.content || '') : getDesc(item)}
@@ -1112,9 +1188,6 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             rowSpan={descIsMerged ? descRowSpan : undefined}
                             onContextMenu={(e) => handleContextMenu(e, index, 'description')}
                           >
-                            {process.env.NODE_ENV === 'development' && (
-                              <div style={{ fontSize: 10, opacity: 0.6 }}>{`[desc=${getDesc(item)}][qty=${item.quantity}][unit=${item.unit}]`}</div>
-                            )}
                             <AutoGrowTextarea
                               value={descIsMerged ? (descMergedInfo?.content || '') : getDesc(item)}
                               onChange={(e) => handleTextareaChange(e, index, descIsMerged, descMergedInfo, 'description')}

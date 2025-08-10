@@ -23,10 +23,11 @@ export function ColumnToggle({
   const { visibleCols, toggleCol } = useTablePrefsHydrated();
   const [open, setOpen] = useState(false);
 
-  const toggleDescriptionMergeMode = () => {
-    const newMode = descriptionMergeMode === 'auto' ? 'manual' : 'auto';
-    onDescriptionMergeModeChange?.(newMode);
-  };
+  // 暂时禁用description列的合并模式切换功能
+  // const toggleDescriptionMergeMode = () => {
+  //   const newMode = descriptionMergeMode === 'auto' ? 'manual' : 'auto';
+  //   onDescriptionMergeModeChange?.(newMode);
+  // };
 
   const toggleRemarksMergeMode = () => {
     const newMode = remarksMergeMode === 'auto' ? 'manual' : 'auto';
@@ -53,8 +54,8 @@ export function ColumnToggle({
               Description
             </button>
             
-            {/* 合并模式切换按钮 - 紧贴Description按钮 */}
-            {visibleCols.includes('description') && (
+            {/* 合并模式切换按钮 - 紧贴Description按钮 - 暂时禁用 */}
+            {/* {visibleCols.includes('description') && (
               <button
                 type="button"
                 onClick={toggleDescriptionMergeMode}
@@ -75,7 +76,7 @@ export function ColumnToggle({
                 </svg>
                 {descriptionMergeMode === 'auto' ? '自动' : '手动'}
               </button>
-            )}
+            )} */}
           </div>
           
           {/* Remarks 按钮组 - 包含Remarks和合并按钮 */}

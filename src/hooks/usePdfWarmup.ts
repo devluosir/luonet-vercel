@@ -30,7 +30,13 @@ export function usePdfWarmup() {
     startedRef.current = true;
     warmedUp = true;
 
-    console.log('开始预热PDF相关资源...');
+    // 只在开发环境显示预热日志
+    if (process.env.NODE_ENV === 'development') {
+      console.log('开始预热PDF相关资源...');
+    }
+
+    // 延迟预热，避免阻塞首屏渲染
+    const delay = process.env.NODE_ENV === 'development' ? 2000 : 3000;
 
     const idleId = requestIdle(async () => {
       try {
@@ -43,22 +49,30 @@ export function usePdfWarmup() {
         // 统一用 toPromise 包装，避免 undefined.then 报错
         if (fontLoader?.preloadFonts) {
           await toPromise(fontLoader.preloadFonts());
-          console.log('字体资源预热完成');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('字体资源预热完成');
+          }
         }
 
         if (imageLoader?.preloadImages) {
           await toPromise(imageLoader.preloadImages());
-          console.log('图片资源预热完成');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('图片资源预热完成');
+          }
         }
 
         if (quotationGen?.generateQuotationPDF) {
           // 预热报价PDF生成器
-          console.log('报价PDF生成器预热完成');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('报价PDF生成器预热完成');
+          }
         }
 
         if (orderGen?.generateOrderConfirmationPDF) {
           // 预热订单确认PDF生成器
-          console.log('订单确认PDF生成器预热完成');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('订单确认PDF生成器预热完成');
+          }
         }
       } catch (e) {
         console.error('PDF资源预热失败:', e);

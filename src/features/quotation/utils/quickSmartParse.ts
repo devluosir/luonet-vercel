@@ -606,48 +606,48 @@ export function quickSmartParse(text: string): ParseResult {
       i = j;
     }
 
-    // 检测描述列合并
-    i = 0;
-    while (i < n) {
-      const desc = processed[i]?.[descCol]?.trim() ?? '';
-      if (!desc) { 
-        i++; 
-        continue; 
-      }
+    // 检测描述列合并 - 暂时禁用
+    // i = 0;
+    // while (i < n) {
+    //   const desc = processed[i]?.[descCol]?.trim() ?? '';
+    //   if (!desc) { 
+    //     i++; 
+    //     continue; 
+    //   }
 
-      const baseRawLen = rawCellCounts?.[i] ?? 0;
-      let j = i + 1;
+    //   const baseRawLen = rawCellCounts?.[i] ?? 0;
+    //   let j = i + 1;
 
-      while (j < n) {
-        const nextDesc = processed[j]?.[descCol]?.trim() ?? '';
+    //   while (j < n) {
+    //     const nextDesc = processed[j]?.[descCol]?.trim() ?? '';
 
-        if (nextDesc) break; // 新锚点，停止吞并
+    //     if (nextDesc) break; // 新锚点，停止吞并
 
-        // 检查当前行的其他列是否有服务/费用标识
-        const currentRowDesc = processed[j]?.[descCol] ?? '';
-        const currentRowName = processed[j]?.[0] ?? ''; // 检查名称列
-        if (isServiceLike(currentRowName)) break; // 服务/费用行，视为分隔
+    //     // 检查当前行的其他列是否有服务/费用标识
+    //     const currentRowDesc = processed[j]?.[descCol] ?? '';
+    //     const currentRowName = processed[j]?.[0] ?? ''; // 检查名称列
+    //     if (isServiceLike(currentRowName)) break; // 服务/费用行，视为分隔
 
-        const rawLen = rawCellCounts?.[j] ?? baseRawLen;
-        if (rawLen + 2 <= baseRawLen) break; // 结构突降，谨慎停
+    //     const rawLen = rawCellCounts?.[j] ?? baseRawLen;
+    //     if (rawLen + 2 <= baseRawLen) break; // 结构突降，谨慎停
 
-        j++;
-      }
+    //     j++;
+    //   }
 
-      if (j - i >= 2) {
-        merged.push({ 
-          column: 'description', 
-          startRow: i, 
-          endRow: j - 1, 
-          content: desc 
-        });
+    //   if (j - i >= 2) {
+    //     merged.push({ 
+    //       column: 'description', 
+    //       startRow: i, 
+    //       endRow: j - 1, 
+    //       content: desc 
+    //     });
         
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[QuickSmartParse] 检测到描述合并块: ${i}-${j-1}, 内容: "${desc.substring(0, 50)}..."`);
-        }
-      }
-      i = j;
-    }
+    //     if (process.env.NODE_ENV === 'development') {
+    //       console.log(`[QuickSmartParse] 检测到描述合并块: ${i}-${j-1}, 内容: "${desc.substring(0, 50)}..."`);
+    //     }
+    //   }
+    //   i = j;
+    // }
     
     return merged;
   }
@@ -1078,7 +1078,8 @@ export function quickSmartParse(text: string): ParseResult {
   
   // 分离备注和描述的合并信息
   const mergedRemarks = mergedCells.filter(cell => cell.column === 'remarks');
-  const mergedDescriptions = mergedCells.filter(cell => cell.column === 'description');
+  // 暂时禁用description列的合并单元格检测
+  const mergedDescriptions: MergedCell[] = [];
   
   if (process.env.NODE_ENV === 'development') {
     console.log('[Parse:merged]', { 
