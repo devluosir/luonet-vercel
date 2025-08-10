@@ -1,4 +1,5 @@
 import { QuotationData } from '@/types/quotation';
+import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-history';
 import { getDefaultNotes } from '@/utils/getDefaultNotes';
 
@@ -92,7 +93,7 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
 // 获取所有历史记录
 export const getQuotationHistory = (filters?: QuotationHistoryFilters): QuotationHistory[] => {
   try {
-    let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let history = getLocalStorageJSON(STORAGE_KEY, []);
 
     if (filters) {
       // 搜索

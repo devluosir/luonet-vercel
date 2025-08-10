@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
+import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 
 interface SavedConsignee {
   name: string;
@@ -72,9 +73,9 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
     try {
       if (typeof window !== 'undefined') {
         // 从localStorage加载客户相关的历史记录
-        const quotationHistory = JSON.parse(localStorage.getItem('quotation_history') || '[]');
-        const packingHistory = JSON.parse(localStorage.getItem('packing_history') || '[]');
-        const invoiceHistory = JSON.parse(localStorage.getItem('invoice_history') || '[]');
+        const quotationHistory = getLocalStorageJSON('quotation_history', []);
+        const packingHistory = getLocalStorageJSON('packing_history', []);
+        const invoiceHistory = getLocalStorageJSON('invoice_history', []);
         
         // 不加载 purchase_history，因为它包含的是供应商信息，不是客户信息
 

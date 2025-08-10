@@ -1,4 +1,5 @@
 // Packing list history management utilities
+import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 
 interface PackingItem {
   id: number;
@@ -143,7 +144,7 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
 // 获取所有历史记录
 export const getPackingHistory = (filters?: PackingHistoryFilters): PackingHistory[] => {
   try {
-    let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let history = getLocalStorageJSON(STORAGE_KEY, []);
 
     if (filters) {
       // 搜索

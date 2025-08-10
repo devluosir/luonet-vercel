@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { getDefaultNotes } from '@/utils/getDefaultNotes';
+import { getLocalStorageJSON, getLocalStorageString } from '@/utils/safeLocalStorage';
 import type { QuotationData } from '@/types/quotation';
 
 // 缓存localStorage数据
@@ -8,15 +9,9 @@ const localStorageCache = new Map<string, unknown>();
 // 获取缓存的localStorage数据
 const getCachedLocalStorage = (key: string) => {
   if (!localStorageCache.has(key)) {
-    try {
-      const data = localStorage.getItem(key);
-      const parsed = data ? JSON.parse(data) : null;
-      localStorageCache.set(key, parsed);
-      return parsed;
-    } catch (error) {
-      console.warn(`Failed to parse localStorage key: ${key}`, error);
-      return null;
-    }
+    const parsed = getLocalStorageJSON(key, null);
+    localStorageCache.set(key, parsed);
+    return parsed;
   }
   return localStorageCache.get(key);
 };
@@ -26,7 +21,9 @@ export function getInitialQuotationData(): QuotationData {
     try {
       const userInfo = getCachedLocalStorage('userInfo');
       if (userInfo) return userInfo.username || 'Roger';
-      const name = getCachedLocalStorage('username');
+      
+      // 使用安全的字符串获取函数
+      const name = getLocalStorageString('username');
       return name ? name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() : 'Roger';
     } catch { 
       return 'Roger' 

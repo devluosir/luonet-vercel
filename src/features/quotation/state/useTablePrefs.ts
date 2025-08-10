@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useEffect, useState } from 'react';
+import { getLocalStorageJSON, setLocalStorage } from '@/utils/safeLocalStorage';
 
 type Col = 'partName'|'description'|'quantity'|'unit'|'unitPrice'|'amount'|'remarks';
 
@@ -19,30 +20,20 @@ export const useTablePrefs = create<TablePrefsState>((set, get) => ({
   toggleCol: (c) => {
     const now = get().visibleCols;
     const next = now.includes(c) ? now.filter(x=>x!==c) : [...now, c];
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('qt.visibleCols', JSON.stringify(next));
-    }
+    setLocalStorage('qt.visibleCols', next);
     set({ visibleCols: next });
   },
   setCols: (cols) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('qt.visibleCols', JSON.stringify(cols));
-    }
+    setLocalStorage('qt.visibleCols', cols);
     set({ visibleCols: cols });
   },
   hydrate: () => {
     if (typeof window !== 'undefined' && !get().hydrated) {
-      try {
-        const saved = localStorage.getItem('qt.visibleCols');
-        const parsed = saved ? JSON.parse(saved) : null;
-        set({ 
-          visibleCols: parsed || DEFAULT_COLS,
-          hydrated: true 
-        });
-      } catch (e) {
-        console.warn('Failed to parse table preferences:', e);
-        set({ hydrated: true });
-      }
+      const parsed = getLocalStorageJSON('qt.visibleCols', null);
+      set({ 
+        visibleCols: parsed || DEFAULT_COLS,
+        hydrated: true 
+      });
     }
   },
 }));

@@ -7,6 +7,7 @@ import { ensureCnFonts } from '@/utils/pdfFonts';
 import { ensurePdfFont } from './pdfFontRegistry';
 import { getHeaderImage } from './imageLoader';
 import { sanitizeQuotation } from './sanitizeQuotation';
+import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 
 // 扩展jsPDF类型
 type ExtendedJsPDF = jsPDF & {
@@ -61,11 +62,7 @@ export const generateOrderConfirmationPDF = async (data: QuotationData, preview 
 
   // 读取页面列显示偏好，与页面表格保持一致
   let visibleCols: string[] | undefined;
-  try {
-    visibleCols = JSON.parse(localStorage.getItem('qt.visibleCols') || 'null');
-  } catch (e) {
-    console.warn('Failed to read table column preferences:', e);
-  }
+  visibleCols = getLocalStorageJSON('qt.visibleCols', null);
 
   const doc = new jsPDF({
     orientation: 'portrait',

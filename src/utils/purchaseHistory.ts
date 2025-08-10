@@ -1,4 +1,5 @@
 import { PurchaseOrderData } from '@/types/purchase';
+import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 
 export interface PurchaseHistory {
   id: string;
@@ -91,7 +92,7 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
 // 获取所有历史记录
 export const getPurchaseHistory = (filters?: PurchaseHistoryFilters): PurchaseHistory[] => {
   try {
-    let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let history = getLocalStorageJSON(STORAGE_KEY, []);
 
     if (filters) {
       // 搜索

@@ -5,6 +5,7 @@ import { fastRegisterFonts } from './globalFontRegistry';
 import { getHeaderImage } from './imageCache';
 import { startTimer, endTimer } from './performanceMonitor';
 import { safeSetFont, safeSetCnFont, getFontName } from './pdf/ensureFont';
+import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 
 // 使用统一的安全字体工具，原有setCnFont函数已移至 pdf/ensureFont.ts
 
@@ -32,11 +33,7 @@ export const generateQuotationPDF = async (rawData: unknown, mode: 'preview' | '
     // 读取页面列显示偏好，与页面表格保持一致
     let visibleCols: string[] | undefined;
     if (typeof window !== 'undefined') {
-      try {
-        visibleCols = JSON.parse(localStorage.getItem('qt.visibleCols') || 'null');
-      } catch (e) {
-        console.warn('Failed to read table column preferences:', e);
-      }
+      visibleCols = getLocalStorageJSON('qt.visibleCols', null);
     }
     
     endTimer(dataValidationId, 'data-validation');
