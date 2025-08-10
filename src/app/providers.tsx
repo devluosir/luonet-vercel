@@ -1,6 +1,5 @@
 'use client';
 
-import { ThemeProvider } from 'next-themes';
 import { SessionProvider } from 'next-auth/react';
 import { usePermissionInit } from '@/hooks/usePermissionInit';
 import { ToastProvider } from '@/components/ui/Toast';
@@ -13,20 +12,11 @@ function PermissionInitializer() {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="light"
-      enableSystem={false}
-      disableTransitionOnChange
-      storageKey="theme"
-      nonce={undefined}
-    >
-      <SessionProvider>
-        <ToastProvider>
-          <PermissionInitializer />
-          {children}
-        </ToastProvider>
-      </SessionProvider>
-    </ThemeProvider>
+    <SessionProvider>
+      <ToastProvider>
+        <PermissionInitializer />
+        {children}
+      </ToastProvider>
+    </SessionProvider>
   );
 } 

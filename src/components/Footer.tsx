@@ -1,21 +1,18 @@
 'use client'
 
-import { useTheme } from 'next-themes';
 import { Sun, Moon, Calculator, CalendarDays } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { Calculator as CalculatorComponent } from './Calculator';
 import { DateCalculator } from './DateCalculator';
+import { useThemeManager } from '@/hooks/useThemeManager';
 
 export function Footer() {
-  const { setTheme, resolvedTheme } = useTheme();
+  const { mode, toggleMode, isDark } = useThemeManager();
   const [mounted, setMounted] = useState(false);
 
-  // 增强的主题切换函数，同时写 Cookie 确保 SSR 一致性
+  // 使用统一的自定义主题管理系统
   const handleThemeToggle = () => {
-    const nextTheme = resolvedTheme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    // 同时写 Cookie，确保 SSR 能读取到正确的主题
-    document.cookie = `theme=${nextTheme};path=/;max-age=31536000`;
+    toggleMode();
   };
   const [showCalculator, setShowCalculator] = useState(false);
   const [showDateCalculator, setShowDateCalculator] = useState(false);
@@ -89,7 +86,7 @@ export function Footer() {
                          hover:bg-gray-200/80 dark:hover:bg-gray-700/50 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 aria-label="切换主题模式"
               >
-                {resolvedTheme === 'dark' ? (
+                {isDark ? (
                   <Sun className="h-4 w-4 transition-colors" />
                 ) : (
                   <Moon className="h-4 w-4 transition-colors" />

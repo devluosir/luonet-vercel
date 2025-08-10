@@ -69,7 +69,7 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
 
   return (
     <button
-      className="module-button dashboard-module-button flex items-center justify-start gap-3 sm:gap-4 px-4 sm:px-5 py-4 sm:py-5 h-[80px] w-full relative group cursor-pointer"
+      className="module-button dashboard-module-button flex items-center justify-start gap-3 sm:gap-4 px-4 sm:px-5 py-4 sm:py-5 h-[96px] w-full relative group cursor-pointer"
       style={{
         '--bg-gradient': `linear-gradient(135deg, var(--${module.id}-from), var(--${module.id}-to))`,
         '--bg-gradient-hover': `linear-gradient(135deg, var(--${module.id}-hover-from), var(--${module.id}-hover-to))`,

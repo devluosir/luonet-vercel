@@ -485,18 +485,6 @@ export class ThemeManager {
 export const themeManager = ThemeManager.getInstance();
 
 // 便捷函数
-export const useTheme = () => {
-  return themeManager.getConfig();
-};
-
-export const setTheme = (config: Partial<ThemeConfig>) => {
-  themeManager.updateConfig(config);
-};
-
-export const toggleTheme = () => {
-  themeManager.toggleMode();
-};
-
 export const getModuleColors = (moduleId: string, theme: ButtonTheme = 'colorful') => {
   return themeManager.getModuleColors(moduleId, theme);
 };

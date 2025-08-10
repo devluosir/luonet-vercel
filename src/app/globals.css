@@ -425,6 +425,15 @@ html.dark.classic-theme {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)) !important;
 }
 
+/* 模块按钮悬停时文字 */
+.module-button:hover .text-base,
+.dashboard-module-button:hover .text-base,
+.module-button:hover .text-sm,
+.dashboard-module-button:hover .text-sm {
+  transform: scale(1.05) !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
 /* 模块按钮徽章 */
 .module-button .badge,
 .dashboard-module-button .badge {
@@ -442,7 +451,7 @@ html.dark.classic-theme {
 /* 模块按钮悬停时徽章 */
 .module-button:hover .badge,
 .dashboard-module-button:hover .badge {
-  transform: scale(1.15) rotate(3deg) !important;
+  transform: scale(1.15) !important;
   box-shadow: 
     0 6px 8px -1px rgba(0, 0, 0, 0.15),
     0 3px 6px -1px rgba(0, 0, 0, 0.1) !important;
@@ -569,6 +578,15 @@ html.classic-theme .dashboard-module-button:hover .icon {
   transform: scale(1.1) !important;
 }
 
+/* 三星风格悬停时文字 */
+html.classic-theme .module-button:hover .text-base,
+html.classic-theme .dashboard-module-button:hover .text-base,
+html.classic-theme .module-button:hover .text-sm,
+html.classic-theme .dashboard-module-button:hover .text-sm {
+  transform: scale(1.08) !important;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+
 /* 三星风格徽章 */
 html.classic-theme .module-button .badge,
 html.classic-theme .dashboard-module-button .badge {
@@ -584,7 +602,7 @@ html.classic-theme .dashboard-module-button .badge {
 /* 三星风格悬停时徽章 */
 html.classic-theme .module-button:hover .badge,
 html.classic-theme .dashboard-module-button:hover .badge {
-  transform: scale(1.2) rotate(5deg) !important;
+  transform: scale(1.2) !important;
   box-shadow: 
     0 6px 12px rgba(0, 0, 0, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
