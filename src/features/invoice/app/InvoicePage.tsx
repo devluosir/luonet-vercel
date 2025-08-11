@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import { CustomerSection } from '@/components/invoice/CustomerSection';
-import ItemsTable from '@/components/invoice/ItemsTable';
+import { ItemsTable } from '../components/ItemsTable';
 import PDFPreviewModal from '@/components/history/PDFPreviewModal';
 import { useInvoiceStore } from '../state/invoice.store';
 import { useInvoiceForm } from '../hooks/useInvoiceForm';
@@ -197,34 +197,7 @@ export const InvoicePage = () => {
               </div>
 
               {/* 商品表格 */}
-              <ItemsTable
-                invoiceData={data}
-                setInvoiceData={(newData) => {
-                  if (typeof newData === 'function') {
-                    const result = newData(data);
-                    updateData(result);
-                  } else {
-                    updateData(newData);
-                  }
-                }}
-                updateLineItem={(index, field, value) => {
-                  // 这里需要调用store的updateLineItem方法
-                  // 暂时保持原有逻辑
-                }}
-                handleKeyDown={(e, rowIndex, column) => {
-                  // 这里需要调用store的键盘导航方法
-                  // 暂时保持原有逻辑
-                }}
-                handleDoubleClick={(index, field) => {
-                  // 这里需要调用store的双击高亮方法
-                  // 暂时保持原有逻辑
-                }}
-                handleOtherFeeDoubleClick={(index, field) => {
-                  // 这里需要调用store的其他费用双击高亮方法
-                  // 暂时保持原有逻辑
-                }}
-                customUnits={data.customUnits || []}
-              />
+              <ItemsTable />
 
               {/* 添加行按钮和总金额 */}
               <div className="flex items-center justify-between gap-4 mt-6 mb-8">
