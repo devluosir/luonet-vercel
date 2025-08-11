@@ -100,7 +100,8 @@ export const DEFAULT_INVOICE_DATA = {
     quantity: 0,
     unit: 'pc',
     unitPrice: 0,
-    amount: 0
+    amount: 0,
+    remarks: ''
   }],
   bankInfo: '',
   paymentDate: '',

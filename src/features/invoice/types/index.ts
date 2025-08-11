@@ -7,6 +7,7 @@ export interface LineItem {
   unit: string;
   unitPrice: number;
   amount: number;
+  remarks?: string;
   highlight?: {
     hsCode?: boolean;
     partname?: boolean;
@@ -15,6 +16,7 @@ export interface LineItem {
     unit?: boolean;
     unitPrice?: boolean;
     amount?: boolean;
+    remarks?: boolean;
   };
 }
 

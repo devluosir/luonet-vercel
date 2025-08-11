@@ -352,7 +352,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
           
           if (!customerMap.has(customerName)) {
             customerMap.set(customerName, {
-              name: rawCustomerName,
+              name: rawCustomerName, // 保存完整的客户信息
               lastUpdated: new Date(doc.date || doc.updatedAt || doc.createdAt || Date.now()),
               documents: []
             });
@@ -364,7 +364,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
           const docDate = new Date(doc.date || doc.updatedAt || doc.createdAt || Date.now());
           if (docDate > customer.lastUpdated) {
             customer.lastUpdated = docDate;
-            customer.name = rawCustomerName;
+            customer.name = rawCustomerName; // 保存完整的客户信息
           }
 
           // 添加文档信息
@@ -383,6 +383,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
         // 格式化客户信息，提取完整的客户信息
         const formattedCustomers = sortedCustomers.map((customer) => {
           let customerInfo = customer.name;
+          let displayName = customer.name.split('\n')[0].trim(); // 默认显示名称
           
           // 尝试从历史记录中获取完整的客户信息
           const allHistory = [
@@ -405,13 +406,15 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
             // 如果是报价单或确认单，使用data.to字段
             if (matchingRecord.data && matchingRecord.data.to) {
               customerInfo = matchingRecord.data.to;
+              displayName = matchingRecord.data.to.split('\n')[0].trim();
             } else if (matchingRecord.to) {
               customerInfo = matchingRecord.to;
+              displayName = matchingRecord.to.split('\n')[0].trim();
             }
           }
           
           return {
-            name: customer.name.split('\n')[0].trim(), // 只取第一行作为显示名称
+            name: displayName, // 只取第一行作为显示名称
             to: customerInfo
           };
         });
@@ -673,7 +676,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                         className="w-full text-left"
                       >
                         <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                          {customer.name}
+                          {customer.name.split('\n')[0].trim()}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
                           {customer.to}
@@ -707,7 +710,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                         onMouseDown={(e) => handleLoad(customer, e)}
                         className="w-full text-left px-2 py-1 text-sm text-gray-700 dark:text-gray-300"
                       >
-                        <div className="font-medium">{customer.name}</div>
+                        <div className="font-medium">{customer.name.split('\n')[0].trim()}</div>
                         <div className="text-xs text-gray-500 mt-1 line-clamp-1">
                           {customer.to}
                         </div>

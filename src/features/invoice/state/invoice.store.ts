@@ -3,7 +3,7 @@ import { InvoiceData, InvoiceFormState, InvoiceFormActions } from '../types';
 import { DEFAULT_INVOICE_DATA } from '../constants/settings';
 import { InvoiceService } from '../services/invoice.service';
 import { PDFService } from '../services/pdf.service';
-import { calculateAmount, processUnitPlural } from '../utils/calculations';
+import { calculateAmount, processUnitPlural, numberToWords } from '../utils/calculations';
 
 interface InvoiceStore extends InvoiceFormState, InvoiceFormActions {
   // 初始化状态
@@ -149,6 +149,7 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
         unit: 'pc',
         unitPrice: 0,
         amount: 0,
+        remarks: '',
         highlight: {}
       }];
       return { data: { ...state.data, items: newItems } };
