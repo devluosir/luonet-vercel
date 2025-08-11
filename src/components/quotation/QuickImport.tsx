@@ -31,7 +31,7 @@ export function QuickImport({
   const [replaceMode, setReplaceMode] = useState(false);
   const [customWarnings, setCustomWarnings] = useState<ValidationWarning[]>([]);
   const [fixReport, setFixReport] = useState<FixReportType | null>(null);
-  const [showFixReport, setShowFixReport] = useState(false);
+    const [showFixReport, setShowFixReport] = useState(false);
   
   // 拖拽相关状态
   const [isDragging, setIsDragging] = useState(false);
@@ -42,11 +42,14 @@ export function QuickImport({
   // 设置初始位置到屏幕中央
   useEffect(() => {
     if (open) {
-      const centerX = window.innerWidth / 2; // 屏幕中心X
-      const centerY = window.innerHeight / 2; // 屏幕中心Y
+      // 估算浮窗尺寸，在屏幕中央显示
+      const estimatedWidth = 672; // max-w-2xl = 672px
+      const estimatedHeight = 400; // 估算高度
+      const centerX = (window.innerWidth - estimatedWidth) / 2;
+      const centerY = (window.innerHeight - estimatedHeight) / 2;
       setPosition({
-        x: centerX,
-        y: centerY
+        x: Math.max(0, centerX),
+        y: Math.max(0, centerY)
       });
     }
   }, [open]);
@@ -137,13 +140,15 @@ export function QuickImport({
   };
 
   const handleMouseMove = (e: MouseEvent) => {
-    if (isDragging) {
+    if (isDragging && modalRef.current) {
+      const rect = modalRef.current.getBoundingClientRect();
+      // 直接计算新位置，考虑transform的影响
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
       
       // 限制在视窗范围内
-      const maxX = window.innerWidth - (modalRef.current?.offsetWidth || 0);
-      const maxY = window.innerHeight - (modalRef.current?.offsetHeight || 0);
+      const maxX = window.innerWidth - rect.width;
+      const maxY = window.innerHeight - rect.height;
       
       setPosition({
         x: Math.max(0, Math.min(newX, maxX)),
@@ -173,14 +178,14 @@ export function QuickImport({
       // 通知父组件插入，包含替换模式信息
       onInsert(preview, replaceMode);
     }
-    closeAll();
+    closeAll(); // 导入完成后自动关闭
   };
   
   const handleAutoInsert = () => {
     if (preview?.length) {
       onInsert(preview, replaceMode);
     }
-    closeAll();
+    closeAll(); // 导入完成后自动关闭
   };
   
   const openPreviewOnly = () => {
@@ -246,16 +251,27 @@ export function QuickImport({
     <div className="relative">
       <button 
         type="button"
-        className="relative inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
+        className="relative inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
                    bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 
                    text-sm font-medium text-blue-700 dark:text-blue-300
                    hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 
                    hover:border-blue-300 dark:hover:border-blue-600
                    transition-all duration-200 shadow-sm hover:shadow-md"
         onClick={()=>setOpen(true)}
+        title="导入数据"
       >
-        <Upload className="h-4 w-4" />
-        导入数据
+        {/* 表格图标 */}
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+        {/* 右箭头 */}
+        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+        {/* 数据库图标 */}
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+        </svg>
         {showWarningDot && (
           <span 
             className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#1C1C1E] animate-pulse"
@@ -264,44 +280,42 @@ export function QuickImport({
         )}
       </button>
       {open && (
-        <div className="fixed inset-0 z-50 backdrop-blur-sm bg-black/20" onClick={closeAll}>
+        <div className="fixed inset-0 z-50" onClick={closeAll}>
           <div 
             ref={modalRef}
             className="absolute w-full max-w-2xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
-                       bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-xl shadow-2xl max-h-[80vh] overflow-hidden cursor-move" 
-            onClick={(e) => e.stopPropagation()}
+                       bg-white dark:bg-[#1C1C1E] shadow-2xl max-h-[80vh] overflow-hidden cursor-move" 
             style={{
               left: `${position.x}px`,
               top: `${position.y}px`,
-              transform: 'translate(-50%, -50%)',
               transition: isDragging ? 'none' : 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* 拖拽区域 */}
+            {/* 标题栏 - 可拖拽区域 */}
             <div 
-              className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-gray-50/80 to-transparent dark:from-gray-800/80 dark:to-transparent rounded-t-2xl cursor-move backdrop-blur-sm"
+              className="flex items-center justify-between p-4 border-b border-[#E5E5EA] dark:border-[#2C2C2E] cursor-move"
               onMouseDown={handleMouseDown}
-            />
-            
-            {/* 关闭按钮 */}
-            <button
-              type="button"
-              onClick={closeAll}
-              className="absolute top-4 right-4 p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
-                         hover:bg-gray-100/80 dark:hover:bg-gray-800/80 transition-all duration-200 z-10 backdrop-blur-sm"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+              <h3 className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">快速导入数据</h3>
+              <button
+                type="button"
+                onClick={closeAll}
+                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
+                           hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
             
             <div className="p-6 max-h-[80vh] overflow-y-auto">
               <div className="mb-3">
-                <h3 className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">快速导入数据</h3>
                 <textarea
                   value={raw}
                   onChange={e=>setRaw(e.target.value)}
-                  placeholder={'支持多种格式:\n名称\t数量\t单价\n名称\t数量\t单位\t单价\n名称\t描述\t数量\t单位\t单价\n\n也支持逗号、分号分隔'}
+                  placeholder={'支持LC报价表，OMS报价表等多种格式:\n名称\t数量\t单价\n名称\t数量\t单位\t单价\n名称\t描述\t数量\t单位\t单价\n\n也支持逗号、分号分隔'}
                   className="quick-import-textarea w-full h-32 p-3 border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                              bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7]
                              text-sm placeholder:text-[#86868B] dark:placeholder:text-[#86868B]

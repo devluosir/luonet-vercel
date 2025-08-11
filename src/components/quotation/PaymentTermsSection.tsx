@@ -13,11 +13,11 @@ interface PaymentTermsSectionProps {
 
 const PRESETS = [
   '100% T/T in advance.',
-  '100% before shipment',
-  '30% deposit, 70% before shipment',
-  '50% deposit, 50% before shipment',
-  'D/P (Documents against Payment)',
-  'D/A (Documents against Acceptance)',
+  '100% before shipment.',
+  '30% deposit, 70% before shipment.',
+  '50% deposit, 50% before shipment.',
+  'D/P (Documents against Payment).',
+  'D/A (Documents against Acceptance).',
 ];
 
 function addDays(iso: string, d: number): string {

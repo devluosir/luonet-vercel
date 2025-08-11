@@ -49,6 +49,7 @@ export const NOTES_TEMPLATES_BILINGUAL = {
 // 交货期选项（用于Notes中的delivery_time）
 export const DELIVERY_TERMS_OPTIONS = [
   { id: 'days_after_order', chinese: '30天', english: 'Delivery Time: 30 days.', remark: '常见30/45/60天' },
+  { id: 'days_after_order', chinese: '交货期：见备注。', english: 'Delivery Time: As stated in Remarks. ', remark: '交货期：见备注。' },
   { id: 'days_after_order', chinese: '订单确认后30天交货', english: 'Delivery Time: 30 days after order confirmation (AOC).', remark: '常见30/45/60天' },
   { id: 'days_after_deposit', chinese: '收到定金后30天交货', english: 'Delivery Time: 30 days after receipt of deposit.', remark: '与30/70搭配常用' },
   { id: 'immediate_delivery', chinese: '现货', english: 'Delivery Time: Ex-stock.', remark: '库存可随时发' },
