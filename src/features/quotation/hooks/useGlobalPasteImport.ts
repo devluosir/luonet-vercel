@@ -56,10 +56,9 @@ export function useGlobalPasteImport(opts: Opts = {}) {
       const replace = true;
 
       // 4) 决策：直接插入 or 预览
-      const confident = parsed.confidence >= minConfidence;
       const smallEnough = parsed.rows.length <= maxDirectInsert;
 
-      if (confident && smallEnough) {
+      if (smallEnough) {
         e.preventDefault(); // 阻止默认粘贴到页面
         
         let maxId = items.reduce((m, it) => Math.max(m, it.id), 0);
@@ -115,7 +114,6 @@ export function useGlobalPasteImport(opts: Opts = {}) {
             action,
             inserted: mapped.length,
             skipped: parsed.skipped,
-            confidence: parsed.confidence,
             format: parsed.detectedFormat,
           });
         }
@@ -126,9 +124,7 @@ export function useGlobalPasteImport(opts: Opts = {}) {
         
         if (process.env.NODE_ENV === 'development') {
           console.log('[Global Paste] Fallback to preview', {
-            confident,
             smallEnough,
-            confidence: parsed.confidence,
             rows: parsed.rows.length,
           });
         }
