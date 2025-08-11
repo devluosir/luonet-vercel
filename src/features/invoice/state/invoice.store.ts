@@ -121,7 +121,19 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
       }
       
       newItems[index] = item;
-      return { data: { ...state.data, items: newItems } };
+      
+      // 计算新的总金额和金额大写
+      const totalAmount = newItems.reduce((sum, item) => sum + item.amount, 0) +
+                         (state.data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
+      const amountInWords = numberToWords(totalAmount);
+      
+      return { 
+        data: { 
+          ...state.data, 
+          items: newItems,
+          amountInWords 
+        } 
+      };
     });
   },
 
@@ -179,7 +191,19 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
       const newFees = state.data.otherFees?.map(fee => 
         fee.id === id ? { ...fee, [field]: value } : fee
       ) || [];
-      return { data: { ...state.data, otherFees: newFees } };
+      
+      // 计算新的总金额和金额大写
+      const totalAmount = state.data.items.reduce((sum, item) => sum + item.amount, 0) +
+                         newFees.reduce((sum, fee) => sum + fee.amount, 0);
+      const amountInWords = numberToWords(totalAmount);
+      
+      return { 
+        data: { 
+          ...state.data, 
+          otherFees: newFees,
+          amountInWords 
+        } 
+      };
     });
   },
 
