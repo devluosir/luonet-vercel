@@ -17,14 +17,15 @@ export const getTotalAmount = (items: LineItem[], otherFees: OtherFee[]): number
 };
 
 /**
- * 计算付款日期（默认下个月）
+ * 计算付款日期（以发票日期为基准+30天）
  */
 export const calculatePaymentDate = (date: string): string => {
   const baseDate = new Date(date);
-  const nextMonth = new Date(baseDate.setMonth(baseDate.getMonth() + 1));
-  const year = nextMonth.getFullYear();
-  const month = String(nextMonth.getMonth() + 1).padStart(2, '0');
-  const day = String(nextMonth.getDate()).padStart(2, '0');
+  const paymentDate = new Date(baseDate);
+  paymentDate.setDate(paymentDate.getDate() + 30);
+  const year = paymentDate.getFullYear();
+  const month = String(paymentDate.getMonth() + 1).padStart(2, '0');
+  const day = String(paymentDate.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 

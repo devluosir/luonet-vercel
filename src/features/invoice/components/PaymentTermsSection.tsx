@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { MoreHorizontal, Copy } from 'lucide-react';
 import type { InvoiceData } from '../types';
+import { calculatePaymentDate } from '../utils/calculations';
 
 interface PaymentTermsSectionProps {
   data: InvoiceData;
@@ -64,10 +65,11 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
   const invoiceDate = date || new Date().toISOString().slice(0, 10);
   const invoiceNoExternal = invoiceNo;
 
-  const dateISO = paymentDate || new Date().toISOString().slice(0, 10);
+  // 以发票日期为基准计算付款日期
+  const dateISO = paymentDate || calculatePaymentDate(invoiceDate);
   const main = `Full payment not later than ${dateISO} by telegraphic transfer (T/T).`;
-  const invoiceHint = (showInvoiceReminder && invoiceNoExternal?.trim())
-    ? `Please state our invoice no. "${invoiceNoExternal.trim()}" on your payment documents.`
+  const invoiceHint = showInvoiceReminder
+    ? `Please state our invoice no. "${invoiceNoExternal?.trim() || 'TBD'}" on your payment documents.`
     : '';
 
   // 同步showMainTerm到data
@@ -79,6 +81,8 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
   React.useEffect(() => {
     setShowMainTerm(showPaymentTerms);
   }, [showPaymentTerms]);
+
+
 
   // 点击外部关闭预设弹窗
   useEffect(() => {
@@ -101,7 +105,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
     let totalTerms = 0;
     if (showMainTerm && dateISO && dateISO.trim()) totalTerms++;
     if (additionalTermsArray.length > 0) totalTerms += additionalTermsArray.length;
-    if (showInvoiceReminder && invoiceNoExternal && invoiceNoExternal.trim()) totalTerms++;
+    if (showInvoiceReminder) totalTerms++;
     
     // 根据条款数量决定使用单数还是复数形式
     const titleText = totalTerms === 1 ? 'Payment Term: ' : 'Payment Terms:';
@@ -123,10 +127,11 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
             index: 1,
             content: <span dangerouslySetInnerHTML={{ __html: `<strong>${titleText}</strong>${additionalTermsArray[0]}` }} />
           });
-        } else if (showInvoiceReminder && invoiceNoExternal && invoiceNoExternal.trim()) {
+        } else if (showInvoiceReminder) {
+          const displayInvoiceNo = invoiceNoExternal?.trim() || 'TBD';
           const hintWithRedInvoice = invoiceHint.replace(
-            `"${invoiceNoExternal}"`,
-            `"<span style="color: #ef4444">${invoiceNoExternal}</span>"`
+            `"${displayInvoiceNo}"`,
+            `"<span style="color: #ef4444">${displayInvoiceNo}</span>"`
           );
           items.push({
             index: 1,
@@ -163,10 +168,11 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
       });
       
       // 3. 发票号提醒（发票号显示为红色）
-      if (showInvoiceReminder && invoiceNoExternal && invoiceNoExternal.trim()) {
+      if (showInvoiceReminder) {
+        const displayInvoiceNo = invoiceNoExternal?.trim() || 'TBD';
         const hintWithRedInvoice = invoiceHint.replace(
-          `"${invoiceNoExternal}"`,
-          `"<span style="color: #ef4444">${invoiceNoExternal}</span>"`
+          `"${displayInvoiceNo}"`,
+          `"<span style="color: #ef4444">${displayInvoiceNo}</span>"`
         );
         items.push({
           index: termIndex,

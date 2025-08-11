@@ -102,7 +102,12 @@ export const DEFAULT_INVOICE_DATA = {
     remarks: ''
   }],
   bankInfo: '',
-  paymentDate: '',
+  paymentDate: (() => {
+    const invoiceDate = new Date().toISOString().split('T')[0];
+    const paymentDate = new Date(invoiceDate);
+    paymentDate.setDate(paymentDate.getDate() + 30);
+    return paymentDate.toISOString().split('T')[0];
+  })(),
   showPaymentTerms: false,
   additionalPaymentTerms: '',
   amountInWords: {

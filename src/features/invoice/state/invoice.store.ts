@@ -93,9 +93,19 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
 
   // 更新数据
   updateData: (updates) => {
-    set((state) => ({
-      data: { ...state.data, ...updates }
-    }));
+    set((state) => {
+      const newData = { ...state.data, ...updates };
+      
+      // 当发票日期改变时，自动更新付款日期
+      if (updates.date && updates.date !== state.data.date) {
+        const { calculatePaymentDate } = require('../utils/calculations');
+        newData.paymentDate = calculatePaymentDate(updates.date);
+      }
+      
+      return {
+        data: newData
+      };
+    });
   },
 
   // 更新商品行项目
