@@ -20,6 +20,7 @@ import { usePasteImport } from '../hooks/usePasteImport';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { InvoiceActions } from '../components/InvoiceActions';
 import { PaymentTermsSection } from '../components/PaymentTermsSection';
+import { InvoiceInfoCompact } from '../components/InvoiceInfoCompact';
 import { INPUT_CLASSNAMES } from '../constants/settings';
 import { getTotalAmount } from '../utils/calculations';
 
@@ -152,51 +153,13 @@ export const InvoicePage = () => {
                 <SettingsPanel />
               </div>
 
-              {/* 基本信息区域 - 左右两栏布局 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {/* 左侧：客户信息 */}
+              {/* 基础信息区域 */}
+              <div className="mb-8">
                 <div className="bg-gray-50/50 dark:bg-gray-800/20 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-                  <CustomerSection
-                    to={data.to}
-                    customerPO={data.customerPO}
-                    onChange={({ to, customerPO }) => {
-                      updateData({ to, customerPO });
-                    }}
+                  <InvoiceInfoCompact 
+                    data={data} 
+                    onChange={updateData} 
                   />
-                </div>
-
-                {/* 右侧：发票号和日期 */}
-                <div className="bg-gray-50/50 dark:bg-gray-800/20 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                        Invoice No.
-                      </label>
-                      <input
-                        type="text"
-                        value={data.invoiceNo}
-                        onChange={e => updateData({ invoiceNo: e.target.value })}
-                        placeholder="Enter invoice number"
-                        className={`${INPUT_CLASSNAMES.base} w-full [&::placeholder]:text-[#007AFF]/60 dark:[&::placeholder]:text-[#0A84FF]/60 ${
-                          !data.invoiceNo 
-                            ? 'border-[#007AFF]/50 dark:border-[#007AFF]/50' 
-                            : ''
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                        Date
-                      </label>
-                      <input
-                        type="date"
-                        value={data.date}
-                        onChange={(e) => updateData({ date: e.target.value })}
-                        className={INPUT_CLASSNAMES.date}
-                        required
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
 
