@@ -1,120 +1,100 @@
-import { useEffect, useCallback } from 'react';
-import { useInvoiceStore } from '../state/invoice.store';
-import { InvoiceData } from '../types';
-import { calculatePaymentDate, numberToWords, getTotalAmount } from '../utils/calculations';
+'use client';
 
-interface CustomWindow extends Window {
-  __INVOICE_DATA__?: InvoiceData;
-  __EDIT_MODE__?: boolean;
-  __EDIT_ID__?: string;
-}
+import { useEffect, useMemo } from 'react';
+import { useInvoiceStore } from '../state/invoice.store';
+import { calculateAmount, calculatePaymentDate, numberToWords } from '../utils/calculations';
 
 /**
- * 发票表单Hook
+ * 发票表单逻辑Hook
  */
 export const useInvoiceForm = () => {
   const {
     data,
-    isEditMode,
-    editId,
     updateData,
-    initialize,
-    focusedCell,
+    updateLineItem,
     setFocusedCell
   } = useInvoiceStore();
 
-  // 初始化表单数据
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const customWindow = window as unknown as CustomWindow;
-      if (customWindow.__INVOICE_DATA__) {
-        initialize(customWindow.__INVOICE_DATA__);
-      }
-      if (customWindow.__EDIT_MODE__ !== undefined) {
-        // 这里可以通过store的setter来设置编辑模式
-      }
-      if (customWindow.__EDIT_ID__ !== undefined) {
-        // 这里可以通过store的setter来设置编辑ID
-      }
+  // 使用useMemo优化计算，避免不必要的重新计算
+  const totalAmount = useMemo(() => {
+    return data.items.reduce((total, item) => total + item.amount, 0) +
+           data.otherFees.reduce((total, fee) => total + fee.amount, 0);
+  }, [data.items, data.otherFees]);
 
-      // 清理全局变量
-      delete customWindow.__INVOICE_DATA__;
-      delete customWindow.__EDIT_MODE__;
-      delete customWindow.__EDIT_ID__;
+  // 优化金额大写计算
+  const amountInWords = useMemo(() => {
+    return numberToWords(totalAmount);
+  }, [totalAmount]);
+
+  // 优化付款日期计算
+  const paymentDate = useMemo(() => {
+    return calculatePaymentDate(data.date || new Date().toISOString().split('T')[0]);
+  }, [data.date]);
+
+  // 初始化表单
+  useEffect(() => {
+    // 设置默认付款日期
+    if (!data.paymentDate) {
+      updateData({ paymentDate });
     }
-  }, [initialize]);
+  }, [data.paymentDate, paymentDate, updateData]);
 
-  // 自动计算付款日期
+  // 自动计算金额
   useEffect(() => {
-    if (data.date) {
-      const newPaymentDate = calculatePaymentDate(data.date);
-      updateData({ paymentDate: newPaymentDate });
+    const newItems = data.items.map(item => ({
+      ...item,
+      amount: calculateAmount(item.quantity, item.unitPrice)
+    }));
+    
+    // 只有当金额实际发生变化时才更新
+    const hasChanges = newItems.some((item, index) => 
+      item.amount !== data.items[index]?.amount
+    );
+    
+    if (hasChanges) {
+      updateData({ items: newItems });
     }
-  }, [data.date, updateData]);
+  }, [data.items, updateData]);
 
-  // 自动计算英文大写金额
+  // 更新金额大写
   useEffect(() => {
-    const total = getTotalAmount(data.items, data.otherFees);
-    const words = numberToWords(total);
-    updateData({ amountInWords: words });
-  }, [data.items, data.otherFees, updateData]);
-
-  // 焦点单元格管理
-  useEffect(() => {
-    if (focusedCell) {
-      const element = document.querySelector(
-        `[data-row="${focusedCell.row}"][data-column="${focusedCell.column}"]`
-      ) as HTMLElement;
-      if (element) {
-        element.focus();
-      }
-    }
-  }, [focusedCell]);
+    updateData({ amountInWords });
+  }, [amountInWords, updateData]);
 
   // 处理表单提交
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // 表单提交逻辑在store中处理
-  }, []);
+    // 表单提交逻辑
+  };
 
   // 处理输入变化
-  const handleInputChange = useCallback((field: keyof InvoiceData, value: any) => {
+  const handleInputChange = (field: keyof typeof data, value: any) => {
     updateData({ [field]: value });
-  }, [updateData]);
+  };
 
-  // 处理日期变化
-  const handleDateChange = useCallback((date: string) => {
-    updateData({ date });
-  }, [updateData]);
+  // 处理商品行变化
+  const handleLineItemChange = (index: number, field: keyof typeof data.items[0], value: any) => {
+    updateLineItem(index, field, value);
+  };
 
-  // 处理币种变化
-  const handleCurrencyChange = useCallback((currency: 'USD' | 'CNY') => {
-    updateData({ currency });
-  }, [updateData]);
+  // 处理焦点单元格
+  const handleCellFocus = (row: number, column: string) => {
+    setFocusedCell({ row, column });
+  };
 
-  // 处理模板配置变化
-  const handleTemplateConfigChange = useCallback((config: Partial<InvoiceData['templateConfig']>) => {
-    updateData({
-      templateConfig: { ...data.templateConfig, ...config }
-    });
-  }, [data.templateConfig, updateData]);
-
-  // 处理显示选项变化
-  const handleDisplayOptionChange = useCallback((option: keyof Pick<InvoiceData, 'showHsCode' | 'showDescription' | 'showBank'>, value: boolean) => {
-    updateData({ [option]: value });
-  }, [updateData]);
+  // 处理单元格失焦
+  const handleCellBlur = () => {
+    setFocusedCell(null);
+  };
 
   return {
-    data,
-    isEditMode,
-    editId,
-    focusedCell,
-    setFocusedCell,
+    totalAmount,
+    amountInWords,
+    paymentDate,
     handleSubmit,
     handleInputChange,
-    handleDateChange,
-    handleCurrencyChange,
-    handleTemplateConfigChange,
-    handleDisplayOptionChange
+    handleLineItemChange,
+    handleCellFocus,
+    handleCellBlur
   };
 };

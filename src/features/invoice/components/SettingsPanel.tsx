@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useInvoiceStore } from '../state/invoice.store';
 import { 
   CURRENCY_OPTIONS, 
@@ -12,7 +13,7 @@ import {
 /**
  * 发票设置面板组件
  */
-export const SettingsPanel = () => {
+export const SettingsPanel = React.memo(() => {
   const {
     data,
     updateData,
@@ -265,4 +266,4 @@ export const SettingsPanel = () => {
       </div>
     </div>
   );
-};
+});

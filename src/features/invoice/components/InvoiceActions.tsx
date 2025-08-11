@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useInvoiceStore } from '../state/invoice.store';
 import { getTotalAmount } from '../utils/calculations';
 import { Download } from 'lucide-react';
@@ -7,7 +8,7 @@ import { Download } from 'lucide-react';
 /**
  * 发票操作按钮组件
  */
-export const InvoiceActions = () => {
+export const InvoiceActions = React.memo(() => {
   const {
     data,
     isEditMode,
@@ -97,4 +98,4 @@ export const InvoiceActions = () => {
       </button>
     </div>
   );
-};
+});

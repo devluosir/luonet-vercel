@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useInvoiceStore } from '../state/invoice.store';
 import { LineItem, OtherFee } from '../types';
 import { INPUT_CLASSNAMES, HIGHLIGHT_CLASS } from '../constants/settings';
@@ -11,7 +12,7 @@ const DEFAULT_UNITS = ['pc', 'set', 'length'];
 /**
  * 完全集成的发票商品表格组件
  */
-export const ItemsTable = () => {
+export const ItemsTable = React.memo(() => {
   const {
     data,
     updateData,
@@ -479,4 +480,4 @@ export const ItemsTable = () => {
       </div>
     </div>
   );
-};
+});
