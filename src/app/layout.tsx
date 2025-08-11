@@ -53,7 +53,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.className} min-h-screen`}>
+      <body className={`${inter.className} min-h-screen`} suppressHydrationWarning>
         <Providers>
           <ThemeProvider>
             <ThemeInitializer />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { quickParseTSV } from '@/features/quotation/utils/quickParse';
 import { quickSmartParse, type ParseResult } from '@/features/quotation/utils/quickSmartParse';
 import { getFeatureFlags } from '@/features/quotation/utils/parseMetrics';
@@ -32,6 +32,24 @@ export function QuickImport({
   const [customWarnings, setCustomWarnings] = useState<ValidationWarning[]>([]);
   const [fixReport, setFixReport] = useState<FixReportType | null>(null);
   const [showFixReport, setShowFixReport] = useState(false);
+  
+  // 拖拽相关状态
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // 设置初始位置到屏幕中央
+  useEffect(() => {
+    if (open) {
+      const centerX = window.innerWidth / 2; // 屏幕中心X
+      const centerY = window.innerHeight / 2; // 屏幕中心Y
+      setPosition({
+        x: centerX,
+        y: centerY
+      });
+    }
+  }, [open]);
   
   // 获取特性开关
   const featureFlags = getFeatureFlags();
@@ -101,8 +119,54 @@ export function QuickImport({
     setCustomWarnings([]);
     setFixReport(null);
     setShowFixReport(false);
+    // 重置位置
+    setPosition({ x: 0, y: 0 });
     onClosePreset?.();
   };
+
+  // 拖拽处理函数
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (modalRef.current) {
+      const rect = modalRef.current.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+      setIsDragging(true);
+    }
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (isDragging) {
+      const newX = e.clientX - dragOffset.x;
+      const newY = e.clientY - dragOffset.y;
+      
+      // 限制在视窗范围内
+      const maxX = window.innerWidth - (modalRef.current?.offsetWidth || 0);
+      const maxY = window.innerHeight - (modalRef.current?.offsetHeight || 0);
+      
+      setPosition({
+        x: Math.max(0, Math.min(newX, maxX)),
+        y: Math.max(0, Math.min(newY, maxY))
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // 添加全局鼠标事件监听
+  useEffect(() => {
+    if (open) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [open, isDragging, dragOffset]);
 
   const handleInsert = () => {
     if (preview?.length) {
@@ -182,169 +246,198 @@ export function QuickImport({
     <div className="relative">
       <button 
         type="button"
-        className="relative px-3 py-1.5 rounded-lg border border-[#E5E5EA] dark:border-[#2C2C2E] 
-                   bg-white/90 dark:bg-[#1C1C1E]/90 text-sm text-[#1D1D1F] dark:text-[#F5F5F7]
-                   hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 transition-colors"
+        className="relative inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
+                   bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 
+                   text-sm font-medium text-blue-700 dark:text-blue-300
+                   hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 
+                   hover:border-blue-300 dark:hover:border-blue-600
+                   transition-all duration-200 shadow-sm hover:shadow-md"
         onClick={()=>setOpen(true)}
       >
-        <Upload className="h-4 w-4 inline mr-1" />
-        导入
+        <Upload className="h-4 w-4" />
+        导入数据
         {showWarningDot && (
           <span 
-            className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#1C1C1E]"
+            className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#1C1C1E] animate-pulse"
             title="检测到需要注意的数据质量问题"
           />
         )}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-[28rem] rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
-                        bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl shadow-lg p-4 z-20">
-          <div className="mb-3">
-            <h3 className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">快速导入数据</h3>
-            <textarea
-              value={raw}
-              onChange={e=>setRaw(e.target.value)}
-              placeholder={'支持多种格式:\n名称\t数量\t单价\n名称\t数量\t单位\t单价\n名称\t描述\t数量\t单位\t单价\n\n也支持逗号、分号分隔'}
-              className="quick-import-textarea w-full h-32 p-3 border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                         bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7]
-                         text-sm placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
-                         focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] 
-                         focus:border-transparent resize-none"
+        <div className="fixed inset-0 z-50 backdrop-blur-sm bg-black/20" onClick={closeAll}>
+          <div 
+            ref={modalRef}
+            className="absolute w-full max-w-2xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
+                       bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-xl shadow-2xl max-h-[80vh] overflow-hidden cursor-move" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              left: `${position.x}px`,
+              top: `${position.y}px`,
+              transform: 'translate(-50%, -50%)',
+              transition: isDragging ? 'none' : 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+          >
+            {/* 拖拽区域 */}
+            <div 
+              className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-gray-50/80 to-transparent dark:from-gray-800/80 dark:to-transparent rounded-t-2xl cursor-move backdrop-blur-sm"
+              onMouseDown={handleMouseDown}
             />
-          </div>
-          {/* Day 3 新UI集成区域 */}
-          {preview && (
-            <div className="space-y-3 mt-4">
-              {/* 顶部资讯条 */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <ConfidenceBadge 
-                  value={Math.round(confidence * 100)} 
-                  threshold={featureFlags.autoInsertThreshold} 
+            
+            {/* 关闭按钮 */}
+            <button
+              type="button"
+              onClick={closeAll}
+              className="absolute top-4 right-4 p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
+                         hover:bg-gray-100/80 dark:hover:bg-gray-800/80 transition-all duration-200 z-10 backdrop-blur-sm"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            <div className="p-6 max-h-[80vh] overflow-y-auto">
+              <div className="mb-3">
+                <h3 className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">快速导入数据</h3>
+                <textarea
+                  value={raw}
+                  onChange={e=>setRaw(e.target.value)}
+                  placeholder={'支持多种格式:\n名称\t数量\t单价\n名称\t数量\t单位\t单价\n名称\t描述\t数量\t单位\t单价\n\n也支持逗号、分号分隔'}
+                  className="quick-import-textarea w-full h-32 p-3 border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                             bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7]
+                             text-sm placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                             focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] 
+                             focus:border-transparent resize-none"
                 />
-                {parseResult && (
-                  <div className="md:text-right">
-                    <InferenceStatsBar
-                      rowCount={parseResult.stats.toInsert}
-                      colCount={parseResult.inference.mapping.length}
-                      ignoreCount={parseResult.inference.mapping.filter(m => m === 'ignore').length}
-                      mixedFormat={parseResult.inference.mixedFormat}
+              </div>
+              
+              {/* Day 3 新UI集成区域 */}
+              {preview && (
+                <div className="space-y-3 mt-4">
+                  {/* 顶部资讯条 */}
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <ConfidenceBadge 
+                      value={Math.round(confidence * 100)} 
+                      threshold={featureFlags.autoInsertThreshold} 
                     />
+                    {parseResult && (
+                      <div className="md:text-right">
+                        <InferenceStatsBar
+                          rowCount={parseResult.stats.toInsert}
+                          colCount={parseResult.inference.mapping.length}
+                          ignoreCount={parseResult.inference.mapping.filter(m => m === 'ignore').length}
+                          mixedFormat={parseResult.inference.mixedFormat}
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              
-              {/* 修复报告 */}
-              {showFixReport && fixReport && (
-                <FixReport report={fixReport} />
+                  
+                  {/* 修复报告 */}
+                  {showFixReport && fixReport && (
+                    <FixReport report={fixReport} />
+                  )}
+                  
+                  {/* 警告列举 */}
+                  {((parseResult?.stats.warnings.length || 0) > 0 || customWarnings.length > 0) && (
+                    <WarningChips 
+                      warnings={[
+                        ...(parseResult?.stats.warnings.map(w => ({
+                          type: w.type as WarningChip['type'],
+                          message: w.message
+                        })) || []),
+                        ...customWarnings.map(w => ({
+                          type: w.type as WarningChip['type'],
+                          message: w.message
+                        }))
+                      ]} 
+                    />
+                  )}
+                  
+                  {/* 替换模式开关 */}
+                  <label className="inline-flex items-center gap-2 select-none">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-[#E5E5EA] dark:border-[#2C2C2E]"
+                      checked={replaceMode}
+                      onChange={(e) => setReplaceMode(e.target.checked)}
+                    />
+                    <span className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">替换已有行</span>
+                  </label>
+                  
+                  {/* 动作按钮区 */}
+                  <div className="flex items-center justify-between pt-2">
+                    {/* 左侧：修复按钮 */}
+                    <div className="flex items-center gap-2">
+                      {featureFlags.autoFixEnabled && ((parseResult?.stats.warnings.length || 0) > 0 || customWarnings.length > 0) && (
+                        <button
+                          type="button"
+                          onClick={handleAutoFix}
+                          className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-blue-200 bg-blue-600 text-white hover:bg-blue-700"
+                          title="规范单位/数量/价格，合并重复项"
+                        >
+                          <Wrench className="h-4 w-4" />
+                          一键修复
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* 右侧：主要操作按钮 */}
+                    <div className="flex items-center gap-2">
+                      {Math.round(confidence * 100) >= featureFlags.autoInsertThreshold && !parseResult?.inference.mixedFormat && customWarnings.length === 0 ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleAutoInsert}
+                            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-green-200 bg-green-600 text-white hover:bg-green-700"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            一键插入
+                          </button>
+                          <button
+                            type="button"
+                            onClick={openPreviewOnly}
+                            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-slate-200 bg-white hover:bg-slate-50 text-[#1D1D1F] dark:bg-[#2C2C2E] dark:text-[#F5F5F7] dark:hover:bg-[#3C3C3E]"
+                          >
+                            <Eye className="h-4 w-4" />
+                            预览后再插
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 ring-1 ring-amber-200 bg-amber-50 text-amber-700">
+                            <AlertCircle className="h-4 w-4" />
+                            {customWarnings.length > 0 ? '数据质量问题' : '置信度不足，建议预览'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleInsert}
+                            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-slate-200 bg-white hover:bg-slate-50 text-[#1D1D1F] dark:bg-[#2C2C2E] dark:text-[#F5F5F7] dark:hover:bg-[#3C3C3E]"
+                          >
+                            <Eye className="h-4 w-4" />
+                            插入数据
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
               
-              {/* 警告列举 */}
-              {((parseResult?.stats.warnings.length || 0) > 0 || customWarnings.length > 0) && (
-                <WarningChips 
-                  warnings={[
-                    ...(parseResult?.stats.warnings.map(w => ({
-                      type: w.type as WarningChip['type'],
-                      message: w.message
-                    })) || []),
-                    ...customWarnings.map(w => ({
-                      type: w.type as WarningChip['type'],
-                      message: w.message
-                    }))
-                  ]} 
-                />
+              {/* 传统预览按钮（无解析结果时） */}
+              {!preview && (
+                <div className="flex items-center gap-3">
+                  <button 
+                    type="button"
+                    className="px-3 py-1.5 border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg text-sm
+                               text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50"
+                    onClick={handlePreview}
+                  >
+                    预览
+                  </button>
+                </div>
               )}
-              
-              {/* 替换模式开关 */}
-              <label className="inline-flex items-center gap-2 select-none">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-[#E5E5EA] dark:border-[#2C2C2E]"
-                  checked={replaceMode}
-                  onChange={(e) => setReplaceMode(e.target.checked)}
-                />
-                <span className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">替换已有行</span>
-              </label>
-              
-              {/* 动作按钮区 */}
-              <div className="flex items-center justify-between pt-2">
-                {/* 左侧：修复按钮 */}
-                <div className="flex items-center gap-2">
-                  {featureFlags.autoFixEnabled && ((parseResult?.stats.warnings.length || 0) > 0 || customWarnings.length > 0) && (
-                    <button
-                      type="button"
-                      onClick={handleAutoFix}
-                      className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-blue-200 bg-blue-600 text-white hover:bg-blue-700"
-                      title="规范单位/数量/价格，合并重复项"
-                    >
-                      <Wrench className="h-4 w-4" />
-                      一键修复
-                    </button>
-                  )}
-                </div>
-                
-                {/* 右侧：主要操作按钮 */}
-                <div className="flex items-center gap-2">
-                  {Math.round(confidence * 100) >= featureFlags.autoInsertThreshold && !parseResult?.inference.mixedFormat && customWarnings.length === 0 ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={handleAutoInsert}
-                        className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-green-200 bg-green-600 text-white hover:bg-green-700"
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                        一键插入
-                      </button>
-                      <button
-                        type="button"
-                        onClick={openPreviewOnly}
-                        className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-slate-200 bg-white hover:bg-slate-50 text-[#1D1D1F] dark:bg-[#2C2C2E] dark:text-[#F5F5F7] dark:hover:bg-[#3C3C3E]"
-                      >
-                        <Eye className="h-4 w-4" />
-                        预览后再插
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 ring-1 ring-amber-200 bg-amber-50 text-amber-700">
-                        <AlertCircle className="h-4 w-4" />
-                        {customWarnings.length > 0 ? '数据质量问题' : '置信度不足，建议预览'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleInsert}
-                        className="inline-flex items-center gap-2 rounded-lg px-3 py-2 ring-1 ring-slate-200 bg-white hover:bg-slate-50 text-[#1D1D1F] dark:bg-[#2C2C2E] dark:text-[#F5F5F7] dark:hover:bg-[#3C3C3E]"
-                      >
-                        <Eye className="h-4 w-4" />
-                        插入数据
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
             </div>
-          )}
-          
-          {/* 传统预览按钮（无解析结果时） */}
-          {!preview && (
-            <div className="flex items-center gap-3">
-              <button 
-                type="button"
-                className="px-3 py-1.5 border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg text-sm
-                           text-[#1D1D1F] dark:text-[#F5F5F7] hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50"
-                onClick={handlePreview}
-              >
-                预览
-              </button>
-            </div>
-          )}
+          </div>
         </div>
-      )}
-      {/* 点击外部关闭 */}
-      {open && (
-        <div 
-          className="fixed inset-0 z-10" 
-          onClick={closeAll}
-        />
       )}
     </div>
   );

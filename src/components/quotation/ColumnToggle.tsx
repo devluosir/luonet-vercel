@@ -122,16 +122,18 @@ export function ColumnToggle({
       )}
 
       {/* 列切换开关按钮 */}
-      <button 
-        type="button"
-        className="px-3 py-1.5 rounded-lg border border-[#E5E5EA] dark:border-[#2C2C2E] 
-                   bg-white/90 dark:bg-[#1C1C1E]/90 text-sm text-[#1D1D1F] dark:text-[#F5F5F7]
-                   hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 transition-colors
-                   flex items-center gap-2"
-        onClick={()=>setOpen(o=>!o)}
-      >
-        <Columns className={`h-4 w-4 transition-all duration-200 ${open ? 'text-gray-400 dark:text-gray-500' : 'text-blue-600 dark:text-blue-400'}`} />
-      </button>
+                      <button 
+                  type="button"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
+                             bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800/20 dark:to-slate-800/20 
+                             text-sm font-medium text-gray-700 dark:text-gray-300
+                             hover:from-gray-100 hover:to-slate-100 dark:hover:from-gray-700/30 dark:hover:to-slate-700/30 
+                             hover:border-gray-300 dark:hover:border-gray-600
+                             transition-all duration-200 shadow-sm hover:shadow-md"
+                  onClick={()=>setOpen(o=>!o)}
+                >
+                  <Columns className={`h-4 w-4 transition-all duration-200 ${open ? 'text-gray-500 dark:text-gray-400' : 'text-gray-600 dark:text-gray-300'}`} />
+                </button>
     </div>
   );
 }

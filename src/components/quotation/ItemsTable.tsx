@@ -642,18 +642,18 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
   const handleInsertImported = (rows: any[], replaceMode = false) => {
     let maxId = replaceMode ? 0 : (data.items || []).reduce((m, it) => Math.max(m, it.id), 0);
-    const mapped: LineItem[] = rows.map((r) => {
+    const mapped: LineItem[] = rows.map((r, index) => {
       const quantity = Number(r.quantity) || 0;
       const unitPrice = Number(r.unitPrice) || 0;
       return {
-        id: ++maxId,
+        id: maxId + index + 1, // 确保每个id都是唯一的
         partName: r.partName || '',
         description: r.description || '',
         quantity,
         unit: r.unit || 'pc',
         unitPrice,
         amount: quantity * unitPrice,
-        remarks: '',
+        remarks: r.remarks || '',
       } as LineItem;
     });
     const finalItems = replaceMode ? mapped : [...(data.items || []), ...mapped];
@@ -829,14 +829,19 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   return (
     <div className="space-y-0">
       {/* Toolbar */}
-      <div className="flex items-center justify-between mb-4 px-1">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-6 px-2">
+        <div className="flex items-center gap-4">
           <ImportDataButton onImport={handleImport} />
-          <div className="hidden md:block text-sm text-gray-500 dark:text-gray-400">
-            <div>提示：双击单元格可以切换红色高亮显示</div>
+          <div className="hidden md:block text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              提示：双击单元格可以切换红色高亮显示
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <ColumnToggle
             descriptionMergeMode={descriptionMergeMode}
             remarksMergeMode={remarksMergeMode}
@@ -1278,19 +1283,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         )}
 
                         {/* Remarks */}
-                        {(() => {
-                          const shouldShow = effectiveVisibleCols.includes('remarks') && shouldRenderRemarkCell(index, mergedRemarksCells);
-                          if (process.env.NODE_ENV === 'development') {
-                            console.log(`[DEBUG] Row ${index} remarks:`, {
-                              effectiveVisibleCols,
-                              includesRemarks: effectiveVisibleCols.includes('remarks'),
-                              shouldRenderRemarkCell: shouldRenderRemarkCell(index, mergedRemarksCells),
-                              shouldShow,
-                              itemRemarks: item.remarks
-                            });
-                          }
-                          return shouldShow;
-                        })() && (
+                        {effectiveVisibleCols.includes('remarks') && shouldRenderRemarkCell(index, mergedRemarksCells) && (
                           <td
                             className={`w-1/5 px-2 py-2 transition-all duration-300 ease-in-out ${
                               remarkIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''

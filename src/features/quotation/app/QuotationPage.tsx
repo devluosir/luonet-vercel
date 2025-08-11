@@ -812,11 +812,11 @@ export default function QuotationPage() {
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
                           <span>
-                            {previewProgress < 30 ? '准备资源...' :
-                             previewProgress < 50 ? '加载字体...' :
-                             previewProgress < 70 ? '加载图片...' :
-                             previewProgress < 90 ? '生成PDF...' :
-                             '创建预览...'}
+                            {previewProgress < 30 ? 'Preparing...' :
+                             previewProgress < 50 ? 'Loading fonts...' :
+                             previewProgress < 70 ? 'Loading images...' :
+                             previewProgress < 90 ? 'Generating PDF...' :
+                             'Creating preview...'}
                           </span>
                         </>
                       ) : (
