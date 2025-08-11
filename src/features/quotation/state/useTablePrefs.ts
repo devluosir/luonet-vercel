@@ -12,7 +12,7 @@ type TablePrefsState = {
   hydrate: () => void;
 };
 
-const DEFAULT_COLS: Col[] = ['partName','quantity','unit','unitPrice','amount'];
+const DEFAULT_COLS: Col[] = ['partName','quantity','unit','unitPrice','amount','remarks'];
 
 export const useTablePrefs = create<TablePrefsState>((set, get) => ({
   visibleCols: DEFAULT_COLS, // 服务器端始终使用默认值

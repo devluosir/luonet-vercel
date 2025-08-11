@@ -1,8 +1,8 @@
-// 增强列识别和数据质量验证系统
+// 增强列识别和数据质量验证系统 - 重新设计版本
 import { ColumnField, ColumnEvidence, ColumnInference, ValidationWarning, ParsedRow } from './quickSmartParse';
 import { hungarian, buildCostMatrix } from '../../../utils/hungarian';
 
-// 重用现有的单位映射和词典
+// 单位映射和词典
 const UNIT_MAP: Record<string, string> = {
   pcs: 'pc', 
   个: 'pc', 
@@ -61,6 +61,176 @@ function cleanTextContent(s?: string) {
     .trim();
 }
 
+// === 新增：基于表头和序号的表格格式识别 ===
+
+// 检测表头行
+function detectHeaderRow(rows: string[][]): number | null {
+  if (rows.length === 0) return null;
+  
+  // 检查第一行是否包含表头关键字
+  const firstRow = rows[0];
+  const headerKeywords = /line\s*no|item|part\s*no|description|qty|quantity|unit|u\/p|u\/price|item\s*total|amount|d\/t|remark|序号|编号|名称|数量|单位|单价|总价|备注/i;
+  
+  const hasHeaderKeywords = firstRow.some(cell => {
+    const header = cell.toLowerCase().trim();
+    return headerKeywords.test(header);
+  });
+  
+  if (hasHeaderKeywords) {
+    return 0; // 第一行是表头
+  }
+  
+  // 如果第一行不是表头，检查第二行
+  if (rows.length > 1) {
+    const secondRow = rows[1];
+    const hasSecondRowHeaderKeywords = secondRow.some(cell => {
+      const header = cell.toLowerCase().trim();
+      return headerKeywords.test(header);
+    });
+    
+    if (hasSecondRowHeaderKeywords) {
+      return 1; // 第二行是表头
+    }
+  }
+  
+  return null;
+}
+
+// 检测序号列
+function detectSequenceColumn(rows: string[][], headerRowIndex: number = 0): number | null {
+  if (rows.length < headerRowIndex + 2) return null; // 至少需要表头行+1行数据
+  
+  const maxCols = Math.max(...rows.map(r => r.length));
+  
+  for (let colIndex = 0; colIndex < maxCols; colIndex++) {
+    let sequenceCount = 0;
+    let totalCount = 0;
+    
+    // 从表头行后面开始检查数据行
+    for (let rowIndex = headerRowIndex + 1; rowIndex < rows.length; rowIndex++) {
+      const cell = rows[rowIndex][colIndex] || '';
+      const cleaned = cleanTextContent(cell);
+      
+      if (cleaned) {
+        totalCount++;
+        
+        // 检查是否是序号
+        const isSequence = /^\d+$/.test(cleaned) && parseInt(cleaned) > 0 && parseInt(cleaned) <= 10000;
+        if (isSequence) {
+          sequenceCount++;
+        }
+      }
+    }
+    
+    // 如果80%以上的非空单元格都是序号，认为这是序号列
+    if (totalCount > 0 && sequenceCount / totalCount >= 0.8) {
+      // 额外检查：确保这一列不是数量列（通过检查表头）
+      const headerRow = rows[headerRowIndex];
+      const header = headerRow[colIndex]?.toLowerCase().trim();
+      const isQuantityColumn = /^(qty|quantity|数量|q'?ty)$/i.test(header);
+      
+      if (!isQuantityColumn) {
+        return colIndex;
+      }
+    }
+  }
+  
+  return null;
+}
+
+// 基于表头和序号列生成列映射
+function generateMappingFromHeaderAndSequence(headerRow: string[], sequenceColIndex: number | null): ColumnField[] {
+  const mapping: ColumnField[] = [];
+  
+  for (let i = 0; i < headerRow.length; i++) {
+    const header = headerRow[i]?.toLowerCase().trim();
+    
+    // 如果是序号列，标记为ignore
+    if (sequenceColIndex !== null && i === sequenceColIndex) {
+      mapping.push('ignore');
+      continue;
+    }
+    
+    // 根据表头内容判断列类型
+    if (/^(item|序号|编号|no\.|num|index|#|line|line\s*no\.?)$/i.test(header)) {
+      mapping.push('ignore'); // 序号列忽略
+    }
+    // Part No. 列 - 作为描述信息显示
+    else if (/^(part\s*no\.?|part\s*number|partno|partnumber)$/i.test(header)) {
+      mapping.push('desc'); // Part No. 列映射为desc，显示在Description列中
+    }
+    // 描述列 - 作为产品名称显示
+    else if (/^(description|desc|描述|规格|specification|spec)$/i.test(header)) {
+      mapping.push('name'); // Description列映射为name，显示在Part Name列中
+    }
+    // 数量列
+    else if (/^(qty|quantity|数量|q'?ty)$/i.test(header)) {
+      mapping.push('qty');
+    }
+    // 单位列
+    else if (/^(unit|单位|uom)$/i.test(header)) {
+      mapping.push('unit');
+    }
+    // 单价列
+    else if (/^(u\/p|u\/price|unit\s*price|单价|price|u\.p)$/i.test(header)) {
+      mapping.push('price');
+    }
+    // 总价列
+    else if (/^(item\s*total|total|amount|总价|金额)$/i.test(header)) {
+      mapping.push('ignore'); // 总价列忽略，系统会自动计算
+    }
+    // 交货时间列
+    else if (/^(d\/t|delivery\s*time|交货时间|交期)$/i.test(header)) {
+      mapping.push('ignore'); // 交货时间列忽略
+    }
+    // 备注列
+    else if (/^(remark|remarks|备注|note|notes)$/i.test(header)) {
+      mapping.push('remark'); // 备注列映射为remark
+    }
+    // 默认作为名称列
+    else {
+      mapping.push('name');
+    }
+  }
+  
+  return mapping;
+}
+
+// 确认表格主体内容
+function confirmTableBody(rows: string[][], headerRowIndex: number, sequenceColIndex: number | null): boolean {
+  if (rows.length < headerRowIndex + 2) return false; // 至少需要表头行+1行数据
+  
+  // 检查表头行后面是否有数据行
+  const dataRows = rows.slice(headerRowIndex + 1);
+  
+  // 检查是否有序号列
+  if (sequenceColIndex !== null) {
+    // 如果有序号列，检查数据行是否包含序号
+    let hasSequenceData = false;
+    for (const row of dataRows) {
+      const sequenceCell = row[sequenceColIndex] || '';
+      const cleaned = cleanTextContent(sequenceCell);
+      if (/^\d+$/.test(cleaned) && parseInt(cleaned) > 0) {
+        hasSequenceData = true;
+        break;
+      }
+    }
+    if (!hasSequenceData) return false;
+  }
+  
+  // 检查数据行是否包含有效内容（至少有一行包含非空单元格）
+  let hasValidData = false;
+  for (const row of dataRows) {
+    const hasContent = row.some(cell => cleanTextContent(cell).length > 0);
+    if (hasContent) {
+      hasValidData = true;
+      break;
+    }
+  }
+  
+  return hasValidData;
+}
+
 interface ColumnStats {
   index: number;
   samples: string[];
@@ -73,20 +243,14 @@ interface ColumnStats {
   containsSpecs: boolean;
 }
 
-function analyzeColumnPatterns(rows: string[][]): ColumnStats[] {
+function analyzeColumnPatterns(rows: string[][], headerRowIndex: number = 0): ColumnStats[] {
   if (rows.length === 0) return [];
   
   const maxCols = Math.max(...rows.map(r => r.length));
   const stats: ColumnStats[] = [];
   
-  // 检查是否有表头行
-  const hasHeader = rows.length > 0 && rows[0].some(cell => {
-    const header = cell.toLowerCase().trim();
-    return /^(item|part\s*no|description|qty|quantity|unit|u\/p|item\s*total|remark|序号|编号|名称|数量|单位|单价|总价|备注)$/.test(header);
-  });
-  
-  // 如果有表头，从第二行开始分析数据
-  const dataRows = hasHeader ? rows.slice(1) : rows;
+  // 从表头行后面开始分析数据
+  const dataRows = rows.slice(headerRowIndex + 1);
   
   for (let colIndex = 0; colIndex < maxCols; colIndex++) {
     const samples = dataRows.map(r => r[colIndex] || '').filter(s => s.trim());
@@ -214,14 +378,28 @@ function chooseBestMapping(colScores: Map<number, Map<ColumnField, ColumnEvidenc
   const numCols = colScores.size;
   if (numCols === 0) return [];
   
-  // 如果有表头行，优先使用表头映射
+  // 首先检测表头和序号列
+  if (rows && rows.length > 0) {
+    const headerRowIndex = detectHeaderRow(rows);
+    if (headerRowIndex !== null) {
+      const sequenceColIndex = detectSequenceColumn(rows, headerRowIndex);
+      
+      // 确认表格主体内容
+      if (confirmTableBody(rows, headerRowIndex, sequenceColIndex)) {
+        const headerRow = rows[headerRowIndex];
+        return generateMappingFromHeaderAndSequence(headerRow, sequenceColIndex);
+      }
+    }
+  }
+  
+  // 如果有表头行，使用表头映射
   if (rows && rows.length > 0) {
     const headerRow = rows[0];
     const headerMapping = mapHeadersToFields(headerRow);
     // 检查是否有标准表头
     const hasStandardHeaders = headerRow.some(cell => {
       const header = cell.toLowerCase().trim();
-      return /^(item|part\s*no|description|qty|quantity|unit|u\/p|item\s*total|remark|序号|编号|名称|数量|单位|单价|总价|备注)$/.test(header);
+      return /^(item|part\s*no|description|qty|quantity|unit|u\/p|item\s*total|remark|序号|编号|名称|数量|单位|单价|总价|备注|line\s*no|q'ty|u\/price|amount|d\/t)$/.test(header);
     });
     
     if (hasStandardHeaders) {
@@ -338,16 +516,31 @@ function detectMixedFormats(rows: string[][], mapping: ColumnField[]): boolean {
 function calcConfidence(colScores: Map<number, Map<ColumnField, ColumnEvidence>>, rowCount: number, mixed: boolean, rows?: string[][]): number {
   if (colScores.size === 0) return 0;
   
-  // 检查是否有表头，如果有表头则给予高置信度
+  // 检查是否有表头和序号列
   if (rows && rows.length > 0) {
+    const headerRowIndex = detectHeaderRow(rows);
+    if (headerRowIndex !== null) {
+      const sequenceColIndex = detectSequenceColumn(rows, headerRowIndex);
+      
+      // 如果同时有表头和序号列，给予最高置信度
+      if (sequenceColIndex !== null && confirmTableBody(rows, headerRowIndex, sequenceColIndex)) {
+        return 95; // 95% 置信度
+      }
+      
+      // 如果有表头但没有序号列，给予高置信度
+      if (confirmTableBody(rows, headerRowIndex, sequenceColIndex)) {
+        return 90; // 90% 置信度
+      }
+    }
+    
+    // 检查是否有标准表头
     const headerRow = rows[0];
     const hasStandardHeaders = headerRow.some(cell => {
       const header = cell.toLowerCase().trim();
-      return /^(item|part\s*no|description|qty|quantity|unit|u\/p|item\s*total|remark|序号|编号|名称|数量|单位|单价|总价|备注)$/.test(header);
+      return /^(item|part\s*no|description|qty|quantity|unit|u\/p|item\s*total|remark|序号|编号|名称|数量|单位|单价|总价|备注|line\s*no|q'ty|u\/price|amount|d\/t)$/.test(header);
     });
     
     if (hasStandardHeaders) {
-      // 如果有标准表头，给予高置信度
       return 85; // 85% 置信度
     }
   }
@@ -398,13 +591,11 @@ export function enhancedColumnDetection(rows: string[][]): ColumnInference {
     };
   }
   
-  // 检查是否有表头行
-  const hasHeader = rows.length > 0 && rows[0].some(cell => {
-    const header = cell.toLowerCase().trim();
-    return /^(item|part\s*no|description|qty|quantity|unit|u\/p|item\s*total|remark|序号|编号|名称|数量|单位|单价|总价|备注)$/.test(header);
-  });
+  // 检测表头行
+  const headerRowIndex = detectHeaderRow(rows);
+  const headerRowIndexForAnalysis = headerRowIndex !== null ? headerRowIndex : 0;
   
-  const colStats = analyzeColumnPatterns(rows);
+  const colStats = analyzeColumnPatterns(rows, headerRowIndexForAnalysis);
   const colScores = scoreColumns(colStats);
   const mapping = chooseBestMapping(colScores, rows);
   
@@ -508,14 +699,13 @@ export function projectByMapping(row: string[], mapping: ColumnField[]): Partial
     
     switch (field) {
       case 'name':
-        result.partName = cleanTextContent(value);
-        break;
-      case 'desc':
-        result.description = cleanTextContent(value);
-        // 如果还没有partName，将desc作为partName
+        // 如果还没有partName，设置partName
         if (!result.partName) {
           result.partName = cleanTextContent(value);
         }
+        break;
+      case 'desc':
+        result.description = cleanTextContent(value);
         break;
       case 'qty':
         result.quantity = parseQuantity(value);
@@ -527,7 +717,7 @@ export function projectByMapping(row: string[], mapping: ColumnField[]): Partial
         result.unitPrice = parsePrice(value);
         break;
       case 'remark':
-        result.remark = cleanTextContent(value);
+        result.remarks = cleanTextContent(value);
         break;
     }
   }
@@ -592,7 +782,7 @@ export function batchProjectByMapping(rows: string[][], mapping: ColumnField[]):
         quantity: projected.quantity || 0,
         unit: projected.unit || 'pc',
         unitPrice: projected.unitPrice || 0,
-        remark: projected.remark || ''
+        remarks: projected.remarks || ''
       });
     }
   }
@@ -649,9 +839,9 @@ export function quickHash(text: string): string {
  */
 export function testHeaderRecognition() {
   const testHeaders = [
+    ['Line No.', 'Description', 'Part No.', 'Q\'TY', 'Unit', 'U/Price', 'Amount', 'D/T', 'Remark'],
     ['Item', 'Part No.', 'Description', 'Qty', 'Unit', 'U/P', 'Item Total', 'Remark'],
-    ['序号', '编号', '名称', '数量', '单位', '单价', '总价', '备注'],
-    ['No.', 'Part Number', 'Desc', 'Quantity', 'Unit', 'Price', 'Amount', 'Notes']
+    ['序号', '编号', '名称', '数量', '单位', '单价', '总价', '备注']
   ];
   
   for (const headers of testHeaders) {

@@ -204,8 +204,6 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
         mergedRemarks: parseResult.mergedRemarks?.length,
         mergedDescriptions: parseResult.mergedDescriptions?.length
       });
-      // 关键：不要在这里清空非起始行的 remarks/description
-      console.info('[store:updateFromParse:first]', normalized[0]);
     }
     
     return { 

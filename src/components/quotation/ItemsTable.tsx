@@ -428,7 +428,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       return result.sort((a, b) => a.startRow - b.startRow);
     }
     
-    // 自动模式下，如果没有解析器合并信息，返回空数组（不进行自动合并检测）
+    // 自动模式下，如果没有解析器合并信息，返回空数组（不进行任何合并检测）
     return [];
   }, [mergedRemarks?.length ?? 0, remarksKey, remarksMergeMode, manualMergedCells.remarks, data.items?.length ?? 0]);
 
@@ -1278,9 +1278,21 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         )}
 
                         {/* Remarks */}
-                        {effectiveVisibleCols.includes('remarks') && shouldRenderRemarkCell(index, mergedRemarksCells) && (
+                        {(() => {
+                          const shouldShow = effectiveVisibleCols.includes('remarks') && shouldRenderRemarkCell(index, mergedRemarksCells);
+                          if (process.env.NODE_ENV === 'development') {
+                            console.log(`[DEBUG] Row ${index} remarks:`, {
+                              effectiveVisibleCols,
+                              includesRemarks: effectiveVisibleCols.includes('remarks'),
+                              shouldRenderRemarkCell: shouldRenderRemarkCell(index, mergedRemarksCells),
+                              shouldShow,
+                              itemRemarks: item.remarks
+                            });
+                          }
+                          return shouldShow;
+                        })() && (
                           <td
-                            className={`px-2 py-2 transition-all duration-300 ease-in-out ${
+                            className={`w-1/5 px-2 py-2 transition-all duration-300 ease-in-out ${
                               remarkIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
                             }`}
                             rowSpan={remarkIsMerged ? remarkRowSpan : undefined}

@@ -864,8 +864,17 @@ export function quickSmartParse(text: string): ParseResult {
           const shouldAccept = isService || true; // 暂时允许所有0单价
           
           if (shouldAccept) {
-            // 处理备注内容
-            const remarks = cells.length > 7 ? cleanTextContent(cells[7]) : '';
+            // 处理备注内容 - 查找真正的备注列
+            let remarks = '';
+            // 从后往前查找备注列，跳过D/T列
+            for (let i = cells.length - 1; i >= 0; i--) {
+              const cell = cleanTextContent(cells[i]);
+              if (cell && !/^\d+\s*(working\s*days?|days?|weeks?|months?)$/i.test(cell)) {
+                // 不是交货时间格式，认为是备注
+                remarks = cell;
+                break;
+              }
+            }
             
             const newItem = { 
               partName: name, 
@@ -946,7 +955,7 @@ export function quickSmartParse(text: string): ParseResult {
   let enhancedSkipped = 0;
   const allWarnings: ValidationWarning[] = [];
   
-  if (false && featureFlags.enhancedInferenceEnabled && inference.confidence >= featureFlags.autoInsertThreshold) {
+  if (featureFlags.enhancedInferenceEnabled && inference.confidence >= featureFlags.autoInsertThreshold) {
     // 高置信度：使用新的投影方式
     // 如果有表头，需要跳过表头行进行投影
     const rowsToProject = maybeHeader ? dataRowCells : dataRowCells;
@@ -1070,16 +1079,13 @@ export function quickSmartParse(text: string): ParseResult {
     }
   }
   
-  // 检测合并单元格
-  const remarkCol = colMap.remarks ?? 7;
-  const descCol = colMap.description ?? 0; // 修复：Description 应该是 0，不是 1
-  const rawCellCounts = allRowCells.map(row => row.length).slice(dataStartRow);
-  const mergedCells = detectMergedBlocks(processedDataRowCells, 0, remarkCol, descCol, rawCellCounts);
-  
-  // 分离备注和描述的合并信息
-  const mergedRemarks = mergedCells.filter(cell => cell.column === 'remarks');
-  // 暂时禁用description列的合并单元格检测
+  // 暂时禁用解析器的合并单元格检测，让UI自己处理
+  const mergedRemarks: MergedCell[] = [];
   const mergedDescriptions: MergedCell[] = [];
+  
+  // 保留列映射信息用于调试
+  const remarkCol = colMap.remarks ?? 7;
+  const descCol = colMap.description ?? 0;
   
   if (process.env.NODE_ENV === 'development') {
     console.log('[Parse:merged]', { 

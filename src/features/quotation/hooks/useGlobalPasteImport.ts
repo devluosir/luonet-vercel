@@ -75,7 +75,7 @@ export function useGlobalPasteImport(opts: Opts = {}) {
             unit: r.unit || 'pc',
             unitPrice: p,
             amount: q * p,
-            remarks: '',
+            remarks: r.remarks || '',
           };
         });
 
@@ -83,8 +83,8 @@ export function useGlobalPasteImport(opts: Opts = {}) {
           // 使用解析器的完整结果，包括合并信息
           updateFromParse({
             rows: mapped,
-            mergedRemarks: parsed.mergedRemarks,
-            mergedDescriptions: parsed.mergedDescriptions
+            mergedRemarks: parsed.mergedRemarks?.filter(cell => cell.column === 'remarks') || [],
+            mergedDescriptions: parsed.mergedDescriptions?.filter(cell => cell.column === 'description') || []
           });
         } else {
           // 追加模式：需要处理合并信息的偏移
