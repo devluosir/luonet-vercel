@@ -315,7 +315,7 @@ export function QuickImport({
                 <textarea
                   value={raw}
                   onChange={e=>setRaw(e.target.value)}
-                  placeholder={'支持LC报价表，OMS报价表等多种格式:\n名称\t数量\t单价\n名称\t数量\t单位\t单价\n名称\t描述\t数量\t单位\t单价\n\n也支持逗号、分号分隔'}
+                  placeholder={'已支持报价表有：LC报价表，OMS报价表等等。\n将Excel报价表的内容复制，到这里粘贴即可。\n包含表头，序号，备注的区域。\n无序号的行不用复制进来。'}
                   className="quick-import-textarea w-full h-32 p-3 border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                              bg-white dark:bg-[#1C1C1E] text-[#1D1D1F] dark:text-[#F5F5F7]
                              text-sm placeholder:text-[#86868B] dark:placeholder:text-[#86868B]

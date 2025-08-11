@@ -26,6 +26,7 @@ export const NOTES_TEMPLATES_BILINGUAL = {
   exw: [
     "Delivery Time: 30 days. / 交货期：30天。",
     "Price Basis: EXW Shanghai, China. / 价格基础：工厂交货，上海，中国。",
+    "Excluding handling & packing charge and freight cost. / 不包含装卸费、包装费和运费。",
     "Delivery Terms: As stated above, subject to prior sale. / 交货条款：同上，以未售出为条件。",
     "Payment Term: 30 days. / 付款条件：货到后30天内付款。",
     "Validity: 10 days. / 报价有效期：10天。"
@@ -50,9 +51,9 @@ export const NOTES_TEMPLATES_BILINGUAL = {
 export const DELIVERY_TERMS_OPTIONS = [
   { id: 'days_after_order', chinese: '30天', english: 'Delivery Time: 30 days.', remark: '常见30/45/60天' },
   { id: 'days_after_order', chinese: '交货期：见备注。', english: 'Delivery Time: As stated in Remarks. ', remark: '交货期：见备注。' },
-  { id: 'days_after_order', chinese: '订单确认后30天交货', english: 'Delivery Time: 30 days after order confirmation (AOC).', remark: '常见30/45/60天' },
   { id: 'days_after_deposit', chinese: '收到定金后30天交货', english: 'Delivery Time: 30 days after receipt of deposit.', remark: '与30/70搭配常用' },
   { id: 'immediate_delivery', chinese: '现货', english: 'Delivery Time: Ex-stock.', remark: '库存可随时发' },
+  { id: 'days_after_order', chinese: '订单确认后30天交货', english: 'Delivery Time: 30 days after order confirmation (AOC).', remark: '常见30/45/60天' },
   { id: 'days_after_sample', chinese: '最终样品确认后XX天交货', english: 'Delivery Time: XX days after final sample approval.', remark: '定制/来样业务常用' },
   { id: 'production_lead_time', chinese: '生产周期XX天/周', english: 'Delivery Time: Production lead time: XX days/weeks.', remark: '标准产期表述' },
   { id: 'flexible_range', chinese: '弹性区间交货', english: 'Delivery Time: Delivery within 45–60 days after order.', remark: '给产线/船期留余量' },    
