@@ -251,7 +251,7 @@ export function QuickImport({
     <div className="relative">
       <button 
         type="button"
-        className="relative inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
+        className="relative inline-flex items-center gap-0 px-3 py-2 rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
                    bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 
                    text-sm font-medium text-blue-700 dark:text-blue-300
                    hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 

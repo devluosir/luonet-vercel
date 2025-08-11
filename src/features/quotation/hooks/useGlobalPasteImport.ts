@@ -83,8 +83,18 @@ export function useGlobalPasteImport(opts: Opts = {}) {
           // 使用解析器的完整结果，包括合并信息
           updateFromParse({
             rows: mapped,
-            mergedRemarks: parsed.mergedRemarks?.filter(cell => cell.column === 'remarks') || [],
-            mergedDescriptions: parsed.mergedDescriptions?.filter(cell => cell.column === 'description') || []
+            mergedRemarks: parsed.mergedRemarks?.filter(cell => cell.column === 'remarks').map(cell => ({
+              startRow: cell.startRow,
+              endRow: cell.endRow,
+              content: cell.content,
+              column: 'remarks' as const
+            })) || [],
+            mergedDescriptions: parsed.mergedDescriptions?.filter(cell => cell.column === 'description').map(cell => ({
+              startRow: cell.startRow,
+              endRow: cell.endRow,
+              content: cell.content,
+              column: 'description' as const
+            })) || []
           });
         } else {
           // 追加模式：需要处理合并信息的偏移
