@@ -123,10 +123,5 @@ export const DEFAULT_INVOICE_DATA = {
     stampType: 'none' as const
   },
   customUnits: [],
-  otherFees: [{
-    id: 1,
-    description: '',
-    amount: 0,
-    remarks: ''
-  }]
+  otherFees: []
 };

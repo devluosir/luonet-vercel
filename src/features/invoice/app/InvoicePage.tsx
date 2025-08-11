@@ -62,9 +62,32 @@ export const InvoicePage = () => {
     return getTotalAmount(data.items, data.otherFees);
   }, [data.items, data.otherFees]);
 
-  // 组件挂载状态
+  // 组件挂载状态和初始化
   useEffect(() => {
     setMounted(true);
+    
+    // 检查是否有注入的发票数据（编辑或复制模式）
+    const customWindow = window as any;
+    if (customWindow.__INVOICE_DATA__) {
+      // 初始化store数据
+      const injectedData = customWindow.__INVOICE_DATA__;
+      const isEditMode = customWindow.__EDIT_MODE__ || false;
+      const editId = customWindow.__EDIT_ID__ || null;
+      
+      // 确保otherFees不为空数组（如果是编辑模式且有数据）
+      if (isEditMode && injectedData.otherFees && injectedData.otherFees.length === 0) {
+        injectedData.otherFees = [];
+      }
+      
+      // 初始化store
+      const { initialize } = useInvoiceStore.getState();
+      initialize(injectedData);
+      
+      // 清理注入的数据
+      customWindow.__INVOICE_DATA__ = undefined;
+      customWindow.__EDIT_MODE__ = false;
+      customWindow.__EDIT_ID__ = undefined;
+    }
   }, []);
 
   // 避免闪烁
