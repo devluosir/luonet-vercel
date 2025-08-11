@@ -133,10 +133,6 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
     return items;
   }, [showMainTerm, main, dateISO, additionalTermsArray, invoiceHint, invoiceNoExternal]);
 
-  if (!showPaymentTerms) {
-    return null;
-  }
-
   return (
     <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 md:p-4 space-y-3">
       {/* 顶部行：标题 */}
