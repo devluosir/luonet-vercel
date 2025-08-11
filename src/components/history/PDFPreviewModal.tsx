@@ -130,8 +130,9 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
           const pdfBlob = await generateOrderConfirmationPDF(item.data, true);
           pdfUrl = URL.createObjectURL(pdfBlob);
         } else if (itemType === 'invoice') {
-          // @ts-ignore - 历史记录数据可能来自不同来源
-          const pdfBlob = await generateInvoicePDF(item.data);
+          // 使用PDF服务来处理数据转换
+          const { PDFService } = await import('@/features/invoice/services/pdf.service');
+          const pdfBlob = await PDFService.generateInvoicePDF(item.data as any);
           pdfUrl = URL.createObjectURL(pdfBlob);
         } else if (itemType === 'purchase') {
           // @ts-ignore - 历史记录数据可能来自不同来源
@@ -183,8 +184,9 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
           // @ts-ignore - 历史记录数据可能来自不同来源
           pdfBlob = await generateOrderConfirmationPDF(item.data, false);
         } else if (itemType === 'invoice') {
-          // @ts-ignore - 历史记录数据可能来自不同来源
-          pdfBlob = await generateInvoicePDF(item.data);
+          // 使用PDF服务来处理数据转换
+          const { PDFService } = await import('@/features/invoice/services/pdf.service');
+          pdfBlob = await PDFService.generateInvoicePDF(item.data as any);
         } else if (itemType === 'purchase') {
           // @ts-ignore - 历史记录数据可能来自不同来源
           pdfBlob = await generatePurchaseOrderPDF(item.data, false);

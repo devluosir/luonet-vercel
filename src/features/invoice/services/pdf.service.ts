@@ -1,16 +1,60 @@
 import { InvoiceData } from '../types';
+import { PDFGeneratorData } from '@/types/pdf';
 
 /**
  * PDF服务类
  */
 export class PDFService {
   /**
+   * 将InvoiceData转换为PDFGeneratorData
+   */
+  private static convertToPDFData(data: InvoiceData): PDFGeneratorData {
+    return {
+      templateConfig: {
+        headerType: data.templateConfig.headerType,
+        stampType: data.templateConfig.stampType,
+        invoiceType: data.templateConfig.invoiceType
+      },
+      items: data.items.map(item => ({
+        hsCode: item.hsCode,
+        partname: item.partname,
+        description: item.description,
+        quantity: item.quantity,
+        unit: item.unit,
+        unitPrice: item.unitPrice,
+        amount: item.amount,
+        highlight: item.highlight
+      })),
+      otherFees: data.otherFees?.map(fee => ({
+        description: fee.description,
+        amount: fee.amount,
+        highlight: fee.highlight
+      })),
+      to: data.to,
+      customerPO: data.customerPO,
+      invoiceNo: data.invoiceNo,
+      date: data.date,
+      currency: data.currency,
+      showHsCode: data.showHsCode,
+      showDescription: data.showDescription,
+      amountInWords: data.amountInWords,
+      showBank: data.showBank,
+      bankInfo: data.bankInfo,
+      showPaymentTerms: data.showPaymentTerms,
+      paymentDate: data.paymentDate,
+      additionalPaymentTerms: data.additionalPaymentTerms,
+      showInvoiceReminder: data.showInvoiceReminder
+    };
+  }
+
+  /**
    * 生成发票PDF
    */
   static async generateInvoicePDF(data: InvoiceData): Promise<Blob> {
     try {
       const { generateInvoicePDF } = await import('@/utils/pdfGenerator');
-      return await generateInvoicePDF(data);
+      const pdfData = this.convertToPDFData(data);
+      return await generateInvoicePDF(pdfData);
     } catch (error) {
       console.error('Error generating invoice PDF:', error);
       throw new Error('发票PDF生成失败');

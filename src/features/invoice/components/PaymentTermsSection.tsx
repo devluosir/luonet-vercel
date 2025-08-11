@@ -134,14 +134,14 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
   }, [showMainTerm, main, dateISO, additionalTermsArray, invoiceHint, invoiceNoExternal]);
 
   return (
-    <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 md:p-4 space-y-3">
-      {/* 顶部行：标题 */}
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium text-gray-800 dark:text-gray-200">Payment Terms</h3>
-      </div>
-
-      {/* 行1：主条款（内联控件） */}
-      <div className="space-y-2">
+    <div className="space-y-3">
+      {/* 标题移到框外 */}
+      <h3 className="font-medium text-gray-800 dark:text-gray-200">Payment Terms</h3>
+      
+      {/* 内容框 */}
+      <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 md:p-4 space-y-3">
+        {/* 行1：主条款（内联控件） */}
+        <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
           <input
             type="checkbox"
@@ -292,6 +292,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
           ))}
         </div>
       </div>
-    </section>
+      </section>
+    </div>
   );
 }

@@ -328,7 +328,6 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     const state = get();
     try {
       const previewUrl = await PDFService.previewInvoicePDF(state.data);
-      set({ showPreview: true, previewItem: null });
       return previewUrl;
     } catch (error) {
       console.error('Error previewing PDF:', error);
