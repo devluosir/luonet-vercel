@@ -19,6 +19,7 @@ import { useInvoiceForm } from '../hooks/useInvoiceForm';
 import { usePasteImport } from '../hooks/usePasteImport';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { InvoiceActions } from '../components/InvoiceActions';
+import { PaymentTermsSection } from '../components/PaymentTermsSection';
 import { INPUT_CLASSNAMES } from '../constants/settings';
 import { getTotalAmount } from '../utils/calculations';
 
@@ -285,82 +286,10 @@ export const InvoicePage = () => {
 
               {/* 付款条款 */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                  Payment Terms:
-                </label>
-                <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/20">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={data.showPaymentTerms}
-                        onChange={(e) => {
-                          updateData({ showPaymentTerms: e.target.checked });
-                        }}
-                        className="flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
-                          checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
-                          focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
-                          relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
-                          before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
-                          checked:before:scale-100 before:transition-transform before:duration-200
-                          w-4 h-4"
-                        style={{
-                          WebkitAppearance: 'none',
-                          MozAppearance: 'none'
-                        }}
-                      />
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Full paid not later than</span>
-                        <input
-                          type="date"
-                          value={data.paymentDate}
-                          onChange={(e) => updateData({ paymentDate: e.target.value })}
-                          className={`${INPUT_CLASSNAMES.date} !py-1.5 text-red-500 dark:text-red-400`}
-                          style={{ 
-                            colorScheme: 'light dark',
-                            width: '150px',
-                            minWidth: '150px',
-                            maxWidth: '150px',
-                            flexShrink: 0,
-                            flexGrow: 0
-                          }}
-                          pattern="\d{4}-\d{2}-\d{2}"
-                        />
-                        <span className="text-sm text-gray-600 dark:text-gray-400">by telegraphic transfer.</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <textarea
-                        value={data.additionalPaymentTerms}
-                        onChange={(e) => updateData({ additionalPaymentTerms: e.target.value })}
-                        placeholder="Enter additional remarks (each line will be a new payment term)"
-                        className={`${INPUT_CLASSNAMES.base} min-h-[4em] resize dark:bg-[#1C1C1E]/90`}
-                        rows={2}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={data.showInvoiceReminder}
-                        onChange={e => updateData({ showInvoiceReminder: e.target.checked })}
-                        className="flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
-                          checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
-                          focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
-                          relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
-                          before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
-                          checked:before:scale-100 before:transition-transform before:duration-200
-                          w-4 h-4"
-                        style={{
-                          WebkitAppearance: 'none',
-                          MozAppearance: 'none'
-                        }}
-                      />
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Please state our invoice no. <span className="text-red-500 dark:text-red-400">&quot;{data.invoiceNo}&quot;</span> on your payment documents.
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <PaymentTermsSection 
+                  data={data} 
+                  onChange={updateData} 
+                />
               </div>
 
               {/* 生成按钮 */}

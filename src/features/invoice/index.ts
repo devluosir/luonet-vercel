@@ -6,6 +6,7 @@ export { InvoicePage } from './app/InvoicePage';
 // 导出组件
 export { SettingsPanel } from './components/SettingsPanel';
 export { InvoiceActions } from './components/InvoiceActions';
+export { PaymentTermsSection } from './components/PaymentTermsSection';
 
 // 导出hooks
 export { useInvoiceForm } from './hooks/useInvoiceForm';
