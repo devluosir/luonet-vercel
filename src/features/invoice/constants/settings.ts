@@ -123,4 +123,4 @@ export const DEFAULT_INVOICE_DATA = {
   },
   customUnits: [],
   otherFees: []
-} as const;
+};

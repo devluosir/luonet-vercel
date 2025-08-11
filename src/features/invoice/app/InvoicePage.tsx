@@ -13,7 +13,7 @@ import {
 import { Footer } from '@/components/Footer';
 import { CustomerSection } from '@/components/invoice/CustomerSection';
 import ItemsTable from '@/components/invoice/ItemsTable';
-import { PDFPreviewModal } from '@/components/history/PDFPreviewModal';
+import PDFPreviewModal from '@/components/history/PDFPreviewModal';
 import { useInvoiceStore } from '../state/invoice.store';
 import { useInvoiceForm } from '../hooks/useInvoiceForm';
 import { usePasteImport } from '../hooks/usePasteImport';
@@ -199,7 +199,14 @@ export const InvoicePage = () => {
               {/* 商品表格 */}
               <ItemsTable
                 invoiceData={data}
-                setInvoiceData={(newData) => updateData(newData)}
+                setInvoiceData={(newData) => {
+                  if (typeof newData === 'function') {
+                    const result = newData(data);
+                    updateData(result);
+                  } else {
+                    updateData(newData);
+                  }
+                }}
                 updateLineItem={(index, field, value) => {
                   // 这里需要调用store的updateLineItem方法
                   // 暂时保持原有逻辑

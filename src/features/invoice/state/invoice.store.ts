@@ -25,6 +25,9 @@ interface InvoiceStore extends InvoiceFormState, InvoiceFormActions {
   
   // 处理其他费用双击高亮
   handleOtherFeeDoubleClick: (index: number, field: 'description' | 'amount') => void;
+  
+  // 设置自定义单位输入值
+  setCustomUnit: (unit: string) => void;
 }
 
 export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
@@ -59,6 +62,21 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
 
   // 重置
   reset: () => {
+    set({
+      data: DEFAULT_INVOICE_DATA,
+      isEditMode: false,
+      editId: null,
+      showSettings: false,
+      showPreview: false,
+      previewItem: null,
+      customUnit: '',
+      showUnitSuccess: false,
+      focusedCell: null
+    });
+  },
+
+  // 重置表单
+  resetForm: () => {
     set({
       data: DEFAULT_INVOICE_DATA,
       isEditMode: false,
@@ -164,21 +182,29 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     });
   },
 
+  // 设置自定义单位输入值
+  setCustomUnit: (unit: string) => {
+    set({ customUnit: unit });
+  },
+
   // 添加自定义单位
   addCustomUnit: (unit) => {
-    set((state) => {
-      if (unit && !(state.data.customUnits || []).includes(unit)) {
-        const newCustomUnits = [...(state.data.customUnits || []), unit];
-        set({ 
-          data: { ...state.data, customUnits: newCustomUnits },
-          customUnit: '',
-          showUnitSuccess: true
-        });
-        
-        // 2秒后隐藏成功消息
-        setTimeout(() => set({ showUnitSuccess: false }), 2000);
-      }
-    });
+    if (unit) {
+      set((state) => {
+        if (!(state.data.customUnits || []).includes(unit)) {
+          const newCustomUnits = [...(state.data.customUnits || []), unit];
+          return {
+            data: { ...state.data, customUnits: newCustomUnits },
+            customUnit: '',
+            showUnitSuccess: true
+          };
+        }
+        return state;
+      });
+      
+      // 2秒后隐藏成功消息
+      setTimeout(() => set({ showUnitSuccess: false }), 2000);
+    }
   },
 
   // 删除自定义单位

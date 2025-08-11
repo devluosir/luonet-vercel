@@ -19,7 +19,8 @@ export const SettingsPanel = () => {
     customUnit,
     showUnitSuccess,
     addCustomUnit,
-    removeCustomUnit
+    removeCustomUnit,
+    setCustomUnit
   } = useInvoiceStore();
 
   const handleCurrencyChange = (currency: 'USD' | 'CNY') => {
@@ -49,7 +50,7 @@ export const SettingsPanel = () => {
   };
 
   const handleCustomUnitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateData({ customUnit: e.target.value });
+    setCustomUnit(e.target.value);
   };
 
   const handleAddCustomUnit = () => {
