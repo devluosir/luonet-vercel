@@ -47,7 +47,9 @@ export interface InvoiceData {
   };
   remarks?: string;
   showHsCode: boolean;
+  showPartName: boolean;
   showDescription: boolean;
+  showRemarks: boolean;
   showBank: boolean;
   showInvoiceReminder: boolean;
   currency: 'USD' | 'CNY';
@@ -57,9 +59,11 @@ export interface InvoiceData {
     id: number;
     description: string;
     amount: number;
+    remarks?: string;
     highlight?: {
       description?: boolean;
       amount?: boolean;
+      remarks?: boolean;
     };
   }>;
 } 

@@ -63,12 +63,21 @@ interface CustomerFormData {
 
 type TabType = 'customers' | 'suppliers' | 'consignees';
 
+// 定义历史记录文档的通用类型
+interface HistoryDocument {
+  id?: string;
+  date?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: any;
+}
+
 // 从localStorage中提取供应商数据
 function extractSuppliersFromHistory(): Supplier[] {
   try {
     if (typeof window === 'undefined') return [];
 
-    const purchaseHistory = getLocalStorageJSON('purchase_history', []);
+    const purchaseHistory = getLocalStorageJSON<HistoryDocument[]>('purchase_history', []);
     
     // 提取供应商信息
     const supplierMap = new Map<string, Supplier>();
@@ -121,7 +130,7 @@ function extractConsigneesFromHistory(): Consignee[] {
   try {
     if (typeof window === 'undefined') return [];
 
-    const packingHistory = getLocalStorageJSON('packing_history', []);
+    const packingHistory = getLocalStorageJSON<HistoryDocument[]>('packing_history', []);
     
     // 提取收货人信息
     const consigneeMap = new Map<string, Consignee>();
@@ -175,7 +184,7 @@ function saveCustomerToHistory(customer: Customer) {
     if (typeof window === 'undefined') return;
 
     // 从专门的客户存储中读取现有数据
-    const existingCustomers = getLocalStorageJSON('customer_management', []);
+    const existingCustomers = getLocalStorageJSON<Customer[]>('customer_management', []);
     
     // 检查是否已存在同名客户，如果存在则更新
     const existingIndex = existingCustomers.findIndex((c: Customer) => c.name === customer.name);
@@ -203,7 +212,7 @@ function saveSupplierToHistory(supplier: Supplier) {
     if (typeof window === 'undefined') return;
 
     // 从专门的供应商存储中读取现有数据
-    const existingSuppliers = getLocalStorageJSON('supplier_management', []);
+    const existingSuppliers = getLocalStorageJSON<Supplier[]>('supplier_management', []);
     
     // 检查是否已存在同名供应商，如果存在则更新
     const existingIndex = existingSuppliers.findIndex((s: Supplier) => s.name === supplier.name);
@@ -230,7 +239,7 @@ function loadSavedSuppliers(): Supplier[] {
   try {
     if (typeof window === 'undefined') return [];
     
-    const savedSuppliers = getLocalStorageJSON('supplier_management', []);
+    const savedSuppliers = getLocalStorageJSON<Supplier[]>('supplier_management', []);
     console.log('从localStorage读取的供应商数据:', savedSuppliers);
     return savedSuppliers;
   } catch (error) {
@@ -245,7 +254,7 @@ function saveConsigneeToHistory(consignee: Consignee) {
     if (typeof window === 'undefined') return;
 
     // 从专门的收货人存储中读取现有数据
-    const existingConsignees = getLocalStorageJSON('consignee_management', []);
+    const existingConsignees = getLocalStorageJSON<Consignee[]>('consignee_management', []);
     
     // 检查是否已存在同名收货人，如果存在则更新
     const existingIndex = existingConsignees.findIndex((c: Consignee) => c.name === consignee.name);
@@ -272,7 +281,7 @@ function loadSavedConsignees(): Consignee[] {
   try {
     if (typeof window === 'undefined') return [];
     
-    const savedConsignees = getLocalStorageJSON('consignee_management', []);
+    const savedConsignees = getLocalStorageJSON<Consignee[]>('consignee_management', []);
     console.log('从localStorage读取的收货人数据:', savedConsignees);
     return savedConsignees;
   } catch (error) {
@@ -411,9 +420,9 @@ export default function CustomerPage() {
 
       // 如果是编辑操作，检查是否会影响历史记录
       if (editingCustomer && editingCustomer.name !== customerData.name) {
-        const quotationHistory = getLocalStorageJSON('quotation_history', []);
-        const packingHistory = getLocalStorageJSON('packing_history', []);
-        const invoiceHistory = getLocalStorageJSON('invoice_history', []);
+        const quotationHistory = getLocalStorageJSON<HistoryDocument[]>('quotation_history', []);
+        const packingHistory = getLocalStorageJSON<HistoryDocument[]>('packing_history', []);
+        const invoiceHistory = getLocalStorageJSON<HistoryDocument[]>('invoice_history', []);
         
         const allHistory = [...quotationHistory, ...packingHistory, ...invoiceHistory];
         const relatedRecords = allHistory.filter((doc: any) => {
@@ -476,7 +485,7 @@ export default function CustomerPage() {
 
       // 如果是编辑操作，检查是否会影响历史记录
       if (editingSupplier && editingSupplier.name !== supplierData.name) {
-        const purchaseHistory = getLocalStorageJSON('purchase_history', []);
+        const purchaseHistory = getLocalStorageJSON<HistoryDocument[]>('purchase_history', []);
         
         const relatedRecords = purchaseHistory.filter((doc: any) => {
           if (!doc) return false;
@@ -532,7 +541,7 @@ export default function CustomerPage() {
 
       // 如果是编辑操作，检查是否会影响历史记录
       if (editingConsignee && editingConsignee.name !== consigneeData.name) {
-        const packingHistory = getLocalStorageJSON('packing_history', []);
+        const packingHistory = getLocalStorageJSON<HistoryDocument[]>('packing_history', []);
         
         const relatedRecords = packingHistory.filter((doc: any) => {
           if (!doc) return false;
@@ -575,9 +584,9 @@ export default function CustomerPage() {
   // 编辑客户
   const editCustomer = (customer: Customer) => {
     // 检查该客户是否被多个历史记录引用
-    const quotationHistory = getLocalStorageJSON('quotation_history', []);
-    const packingHistory = getLocalStorageJSON('packing_history', []);
-    const invoiceHistory = getLocalStorageJSON('invoice_history', []);
+    const quotationHistory = getLocalStorageJSON<HistoryDocument[]>('quotation_history', []);
+    const packingHistory = getLocalStorageJSON<HistoryDocument[]>('packing_history', []);
+    const invoiceHistory = getLocalStorageJSON<HistoryDocument[]>('invoice_history', []);
     
     const allHistory = [...quotationHistory, ...packingHistory, ...invoiceHistory];
     const relatedRecords = allHistory.filter((doc: any) => {
@@ -621,7 +630,7 @@ export default function CustomerPage() {
   // 编辑供应商
   const editSupplier = (supplier: Supplier) => {
     // 检查该供应商是否被多个历史记录引用
-    const purchaseHistory = getLocalStorageJSON('purchase_history', []);
+    const purchaseHistory = getLocalStorageJSON<HistoryDocument[]>('purchase_history', []);
     
     const relatedRecords = purchaseHistory.filter((doc: any) => {
       if (!doc) return false;
@@ -658,7 +667,7 @@ export default function CustomerPage() {
   // 编辑收货人
   const editConsignee = (consignee: Consignee) => {
     // 检查该收货人是否被多个历史记录引用
-    const packingHistory = getLocalStorageJSON('packing_history', []);
+    const packingHistory = getLocalStorageJSON<HistoryDocument[]>('packing_history', []);
     
     const relatedRecords = packingHistory.filter((doc: any) => {
       if (!doc) return false;
@@ -699,9 +708,9 @@ export default function CustomerPage() {
     if (!customerToDelete) return;
     
     // 检查该客户是否被历史记录引用
-    const quotationHistory = getLocalStorageJSON('quotation_history', []);
-    const packingHistory = getLocalStorageJSON('packing_history', []);
-    const invoiceHistory = getLocalStorageJSON('invoice_history', []);
+    const quotationHistory = getLocalStorageJSON<HistoryDocument[]>('quotation_history', []);
+    const packingHistory = getLocalStorageJSON<HistoryDocument[]>('packing_history', []);
+    const invoiceHistory = getLocalStorageJSON<HistoryDocument[]>('invoice_history', []);
     
     const allHistory = [...quotationHistory, ...packingHistory, ...invoiceHistory];
     const relatedRecords = allHistory.filter((doc: any) => {
@@ -738,7 +747,7 @@ export default function CustomerPage() {
 
     try {
       // 从localStorage中删除客户
-      const existingCustomers = getLocalStorageJSON('customer_management', []);
+      const existingCustomers = getLocalStorageJSON<Customer[]>('customer_management', []);
       const updatedCustomers = existingCustomers.filter((c: Customer) => c.id !== customerId);
       localStorage.setItem('customer_management', JSON.stringify(updatedCustomers));
       
@@ -757,7 +766,7 @@ export default function CustomerPage() {
     if (!supplierToDelete) return;
     
     // 检查该供应商是否被历史记录引用
-    const purchaseHistory = getLocalStorageJSON('purchase_history', []);
+    const purchaseHistory = getLocalStorageJSON<HistoryDocument[]>('purchase_history', []);
     
     const relatedRecords = purchaseHistory.filter((doc: any) => {
       if (!doc) return false;
@@ -787,7 +796,7 @@ export default function CustomerPage() {
 
     try {
       // 从localStorage中删除供应商
-      const existingSuppliers = getLocalStorageJSON('supplier_management', []);
+      const existingSuppliers = getLocalStorageJSON<Supplier[]>('supplier_management', []);
       const updatedSuppliers = existingSuppliers.filter((s: Supplier) => s.id !== supplierId);
       localStorage.setItem('supplier_management', JSON.stringify(updatedSuppliers));
       
@@ -806,7 +815,7 @@ export default function CustomerPage() {
     if (!consigneeToDelete) return;
     
     // 检查该收货人是否被历史记录引用
-    const packingHistory = getLocalStorageJSON('packing_history', []);
+    const packingHistory = getLocalStorageJSON<HistoryDocument[]>('packing_history', []);
     
     const relatedRecords = packingHistory.filter((doc: any) => {
       if (!doc) return false;
@@ -836,7 +845,7 @@ export default function CustomerPage() {
 
     try {
       // 从localStorage中删除收货人
-      const existingConsignees = getLocalStorageJSON('consignee_management', []);
+      const existingConsignees = getLocalStorageJSON<Consignee[]>('consignee_management', []);
       const updatedConsignees = existingConsignees.filter((c: Consignee) => c.id !== consigneeId);
       localStorage.setItem('consignee_management', JSON.stringify(updatedConsignees));
       
@@ -1027,9 +1036,9 @@ export default function CustomerPage() {
                 </div>
                 <div className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                   <div>调试信息：</div>
-                  <div>• 报价单历史：{getLocalStorageJSON('quotation_history', []).length} 条</div>
-                  <div>• 装箱单历史：{getLocalStorageJSON('packing_history', []).length} 条</div>
-                  <div>• 发票历史：{getLocalStorageJSON('invoice_history', []).length} 条</div>
+                  <div>• 报价单历史：{getLocalStorageJSON<HistoryDocument[]>('quotation_history', []).length} 条</div>
+                  <div>• 装箱单历史：{getLocalStorageJSON<HistoryDocument[]>('packing_history', []).length} 条</div>
+                  <div>• 发票历史：{getLocalStorageJSON<HistoryDocument[]>('invoice_history', []).length} 条</div>
                   <div>• 提取的客户：{getAllCustomers().length} 个</div>
                 </div>
               </div>
@@ -1092,7 +1101,7 @@ export default function CustomerPage() {
                 </div>
                 <div className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                   <div>调试信息：</div>
-                  <div>• 采购单历史：{getLocalStorageJSON('purchase_history', []).length} 条</div>
+                  <div>• 采购单历史：{getLocalStorageJSON<HistoryDocument[]>('purchase_history', []).length} 条</div>
                   <div>• 提取的供应商：{extractSuppliersFromHistory().length} 个</div>
                 </div>
               </div>
@@ -1155,7 +1164,7 @@ export default function CustomerPage() {
                 </div>
                 <div className="text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                   <div>调试信息：</div>
-                  <div>• 装箱单历史：{getLocalStorageJSON('packing_history', []).length} 条</div>
+                  <div>• 装箱单历史：{getLocalStorageJSON<HistoryDocument[]>('packing_history', []).length} 条</div>
                   <div>• 提取的收货人：{extractConsigneesFromHistory().length} 个</div>
                 </div>
               </div>

@@ -10,7 +10,7 @@ import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 // 使用统一的安全字体工具，原有setCnFont函数已移至 pdf/ensureFont.ts
 
 // 扩展jsPDF类型以支持autotable
-interface ExtendedJsPDF extends jsPDF {
+interface ExtendedJsPDF extends Omit<jsPDF, 'getFont' | 'getImageProperties'> {
   autoTable: (options: any) => void;
   lastAutoTable: {
     finalY: number;
@@ -60,7 +60,7 @@ export const generateQuotationPDF = async (
 
     // 创建PDF文档
     const docCreationId = startTimer('doc-creation');
-    const doc = new jsPDF() as ExtendedJsPDF;
+    const doc = new jsPDF() as any;
     endTimer(docCreationId, 'doc-creation');
 
     // 字体策略：预览和导出都使用中文字体，确保中文正常显示

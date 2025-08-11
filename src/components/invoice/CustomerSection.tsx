@@ -55,6 +55,7 @@ const inputClassName = `w-full px-4 py-2.5 rounded-2xl
 
 export function CustomerSection({ to, customerPO, onChange }: CustomerSectionProps) {
   const [savedCustomers, setSavedCustomers] = useState<SavedCustomer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<SavedCustomer[]>([]);
   const [showSavedCustomers, setShowSavedCustomers] = useState(false);
 
   // 添加 ref 用于检测点击外部区域

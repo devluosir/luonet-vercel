@@ -154,7 +154,7 @@ export function getCustomersForDropdown(): SavedCustomer[] {
     
     for (const pattern of companyEndPatterns) {
       const match = fullInfo.match(pattern);
-      if (match) {
+      if (match && match.index !== undefined) {
         titleEndIndex = match.index;
         break;
       }

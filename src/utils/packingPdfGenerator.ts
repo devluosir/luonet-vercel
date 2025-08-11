@@ -6,7 +6,7 @@ import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { setCnFont, validateFontRegistration } from '@/utils/pdfFontUtils';
 
 // 扩展 jsPDF 类型
-interface ExtendedJsPDF extends jsPDF {
+interface ExtendedJsPDF extends Omit<jsPDF, 'getImageProperties' | 'setPage'> {
   autoTable: (options: UserOptions) => void;
   getImageProperties: (image: string) => { width: number; height: number };
   getNumberOfPages: () => number;
@@ -84,14 +84,14 @@ export async function generatePackingListPDF(
     format: 'a4',
     putOnlyUsedFonts: true,
     floatPrecision: 16
-  }) as unknown as ExtendedJsPDF;
+  }) as any;
 
   try {
     // 确保字体在当前 doc 实例注册
-    await ensurePdfFont(doc);
+    await ensurePdfFont(doc as unknown as jsPDF);
     
     // 验证字体注册
-    validateFontRegistration(doc, '装箱单');
+    validateFontRegistration(doc as unknown as jsPDF, '装箱单');
 
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
@@ -193,7 +193,7 @@ function getPackingListTitle(data: PackingData): string {
 }
 
 // 渲染基本信息
-function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, pageWidth: number, margin: number): number {
+function renderBasicInfo(doc: any, data: PackingData, startY: number, pageWidth: number, margin: number): number {
   let currentY = startY;
   const contentIndent = 5; // 收货人信息的缩进值
   const orderNoIndent = 15; // Order No. 内容的缩进值，设置更大的缩进
@@ -284,7 +284,7 @@ function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, 
 }
 
 // 渲染备注
-function renderRemarks(doc: ExtendedJsPDF, data: PackingData, startY: number, pageWidth: number, margin: number): number {
+function renderRemarks(doc: any, data: PackingData, startY: number, pageWidth: number, margin: number): number {
   let currentY = startY;
   
   // 检查是否有备注内容
@@ -322,7 +322,7 @@ function renderRemarks(doc: ExtendedJsPDF, data: PackingData, startY: number, pa
 }
 
 // 添加页码
-function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: number, margin: number): void {
+function addPageNumbers(doc: any, pageWidth: number, pageHeight: number, margin: number): void {
   const totalPages = doc.getNumberOfPages();
   
   for (let i = 1; i <= totalPages; i++) {
@@ -337,7 +337,7 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
 }
 
 // 处理表头错误的情况
-function handleHeaderError(doc: ExtendedJsPDF, data: PackingData, margin: number, pageWidth: number): number {
+function handleHeaderError(doc: any, data: PackingData, margin: number, pageWidth: number): number {
   doc.setFontSize(14);
   setCnFont(doc, 'bold');
   const title = getPackingListTitle(data);
@@ -348,7 +348,7 @@ function handleHeaderError(doc: ExtendedJsPDF, data: PackingData, margin: number
 }
 
 // 处理无表头的情况
-function handleNoHeader(doc: ExtendedJsPDF, data: PackingData, margin: number, pageWidth: number): number {
+function handleNoHeader(doc: any, data: PackingData, margin: number, pageWidth: number): number {
   doc.setFontSize(14);
   setCnFont(doc, 'bold');
   const title = getPackingListTitle(data);
@@ -360,7 +360,7 @@ function handleNoHeader(doc: ExtendedJsPDF, data: PackingData, margin: number, p
 
 // 渲染商品表格
 async function renderPackingTable(
-  doc: ExtendedJsPDF,
+  doc: any,
   data: PackingData,
   startY: number,
   _totals?: { netWeight: number; grossWeight: number; packageQty: number; totalPrice: number }

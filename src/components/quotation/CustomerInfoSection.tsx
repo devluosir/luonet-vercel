@@ -5,7 +5,7 @@ import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { hasStringChanged, normalizeStringInput } from '@/features/quotation/utils/inputUtils';
 import { useDebounced } from '@/hooks/useDebounced';
 import { useQuotationStore } from '@/features/quotation/state/useQuotationStore';
-import { getCustomersForDropdown, SavedCustomer } from '@/utils/customerDataService';
+import { getCustomersForDropdown } from '@/utils/customerDataService';
 
 // 🛡️ 兜底：多行名称 → 单行展示（避免触发清空/过滤判定）
 function sanitizeForInput(s: string): string {
