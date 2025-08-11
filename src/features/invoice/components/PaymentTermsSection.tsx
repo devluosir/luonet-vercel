@@ -75,6 +75,11 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
     updateData({ showPaymentTerms: showMainTerm });
   }, [showMainTerm, updateData]);
 
+  // 同步data.showPaymentTerms到showMainTerm
+  React.useEffect(() => {
+    setShowMainTerm(showPaymentTerms);
+  }, [showPaymentTerms]);
+
   // 点击外部关闭预设弹窗
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -91,47 +96,87 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
 
   const preview = useMemo(() => {
     const items: { index: number; content: React.ReactNode }[] = [];
-    let termIndex = 1;
     
-    // 1. 主条款（与PDF逻辑保持一致）
-    if (showMainTerm) {
-      // 将日期部分高亮为红色
-      const mainWithRedDate = main.replace(
-        dateISO, 
-        `<span style="color: #ef4444">${dateISO}</span>`
-      );
-      items.push({
-        index: termIndex,
-        content: <span dangerouslySetInnerHTML={{ __html: `${termIndex}. ${mainWithRedDate}` }} />
-      });
-      termIndex++;
-    }
+    // 计算条款总数
+    let totalTerms = 0;
+    if (showMainTerm && dateISO && dateISO.trim()) totalTerms++;
+    if (additionalTermsArray.length > 0) totalTerms += additionalTermsArray.length;
+    if (showInvoiceReminder && invoiceNoExternal && invoiceNoExternal.trim()) totalTerms++;
     
-    // 2. 附加条款（按行拆分，每行一个条款）
-    additionalTermsArray.forEach(term => {
-      if (term.trim()) {
+    // 根据条款数量决定使用单数还是复数形式
+    const titleText = totalTerms === 1 ? 'Payment Term: ' : 'Payment Terms:';
+    
+          if (totalTerms === 1) {
+        // 单条付款条款的情况，标题和内容在同一行
+        if (showMainTerm && dateISO && dateISO.trim()) {
+          // 将日期部分高亮为红色
+          const mainWithRedDate = main.replace(
+            dateISO, 
+            `<span style="color: #ef4444">${dateISO}</span>`
+          );
+          items.push({
+            index: 1,
+            content: <span dangerouslySetInnerHTML={{ __html: `<strong>${titleText}</strong>${mainWithRedDate}` }} />
+          });
+        } else if (additionalTermsArray.length > 0) {
+          items.push({
+            index: 1,
+            content: <span dangerouslySetInnerHTML={{ __html: `<strong>${titleText}</strong>${additionalTermsArray[0]}` }} />
+          });
+        } else if (showInvoiceReminder && invoiceNoExternal && invoiceNoExternal.trim()) {
+          const hintWithRedInvoice = invoiceHint.replace(
+            `"${invoiceNoExternal}"`,
+            `"<span style="color: #ef4444">${invoiceNoExternal}</span>"`
+          );
+          items.push({
+            index: 1,
+            content: <span dangerouslySetInnerHTML={{ __html: `<strong>${titleText}</strong>${hintWithRedInvoice}` }} />
+          });
+        }
+      } else {
+      // 多条付款条款的情况，使用编号列表格式
+      let termIndex = 1;
+      
+      // 1. 主条款（与PDF逻辑保持一致）
+      if (showMainTerm && dateISO && dateISO.trim()) {
+        // 将日期部分高亮为红色
+        const mainWithRedDate = main.replace(
+          dateISO, 
+          `<span style="color: #ef4444">${dateISO}</span>`
+        );
         items.push({
           index: termIndex,
-          content: `${termIndex}. ${term.trim()}`
+          content: <span dangerouslySetInnerHTML={{ __html: `${termIndex}. ${mainWithRedDate}` }} />
         });
         termIndex++;
       }
-    });
-    
-    // 3. 发票号提醒（发票号显示为红色）
-    if (invoiceHint && invoiceNoExternal) {
-      const hintWithRedInvoice = invoiceHint.replace(
-        `"${invoiceNoExternal}"`,
-        `"<span style="color: #ef4444">${invoiceNoExternal}</span>"`
-      );
-      items.push({
-        index: termIndex,
-        content: <span dangerouslySetInnerHTML={{ __html: `${termIndex}. ${hintWithRedInvoice}` }} />
+      
+      // 2. 附加条款（按行拆分，每行一个条款）
+      additionalTermsArray.forEach(term => {
+        if (term.trim()) {
+          items.push({
+            index: termIndex,
+            content: `${termIndex}. ${term.trim()}`
+          });
+          termIndex++;
+        }
       });
+      
+      // 3. 发票号提醒（发票号显示为红色）
+      if (showInvoiceReminder && invoiceNoExternal && invoiceNoExternal.trim()) {
+        const hintWithRedInvoice = invoiceHint.replace(
+          `"${invoiceNoExternal}"`,
+          `"<span style="color: #ef4444">${invoiceNoExternal}</span>"`
+        );
+        items.push({
+          index: termIndex,
+          content: <span dangerouslySetInnerHTML={{ __html: `${termIndex}. ${hintWithRedInvoice}` }} />
+        });
+      }
     }
     
     return items;
-  }, [showMainTerm, main, dateISO, additionalTermsArray, invoiceHint, invoiceNoExternal]);
+  }, [showMainTerm, main, dateISO, additionalTermsArray, invoiceHint, invoiceNoExternal, showInvoiceReminder]);
 
   return (
     <div className="space-y-3">
@@ -286,7 +331,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
         </div>
         <div className="whitespace-pre-wrap rounded bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 p-2 text-[11px] leading-5 text-gray-900 dark:text-gray-100 font-mono">
           {preview.map((item, index) => (
-            <div key={index}>
+            <div key={index} className="mb-1 last:mb-0">
               {typeof item.content === 'string' ? item.content : item.content}
             </div>
           ))}

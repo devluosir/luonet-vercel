@@ -58,8 +58,8 @@ function CustomerField({
         }
       }
 
-      // 3) 历史列表聚合（quotation/invoice/packing）
-      const historyKeys = ['quotation_history', 'invoice_history', 'packing_history'];
+      // 3) 历史列表聚合（quotation/invoice - 不包含packing的收货人数据）
+      const historyKeys = ['quotation_history', 'invoice_history'];
       for (const key of historyKeys) {
         const raw = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
         if (!raw) continue;
@@ -67,7 +67,7 @@ function CustomerField({
           const arr = JSON.parse(raw);
           if (Array.isArray(arr)) {
             for (const item of arr) {
-              const name = String(item?.customerName || item?.consigneeName || item?.name || '');
+              const name = String(item?.customerName || item?.name || '');
               const to = String(item?.to || item?.data?.to || '');
               if (name || to) aggregate.push({ name, to });
             }
@@ -230,7 +230,7 @@ export const InvoiceInfoCompact = React.memo(({ data, onChange }: InvoiceInfoCom
               placeholder=""
               value={data.invoiceNo || ''}
               onChange={set('invoiceNo')}
-              className="fi"
+              className="fi font-bold text-red-600 dark:text-red-400"
             />
           </Field>
           <Field label="Date">

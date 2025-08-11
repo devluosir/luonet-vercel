@@ -14,6 +14,7 @@ export interface PDFGeneratorData {
     unit: string;
     unitPrice: number;
     amount: number;
+    remarks?: string;
     highlight?: {
       hsCode?: boolean;
       partname?: boolean;
@@ -22,11 +23,13 @@ export interface PDFGeneratorData {
       unit?: boolean;
       unitPrice?: boolean;
       amount?: boolean;
+      remarks?: boolean;
     };
   }[];
   otherFees?: {
     description: string;
     amount: number;
+    remarks?: string;
     highlight?: {
       description?: boolean;
       amount?: boolean;
@@ -39,7 +42,9 @@ export interface PDFGeneratorData {
   date: string;
   currency: string;
   showHsCode: boolean;
+  showPartName: boolean;
   showDescription: boolean;
+  showRemarks: boolean;
   amountInWords: {
     dollars: string;
     cents: string;

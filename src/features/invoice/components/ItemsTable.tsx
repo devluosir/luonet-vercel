@@ -100,8 +100,20 @@ export const ItemsTable = React.memo(() => {
   const [editingOtherFeeAmount, setEditingOtherFeeAmount] = useState<string>('');
   const [importPreset, setImportPreset] = useState<{ raw: string; parsed: any } | null>(null);
 
-  // 列显示状态
-  const [visibleCols, setVisibleCols] = useState(['hsCode', 'partName', 'description', 'quantity', 'unit', 'unitPrice', 'amount', 'remarks']);
+  // 列显示状态 - HS code、Part Name、Description、Remarks 可控，其他列常显
+  // 互锁规则：Part Name 和 Description 至少必须显示一个
+  const visibleCols = useMemo(() => {
+    const cols = [];
+    if (data.showHsCode) cols.push('hsCode');
+    if (data.showPartName) cols.push('partName');
+    if (data.showDescription) cols.push('description');
+    if (data.showRemarks) cols.push('remarks');
+    // 确保 Part Name 和 Description 至少有一个显示（互锁约束）
+    if (!cols.includes('partName') && !cols.includes('description')) {
+      cols.push('description'); // 默认显示 Description
+    }
+    return cols;
+  }, [data.showHsCode, data.showPartName, data.showDescription, data.showRemarks]);
 
   // 检测暗色模式
   useEffect(() => {
@@ -114,6 +126,10 @@ export const ItemsTable = React.memo(() => {
     }
     return;
   }, []);
+
+
+
+
 
   // 处理键盘导航
   const handleKeyDown = (
@@ -170,6 +186,11 @@ export const ItemsTable = React.memo(() => {
   // 处理其他费用描述变化
   const handleOtherFeeDescriptionChange = (id: number, value: string) => {
     updateOtherFee(id, 'description', value);
+  };
+
+  // 处理其他费用备注变化
+  const handleOtherFeeRemarksChange = (id: number, value: string) => {
+    updateOtherFee(id, 'remarks', value);
   };
 
   // 获取所有可用单位
@@ -287,18 +308,22 @@ export const ItemsTable = React.memo(() => {
     }
   };
 
-  // 列切换功能
+  // 列切换功能 - 直接更新 store 中的显示设置
   const toggleCol = (col: string) => {
-    setVisibleCols(prev => 
-      prev.includes(col) 
-        ? prev.filter(c => c !== col)
-        : [...prev, col]
-    );
+    if (col === 'hsCode') {
+      updateData({ showHsCode: !data.showHsCode });
+    } else if (col === 'partName') {
+      updateData({ showPartName: !data.showPartName });
+    } else if (col === 'description') {
+      updateData({ showDescription: !data.showDescription });
+    } else if (col === 'remarks') {
+      updateData({ showRemarks: !data.showRemarks });
+    }
   };
 
-  // 获取有效可见列
+  // 获取有效可见列 - HS code、Part Name、Description、Remarks 可控，其他列常显
   const effectiveVisibleCols = visibleCols.filter(col => 
-    ['hsCode', 'partName', 'description', 'quantity', 'unit', 'unitPrice', 'amount', 'remarks'].includes(col)
+    ['hsCode', 'partName', 'description', 'remarks'].includes(col)
   );
 
   // 焦点处理
@@ -327,7 +352,7 @@ export const ItemsTable = React.memo(() => {
           <ColumnToggle
             visibleCols={effectiveVisibleCols}
             onToggleCol={toggleCol}
-            availableCols={['hsCode', 'partName', 'description', 'quantity', 'unit', 'unitPrice', 'amount', 'remarks']}
+            availableCols={['hsCode', 'partName', 'description', 'remarks']}
           />
           <QuickImport
             onInsert={handleInsertImported}
@@ -399,9 +424,8 @@ export const ItemsTable = React.memo(() => {
                 </div>
               )}
 
-              {/* Qty + Unit */}
+              {/* Qty + Unit - 始终显示 */}
               <div className="grid grid-cols-2 gap-4">
-                {effectiveVisibleCols.includes('quantity') && (
                 <div>
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
                   <input
@@ -416,8 +440,6 @@ export const ItemsTable = React.memo(() => {
                     placeholder="0"
                   />
                 </div>
-                )}
-                {effectiveVisibleCols.includes('unit') && (
                 <div>
                   <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
                   <select
@@ -442,12 +464,10 @@ export const ItemsTable = React.memo(() => {
                       })}
                   </select>
                 </div>
-                )}
               </div>
 
-              {/* U/Price + Amount */}
+              {/* U/Price + Amount - 始终显示 */}
               <div className="grid grid-cols-2 gap-4">
-                {effectiveVisibleCols.includes('unitPrice') && (
                 <div>
                   <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit Price</label>
                   <input
@@ -462,9 +482,7 @@ export const ItemsTable = React.memo(() => {
                     placeholder="0.00"
                     />
                   </div>
-                )}
-                {effectiveVisibleCols.includes('amount') && (
-                  <div>
+                <div>
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Amount</label>
                     <input
                       type="text"
@@ -477,7 +495,6 @@ export const ItemsTable = React.memo(() => {
                       style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
                   />
                 </div>
-                )}
               </div>
 
               {/* Remarks */}
@@ -524,6 +541,22 @@ export const ItemsTable = React.memo(() => {
                       className={`${fee.highlight?.description ? HIGHLIGHT_CLASS : ''}`}
                     />
                   </div>
+
+                  {/* Other Fees Remarks */}
+                  {effectiveVisibleCols.includes('remarks') && (
+                    <div>
+                      <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Remarks</label>
+                      <AutoGrowTextarea
+                        value={fee.remarks || ''}
+                        onChange={(e) => handleOtherFeeRemarksChange(fee.id, e.target.value)}
+                        onDoubleClick={() => handleOtherFeeDoubleClick(index, 'remarks')}
+                        isDarkMode={isDarkMode}
+                        onFocusIOS={onFocusIOS}
+                        className={`${fee.highlight?.remarks ? HIGHLIGHT_CLASS : ''}`}
+                        placeholder="Enter remarks..."
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Amount</label>
@@ -598,21 +631,13 @@ export const ItemsTable = React.memo(() => {
                     {effectiveVisibleCols.includes('description') && (
                       <th className="px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] min-w-[120px]">Description</th>
                     )}
-                    {effectiveVisibleCols.includes('quantity') && (
-                      <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
-                    )}
-                    {effectiveVisibleCols.includes('unit') && (
-                      <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
-                    )}
-                    {effectiveVisibleCols.includes('unitPrice') && (
-                      <th className="w-32 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
-                    )}
-                    {effectiveVisibleCols.includes('amount') && (
-                      <th className="w-28 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
-                    )}
+                    <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Q&apos;TY</th>
+                    <th className="w-24 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Unit</th>
+                    <th className="w-32 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">U/Price</th>
+                    <th className="w-28 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Amount</th>
                     {effectiveVisibleCols.includes('remarks') && (
                       <th
-                        className={`min-w-[120px] px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] ${
+                        className={`w-40 px-2 py-3 text-center text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] ${
                           (data.otherFees ?? []).length === 0 ? 'rounded-tr-2xl' : ''
                         }`}
                       >
@@ -687,81 +712,73 @@ export const ItemsTable = React.memo(() => {
                         </td>
                       )}
 
-                      {effectiveVisibleCols.includes('quantity') && (
-                        <td className="w-24 px-2 py-2">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            {...qtyInputProps(index)}
-                            onDoubleClick={() => handleDoubleClick(index, 'quantity')}
-                            className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
-                              focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
-                              [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${item.highlight?.quantity ? HIGHLIGHT_CLASS : ''}`}
-                            style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
-                          />
-                        </td>
-                      )}
+                      <td className="w-24 px-2 py-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          {...qtyInputProps(index)}
+                          onDoubleClick={() => handleDoubleClick(index, 'quantity')}
+                          className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
+                            focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                            text-[13px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
+                            [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${item.highlight?.quantity ? HIGHLIGHT_CLASS : ''}`}
+                          style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
+                        />
+                      </td>
 
-                      {effectiveVisibleCols.includes('unit') && (
-                        <td className="w-24 px-2 py-2">
-                          <select
-                            value={item.unit}
-                            onChange={(e) => handleUnitChange(index, e.target.value)}
-                            onDoubleClick={() => handleDoubleClick(index, 'unit')}
-                            onFocus={onFocusIOS}
-                            className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
-                              focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-center cursor-pointer appearance-none ios-optimized-input ${item.highlight?.unit ? HIGHLIGHT_CLASS : ''}`}
-                            style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
-                          >
-                            {getAllUnits().map((unit) => {
-                              const display = DEFAULT_UNITS.includes(unit)
-                                ? getUnitDisplay(unit, item.quantity)
-                                : unit;
-                              return (
-                                <option key={unit} value={display}>
-                                  {display}
-                                </option>
-                              );
-                            })}
-                          </select>
-                        </td>
-                      )}
+                      <td className="w-24 px-2 py-2">
+                        <select
+                          value={item.unit}
+                          onChange={(e) => handleUnitChange(index, e.target.value)}
+                          onDoubleClick={() => handleDoubleClick(index, 'unit')}
+                          onFocus={onFocusIOS}
+                          className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
+                            focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                            text-[13px] text-center cursor-pointer appearance-none ios-optimized-input ${item.highlight?.unit ? HIGHLIGHT_CLASS : ''}`}
+                          style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
+                        >
+                          {getAllUnits().map((unit) => {
+                            const display = DEFAULT_UNITS.includes(unit)
+                              ? getUnitDisplay(unit, item.quantity)
+                              : unit;
+                            return (
+                              <option key={unit} value={display}>
+                                {display}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </td>
 
-                      {effectiveVisibleCols.includes('unitPrice') && (
-                        <td className="w-32 px-2 py-2">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            {...priceInputProps(index)}
-                            onDoubleClick={() => handleDoubleClick(index, 'unitPrice')}
-                            className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
-                              focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
-                              [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${item.highlight?.unitPrice ? HIGHLIGHT_CLASS : ''}`}
-                            style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
-                          />
-                        </td>
-                      )}
+                      <td className="w-32 px-2 py-2">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          {...priceInputProps(index)}
+                          onDoubleClick={() => handleDoubleClick(index, 'unitPrice')}
+                          className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
+                            focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                            text-[13px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
+                            [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${item.highlight?.unitPrice ? HIGHLIGHT_CLASS : ''}`}
+                          style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
+                        />
+                      </td>
 
-                      {effectiveVisibleCols.includes('amount') && (
-                        <td className="w-28 px-2 py-2">
-                          <input
-                            type="text"
-                            value={item.amount.toFixed(2)}
-                            readOnly
-                            onDoubleClick={() => handleDoubleClick(index, 'amount')}
-                            className={`w-full px-3 py-1.5 bg-transparent text-[13px] text-center ios-optimized-input ${
-                              item.highlight?.amount ? HIGHLIGHT_CLASS : ''
-                            }`}
-                            style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
-                          />
-                        </td>
-                      )}
+                      <td className="w-28 px-2 py-2">
+                        <input
+                          type="text"
+                          value={item.amount.toFixed(2)}
+                          readOnly
+                          onDoubleClick={() => handleDoubleClick(index, 'amount')}
+                          className={`w-full px-3 py-1.5 bg-transparent text-[13px] text-center ios-optimized-input ${
+                            item.highlight?.amount ? HIGHLIGHT_CLASS : ''
+                          }`}
+                          style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
+                        />
+                      </td>
 
                       {effectiveVisibleCols.includes('remarks') && (
-                        <td className="w-1/5 px-2 py-2">
+                        <td className="w-40 px-2 py-2">
                           <AutoGrowTextarea
                             value={item.remarks || ''}
                             onChange={(e) => handleRemarksChange(index, e.target.value)}
@@ -798,7 +815,15 @@ export const ItemsTable = React.memo(() => {
                             ×
                           </span>
                         </td>
-                        <td colSpan={effectiveVisibleCols.includes('description') ? 6 : 5} className="px-2 py-2">
+                        <td 
+                          colSpan={
+                            (effectiveVisibleCols.includes('hsCode') ? 1 : 0) +
+                            (effectiveVisibleCols.includes('partName') ? 1 : 0) +
+                            (effectiveVisibleCols.includes('description') ? 1 : 0) +
+                            3 // Q'TY, Unit, U/Price
+                          } 
+                          className="px-2 py-2 bg-white/90 dark:bg-[#1C1C1E]/90"
+                        >
                           <AutoGrowTextarea
                             value={fee.description}
                             onChange={(e) => handleOtherFeeDescriptionChange(fee.id, e.target.value)}
@@ -808,7 +833,7 @@ export const ItemsTable = React.memo(() => {
                             className={`${fee.highlight?.description ? HIGHLIGHT_CLASS : ''} text-center`}
                           />
                         </td>
-                        <td className={`w-28 px-2 py-2 ${index === (data.otherFees ?? []).length - 1 && !effectiveVisibleCols.includes('remarks') ? 'rounded-br-2xl' : ''}`}>
+                        <td className="w-28 px-2 py-2">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -838,6 +863,18 @@ export const ItemsTable = React.memo(() => {
                             placeholder="0.00"
                           />
                         </td>
+                        {effectiveVisibleCols.includes('remarks') && (
+                          <td className={`w-40 px-2 py-2 ${index === (data.otherFees ?? []).length - 1 ? 'rounded-br-2xl' : ''}`}>
+                            <AutoGrowTextarea
+                              value={fee.remarks || ''}
+                              onChange={(e) => handleOtherFeeRemarksChange(fee.id, e.target.value)}
+                              onDoubleClick={() => handleOtherFeeDoubleClick(index, 'remarks')}
+                              isDarkMode={isDarkMode}
+                              onFocusIOS={onFocusIOS}
+                              className={`${fee.highlight?.remarks ? HIGHLIGHT_CLASS : ''} text-center`}
+                            />
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

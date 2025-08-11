@@ -322,35 +322,38 @@ async function renderInvoiceTable(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   const tableHeaders = [
     'No.',
     ...(data.showHsCode ? ['HS Code'] : []),
-    'Part Name',
+    ...(data.showPartName ? ['Part Name'] : []),
     ...(data.showDescription ? ['Description'] : []),
     'Q\'TY',
     'Unit',
     'Unit Price',
-    'Amount'
+    'Amount',
+    ...(data.showRemarks ? ['Remarks'] : [])
   ];
 
   const tableBody = [
     ...data.items.map((item, index) => [
       index + 1,
       ...(data.showHsCode ? [{ content: item.hsCode, styles: item.highlight?.hsCode ? { textColor: [255, 0, 0] } : {} }] : []),
-      { content: item.partname, styles: item.highlight?.partname ? { textColor: [255, 0, 0] } : {} },
+      ...(data.showPartName ? [{ content: item.partname, styles: item.highlight?.partname ? { textColor: [255, 0, 0] } : {} }] : []),
       ...(data.showDescription ? [{ content: item.description, styles: item.highlight?.description ? { textColor: [255, 0, 0] } : {} }] : []),
       { content: item.quantity || '', styles: item.highlight?.quantity ? { textColor: [255, 0, 0] } : {} },
       { content: item.quantity ? item.unit : '', styles: item.highlight?.unit ? { textColor: [255, 0, 0] } : {} },
       { content: Number(item.unitPrice).toFixed(2), styles: item.highlight?.unitPrice ? { textColor: [255, 0, 0] } : {} },
-      { content: Number(item.amount).toFixed(2), styles: item.highlight?.amount ? { textColor: [255, 0, 0] } : {} }
+      { content: Number(item.amount).toFixed(2), styles: item.highlight?.amount ? { textColor: [255, 0, 0] } : {} },
+      ...(data.showRemarks ? [{ content: item.remarks || '', styles: item.highlight?.remarks ? { textColor: [255, 0, 0] } : {} }] : [])
     ]),
     ...(data.otherFees || []).map(fee => [
       {
         content: fee.description,
-        colSpan: (data.showHsCode ? 1 : 0) + (data.showDescription ? 1 : 0) + 5,
+        colSpan: (data.showHsCode ? 1 : 0) + (data.showPartName ? 1 : 0) + (data.showDescription ? 1 : 0) + 4,
         styles: { halign: 'center', ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {}) }
       },
       {
         content: fee.amount.toFixed(2),
         styles: fee.highlight?.amount ? { textColor: [255, 0, 0] } : {}
-      }
+      },
+      ...(data.showRemarks ? [{ content: fee.remarks || '', styles: fee.highlight?.remarks ? { textColor: [255, 0, 0] } : {} }] : [])
     ])
   ];
 
@@ -418,6 +421,7 @@ function getColumnStyles(data: PDFGeneratorData, tableWidth: number): Record<str
     hsCode: 6,       // HS Code
     partName: 13,    // Part Name
     description: 16, // Description
+    remarks: 12,     // Remarks - 增加宽度
     qty: 4,          // Q'TY
     unit: 4,         // Unit
     unitPrice: 6,    // Unit Price
@@ -427,8 +431,9 @@ function getColumnStyles(data: PDFGeneratorData, tableWidth: number): Record<str
   // 计算实际显示的列数
   let totalWeight = baseWidths.no;
   if (data.showHsCode) totalWeight += baseWidths.hsCode;
-  totalWeight += baseWidths.partName;
+  if (data.showPartName) totalWeight += baseWidths.partName;
   if (data.showDescription) totalWeight += baseWidths.description;
+  if (data.showRemarks) totalWeight += baseWidths.remarks;
   totalWeight += baseWidths.qty + baseWidths.unit + baseWidths.unitPrice + baseWidths.amount;
 
   // 计算单位权重对应的宽度
@@ -455,11 +460,13 @@ function getColumnStyles(data: PDFGeneratorData, tableWidth: number): Record<str
   }
 
   // Part Name 列
-  columnStyles[currentColumnIndex] = { 
-    halign: 'center', 
-    cellWidth: baseWidths.partName * unitWidth 
-  };
-  currentColumnIndex++;
+  if (data.showPartName) {
+    columnStyles[currentColumnIndex] = { 
+      halign: 'center', 
+      cellWidth: baseWidths.partName * unitWidth 
+    };
+    currentColumnIndex++;
+  }
 
   // Description 列
   if (data.showDescription) {
@@ -496,6 +503,16 @@ function getColumnStyles(data: PDFGeneratorData, tableWidth: number): Record<str
     halign: 'center', 
     cellWidth: baseWidths.amount * unitWidth 
   };
+  currentColumnIndex++;
+
+  // Remarks 列
+  if (data.showRemarks) {
+    columnStyles[currentColumnIndex] = { 
+      halign: 'center', 
+      cellWidth: baseWidths.remarks * unitWidth 
+    };
+    currentColumnIndex++;
+  }
 
   return columnStyles;
 }
@@ -555,7 +572,9 @@ async function renderBankAndPaymentInfo(doc: ExtendedJsPDF, data: PDFGeneratorDa
   }
 
   // 付款条款
-  if (data.showPaymentTerms || data.additionalPaymentTerms || data.showInvoiceReminder) {
+  if (data.showPaymentTerms || 
+      (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) || 
+      data.showInvoiceReminder) {
     currentY = await renderPaymentTerms(doc, data, currentY, pageWidth, margin);
   }
 
@@ -565,86 +584,192 @@ async function renderBankAndPaymentInfo(doc: ExtendedJsPDF, data: PDFGeneratorDa
 // 渲染付款条款
 async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, startY: number, pageWidth: number, margin: number): Promise<number> {
   let currentY = startY;
-  const termLeftMargin = 25;
-  const maxWidth = pageWidth - termLeftMargin - 15;
-  let termCount = 1;
 
-  // 标题使用粗体
-  setCnFont(doc, 'bold');
-  doc.text('Payment Terms:', margin, currentY);
-  currentY += 5;
-
-  // 其他内容使用普通字体
-  setCnFont(doc, 'normal');
-
-  if (data.showPaymentTerms && data.paymentDate) {
-    const termNumber = `${termCount}.`;
-    doc.text(termNumber, 20, currentY);
-    
-    const term = `Full paid not later than ${data.paymentDate} by telegraphic transfer.`;
-    const parts = term.split(data.paymentDate);
-    
-    if (parts[0]) {
-      doc.text(parts[0], termLeftMargin, currentY);
-      const firstWidth = doc.getTextWidth(parts[0]);
-      
-      if (data.paymentDate) {
-        doc.setTextColor(255, 0, 0);
-        doc.text(data.paymentDate, termLeftMargin + firstWidth, currentY);
-        doc.setTextColor(0, 0, 0);
-      }
-      
-      if (parts[1]) {
-        const dateWidth = doc.getTextWidth(data.paymentDate || '');
-        doc.text(parts[1], termLeftMargin + firstWidth + dateWidth, currentY);
-      }
-    }
-    currentY += 5;
-    termCount++;
+  // 计算条款总数
+  let totalTerms = 0;
+  if (data.showPaymentTerms) totalTerms++;
+  if (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) {
+    totalTerms += data.additionalPaymentTerms.trim().split('\n').filter(line => line.trim()).length || 0;
   }
+  if (data.showInvoiceReminder) totalTerms++;
 
-  if (data.additionalPaymentTerms) {
-    const terms = data.additionalPaymentTerms.split('\n').filter(t => t.trim());
-    for (const term of terms) {
-      if (term) {
-        const termNumber = `${termCount}.`;
-        doc.text(termNumber, 20, currentY);
+  // 根据条款数量决定使用单数还是复数形式
+  const titleText = totalTerms === 1 ? 'Payment Term: ' : 'Payment Terms:';
+  
+    if (totalTerms === 1) {
+    // 单条付款条款的情况，标题和内容在同一行
+    if (data.showPaymentTerms) {
+      // 如果有日期，使用日期；否则使用默认文本
+      const paymentDate = data.paymentDate && data.paymentDate.trim() ? data.paymentDate : 'TBD';
+      const term = `Full payment not later than ${paymentDate} by telegraphic transfer (T/T).`;
+      const parts = term.split(paymentDate);
+      
+      // 标题使用粗体
+      setCnFont(doc, 'bold');
+      doc.text(titleText, margin, currentY);
+      
+      // 其他内容使用普通字体
+      setCnFont(doc, 'normal');
+      
+      // 增加标题和内容之间的间距
+      const titleWidth = doc.getTextWidth(titleText);
+      const spacing = 5; // 设置合适的间距
+      
+      if (parts[0]) {
+        doc.text(parts[0], margin + titleWidth + spacing, currentY);
+        const firstWidth = doc.getTextWidth(parts[0]);
         
-        const lines = doc.splitTextToSize(term, maxWidth);
-        if (lines && lines.length > 0) {
-          lines.forEach((line: string, index: number) => {
-            if (line) {
-              doc.text(line, termLeftMargin, currentY + (index * 5));
-            }
-          });
-          currentY += lines.length * 5;
-          termCount++;
+        // 日期显示为红色
+        doc.setTextColor(255, 0, 0);
+        doc.text(paymentDate, margin + titleWidth + spacing + firstWidth, currentY);
+        doc.setTextColor(0, 0, 0);
+        
+        if (parts[1]) {
+          const dateWidth = doc.getTextWidth(paymentDate);
+          doc.text(parts[1], margin + titleWidth + spacing + firstWidth + dateWidth, currentY);
         }
       }
-    }
-  }
-
-  if (data.showInvoiceReminder && data.invoiceNo) {
-    const termNumber = `${termCount}.`;
-    doc.text(termNumber, 20, currentY);
-    
-    const reminder = 'Please state our invoice no. "' + data.invoiceNo + '" on your payment documents.';
-    const parts = reminder.split('"' + data.invoiceNo + '"');
-    
-    if (parts[0]) {
-      doc.text(parts[0], termLeftMargin, currentY);
-      const firstWidth = doc.getTextWidth(parts[0]);
+      currentY += 5;
+    } else if (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) {
+      // 显示额外的付款条款
+      const additionalTerm = data.additionalPaymentTerms.trim();
       
+      // 标题使用粗体
+      setCnFont(doc, 'bold');
+      doc.text(titleText, margin, currentY);
+      
+      // 其他内容使用普通字体
+      setCnFont(doc, 'normal');
+      
+      const titleWidth = doc.getTextWidth(titleText);
+      const spacing = 5; // 设置合适的间距
+      doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
+      currentY += 5;
+    } else if (data.showInvoiceReminder) {
+      // 只有发票号提醒时的布局
+      const invoiceNo = data.invoiceNo && data.invoiceNo.trim() ? data.invoiceNo : 'TBD';
+      const reminderPrefix = `Please state our invoice no. "`;
+      const reminderSuffix = `" on your payment documents.`;
+      
+      // 标题使用粗体
+      setCnFont(doc, 'bold');
+      doc.text(titleText, margin, currentY);
+      
+      // 其他内容使用普通字体
+      setCnFont(doc, 'normal');
+      
+      // 计算各部分的宽度
+      const titleWidth = doc.getTextWidth(titleText);
+      const spacing = 5; // 设置合适的间距
+      const prefixWidth = doc.getTextWidth(reminderPrefix);
+      const invoiceNoWidth = doc.getTextWidth(invoiceNo);
+      
+      // 绘制前缀（黑色）
+      doc.text(reminderPrefix, margin + titleWidth + spacing, currentY);
+      
+      // 绘制发票号（红色）
       doc.setTextColor(255, 0, 0);
-      doc.text('"' + data.invoiceNo + '"', termLeftMargin + firstWidth, currentY);
-      doc.setTextColor(0, 0, 0);
+      doc.text(invoiceNo, margin + titleWidth + spacing + prefixWidth, currentY);
       
-      if (parts[1]) {
-        const invoiceWidth = doc.getTextWidth('"' + data.invoiceNo + '"');
-        doc.text(parts[1], termLeftMargin + firstWidth + invoiceWidth, currentY);
-      }
+      // 绘制后缀（黑色）
+      doc.setTextColor(0, 0, 0);
+      doc.text(reminderSuffix, margin + titleWidth + spacing + prefixWidth + invoiceNoWidth, currentY);
+      
+      currentY += 5;
     }
-    currentY += 5;
+  } else {
+    // 多条付款条款的情况，使用编号列表格式
+    // 标题使用粗体
+    setCnFont(doc, 'bold');
+    doc.text(titleText, margin, currentY);
+    currentY += 5;  // 标题和第一条之间的间距
+    
+    // 其他内容使用普通字体
+    setCnFont(doc, 'normal');
+    
+    const termRightMargin = 15;
+    const numberWidth = doc.getTextWidth('1. '); // 获取序号的标准宽度
+    const maxWidth = pageWidth - margin - numberWidth - termRightMargin;
+    const termSpacing = 5;  // 条款之间的固定间距
+    let termIndex = 1;
+
+    // 显示标准付款条款
+    if (data.showPaymentTerms) {
+      // 绘制条款编号
+      doc.text(`${termIndex}.`, margin, currentY);
+      
+      // 如果有日期，使用日期；否则使用默认文本
+      const paymentDate = data.paymentDate && data.paymentDate.trim() ? data.paymentDate : 'TBD';
+      const term = `Full payment not later than ${paymentDate} by telegraphic transfer (T/T).`;
+      const parts = term.split(paymentDate);
+      
+      if (parts[0]) {
+        // 处理长文本自动换行
+        const wrappedText = doc.splitTextToSize(parts[0], maxWidth);
+        doc.text(wrappedText[0], margin + numberWidth, currentY);
+        
+        // 日期显示为红色
+        doc.setTextColor(255, 0, 0);
+        doc.text(paymentDate, margin + numberWidth + doc.getTextWidth(parts[0]), currentY);
+        doc.setTextColor(0, 0, 0);
+        
+        if (parts[1]) {
+          const dateWidth = doc.getTextWidth(paymentDate);
+          doc.text(parts[1], margin + numberWidth + doc.getTextWidth(parts[0]) + dateWidth, currentY);
+        }
+      }
+      currentY += termSpacing;
+      termIndex++;
+    }
+
+    // 显示额外的付款条款
+    if (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) {
+      const terms = data.additionalPaymentTerms.split('\n').filter(term => term.trim());
+      terms.forEach(term => {
+        const numberText = `${termIndex}. `;
+        const numberWidth = doc.getTextWidth(numberText);
+
+        // 添加序号
+        doc.text(numberText, margin, currentY);
+
+        // 处理长文本自动换行，使用定义好的 maxWidth
+        const wrappedText = doc.splitTextToSize(term, maxWidth - numberWidth);
+        wrappedText.forEach((line: string, lineIndex: number) => {
+          doc.text(line, margin + numberWidth, currentY + (lineIndex * 5));
+        });
+
+        // 更新Y坐标，并增加额外的行间距
+        currentY += wrappedText.length * 5;
+        termIndex++;
+      });
+    }
+
+    // 显示发票号提醒
+    if (data.showInvoiceReminder) {
+      const invoiceNo = data.invoiceNo && data.invoiceNo.trim() ? data.invoiceNo : 'TBD';
+      const reminderPrefix = `${termIndex}. Please state our invoice no. "`;
+      const reminderSuffix = `" on your payment documents.`;
+      
+      // 计算各部分的宽度
+      const prefixWidth = doc.getTextWidth(reminderPrefix);
+      const invoiceNoWidth = doc.getTextWidth(invoiceNo);
+      
+      // 处理长文本自动换行，使用定义好的 maxWidth
+      const wrappedPrefix = doc.splitTextToSize(reminderPrefix, maxWidth);
+      
+      // 绘制前缀（黑色）
+      doc.text(wrappedPrefix, margin, currentY);
+      
+      // 绘制发票号（红色）
+      doc.setTextColor(255, 0, 0);
+      doc.text(invoiceNo, margin + prefixWidth, currentY);
+      
+      // 绘制后缀（黑色）
+      doc.setTextColor(0, 0, 0);
+      doc.text(reminderSuffix, margin + prefixWidth + invoiceNoWidth, currentY);
+      
+      currentY += 5;
+    }
   }
 
   return currentY + 10;

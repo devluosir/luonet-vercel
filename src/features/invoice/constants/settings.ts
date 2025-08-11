@@ -30,9 +30,7 @@ export const STAMP_TYPE_OPTIONS = [
 
 // 显示选项
 export const DISPLAY_OPTIONS = [
-  { key: 'showBank', label: 'Bank' },
-  { key: 'showHsCode', label: 'HS Code' },
-  { key: 'showDescription', label: 'Description' }
+  { key: 'showBank', label: 'Bank' }
 ] as const;
 
 // 输入框样式类名
@@ -112,8 +110,10 @@ export const DEFAULT_INVOICE_DATA = {
     cents: '',
     hasDecimals: false
   },
-  showHsCode: false,
+  showHsCode: true,
+  showPartName: false,
   showDescription: true,
+  showRemarks: false,
   showBank: false,
   showInvoiceReminder: false,
   currency: 'USD' as const,
@@ -123,5 +123,10 @@ export const DEFAULT_INVOICE_DATA = {
     stampType: 'none' as const
   },
   customUnits: [],
-  otherFees: []
+  otherFees: [{
+    id: 1,
+    description: '',
+    amount: 0,
+    remarks: ''
+  }]
 };

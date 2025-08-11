@@ -46,7 +46,7 @@ export const SettingsPanel = React.memo(() => {
     });
   };
 
-  const handleDisplayOptionChange = (option: keyof Pick<typeof data, 'showBank' | 'showHsCode' | 'showDescription'>, value: boolean) => {
+  const handleDisplayOptionChange = (option: keyof Pick<typeof data, 'showBank'>, value: boolean) => {
     updateData({ [option]: value });
   };
 

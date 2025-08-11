@@ -5,6 +5,7 @@ import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { hasStringChanged, normalizeStringInput } from '@/features/quotation/utils/inputUtils';
 import { useDebounced } from '@/hooks/useDebounced';
 import { useQuotationStore } from '@/features/quotation/state/useQuotationStore';
+import { getCustomersForDropdown, SavedCustomer } from '@/utils/customerDataService';
 
 // 🛡️ 兜底：多行名称 → 单行展示（避免触发清空/过滤判定）
 function sanitizeForInput(s: string): string {
@@ -295,160 +296,27 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   }, [data.to, data.quotationNo, commitTo, onCloseSelect]);
 
   // 加载客户数据的通用函数
-  // 注意：这里只加载客户相关的历史记录，不包含供应商信息
-  // 供应商信息来自 purchase_history，只在客户页面的供应商tab中显示
+  // 使用统一的客户数据服务，从客户管理页面获取数据
   const loadCustomerData = useCallback(() => {
     try {
       if (typeof window !== 'undefined') {
-        // 从localStorage加载客户相关的历史记录
-        const quotationHistory = (getCachedLocalStorage('quotation_history') as HistoryDocument[]) || [];
-        const packingHistory = (getCachedLocalStorage('packing_history') as HistoryDocument[]) || [];
-        const invoiceHistory = (getCachedLocalStorage('invoice_history') as HistoryDocument[]) || [];
+        // 使用统一的客户数据服务
+        const allCustomers = getCustomersForDropdown();
         
-        // 不加载 purchase_history，因为它包含的是供应商信息，不是客户信息
-
-        // 过滤掉无效的记录
-        const validQuotationHistory = quotationHistory.filter((doc: HistoryDocument) => {
-          const isValid = doc && 
-            typeof doc === 'object' && 
-            (doc.customerName || doc.quotationNo);
-          return isValid;
+        console.log('从客户管理服务加载的客户数据:', {
+          totalCustomers: allCustomers.length,
+          customers: allCustomers
         });
-
-        // 合并所有历史记录
-        const allRecords = [
-          ...validQuotationHistory.map((doc: HistoryDocument) => {
-            const isConfirmation = doc.type === 'confirmation' || (doc.data && doc.data.type === 'confirmation');
-            return {
-              ...doc,
-              type: isConfirmation ? 'confirmation' : 'quotation'
-            };
-          }),
-          ...packingHistory.map((doc: HistoryDocument) => ({ ...doc, type: 'packing' })),
-          ...invoiceHistory.map((doc: HistoryDocument) => ({ ...doc, type: 'invoice' }))
-        ];
-
-        // 统计客户数据
-        const customerMap = new Map<string, { name: string; lastUpdated: Date; documents: Array<{ id: string; type: string; number: string; date: Date }> }>();
         
-        // 处理所有记录
-        allRecords.forEach((doc: HistoryDocument) => {
-          if (!doc || typeof doc !== 'object') {
-            return;
-          }
-
-          let rawCustomerName;
-          if (doc.type === 'packing') {
-            rawCustomerName = doc.consigneeName || doc.customerName || '未命名客户';
-          } else {
-            rawCustomerName = doc.customerName || '未命名客户';
-          }
-          
-          if (!rawCustomerName || rawCustomerName === '未命名客户') {
-            return;
-          }
-
-          const customerName = normalizeCustomerName(rawCustomerName);
-          
-          if (!customerMap.has(customerName)) {
-            customerMap.set(customerName, {
-              name: rawCustomerName, // 保存完整的客户信息
-              lastUpdated: new Date(doc.date || doc.updatedAt || doc.createdAt || Date.now()),
-              documents: []
-            });
-          }
-
-          const customer = customerMap.get(customerName)!;
-          
-          // 更新最后更新时间
-          const docDate = new Date(doc.date || doc.updatedAt || doc.createdAt || Date.now());
-          if (docDate > customer.lastUpdated) {
-            customer.lastUpdated = docDate;
-            customer.name = rawCustomerName; // 保存完整的客户信息
-          }
-
-          // 添加文档信息
-          customer.documents.push({
-            id: doc.id || '',
-            type: doc.type || 'unknown',
-            number: doc.quotationNo || doc.contractNo || doc.invoiceNo || '-',
-            date: docDate
-          });
-        });
-
-        // 转换为数组并按最后更新时间排序
-        const sortedCustomers = Array.from(customerMap.values())
-          .sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime());
-
-        // 格式化客户信息，提取完整的客户信息
-        const formattedCustomers = sortedCustomers.map((customer) => {
-          let customerInfo = customer.name;
-          let displayName = customer.name.split('\n')[0].trim(); // 默认显示名称
-          
-          // 尝试从历史记录中获取完整的客户信息
-          const allHistory = [
-            ...quotationHistory,
-            ...packingHistory,
-            ...invoiceHistory
-          ];
-          
-          const matchingRecord = allHistory.find((record: HistoryDocument) => {
-            let recordCustomerName;
-            if (record.type === 'packing') {
-              recordCustomerName = record.consigneeName || record.customerName;
-            } else {
-              recordCustomerName = record.customerName;
-            }
-            return recordCustomerName && normalizeCustomerName(recordCustomerName) === normalizeCustomerName(customer.name);
-          });
-          
-          if (matchingRecord) {
-            // 如果是报价单或确认单，使用data.to字段
-            if (matchingRecord.data && matchingRecord.data.to) {
-              customerInfo = matchingRecord.data.to;
-              displayName = matchingRecord.data.to.split('\n')[0].trim();
-            } else if (matchingRecord.to) {
-              customerInfo = matchingRecord.to;
-              displayName = matchingRecord.to.split('\n')[0].trim();
-            }
-          }
-          
-          return {
-            name: displayName, // 只取第一行作为显示名称
-            to: customerInfo
-          };
-        });
-
-        // 去重处理 - 根据name和to的组合去重
-        const uniqueCustomers = formattedCustomers.filter((customer, index, self) => {
-          const key = `${normalizeCustomerName(customer.name)}_${customer.to}`;
-          return index === self.findIndex(c => {
-            const cKey = `${normalizeCustomerName(c.name)}_${c.to}`;
-            return cKey === key;
-          });
-        });
-
-        if (uniqueCustomers.length > 0) {
-          console.log('客户数据统计:', {
-            total: formattedCustomers.length,
-            unique: uniqueCustomers.length,
-            customers: uniqueCustomers.map(c => ({ name: c.name, to: c.to.substring(0, 50) }))
-          });
-        }
-
-        setSavedCustomers(uniqueCustomers);
+        setSavedCustomers(allCustomers);
+        setFilteredCustomers(allCustomers);
       }
     } catch (error) {
       console.error('加载客户数据失败:', error);
-      // 兼容旧的保存格式
-      if (typeof window !== 'undefined') {
-        const saved = getCachedLocalStorage('savedCustomers') as SavedCustomer[];
-        if (saved && Array.isArray(saved)) {
-          setSavedCustomers(saved);
-        }
-      }
+      setSavedCustomers([]);
+      setFilteredCustomers([]);
     }
-  }, [normalizeCustomerName]);
+  }, []);
 
   // 加载保存的客户信息
   useEffect(() => {
@@ -700,23 +568,32 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                   找到 {filteredCustomers.length} 个匹配的客户
                 </div>
                 <div className="max-h-[200px] overflow-y-auto">
-                  {filteredCustomers.map((customer, index) => (
-                    <div
-                      key={index}
-                      className="p-2 hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded-lg"
-                    >
-                      <button
-                        type="button"
-                        onMouseDown={(e) => handleLoad(customer, e)}
-                        className="w-full text-left px-2 py-1 text-sm text-gray-700 dark:text-gray-300"
+                  {filteredCustomers.map((customer, index) => {
+                    const title = customer.name; // 使用提取的标题
+                    const content = customer.to; // 完整信息作为内容
+                    
+                    return (
+                      <div
+                        key={index}
+                        className="p-2 hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded-lg"
                       >
-                        <div className="font-medium">{customer.name.split('\n')[0].trim()}</div>
-                        <div className="text-xs text-gray-500 mt-1 line-clamp-1">
-                          {customer.to}
-                        </div>
-                      </button>
-                    </div>
-                  ))}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => handleLoad(customer, e)}
+                          className="w-full text-left px-2 py-1"
+                        >
+                          {/* 标题部分，使用醒目的样式 */}
+                          <div className="text-base font-bold text-gray-900 dark:text-white mb-1">
+                            {title}
+                          </div>
+                          {/* 完整信息作为内容 */}
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            {content}
+                          </div>
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -23,11 +23,13 @@ export class PDFService {
         unit: item.unit,
         unitPrice: item.unitPrice,
         amount: item.amount,
+        remarks: item.remarks,
         highlight: item.highlight
       })),
       otherFees: data.otherFees?.map(fee => ({
         description: fee.description,
         amount: fee.amount,
+        remarks: fee.remarks,
         highlight: fee.highlight
       })),
       to: data.to,
@@ -36,7 +38,9 @@ export class PDFService {
       date: data.date,
       currency: data.currency,
       showHsCode: data.showHsCode,
+      showPartName: data.showPartName,
       showDescription: data.showDescription,
+      showRemarks: data.showRemarks,
       amountInWords: data.amountInWords,
       showBank: data.showBank,
       bankInfo: data.bankInfo,

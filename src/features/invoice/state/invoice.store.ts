@@ -25,7 +25,7 @@ interface InvoiceStore extends InvoiceFormState, InvoiceFormActions {
   handleDoubleClick: (index: number, field: keyof Exclude<InvoiceData['items'][0]['highlight'], undefined>) => void;
   
   // 处理其他费用双击高亮
-  handleOtherFeeDoubleClick: (index: number, field: 'description' | 'amount') => void;
+  handleOtherFeeDoubleClick: (index: number, field: 'description' | 'amount' | 'remarks') => void;
   
   // 设置自定义单位输入值
   setCustomUnit: (unit: string) => void;
@@ -172,7 +172,8 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
       const newFees = [...(state.data.otherFees || []), {
         id: Date.now(),
         description: '',
-        amount: 0
+        amount: 0,
+        remarks: ''
       }];
       return { data: { ...state.data, otherFees: newFees } };
     });
