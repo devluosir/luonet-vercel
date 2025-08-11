@@ -16,9 +16,10 @@ export interface NoteItem {
 export const DEFAULT_NOTES_CONFIG: NoteConfig[] = [
   { id: 'delivery_time', visible: true, order: 0, content: 'Delivery Time: 30 days.' },      // 1. Delivery time
   { id: 'price_based_on', visible: true, order: 1, content: 'Price Basis: EXW Shanghai, China.' },    // 2. Price based on
-  { id: 'delivery_terms', visible: true, order: 2, content: 'Delivery Terms: As stated above, subject to prior sale.' },     // 3. Delivery terms
-  { id: 'payment_terms', visible: true, order: 3, content: 'Payment Term: 100% T/T in advance.' },      // 4. Payment term
-  { id: 'validity', visible: true, order: 4, content: 'Validity: 10 days.' },           // 5. Validity
+  { id: 'excluding_hpfc', visible: true, order: 2, content: 'Excluding handling & packing charge and freight cost.' },
+  { id: 'delivery_terms', visible: true, order: 3, content: 'Delivery Terms: As stated above, subject to prior sale.' },     // 3. Delivery terms
+  { id: 'payment_terms', visible: true, order: 4, content: 'Payment Term: 30 days.' },      // 4. Payment term
+  { id: 'validity', visible: true, order: 5, content: 'Validity: 10 days.' },           // 5. Validity
 ];
 
 // 条款模板预设（用于Notes中的快速模板选择时的预设条款）
@@ -49,11 +50,11 @@ export const NOTES_TEMPLATES_BILINGUAL = {
 
 // 交货期选项（用于Notes中的delivery_time）
 export const DELIVERY_TERMS_OPTIONS = [
-  { id: 'days_after_order', chinese: '30天', english: 'Delivery Time: 30 days.', remark: '常见30/45/60天' },
-  { id: 'days_after_order', chinese: '交货期：见备注。', english: 'Delivery Time: As stated in Remarks. ', remark: '交货期：见备注。' },
+  { id: 'days_after_order30', chinese: '30天', english: 'Delivery Time: 30 days.', remark: '常见30/45/60天' },
+  { id: 'days_after_order', chinese: '交货期见备注', english: 'Delivery Time: As stated in Remarks. ', remark: '交货期：见备注。' },
   { id: 'days_after_deposit', chinese: '收到定金后30天交货', english: 'Delivery Time: 30 days after receipt of deposit.', remark: '与30/70搭配常用' },
   { id: 'immediate_delivery', chinese: '现货', english: 'Delivery Time: Ex-stock.', remark: '库存可随时发' },
-  { id: 'days_after_order', chinese: '订单确认后30天交货', english: 'Delivery Time: 30 days after order confirmation (AOC).', remark: '常见30/45/60天' },
+  { id: 'days_after_order30o', chinese: '订单确认后30天交货', english: 'Delivery Time: 30 days after order confirmation (AOC).', remark: '常见30/45/60天' },
   { id: 'days_after_sample', chinese: '最终样品确认后XX天交货', english: 'Delivery Time: XX days after final sample approval.', remark: '定制/来样业务常用' },
   { id: 'production_lead_time', chinese: '生产周期XX天/周', english: 'Delivery Time: Production lead time: XX days/weeks.', remark: '标准产期表述' },
   { id: 'flexible_range', chinese: '弹性区间交货', english: 'Delivery Time: Delivery within 45–60 days after order.', remark: '给产线/船期留余量' },    

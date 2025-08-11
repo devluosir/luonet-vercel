@@ -116,6 +116,33 @@ export const generateOrderConfirmationPDF = async (
       console.warn('Failed to read table column preferences:', e);
     }
 
+    // 添加头部图片
+    const headerType = data.templateConfig?.headerType || 'bilingual';
+    if (headerType !== 'none') {
+      try {
+        const headerImage = await getHeaderImage(headerType as 'bilingual' | 'english');
+        
+        // 使用jsPDF的getImageProperties方法获取图片尺寸，避免创建Image对象
+        const imgProperties = doc.getImageProperties(headerImage);
+        const aspectRatio = imgProperties.width / imgProperties.height;
+        const maxWidth = pageWidth - (margin * 2);
+        const maxHeight = 40;
+        let imgWidth = maxWidth;
+        let imgHeight = imgWidth / aspectRatio;
+        
+        if (imgHeight > maxHeight) {
+          imgHeight = maxHeight;
+          imgWidth = imgHeight * aspectRatio;
+        }
+        
+        const xPosition = margin + (maxWidth - imgWidth) / 2;
+        doc.addImage(headerImage, 'PNG', xPosition, startY, imgWidth, imgHeight);
+        startY += imgHeight + 10;
+      } catch (error) {
+        console.error('头部图片加载失败，跳过:', error);
+      }
+    }
+
     // 添加标题
     doc.setFontSize(14);
     safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');

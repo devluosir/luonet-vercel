@@ -97,20 +97,15 @@ export const generateQuotationPDF = async (
     let yPosition = margin;
 
     // 添加头部图片
-    const headerType = data.templateConfig?.headerType || 'none';
+    const headerType = data.templateConfig?.headerType || 'bilingual';
     if (headerType !== 'none') {
       const headerLoadingId = startTimer('header-loading');
       try {
         const headerImage = await getHeaderImage(headerType as 'bilingual' | 'english');
         
-        // 计算图片尺寸
-        const img = new Image();
-        img.src = headerImage;
-        await new Promise((resolve) => {
-          img.onload = resolve;
-        });
-        
-        const aspectRatio = img.width / img.height;
+        // 直接使用base64数据，不创建Image对象避免HTTP请求
+        const imgProperties = doc.getImageProperties(headerImage);
+        const aspectRatio = imgProperties.width / imgProperties.height;
         const maxWidth = contentWidth;
         const maxHeight = 40;
         let imgWidth = maxWidth;

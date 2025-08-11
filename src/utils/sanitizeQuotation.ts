@@ -60,7 +60,8 @@ export function sanitizeQuotation(raw: any): QuotationData {
     showInvoiceReminder: raw.showInvoiceReminder ?? false,
     additionalPaymentTerms: raw.additionalPaymentTerms ?? '',
     templateConfig: raw.templateConfig ?? {
-      headerType: 'none',
+      headerType: 'bilingual',
+      stampType: 'none'
     },
   };
 }

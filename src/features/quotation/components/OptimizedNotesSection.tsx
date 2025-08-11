@@ -100,11 +100,27 @@ export const OptimizedNotesSection: React.FC<NotesSectionProps> = memo(() => {
     
     // 应用模板内容
     setTimeout(() => {
-      updateNoteContent('delivery_time', extractEnglishContent(template[0]));
-      updateNoteContent('price_based_on', extractEnglishContent(template[1]));
-      updateNoteContent('delivery_terms', extractEnglishContent(template[2]));
-      updateNoteContent('payment_terms', extractEnglishContent(template[3]));
-      updateNoteContent('validity', extractEnglishContent(template[4]));
+      if (templateKey === 'exw') {
+        // EXW模板有6个条目，需要正确映射
+        updateNoteContent('delivery_time', extractEnglishContent(template[0]));
+        updateNoteContent('price_based_on', extractEnglishContent(template[1]));
+        updateNoteContent('excluding_hpfc', extractEnglishContent(template[2]));
+        updateNoteContent('delivery_terms', extractEnglishContent(template[3]));
+        updateNoteContent('payment_terms', extractEnglishContent(template[4]));
+        updateNoteContent('validity', extractEnglishContent(template[5]));
+      } else {
+        // FOB和CIF模板有5个条目，隐藏excluding_hpfc条款
+        updateNoteContent('delivery_time', extractEnglishContent(template[0]));
+        updateNoteContent('price_based_on', extractEnglishContent(template[1]));
+        updateNoteContent('excluding_hpfc', ''); // 清空并隐藏
+        updateNoteContent('delivery_terms', extractEnglishContent(template[2]));
+        updateNoteContent('payment_terms', extractEnglishContent(template[3]));
+        updateNoteContent('validity', extractEnglishContent(template[4]));
+        
+        // 隐藏excluding_hpfc条款
+        const { updateNoteVisibility } = useQuotationStore.getState();
+        updateNoteVisibility('excluding_hpfc', false);
+      }
     }, 100);
   }, [updateNoteContent]);
 
