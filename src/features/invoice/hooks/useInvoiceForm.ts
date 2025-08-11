@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useInvoiceStore } from '../state/invoice.store';
 import { calculateAmount, calculatePaymentDate, numberToWords } from '../utils/calculations';
 
@@ -30,36 +30,6 @@ export const useInvoiceForm = () => {
   const paymentDate = useMemo(() => {
     return calculatePaymentDate(data.date || new Date().toISOString().split('T')[0]);
   }, [data.date]);
-
-  // 初始化表单
-  useEffect(() => {
-    // 设置默认付款日期
-    if (!data.paymentDate) {
-      updateData({ paymentDate });
-    }
-  }, [data.paymentDate, paymentDate, updateData]);
-
-  // 自动计算金额
-  useEffect(() => {
-    const newItems = data.items.map(item => ({
-      ...item,
-      amount: calculateAmount(item.quantity, item.unitPrice)
-    }));
-    
-    // 只有当金额实际发生变化时才更新
-    const hasChanges = newItems.some((item, index) => 
-      item.amount !== data.items[index]?.amount
-    );
-    
-    if (hasChanges) {
-      updateData({ items: newItems });
-    }
-  }, [data.items, updateData]);
-
-  // 更新金额大写
-  useEffect(() => {
-    updateData({ amountInWords });
-  }, [amountInWords, updateData]);
 
   // 处理表单提交
   const handleSubmit = (e: React.FormEvent) => {

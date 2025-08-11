@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -15,15 +15,13 @@ import { CustomerSection } from '@/components/invoice/CustomerSection';
 import { ItemsTable } from '../components/ItemsTable';
 import PDFPreviewModal from '@/components/history/PDFPreviewModal';
 import { useInvoiceStore } from '../state/invoice.store';
-import { useInvoiceForm } from '../hooks/useInvoiceForm';
-import { usePasteImport } from '../hooks/usePasteImport';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { InvoiceActions } from '../components/InvoiceActions';
 import { INPUT_CLASSNAMES } from '../constants/settings';
 import { getTotalAmount } from '../utils/calculations';
 
 /**
- * 发票主页面组件
+ * 发票主页面组件 - 简化版本
  */
 export const InvoicePage = () => {
   const [mounted, setMounted] = useState(false);
@@ -52,9 +50,6 @@ export const InvoicePage = () => {
     addOtherFee
   } = useInvoiceStore();
 
-  const { handleSubmit } = useInvoiceForm();
-  const { handlePasteButtonClick } = usePasteImport();
-
   // 组件挂载状态
   useEffect(() => {
     setMounted(true);
@@ -65,7 +60,16 @@ export const InvoicePage = () => {
     return null;
   }
 
-  const totalAmount = getTotalAmount(data.items, data.otherFees);
+  // 简化总金额计算，避免重复计算
+  const totalAmount = useMemo(() => {
+    return getTotalAmount(data.items, data.otherFees);
+  }, [data.items, data.otherFees]);
+
+  // 简化的表单提交处理
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // 表单提交逻辑
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#000000] dark:text-gray-100 flex flex-col">
@@ -93,14 +97,6 @@ export const InvoicePage = () => {
                   <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
                     Invoice Generator
                   </h1>
-                  <button
-                    type="button"
-                    onClick={handlePasteButtonClick}
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 flex-shrink-0"
-                    title="Paste from clipboard"
-                  >
-                    <Clipboard className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  </button>
                 </div>
                 <div className="flex items-center gap-3">
                   <Link
@@ -240,122 +236,6 @@ export const InvoicePage = () => {
                       {data.currency === 'USD' ? '$' : '¥'}
                       {totalAmount.toFixed(2)}
                     </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 英文大写金额显示区域 */}
-              <div className="mt-4 mb-8">
-                <div className="inline text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">SAY TOTAL </span>
-                  <span className="text-blue-500">
-                    {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
-                  </span>
-                  <span className="text-gray-600 dark:text-gray-400">{data.amountInWords.dollars}</span>
-                  {data.amountInWords.hasDecimals && (
-                    <>
-                      <span className="text-red-500"> AND </span>
-                      <span className="text-gray-600 dark:text-gray-400">
-                        {data.amountInWords.cents}
-                      </span>
-                    </>
-                  )}
-                  {!data.amountInWords.hasDecimals && (
-                    <span className="text-gray-600 dark:text-gray-400"> ONLY</span>
-                  )}
-                </div>
-              </div>
-
-              {/* 银行信息 */}
-              {data.showBank && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Bank Information:</h3>
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-sm text-gray-600 dark:text-gray-400">
-                    <p>Bank Name: The Hongkong and Shanghai Banking Corporation Limited</p>
-                    <p>Swift Code: HSBCHKHHHKH</p>
-                    <p>Bank Address: Head Office 1 Queen&apos;s Road Central Hong Kong</p>
-                    <p>A/C No.: 801470337838</p>
-                    <p>Beneficiary: Luo &amp; Company Co., Limited</p>
-                  </div>
-                </div>
-              )}
-
-              {/* 付款条款 */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-                  Payment Terms:
-                </label>
-                <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/20">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={data.showPaymentTerms}
-                        onChange={(e) => {
-                          updateData({ showPaymentTerms: e.target.checked });
-                        }}
-                        className="flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
-                          checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
-                          focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
-                          relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
-                          before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
-                          checked:before:scale-100 before:transition-transform before:duration-200
-                          w-4 h-4"
-                        style={{
-                          WebkitAppearance: 'none',
-                          MozAppearance: 'none'
-                        }}
-                      />
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Full paid not later than</span>
-                        <input
-                          type="date"
-                          value={data.paymentDate}
-                          onChange={(e) => updateData({ paymentDate: e.target.value })}
-                          className={`${INPUT_CLASSNAMES.date} !py-1.5 text-red-500 dark:text-red-400`}
-                          style={{ 
-                            colorScheme: 'light dark',
-                            width: '150px',
-                            minWidth: '150px',
-                            maxWidth: '150px',
-                            flexShrink: 0,
-                            flexGrow: 0
-                          }}
-                          pattern="\d{4}-\d{2}-\d{2}"
-                        />
-                        <span className="text-sm text-gray-600 dark:text-gray-400">by telegraphic transfer.</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <textarea
-                        value={data.additionalPaymentTerms}
-                        onChange={(e) => updateData({ additionalPaymentTerms: e.target.value })}
-                        placeholder="Enter additional remarks (each line will be a new payment term)"
-                        className={`${INPUT_CLASSNAMES.base} min-h-[4em] resize dark:bg-[#1C1C1E]/90`}
-                        rows={2}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={data.showInvoiceReminder}
-                        onChange={e => updateData({ showInvoiceReminder: e.target.checked })}
-                        className="flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
-                          checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
-                          focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
-                          relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
-                          before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
-                          checked:before:scale-100 before:transition-transform before:duration-200
-                          w-4 h-4"
-                        style={{
-                          WebkitAppearance: 'none',
-                          MozAppearance: 'none'
-                        }}
-                      />
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Please state our invoice no. <span className="text-red-500 dark:text-red-400">&quot;{data.invoiceNo}&quot;</span> on your payment documents.
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
