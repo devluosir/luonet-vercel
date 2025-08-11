@@ -55,6 +55,11 @@ export const InvoicePage = () => {
   const { handleSubmit } = useInvoiceForm();
   const { handlePasteButtonClick } = usePasteImport();
 
+  // 优化总金额计算
+  const totalAmount = useMemo(() => {
+    return getTotalAmount(data.items, data.otherFees);
+  }, [data.items, data.otherFees]);
+
   // 组件挂载状态
   useEffect(() => {
     setMounted(true);
@@ -64,11 +69,6 @@ export const InvoicePage = () => {
   if (!mounted) {
     return null;
   }
-
-  // 优化总金额计算
-  const totalAmount = useMemo(() => {
-    return getTotalAmount(data.items, data.otherFees);
-  }, [data.items, data.otherFees]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#000000] dark:text-gray-100 flex flex-col">
