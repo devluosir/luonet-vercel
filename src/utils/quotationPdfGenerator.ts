@@ -17,6 +17,7 @@ interface ExtendedJsPDF extends jsPDF {
   };
   getFont: () => { fontName: string; fontStyle: string };
   getNumberOfPages: () => number;
+  getImageProperties: (image: string) => { width: number; height: number };
 }
 
 export const generateQuotationPDF = async (
