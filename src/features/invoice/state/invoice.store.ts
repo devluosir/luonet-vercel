@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { InvoiceData, InvoiceFormState, InvoiceFormActions } from '../types';
 import { DEFAULT_INVOICE_DATA } from '../constants/settings';
 import { InvoiceService } from '../services/invoice.service';
+import { PDFService } from '../services/pdf.service';
 import { calculateAmount, processUnitPlural } from '../utils/calculations';
 
 interface InvoiceStore extends InvoiceFormState, InvoiceFormActions {
@@ -290,10 +291,23 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
   generatePDF: async () => {
     const state = get();
     try {
-      await InvoiceService.downloadPDF(state.data);
+      await PDFService.downloadInvoicePDF(state.data);
       InvoiceService.recordCustomerUsage(state.data);
     } catch (error) {
       console.error('Error generating PDF:', error);
+      throw error;
+    }
+  },
+
+  // 预览PDF
+  previewPDF: async () => {
+    const state = get();
+    try {
+      const previewUrl = await PDFService.previewInvoicePDF(state.data);
+      set({ showPreview: true, previewItem: null });
+      return previewUrl;
+    } catch (error) {
+      console.error('Error previewing PDF:', error);
       throw error;
     }
   },

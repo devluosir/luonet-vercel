@@ -106,4 +106,5 @@ export interface InvoiceFormActions {
   togglePreview: () => void;
   setPreviewItem: (item: InvoiceHistoryItem | null) => void;
   resetForm: () => void;
+  previewPDF: () => Promise<string>;
 }

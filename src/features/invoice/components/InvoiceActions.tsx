@@ -18,6 +18,7 @@ export const InvoiceActions = () => {
     previewItem,
     saveInvoice,
     generatePDF,
+    previewPDF,
     togglePreview,
     setPreviewItem
   } = useInvoiceStore();
@@ -35,6 +36,9 @@ export const InvoiceActions = () => {
 
   const handlePreview = async () => {
     try {
+      // 使用新的预览方法
+      const previewUrl = await previewPDF();
+      
       // 准备预览数据，包装成历史记录格式
       const previewData = {
         id: 'preview',
@@ -44,13 +48,15 @@ export const InvoiceActions = () => {
         invoiceNo: data.invoiceNo || 'N/A',
         totalAmount: totalAmount,
         currency: data.currency,
-        data: data
+        data: data,
+        pdfUrl: previewUrl // 添加PDF URL
       };
       
       setPreviewItem(previewData);
       togglePreview();
     } catch (error) {
       console.error('Error previewing PDF:', error);
+      alert('预览PDF时出错');
     }
   };
 
