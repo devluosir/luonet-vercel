@@ -894,9 +894,23 @@ html.dark, html.dark body {
   height: 2.25rem; /* h-9：统一小尺寸输入高度 */
 }
 
+/* select元素的特殊样式，确保与input保持一致 */
+.fi[data-type="select"] {
+  @apply appearance-none bg-no-repeat bg-right pr-8;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-size: 1.25rem;
+  background-position: right 0.5rem center;
+}
+
+/* 深色模式下的select箭头 */
+.dark .fi[data-type="select"] {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23d1d5db' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+}
+
 .fi-multiline { 
   @apply w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 px-3 py-2 text-sm leading-6
          outline-none focus:border-slate-400 dark:focus:border-gray-500 transition-all duration-200; 
+  min-height: 2.25rem; /* 确保最小高度与fi类一致 */
 }
 
 /* 浮动标签样式增强 */
