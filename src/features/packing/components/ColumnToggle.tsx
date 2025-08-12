@@ -16,13 +16,15 @@ interface ColumnToggleProps {
   dimensionsMergeMode?: 'auto' | 'manual';
   onPackageQtyMergeModeChange?: (mode: 'auto' | 'manual') => void;
   onDimensionsMergeModeChange?: (mode: 'auto' | 'manual') => void;
+  hasGroupedItems?: boolean;
 }
 
 export function ColumnToggle({ 
   packageQtyMergeMode = 'auto', 
   dimensionsMergeMode = 'auto',
   onPackageQtyMergeModeChange,
-  onDimensionsMergeModeChange
+  onDimensionsMergeModeChange,
+  hasGroupedItems = false
 }: ColumnToggleProps) {
   const { visibleCols, toggleCol, setCols } = useTablePrefsHydrated();
   const [open, setOpen] = useState(false);
@@ -108,8 +110,8 @@ export function ColumnToggle({
                     {col.label}
                   </button>
                   
-                  {/* 包装数量合并模式切换按钮 */}
-                  {hasAnyWeightCol && visibleCols.includes('packageQty') && (
+                  {/* 包装数量合并模式切换按钮 - 仅在无分组数据时显示 */}
+                  {hasAnyWeightCol && visibleCols.includes('packageQty') && !hasGroupedItems && (
                     <button
                       type="button"
                       onClick={togglePackageQtyMergeMode}
@@ -183,8 +185,8 @@ export function ColumnToggle({
                     {col.label}
                   </button>
                   
-                  {/* 尺寸合并模式切换按钮 */}
-                  {isDimensionsVisible && !isDisabled && (
+                  {/* 尺寸合并模式切换按钮 - 仅在无分组数据时显示 */}
+                  {isDimensionsVisible && !isDisabled && !hasGroupedItems && (
                     <button
                       type="button"
                       onClick={toggleDimensionsMergeMode}

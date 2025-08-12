@@ -40,7 +40,10 @@ export const PackingForm: React.FC<PackingFormProps> = ({
   const [editingFeeAmount, setEditingFeeAmount] = useState<string>('');
 
   // 计算总计
-  const totals = calculatePackingTotals(data);
+  const totals = calculatePackingTotals(data, {
+    packageQty: data.manualMergedCells?.packageQty || [],
+    dimensions: data.manualMergedCells?.dimensions || []
+  });
 
   // 处理数据变更
   const handleDataChange = (newData: Partial<typeof data>) => {

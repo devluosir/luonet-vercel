@@ -88,6 +88,10 @@ export interface PackingData {
     packageQty: MergedCellInfo[];
     dimensions: MergedCellInfo[];
   };
+  autoMergedCells?: {
+    packageQty: MergedCellInfo[];
+    dimensions: MergedCellInfo[];
+  };
 }
 
 // 总计数据接口

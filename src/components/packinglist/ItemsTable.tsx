@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { OtherFeesTable } from './OtherFeesTable';
+import { ColumnToggle } from '../../features/packing/components/ColumnToggle';
 
 // 表格输入框基础样式
 const baseInputClassName = `w-full px-2 py-1.5 rounded-lg
@@ -73,6 +74,8 @@ interface PackingData {
   // 新增：分组相关状态
   isInGroupMode?: boolean;
   currentGroupId?: string;
+  packageQtyMergeMode?: 'auto' | 'manual';
+  dimensionsMergeMode?: 'auto' | 'manual';
 }
 
 interface ItemsTableProps {
@@ -96,6 +99,7 @@ interface ItemsTableProps {
   // 新增：分组相关props
   onEnterGroupMode?: () => void;
   onExitGroupMode?: () => void;
+  onDataChange?: (data: PackingData) => void;
 }
 
 export const ItemsTable: React.FC<ItemsTableProps> = ({
@@ -112,7 +116,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   setEditingFeeAmount,
   totals,
   onEnterGroupMode,
-  onExitGroupMode
+  onExitGroupMode,
+  onDataChange
 }) => {
   // 可用单位列表
   const availableUnits = [...defaultUnits, ...(data.customUnits || [])] as const;
@@ -341,6 +346,91 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
   return (
     <div className="space-y-0">
+      {/* 移动端按钮行 */}
+      <div className="block md:hidden mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* 分组按钮 */}
+            <button
+              type="button"
+              onClick={() => {
+                if (data.isInGroupMode) {
+                  onDataChange?.({ ...data, isInGroupMode: false, currentGroupId: undefined });
+                } else {
+                  onDataChange?.({ ...data, isInGroupMode: true, currentGroupId: `group_${Date.now()}` });
+                }
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                data.isInGroupMode 
+                  ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
+                  : 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40'
+              }`}
+            >
+              {data.isInGroupMode ? 'Exit Group' : 'Add Group'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const newItem = {
+                  id: Date.now(),
+                  serialNo: '',
+                  description: '',
+                  hsCode: '',
+                  quantity: 0,
+                  unitPrice: 0,
+                  totalPrice: 0,
+                  netWeight: 0,
+                  grossWeight: 0,
+                  packageQty: 0,
+                  dimensions: '',
+                  unit: '',
+                  groupId: data.currentGroupId
+                };
+                onDataChange?.({ ...data, items: [...data.items, newItem] });
+              }}
+              className="px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40 text-xs font-medium transition-all duration-200"
+            >
+              Add Item
+            </button>
+
+            {data.showPrice && (
+              <button
+                type="button"
+                onClick={() => {
+                  const newOtherFee = {
+                    id: Date.now(),
+                    description: '',
+                    amount: 0
+                  };
+                  onDataChange?.({ 
+                    ...data, 
+                    otherFees: [...(data.otherFees || []), newOtherFee] 
+                  });
+                }}
+                className="px-3 py-1.5 rounded-lg bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 text-xs font-medium transition-all duration-200"
+              >
+                Add Fee
+              </button>
+            )}
+          </div>
+
+          {/* 列设置按钮 - 右侧 */}
+          <div className="flex items-center gap-2">
+            <ColumnToggle 
+              packageQtyMergeMode={data.packageQtyMergeMode || 'auto'}
+              dimensionsMergeMode={data.dimensionsMergeMode || 'auto'}
+              onPackageQtyMergeModeChange={(mode) => {
+                onDataChange?.({ ...data, packageQtyMergeMode: mode });
+              }}
+              onDimensionsMergeModeChange={(mode) => {
+                onDataChange?.({ ...data, dimensionsMergeMode: mode });
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* 移动端和平板卡片视图 - 中屏以下显示 */}
       <div className="block md:hidden space-y-4">
         {data.items.map((item, index) => {

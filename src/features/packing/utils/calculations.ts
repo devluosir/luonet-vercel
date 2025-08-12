@@ -23,30 +23,61 @@ export const getUnitDisplay = (baseUnit: string, quantity: number): string => {
 /**
  * 计算箱单总计
  */
-export const calculatePackingTotals = (data: PackingData): PackingTotals => {
+export const calculatePackingTotals = (
+  data: PackingData, 
+  mergedCells?: { packageQty: Array<{ startRow: number; endRow: number; isMerged: boolean }>; dimensions: Array<{ startRow: number; endRow: number; isMerged: boolean }> }
+): PackingTotals => {
   let totalPrice = 0;
   let netWeight = 0;
   let grossWeight = 0;
   let packageQty = 0;
   const processedGroups = new Set<string>();
-
-  data.items.forEach((item) => {
-    totalPrice += item.totalPrice;
-    const isInGroup = !!item.groupId;
-    const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
-    const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
+  const processedMergedRows = new Set<number>();
+  
+  // 处理合并单元格，标记已合并的行
+  if (mergedCells) {
+    const allMergedCells = [
+      ...mergedCells.packageQty,
+      ...mergedCells.dimensions
+    ];
     
-    if (isInGroup) {
-      if (isFirstInGroup) {
+    allMergedCells.forEach(cell => {
+      if (cell.isMerged) {
+        for (let i = cell.startRow; i <= cell.endRow; i++) {
+          processedMergedRows.add(i);
+        }
+      }
+    });
+  }
+
+  data.items.forEach((item, index) => {
+    totalPrice += item.totalPrice;
+    
+    // 检查是否在合并单元格中且不是合并的起始行
+    const isInMergedCell = processedMergedRows.has(index);
+    const isMergeStart = mergedCells ? [
+      ...mergedCells.packageQty,
+      ...mergedCells.dimensions
+    ].some(cell => cell.isMerged && cell.startRow === index) : false;
+    
+    // 如果不在合并单元格中，或者是合并的起始行，则计算
+    if (!isInMergedCell || isMergeStart) {
+      const isInGroup = !!item.groupId;
+      const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
+      const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
+      
+      if (isInGroup) {
+        if (isFirstInGroup) {
+          netWeight += item.netWeight;
+          grossWeight += item.grossWeight;
+          packageQty += item.packageQty;
+          processedGroups.add(item.groupId!);
+        }
+      } else {
         netWeight += item.netWeight;
         grossWeight += item.grossWeight;
         packageQty += item.packageQty;
-        processedGroups.add(item.groupId!);
       }
-    } else {
-      netWeight += item.netWeight;
-      grossWeight += item.grossWeight;
-      packageQty += item.packageQty;
     }
   });
 

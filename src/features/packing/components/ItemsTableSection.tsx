@@ -1,10 +1,6 @@
 'use client';
-import { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ItemsTableEnhanced } from './ItemsTableEnhanced';
-import { OtherFeesTable } from '../../../components/packinglist/OtherFeesTable';
-import { ColumnToggle } from './ColumnToggle';
-import { QuickImport } from './QuickImport';
-import { ImportDataButton } from './ImportDataButton';
 import { useTablePrefsHydrated } from '../state/useTablePrefs';
 import { ItemsTableSectionProps } from '../types';
 
@@ -31,13 +27,12 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
   setEditingFeeAmount
 }) => {
   const { visibleCols, isHydrated } = useTablePrefsHydrated();
-  const [importPreset, setImportPreset] = useState<{ raw: string; parsed: any } | null>(null);
 
-  // 合并模式状态管理
-  const [packageQtyMergeMode, setPackageQtyMergeMode] = useState<'auto' | 'manual'>('auto');
-  const [dimensionsMergeMode, setDimensionsMergeMode] = useState<'auto' | 'manual'>('auto');
+  // 合并模式状态管理 - 从主数据初始化
+  const [packageQtyMergeMode, setPackageQtyMergeMode] = useState<'auto' | 'manual'>(data.packageQtyMergeMode || 'auto');
+  const [dimensionsMergeMode, setDimensionsMergeMode] = useState<'auto' | 'manual'>(data.dimensionsMergeMode || 'auto');
   
-  // 手动合并数据状态
+  // 手动合并数据状态 - 从主数据初始化
   const [manualMergedCells, setManualMergedCells] = useState<{
     packageQty: Array<{
       startRow: number;
@@ -51,10 +46,34 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
       content: string;
       isMerged: boolean;
     }>;
-  }>({
+  }>(data.manualMergedCells || {
     packageQty: [],
     dimensions: []
   });
+
+  // 当主数据中的合并相关数据发生变化时，同步更新本地状态
+  useEffect(() => {
+    if (data.packageQtyMergeMode !== packageQtyMergeMode) {
+      setPackageQtyMergeMode(data.packageQtyMergeMode || 'auto');
+    }
+    if (data.dimensionsMergeMode !== dimensionsMergeMode) {
+      setDimensionsMergeMode(data.dimensionsMergeMode || 'auto');
+    }
+    if (data.manualMergedCells && JSON.stringify(data.manualMergedCells) !== JSON.stringify(manualMergedCells)) {
+      setManualMergedCells(data.manualMergedCells);
+    }
+  }, [data.packageQtyMergeMode, data.dimensionsMergeMode, data.manualMergedCells, packageQtyMergeMode, dimensionsMergeMode, manualMergedCells]);
+
+  // 记忆化合并模式变更回调函数
+  const handlePackageQtyMergeModeChange = useCallback((mode: 'auto' | 'manual') => {
+    setPackageQtyMergeMode(mode);
+    onDataChange({ ...data, packageQtyMergeMode: mode });
+  }, [onDataChange, data]);
+
+  const handleDimensionsMergeModeChange = useCallback((mode: 'auto' | 'manual') => {
+    setDimensionsMergeMode(mode);
+    onDataChange({ ...data, dimensionsMergeMode: mode });
+  }, [onDataChange, data]);
 
   // 处理导入数据
   const handleImport = (newItems: any[]) => {
@@ -92,45 +111,37 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
   // 处理手动合并数据变更
   const handleManualMergeChange = (newManualMergedCells: typeof manualMergedCells) => {
     setManualMergedCells(newManualMergedCells);
+    // 同时保存到主数据中，确保PDF生成时能获取到
+    onDataChange({ 
+      ...data, 
+      manualMergedCells: newManualMergedCells,
+      packageQtyMergeMode,
+      dimensionsMergeMode
+    });
   };
 
   return (
     <section className="rounded-2xl border border-slate-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/30 shadow-sm p-4">
-      {/* 工具栏 */}
-      <div className="flex items-center justify-between mb-6 px-2">
-        <div className="flex items-center gap-4">
-          <ImportDataButton onImport={handleImport} />
-
-        </div>
-        <div className="flex items-center gap-3">
-          <ColumnToggle 
-            packageQtyMergeMode={packageQtyMergeMode}
-            dimensionsMergeMode={dimensionsMergeMode}
-            onPackageQtyMergeModeChange={setPackageQtyMergeMode}
-            onDimensionsMergeModeChange={setDimensionsMergeMode}
-          />
-          <QuickImport
-            onInsert={handleInsertImported}
-            presetRaw={importPreset?.raw}
-            presetParsed={importPreset?.parsed}
-            onClosePreset={() => setImportPreset(null)}
-          />
-        </div>
-      </div>
-
-
-      
       {/* 商品表格 */}
       <ItemsTableEnhanced
         data={{
+          orderNo: data.orderNo,
+          invoiceNo: data.invoiceNo,
+          date: data.date,
+          consignee: data.consignee,
+          markingNo: data.markingNo,
           items: data.items,
           otherFees: data.otherFees,
+          currency: data.currency,
+          remarks: data.remarks,
+          remarkOptions: data.remarkOptions,
           showHsCode: data.showHsCode,
           showDimensions: data.showDimensions,
           showWeightAndPackage: data.showWeightAndPackage,
           showPrice: data.showPrice,
           dimensionUnit: data.dimensionUnit,
-          currency: data.currency,
+          documentType: data.documentType,
+          templateConfig: data.templateConfig,
           customUnits: data.customUnits,
           isInGroupMode: data.isInGroupMode,
           currentGroupId: data.currentGroupId,
@@ -146,7 +157,16 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
         setEditingFeeAmount={setEditingFeeAmount}
         onItemChange={(index, field, value) => {
           const newItems = [...data.items];
-          newItems[index] = { ...newItems[index], [field]: value };
+          const item = { ...newItems[index], [field]: value };
+          
+          // 当quantity或unitPrice改变时，自动计算totalPrice
+          if (field === 'quantity' || field === 'unitPrice') {
+            const quantity = field === 'quantity' ? Number(value) : item.quantity;
+            const unitPrice = field === 'unitPrice' ? Number(value) : item.unitPrice;
+            item.totalPrice = quantity * unitPrice;
+          }
+          
+          newItems[index] = item;
           onDataChange({ ...data, items: newItems });
         }}
         onAddLine={() => {
@@ -194,77 +214,13 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
         }}
         onDataChange={onDataChange}
         // 合并单元格相关回调
-        onPackageQtyMergeModeChange={setPackageQtyMergeMode}
-        onDimensionsMergeModeChange={setDimensionsMergeMode}
+        onPackageQtyMergeModeChange={handlePackageQtyMergeModeChange}
+        onDimensionsMergeModeChange={handleDimensionsMergeModeChange}
         onManualMergedCellsChange={handleManualMergeChange}
+        // 导入相关
+        onImport={handleImport}
+        onInsertImported={handleInsertImported}
       />
-
-      {/* 添加行按钮 */}
-      <div className="mt-4 flex items-center gap-2">
-        {/* 分组按钮 */}
-        <button
-          type="button"
-          onClick={() => {
-            if (data.isInGroupMode) {
-              onDataChange({ ...data, isInGroupMode: false, currentGroupId: undefined });
-            } else {
-              onDataChange({ ...data, isInGroupMode: true, currentGroupId: `group_${Date.now()}` });
-            }
-          }}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-            data.isInGroupMode 
-              ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
-              : 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40'
-          }`}
-        >
-          {data.isInGroupMode ? '退出分组' : '添加分组'}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            const newItem = {
-              id: Date.now(),
-              serialNo: '',
-              description: '',
-              hsCode: '',
-              quantity: 0,
-              unitPrice: 0,
-              totalPrice: 0,
-              netWeight: 0,
-              grossWeight: 0,
-              packageQty: 0,
-              dimensions: '',
-              unit: '',
-              groupId: data.currentGroupId
-            };
-            onDataChange({ ...data, items: [...data.items, newItem] });
-          }}
-          className="px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40 text-xs font-medium transition-all duration-200"
-        >
-          添加商品
-        </button>
-
-        {data.showPrice && (
-          <button
-            type="button"
-            onClick={() => {
-              const newOtherFee = {
-                id: Date.now(),
-                description: '',
-                amount: 0
-              };
-              onDataChange({ 
-                ...data, 
-                otherFees: [...(data.otherFees || []), newOtherFee] 
-              });
-            }}
-            className="px-3 py-1.5 rounded-lg bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 text-xs font-medium transition-all duration-200"
-          >
-            添加费用
-          </button>
-        )}
-      </div>
     </section>
   );
 };

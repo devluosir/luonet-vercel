@@ -4,6 +4,7 @@ import { UserOptions, RowInput, CellInput } from 'jspdf-autotable';
 import { embeddedResources } from '@/lib/embedded-resources';
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { setCnFont, validateFontRegistration } from '@/utils/pdfFontUtils';
+import { MergedCellInfo } from '@/features/packing/types';
 
 // 扩展 jsPDF 类型
 interface ExtendedJsPDF extends Omit<jsPDF, 'getImageProperties' | 'setPage'> {
@@ -62,7 +63,40 @@ interface PackingData {
   templateConfig: {
     headerType: 'none' | 'bilingual' | 'english';
   };
+  // 合并单元格相关
+  packageQtyMergeMode?: 'auto' | 'manual';
+  dimensionsMergeMode?: 'auto' | 'manual';
+  manualMergedCells?: {
+    packageQty: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+    dimensions: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+  };
+  autoMergedCells?: {
+    packageQty: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+    dimensions: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+  };
 }
+
+
 
 // 函数重载签名
 export async function generatePackingListPDF(data: PackingData): Promise<Blob>;
@@ -76,6 +110,35 @@ export async function generatePackingListPDF(
   if (typeof window === 'undefined') {
     throw new Error('PDF generation is only available in client-side environment');
   }
+
+  // 直接使用页面传递的合并单元格数据，不再重新计算
+
+  // 直接使用页面传递的合并单元格数据，不再重新计算
+  const packageQtyMergeMode = data.packageQtyMergeMode || 'auto';
+  const dimensionsMergeMode = data.dimensionsMergeMode || 'auto';
+  
+  // 根据合并模式选择对应的数据源
+  const mergedPackageQtyCells = packageQtyMergeMode === 'manual' 
+    ? (data.manualMergedCells?.packageQty || [])
+    : (data.autoMergedCells?.packageQty || []);
+    
+  const mergedDimensionsCells = dimensionsMergeMode === 'manual'
+    ? (data.manualMergedCells?.dimensions || [])
+    : (data.autoMergedCells?.dimensions || []);
+
+  // 添加调试信息
+  console.log('PDF合并单元格数据:', {
+    packageQtyMergeMode,
+    dimensionsMergeMode,
+    mergedPackageQtyCells,
+    mergedDimensionsCells,
+    itemsCount: data.items.length,
+    items: data.items.map((item, index) => ({
+      index,
+      packageQty: item.packageQty,
+      dimensions: item.dimensions
+    }))
+  });
 
   // 创建 PDF 文档
   const doc = new jsPDF({
@@ -147,7 +210,7 @@ export async function generatePackingListPDF(
     // }
 
     // 商品表格 - 紧跟在基本信息后
-    currentY = await renderPackingTable(doc, data, currentY);
+    currentY = await renderPackingTable(doc, data, currentY, mergedPackageQtyCells, mergedDimensionsCells);
 
     // 备注
     renderRemarks(doc, data, currentY, pageWidth, margin);
@@ -288,7 +351,7 @@ function renderRemarks(doc: any, data: PackingData, startY: number, pageWidth: n
   let currentY = startY;
   
   // 检查是否有备注内容
-  const hasCustomRemarks = data.remarks.trim();
+  const hasCustomRemarks = data.remarks && data.remarks.trim();
   
   // 如果没有任何备注内容，直接返回
   if (!hasCustomRemarks) {
@@ -309,13 +372,16 @@ function renderRemarks(doc: any, data: PackingData, startY: number, pageWidth: n
   if (hasCustomRemarks) {
     const customRemarkLines = data.remarks.split('\n').filter(line => line.trim());
     customRemarkLines.forEach((item, index) => {
-    const numberedText = `${index + 1}. ${item.trim()}`;
-    const itemLines = doc.splitTextToSize(numberedText, pageWidth - (margin * 2));
-    itemLines.forEach((line: string, lineIndex: number) => {
-      doc.text(String(line), margin, currentY + (lineIndex * 4));
+      const numberedText = `${index + 1}. ${item.trim()}`;
+      const itemLines = doc.splitTextToSize(numberedText, pageWidth - (margin * 2));
+      itemLines.forEach((line: string, lineIndex: number) => {
+        // 确保line是有效的字符串
+        if (line && typeof line === 'string') {
+          doc.text(line, margin, currentY + (lineIndex * 4));
+        }
+      });
+      currentY += itemLines.length * 4 + 2; // 每个项目间增加2mm间距
     });
-    currentY += itemLines.length * 4 + 2; // 每个项目间增加2mm间距
-  });
   }
   
   return currentY + 3;
@@ -363,7 +429,18 @@ async function renderPackingTable(
   doc: any,
   data: PackingData,
   startY: number,
-  _totals?: { netWeight: number; grossWeight: number; packageQty: number; totalPrice: number }
+  mergedPackageQtyCells: Array<{
+    startRow: number;
+    endRow: number;
+    content: string;
+    isMerged: boolean;
+  }>,
+  mergedDimensionsCells: Array<{
+    startRow: number;
+    endRow: number;
+    content: string;
+    isMerged: boolean;
+  }>
 ): Promise<number> {
   // 计算页面宽度和边距
   const pageWidth = doc.internal.pageSize.width;
@@ -514,100 +591,112 @@ async function renderPackingTable(
 
   // 准备数据行（支持分组合并单元格）
   const body: RowInput[] = [];
-  const groupMap: Record<string, PackingItem[]> = {};
-  data.items.forEach(item => {
-    if (item.groupId) {
-      if (!groupMap[item.groupId]) groupMap[item.groupId] = [];
-      groupMap[item.groupId].push(item);
-    }
-  });
-  const handledGroupIds = new Set<string>();
+  
+  // 获取合并单元格信息的辅助函数
+  const getMergedCellInfo = (rowIndex: number, mergedCells: MergedCellInfo[]) => {
+    return mergedCells.find(cell => rowIndex >= cell.startRow && rowIndex <= cell.endRow);
+  };
+
+  const shouldRenderCell = (rowIndex: number, mergedCells: MergedCellInfo[]) => {
+    const mergedInfo = getMergedCellInfo(rowIndex, mergedCells);
+    return !mergedInfo || mergedInfo.startRow === rowIndex;
+  };
+
   let rowIndex = 0;
   data.items.forEach((item) => {
-    const isInGroup = !!item.groupId;
-    if (isInGroup) {
-      if (handledGroupIds.has(item.groupId!)) return; // 只处理组内第一行
-      const groupItems = groupMap[item.groupId!];
-      handledGroupIds.add(item.groupId!);
-      // 组内第一行
-      const row: CellInput[] = [
-        rowIndex + 1, // 用当前序号
-        groupItems[0].description
-      ];
-      if (data.showHsCode) row.push(groupItems[0].hsCode);
+    const row: CellInput[] = [
+      rowIndex + 1, // 用当前序号
+      item.description
+    ];
+    
+    if (data.showHsCode) row.push(item.hsCode);
+    row.push(
+      item.quantity.toString(),
+      item.unit
+    );
+    
+    if (data.showPrice) {
       row.push(
-        groupItems[0].quantity.toString(),
-        groupItems[0].unit
+        item.unitPrice.toFixed(2),
+        item.totalPrice.toFixed(2)
       );
-      if (data.showPrice) {
-        row.push(
-          groupItems[0].unitPrice.toFixed(2),
-          groupItems[0].totalPrice.toFixed(2)
-        );
-      }
-      if (data.showWeightAndPackage) {
-        // 合并单元格，rowSpan=groupItems.length
-        row.push(
-          { content: groupItems[0].netWeight.toFixed(2), rowSpan: groupItems.length, styles: { valign: 'middle', halign: 'center' } },
-          { content: groupItems[0].grossWeight.toFixed(2), rowSpan: groupItems.length, styles: { valign: 'middle', halign: 'center' } },
-          { content: groupItems[0].packageQty.toString(), rowSpan: groupItems.length, styles: { valign: 'middle', halign: 'center' } }
-        );
-      }
-      if (data.showDimensions) {
-        row.push({ content: groupItems[0].dimensions, rowSpan: groupItems.length, styles: { valign: 'middle', halign: 'center' } });
-      }
-      body.push(row);
-      rowIndex++;
-      // 组内其他行
-      for (let i = 1; i < groupItems.length; i++) {
-        const sub = groupItems[i];
-        const subRow: CellInput[] = [
-          rowIndex + 1, // 用当前序号
-          sub.description
-        ];
-        if (data.showHsCode) subRow.push(sub.hsCode);
-        subRow.push(
-          sub.quantity.toString(),
-          sub.unit
-        );
-        if (data.showPrice) {
-          subRow.push(
-            sub.unitPrice.toFixed(2),
-            sub.totalPrice.toFixed(2)
-          );
-        }
-        // 组内其他行不渲染合并列
-        body.push(subRow);
-        rowIndex++;
-      }
-    } else {
-      // 普通行
-      const row: CellInput[] = [
-        rowIndex + 1, // 用当前序号
-        item.description
-      ];
-      if (data.showHsCode) row.push(item.hsCode);
-      row.push(
-        item.quantity.toString(),
-        item.unit
-      );
-      if (data.showPrice) {
-        row.push(
-          item.unitPrice.toFixed(2),
-          item.totalPrice.toFixed(2)
-        );
-      }
-      if (data.showWeightAndPackage) {
-        row.push(
-          item.netWeight.toFixed(2),
-          item.grossWeight.toFixed(2),
-          item.packageQty.toString()
-        );
-      }
-      if (data.showDimensions) row.push(item.dimensions);
-      body.push(row);
-      rowIndex++;
     }
+    
+    if (data.showWeightAndPackage) {
+      // 处理Net Weight和Gross Weight列（不合并）
+      row.push(
+        item.netWeight.toFixed(2),
+        item.grossWeight.toFixed(2)
+      );
+      
+      // 处理Package Qty列的合并
+      const packageQtyMergedInfo = getMergedCellInfo(rowIndex, mergedPackageQtyCells);
+      console.log(`Row ${rowIndex} Package Qty合并信息:`, {
+        item: item.packageQty,
+        mergedInfo: packageQtyMergedInfo,
+        isStartRow: packageQtyMergedInfo?.startRow === rowIndex,
+        isMerged: packageQtyMergedInfo?.isMerged
+      });
+      
+      if (packageQtyMergedInfo && packageQtyMergedInfo.isMerged && packageQtyMergedInfo.startRow === rowIndex) {
+        // 这是合并单元格的起始行
+        const rowSpan = packageQtyMergedInfo.endRow - packageQtyMergedInfo.startRow + 1;
+        console.log(`Row ${rowIndex} 添加Package Qty合并单元格:`, {
+          content: packageQtyMergedInfo.content,
+          rowSpan: rowSpan
+        });
+        row.push({
+          content: packageQtyMergedInfo.content,
+          rowSpan: rowSpan,
+          styles: { valign: 'middle', halign: 'center' }
+        });
+      } else if (packageQtyMergedInfo && packageQtyMergedInfo.isMerged) {
+        // 这是被合并的行，跳过该列（不添加任何内容）
+        console.log(`Row ${rowIndex} 跳过Package Qty列（被合并）`);
+        // 在jspdf-autotable中，被合并的行会自动处理
+      } else {
+        // 普通行，正常显示
+        console.log(`Row ${rowIndex} 添加Package Qty普通单元格:`, item.packageQty.toString());
+        row.push(item.packageQty.toString());
+      }
+    }
+    
+    if (data.showDimensions) {
+      // 处理Dimensions列的合并
+      const dimensionsMergedInfo = getMergedCellInfo(rowIndex, mergedDimensionsCells);
+      console.log(`Row ${rowIndex} Dimensions合并信息:`, {
+        item: item.dimensions,
+        mergedInfo: dimensionsMergedInfo,
+        isStartRow: dimensionsMergedInfo?.startRow === rowIndex,
+        isMerged: dimensionsMergedInfo?.isMerged
+      });
+      
+      if (dimensionsMergedInfo && dimensionsMergedInfo.isMerged && dimensionsMergedInfo.startRow === rowIndex) {
+        // 这是合并单元格的起始行
+        const rowSpan = dimensionsMergedInfo.endRow - dimensionsMergedInfo.startRow + 1;
+        console.log(`Row ${rowIndex} 添加Dimensions合并单元格:`, {
+          content: dimensionsMergedInfo.content,
+          rowSpan: rowSpan
+        });
+        row.push({
+          content: dimensionsMergedInfo.content,
+          rowSpan: rowSpan,
+          styles: { valign: 'middle', halign: 'center' }
+        });
+      } else if (dimensionsMergedInfo && dimensionsMergedInfo.isMerged) {
+        // 这是被合并的行，跳过该列（不添加任何内容）
+        console.log(`Row ${rowIndex} 跳过Dimensions列（被合并）`);
+        // 在jspdf-autotable中，被合并的行会自动处理
+      } else {
+        // 普通行，正常显示
+        console.log(`Row ${rowIndex} 添加Dimensions普通单元格:`, item.dimensions);
+        row.push(item.dimensions);
+      }
+    }
+    
+    console.log(`Row ${rowIndex} 最终行数据:`, row);
+    body.push(row);
+    rowIndex++;
   });
 
   // 计算需要合并的列数（No. + Description + HS Code + Qty + Unit + U/Price）
@@ -640,22 +729,48 @@ async function renderPackingTable(
     });
   }
 
-  // 统计总计（分组只统计组内第一行）
+  // 统计总计（考虑合并单元格，避免重复计算）
   let netWeight = 0, grossWeight = 0, packageQty = 0, totalPrice = 0;
   const processedGroups = new Set<string>();
-  data.items.forEach((item) => {
+  const processedMergedRows = new Set<number>();
+  
+  // 处理合并单元格，标记已合并的行
+  const allMergedCells = [
+    ...(mergedPackageQtyCells || []),
+    ...(mergedDimensionsCells || [])
+  ];
+  
+  allMergedCells.forEach(cell => {
+    if (cell.isMerged) {
+      for (let i = cell.startRow; i <= cell.endRow; i++) {
+        processedMergedRows.add(i);
+      }
+    }
+  });
+  
+  data.items.forEach((item, index) => {
     totalPrice += item.totalPrice;
-    if (item.groupId) {
-      if (!processedGroups.has(item.groupId)) {
+    
+    // 检查是否在合并单元格中且不是合并的起始行
+    const isInMergedCell = processedMergedRows.has(index);
+    const isMergeStart = allMergedCells.some(cell => 
+      cell.isMerged && cell.startRow === index
+    );
+    
+    // 如果不在合并单元格中，或者是合并的起始行，则计算
+    if (!isInMergedCell || isMergeStart) {
+      if (item.groupId) {
+        if (!processedGroups.has(item.groupId)) {
+          netWeight += item.netWeight;
+          grossWeight += item.grossWeight;
+          packageQty += item.packageQty;
+          processedGroups.add(item.groupId);
+        }
+      } else {
         netWeight += item.netWeight;
         grossWeight += item.grossWeight;
         packageQty += item.packageQty;
-        processedGroups.add(item.groupId);
       }
-    } else {
-      netWeight += item.netWeight;
-      grossWeight += item.grossWeight;
-      packageQty += item.packageQty;
     }
   });
 

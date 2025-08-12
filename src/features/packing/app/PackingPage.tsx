@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Footer } from '@/components/Footer';
@@ -57,12 +57,12 @@ export default function PackingPage() {
       const id = pathname.split('/').pop();
       setEditId(id);
     }
-  }, [pathname, setEditId]);
+  }, [pathname]);
 
   // 处理数据变更
-  const handleDataChange = (newData: PackingData) => {
+  const handleDataChange = useCallback((newData: PackingData) => {
     setData(newData);
-  };
+  }, []);
 
   // 处理预览
   const handlePreviewClick = async () => {

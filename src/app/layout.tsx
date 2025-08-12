@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import ClientInitializer from '@/components/ClientInitializer';
-import { ThemeProvider, ThemeInitializer } from '@/components/ThemeProvider';
 
 
 const inter = Inter({ subsets: ['latin'] });
@@ -55,11 +54,8 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} min-h-screen`} suppressHydrationWarning>
         <Providers>
-          <ThemeProvider>
-            <ThemeInitializer />
-            <ClientInitializer />
-            {children}
-          </ThemeProvider>
+          <ClientInitializer />
+          {children}
         </Providers>
       </body>
     </html>

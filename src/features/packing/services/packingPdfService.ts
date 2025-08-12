@@ -20,7 +20,22 @@ export const generatePdf = async (data: PackingData): Promise<Blob | null> => {
       recordCustomerUsage(customerName, 'packing', data.invoiceNo);
     }
 
-    const blob = await generatePackingListPDF(data);
+    // 确保传递合并单元格数据
+    const pdfData = {
+      ...data,
+      packageQtyMergeMode: data.packageQtyMergeMode || 'auto',
+      dimensionsMergeMode: data.dimensionsMergeMode || 'auto',
+      manualMergedCells: data.manualMergedCells || {
+        packageQty: [],
+        dimensions: []
+      },
+      autoMergedCells: data.autoMergedCells || {
+        packageQty: [],
+        dimensions: []
+      }
+    };
+
+    const blob = await generatePackingListPDF(pdfData);
     return blob;
   } catch (error) {
     console.error('Error generating PDF:', error);

@@ -43,7 +43,18 @@ const getInitialData = (): PackingData => ({
     headerType: 'bilingual'
   },
   customUnits: [],
-  isInGroupMode: false
+  isInGroupMode: false,
+  // 合并单元格相关
+  packageQtyMergeMode: 'auto',
+  dimensionsMergeMode: 'auto',
+  manualMergedCells: {
+    packageQty: [],
+    dimensions: []
+  },
+  autoMergedCells: {
+    packageQty: [],
+    dimensions: []
+  }
 });
 
 interface CustomWindow extends Window {
@@ -55,6 +66,11 @@ interface CustomWindow extends Window {
 export const usePackingData = () => {
   const [data, setData] = useState<PackingData>(getInitialData);
   const [editId, setEditId] = useState<string | undefined>(undefined);
+
+  // 记忆化 setEditId 函数
+  const setEditIdMemo = useCallback((id: string | undefined) => {
+    setEditId(id);
+  }, []);
 
   // 检查并加载注入的数据
   useEffect(() => {
@@ -236,7 +252,7 @@ export const usePackingData = () => {
     data,
     setData,
     editId,
-    setEditId,
+    setEditId: setEditIdMemo,
     updateLineItem,
     handleAddLine,
     handleDeleteLine,

@@ -1,7 +1,10 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTablePrefsHydrated } from '../state/useTablePrefs';
+import { ColumnToggle } from './ColumnToggle';
 import { OtherFeesTable } from '../../../components/packinglist/OtherFeesTable';
+import { ImportDataButton } from './ImportDataButton';
+import { QuickImport } from './QuickImport';
 
 // 表格输入框基础样式
 const baseInputClassName = `w-full px-2 py-1.5 rounded-lg
@@ -82,21 +85,41 @@ interface PackingItem {
 type OtherFeeField = 'description' | 'amount';
 
 interface PackingData {
+  orderNo: string;
+  invoiceNo: string;
+  date: string;
+  consignee: {
+    name: string;
+  };
+  markingNo: string;
   items: PackingItem[];
   otherFees?: PackingOtherFee[];
+  currency: string;
+  remarks: string;
+  remarkOptions: {
+    shipsSpares: boolean;
+    customsPurpose: boolean;
+  };
   showHsCode: boolean;
   showDimensions: boolean;
   showWeightAndPackage: boolean;
   showPrice: boolean;
   dimensionUnit: string;
-  currency: string;
+  documentType: 'proforma' | 'packing' | 'both';
+  templateConfig: {
+    headerType: 'none' | 'bilingual' | 'english';
+  };
   customUnits?: string[];
-  isInGroupMode?: boolean;
+  isInGroupMode: boolean;
   currentGroupId?: string;
   // 合并单元格相关
   packageQtyMergeMode?: 'auto' | 'manual';
   dimensionsMergeMode?: 'auto' | 'manual';
   manualMergedCells?: {
+    packageQty: MergedCellInfo[];
+    dimensions: MergedCellInfo[];
+  };
+  autoMergedCells?: {
     packageQty: MergedCellInfo[];
     dimensions: MergedCellInfo[];
   };
@@ -130,6 +153,9 @@ interface ItemsTableEnhancedProps {
     packageQty: MergedCellInfo[];
     dimensions: MergedCellInfo[];
   }) => void;
+  // 导入相关
+  onImport?: (newItems: any[]) => void;
+  onInsertImported?: (rows: any[], replaceMode?: boolean) => void;
 }
 
 export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
@@ -151,7 +177,10 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   // 合并单元格相关
   onPackageQtyMergeModeChange,
   onDimensionsMergeModeChange,
-  onManualMergedCellsChange
+  onManualMergedCellsChange,
+  // 导入相关
+  onImport,
+  onInsertImported
 }) => {
   const { visibleCols, isHydrated } = useTablePrefsHydrated();
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -165,6 +194,8 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   const [editingGrossWeightAmount, setEditingGrossWeightAmount] = useState<string>('');
   const [editingPackageQtyIndex, setEditingPackageQtyIndex] = useState<number | null>(null);
   const [editingPackageQtyAmount, setEditingPackageQtyAmount] = useState<string>('');
+  const [editingDimensionsIndex, setEditingDimensionsIndex] = useState<number | null>(null);
+  const [editingDimensionsValue, setEditingDimensionsValue] = useState<string>('');
 
   // 合并单元格相关状态
   const [contextMenu, setContextMenu] = useState<{
@@ -198,7 +229,13 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     const mergedCells: MergedCellInfo[] = [];
     if (!items || items.length === 0) return mergedCells;
 
+    // 当表格中有分组数据时，禁用合并单元格功能
+    if (items.some(item => item.groupId)) {
+      return mergedCells;
+    }
+
     if (mode === 'manual') {
+      // 手动模式：先创建所有独立单元格
       items.forEach((item, index) => {
         mergedCells.push({
           startRow: index,
@@ -207,12 +244,33 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
           isMerged: false,
         });
       });
+      
+      // 应用手动合并数据
+      const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [] };
+      const manualCells = currentManualMergedCells[column] || [];
+      
+      if (manualCells.length > 0) {
+        // 移除被合并的独立单元格
+        manualCells.forEach(manualCell => {
+          for (let i = manualCell.startRow; i <= manualCell.endRow; i++) {
+            const existingIndex = mergedCells.findIndex(cell => cell.startRow === i);
+            if (existingIndex !== -1) {
+              mergedCells.splice(existingIndex, 1);
+            }
+          }
+          // 添加合并的单元格
+          mergedCells.push(manualCell);
+        });
+        
+        // 保持顺序
+        mergedCells.sort((a, b) => a.startRow - b.startRow);
+      }
+      
       return mergedCells;
     }
 
     let currentStart = 0;
     let currentContent = column === 'packageQty' ? items[0]?.packageQty.toString() : items[0]?.dimensions;
-    let currentGroupId = items[0]?.groupId;
 
     for (let i = 1; i <= items.length; i++) {
       const currentItem = items[i];
@@ -223,36 +281,28 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
         ? column === 'packageQty' ? currentItem.packageQty.toString() : currentItem.dimensions
         : '';
 
-      // 考虑分组因素：如果当前项和前一项属于不同组，则结束合并
-      const prevGroupId = prevItem?.groupId;
-      const nextGroupId = currentItem?.groupId;
-      const isGroupChange = prevGroupId !== nextGroupId;
-
-      // 如果前一项没有分组ID（分组外的行），则单独处理，不合并
-      const prevIsUngrouped = !prevGroupId;
-      const currentIsUngrouped = !nextGroupId;
-
+      // 合并逻辑：相同内容合并，但排除0和空值
       const shouldEndMerge = !currentItem || 
-        (currentContentValue !== prevContent && currentContentValue !== '') ||
-        isGroupChange ||
-        prevIsUngrouped || // 如果前一项是分组外的行，结束合并
-        currentIsUngrouped; // 如果当前项是分组外的行，结束合并
+        (currentContentValue !== prevContent) ||
+        // 排除无意义的合并
+        (prevContent === '0' || prevContent === '') ||
+        (currentContentValue === '0' || currentContentValue === '') ||
+        // 对于Dimensions列，排除纯数字的合并
+        (column === 'dimensions' && /^\d+$/.test(prevContent)) ||
+        (column === 'dimensions' && currentContentValue && /^\d+$/.test(currentContentValue));
 
       if (shouldEndMerge) {
-        // 如果前一项是分组外的行，单独处理
-        if (prevIsUngrouped) {
-          mergedCells.push({ startRow: i - 1, endRow: i - 1, content: prevContent, isMerged: false });
-        } else if (i - 1 > currentStart) {
-          // 分组内的合并
+        if (i - 1 > currentStart) {
+          // 有合并的行
           mergedCells.push({ startRow: currentStart, endRow: i - 1, content: currentContent, isMerged: true });
         } else {
+          // 单行，不合并
           mergedCells.push({ startRow: currentStart, endRow: currentStart, content: currentContent, isMerged: false });
         }
         
         if (currentItem) {
           currentStart = i;
           currentContent = currentContentValue;
-          currentGroupId = nextGroupId;
         }
       }
     }
@@ -295,21 +345,30 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   const manualMergeRows = (startRow: number, endRow: number, column: 'packageQty' | 'dimensions' = 'packageQty') => {
     if (startRow === endRow) return;
     const field = column;
-    const contents: string[] = [];
-    for (let i = startRow; i <= endRow; i++) {
-      const item = data.items?.[i];
-      if (!item) continue;
-      const content = column === 'packageQty' ? item.packageQty.toString() : item.dimensions;
-      if (content) contents.push(content);
-    }
-    const mergedContent = contents.length > 1 ? contents.join('\n') : (contents[0] || '');
-
+    
+    // 获取起始行的内容作为合并后的显示内容
+    const startItem = data.items?.[startRow];
+    if (!startItem) return;
+    
+    const mergedContent = column === 'packageQty' ? startItem.packageQty.toString() : startItem.dimensions;
+    
+    // 添加调试信息
+    console.log('手动合并调试:', {
+      startRow,
+      endRow,
+      column,
+      mergedContent,
+      selectedValue: mergedContent
+    });
+    
+    // 创建合并单元格，以起始行的内容为准
     const cell: MergedCellInfo = { startRow, endRow, content: mergedContent, isMerged: true };
     const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [] };
     const newManualMergedCells = {
       ...currentManualMergedCells,
       [column]: [...currentManualMergedCells[column], cell].sort((a, b) => a.startRow - b.startRow)
     };
+    console.log('手动合并成功:', { mergedContent, cell, newManualMergedCells });
     onManualMergedCellsChange?.(newManualMergedCells);
   };
 
@@ -540,30 +599,93 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
 
   // 计算 Other Fee 总额
   const otherFeesTotal = data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
+
+  // 计算合并单元格数据
+  const packageQtyMergeMode = data.packageQtyMergeMode || 'auto';
+  const dimensionsMergeMode = data.dimensionsMergeMode || 'auto';
   
-  // 修改总计计算逻辑，对于组内的项目，只计算合并后的那一行的数值
+  // 计算合并单元格数据 - 直接计算，不使用 useCallback 避免依赖项问题
+  const mergedPackageQtyCells = packageQtyMergeMode === 'manual' 
+    ? (data.manualMergedCells?.packageQty || [])
+    : calculateMergedCells(data.items, 'auto', 'packageQty');
+    
+  const mergedDimensionsCells = dimensionsMergeMode === 'manual'
+    ? (data.manualMergedCells?.dimensions || [])
+    : calculateMergedCells(data.items, 'auto', 'dimensions');
+
+  // 确保自动合并单元格数据被传递到主数据中
+  useEffect(() => {
+    if (onDataChange) {
+      const newAutoMergedCells = {
+        packageQty: packageQtyMergeMode === 'auto' ? mergedPackageQtyCells : [],
+        dimensions: dimensionsMergeMode === 'auto' ? mergedDimensionsCells : []
+      };
+      
+      // 只有当自动合并数据发生变化时才更新
+      const currentAutoMergedCells = data.autoMergedCells || { packageQty: [], dimensions: [] };
+      const hasChanged = JSON.stringify(currentAutoMergedCells) !== JSON.stringify(newAutoMergedCells);
+      
+      if (hasChanged) {
+        console.log('更新自动合并单元格数据:', newAutoMergedCells);
+        onDataChange({
+          ...data,
+          autoMergedCells: newAutoMergedCells
+        });
+      }
+    }
+  }, [mergedPackageQtyCells, mergedDimensionsCells, packageQtyMergeMode, dimensionsMergeMode, onDataChange, data]);
+
+
+  
+  // 修改总计计算逻辑，考虑合并单元格，避免重复计算
   const calculateTotals = () => {
     let totalPrice = 0;
     let netWeight = 0;
     let grossWeight = 0;
     let packageQty = 0;
     const processedGroups = new Set<string>();
+    const processedMergedRows = new Set<number>();
+    
+    // 处理合并单元格，标记已合并的行
+    const allMergedCells = [
+      ...mergedPackageQtyCells,
+      ...mergedDimensionsCells
+    ];
+    
+    allMergedCells.forEach(cell => {
+      if (cell.isMerged) {
+        for (let i = cell.startRow; i <= cell.endRow; i++) {
+          processedMergedRows.add(i);
+        }
+      }
+    });
+    
     data.items.forEach((item, index) => {
       totalPrice += item.totalPrice;
-      const isInGroup = !!item.groupId;
-      const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
-      const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
-      if (isInGroup) {
-        if (isFirstInGroup) {
+      
+      // 检查是否在合并单元格中且不是合并的起始行
+      const isInMergedCell = processedMergedRows.has(index);
+      const isMergeStart = allMergedCells.some(cell => 
+        cell.isMerged && cell.startRow === index
+      );
+      
+      // 如果不在合并单元格中，或者是合并的起始行，则计算
+      if (!isInMergedCell || isMergeStart) {
+        const isInGroup = !!item.groupId;
+        const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
+        const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
+        if (isInGroup) {
+          if (isFirstInGroup) {
+            netWeight += item.netWeight;
+            grossWeight += item.grossWeight;
+            packageQty += item.packageQty;
+            processedGroups.add(item.groupId!);
+          }
+        } else {
           netWeight += item.netWeight;
           grossWeight += item.grossWeight;
           packageQty += item.packageQty;
-          processedGroups.add(item.groupId!);
         }
-      } else {
-        netWeight += item.netWeight;
-        grossWeight += item.grossWeight;
-        packageQty += item.packageQty;
       }
     });
     return {
@@ -577,26 +699,106 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   const calculatedTotals = calculateTotals();
   const totalAmount = calculatedTotals.totalPrice + otherFeesTotal;
 
-  // 计算合并单元格数据
-  const packageQtyMergeMode = data.packageQtyMergeMode || 'auto';
-  const dimensionsMergeMode = data.dimensionsMergeMode || 'auto';
-  
-  const mergedPackageQtyCells = packageQtyMergeMode === 'manual' 
-    ? (data.manualMergedCells?.packageQty || [])
-    : calculateMergedCells(data.items, 'auto', 'packageQty');
-    
-  const mergedDimensionsCells = dimensionsMergeMode === 'manual'
-    ? (data.manualMergedCells?.dimensions || [])
-    : calculateMergedCells(data.items, 'auto', 'dimensions');
+  // 检查是否有分组数据
+  const hasGroupedItems = data.items.some(item => item.groupId);
 
   // 获取可见列
   const effectiveVisibleCols = isHydrated ? visibleCols : ['description', 'quantity', 'unit', 'netWeight', 'grossWeight', 'packageQty', 'unitPrice', 'amount'];
 
   return (
     <div className="space-y-0">
+      {/* 工具栏 */}
+      <div className="flex items-center justify-between mb-8 px-4 py-3 bg-gray-50/50 dark:bg-gray-800/30 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+        <div className="flex items-center gap-4">
+          {/* 导入按钮 */}
+          {onImport && <ImportDataButton onImport={onImport} />}
+          
+          {/* 分组按钮 */}
+          <button
+            type="button"
+            onClick={() => {
+              if (data.isInGroupMode) {
+                onDataChange?.({ ...data, isInGroupMode: false, currentGroupId: undefined });
+              } else {
+                onDataChange?.({ ...data, isInGroupMode: true, currentGroupId: `group_${Date.now()}` });
+              }
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+              data.isInGroupMode 
+                ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
+                : 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40'
+            }`}
+          >
+            {data.isInGroupMode ? '退出分组' : '添加分组'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const newItem = {
+                id: Date.now(),
+                serialNo: '',
+                description: '',
+                hsCode: '',
+                quantity: 0,
+                unitPrice: 0,
+                totalPrice: 0,
+                netWeight: 0,
+                grossWeight: 0,
+                packageQty: 0,
+                dimensions: '',
+                unit: '',
+                groupId: data.currentGroupId
+              };
+              onDataChange?.({ ...data, items: [...data.items, newItem] });
+            }}
+            className="px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40 text-xs font-medium transition-all duration-200"
+          >
+            添加商品
+          </button>
+
+          {data.showPrice && (
+            <button
+              type="button"
+              onClick={() => {
+                const newOtherFee = {
+                  id: Date.now(),
+                  description: '',
+                  amount: 0
+                };
+                onDataChange?.({ 
+                  ...data, 
+                  otherFees: [...(data.otherFees || []), newOtherFee] 
+                });
+              }}
+              className="px-3 py-1.5 rounded-lg bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 text-xs font-medium transition-all duration-200"
+            >
+              添加费用
+            </button>
+          )}
+        </div>
+
+        {/* 右侧工具栏 */}
+        <div className="flex items-center gap-3">
+          <ColumnToggle 
+            packageQtyMergeMode={data.packageQtyMergeMode || 'auto'}
+            dimensionsMergeMode={data.dimensionsMergeMode || 'auto'}
+            onPackageQtyMergeModeChange={onPackageQtyMergeModeChange}
+            onDimensionsMergeModeChange={onDimensionsMergeModeChange}
+            hasGroupedItems={hasGroupedItems}
+          />
+          {onInsertImported && (
+            <QuickImport
+              onInsert={onInsertImported}
+              onClosePreset={() => {}}
+            />
+          )}
+        </div>
+      </div>
+
       {/* 桌面端表格视图 - 中屏及以上显示 */}
       <div className="hidden md:block overflow-x-auto rounded-2xl border border-gray-200/30 dark:border-white/10
-                    bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl shadow-lg">
+                    bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl shadow-lg mt-6">
         <div className="min-w-[800px] lg:min-w-[1000px] xl:min-w-[1200px]">
           <table className="w-full">
             <thead>
@@ -943,76 +1145,158 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                       ) : null
                     )}
                     
-                    {effectiveVisibleCols.includes('packageQty') && data.showWeightAndPackage && shouldRenderCell(index, mergedPackageQtyCells) && (
-                      (() => {
-                        const packageQtyMergedInfo = getMergedCellInfo(index, mergedPackageQtyCells);
-                        const packageQtyRowSpan = packageQtyMergedInfo ? packageQtyMergedInfo.endRow - packageQtyMergedInfo.startRow + 1 : 1;
-                        const packageQtyIsMerged = !!packageQtyMergedInfo?.isMerged;
-                        
-                        return (
-                          <td 
-                            className={`py-2 px-4 text-center text-sm ${
-                              packageQtyIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
-                            }`}
-                            rowSpan={packageQtyIsMerged ? packageQtyRowSpan : undefined}
-                            onContextMenu={(e) => handleContextMenu(e, index, 'packageQty')}
-                          >
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              value={editingPackageQtyIndex === index ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (/^\d*$/.test(value)) {
-                                  setEditingPackageQtyAmount(value);
-                                  onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
-                                }
-                              }}
-                              onFocus={(e) => {
-                                setEditingPackageQtyIndex(index);
-                                setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
-                                e.target.select();
-                                handleIOSInputFocus(e);
-                              }}
-                              onBlur={() => {
-                                setEditingPackageQtyIndex(null);
-                                setEditingPackageQtyAmount('');
-                              }}
-                              onDoubleClick={() => handleDoubleClick(index, 'packageQty')}
-                              className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${item.highlight?.packageQty ? highlightClass : ''} ${packageQtyIsMerged ? 'border-blue-200 dark:border-blue-700' : ''}`}
-                              placeholder="0"
-                              style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
-                            />
-                          </td>
-                        );
-                      })()
+                    {effectiveVisibleCols.includes('packageQty') && data.showWeightAndPackage && (
+                      // 当有分组数据时，使用普通单元格渲染
+                      hasGroupedItems ? (
+                        <td className="py-2 px-4 text-center text-sm">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={editingPackageQtyIndex === index ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (/^\d*$/.test(value)) {
+                                setEditingPackageQtyAmount(value);
+                                onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
+                              }
+                            }}
+                            onFocus={(e) => {
+                              setEditingPackageQtyIndex(index);
+                              setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
+                              e.target.select();
+                              handleIOSInputFocus(e);
+                            }}
+                            onBlur={() => {
+                              setEditingPackageQtyIndex(null);
+                              setEditingPackageQtyAmount('');
+                            }}
+                            onDoubleClick={() => handleDoubleClick(index, 'packageQty')}
+                            className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${item.highlight?.packageQty ? highlightClass : ''}`}
+                            placeholder="0"
+                            style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
+                          />
+                        </td>
+                      ) : (
+                        // 非分组模式下，使用合并单元格功能
+                        shouldRenderCell(index, mergedPackageQtyCells) && (
+                          (() => {
+                            const packageQtyMergedInfo = getMergedCellInfo(index, mergedPackageQtyCells);
+                            const packageQtyRowSpan = packageQtyMergedInfo ? packageQtyMergedInfo.endRow - packageQtyMergedInfo.startRow + 1 : 1;
+                            const packageQtyIsMerged = !!packageQtyMergedInfo?.isMerged;
+                            
+                            return (
+                              <td 
+                                className={`py-2 px-4 text-center text-sm ${
+                                  packageQtyIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
+                                }`}
+                                rowSpan={packageQtyIsMerged ? packageQtyRowSpan : undefined}
+                                onContextMenu={(e) => handleContextMenu(e, index, 'packageQty')}
+                              >
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={editingPackageQtyIndex === index ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (/^\d*$/.test(value)) {
+                                      setEditingPackageQtyAmount(value);
+                                      onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
+                                    }
+                                  }}
+                                  onFocus={(e) => {
+                                    setEditingPackageQtyIndex(index);
+                                    setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
+                                    e.target.select();
+                                    handleIOSInputFocus(e);
+                                  }}
+                                  onBlur={() => {
+                                    setEditingPackageQtyIndex(null);
+                                    setEditingPackageQtyAmount('');
+                                  }}
+                                  onDoubleClick={() => handleDoubleClick(index, 'packageQty')}
+                                  className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${item.highlight?.packageQty ? highlightClass : ''} ${packageQtyIsMerged ? 'border-blue-200 dark:border-blue-700' : ''}`}
+                                  placeholder="0"
+                                  style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
+                                />
+                              </td>
+                            );
+                          })()
+                        )
+                      )
                     )}
                     
-                    {effectiveVisibleCols.includes('dimensions') && data.showDimensions && shouldRenderCell(index, mergedDimensionsCells) && (
-                      (() => {
-                        const dimensionsMergedInfo = getMergedCellInfo(index, mergedDimensionsCells);
-                        const dimensionsRowSpan = dimensionsMergedInfo ? dimensionsMergedInfo.endRow - dimensionsMergedInfo.startRow + 1 : 1;
-                        const dimensionsIsMerged = !!dimensionsMergedInfo?.isMerged;
-                        
-                        return (
-                          <td 
-                            className={`py-2 px-4 text-center text-sm ${
-                              dimensionsIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
-                            }`}
-                            rowSpan={dimensionsIsMerged ? dimensionsRowSpan : undefined}
-                            onContextMenu={(e) => handleContextMenu(e, index, 'dimensions')}
-                          >
-                            <input
-                              type="text"
-                              value={item.dimensions}
-                              onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
-                              onDoubleClick={() => handleDoubleClick(index, 'dimensions')}
-                              className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input ${item.highlight?.dimensions ? highlightClass : ''} ${dimensionsIsMerged ? 'border-blue-200 dark:border-blue-700' : ''}`}
-                              placeholder="Dimensions"
-                            />
-                          </td>
-                        );
-                      })()
+                    {effectiveVisibleCols.includes('dimensions') && data.showDimensions && (
+                      // 当有分组数据时，使用普通单元格渲染
+                      hasGroupedItems ? (
+                        <td className="py-2 px-4 text-center text-sm">
+                          <input
+                            type="text"
+                            inputMode="text"
+                            value={editingDimensionsIndex === index ? editingDimensionsValue : item.dimensions}
+                            onChange={(e) => {
+                              setEditingDimensionsValue(e.target.value);
+                              onItemChange(index, 'dimensions', e.target.value);
+                            }}
+                            onFocus={(e) => {
+                              setEditingDimensionsIndex(index);
+                              setEditingDimensionsValue(item.dimensions);
+                              e.target.select();
+                              handleIOSInputFocus(e);
+                            }}
+                            onBlur={() => {
+                              setEditingDimensionsIndex(null);
+                              setEditingDimensionsValue('');
+                            }}
+                            onDoubleClick={() => handleDoubleClick(index, 'dimensions')}
+                            className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input ${item.highlight?.dimensions ? highlightClass : ''}`}
+                            placeholder={`Dimensions (${data.dimensionUnit})`}
+                            style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
+                          />
+                        </td>
+                      ) : (
+                        // 非分组模式下，使用合并单元格功能
+                        shouldRenderCell(index, mergedDimensionsCells) && (
+                          (() => {
+                            const dimensionsMergedInfo = getMergedCellInfo(index, mergedDimensionsCells);
+                            const dimensionsRowSpan = dimensionsMergedInfo ? dimensionsMergedInfo.endRow - dimensionsMergedInfo.startRow + 1 : 1;
+                            const dimensionsIsMerged = !!dimensionsMergedInfo?.isMerged;
+                            
+                            return (
+                              <td 
+                                className={`py-2 px-4 text-center text-sm ${
+                                  dimensionsIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
+                                }`}
+                                rowSpan={dimensionsIsMerged ? dimensionsRowSpan : undefined}
+                                onContextMenu={(e) => handleContextMenu(e, index, 'dimensions')}
+                              >
+                                <input
+                                  type="text"
+                                  inputMode="text"
+                                  value={editingDimensionsIndex === index ? editingDimensionsValue : item.dimensions}
+                                  onChange={(e) => {
+                                    setEditingDimensionsValue(e.target.value);
+                                    onItemChange(index, 'dimensions', e.target.value);
+                                  }}
+                                  onFocus={(e) => {
+                                    setEditingDimensionsIndex(index);
+                                    setEditingDimensionsValue(item.dimensions);
+                                    e.target.select();
+                                    handleIOSInputFocus(e);
+                                  }}
+                                  onBlur={() => {
+                                    setEditingDimensionsIndex(null);
+                                    setEditingDimensionsValue('');
+                                  }}
+                                  onDoubleClick={() => handleDoubleClick(index, 'dimensions')}
+                                  className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input ${item.highlight?.dimensions ? highlightClass : ''} ${dimensionsIsMerged ? 'border-blue-200 dark:border-blue-700' : ''}`}
+                                  placeholder={`Dimensions (${data.dimensionUnit})`}
+                                  style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
+                                />
+                              </td>
+                            );
+                          })()
+                        )
+                      )
                     )}
                   </tr>
                 );

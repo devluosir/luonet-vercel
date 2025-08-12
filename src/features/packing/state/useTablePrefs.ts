@@ -21,18 +21,18 @@ export const useTablePrefs = create<TablePrefsState>((set, get) => ({
     const now = get().visibleCols;
     const next = now.includes(c) ? now.filter(x=>x!==c) : [...now, c];
     // 确保核心列始终显示
-    const coreCols = ['description', 'quantity', 'unit'];
+    const coreCols: Col[] = ['description', 'quantity', 'unit'];
     
     // 处理重量包装组与尺寸的关系
-    const weightCols = ['netWeight', 'grossWeight', 'packageQty'];
+    const weightCols: Col[] = ['netWeight', 'grossWeight', 'packageQty'];
     const hasAnyWeightCol = weightCols.some(col => next.includes(col));
     
     // 处理价格组与重量包装组的关系
-    const priceCols = ['unitPrice', 'amount'];
+    const priceCols: Col[] = ['unitPrice', 'amount'];
     const hasAnyPriceCol = priceCols.some(col => next.includes(col));
     
     // 如果重量包装组关闭，则强制关闭尺寸列
-    let finalCols = [...new Set([...coreCols, ...next])];
+    let finalCols = Array.from(new Set([...coreCols, ...next]));
     if (!hasAnyWeightCol) {
       finalCols = finalCols.filter(col => col !== 'dimensions');
     }
@@ -48,18 +48,18 @@ export const useTablePrefs = create<TablePrefsState>((set, get) => ({
   },
   setCols: (cols) => {
     // 确保核心列始终显示
-    const coreCols = ['description', 'quantity', 'unit'];
+    const coreCols: Col[] = ['description', 'quantity', 'unit'];
     
     // 处理重量包装组与尺寸的关系
-    const weightCols = ['netWeight', 'grossWeight', 'packageQty'];
+    const weightCols: Col[] = ['netWeight', 'grossWeight', 'packageQty'];
     const hasAnyWeightCol = weightCols.some(col => cols.includes(col));
     
     // 处理价格组与重量包装组的关系
-    const priceCols = ['unitPrice', 'amount'];
+    const priceCols: Col[] = ['unitPrice', 'amount'];
     const hasAnyPriceCol = priceCols.some(col => cols.includes(col));
     
     // 如果重量包装组关闭，则强制关闭尺寸列
-    let finalCols = [...new Set([...coreCols, ...cols])];
+    let finalCols = Array.from(new Set([...coreCols, ...cols]));
     if (!hasAnyWeightCol) {
       finalCols = finalCols.filter(col => col !== 'dimensions');
     }
@@ -77,19 +77,19 @@ export const useTablePrefs = create<TablePrefsState>((set, get) => ({
     if (typeof window !== 'undefined' && !get().hydrated) {
       const parsed = getLocalStorageJSON('pk.visibleCols', null);
       // 确保核心列始终显示
-      const coreCols = ['description', 'quantity', 'unit'];
+      const coreCols: Col[] = ['description', 'quantity', 'unit'];
       const initialCols = parsed || DEFAULT_COLS;
       
       // 处理重量包装组与尺寸的关系
-      const weightCols = ['netWeight', 'grossWeight', 'packageQty'];
+      const weightCols: Col[] = ['netWeight', 'grossWeight', 'packageQty'];
       const hasAnyWeightCol = weightCols.some(col => initialCols.includes(col));
       
       // 处理价格组与重量包装组的关系
-      const priceCols = ['unitPrice', 'amount'];
+      const priceCols: Col[] = ['unitPrice', 'amount'];
       const hasAnyPriceCol = priceCols.some(col => initialCols.includes(col));
       
       // 如果重量包装组关闭，则强制关闭尺寸列
-      let finalCols = [...new Set([...coreCols, ...initialCols])];
+      let finalCols = Array.from(new Set([...coreCols, ...initialCols]));
       if (!hasAnyWeightCol) {
         finalCols = finalCols.filter(col => col !== 'dimensions');
       }
