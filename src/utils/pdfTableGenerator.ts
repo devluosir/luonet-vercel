@@ -418,30 +418,42 @@ export const generateTableConfig = (
         return row;
       }),
       // Other Fees 行
-      ...(data.otherFees || []).map(fee => [
-        {
-          content: fee.description,
-          colSpan: showDescription ? 7 : 6,
-          styles: { 
-            halign: 'center' as const,
-            ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {})
+      ...(data.otherFees || []).map((fee, index) => {
+        const row: any[] = [
+          {
+            content: ((data.items?.length || 0) + index + 1).toString(), // 连续主表序号
+            styles: { halign: 'center' as const }
+          },
+          {
+            content: fee.description,
+            colSpan: showDescription ? 5 : 4, // 合并Part Name到U/Price列（不包括Amount列）
+            styles: { 
+              halign: 'center' as const,
+              ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {})
+            }
+          },
+          {
+            content: fee.amount.toFixed(2),
+            styles: {
+              halign: 'center' as const,
+              ...(fee.highlight?.amount ? { textColor: [255, 0, 0] } : {})
+            }
           }
-        },
-        {
-          content: fee.amount.toFixed(2),
-          styles: {
-            halign: 'center' as const,
-            ...(fee.highlight?.amount ? { textColor: [255, 0, 0] } : {})
-          }
-        },
-        ...(showRemarks ? [{
-          content: fee.remarks || '',
-          styles: {
-            halign: 'center' as const,
-            ...(fee.highlight?.remarks ? { textColor: [255, 0, 0] } : {})
-          }
-        }] : [])
-      ])
+        ];
+
+        // 添加 remarks 列（如果显示）
+        if (showRemarks) {
+          row.push({
+            content: fee.remarks || '',
+            styles: {
+              halign: 'center' as const,
+              ...(fee.highlight?.remarks ? { textColor: [255, 0, 0] } : {})
+            }
+          });
+        }
+
+        return row;
+      }),
     ] as unknown as RowInput[],
     margin: { left: margin - 5, right: margin - 5, bottom: 20 }, // 左右边距向外扩展5mm
     tableWidth: pageWidth - ((margin - 5) * 2), // 使用调整后的边距计算表格宽度

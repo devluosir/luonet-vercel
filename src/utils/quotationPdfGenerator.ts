@@ -229,6 +229,8 @@ export const generateQuotationPDF = async (
       const itemsTotal = data.items.reduce((sum, item) => sum + (item.amount || 0), 0);
       const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + (fee.amount || 0), 0);
       const totalAmount = itemsTotal + feesTotal;
+      
+
 
       // 显示总金额
       doc.setFontSize(10);

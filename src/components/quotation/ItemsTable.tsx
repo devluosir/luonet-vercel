@@ -1012,7 +1012,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
             {(data.otherFees ?? []).map((fee, index) => (
               <div key={fee.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5EA] dark:border-[#2C2C2E]">
-                  <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Other Fee #{index + 1}</div>
+                  <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Item #{((data.items?.length || 0) + index + 1)}</div>
                   <button type="button" onClick={() => handleOtherFeeSoftDelete(index)} className="text-gray-400 hover:text-red-500 transition-colors p-1" title="删除此项">
                     ×
                   </button>
@@ -1326,7 +1326,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                             onClick={() => handleOtherFeeSoftDelete(index)}
                             title="Click to delete"
                           >
-                            ×
+                            {(data.items?.length || 0) + index + 1}
                           </span>
                         </td>
                         <td colSpan={effectiveVisibleCols.includes('description') ? 6 : 5} className="px-2 py-2">
