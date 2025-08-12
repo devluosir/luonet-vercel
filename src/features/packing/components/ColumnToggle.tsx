@@ -10,10 +10,18 @@ const ALL_COLS: { key: string; label: string }[] = [
 ];
 
 interface ColumnToggleProps {
-  // 可以根据需要添加更多props
+  packageQtyMergeMode?: 'auto' | 'manual';
+  dimensionsMergeMode?: 'auto' | 'manual';
+  onPackageQtyMergeModeChange?: (mode: 'auto' | 'manual') => void;
+  onDimensionsMergeModeChange?: (mode: 'auto' | 'manual') => void;
 }
 
-export function ColumnToggle({}: ColumnToggleProps) {
+export function ColumnToggle({ 
+  packageQtyMergeMode = 'auto', 
+  dimensionsMergeMode = 'auto',
+  onPackageQtyMergeModeChange,
+  onDimensionsMergeModeChange
+}: ColumnToggleProps) {
   const { visibleCols, toggleCol, setCols } = useTablePrefsHydrated();
   const [open, setOpen] = useState(false);
 
@@ -49,6 +57,18 @@ export function ColumnToggle({}: ColumnToggleProps) {
     }
   };
 
+  // 切换包装数量合并模式
+  const togglePackageQtyMergeMode = () => {
+    const newMode = packageQtyMergeMode === 'auto' ? 'manual' : 'auto';
+    onPackageQtyMergeModeChange?.(newMode);
+  };
+
+  // 切换尺寸合并模式
+  const toggleDimensionsMergeMode = () => {
+    const newMode = dimensionsMergeMode === 'auto' ? 'manual' : 'auto';
+    onDimensionsMergeModeChange?.(newMode);
+  };
+
   // 检查重量和包装列的状态
   const weightCols = ['netWeight', 'grossWeight', 'packageQty'];
   const hasAnyWeightCol = weightCols.some(col => visibleCols.includes(col as any));
@@ -68,22 +88,48 @@ export function ColumnToggle({}: ColumnToggleProps) {
               const isDisabled = !hasAnyPriceCol && !hasAnyWeightCol;
               
               return (
-                <button
-                  key={col.key}
-                  type="button"
-                  onClick={handleWeightAndPackageToggle}
-                  disabled={isDisabled}
-                  className={`px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
-                    isDisabled
-                      ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
-                      : hasAnyWeightCol
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'
-                  }`}
-                  title={isDisabled ? '价格组和重量包装组不能同时关闭' : '切换重量包装组'}
-                >
-                  {col.label}
-                </button>
+                <div key={col.key} className="flex items-center">
+                  {/* 重量包装组按钮 */}
+                  <button
+                    type="button"
+                    onClick={handleWeightAndPackageToggle}
+                    disabled={isDisabled}
+                    className={`px-1.5 py-1 text-xs font-medium rounded-l-lg transition-all duration-200 active:scale-95 ${
+                      isDisabled
+                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
+                        : hasAnyWeightCol
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'
+                    }`}
+                    title={isDisabled ? '价格组和重量包装组不能同时关闭' : '切换重量包装组'}
+                  >
+                    {col.label}
+                  </button>
+                  
+                  {/* 包装数量合并模式切换按钮 */}
+                  {hasAnyWeightCol && visibleCols.includes('packageQty') && (
+                    <button
+                      type="button"
+                      onClick={togglePackageQtyMergeMode}
+                      className={`px-1.5 py-1 text-xs font-medium rounded-r-lg transition-all duration-200 active:scale-95 flex items-center gap-1 border-l border-current/20 ${
+                        packageQtyMergeMode === 'auto'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 shadow-sm'
+                          : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 shadow-sm'
+                      }`}
+                      title={packageQtyMergeMode === 'auto' ? '切换到手动合并模式' : '切换到自动合并模式'}
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M8 6l4-2 4 2M8 18l4 2 4-2M12 4v16"
+                        />
+                      </svg>
+                      {packageQtyMergeMode === 'auto' ? '自动' : '手动'}
+                    </button>
+                  )}
+                </div>
               );
             }
             
@@ -117,22 +163,48 @@ export function ColumnToggle({}: ColumnToggleProps) {
               const isDisabled = !hasAnyWeightCol; // 当重量包装组关闭时禁用
               
               return (
-                <button
-                  key={col.key}
-                  type="button"
-                  onClick={() => !isDisabled && toggleCol(col.key as any)}
-                  disabled={isDisabled}
-                  className={`px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
-                    isDisabled
-                      ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
-                      : isDimensionsVisible
-                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'
-                  }`}
-                  title={isDisabled ? '需要先开启重量包装组' : '切换尺寸列'}
-                >
-                  {col.label}
-                </button>
+                <div key={col.key} className="flex items-center">
+                  {/* 尺寸列按钮 */}
+                  <button
+                    type="button"
+                    onClick={() => !isDisabled && toggleCol(col.key as any)}
+                    disabled={isDisabled}
+                    className={`px-1.5 py-1 text-xs font-medium rounded-l-lg transition-all duration-200 active:scale-95 ${
+                      isDisabled
+                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
+                        : isDimensionsVisible
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'
+                    }`}
+                    title={isDisabled ? '需要先开启重量包装组' : '切换尺寸列'}
+                  >
+                    {col.label}
+                  </button>
+                  
+                  {/* 尺寸合并模式切换按钮 */}
+                  {isDimensionsVisible && !isDisabled && (
+                    <button
+                      type="button"
+                      onClick={toggleDimensionsMergeMode}
+                      className={`px-1.5 py-1 text-xs font-medium rounded-r-lg transition-all duration-200 active:scale-95 flex items-center gap-1 border-l border-current/20 ${
+                        dimensionsMergeMode === 'auto'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 shadow-sm'
+                          : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 shadow-sm'
+                      }`}
+                      title={dimensionsMergeMode === 'auto' ? '切换到手动合并模式' : '切换到自动合并模式'}
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M8 6l4-2 4 2M8 18l4 2 4-2M12 4v16"
+                        />
+                      </svg>
+                      {dimensionsMergeMode === 'auto' ? '自动' : '手动'}
+                    </button>
+                  )}
+                </div>
               );
             }
             

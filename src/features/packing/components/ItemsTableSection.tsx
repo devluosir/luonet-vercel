@@ -33,6 +33,29 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
   const { visibleCols, isHydrated } = useTablePrefsHydrated();
   const [importPreset, setImportPreset] = useState<{ raw: string; parsed: any } | null>(null);
 
+  // 合并模式状态管理
+  const [packageQtyMergeMode, setPackageQtyMergeMode] = useState<'auto' | 'manual'>('auto');
+  const [dimensionsMergeMode, setDimensionsMergeMode] = useState<'auto' | 'manual'>('auto');
+  
+  // 手动合并数据状态
+  const [manualMergedCells, setManualMergedCells] = useState<{
+    packageQty: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+    dimensions: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+  }>({
+    packageQty: [],
+    dimensions: []
+  });
+
   // 处理导入数据
   const handleImport = (newItems: any[]) => {
     const processed = newItems.map((item, index) => ({
@@ -66,6 +89,11 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
     onDataChange({ ...data, items: finalItems });
   };
 
+  // 处理手动合并数据变更
+  const handleManualMergeChange = (newManualMergedCells: typeof manualMergedCells) => {
+    setManualMergedCells(newManualMergedCells);
+  };
+
   return (
     <section className="rounded-2xl border border-slate-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/30 shadow-sm p-4">
       {/* 工具栏 */}
@@ -75,7 +103,12 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
 
         </div>
         <div className="flex items-center gap-3">
-          <ColumnToggle />
+          <ColumnToggle 
+            packageQtyMergeMode={packageQtyMergeMode}
+            dimensionsMergeMode={dimensionsMergeMode}
+            onPackageQtyMergeModeChange={setPackageQtyMergeMode}
+            onDimensionsMergeModeChange={setDimensionsMergeMode}
+          />
           <QuickImport
             onInsert={handleInsertImported}
             presetRaw={importPreset?.raw}
@@ -100,7 +133,11 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
           currency: data.currency,
           customUnits: data.customUnits,
           isInGroupMode: data.isInGroupMode,
-          currentGroupId: data.currentGroupId
+          currentGroupId: data.currentGroupId,
+          // 合并单元格相关
+          packageQtyMergeMode,
+          dimensionsMergeMode,
+          manualMergedCells
         }}
         totals={totals}
         editingFeeIndex={editingFeeIndex}
@@ -156,6 +193,10 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
           onDataChange({ ...data, isInGroupMode: false, currentGroupId: undefined });
         }}
         onDataChange={onDataChange}
+        // 合并单元格相关回调
+        onPackageQtyMergeModeChange={setPackageQtyMergeMode}
+        onDimensionsMergeModeChange={setDimensionsMergeMode}
+        onManualMergedCellsChange={handleManualMergeChange}
       />
 
       {/* 添加行按钮 */}
@@ -225,5 +266,8 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
         )}
       </div>
     </section>
+  );
+};
+
   );
 };

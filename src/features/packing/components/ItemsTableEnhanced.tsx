@@ -147,7 +147,11 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   setEditingFeeAmount,
   totals,
   onEnterGroupMode,
-  onExitGroupMode
+  onExitGroupMode,
+  // 合并单元格相关
+  onPackageQtyMergeModeChange,
+  onDimensionsMergeModeChange,
+  onManualMergedCellsChange
 }) => {
   const { visibleCols, isHydrated } = useTablePrefsHydrated();
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -161,6 +165,15 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   const [editingGrossWeightAmount, setEditingGrossWeightAmount] = useState<string>('');
   const [editingPackageQtyIndex, setEditingPackageQtyIndex] = useState<number | null>(null);
   const [editingPackageQtyAmount, setEditingPackageQtyAmount] = useState<string>('');
+
+  // 合并单元格相关状态
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    rowIndex: number;
+    column?: 'packageQty' | 'dimensions';
+  } | null>(null);
 
   // iOS输入框样式
   const iosCaretStyle = {
@@ -246,16 +259,204 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     return mergedCells;
   };
 
-  // 获取合并单元格信息
-  const getMergedCellInfo = (rowIndex: number, merged: MergedCellInfo[]) => {
-    if (merged.length === 0) return null;
-    return merged.find((cell) => cell.startRow === rowIndex) || null;
+  // 合并单元格相关工具函数
+  const getMergedCellInfo = (rowIndex: number, mergedCells: MergedCellInfo[]) => {
+    return mergedCells.find(cell => rowIndex >= cell.startRow && rowIndex <= cell.endRow);
   };
 
-  // 判断是否应该渲染单元格
-  const shouldRenderCell = (rowIndex: number, merged: MergedCellInfo[]) => {
-    if (merged.length === 0) return true;
-    return merged.some((cell) => cell.startRow === rowIndex);
+  const shouldRenderCell = (rowIndex: number, mergedCells: MergedCellInfo[]) => {
+    const mergedInfo = getMergedCellInfo(rowIndex, mergedCells);
+    return !mergedInfo || mergedInfo.startRow === rowIndex;
+  };
+
+  const findContainingMergedCell = (rowIndex: number, column: 'packageQty' | 'dimensions') => {
+    const mergedCells = column === 'packageQty' ? mergedPackageQtyCells : mergedDimensionsCells;
+    return mergedCells.find(cell => rowIndex >= cell.startRow && rowIndex <= cell.endRow);
+  };
+
+  const findNextMergedGroupStartBeforeEnd = (currentEndRow: number, column: 'packageQty' | 'dimensions') => {
+    const mergedCells = column === 'packageQty' ? mergedPackageQtyCells : mergedDimensionsCells;
+    for (let i = 0; i < mergedCells.length; i++) {
+      const c = mergedCells[i];
+      if (c.isMerged && c.startRow > currentEndRow) return c.startRow - 1;
+    }
+    return data.items.length - 1;
+  };
+
+  const findPrevMergedGroupEndAfterStart = (currentStartRow: number, column: 'packageQty' | 'dimensions') => {
+    const mergedCells = column === 'packageQty' ? mergedPackageQtyCells : mergedDimensionsCells;
+    for (let i = mergedCells.length - 1; i >= 0; i--) {
+      const c = mergedCells[i];
+      if (c.isMerged && c.endRow < currentStartRow) return c.endRow + 1;
+    }
+    return 0;
+  };
+
+  const manualMergeRows = (startRow: number, endRow: number, column: 'packageQty' | 'dimensions' = 'packageQty') => {
+    if (startRow === endRow) return;
+    const field = column;
+    const contents: string[] = [];
+    for (let i = startRow; i <= endRow; i++) {
+      const item = data.items?.[i];
+      if (!item) continue;
+      const content = column === 'packageQty' ? item.packageQty.toString() : item.dimensions;
+      if (content) contents.push(content);
+    }
+    const mergedContent = contents.length > 1 ? contents.join('\n') : (contents[0] || '');
+
+    const cell: MergedCellInfo = { startRow, endRow, content: mergedContent, isMerged: true };
+    const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [] };
+    const newManualMergedCells = {
+      ...currentManualMergedCells,
+      [column]: [...currentManualMergedCells[column], cell].sort((a, b) => a.startRow - b.startRow)
+    };
+    onManualMergedCellsChange?.(newManualMergedCells);
+  };
+
+  const splitMergedCell = (rowIndex: number) => {
+    const column = contextMenu?.column || 'packageQty';
+    const mergedInfo = getMergedCellInfo(rowIndex, column === 'packageQty' ? mergedPackageQtyCells : mergedDimensionsCells);
+    if (!mergedInfo || !mergedInfo.isMerged) return;
+
+    const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [] };
+    const newManualMergedCells = {
+      ...currentManualMergedCells,
+      [column]: currentManualMergedCells[column].filter((c) => !(c.startRow === mergedInfo.startRow && c.endRow === mergedInfo.endRow))
+    };
+    onManualMergedCellsChange?.(newManualMergedCells);
+  };
+
+  const mergeToRow = (startRow: number, endRow: number) => {
+    const column = contextMenu?.column || 'packageQty';
+    const rowIndex = contextMenu?.rowIndex ?? 0;
+    const existing = findContainingMergedCell(rowIndex, column);
+    if (existing) {
+      const newStart = Math.min(existing.startRow, startRow);
+      const newEnd = Math.max(existing.endRow, endRow);
+      const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [] };
+      const newManualMergedCells = {
+        ...currentManualMergedCells,
+        [column]: currentManualMergedCells[column].filter((c) => !(c.startRow === existing.startRow && c.endRow === existing.endRow))
+      };
+      onManualMergedCellsChange?.(newManualMergedCells);
+      manualMergeRows(newStart, newEnd, column);
+    } else {
+      manualMergeRows(startRow, endRow, column);
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, rowIndex: number, column?: 'packageQty' | 'dimensions') => {
+    e.preventDefault();
+    setContextMenu({ visible: true, x: e.clientX, y: e.clientY, rowIndex, column });
+  };
+
+  const closeContextMenu = () => setContextMenu(null);
+
+  // 合并单元格右键菜单组件
+  type ContextMenuProps = {
+    menu: typeof contextMenu;
+    onClose: () => void;
+    onSplit: (rowIndex: number) => void;
+    onMergeUp: (rowIndex: number) => void;
+    onMergeUpMore: (rowIndex: number) => void;
+    onMergeDown: (rowIndex: number) => void;
+    onMergeDownMore: (rowIndex: number) => void;
+    isManualMode: boolean;
+    canMergeUp: boolean;
+    canMergeDown: boolean;
+  };
+
+  const MergeContextMenu: React.FC<ContextMenuProps> = ({
+    menu,
+    onClose,
+    onSplit,
+    onMergeUp,
+    onMergeUpMore,
+    onMergeDown,
+    onMergeDownMore,
+    isManualMode,
+    canMergeUp,
+    canMergeDown,
+  }) => {
+    if (!menu || menu.visible !== true) return null;
+    if (!isManualMode) return null;
+
+    return (
+      <>
+        <div
+          className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1"
+          style={{ left: menu.x, top: menu.y }}
+        >
+          {canMergeUp && (
+            <>
+              <button
+                type="button"
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => {
+                  onMergeUp(menu.rowIndex);
+                  onClose();
+                }}
+              >
+                向上合并
+              </button>
+              <button
+                type="button"
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => {
+                  onMergeUpMore(menu.rowIndex);
+                  onClose();
+                }}
+              >
+                向上扩展合并
+              </button>
+            </>
+          )}
+          {canMergeDown && (
+            <>
+              <button
+                type="button"
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => {
+                  onMergeDown(menu.rowIndex);
+                  onClose();
+                }}
+              >
+                向下合并
+              </button>
+              <button
+                type="button"
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => {
+                  onMergeDownMore(menu.rowIndex);
+                  onClose();
+                }}
+              >
+                向下扩展合并
+              </button>
+            </>
+          )}
+          {(canMergeUp || canMergeDown) && <div className="border-t border-gray-200 dark:border-gray-600 my-1" />}
+          <button
+            type="button"
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            onClick={() => {
+              onSplit(menu.rowIndex);
+              onClose();
+            }}
+          >
+            拆分合并单元格
+          </button>
+          <button
+            type="button"
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            onClick={onClose}
+          >
+            取消
+          </button>
+        </div>
+        <div className="fixed inset-0 z-40" onClick={onClose} />
+      </>
+    );
   };
 
   // 检测暗黑模式
@@ -754,6 +955,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                               packageQtyIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
                             }`}
                             rowSpan={packageQtyIsMerged ? packageQtyRowSpan : undefined}
+                            onContextMenu={(e) => handleContextMenu(e, index, 'packageQty')}
                           >
                             <input
                               type="text"
@@ -798,6 +1000,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                               dimensionsIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
                             }`}
                             rowSpan={dimensionsIsMerged ? dimensionsRowSpan : undefined}
+                            onContextMenu={(e) => handleContextMenu(e, index, 'dimensions')}
                           >
                             <input
                               type="text"
@@ -879,6 +1082,46 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
           </div>
         </div>
       )}
+
+      {/* 合并单元格右键菜单 */}
+      <MergeContextMenu
+        menu={contextMenu}
+        onClose={closeContextMenu}
+        onSplit={splitMergedCell}
+        onMergeUp={(rowIndex) => {
+          const column = contextMenu?.column || 'packageQty';
+          const existing = findContainingMergedCell(rowIndex, column);
+          const start = existing ? Math.max(existing.startRow - 1, 0) : Math.max(rowIndex - 1, 0);
+          const end = existing ? existing.endRow : rowIndex;
+          mergeToRow(start, end);
+        }}
+        onMergeUpMore={(rowIndex) => {
+          const column = contextMenu?.column || 'packageQty';
+          const existing = findContainingMergedCell(rowIndex, column);
+          const start = existing ? findPrevMergedGroupEndAfterStart(existing.startRow, column) : Math.max(rowIndex - 3, 0);
+          const end = existing ? existing.endRow : rowIndex;
+          mergeToRow(start, end);
+        }}
+        onMergeDown={(rowIndex) => {
+          const column = contextMenu?.column || 'packageQty';
+          const existing = findContainingMergedCell(rowIndex, column);
+          const start = existing ? existing.startRow : rowIndex;
+          const end = existing ? Math.min(existing.endRow + 1, data.items.length - 1) : Math.min(rowIndex + 1, data.items.length - 1);
+          mergeToRow(start, end);
+        }}
+        onMergeDownMore={(rowIndex) => {
+          const column = contextMenu?.column || 'packageQty';
+          const existing = findContainingMergedCell(rowIndex, column);
+          const start = existing ? existing.startRow : rowIndex;
+          const end = existing ? findNextMergedGroupStartBeforeEnd(existing.endRow, column) : Math.min(rowIndex + 4, data.items.length - 1);
+          mergeToRow(start, end);
+        }}
+        isManualMode={
+          contextMenu?.column === 'packageQty' ? packageQtyMergeMode === 'manual' : dimensionsMergeMode === 'manual'
+        }
+        canMergeUp={(contextMenu?.rowIndex ?? 0) > 0}
+        canMergeDown={(contextMenu?.rowIndex ?? 0) < data.items.length - 1}
+      />
     </div>
   );
 };
