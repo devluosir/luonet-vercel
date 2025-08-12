@@ -198,8 +198,16 @@ export const generateOrderConfirmationPDF = async (
     });
     currentY += Math.max(toLines.length * 4, 8);
 
-    currentY = Math.max(currentY + 8, startY + 20);  // 设置最小起始位置
+    // Inquiry No. 区域 - 优化间距
+    currentY += 3; // To字段与Inquiry No.之间的间距：3mm
+    const inquiryLabelWidth = doc.getTextWidth('Inquiry No.: ');
+    doc.text('Inquiry No.:', leftMargin, currentY);
+    doc.setTextColor(0, 0, 255); // 设置文字颜色为蓝色
+    doc.text(data.inquiryNo || '', leftMargin + inquiryLabelWidth, currentY);
+    doc.setTextColor(0, 0, 0); // 恢复文字颜色为黑色
+    currentY += 5; // Inquiry No.与感谢语之间的间距：5mm
     doc.setFontSize(8);
+    safeSetCnFont(doc, 'normal', preview ? 'preview' : 'export'); // 设置为正常体
     doc.text('Thank you for your order. We confirm the following details:', leftMargin, currentY);
 
     // 确保表格与感谢语有3mm的固定间距
