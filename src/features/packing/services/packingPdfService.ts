@@ -1,6 +1,6 @@
 import { PackingData } from '../types';
-import { generatePackingListPDF } from '@/utils/packingPdfGenerator';
-import { recordCustomerUsage } from '@/utils/customerUsageTracker';
+import { generatePackingListPDF } from '../../../utils/packingPdfGenerator';
+import { recordCustomerUsage } from '../../../utils/customerUsageTracker';
 import { formatPdfFileName } from '../utils/formatters';
 
 /**

@@ -91,6 +91,13 @@ export interface PackingFormProps {
   onDataChange: (data: PackingData) => void;
   isEditMode?: boolean;
   editId?: string;
+  isGenerating?: boolean;
+  isSaving?: boolean;
+  saveMessage?: string;
+  onGenerate?: () => void;
+  onPreview?: () => void;
+  onSave?: () => void;
+  onExportExcel?: () => void;
 }
 
 export interface BasicInfoSectionProps {

@@ -9,40 +9,11 @@ import { BasicInfoSection } from './BasicInfoSection';
 import { ItemsTableSection } from './ItemsTableSection';
 import { RemarksSection } from './RemarksSection';
 import { ActionButtons } from './ActionButtons';
-import { SettingsPanel } from '@/components/packinglist/SettingsPanel';
-import { ShippingMarksModal } from '@/components/packinglist/ShippingMarksModal';
+import { SettingsPanel } from '../../../components/packinglist/SettingsPanel';
+import { ShippingMarksModal } from '../../../components/packinglist/ShippingMarksModal';
 import { calculatePackingTotals } from '../utils/calculations';
 
-// 基础样式定义
-const inputClassName = `w-full px-4 py-2.5 rounded-2xl
-  bg-white/95 dark:bg-[#1c1c1e]/95
-  border border-[#007AFF]/10 dark:border-[#0A84FF]/10
-  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
-  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
-  text-[15px] leading-relaxed text-gray-800 dark:text-gray-100
-  transition-all duration-300 ease-out
-  hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
-  shadow-sm hover:shadow-md`;
 
-// 日期输入框专用样式
-const dateInputClassName = `w-full min-w-0 px-4 py-2.5 rounded-2xl
-  bg-white/95 dark:bg-[#1c1c1e]/95
-  border border-[#007AFF]/10 dark:border-[#0A84FF]/10
-  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
-  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
-  text-[15px] leading-relaxed text-gray-800 dark:text-gray-100
-  transition-all duration-300 ease-out
-  hover:border-[#007AFF]/20 dark:hover:border-[#0A84FF]/20
-  shadow-sm hover:shadow-md`;
-
-// iOS光标优化样式
-const iosCaretStyle = {
-  caretColor: '#007AFF',
-  WebkitCaretColor: '#007AFF',
-  WebkitTextFillColor: 'initial',
-  WebkitOpacity: 1,
-  opacity: 1
-} as React.CSSProperties;
 
 // 标题样式
 const titleClassName = `text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]`;
@@ -51,7 +22,14 @@ export const PackingForm: React.FC<PackingFormProps> = ({
   data,
   onDataChange,
   isEditMode = false,
-  editId
+  editId,
+  isGenerating = false,
+  isSaving = false,
+  saveMessage = '',
+  onGenerate = () => {},
+  onPreview = () => {},
+  onSave = () => {},
+  onExportExcel = () => {}
 }) => {
   const pathname = usePathname();
   const [showSettings, setShowSettings] = useState(false);
@@ -133,6 +111,7 @@ export const PackingForm: React.FC<PackingFormProps> = ({
                   </Link>
                   <button
                     type="button"
+                    onClick={onExportExcel}
                     className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
                     title="导出为Excel"
                   >
@@ -140,10 +119,19 @@ export const PackingForm: React.FC<PackingFormProps> = ({
                   </button>
                   <button
                     type="button"
+                    onClick={onSave}
+                    disabled={isSaving}
                     className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0 relative"
                     title={editId ? '保存修改' : '保存新记录'}
                   >
-                    <Save className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                    {isSaving ? (
+                      <svg className="animate-spin h-5 w-5 text-gray-600 dark:text-[#98989D]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <Save className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                    )}
                   </button>
                   <button
                     type="button"
@@ -185,49 +173,52 @@ export const PackingForm: React.FC<PackingFormProps> = ({
               />
 
               {/* 基本信息区域 */}
-              <BasicInfoSection
-                data={data}
-                onDataChange={handleDataChange}
-                onShowShippingMarks={() => setShowShippingMarks(true)}
-                inputClassName={inputClassName}
-                dateInputClassName={dateInputClassName}
-                iosCaretStyle={iosCaretStyle}
-              />
+              <div className="px-4 sm:px-6 py-4 sm:py-6">
+                <BasicInfoSection
+                  data={data}
+                  onDataChange={handleDataChange}
+                  onShowShippingMarks={() => setShowShippingMarks(true)}
+                />
+              </div>
 
               {/* 商品表格区域 */}
-              <ItemsTableSection
-                data={data}
-                onDataChange={handleDataChange}
-                totals={totals}
-                editingUnitPriceIndex={editingUnitPriceIndex}
-                editingUnitPrice={editingUnitPrice}
-                editingFeeIndex={editingFeeIndex}
-                editingFeeAmount={editingFeeAmount}
-                setEditingUnitPriceIndex={setEditingUnitPriceIndex}
-                setEditingUnitPrice={setEditingUnitPrice}
-                setEditingFeeIndex={setEditingFeeIndex}
-                setEditingFeeAmount={setEditingFeeAmount}
-              />
+              <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-100 dark:border-[#3A3A3C]">
+                <ItemsTableSection
+                  data={data}
+                  onDataChange={handleDataChange}
+                  totals={totals}
+                  editingUnitPriceIndex={editingUnitPriceIndex}
+                  editingUnitPrice={editingUnitPrice}
+                  editingFeeIndex={editingFeeIndex}
+                  editingFeeAmount={editingFeeAmount}
+                  setEditingUnitPriceIndex={setEditingUnitPriceIndex}
+                  setEditingUnitPrice={setEditingUnitPrice}
+                  setEditingFeeIndex={setEditingFeeIndex}
+                  setEditingFeeAmount={setEditingFeeAmount}
+                />
+              </div>
 
               {/* 备注区域 */}
-              <RemarksSection
-                data={data}
-                onDataChange={handleDataChange}
-                inputClassName={inputClassName}
-                iosCaretStyle={iosCaretStyle}
-              />
+              <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-100 dark:border-[#3A3A3C]">
+                <RemarksSection
+                  data={data}
+                  onDataChange={handleDataChange}
+                />
+              </div>
 
               {/* 操作按钮区域 */}
-              <ActionButtons
-                data={data}
-                isGenerating={false}
-                isSaving={false}
-                saveMessage=""
-                onGenerate={() => {}}
-                onPreview={() => {}}
-                onSave={() => {}}
-                onExportExcel={() => {}}
-              />
+              <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-100 dark:border-[#3A3A3C] bg-gray-50 dark:bg-[#1C1C1E] rounded-b-2xl sm:rounded-b-3xl">
+                <ActionButtons
+                  data={data}
+                  isGenerating={isGenerating}
+                  isSaving={isSaving}
+                  saveMessage={saveMessage}
+                  onGenerate={onGenerate}
+                  onPreview={onPreview}
+                  onSave={onSave}
+                  onExportExcel={onExportExcel}
+                />
+              </div>
             </form>
           </div>
         </div>

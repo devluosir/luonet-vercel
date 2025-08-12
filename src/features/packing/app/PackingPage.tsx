@@ -98,6 +98,13 @@ export default function PackingPage() {
         onDataChange={handleDataChange}
         isEditMode={!!editId}
         editId={editId}
+        isGenerating={isGenerating}
+        isSaving={isSaving}
+        saveMessage={saveMessage}
+        onGenerate={handleGenerate}
+        onPreview={handlePreviewClick}
+        onSave={handleSave}
+        onExportExcel={handleExportExcel}
       />
       <Footer />
       

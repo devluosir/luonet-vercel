@@ -1,5 +1,5 @@
 import { PackingData, PackingHistory } from '../types';
-import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
+import { getLocalStorageJSON } from '../../../utils/safeLocalStorage';
 import { calculateTotalAmount } from '../utils/calculations';
 
 const STORAGE_KEY = 'packing_history';

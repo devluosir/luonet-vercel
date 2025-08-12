@@ -3,6 +3,10 @@ export { default as PackingPage } from './app/PackingPage';
 
 // 组件
 export { PackingForm } from './components/PackingForm';
+export { ColumnToggle } from './components/ColumnToggle';
+export { QuickImport } from './components/QuickImport';
+export { ImportDataButton } from './components/ImportDataButton';
+export { ItemsTableEnhanced } from './components/ItemsTableEnhanced';
 
 // Hooks
 export { usePackingData } from './hooks/usePackingData';
