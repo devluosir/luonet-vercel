@@ -167,6 +167,19 @@ export default {
     'border-gray-200/30', 'dark:border-gray-800/30',
     'border-gray-300/50', 'dark:border-gray-700/50',
     'border-white/30', 'border-white/50',
+    
+    // 🔲 Tab标签边框颜色
+    'border-blue-500', 'dark:border-blue-400',
+    'border-green-500', 'dark:border-green-400',
+    'border-teal-500', 'dark:border-teal-400',
+    'border-purple-500', 'dark:border-purple-400',
+    'border-orange-500', 'dark:border-orange-400',
+    'border-gray-300', 'dark:border-gray-500',
+    'hover:border-blue-400', 'dark:hover:border-blue-400',
+    'hover:border-green-400', 'dark:hover:border-green-400',
+    'hover:border-teal-400', 'dark:hover:border-teal-400',
+    'hover:border-purple-400', 'dark:hover:border-purple-400',
+    'hover:border-orange-400', 'dark:hover:border-orange-400',
 
     // 🌟 阴影
     'shadow-lg', 'hover:shadow-xl', 'active:shadow-md',

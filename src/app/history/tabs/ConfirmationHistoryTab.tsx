@@ -33,7 +33,6 @@ interface SortConfig {
 interface Filters {
   search: string;
   dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
-  amountRange: 'all' | 'low' | 'medium' | 'high';
 }
 
 interface Props {
@@ -96,18 +95,6 @@ export default function ConfirmationHistoryTab({
             case 'week': return diffDays <= 7;
             case 'month': return diffDays <= 30;
             case 'year': return diffDays <= 365;
-            default: return true;
-          }
-        });
-      }
-      // 金额范围过滤
-      if (filters.amountRange !== 'all') {
-        results = results.filter(item => {
-          const amount = item.totalAmount;
-          switch (filters.amountRange) {
-            case 'low': return amount < 10000;
-            case 'medium': return amount >= 10000 && amount < 100000;
-            case 'high': return amount >= 100000;
             default: return true;
           }
         });

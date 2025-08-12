@@ -27,9 +27,7 @@ interface PackingHistory {
 
 interface Filters {
   search: string;
-  type: 'all' | 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing' | 'proforma' | 'both';
   dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
-  amountRange: 'all' | 'low' | 'medium' | 'high';
 }
 
 interface SortConfig {
@@ -115,22 +113,6 @@ export default function PackingHistoryTab({
             break;
           case 'year':
             if (diffDays > 365) return false;
-            break;
-        }
-      }
-      
-      // 金额范围过滤
-      if (filters.amountRange !== 'all') {
-        const amount = item.totalAmount;
-        switch (filters.amountRange) {
-          case 'low':
-            if (amount >= 1000) return false;
-            break;
-          case 'medium':
-            if (amount < 1000 || amount >= 10000) return false;
-            break;
-          case 'high':
-            if (amount < 10000) return false;
             break;
         }
       }
