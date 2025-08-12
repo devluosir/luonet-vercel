@@ -66,7 +66,18 @@ export function usePermissionRefresh() {
             timestamp: Date.now()
           };
           localStorage.setItem('userCache', JSON.stringify(cacheData));
+          
+          // 同时保存用户信息到userInfo，确保其他组件能正确获取
+          const userInfo = {
+            username: data.user.username,
+            email: data.user.email,
+            isAdmin: data.user.isAdmin
+          };
+          localStorage.setItem('userInfo', JSON.stringify(userInfo));
+          localStorage.setItem('username', data.user.username);
+          
           console.log('权限数据已保存到缓存:', cacheData);
+          console.log('用户信息已保存:', userInfo);
         } catch (error) {
           console.error('保存权限数据到缓存失败:', error);
         }

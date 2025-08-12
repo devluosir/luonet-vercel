@@ -5,6 +5,7 @@ import { DEFAULT_NOTES_CONFIG } from '../types/notes';
 import { getInitialQuotationData } from '@/utils/quotationInitialData';
 import { getDefaultNotes } from '@/utils/getDefaultNotes';
 import { eventSampler } from '../utils/eventLogger';
+import { getLocalStorageJSON, getLocalStorageString } from '@/utils/safeLocalStorage';
 
 // 已知的QuotationData字段
 const KNOWN_KEYS = new Set<keyof QuotationData>([
@@ -122,6 +123,7 @@ export interface QuotationState {
   updateData: (updates: Partial<QuotationData>) => void;
   updateFrom: (from: string) => void;
   updateCurrency: (currency: 'USD' | 'EUR' | 'CNY') => void;
+  updateFromField: () => void;
   
   // 新增：Notes配置相关actions
   setNotesConfig: (config: NoteConfig[]) => void;
@@ -281,6 +283,28 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
         eventSampler.log('updateFrom', { from, notesCount: nextNotes.length });
       }
       return { data: { ...state.data, from, notes: nextNotes, updatedAt: Date.now() } };
+  }),
+  
+  // 更新from字段为当前用户
+  updateFromField: () => set((state) => {
+    if (typeof window === 'undefined') return state;
+    
+    try {
+      const userInfo = getLocalStorageJSON('userInfo', null) as { username?: string } | null;
+      const currentUser = userInfo?.username || getLocalStorageString('username');
+      
+      if (currentUser && currentUser.toLowerCase() !== 'roger') {
+        const formattedUser = currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase();
+        const nextNotes = getDefaultNotes(formattedUser, state.tab);
+        return { 
+          data: { ...state.data, from: formattedUser, notes: nextNotes, updatedAt: Date.now() }
+        };
+      }
+    } catch (error) {
+      console.warn('[QuotationStore] 更新from字段失败:', error);
+    }
+    
+    return state;
   }),
   updateCurrency: (currency) => set((state) => {
     if (currency === state.data.currency) {

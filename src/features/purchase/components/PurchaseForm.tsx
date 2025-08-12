@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef } from 'react';
+import React, { useRef, useCallback, useEffect, useState } from 'react';
 import { SettingsPanel } from '@/components/purchase/SettingsPanel';
 import { BankInfoSection } from '@/components/purchase/BankInfoSection';
 import PurchaseBaseInfo from '@/components/purchase/PurchaseBaseInfo';
@@ -13,8 +13,11 @@ export default function PurchaseForm() {
     updateData, 
     toggleBank, 
     changeCurrency,
-    pageMode 
+    pageMode,
+    updateFromField
   } = usePurchaseStore();
+
+  const [isClient, setIsClient] = useState(false);
 
   const projectSpecificationRef = useRef<HTMLTextAreaElement>(null);
   const deliveryInfoRef = useRef<HTMLTextAreaElement>(null);
@@ -27,6 +30,26 @@ export default function PurchaseForm() {
     [data.projectSpecification, data.deliveryInfo, data.orderNumbers, data.paymentTerms]
   );
 
+  // 确保客户端渲染
+  useEffect(() => {
+    setIsClient(true);
+    // 在客户端渲染时更新from字段为当前用户
+    updateFromField();
+  }, [updateFromField]);
+
+  // 使用useCallback优化onChange回调，避免无限循环
+  const handleBaseInfoChange = useCallback((value: any) => {
+    updateData({
+      attn: value.attn,
+      yourRef: value.yourRef,
+      supplierQuoteDate: value.supplierQuoteDate,
+      orderNo: value.orderNo,
+      ourRef: value.ourRef,
+      date: value.date,
+      from: value.from, // 添加from字段的处理
+    });
+  }, [updateData]);
+
   // 输入控件样式
   const inputClass =
     'w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm';
@@ -37,6 +60,20 @@ export default function PurchaseForm() {
   const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2';
   const subheadingClass = 'block text-lg font-semibold text-gray-800 dark:text-gray-200 pt-6 pb-3';
 
+
+
+  // 如果不在客户端，显示加载状态
+  if (!isClient) {
+    return (
+      <div className="p-4 sm:p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* 设置面板 */}
@@ -44,6 +81,10 @@ export default function PurchaseForm() {
         ${showSettings ? 'opacity-100 px-4 sm:px-6 py-6 h-auto' : 'opacity-0 px-0 py-0 h-0'}`}>
         <SettingsPanel data={data} onDataChange={updateData} />
       </div>
+      
+
+      
+
 
       {/* 主内容区域 */}
       <div className="p-4 sm:p-6 space-y-6">
@@ -56,17 +97,9 @@ export default function PurchaseForm() {
             orderNo: data.orderNo,
             ourRef: data.ourRef,
             date: data.date,
+            from: data.from, // 添加from字段
           }}
-          onChange={(value) => {
-            updateData({
-              attn: value.attn,
-              yourRef: value.yourRef,
-              supplierQuoteDate: value.supplierQuoteDate,
-              orderNo: value.orderNo,
-              ourRef: value.ourRef,
-              date: value.date,
-            });
-          }}
+          onChange={handleBaseInfoChange}
           config={{
             type: pageMode,
             labels: {
@@ -88,7 +121,7 @@ export default function PurchaseForm() {
             <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl">
               <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">1. 供货范围和成交价格</h3>
               <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
-                客户确认贵司于<strong className="text-blue-600">{data.supplierQuoteDate || '日期'}</strong> <strong className="text-red-600">{data.yourRef || 'Your ref'}</strong>报价提供的项目价格、规格和交货条件；
+                客户确认贵司于<strong className="text-blue-600"><span suppressHydrationWarning>{data.supplierQuoteDate || '日期'}</span></strong> <strong className="text-red-600"><span suppressHydrationWarning>{data.yourRef || 'Your ref'}</span></strong>报价提供的项目价格、规格和交货条件；
               </p>
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <span className="text-gray-600 dark:text-gray-300 text-sm">
@@ -217,6 +250,31 @@ export default function PurchaseForm() {
                 value={data.orderNumbers}
                 onChange={e => updateData({ orderNumbers: e.target.value })}
               />
+            </div>
+
+            {/* 6. 印章 */}
+            <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl">
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">6. 印章</h3>
+              <div className="flex gap-2">
+                {[
+                  { value: 'none', label: '无', color: 'gray' },
+                  { value: 'shanghai', label: '上海', color: 'emerald' },
+                  { value: 'hongkong', label: '香港', color: 'indigo' }
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => updateData({ ...data, stampType: option.value as 'none' | 'shanghai' | 'hongkong' })}
+                    className={`px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 ${
+                      data.stampType === option.value 
+                        ? 'bg-blue-500 text-white shadow-md'
+                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

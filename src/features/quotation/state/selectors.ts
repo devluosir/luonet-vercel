@@ -62,6 +62,7 @@ export const sel = {
   updateData: (s: QuotationState) => s.updateData,
   updateFrom: (s: QuotationState) => s.updateFrom,
   updateCurrency: (s: QuotationState) => s.updateCurrency,
+  updateFromField: (s: QuotationState) => s.updateFromField,
 } as const;
 
 // 导出浅比较工具

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAutoResizeTextareas } from '@/hooks/useAutoResizeTextareas';
 import { getPurchaseHistory, PurchaseHistory } from '@/utils/purchaseHistory';
+import { getLocalStorageJSON, getLocalStorageString } from '@/utils/safeLocalStorage';
 
 export interface PurchaseBaseInfoValue {
   attn?: string;
@@ -9,6 +10,7 @@ export interface PurchaseBaseInfoValue {
   orderNo?: string;
   ourRef?: string;
   date?: string;
+  from?: string;
 }
 
 export interface PurchaseBaseInfoConfig {
@@ -20,6 +22,7 @@ export interface PurchaseBaseInfoConfig {
     orderNo?: boolean;
     ourRef?: boolean;
     date?: boolean;
+    from?: boolean;
   };
   labels?: Partial<Record<keyof PurchaseBaseInfoValue, string>>;
   required?: (keyof PurchaseBaseInfoValue)[];
@@ -329,10 +332,19 @@ export default function PurchaseBaseInfo({
   config, 
   className = ''
 }: PurchaseBaseInfoProps) {
-  const set = (key: keyof PurchaseBaseInfoValue) => 
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  
+  // 使用useCallback优化set函数，避免无限循环
+  const set = useCallback((key: keyof PurchaseBaseInfoValue) => 
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
       onChange({ ...value, [key]: e.target.value });
-    };
+    }, [onChange, value]);
+
+  // 使用useCallback优化SupplierField的onChange回调
+  const handleAttnChange = useCallback((newValue: string) => {
+    onChange({ ...value, attn: newValue });
+  }, [onChange, value]);
+
+  // 移除自动设置from字段的useEffect，因为store已经在初始化时正确设置了
 
   // 默认显示字段配置
   const defaultShowFields = {
@@ -342,6 +354,7 @@ export default function PurchaseBaseInfo({
     orderNo: true,
     ourRef: true,
     date: true,
+    from: true,
   };
 
   const showFields = { ...defaultShowFields, ...config.showFields };
@@ -357,6 +370,7 @@ export default function PurchaseBaseInfo({
           orderNo: '订单号 Order No.',
           ourRef: '询价号码 Our ref',
           date: '日期 Date',
+          from: 'From',
         };
       case 'edit':
         return {
@@ -366,6 +380,7 @@ export default function PurchaseBaseInfo({
           orderNo: '订单号 Order No.',
           ourRef: '询价号码 Our ref',
           date: '日期 Date',
+          from: 'From',
         };
       case 'copy':
         return {
@@ -375,6 +390,7 @@ export default function PurchaseBaseInfo({
           orderNo: '订单号 Order No.',
           ourRef: '询价号码 Our ref',
           date: '日期 Date',
+          from: 'From',
         };
       default:
         return {
@@ -384,6 +400,7 @@ export default function PurchaseBaseInfo({
           orderNo: '订单号 Order No.',
           ourRef: '询价号码 Our ref',
           date: '日期 Date',
+          from: 'From',
         };
     }
   };
@@ -403,6 +420,7 @@ export default function PurchaseBaseInfo({
           orderNo: true,
           ourRef: true,
           date: true,
+          from: true,
         };
       case 'edit':
         return {
@@ -413,6 +431,7 @@ export default function PurchaseBaseInfo({
           orderNo: true,
           ourRef: true,
           date: true,
+          from: true,
         };
       case 'copy':
         return {
@@ -423,6 +442,7 @@ export default function PurchaseBaseInfo({
           orderNo: true,
           ourRef: true,
           date: true,
+          from: true,
         };
       default:
         return showFields;
@@ -430,6 +450,71 @@ export default function PurchaseBaseInfo({
   };
 
   const fields = getFieldsForType();
+
+  // From选项 - 基于localStorage用户信息
+const getFromOptions = useCallback(() => {
+  const options = ['Roger', 'Sharon', 'Emily', 'Summer', 'Nina'];
+  
+  // 在服务器端渲染时，只返回基本选项避免水合错误
+  if (typeof window === 'undefined') {
+    return options;
+  }
+  
+  // 从localStorage获取当前用户名，与报价页面保持一致
+  const currentUser = (() => {
+    try {
+      const userInfo = getLocalStorageJSON('userInfo', null) as { username?: string } | null;
+      if (userInfo) return userInfo.username || '';
+      
+      // 使用安全的字符串获取函数
+      const name = getLocalStorageString('username');
+      return name ? name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() : '';
+    } catch { 
+      return '' 
+    }
+  })();
+  
+  // 如果当前用户不在预设列表中，将其添加到列表开头
+  if (currentUser && !options.some(option => option.toLowerCase() === currentUser.toLowerCase())) {
+    options.unshift(currentUser);
+  }
+  
+  // 如果当前值不在列表中，也添加进去
+  if (value.from && !options.some(option => option.toLowerCase() === value.from.toLowerCase())) {
+    options.unshift(value.from);
+  }
+  
+  return options;
+}, [value.from]);
+
+  // 使用useState和useEffect来避免水合错误
+  const [fromOptions, setFromOptions] = useState<string[]>(['Roger', 'Sharon', 'Emily', 'Summer', 'Nina']);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    const options = getFromOptions();
+    setFromOptions(options);
+    
+    // 如果当前from值是默认值（Roger），且当前用户不是Roger，则自动更新为当前用户
+    if (value.from === 'Roger' && typeof window !== 'undefined') {
+      try {
+        const userInfo = getLocalStorageJSON('userInfo', null) as { username?: string } | null;
+        const currentUser = userInfo?.username || getLocalStorageString('username');
+        
+        if (currentUser && currentUser.toLowerCase() !== 'roger') {
+          const formattedUser = currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase();
+          // 调用onChange来更新from值
+          onChange({
+            ...value,
+            from: formattedUser
+          });
+        }
+      } catch (error) {
+        console.warn('自动更新from字段失败:', error);
+      }
+    }
+  }, [getFromOptions, value.from, onChange, value]);
 
   return (
     <section className={`rounded-2xl border border-slate-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/30 shadow-sm p-4 ${className || ''}`}>
@@ -443,7 +528,7 @@ export default function PurchaseBaseInfo({
                 <SupplierField
                   label={labels.attn!}
                   value={value.attn || ''}
-                  onChange={(newValue) => onChange({ ...value, attn: newValue })}
+                  onChange={handleAttnChange}
                   placeholder={' '}
                 />
               </div>
@@ -480,17 +565,46 @@ export default function PurchaseBaseInfo({
 
         {/* 右侧：订单信息 */}
         <div className="col-span-12 md:col-span-6 lg:col-span-6 space-y-[10px]">
-          {/* 第一行：订单号 */}
-          {fields.orderNo && (
-            <Field label={labels.orderNo!}>
-              <input
-                placeholder={' '}
-                value={value.orderNo || ''}
-                onChange={set('orderNo')}
-                className="fi"
-              />
-            </Field>
-          )}
+          {/* 第一行：订单号 + From 并排 */}
+          <div className="grid grid-cols-12 gap-2">
+            {fields.orderNo && (
+              <div className="col-span-8">
+                <Field label={labels.orderNo!}>
+                  <input
+                    placeholder={' '}
+                    value={value.orderNo || ''}
+                    onChange={set('orderNo')}
+                    className="fi"
+                  />
+                </Field>
+              </div>
+            )}
+            {fields.from && (
+              <div className="col-span-4">
+                <select
+                  value={value.from || ''}
+                  onChange={set('from')}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                  suppressHydrationWarning
+                >
+                  {isClient ? (
+                    fromOptions.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))
+                  ) : (
+                    // 服务器端渲染时只显示基本选项，避免水合错误
+                    ['Roger', 'Sharon', 'Emily', 'Summer', 'Nina'].map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            )}
+          </div>
           {/* 第二行：询价号 + 日期并排 */}
           <div className="grid grid-cols-12 gap-2">
             {fields.ourRef && (

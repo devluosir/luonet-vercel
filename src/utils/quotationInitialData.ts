@@ -6,6 +6,11 @@ import { calculatePaymentDate } from './quotationCalculations';
 
 export function getInitialQuotationData(): QuotationData {
   const username = (() => {
+    // 在服务器端渲染时，返回默认值避免水合错误
+    if (typeof window === 'undefined') {
+      return 'Roger';
+    }
+    
     try {
       const userInfo = getLocalStorageJSON('userInfo', null) as { username?: string } | null;
       if (userInfo) return userInfo.username || 'Roger';
@@ -18,7 +23,8 @@ export function getInitialQuotationData(): QuotationData {
     }
   })();
 
-  const currentDate = format(new Date(), 'yyyy-MM-dd');
+  // 在服务器端渲染时，使用固定的默认日期避免水合错误
+  const currentDate = typeof window === 'undefined' ? '2024-01-01' : format(new Date(), 'yyyy-MM-dd');
 
   return {
     to: '',

@@ -101,6 +101,7 @@ export default function QuotationPage() {
   const _updateData = useQuotationStore(sel.updateData);
   const updateFrom = useQuotationStore(sel.updateFrom);
   const _updateCurrency = useQuotationStore(sel.updateCurrency);
+  const updateFromField = useQuotationStore(sel.updateFromField);
   const updateCurrency = useMemo(() => _updateCurrency ?? (() => {}), [_updateCurrency]); // 空函数兜底
   
   // 页面级白名单：覆盖Items & CustomerInfo & AutoSave等所有入口
@@ -199,6 +200,13 @@ export default function QuotationPage() {
   
   // 初始化
   useInitQuotation();
+  
+  // 客户端渲染时更新from字段
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      updateFromField();
+    }
+  }, [updateFromField]);
   
   // PDF生成服务
   const { generatePdf } = useGenerateService();

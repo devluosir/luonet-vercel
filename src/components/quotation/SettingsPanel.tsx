@@ -1,6 +1,7 @@
 import type { QuotationData } from '@/types/quotation';
 import { getDefaultNotes } from '@/utils/getDefaultNotes';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { getLocalStorageJSON, getLocalStorageString } from '@/utils/safeLocalStorage';
 
 interface SettingsPanelProps {
   data: QuotationData;
@@ -11,13 +12,70 @@ interface SettingsPanelProps {
 export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps) {
   const [customUnit, setCustomUnit] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [fromOptions, setFromOptions] = useState<string[]>(['Roger', 'Sharon', 'Emily', 'Summer', 'Nina']);
+  const [isClient, setIsClient] = useState(false);
 
-  // 动态处理From选项
-  const fromOptions = ['Roger', 'Sharon', 'Emily', 'Summer', 'Nina'];
-  // 大小写不敏感的重复检查
-  if (data.from && !fromOptions.some(option => option.toLowerCase() === data.from.toLowerCase())) {
-    fromOptions.unshift(data.from);
-  }
+  // 获取From选项的函数
+  const getFromOptions = useCallback(() => {
+    const options = ['Roger', 'Sharon', 'Emily', 'Summer', 'Nina'];
+    
+    // 在服务器端渲染时，只返回基本选项避免水合错误
+    if (typeof window === 'undefined') {
+      return options;
+    }
+    
+    // 从localStorage获取当前用户名
+    const currentUser = (() => {
+      try {
+        const userInfo = getLocalStorageJSON('userInfo', null) as { username?: string } | null;
+        if (userInfo) return userInfo.username || '';
+        
+        // 使用安全的字符串获取函数
+        const name = getLocalStorageString('username');
+        return name ? name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() : '';
+      } catch { 
+        return '' 
+      }
+    })();
+    
+    // 如果当前用户不在预设列表中，将其添加到列表开头
+    if (currentUser && !options.some(option => option.toLowerCase() === currentUser.toLowerCase())) {
+      options.unshift(currentUser);
+    }
+    
+    // 如果当前值不在列表中，也添加进去
+    if (data.from && !options.some(option => option.toLowerCase() === data.from.toLowerCase())) {
+      options.unshift(data.from);
+    }
+    
+    return options;
+  }, [data.from]);
+
+  // 客户端渲染时更新选项
+  useEffect(() => {
+    setIsClient(true);
+    setFromOptions(getFromOptions());
+    
+    // 如果当前from值是默认值（Roger），且当前用户不是Roger，则自动更新为当前用户
+    if (data.from === 'Roger' && typeof window !== 'undefined') {
+      try {
+        const userInfo = getLocalStorageJSON('userInfo', null) as { username?: string } | null;
+        const currentUser = userInfo?.username || getLocalStorageString('username');
+        
+        if (currentUser && currentUser.toLowerCase() !== 'roger') {
+          const formattedUser = currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase();
+          // 调用onChange来更新from值
+          onChange({
+            ...data,
+            from: formattedUser,
+            notes: getDefaultNotes(formattedUser, activeTab)
+          });
+        }
+      } catch (error) {
+        console.warn('自动更新from字段失败:', error);
+      }
+    }
+  }, [getFromOptions, data.from, onChange, data, activeTab]);
 
   const handleAddCustomUnit = () => {
     if (customUnit && !(data.customUnits || []).includes(customUnit)) {
@@ -64,12 +122,22 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
               focus:outline-none focus:ring-1
               focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
               text-gray-800 dark:text-gray-200"
+            suppressHydrationWarning
           >
-            {fromOptions.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
+            {isClient ? (
+              fromOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))
+            ) : (
+              // 服务器端渲染时只显示基本选项，避免水合错误
+              ['Roger', 'Sharon', 'Emily', 'Summer', 'Nina'].map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))
+            )}
           </select>
         </div>
 

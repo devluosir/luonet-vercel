@@ -25,10 +25,12 @@ export const usePurchaseInit = () => {
     initializedRef.current = true;
     
     // 清除旧的localStorage数据以确保使用新版本
-    try {
-      localStorage.removeItem('purchase-draft-v5');
-    } catch (e) {
-      // 忽略错误
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('purchase-draft-v5');
+      } catch (e) {
+        // 忽略错误
+      }
     }
     
     const win = window as CustomWindow;
@@ -39,7 +41,7 @@ export const usePurchaseInit = () => {
         ...win.__PURCHASE_DATA__,
         attn: win.__PURCHASE_DATA__.attn || '',
         yourRef: win.__PURCHASE_DATA__.yourRef || '',
-        supplierQuoteDate: win.__PURCHASE_DATA__.supplierQuoteDate || new Date().toISOString().split('T')[0],
+        supplierQuoteDate: win.__PURCHASE_DATA__.supplierQuoteDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '2024-01-01'),
       };
       
       init(sanitizedData);
@@ -53,45 +55,47 @@ export const usePurchaseInit = () => {
     }
 
     // 其次使用草稿数据（新建模式）
-    try {
-      const draft = localStorage.getItem('draftPurchase');
-      if (draft) {
-        const parsed = JSON.parse(draft);
-        
-        // 验证数据格式
-        if (parsed && typeof parsed === 'object') {
-          const sanitizedDraft: PurchaseOrderData = {
-            ...parsed,
-            attn: parsed.attn || '',
-            yourRef: parsed.yourRef || '',
-            supplierQuoteDate: parsed.supplierQuoteDate || new Date().toISOString().split('T')[0],
-            // 确保所有必需字段都有默认值
-            orderNo: parsed.orderNo || '',
-            ourRef: parsed.ourRef || '',
-            date: parsed.date || new Date().toISOString().split('T')[0],
-            contractAmount: parsed.contractAmount || '',
-            projectSpecification: parsed.projectSpecification || '',
-            paymentTerms: parsed.paymentTerms || '交货后30天',
-            invoiceRequirements: parsed.invoiceRequirements || '如前；',
-            deliveryInfo: parsed.deliveryInfo || '',
-            orderNumbers: parsed.orderNumbers || '',
-            showStamp: parsed.showStamp || false,
-            showBank: parsed.showBank || false,
-            currency: parsed.currency || 'CNY',
-            stampType: parsed.stampType || 'none',
-            from: parsed.from || '',
-          };
-          init(sanitizedDraft);
-          return;
-        }
-      }
-    } catch (error) {
-      console.warn('读取草稿失败:', error);
-      // 清除损坏的草稿数据
+    if (typeof window !== 'undefined') {
       try {
-        localStorage.removeItem('draftPurchase');
-      } catch (e) {
-        console.warn('清除损坏草稿失败:', e);
+        const draft = localStorage.getItem('draftPurchase');
+        if (draft) {
+          const parsed = JSON.parse(draft);
+          
+          // 验证数据格式
+          if (parsed && typeof parsed === 'object') {
+            const sanitizedDraft: PurchaseOrderData = {
+              ...parsed,
+              attn: parsed.attn || '',
+              yourRef: parsed.yourRef || '',
+              supplierQuoteDate: parsed.supplierQuoteDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '2024-01-01'),
+              // 确保所有必需字段都有默认值
+              orderNo: parsed.orderNo || '',
+              ourRef: parsed.ourRef || '',
+              date: parsed.date || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '2024-01-01'),
+              contractAmount: parsed.contractAmount || '',
+              projectSpecification: parsed.projectSpecification || '',
+              paymentTerms: parsed.paymentTerms || '交货后30天',
+              invoiceRequirements: parsed.invoiceRequirements || '如前；',
+              deliveryInfo: parsed.deliveryInfo || '',
+              orderNumbers: parsed.orderNumbers || '',
+              showStamp: parsed.showStamp || false,
+              showBank: parsed.showBank || false,
+              currency: parsed.currency || 'CNY',
+              stampType: parsed.stampType || 'none',
+              from: parsed.from || '',
+            };
+            init(sanitizedDraft);
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('读取草稿失败:', error);
+        // 清除损坏的草稿数据
+        try {
+          localStorage.removeItem('draftPurchase');
+        } catch (e) {
+          console.warn('清除损坏草稿失败:', e);
+        }
       }
     }
 
@@ -121,8 +125,14 @@ export const usePurchaseInit = () => {
       }
     }
     
-    if (userName && !data.from) {
-      updateData({ from: userName });
+    // 格式化用户名
+    if (userName) {
+      const formattedUser = userName.charAt(0).toUpperCase() + userName.slice(1).toLowerCase();
+      
+      // 如果from字段为空或者是默认值Roger，则更新为当前用户
+      if (!data.from || data.from === 'Roger') {
+        updateData({ from: formattedUser });
+      }
     }
   }, [session, data.from, updateData]);
 };
