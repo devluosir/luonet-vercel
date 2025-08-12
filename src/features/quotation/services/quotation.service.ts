@@ -136,3 +136,67 @@ export function getTabFromSearchParams(searchParams?: URLSearchParams): 'quotati
 
   return 'quotation';
 }
+
+// 报价单服务类
+export class QuotationService {
+  private baseUrl: string = '/api/quotation';
+
+  async create(data: any): Promise<any> {
+    const response = await fetch(this.baseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      throw new Error('创建报价单失败');
+    }
+    
+    return response.json();
+  }
+
+  async update(id: string, data: any): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      throw new Error('更新报价单失败');
+    }
+    
+    return response.json();
+  }
+
+  async delete(id: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/${id}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      throw new Error('删除报价单失败');
+    }
+  }
+
+  async getById(id: string): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/${id}`);
+    
+    if (!response.ok) {
+      throw new Error('获取报价单失败');
+    }
+    
+    return response.json();
+  }
+
+  async list(params?: any): Promise<any> {
+    const searchParams = new URLSearchParams(params);
+    const response = await fetch(`${this.baseUrl}?${searchParams}`);
+    
+    if (!response.ok) {
+      throw new Error('获取报价单列表失败');
+    }
+    
+    return response.json();
+  }
+}
