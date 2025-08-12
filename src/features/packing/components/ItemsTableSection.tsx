@@ -268,6 +268,3 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
     </section>
   );
 };
-
-  );
-};
