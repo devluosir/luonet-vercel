@@ -121,13 +121,27 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         pdfUrl = URL.createObjectURL(item.pdfBlob);
       } else {
         // 最后才根据记录类型生成对应的PDF
-        if (itemType === 'quotation') {
-          // @ts-ignore - 历史记录数据可能来自不同来源
-          const pdfBlob = await generateQuotationPDF(item.data, true);
-          pdfUrl = URL.createObjectURL(pdfBlob);
-        } else if (itemType === 'confirmation') {
-          // @ts-ignore - 历史记录数据可能来自不同来源
-          const pdfBlob = await generateOrderConfirmationPDF(item.data, true);
+        if (itemType === 'quotation' || itemType === 'confirmation') {
+          // 使用新的generatePdf服务来处理报价单和订单确认
+          const { generatePdf } = await import('@/features/quotation/services/generate.service');
+          
+          // 从历史记录数据中提取notesConfig
+          const quotationData = item.data as any;
+          const notesConfig = quotationData.notesConfig || [];
+          
+          // 使用新的生成服务，传入notesConfig
+          const pdfBlob = await generatePdf(
+            itemType, 
+            quotationData, 
+            notesConfig, 
+            (progress) => {
+              // 预览时不需要显示进度
+              console.log(`PDF生成进度: ${progress}%`);
+            }, 
+            { 
+              mode: 'preview' 
+            }
+          );
           pdfUrl = URL.createObjectURL(pdfBlob);
         } else if (itemType === 'invoice') {
           // 使用PDF服务来处理数据转换
@@ -177,12 +191,27 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         pdfBlob = item.pdfBlob;
       } else {
         // 根据记录类型生成对应的PDF
-        if (itemType === 'quotation') {
-          // @ts-ignore - 历史记录数据可能来自不同来源
-          pdfBlob = await generateQuotationPDF(item.data, false);
-        } else if (itemType === 'confirmation') {
-          // @ts-ignore - 历史记录数据可能来自不同来源
-          pdfBlob = await generateOrderConfirmationPDF(item.data, false);
+        if (itemType === 'quotation' || itemType === 'confirmation') {
+          // 使用新的generatePdf服务来处理报价单和订单确认
+          const { generatePdf } = await import('@/features/quotation/services/generate.service');
+          
+          // 从历史记录数据中提取notesConfig
+          const quotationData = item.data as any;
+          const notesConfig = quotationData.notesConfig || [];
+          
+          // 使用新的生成服务，传入notesConfig
+          pdfBlob = await generatePdf(
+            itemType, 
+            quotationData, 
+            notesConfig, 
+            (progress) => {
+              // 下载时不需要显示进度
+              console.log(`PDF生成进度: ${progress}%`);
+            }, 
+            { 
+              mode: 'final' 
+            }
+          );
         } else if (itemType === 'invoice') {
           // 使用PDF服务来处理数据转换
           const { PDFService } = await import('@/features/invoice/services/pdf.service');
