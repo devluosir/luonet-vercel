@@ -480,7 +480,7 @@ const getFromOptions = useCallback(() => {
   }
   
   // 如果当前值不在列表中，也添加进去
-  if (value.from && !options.some(option => option.toLowerCase() === value.from.toLowerCase())) {
+  if (value.from && !options.some(option => option.toLowerCase() === value.from!.toLowerCase())) {
     options.unshift(value.from);
   }
   
