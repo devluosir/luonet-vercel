@@ -253,7 +253,6 @@ function SupplierField({
   return (
     <div className="group block relative">
       <textarea
-        rows={3}
         placeholder={' '}
         value={value}
         onChange={(e) => {
@@ -275,7 +274,8 @@ function SupplierField({
             setShowSavedSuppliers(false);
           }, 200);
         }}
-        className="fi-multiline h-[90px] resize-y"
+        className="fi h-[36px] resize-y"
+        style={{ height: '36px', minHeight: '36px' }}
       />
       <span
         className="
@@ -522,53 +522,52 @@ const getFromOptions = useCallback(() => {
       <div className="grid grid-cols-12 gap-3">
         {/* 左侧：供应商信息 */}
         {fields.attn && (
-          <div className="col-span-12 md:col-span-6 lg:col-span-6">
-            <div className="space-y-3">
-              <div>
-                <SupplierField
-                  label={labels.attn!}
-                  value={value.attn || ''}
-                  onChange={handleAttnChange}
-                  placeholder={' '}
-                />
-              </div>
-              {/* Your Ref + 报价日期 并排 */}
-              <div className="grid grid-cols-12 gap-2">
-                {fields.yourRef && (
-                  <div className="col-span-7">
-                    <Field label={labels.yourRef!}>
-                      <input
-                        placeholder={' '}
-                        value={value.yourRef || ''}
-                        onChange={set('yourRef')}
-                        className="fi"
-                      />
-                    </Field>
-                  </div>
-                )}
-                {fields.supplierQuoteDate && (
-                  <div className="col-span-5">
-                    <Field label={labels.supplierQuoteDate!}>
-                      <input
-                        type="date"
-                        value={value.supplierQuoteDate?.replaceAll('/', '-') || ''}
-                        onChange={set('supplierQuoteDate')}
-                        className="fi"
-                      />
-                    </Field>
-                  </div>
-                )}
-              </div>
+          <div className="col-span-12 md:col-span-6 lg:col-span-6 space-y-3">
+            {/* 第一行：供应商信息 */}
+            <div>
+              <SupplierField
+                label={labels.attn!}
+                value={value.attn || ''}
+                onChange={handleAttnChange}
+                placeholder={' '}
+              />
+            </div>
+            {/* 第二行：Your Ref + 报价日期 并排 */}
+            <div className="grid grid-cols-12 gap-2">
+              {fields.yourRef && (
+                <div className="col-span-7">
+                  <Field label={labels.yourRef!}>
+                    <input
+                      placeholder={' '}
+                      value={value.yourRef || ''}
+                      onChange={set('yourRef')}
+                      className="fi"
+                    />
+                  </Field>
+                </div>
+              )}
+              {fields.supplierQuoteDate && (
+                <div className="col-span-5">
+                  <Field label={labels.supplierQuoteDate!}>
+                    <input
+                      type="date"
+                      value={value.supplierQuoteDate?.replaceAll('/', '-') || ''}
+                      onChange={set('supplierQuoteDate')}
+                      className="fi"
+                    />
+                  </Field>
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {/* 右侧：订单信息 */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-6 space-y-[10px]">
+        <div className="col-span-12 md:col-span-6 lg:col-span-6 space-y-4">
           {/* 第一行：订单号 + From 并排 */}
           <div className="grid grid-cols-12 gap-2">
             {fields.orderNo && (
-              <div className="col-span-8">
+              <div className="col-span-7">
                 <Field label={labels.orderNo!}>
                   <input
                     placeholder={' '}
@@ -580,11 +579,12 @@ const getFromOptions = useCallback(() => {
               </div>
             )}
             {fields.from && (
-              <div className="col-span-4">
+              <div className="col-span-5">
                 <select
                   value={value.from || ''}
                   onChange={set('from')}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+                  className="fi"
+                  data-type="select"
                   suppressHydrationWarning
                 >
                   {isClient ? (

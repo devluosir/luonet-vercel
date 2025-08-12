@@ -21,7 +21,7 @@ export const API_ENDPOINTS = {
   },
   
   // 其他API
-  GENERATE: `${API_BASE_URL}/generate`,
+  GENERATE: '/api/generate',
 };
 
 // 获取用户信息（优先从localStorage获取）
@@ -84,7 +84,10 @@ export async function apiRequest(
     };
   }
 
-  return fetch(url, defaultOptions);
+  // 处理相对URL（本地API路由）
+  const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
+
+  return fetch(fullUrl, defaultOptions);
 }
 
 // 带错误处理的API请求

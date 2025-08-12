@@ -340,6 +340,85 @@ html.dark.classic-theme {
               color var(--transition-normal);
 }
 
+
+
+/* 🎨 邮件页面按钮样式 - 采用与模块按钮相同的设计模式 */
+.mail-generate-button,
+.mail-settings-button {
+  /* 重置全局过渡动画，避免冲突 */
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  
+  /* 确保背景色不被覆盖 */
+  background-image: var(--bg-gradient) !important;
+  background-color: transparent !important;
+  
+  /* 确保文本颜色不被覆盖 */
+  color: var(--text-color) !important;
+  
+  /* 确保阴影不被覆盖 */
+  box-shadow: var(--shadow) !important;
+  
+  /* Apple风格高级效果 */
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-radius: 12px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  border: none !important;
+}
+
+/* 邮件按钮悬停状态 */
+.mail-generate-button:hover,
+.mail-settings-button:hover {
+  background-image: var(--bg-gradient-hover) !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: var(--shadow-hover) !important;
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+}
+
+/* 邮件按钮激活状态 */
+.mail-generate-button:active,
+.mail-settings-button:active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: var(--shadow) !important;
+  transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 邮件按钮图标容器 */
+.mail-generate-button .icon-container,
+.mail-settings-button .icon-container {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--icon-color) !important;
+  border-radius: 8px !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 邮件按钮悬停时图标容器 */
+.mail-generate-button:hover .icon-container,
+.mail-settings-button:hover .icon-container {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  transform: scale(1.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* 邮件按钮图标 */
+.mail-generate-button .icon,
+.mail-settings-button .icon {
+  color: var(--icon-color) !important;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1)) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 邮件按钮悬停时图标 */
+.mail-generate-button:hover .icon,
+.mail-settings-button:hover .icon {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)) !important;
+}
+
 /* 🎨 模块按钮专用样式 - Apple风格高级效果 */
 .module-button,
 .dashboard-module-button {
@@ -815,9 +894,23 @@ html.dark, html.dark body {
   height: 2.25rem; /* h-9：统一小尺寸输入高度 */
 }
 
+/* select元素的特殊样式，确保与input保持一致 */
+.fi[data-type="select"] {
+  @apply appearance-none bg-no-repeat bg-right pr-8;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-size: 1.25rem;
+  background-position: right 0.5rem center;
+}
+
+/* 深色模式下的select箭头 */
+.dark .fi[data-type="select"] {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23d1d5db' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+}
+
 .fi-multiline { 
   @apply w-full rounded-xl border border-slate-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 px-3 py-2 text-sm leading-6
          outline-none focus:border-slate-400 dark:focus:border-gray-500 transition-all duration-200; 
+  min-height: 2.25rem; /* 确保最小高度与fi类一致 */
 }
 
 /* 浮动标签样式增强 */
