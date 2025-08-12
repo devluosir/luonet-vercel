@@ -646,21 +646,6 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       }
       currentY += 5;
     } else if (data.showInvoiceReminder) {
-      // 显示额外的付款条款
-      const additionalTerm = data.additionalPaymentTerms?.trim() || '';
-      
-      // 标题使用粗体
-      setCnFont(doc, 'bold');
-      doc.text(titleText, margin, currentY);
-      
-      // 其他内容使用普通字体
-      setCnFont(doc, 'normal');
-      
-      const titleWidth = doc.getTextWidth(titleText);
-      const spacing = 5; // 设置合适的间距
-      doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
-      currentY += 5;
-    } else if (data.showInvoiceReminder) {
       // 只有发票号提醒时的布局
       const invoiceNo = data.invoiceNo && data.invoiceNo.trim() ? data.invoiceNo : 'TBD';
       const reminderPrefix = `Please state our invoice no. "`;
