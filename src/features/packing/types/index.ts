@@ -1,3 +1,11 @@
+// 合并单元格信息接口
+export interface MergedCellInfo {
+  startRow: number;
+  endRow: number;
+  content: string;
+  isMerged: boolean;
+}
+
 // 箱单项目接口
 export interface PackingItem {
   id: number;
@@ -13,6 +21,18 @@ export interface PackingItem {
   dimensions: string;
   unit: string;
   groupId?: string;
+  highlight?: {
+    description?: boolean;
+    hsCode?: boolean;
+    quantity?: boolean;
+    unit?: boolean;
+    unitPrice?: boolean;
+    totalPrice?: boolean;
+    netWeight?: boolean;
+    grossWeight?: boolean;
+    packageQty?: boolean;
+    dimensions?: boolean;
+  };
 }
 
 // 其他费用接口
@@ -61,6 +81,13 @@ export interface PackingData {
   customUnits?: string[];
   isInGroupMode: boolean;
   currentGroupId?: string;
+  // 合并单元格相关
+  packageQtyMergeMode?: 'auto' | 'manual';
+  dimensionsMergeMode?: 'auto' | 'manual';
+  manualMergedCells?: {
+    packageQty: MergedCellInfo[];
+    dimensions: MergedCellInfo[];
+  };
 }
 
 // 总计数据接口

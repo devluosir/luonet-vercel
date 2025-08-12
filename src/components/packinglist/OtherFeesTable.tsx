@@ -23,25 +23,14 @@ interface OtherFeesTableProps {
   showWeightAndPackage?: boolean;
   showHsCode?: boolean;
   showDimensions?: boolean;
+  itemsCount?: number; // 添加主表格项目数量，用于计算连续序号
+  effectiveVisibleCols?: string[]; // 添加可见列信息
 }
 
-// 参考发票页面的输入框样式
-const tableInputClassName = `w-full px-3 py-2 rounded-xl
-  bg-transparent backdrop-blur-sm
-  border border-transparent
-  focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 dark:focus:ring-[#0A84FF]/20
-  text-[14px] leading-relaxed text-gray-800 dark:text-gray-100
-  placeholder:text-gray-400/60 dark:placeholder:text-gray-500/60
-  transition-all duration-300 ease-out
-  hover:bg-[#007AFF]/5 dark:hover:bg-[#0A84FF]/5
-  text-center whitespace-pre-wrap
-  ios-optimized-input`;
+// 参考主表格的输入框样式
+const tableInputClassName = `w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input`;
 
-const numberInputClassName = `${tableInputClassName}
-  [appearance:textfield] 
-  [&::-webkit-outer-spin-button]:appearance-none 
-  [&::-webkit-inner-spin-button]:appearance-none
-  text-center`;
+const numberInputClassName = `${tableInputClassName} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
 
 const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
 
@@ -57,70 +46,86 @@ export function OtherFeesTable({
   setEditingFeeAmount,
   showWeightAndPackage,
   showHsCode,
-  showDimensions
+  showDimensions,
+  itemsCount = 0,
+  effectiveVisibleCols = []
 }: OtherFeesTableProps) {
   return (
-    <div className="border-t border-[#007AFF]/10 dark:border-[#0A84FF]/10">
+    <tbody>
       {otherFees.map((fee, index) => (
-        <div key={fee.id} 
-             className={`flex items-center ${
-               index % 2 === 0 ? 'bg-[#007AFF]/[0.02] dark:bg-[#0A84FF]/[0.02]' : ''
-             }`}>
-          <div className="w-[40px] px-4">
-            <span 
-              className="flex items-center justify-center w-6 h-6 rounded-full mx-auto
-                        text-xs text-[#86868B] hover:bg-red-500/10 hover:text-red-500 
-                        cursor-pointer transition-all duration-200"
-              onClick={() => onDeleteFee(index)}
-              title="Click to delete"
-            >
-              ×
-            </span>
-          </div>
-          <div className="flex-1 px-4">
-            <textarea
-              value={fee.description}
-              onChange={(e) => {
-                onFeeChange(index, 'description', e.target.value);
-                // 自动调整高度
-                e.target.style.height = '28px';
-                e.target.style.height = `${e.target.scrollHeight}px`;
-              }}
-              onDoubleClick={() => onFeeDoubleClick(index, 'description')}
-              placeholder="Other Fee"
-              className={`${tableInputClassName} text-center whitespace-pre-wrap resize-y overflow-hidden ${fee.highlight?.description ? highlightClass : ''}`}
-              style={{ height: '28px' }}
-            />
-          </div>
-          <div className="w-[160px] px-4">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={editingFeeIndex === index ? editingFeeAmount : fee.amount.toFixed(2)}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (/^-?\d*\.?\d{0,2}$/.test(value) || value === '' || value === '-') {
-                  setEditingFeeAmount(value);
-                  const amount = value === '' || value === '-' ? 0 : parseFloat(value) || 0;
-                  onFeeChange(index, 'amount', amount);
-                }
-              }}
-              onDoubleClick={() => onFeeDoubleClick(index, 'amount')}
-              onFocus={(e) => {
-                setEditingFeeIndex(index);
-                setEditingFeeAmount(fee.amount === 0 ? '' : fee.amount.toString());
-                e.target.select();
-              }}
-              onBlur={() => {
-                setEditingFeeIndex(null);
-                setEditingFeeAmount('');
-              }}
-              placeholder="0.00"
-              className={`${numberInputClassName} ${fee.highlight?.amount ? highlightClass : ''}`}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
+        <tr key={fee.id} className="border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10 bg-white/90 dark:bg-[#1C1C1E]/90">
+                {/* 序号列 - 与主表格完全一致 */}
+                <td className="py-2 px-4 text-center text-sm">
+                  <span 
+                    className="flex items-center justify-center w-5 h-5 rounded-full text-xs text-gray-400 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors"
+                    onClick={() => onDeleteFee(index)}
+                    title="Click to delete"
+                  >
+                    {itemsCount + index + 1}
+                  </span>
+                </td>
+                
+                {/* Description列 - 合并所有中间列 */}
+                <td className="py-2 px-4 text-center text-[12px]" colSpan={
+                  (effectiveVisibleCols.includes('hsCode') && showHsCode ? 1 : 0) +
+                  (effectiveVisibleCols.includes('quantity') ? 1 : 0) +
+                  (effectiveVisibleCols.includes('unit') ? 1 : 0) +
+                  (effectiveVisibleCols.includes('unitPrice') ? 1 : 0) +
+                  (effectiveVisibleCols.includes('netWeight') && showWeightAndPackage ? 1 : 0) +
+                  (effectiveVisibleCols.includes('grossWeight') && showWeightAndPackage ? 1 : 0) +
+                  (effectiveVisibleCols.includes('packageQty') && showWeightAndPackage ? 1 : 0) +
+                  (effectiveVisibleCols.includes('dimensions') && showDimensions ? 1 : 0)
+                }>
+                  <textarea
+                    value={fee.description}
+                    onChange={(e) => {
+                      onFeeChange(index, 'description', e.target.value);
+                      // 自动调整高度
+                      e.target.style.height = '28px';
+                      e.target.style.height = `${e.target.scrollHeight}px`;
+                    }}
+                    onDoubleClick={() => onFeeDoubleClick(index, 'description')}
+                    placeholder="Other Fee"
+                    className={`${tableInputClassName} text-center whitespace-pre-wrap resize-y overflow-hidden ${fee.highlight?.description ? highlightClass : ''}`}
+                    style={{ height: '28px' }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.stopPropagation();
+                      }
+                    }}
+                  />
+                </td>
+                
+                {/* Amount列 */}
+                <td className="py-2 px-4 text-center text-sm">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={editingFeeIndex === index ? editingFeeAmount : fee.amount.toFixed(2)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (/^-?\d*\.?\d{0,2}$/.test(value) || value === '' || value === '-') {
+                        setEditingFeeAmount(value);
+                        const amount = value === '' || value === '-' ? 0 : parseFloat(value) || 0;
+                        onFeeChange(index, 'amount', amount);
+                      }
+                    }}
+                    onDoubleClick={() => onFeeDoubleClick(index, 'amount')}
+                    onFocus={(e) => {
+                      setEditingFeeIndex(index);
+                      setEditingFeeAmount(fee.amount === 0 ? '' : fee.amount.toString());
+                      e.target.select();
+                    }}
+                    onBlur={() => {
+                      setEditingFeeIndex(null);
+                      setEditingFeeAmount('');
+                    }}
+                    placeholder="0.00"
+                    className={`${numberInputClassName} ${fee.highlight?.amount ? highlightClass : ''}`}
+                  />
+                </td>
+              </tr>
+            ))}
+    </tbody>
   );
 } 

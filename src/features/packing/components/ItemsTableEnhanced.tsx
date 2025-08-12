@@ -44,6 +44,13 @@ interface PackingOtherFee {
   };
 }
 
+interface MergedCellInfo {
+  startRow: number;
+  endRow: number;
+  content: string;
+  isMerged: boolean;
+}
+
 interface PackingItem {
   id: number;
   serialNo: string;
@@ -58,6 +65,18 @@ interface PackingItem {
   dimensions: string;
   unit: string;
   groupId?: string;
+  highlight?: {
+    description?: boolean;
+    hsCode?: boolean;
+    quantity?: boolean;
+    unit?: boolean;
+    unitPrice?: boolean;
+    totalPrice?: boolean;
+    netWeight?: boolean;
+    grossWeight?: boolean;
+    packageQty?: boolean;
+    dimensions?: boolean;
+  };
 }
 
 type OtherFeeField = 'description' | 'amount';
@@ -74,11 +93,19 @@ interface PackingData {
   customUnits?: string[];
   isInGroupMode?: boolean;
   currentGroupId?: string;
+  // 合并单元格相关
+  packageQtyMergeMode?: 'auto' | 'manual';
+  dimensionsMergeMode?: 'auto' | 'manual';
+  manualMergedCells?: {
+    packageQty: MergedCellInfo[];
+    dimensions: MergedCellInfo[];
+  };
 }
 
 interface ItemsTableEnhancedProps {
   data: PackingData;
   onItemChange: (index: number, field: keyof PackingItem, value: string | number) => void;
+  onDataChange?: (data: PackingData) => void;
   onAddLine: () => void;
   onDeleteLine: (index: number) => void;
   onOtherFeeChange?: (index: number, field: keyof PackingOtherFee, value: string | number) => void;
@@ -96,11 +123,19 @@ interface ItemsTableEnhancedProps {
   };
   onEnterGroupMode?: () => void;
   onExitGroupMode?: () => void;
+  // 合并单元格相关
+  onPackageQtyMergeModeChange?: (mode: 'auto' | 'manual') => void;
+  onDimensionsMergeModeChange?: (mode: 'auto' | 'manual') => void;
+  onManualMergedCellsChange?: (manualMergedCells: {
+    packageQty: MergedCellInfo[];
+    dimensions: MergedCellInfo[];
+  }) => void;
 }
 
 export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   data,
   onItemChange,
+  onDataChange,
   onAddLine,
   onDeleteLine,
   onOtherFeeChange,
@@ -136,6 +171,91 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   const iosCaretStyleDark = {
     caretColor: '#0A84FF',
     WebkitTextFillColor: '#F5F5F7',
+  };
+
+  // 高亮样式类
+  const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
+
+  // 合并单元格计算函数
+  const calculateMergedCells = (
+    items: PackingItem[],
+    mode: 'auto' | 'manual' = 'auto',
+    column: 'packageQty' | 'dimensions' = 'packageQty'
+  ): MergedCellInfo[] => {
+    const mergedCells: MergedCellInfo[] = [];
+    if (!items || items.length === 0) return mergedCells;
+
+    if (mode === 'manual') {
+      items.forEach((item, index) => {
+        mergedCells.push({
+          startRow: index,
+          endRow: index,
+          content: column === 'packageQty' ? item.packageQty.toString() : item.dimensions,
+          isMerged: false,
+        });
+      });
+      return mergedCells;
+    }
+
+    let currentStart = 0;
+    let currentContent = column === 'packageQty' ? items[0]?.packageQty.toString() : items[0]?.dimensions;
+    let currentGroupId = items[0]?.groupId;
+
+    for (let i = 1; i <= items.length; i++) {
+      const currentItem = items[i];
+      const prevItem = items[i - 1];
+
+      const prevContent = column === 'packageQty' ? prevItem?.packageQty.toString() : prevItem?.dimensions;
+      const currentContentValue = currentItem
+        ? column === 'packageQty' ? currentItem.packageQty.toString() : currentItem.dimensions
+        : '';
+
+      // 考虑分组因素：如果当前项和前一项属于不同组，则结束合并
+      const prevGroupId = prevItem?.groupId;
+      const nextGroupId = currentItem?.groupId;
+      const isGroupChange = prevGroupId !== nextGroupId;
+
+      // 如果前一项没有分组ID（分组外的行），则单独处理，不合并
+      const prevIsUngrouped = !prevGroupId;
+      const currentIsUngrouped = !nextGroupId;
+
+      const shouldEndMerge = !currentItem || 
+        (currentContentValue !== prevContent && currentContentValue !== '') ||
+        isGroupChange ||
+        prevIsUngrouped || // 如果前一项是分组外的行，结束合并
+        currentIsUngrouped; // 如果当前项是分组外的行，结束合并
+
+      if (shouldEndMerge) {
+        // 如果前一项是分组外的行，单独处理
+        if (prevIsUngrouped) {
+          mergedCells.push({ startRow: i - 1, endRow: i - 1, content: prevContent, isMerged: false });
+        } else if (i - 1 > currentStart) {
+          // 分组内的合并
+          mergedCells.push({ startRow: currentStart, endRow: i - 1, content: currentContent, isMerged: true });
+        } else {
+          mergedCells.push({ startRow: currentStart, endRow: currentStart, content: currentContent, isMerged: false });
+        }
+        
+        if (currentItem) {
+          currentStart = i;
+          currentContent = currentContentValue;
+          currentGroupId = nextGroupId;
+        }
+      }
+    }
+    return mergedCells;
+  };
+
+  // 获取合并单元格信息
+  const getMergedCellInfo = (rowIndex: number, merged: MergedCellInfo[]) => {
+    if (merged.length === 0) return null;
+    return merged.find((cell) => cell.startRow === rowIndex) || null;
+  };
+
+  // 判断是否应该渲染单元格
+  const shouldRenderCell = (rowIndex: number, merged: MergedCellInfo[]) => {
+    if (merged.length === 0) return true;
+    return merged.some((cell) => cell.startRow === rowIndex);
   };
 
   // 检测暗黑模式
@@ -194,6 +314,22 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     }
   };
 
+  // 处理双击高亮
+  const handleDoubleClick = (index: number, field: keyof NonNullable<PackingItem['highlight']>) => {
+    if (!onDataChange) return;
+    
+    const newItems = [...data.items];
+    newItems[index] = {
+      ...newItems[index],
+      highlight: {
+        ...newItems[index].highlight,
+        [field]: !newItems[index].highlight?.[field],
+      },
+    };
+    const newData = { ...data, items: newItems };
+    onDataChange(newData);
+  };
+
   // 软删除处理
   const handleSoftDelete = (index: number) => {
     if (data.items.length > 1) {
@@ -240,8 +376,20 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   const calculatedTotals = calculateTotals();
   const totalAmount = calculatedTotals.totalPrice + otherFeesTotal;
 
+  // 计算合并单元格数据
+  const packageQtyMergeMode = data.packageQtyMergeMode || 'auto';
+  const dimensionsMergeMode = data.dimensionsMergeMode || 'auto';
+  
+  const mergedPackageQtyCells = packageQtyMergeMode === 'manual' 
+    ? (data.manualMergedCells?.packageQty || [])
+    : calculateMergedCells(data.items, 'auto', 'packageQty');
+    
+  const mergedDimensionsCells = dimensionsMergeMode === 'manual'
+    ? (data.manualMergedCells?.dimensions || [])
+    : calculateMergedCells(data.items, 'auto', 'dimensions');
+
   // 获取可见列
-  const effectiveVisibleCols = isHydrated ? visibleCols : ['description', 'quantity', 'unit', 'netWeight', 'grossWeight', 'packageQty'];
+  const effectiveVisibleCols = isHydrated ? visibleCols : ['description', 'quantity', 'unit', 'netWeight', 'grossWeight', 'packageQty', 'unitPrice', 'amount'];
 
   return (
     <div className="space-y-0">
@@ -254,13 +402,13 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
               <tr className="border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10
                             bg-[#007AFF]/5 dark:bg-[#0A84FF]/5">
                 <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[40px]">No.</th>
+                {effectiveVisibleCols.includes('description') && (
+                  <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[200px] lg:w-[280px] xl:w-[350px]">Description</th>
+                )}
                 {effectiveVisibleCols.includes('hsCode') && data.showHsCode && (
                   <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[120px]">
                     HS Code
                   </th>
-                )}
-                {effectiveVisibleCols.includes('description') && (
-                  <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[200px] lg:w-[280px] xl:w-[350px]">Description</th>
                 )}
                 {effectiveVisibleCols.includes('quantity') && (
                   <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[100px]">Qty</th>
@@ -314,18 +462,6 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                       </span>
                     </td>
                     
-                    {effectiveVisibleCols.includes('hsCode') && data.showHsCode && (
-                      <td className="py-2 px-4 text-center text-sm">
-                        <input
-                          type="text"
-                          value={item.hsCode}
-                          onChange={(e) => onItemChange(index, 'hsCode', e.target.value)}
-                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
-                          placeholder="HS Code"
-                        />
-                      </td>
-                    )}
-                    
                     {effectiveVisibleCols.includes('description') && (
                       <td className="py-2 px-4 text-center text-[12px]">
                         <textarea
@@ -342,6 +478,18 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                               e.stopPropagation();
                             }
                           }}
+                        />
+                      </td>
+                    )}
+                    
+                    {effectiveVisibleCols.includes('hsCode') && data.showHsCode && (
+                      <td className="py-2 px-4 text-center text-sm">
+                        <input
+                          type="text"
+                          value={item.hsCode}
+                          onChange={(e) => onItemChange(index, 'hsCode', e.target.value)}
+                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
+                          placeholder="HS Code"
                         />
                       </td>
                     )}
@@ -594,10 +742,19 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                       ) : null
                     )}
                     
-                    {effectiveVisibleCols.includes('packageQty') && data.showWeightAndPackage && (
-                      isInGroup && isFirstInGroup ? (
-                        <td rowSpan={groupRowSpan} className="py-2 px-4 text-center align-middle" style={{verticalAlign:'middle'}}>
-                          <div className="flex flex-col justify-center items-center h-full">
+                    {effectiveVisibleCols.includes('packageQty') && data.showWeightAndPackage && shouldRenderCell(index, mergedPackageQtyCells) && (
+                      (() => {
+                        const packageQtyMergedInfo = getMergedCellInfo(index, mergedPackageQtyCells);
+                        const packageQtyRowSpan = packageQtyMergedInfo ? packageQtyMergedInfo.endRow - packageQtyMergedInfo.startRow + 1 : 1;
+                        const packageQtyIsMerged = !!packageQtyMergedInfo?.isMerged;
+                        
+                        return (
+                          <td 
+                            className={`py-2 px-4 text-center text-sm ${
+                              packageQtyIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
+                            }`}
+                            rowSpan={packageQtyIsMerged ? packageQtyRowSpan : undefined}
+                          >
                             <input
                               type="text"
                               inputMode="numeric"
@@ -606,13 +763,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                                 const value = e.target.value;
                                 if (/^\d*$/.test(value)) {
                                   setEditingPackageQtyAmount(value);
-                                  const newQty = value === '' ? 0 : parseInt(value);
-                                  groupItems.forEach((groupItem) => {
-                                    const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
-                                    if (itemIndex !== -1) {
-                                      onItemChange(itemIndex, 'packageQty', newQty);
-                                    }
-                                  });
+                                  onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
                                 }
                               }}
                               onFocus={(e) => {
@@ -621,114 +772,101 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                                 e.target.select();
                                 handleIOSInputFocus(e);
                               }}
-                              onBlur={(e) => {
+                              onBlur={() => {
                                 setEditingPackageQtyIndex(null);
                                 setEditingPackageQtyAmount('');
-                                const value = parseInt(e.target.value) || 0;
-                                if (value > 0) {
-                                  groupItems.forEach((groupItem) => {
-                                    const itemIndex = data.items.findIndex(i => i.id === groupItem.id);
-                                    if (itemIndex !== -1) {
-                                      onItemChange(itemIndex, 'packageQty', value);
-                                    }
-                                  });
-                                }
                               }}
-                              className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input"
+                              onDoubleClick={() => handleDoubleClick(index, 'packageQty')}
+                              className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${item.highlight?.packageQty ? highlightClass : ''} ${packageQtyIsMerged ? 'border-blue-200 dark:border-blue-700' : ''}`}
                               placeholder="0"
                               style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
                             />
-                          </div>
-                        </td>
-                      ) : !isInGroup ? (
-                        <td className="py-2 px-4 text-center text-sm">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            value={editingPackageQtyIndex === index ? editingPackageQtyAmount : (item.packageQty > 0 ? item.packageQty.toString() : '')}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (/^\d*$/.test(value)) {
-                                setEditingPackageQtyAmount(value);
-                                onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
-                              }
-                            }}
-                            onFocus={(e) => {
-                              setEditingPackageQtyIndex(index);
-                              setEditingPackageQtyAmount(item.packageQty === 0 ? '' : item.packageQty.toString());
-                              e.target.select();
-                              handleIOSInputFocus(e);
-                            }}
-                            onBlur={() => {
-                              setEditingPackageQtyIndex(null);
-                              setEditingPackageQtyAmount('');
-                            }}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input"
-                            placeholder="0"
-                            style={{ ...(isDarkMode ? iosCaretStyleDark : iosCaretStyle) }}
-                          />
-                        </td>
-                      ) : null
+                          </td>
+                        );
+                      })()
                     )}
                     
-                    {effectiveVisibleCols.includes('dimensions') && data.showDimensions && (
-                      <td className="py-2 px-4 text-center text-sm">
-                        <input
-                          type="text"
-                          value={item.dimensions}
-                          onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
-                          className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
-                          placeholder="Dimensions"
-                        />
-                      </td>
+                    {effectiveVisibleCols.includes('dimensions') && data.showDimensions && shouldRenderCell(index, mergedDimensionsCells) && (
+                      (() => {
+                        const dimensionsMergedInfo = getMergedCellInfo(index, mergedDimensionsCells);
+                        const dimensionsRowSpan = dimensionsMergedInfo ? dimensionsMergedInfo.endRow - dimensionsMergedInfo.startRow + 1 : 1;
+                        const dimensionsIsMerged = !!dimensionsMergedInfo?.isMerged;
+                        
+                        return (
+                          <td 
+                            className={`py-2 px-4 text-center text-sm ${
+                              dimensionsIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
+                            }`}
+                            rowSpan={dimensionsIsMerged ? dimensionsRowSpan : undefined}
+                          >
+                            <input
+                              type="text"
+                              value={item.dimensions}
+                              onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
+                              onDoubleClick={() => handleDoubleClick(index, 'dimensions')}
+                              className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input ${item.highlight?.dimensions ? highlightClass : ''} ${dimensionsIsMerged ? 'border-blue-200 dark:border-blue-700' : ''}`}
+                              placeholder="Dimensions"
+                            />
+                          </td>
+                        );
+                      })()
                     )}
                   </tr>
                 );
               })}
             </tbody>
+            
+            {/* Other Fees 表格 - 无缝衔接 */}
+            {data.showPrice && data.otherFees && data.otherFees.length > 0 && (
+              <OtherFeesTable
+                otherFees={data.otherFees}
+                currency={data.currency}
+                onFeeChange={onOtherFeeChange || (() => {})}
+                onFeeDoubleClick={onOtherFeeDoubleClick || (() => {})}
+                onDeleteFee={onDeleteOtherFee || (() => {})}
+                editingFeeIndex={editingFeeIndex || null}
+                editingFeeAmount={editingFeeAmount || ''}
+                setEditingFeeIndex={setEditingFeeIndex || (() => {})}
+                setEditingFeeAmount={setEditingFeeAmount || (() => {})}
+                itemsCount={data.items.length} // 传递主表格项目数量
+                effectiveVisibleCols={effectiveVisibleCols} // 传递可见列信息
+                showHsCode={data.showHsCode}
+                showWeightAndPackage={data.showWeightAndPackage}
+                showDimensions={data.showDimensions}
+              />
+            )}
           </table>
         </div>
       </div>
 
-      {/* Other Fees 表格 */}
-      {data.showPrice && data.otherFees && data.otherFees.length > 0 && (
-        <div className="mt-6">
-          <OtherFeesTable
-            otherFees={data.otherFees}
-            currency={data.currency}
-            onFeeChange={onOtherFeeChange || (() => {})}
-            onFeeDoubleClick={onOtherFeeDoubleClick || (() => {})}
-            onDeleteFee={onDeleteOtherFee || (() => {})}
-            editingFeeIndex={editingFeeIndex || null}
-            editingFeeAmount={editingFeeAmount || ''}
-            setEditingFeeIndex={setEditingFeeIndex || (() => {})}
-            setEditingFeeAmount={setEditingFeeAmount || (() => {})}
-          />
-        </div>
-      )}
-
       {/* 总计信息 */}
-      {(data.showWeightAndPackage || (data.showPrice && data.otherFees && data.otherFees.length > 0)) && (
+      {((data.showWeightAndPackage && (effectiveVisibleCols.includes('netWeight') || effectiveVisibleCols.includes('grossWeight') || effectiveVisibleCols.includes('packageQty'))) || (data.showPrice && (effectiveVisibleCols.includes('unitPrice') || effectiveVisibleCols.includes('amount')))) && (
         <div className="flex justify-end items-center py-3 sm:py-4 px-3 sm:px-6 border-t border-[#007AFF]/10 dark:border-[#0A84FF]/10">
           <div className="w-full sm:w-auto">
             <div className="flex items-center gap-4 md:gap-6">
-              {data.showWeightAndPackage && (
+              {data.showWeightAndPackage && (effectiveVisibleCols.includes('netWeight') || effectiveVisibleCols.includes('grossWeight') || effectiveVisibleCols.includes('packageQty')) && (
                 <>
-                  <div className="text-center sm:text-right">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total N.W.</div>
-                    <div className="text-sm sm:text-base font-medium">{calculatedTotals.netWeight.toFixed(2)} KGS</div>
-                  </div>
-                  <div className="text-center sm:text-right">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total G.W.</div>
-                    <div className="text-sm sm:text-base font-medium">{calculatedTotals.grossWeight.toFixed(2)} KGS</div>
-                  </div>
-                  <div className="text-center sm:text-right">
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Package</div>
-                    <div className="text-sm sm:text-base font-medium">{calculatedTotals.packageQty} CTNS</div>
-                  </div>
+                  {effectiveVisibleCols.includes('netWeight') && (
+                    <div className="text-center sm:text-right">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total N.W.</div>
+                      <div className="text-sm sm:text-base font-medium">{calculatedTotals.netWeight.toFixed(2)} KGS</div>
+                    </div>
+                  )}
+                  {effectiveVisibleCols.includes('grossWeight') && (
+                    <div className="text-center sm:text-right">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total G.W.</div>
+                      <div className="text-sm sm:text-base font-medium">{calculatedTotals.grossWeight.toFixed(2)} KGS</div>
+                    </div>
+                  )}
+                  {effectiveVisibleCols.includes('packageQty') && (
+                    <div className="text-center sm:text-right">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Package</div>
+                      <div className="text-sm sm:text-base font-medium">{calculatedTotals.packageQty} CTNS</div>
+                    </div>
+                  )}
                 </>
               )}
-              {data.showPrice && (
+              {data.showPrice && (effectiveVisibleCols.includes('unitPrice') || effectiveVisibleCols.includes('amount')) && (
                 <div className="text-center sm:text-right">
                   <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Amount</div>
                   <div className="text-sm sm:text-base font-semibold">

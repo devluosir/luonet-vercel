@@ -12,7 +12,7 @@ type TablePrefsState = {
   hydrate: () => void;
 };
 
-const DEFAULT_COLS: Col[] = ['description','quantity','unit','netWeight','grossWeight','packageQty'];
+const DEFAULT_COLS: Col[] = ['description','quantity','unit','netWeight','grossWeight','packageQty','unitPrice','amount'];
 
 export const useTablePrefs = create<TablePrefsState>((set, get) => ({
   visibleCols: DEFAULT_COLS, // 服务器端始终使用默认值
@@ -20,18 +20,88 @@ export const useTablePrefs = create<TablePrefsState>((set, get) => ({
   toggleCol: (c) => {
     const now = get().visibleCols;
     const next = now.includes(c) ? now.filter(x=>x!==c) : [...now, c];
-    setLocalStorage('pk.visibleCols', next);
-    set({ visibleCols: next });
+    // 确保核心列始终显示
+    const coreCols = ['description', 'quantity', 'unit'];
+    
+    // 处理重量包装组与尺寸的关系
+    const weightCols = ['netWeight', 'grossWeight', 'packageQty'];
+    const hasAnyWeightCol = weightCols.some(col => next.includes(col));
+    
+    // 处理价格组与重量包装组的关系
+    const priceCols = ['unitPrice', 'amount'];
+    const hasAnyPriceCol = priceCols.some(col => next.includes(col));
+    
+    // 如果重量包装组关闭，则强制关闭尺寸列
+    let finalCols = [...new Set([...coreCols, ...next])];
+    if (!hasAnyWeightCol) {
+      finalCols = finalCols.filter(col => col !== 'dimensions');
+    }
+    
+    // 确保价格组和重量包装组不能同时不显示
+    if (!hasAnyPriceCol && !hasAnyWeightCol) {
+      // 如果两个组都关闭，则重新开启价格组（默认选择）
+      finalCols = [...finalCols, ...priceCols];
+    }
+    
+    setLocalStorage('pk.visibleCols', finalCols);
+    set({ visibleCols: finalCols });
   },
   setCols: (cols) => {
-    setLocalStorage('pk.visibleCols', cols);
-    set({ visibleCols: cols });
+    // 确保核心列始终显示
+    const coreCols = ['description', 'quantity', 'unit'];
+    
+    // 处理重量包装组与尺寸的关系
+    const weightCols = ['netWeight', 'grossWeight', 'packageQty'];
+    const hasAnyWeightCol = weightCols.some(col => cols.includes(col));
+    
+    // 处理价格组与重量包装组的关系
+    const priceCols = ['unitPrice', 'amount'];
+    const hasAnyPriceCol = priceCols.some(col => cols.includes(col));
+    
+    // 如果重量包装组关闭，则强制关闭尺寸列
+    let finalCols = [...new Set([...coreCols, ...cols])];
+    if (!hasAnyWeightCol) {
+      finalCols = finalCols.filter(col => col !== 'dimensions');
+    }
+    
+    // 确保价格组和重量包装组不能同时不显示
+    if (!hasAnyPriceCol && !hasAnyWeightCol) {
+      // 如果两个组都关闭，则重新开启价格组（默认选择）
+      finalCols = [...finalCols, ...priceCols];
+    }
+    
+    setLocalStorage('pk.visibleCols', finalCols);
+    set({ visibleCols: finalCols });
   },
   hydrate: () => {
     if (typeof window !== 'undefined' && !get().hydrated) {
       const parsed = getLocalStorageJSON('pk.visibleCols', null);
+      // 确保核心列始终显示
+      const coreCols = ['description', 'quantity', 'unit'];
+      const initialCols = parsed || DEFAULT_COLS;
+      
+      // 处理重量包装组与尺寸的关系
+      const weightCols = ['netWeight', 'grossWeight', 'packageQty'];
+      const hasAnyWeightCol = weightCols.some(col => initialCols.includes(col));
+      
+      // 处理价格组与重量包装组的关系
+      const priceCols = ['unitPrice', 'amount'];
+      const hasAnyPriceCol = priceCols.some(col => initialCols.includes(col));
+      
+      // 如果重量包装组关闭，则强制关闭尺寸列
+      let finalCols = [...new Set([...coreCols, ...initialCols])];
+      if (!hasAnyWeightCol) {
+        finalCols = finalCols.filter(col => col !== 'dimensions');
+      }
+      
+      // 确保价格组和重量包装组不能同时不显示
+      if (!hasAnyPriceCol && !hasAnyWeightCol) {
+        // 如果两个组都关闭，则重新开启价格组（默认选择）
+        finalCols = [...finalCols, ...priceCols];
+      }
+      
       set({ 
-        visibleCols: parsed || DEFAULT_COLS,
+        visibleCols: finalCols,
         hydrated: true 
       });
     }
