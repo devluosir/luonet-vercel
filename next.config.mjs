@@ -8,18 +8,18 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', '@headlessui/react'],
     // 启用更多性能优化
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
+    // turbo: {
+    //   rules: {
+    //     '*.svg': {
+    //       loaders: ['@svgr/webpack'],
+    //       as: '*.js',
+    //     },
+    //   },
+    // },
     // 启用更激进的代码分割
-    optimizeCss: true,
+    // optimizeCss: true,
     // 启用更快的构建
-    swcMinify: true,
+    // swcMinify: true,
   },
   env: {
     WORKER_URL: process.env.WORKER_URL,

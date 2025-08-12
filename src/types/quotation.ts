@@ -63,6 +63,8 @@ export interface QuotationData {
     headerType: 'none' | 'bilingual' | 'english';
     stampType?: 'none' | 'shanghai' | 'hongkong';
   };
+  // Notes配置
+  notesConfig?: NoteConfig[];
   // 解析器提供的合并单元格信息
   mergedRemarks?: { startRow: number; endRow: number; content: string; column: 'remarks' }[];
   mergedDescriptions?: { startRow: number; endRow: number; content: string; column: 'description' }[];

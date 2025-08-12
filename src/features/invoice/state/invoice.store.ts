@@ -7,7 +7,7 @@ import { calculateAmount, processUnitPlural, numberToWords } from '../utils/calc
 
 interface InvoiceStore extends InvoiceFormState, InvoiceFormActions {
   // 初始化状态
-  initialize: (initialData?: InvoiceData) => void;
+  initialize: (initialData?: InvoiceData, isEditMode?: boolean, editId?: string | null) => void;
   
   // 重置状态
   reset: () => void;
@@ -360,28 +360,9 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
   previewPDF: async () => {
     const state = get();
     try {
-      // 先保存数据
-      const saveResult = await InvoiceService.saveInvoice(
-        state.data,
-        state.isEditMode,
-        state.editId
-      );
-      
-      if (saveResult.success) {
-        // 更新editId（如果是新记录）
-        if (saveResult.newEditId && !state.editId) {
-          set({ 
-            editId: saveResult.newEditId,
-            isEditMode: true
-          });
-        }
-        
-        // 生成预览PDF
-        const previewUrl = await PDFService.previewInvoicePDF(state.data);
-        return previewUrl;
-      } else {
-        throw new Error(saveResult.message || '保存失败');
-      }
+      // 预览时不保存数据，直接生成预览PDF
+      const previewUrl = await PDFService.previewInvoicePDF(state.data);
+      return previewUrl;
     } catch (error) {
       console.error('Error previewing PDF:', error);
       throw error;
