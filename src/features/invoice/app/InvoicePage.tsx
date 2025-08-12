@@ -81,7 +81,7 @@ export const InvoicePage = () => {
       
       // 初始化store
       const { initialize } = useInvoiceStore.getState();
-      initialize(injectedData);
+      initialize(injectedData, isEditMode, editId);
       
       // 清理注入的数据
       customWindow.__INVOICE_DATA__ = undefined;

@@ -112,7 +112,12 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
     
     if (totalTerms === 1) {
       // 单条付款条款的情况，标题和内容在同一行
-      if (showMainTerm && dateISO && dateISO.trim()) {
+      if (additionalTermsArray.length > 0) {
+        items.push({
+          index: 1,
+          content: <span dangerouslySetInnerHTML={{ __html: `<strong>${titleText}</strong>${additionalTermsArray[0]}` }} />
+        });
+      } else if (showMainTerm && dateISO && dateISO.trim()) {
         // 将日期部分高亮为红色
         const mainWithRedDate = main.replace(
           dateISO, 
@@ -121,11 +126,6 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
         items.push({
           index: 1,
           content: <span dangerouslySetInnerHTML={{ __html: `<strong>${titleText}</strong>${mainWithRedDate}` }} />
-        });
-      } else if (additionalTermsArray.length > 0) {
-        items.push({
-          index: 1,
-          content: <span dangerouslySetInnerHTML={{ __html: `<strong>${titleText}</strong>${additionalTermsArray[0]}` }} />
         });
       } else if (showInvoiceReminder) {
         const displayContractNo = contractNoExternal?.trim() || 'TBD';
@@ -142,7 +142,18 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
       // 多条付款条款的情况，使用编号列表格式
       let termIndex = 1;
       
-      // 1. 主条款（与PDF逻辑保持一致）
+      // 1. 附加条款（按行拆分，每行一个条款）
+      additionalTermsArray.forEach(term => {
+        if (term.trim()) {
+          items.push({
+            index: termIndex,
+            content: `${termIndex}. ${term.trim()}`
+          });
+          termIndex++;
+        }
+      });
+      
+      // 2. 主条款（与PDF逻辑保持一致）
       if (showMainTerm && dateISO && dateISO.trim()) {
         // 将日期部分高亮为红色
         const mainWithRedDate = main.replace(
@@ -155,17 +166,6 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
         });
         termIndex++;
       }
-      
-      // 2. 附加条款（按行拆分，每行一个条款）
-      additionalTermsArray.forEach(term => {
-        if (term.trim()) {
-          items.push({
-            index: termIndex,
-            content: `${termIndex}. ${term.trim()}`
-          });
-          termIndex++;
-        }
-      });
       
       // 3. 合同号提醒（合同号显示为红色）
       if (showInvoiceReminder) {
@@ -209,42 +209,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
       
       {/* 内容框 */}
       <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 md:p-4 space-y-3">
-        {/* 行1：主条款（内联控件） */}
-        <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-          <input
-            type="checkbox"
-            checked={showMainTerm}
-            onChange={(e) => setShowMainTerm(e.target.checked)}
-            className="h-4 w-4 accent-black dark:accent-white"
-          />
-          <span>Full payment not later than</span>
-          <input
-            type="date"
-            className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-            value={dateISO}
-            onChange={(e) => updateData({ paymentDate: e.target.value })}
-          />
-          <div className="inline-flex overflow-hidden rounded border border-gray-300 dark:border-gray-600">
-            {[3, 7, 30].map(d => (
-              <button 
-                key={d}
-                type="button"
-                className="border-r border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs last:border-r-0 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                onClick={() => {
-                  const nextDate = addDays(quotationDate, d);
-                  updateData({ paymentDate: nextDate });
-                }}
-              >
-                +{d}d
-              </button>
-            ))}
-          </div>
-          <span>by telegraphic transfer (T/T).</span>
-        </div>
-      </div>
-
-      {/* 行2：附加条款 + 预设 */}
+        {/* 行1：附加条款 + 预设 */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <div className="flex-1 relative">
@@ -319,6 +284,41 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
             ))}
           </div>
         )}
+      </div>
+
+      {/* 行2：主条款（内联控件） */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input
+            type="checkbox"
+            checked={showMainTerm}
+            onChange={(e) => setShowMainTerm(e.target.checked)}
+            className="h-4 w-4 accent-black dark:accent-white"
+          />
+          <span>Full payment not later than</span>
+          <input
+            type="date"
+            className="rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            value={dateISO}
+            onChange={(e) => updateData({ paymentDate: e.target.value })}
+          />
+          <div className="inline-flex overflow-hidden rounded border border-gray-300 dark:border-gray-600">
+            {[3, 7, 30].map(d => (
+              <button 
+                key={d}
+                type="button"
+                className="border-r border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs last:border-r-0 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                onClick={() => {
+                  const nextDate = addDays(quotationDate, d);
+                  updateData({ paymentDate: nextDate });
+                }}
+              >
+                +{d}d
+              </button>
+            ))}
+          </div>
+          <span>by telegraphic transfer (T/T).</span>
+        </div>
       </div>
 
       {/* 行3：合同提醒（只读展示合同号） */}

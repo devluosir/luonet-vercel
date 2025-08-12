@@ -44,27 +44,59 @@ export class InvoiceService {
           return { success: false, message: '保存失败' };
         }
       } else {
-        // 创建新发票记录
-        const newInvoice: InvoiceHistoryItem = {
-          id: uuidv4(),
-          customerName: data.to,
-          invoiceNo: data.invoiceNo,
-          totalAmount: totalAmount,
-          currency: data.currency,
-          data: data,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-
-        const saved = addInvoiceHistory(newInvoice);
-        if (saved) {
-          return { 
-            success: true, 
-            message: '保存成功',
-            newEditId: newInvoice.id
-          };
+        // 检查是否已存在相同发票号的记录
+        const existingInvoice = history.find(item => item.invoiceNo === data.invoiceNo);
+        
+        if (existingInvoice) {
+          // 如果存在相同发票号，更新现有记录
+          const updatedHistory = history.map(item => {
+            if (item.id === existingInvoice.id) {
+              return {
+                ...item,
+                customerName: data.to,
+                invoiceNo: data.invoiceNo,
+                totalAmount: totalAmount,
+                currency: data.currency,
+                data: data,
+                updatedAt: new Date().toISOString()
+              };
+            }
+            return item;
+          });
+          
+          const saved = saveInvoiceHistory(updatedHistory);
+          if (saved) {
+            return { 
+              success: true, 
+              message: '保存成功',
+              newEditId: existingInvoice.id
+            };
+          } else {
+            return { success: false, message: '保存失败' };
+          }
         } else {
-          return { success: false, message: '保存失败' };
+          // 创建新发票记录
+          const newInvoice: InvoiceHistoryItem = {
+            id: uuidv4(),
+            customerName: data.to,
+            invoiceNo: data.invoiceNo,
+            totalAmount: totalAmount,
+            currency: data.currency,
+            data: data,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+
+          const saved = addInvoiceHistory(newInvoice);
+          if (saved) {
+            return { 
+              success: true, 
+              message: '保存成功',
+              newEditId: newInvoice.id
+            };
+          } else {
+            return { success: false, message: '保存失败' };
+          }
         }
       }
     } catch (error) {

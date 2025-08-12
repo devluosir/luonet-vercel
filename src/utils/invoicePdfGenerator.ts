@@ -598,7 +598,22 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   
     if (totalTerms === 1) {
     // 单条付款条款的情况，标题和内容在同一行
-    if (data.showPaymentTerms) {
+    if (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) {
+      // 显示额外的付款条款
+      const additionalTerm = data.additionalPaymentTerms.trim();
+      
+      // 标题使用粗体
+      setCnFont(doc, 'bold');
+      doc.text(titleText, margin, currentY);
+      
+      // 其他内容使用普通字体
+      setCnFont(doc, 'normal');
+      
+      const titleWidth = doc.getTextWidth(titleText);
+      const spacing = 5; // 设置合适的间距
+      doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
+      currentY += 5;
+    } else if (data.showPaymentTerms) {
       // 如果有日期，使用日期；否则使用默认文本
       const paymentDate = data.paymentDate && data.paymentDate.trim() ? data.paymentDate : 'TBD';
       const term = `Full payment not later than ${paymentDate} by telegraphic transfer (T/T).`;
@@ -630,9 +645,9 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
         }
       }
       currentY += 5;
-    } else if (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) {
+    } else if (data.showInvoiceReminder) {
       // 显示额外的付款条款
-      const additionalTerm = data.additionalPaymentTerms.trim();
+      const additionalTerm = data.additionalPaymentTerms?.trim() || '';
       
       // 标题使用粗体
       setCnFont(doc, 'bold');
@@ -693,6 +708,28 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
     const termSpacing = 5;  // 条款之间的固定间距
     let termIndex = 1;
 
+    // 显示额外的付款条款
+    if (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) {
+      const terms = data.additionalPaymentTerms.split('\n').filter(term => term.trim());
+      terms.forEach(term => {
+        const numberText = `${termIndex}. `;
+        const numberWidth = doc.getTextWidth(numberText);
+
+        // 添加序号
+        doc.text(numberText, margin, currentY);
+
+        // 处理长文本自动换行，使用定义好的 maxWidth
+        const wrappedText = doc.splitTextToSize(term, maxWidth - numberWidth);
+        wrappedText.forEach((line: string, lineIndex: number) => {
+          doc.text(line, margin + numberWidth, currentY + (lineIndex * 5));
+        });
+
+        // 更新Y坐标，并增加额外的行间距
+        currentY += wrappedText.length * 5;
+        termIndex++;
+      });
+    }
+
     // 显示标准付款条款
     if (data.showPaymentTerms) {
       // 绘制条款编号
@@ -720,28 +757,6 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       }
       currentY += termSpacing;
       termIndex++;
-    }
-
-    // 显示额外的付款条款
-    if (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) {
-      const terms = data.additionalPaymentTerms.split('\n').filter(term => term.trim());
-      terms.forEach(term => {
-        const numberText = `${termIndex}. `;
-        const numberWidth = doc.getTextWidth(numberText);
-
-        // 添加序号
-        doc.text(numberText, margin, currentY);
-
-        // 处理长文本自动换行，使用定义好的 maxWidth
-        const wrappedText = doc.splitTextToSize(term, maxWidth - numberWidth);
-        wrappedText.forEach((line: string, lineIndex: number) => {
-          doc.text(line, margin + numberWidth, currentY + (lineIndex * 5));
-        });
-
-        // 更新Y坐标，并增加额外的行间距
-        currentY += wrappedText.length * 5;
-        termIndex++;
-      });
     }
 
     // 显示发票号提醒

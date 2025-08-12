@@ -47,11 +47,11 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
   focusedCell: null,
 
   // 初始化
-  initialize: (initialData) => {
+  initialize: (initialData, isEditMode = false, editId = null) => {
     set({
       data: initialData || DEFAULT_INVOICE_DATA,
-      isEditMode: !!initialData,
-      editId: null,
+      isEditMode: isEditMode || !!initialData,
+      editId: editId,
       showSettings: false,
       showPreview: false,
       previewItem: null,
@@ -275,16 +275,17 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
   // 保存发票
   saveInvoice: async () => {
     const state = get();
-    const validation = InvoiceService.validateInvoiceData(state.data);
-    
-    if (!validation.isValid) {
-      set({ 
-        saveSuccess: false, 
-        saveMessage: validation.errors[0] 
-      });
-      setTimeout(() => set({ saveMessage: '' }), 2000);
-      return { success: false, message: validation.errors[0] };
-    }
+    // 取消验证，直接保存
+    // const validation = InvoiceService.validateInvoiceData(state.data);
+    // 
+    // if (!validation.isValid) {
+    //   set({ 
+    //     saveSuccess: false, 
+    //     saveMessage: validation.errors[0] 
+    //   });
+    //   setTimeout(() => set({ saveMessage: '' }), 2000);
+    //   return { success: false, message: validation.errors[0] };
+    // }
 
     set({ isSaving: true });
     
@@ -327,8 +328,28 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
   generatePDF: async () => {
     const state = get();
     try {
-      await PDFService.downloadInvoicePDF(state.data);
-      InvoiceService.recordCustomerUsage(state.data);
+      // 先保存数据
+      const saveResult = await InvoiceService.saveInvoice(
+        state.data,
+        state.isEditMode,
+        state.editId
+      );
+      
+      if (saveResult.success) {
+        // 更新editId（如果是新记录）
+        if (saveResult.newEditId && !state.editId) {
+          set({ 
+            editId: saveResult.newEditId,
+            isEditMode: true
+          });
+        }
+        
+        // 生成并下载PDF
+        await PDFService.downloadInvoicePDF(state.data);
+        InvoiceService.recordCustomerUsage(state.data);
+      } else {
+        throw new Error(saveResult.message || '保存失败');
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
       throw error;
@@ -339,8 +360,28 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
   previewPDF: async () => {
     const state = get();
     try {
-      const previewUrl = await PDFService.previewInvoicePDF(state.data);
-      return previewUrl;
+      // 先保存数据
+      const saveResult = await InvoiceService.saveInvoice(
+        state.data,
+        state.isEditMode,
+        state.editId
+      );
+      
+      if (saveResult.success) {
+        // 更新editId（如果是新记录）
+        if (saveResult.newEditId && !state.editId) {
+          set({ 
+            editId: saveResult.newEditId,
+            isEditMode: true
+          });
+        }
+        
+        // 生成预览PDF
+        const previewUrl = await PDFService.previewInvoicePDF(state.data);
+        return previewUrl;
+      } else {
+        throw new Error(saveResult.message || '保存失败');
+      }
     } catch (error) {
       console.error('Error previewing PDF:', error);
       throw error;

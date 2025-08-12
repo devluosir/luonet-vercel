@@ -439,7 +439,14 @@ export const generateOrderConfirmationPDF = async (
 
       if (totalTerms === 1) {
         // 单条付款条款的情况，使用单行格式
-        if (data.showMainPaymentTerm) {
+        if (data.additionalPaymentTerms && data.additionalPaymentTerms?.trim()) {
+          // 显示额外的付款条款
+          const additionalTerm = data.additionalPaymentTerms?.trim() || '';
+          const titleWidth = doc.getTextWidth('Payment Term:');
+          const spacing = 5; // 设置合适的间距
+          doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
+          currentY += 5;
+        } else if (data.showMainPaymentTerm) {
           // 构建付款方式文本
           const methodMap: Record<string, string> = {
             'T/T': 'telegraphic transfer (T/T)',
@@ -467,13 +474,6 @@ export const generateOrderConfirmationPDF = async (
           doc.setTextColor(0, 0, 0);
           doc.text(term1Parts[1], margin + titleWidth + spacing + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
           
-          currentY += 5;
-        } else if (data.additionalPaymentTerms) {
-          // 显示额外的付款条款
-          const additionalTerm = data.additionalPaymentTerms?.trim() || '';
-          const titleWidth = doc.getTextWidth('Payment Term:');
-          const spacing = 5; // 设置合适的间距
-          doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
           currentY += 5;
         } else if (data.showInvoiceReminder) {
           // 只有合同号提醒时的布局
@@ -509,6 +509,28 @@ export const generateOrderConfirmationPDF = async (
         const maxWidth = pageWidth - margin - numberWidth - termRightMargin;
         const termSpacing = 5;  // 条款之间的固定间距
 
+        // 显示额外的付款条款
+        if (data.additionalPaymentTerms) {
+          const terms = data.additionalPaymentTerms?.split('\n').filter(term => term?.trim()) || [];
+          terms.forEach(term => {
+            const numberText = `${termIndex}. `;
+            const numberWidth = doc.getTextWidth(numberText);
+
+            // 添加序号
+            doc.text(numberText, margin, currentY);
+
+            // 处理长文本自动换行，使用定义好的 maxWidth
+            const wrappedText = doc.splitTextToSize(term, maxWidth - numberWidth);
+            wrappedText.forEach((line: string, lineIndex: number) => {
+              doc.text(line, margin + numberWidth, currentY + (lineIndex * 5));
+            });
+
+            // 更新Y坐标，并增加额外的行间距
+            currentY += wrappedText.length * 5;
+            termIndex++;
+          });
+        }
+
         // 显示标准付款条款
         if (data.showMainPaymentTerm) {
           // 绘制条款编号
@@ -542,28 +564,6 @@ export const generateOrderConfirmationPDF = async (
           
           currentY += termSpacing;
           termIndex++;
-        }
-
-        // 显示额外的付款条款
-        if (data.additionalPaymentTerms) {
-          const terms = data.additionalPaymentTerms?.split('\n').filter(term => term?.trim()) || [];
-          terms.forEach(term => {
-            const numberText = `${termIndex}. `;
-            const numberWidth = doc.getTextWidth(numberText);
-
-            // 添加序号
-            doc.text(numberText, margin, currentY);
-
-            // 处理长文本自动换行，使用定义好的 maxWidth
-            const wrappedText = doc.splitTextToSize(term, maxWidth - numberWidth);
-            wrappedText.forEach((line: string, lineIndex: number) => {
-              doc.text(line, margin + numberWidth, currentY + (lineIndex * 5));
-            });
-
-            // 更新Y坐标，并增加额外的行间距
-            currentY += wrappedText.length * 5;
-            termIndex++;
-          });
         }
 
         // 显示合同号提醒
