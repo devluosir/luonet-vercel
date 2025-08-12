@@ -56,7 +56,8 @@ export function sanitizeQuotation(raw: any): QuotationData {
       remarks: fee.remarks ?? '',
     })),
     customUnits: raw.customUnits ?? [],
-    showPaymentTerms: raw.showPaymentTerms ?? false,
+    showPaymentTerms: true, // 常显，不再通过设置面板控制
+    showMainPaymentTerm: raw.showMainPaymentTerm ?? false,
     showInvoiceReminder: raw.showInvoiceReminder ?? false,
     additionalPaymentTerms: raw.additionalPaymentTerms ?? '',
     templateConfig: raw.templateConfig ?? {

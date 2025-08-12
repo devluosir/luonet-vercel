@@ -3,8 +3,7 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { MoreHorizontal, Copy } from 'lucide-react';
 import type { QuotationData } from '@/types/quotation';
-
-
+import { calculatePaymentDate } from '@/utils/quotationCalculations';
 
 interface PaymentTermsSectionProps {
   data: QuotationData;
@@ -18,6 +17,9 @@ const PRESETS = [
   '50% deposit, 50% before shipment.',
   'D/P (Documents against Payment).',
   'D/A (Documents against Acceptance).',
+  'Net 30 days.',
+  'Net 60 days.',
+  'Net 90 days.',
 ];
 
 function addDays(iso: string, d: number): string {
@@ -47,7 +49,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
     date = '' // 报价日期作为基准
   } = data;
 
-  const [showMainTerm, setShowMainTerm] = useState(showPaymentTerms);
+  const [showMainTerm, setShowMainTerm] = useState(false);
   const [extra, setExtra] = useState('');
   const [showPresets, setShowPresets] = useState(false);
   const presetsRef = useRef<HTMLDivElement>(null);
@@ -63,17 +65,19 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
   const quotationDate = date || new Date().toISOString().slice(0, 10);
   const contractNoExternal = contractNo;
 
-  const dateISO = paymentDate || new Date().toISOString().slice(0, 10);
+  // 以报价日期为基准计算付款日期
+  const dateISO = paymentDate || calculatePaymentDate(quotationDate);
   const main = `Full payment not later than ${dateISO} by telegraphic transfer (T/T).`;
-  const contractHint = (showInvoiceReminder && contractNoExternal?.trim())
-    ? `Please state our contract no. "${contractNoExternal.trim()}" on your payment documents.`
+  const contractHint = showInvoiceReminder
+    ? `Please state our contract no. "${contractNoExternal?.trim() || 'TBD'}" on your payment documents.`
     : '';
 
-  // 同步showMainTerm到data，使用不同的字段名避免冲突
+  // 同步showMainTerm到data
   React.useEffect(() => {
-    // 使用一个新的字段来控制PDF中主条款的显示
     updateData({ showMainPaymentTerm: showMainTerm });
   }, [showMainTerm, updateData]);
+
+  // 移除自动同步逻辑，让showMainTerm完全独立控制
 
   // 点击外部关闭预设弹窗
   useEffect(() => {
@@ -91,61 +95,101 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
 
   const preview = useMemo(() => {
     const items: { index: number; content: React.ReactNode }[] = [];
-    let termIndex = 1;
     
-    // 1. 主条款（与PDF逻辑保持一致）
-    if (showMainTerm) {
-      // 将日期部分高亮为红色
-      const mainWithRedDate = main.replace(
-        dateISO, 
-        `<span style="color: #ef4444">${dateISO}</span>`
-      );
-      items.push({
-        index: termIndex,
-        content: <span dangerouslySetInnerHTML={{ __html: `${termIndex}. ${mainWithRedDate}` }} />
-      });
-      termIndex++;
-    }
+    // 计算条款总数
+    let totalTerms = 0;
+    if (showMainTerm && dateISO && dateISO.trim()) totalTerms++;
+    if (additionalTermsArray.length > 0) totalTerms += additionalTermsArray.length;
+    if (showInvoiceReminder) totalTerms++;
     
-    // 2. 附加条款（按行拆分，每行一个条款）
-    additionalTermsArray.forEach(term => {
-      if (term.trim()) {
+    // 根据条款数量决定使用单数还是复数形式
+    const titleText = totalTerms === 1 ? 'Payment Term: ' : 'Payment Terms:';
+    
+    if (totalTerms === 1) {
+      // 单条付款条款的情况，标题和内容在同一行
+      if (showMainTerm && dateISO && dateISO.trim()) {
+        // 将日期部分高亮为红色
+        const mainWithRedDate = main.replace(
+          dateISO, 
+          `<span style="color: #ef4444">${dateISO}</span>`
+        );
+        items.push({
+          index: 1,
+          content: <span dangerouslySetInnerHTML={{ __html: `<strong>${titleText}</strong>${mainWithRedDate}` }} />
+        });
+      } else if (additionalTermsArray.length > 0) {
+        items.push({
+          index: 1,
+          content: <span dangerouslySetInnerHTML={{ __html: `<strong>${titleText}</strong>${additionalTermsArray[0]}` }} />
+        });
+      } else if (showInvoiceReminder) {
+        const displayContractNo = contractNoExternal?.trim() || 'TBD';
+        const hintWithRedContract = contractHint.replace(
+          `"${displayContractNo}"`,
+          `"<span style="color: #ef4444">${displayContractNo}</span>"`
+        );
+        items.push({
+          index: 1,
+          content: <span dangerouslySetInnerHTML={{ __html: `<strong>${titleText}</strong>${hintWithRedContract}` }} />
+        });
+      }
+    } else {
+      // 多条付款条款的情况，使用编号列表格式
+      let termIndex = 1;
+      
+      // 1. 主条款（与PDF逻辑保持一致）
+      if (showMainTerm && dateISO && dateISO.trim()) {
+        // 将日期部分高亮为红色
+        const mainWithRedDate = main.replace(
+          dateISO, 
+          `<span style="color: #ef4444">${dateISO}</span>`
+        );
         items.push({
           index: termIndex,
-          content: `${termIndex}. ${term.trim()}`
+          content: <span dangerouslySetInnerHTML={{ __html: `${termIndex}. ${mainWithRedDate}` }} />
         });
         termIndex++;
       }
-    });
-    
-    // 3. 发票号提醒（合同号显示为红色）
-    if (contractHint && contractNoExternal) {
-      const hintWithRedContract = contractHint.replace(
-        `"${contractNoExternal}"`,
-        `"<span style="color: #ef4444">${contractNoExternal}</span>"`
-      );
-      items.push({
-        index: termIndex,
-        content: <span dangerouslySetInnerHTML={{ __html: `${termIndex}. ${hintWithRedContract}` }} />
+      
+      // 2. 附加条款（按行拆分，每行一个条款）
+      additionalTermsArray.forEach(term => {
+        if (term.trim()) {
+          items.push({
+            index: termIndex,
+            content: `${termIndex}. ${term.trim()}`
+          });
+          termIndex++;
+        }
       });
+      
+      // 3. 合同号提醒（合同号显示为红色）
+      if (showInvoiceReminder) {
+        const displayContractNo = contractNoExternal?.trim() || 'TBD';
+        const hintWithRedContract = contractHint.replace(
+          `"${displayContractNo}"`,
+          `"<span style="color: #ef4444">${displayContractNo}</span>"`
+        );
+        items.push({
+          index: termIndex,
+          content: <span dangerouslySetInnerHTML={{ __html: `${termIndex}. ${hintWithRedContract}` }} />
+        });
+      }
     }
     
     return items;
-  }, [showMainTerm, main, dateISO, additionalTermsArray, contractHint, contractNoExternal]);
+  }, [showMainTerm, main, dateISO, additionalTermsArray, contractHint, contractNoExternal, showInvoiceReminder]);
 
-  if (!showPaymentTerms) {
-    return null;
-  }
+
 
   return (
-    <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 md:p-4 space-y-3">
-      {/* 顶部行：标题 */}
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium text-gray-800 dark:text-gray-200">Payment Terms</h3>
-      </div>
-
-      {/* 行1：主条款（内联控件） */}
-      <div className="space-y-2">
+    <div className="space-y-3">
+      {/* 标题移到框外 */}
+      <h3 className="font-medium text-gray-800 dark:text-gray-200">Payment Terms</h3>
+      
+      {/* 内容框 */}
+      <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 md:p-4 space-y-3">
+        {/* 行1：主条款（内联控件） */}
+        <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
           <input
             type="checkbox"
@@ -247,7 +291,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
         )}
       </div>
 
-      {/* 行3：合同提醒（只读展示外部号） */}
+      {/* 行3：合同提醒（只读展示合同号） */}
       <div className="flex items-center justify-between text-sm">
         <label className="inline-flex items-center gap-2 text-gray-700 dark:text-gray-300">
           <input
@@ -290,12 +334,13 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
         </div>
         <div className="whitespace-pre-wrap rounded bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 p-2 text-[11px] leading-5 text-gray-900 dark:text-gray-100 font-mono">
           {preview.map((item, index) => (
-            <div key={index}>
+            <div key={index} className="mb-1 last:mb-0">
               {typeof item.content === 'string' ? item.content : item.content}
             </div>
           ))}
         </div>
       </div>
-    </section>
+      </section>
+    </div>
   );
 }

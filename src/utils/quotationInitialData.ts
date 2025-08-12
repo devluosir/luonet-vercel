@@ -1,25 +1,13 @@
 import { format } from 'date-fns';
-import { getDefaultNotes } from '@/utils/getDefaultNotes';
 import { getLocalStorageJSON, getLocalStorageString } from '@/utils/safeLocalStorage';
+import { getDefaultNotes } from './getDefaultNotes';
 import type { QuotationData } from '@/types/quotation';
-
-// 缓存localStorage数据
-const localStorageCache = new Map<string, unknown>();
-
-// 获取缓存的localStorage数据
-const getCachedLocalStorage = (key: string) => {
-  if (!localStorageCache.has(key)) {
-    const parsed = getLocalStorageJSON(key, null);
-    localStorageCache.set(key, parsed);
-    return parsed;
-  }
-  return localStorageCache.get(key);
-};
+import { calculatePaymentDate } from './quotationCalculations';
 
 export function getInitialQuotationData(): QuotationData {
   const username = (() => {
     try {
-      const userInfo = getCachedLocalStorage('userInfo') as { username?: string } | null;
+      const userInfo = getLocalStorageJSON('userInfo', null) as { username?: string } | null;
       if (userInfo) return userInfo.username || 'Roger';
       
       // 使用安全的字符串获取函数
@@ -30,15 +18,17 @@ export function getInitialQuotationData(): QuotationData {
     }
   })();
 
+  const currentDate = format(new Date(), 'yyyy-MM-dd');
+
   return {
     to: '',
     inquiryNo: '',
     quotationNo: '',
     contractNo: '',
-    date: format(new Date(), 'yyyy-MM-dd'),
+    date: currentDate,
     from: username,
     currency: 'USD',
-    paymentDate: format(new Date(), 'yyyy-MM-dd'),
+    paymentDate: calculatePaymentDate(currentDate),
     items: [{ 
       id: 1, 
       partName: '', 
@@ -61,7 +51,8 @@ export function getInitialQuotationData(): QuotationData {
     showStamp: false,
     otherFees: [],
     customUnits: [],
-    showPaymentTerms: false,
+    showPaymentTerms: true, // 常显，不再通过设置面板控制
+    showMainPaymentTerm: false,
     showInvoiceReminder: false,
     additionalPaymentTerms: '',
     templateConfig: { 

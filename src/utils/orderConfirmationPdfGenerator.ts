@@ -476,7 +476,8 @@ export const generateOrderConfirmationPDF = async (
           doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
           currentY += 5;
         } else if (data.showInvoiceReminder) {
-          // 只有发票号提醒时的布局
+          // 只有合同号提醒时的布局
+          const contractNo = data.contractNo && data.contractNo.trim() ? data.contractNo : 'TBD';
           const reminderPrefix = `Please state our contract no. "`;
           const reminderSuffix = `" on your payment documents.`;
           
@@ -484,14 +485,14 @@ export const generateOrderConfirmationPDF = async (
           const titleWidth = doc.getTextWidth('Payment Term:');
           const spacing = 5; // 设置合适的间距
           const prefixWidth = doc.getTextWidth(reminderPrefix);
-          const contractNoWidth = doc.getTextWidth(data.contractNo);
+          const contractNoWidth = doc.getTextWidth(contractNo);
           
           // 绘制前缀（黑色）
           doc.text(reminderPrefix, margin + titleWidth + spacing, currentY);
           
           // 绘制合同号（红色）
           doc.setTextColor(255, 0, 0);
-          doc.text(data.contractNo, margin + titleWidth + spacing + prefixWidth, currentY);
+          doc.text(contractNo, margin + titleWidth + spacing + prefixWidth, currentY);
           
           // 绘制后缀（黑色）
           doc.setTextColor(0, 0, 0);
@@ -565,14 +566,15 @@ export const generateOrderConfirmationPDF = async (
           });
         }
 
-        // 显示发票号提醒
+        // 显示合同号提醒
         if (data.showInvoiceReminder) {
+          const contractNo = data.contractNo && data.contractNo.trim() ? data.contractNo : 'TBD';
           const reminderPrefix = `${termIndex}. Please state our contract no. "`;
           const reminderSuffix = `" on your payment documents.`;
           
           // 计算各部分的宽度
           const prefixWidth = doc.getTextWidth(reminderPrefix);
-          const contractNoWidth = doc.getTextWidth(data.contractNo);
+          const contractNoWidth = doc.getTextWidth(contractNo);
           
           // 处理长文本自动换行，使用定义好的 maxWidth
           const wrappedPrefix = doc.splitTextToSize(reminderPrefix, maxWidth);
@@ -582,7 +584,7 @@ export const generateOrderConfirmationPDF = async (
           
           // 绘制合同号（红色）
           doc.setTextColor(255, 0, 0);
-          doc.text(data.contractNo, margin + prefixWidth, currentY);
+          doc.text(contractNo, margin + prefixWidth, currentY);
           
           // 绘制后缀（黑色）
           doc.setTextColor(0, 0, 0);
