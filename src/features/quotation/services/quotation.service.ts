@@ -99,7 +99,8 @@ export function initNotesConfigFromSources(): NoteConfig[] {
     const draft = localStorage.getItem('draftQuotation');
     if (draft) {
       const parsed = JSON.parse(draft);
-      if (parsed.notesConfig) {
+      if (parsed.notesConfig && Array.isArray(parsed.notesConfig)) {
+        console.log('从草稿恢复Notes配置:', parsed.notesConfig.length, '条');
         return parsed.notesConfig;
       }
     }
@@ -108,6 +109,7 @@ export function initNotesConfigFromSources(): NoteConfig[] {
   }
 
   // 3. 最后使用默认配置
+  console.log('使用默认Notes配置:', DEFAULT_NOTES_CONFIG.length, '条');
   return DEFAULT_NOTES_CONFIG;
 }
 

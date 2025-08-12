@@ -60,6 +60,7 @@ export function sanitizeQuotation(raw: any): QuotationData {
     showMainPaymentTerm: raw.showMainPaymentTerm ?? false,
     showInvoiceReminder: raw.showInvoiceReminder ?? false,
     additionalPaymentTerms: raw.additionalPaymentTerms ?? '',
+    paymentMethod: raw.paymentMethod ?? 'T/T',
     templateConfig: raw.templateConfig ?? {
       headerType: 'bilingual',
       stampType: 'none'
@@ -103,8 +104,10 @@ export function pickDraft(full: any) {
     showStamp: full.showStamp,
     customUnits: full.customUnits,
     showPaymentTerms: full.showPaymentTerms,
+    showMainPaymentTerm: full.showMainPaymentTerm,
     showInvoiceReminder: full.showInvoiceReminder,
     additionalPaymentTerms: full.additionalPaymentTerms,
+    paymentMethod: full.paymentMethod,
     templateConfig: full.templateConfig,
     notesConfig: full.notesConfig,
     updatedAt: Date.now(),

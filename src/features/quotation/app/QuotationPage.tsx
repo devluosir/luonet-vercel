@@ -231,7 +231,10 @@ export default function QuotationPage() {
   
   // 自动保存 - 传序列化后的数据，避免引用抖动
   const { clearSaved: clearAutoSave } = useAutoSave({
-    data: JSON.stringify(data ?? getInitialQuotationData()),
+    data: JSON.stringify({
+      ...data ?? getInitialQuotationData(),
+      notesConfig
+    }),
     key: 'draftQuotation',
     delay: 2000,
     enabled: !editId

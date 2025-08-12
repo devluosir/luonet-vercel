@@ -34,6 +34,10 @@ export default function QuotationCopyPage({ params }: { params: { id: string } }
       customWindow.__EDIT_MODE__ = false; // 复制模式
       customWindow.__EDIT_ID__ = undefined; // 没有编辑ID
       customWindow.__QUOTATION_TYPE__ = quotation.type;
+      // 注入Notes配置
+      if (quotation.data.notesConfig) {
+        customWindow.__NOTES_CONFIG__ = quotation.data.notesConfig;
+      }
       
       // 立即设置loading为false，让页面快速显示
       setIsLoading(false);
@@ -51,6 +55,7 @@ export default function QuotationCopyPage({ params }: { params: { id: string } }
       customWindow.__EDIT_MODE__ = false;
       customWindow.__EDIT_ID__ = undefined;
       customWindow.__QUOTATION_TYPE__ = 'quotation';
+      customWindow.__NOTES_CONFIG__ = undefined;
     };
   }, [params.id]);
 

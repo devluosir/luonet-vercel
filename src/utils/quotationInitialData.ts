@@ -61,6 +61,7 @@ export function getInitialQuotationData(): QuotationData {
     showMainPaymentTerm: false,
     showInvoiceReminder: false,
     additionalPaymentTerms: '',
+    paymentMethod: 'T/T',
     templateConfig: { 
       headerType: 'bilingual', 
       stampType: 'none' 

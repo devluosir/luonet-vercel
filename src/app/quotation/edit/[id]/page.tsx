@@ -31,6 +31,10 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
       customWindow.__EDIT_ID__ = params.id;
       // 优先使用URL中的tab参数，否则使用文档的原始类型
       customWindow.__QUOTATION_TYPE__ = tabFromUrl || quotation.type;
+      // 注入Notes配置
+      if (quotation.data.notesConfig) {
+        customWindow.__NOTES_CONFIG__ = quotation.data.notesConfig;
+      }
       
       // 立即设置loading为false，让页面快速显示
       setIsLoading(false);
@@ -48,6 +52,7 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
       customWindow.__EDIT_MODE__ = false;
       customWindow.__EDIT_ID__ = undefined;
       customWindow.__QUOTATION_TYPE__ = 'quotation';
+      customWindow.__NOTES_CONFIG__ = undefined;
     };
   }, [params.id]);
 

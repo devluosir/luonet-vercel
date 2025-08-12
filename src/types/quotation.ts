@@ -1,3 +1,5 @@
+import type { NoteConfig } from '@/features/quotation/types/notes';
+
 export interface LineItem {
   id: number;
   partName: string;
@@ -71,4 +73,5 @@ export interface CustomWindow extends Window {
   __EDIT_MODE__?: boolean;
   __EDIT_ID__?: string;
   __QUOTATION_TYPE__?: 'quotation' | 'confirmation';
+  __NOTES_CONFIG__?: NoteConfig[];
 } 

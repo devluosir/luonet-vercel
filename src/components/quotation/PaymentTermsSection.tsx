@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { MoreHorizontal, Copy } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import type { QuotationData } from '@/types/quotation';
 import { calculatePaymentDate } from '@/utils/quotationCalculations';
 
@@ -51,7 +51,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
     date = '' // 报价日期作为基准
   } = data;
 
-  const [showMainTerm, setShowMainTerm] = useState(false);
+  const [showMainTerm, setShowMainTerm] = useState(showPaymentTerms);
   const [extra, setExtra] = useState('');
   const [showPresets, setShowPresets] = useState(false);
   const presetsRef = useRef<HTMLDivElement>(null);
@@ -79,7 +79,10 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
     updateData({ showMainPaymentTerm: showMainTerm });
   }, [showMainTerm, updateData]);
 
-  // 移除自动同步逻辑，让showMainTerm完全独立控制
+  // 同步data.showPaymentTerms到showMainTerm
+  React.useEffect(() => {
+    setShowMainTerm(showPaymentTerms);
+  }, [showPaymentTerms]);
 
   // 点击外部关闭预设弹窗
   useEffect(() => {
@@ -243,24 +246,32 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
 
       {/* 行2：附加条款 + 预设 */}
       <div className="space-y-2">
-        <div className="flex gap-2">
-          <input
-            placeholder="Additional term… (Enter to add)"
-            className="flex-1 rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-            value={extra}
-            onChange={(e) => setExtra(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && extra.trim()) {
-                const newTerms = Array.from(new Set([...additionalTermsArray, extra.trim()]));
-                updateData({ additionalPaymentTerms: termsToString(newTerms) });
-                setExtra('');
-              }
-            }}
-          />
+        <div className="flex items-center gap-2">
+          <div className="flex-1 relative">
+            <input
+              placeholder="Additional term… (Enter to add)"
+              className="w-full rounded border border-blue-300 dark:border-blue-600 pl-8 pr-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-blue-500 dark:placeholder-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={extra}
+              onChange={(e) => setExtra(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && extra.trim()) {
+                  const newTerms = Array.from(new Set([...additionalTermsArray, extra.trim()]));
+                  updateData({ additionalPaymentTerms: termsToString(newTerms) });
+                  setExtra('');
+                }
+              }}
+            />
+            <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400"></span>
+            </div>
+            <div className="absolute left-6 top-1/2 transform -translate-y-1/2 text-xs text-blue-600 dark:text-blue-400 font-medium">
+              +
+            </div>
+          </div>
           <div className="relative" ref={presetsRef}>
             <button
               type="button"
-              className="inline-flex items-center gap-1 rounded border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-gray-700 dark:text-gray-300"
+              className="inline-flex items-center gap-1 rounded border border-blue-300 dark:border-blue-600 px-2 py-1.5 text-xs hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/10"
               onClick={() => setShowPresets(!showPresets)}
             >
               <MoreHorizontal size={14} />
@@ -290,12 +301,13 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
             {additionalTermsArray.map((t, i) => (
               <span 
                 key={i} 
-                className="group inline-flex items-center gap-1 rounded-full border border-gray-300 dark:border-gray-600 px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                className="group inline-flex items-center gap-1 rounded-full border border-blue-300 dark:border-blue-600 px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm"
               >
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 flex-shrink-0"></span>
                 {t}
                 <button 
                   type="button"
-                  className="opacity-60 group-hover:opacity-100 hover:text-red-500"
+                  className="opacity-60 group-hover:opacity-100 hover:text-red-500 ml-1"
                   onClick={() => {
                     const newTerms = additionalTermsArray.filter((_, idx) => idx !== i);
                     updateData({ additionalPaymentTerms: termsToString(newTerms) });
@@ -310,54 +322,32 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
       </div>
 
       {/* 行3：合同提醒（只读展示合同号） */}
-      <div className="flex items-center justify-between text-sm">
-        <label className="inline-flex items-center gap-2 text-gray-700 dark:text-gray-300">
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
           <input
             type="checkbox"
             checked={showInvoiceReminder}
             onChange={(e) => updateData({ showInvoiceReminder: e.target.checked })}
             className="h-4 w-4 accent-black dark:accent-white"
           />
-          Show contract reminder
-        </label>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          Contract No: {contractNoExternal?.trim() || 'N/A'}
-        </span>
+          <span>Please state our contract no. "</span>
+          <span className="font-medium text-orange-600 dark:text-orange-400">
+            {contractNoExternal?.trim() || 'TBD'}
+          </span>
+          <span>" on your payment documents.</span>
+        </div>
       </div>
 
-      {/* 预览（底部一行卡片） */}
-      <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-neutral-50 dark:bg-gray-800/30 p-2">
-        <div className="mb-1 flex items-center justify-between">
-          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Preview</span>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded border border-gray-300 dark:border-gray-600 px-2 py-0.5 text-[11px] hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-            onClick={() => {
-              // 生成纯文本版本用于复制
-              const textVersion = preview.map(item => {
-                if (typeof item.content === 'string') {
-                  return item.content;
-                } else {
-                  // 从HTML中提取纯文本
-                  const div = document.createElement('div');
-                  div.innerHTML = (item.content as any).props.dangerouslySetInnerHTML.__html;
-                  return div.textContent || div.innerText || '';
-                }
-              }).join('\n');
-              navigator.clipboard.writeText(textVersion);
-            }}
-          >
-            <Copy size={12} /> Copy
-          </button>
-        </div>
-        <div className="whitespace-pre-wrap rounded bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 p-2 text-[11px] leading-5 text-gray-900 dark:text-gray-100 font-mono">
+      {/* 预览（简洁版本） */}
+      {preview.length > 0 && (
+        <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 p-2 text-[11px] leading-5 text-gray-900 dark:text-gray-100 font-mono">
           {preview.map((item, index) => (
             <div key={index} className="mb-1 last:mb-0">
               {typeof item.content === 'string' ? item.content : item.content}
             </div>
           ))}
         </div>
-      </div>
+      )}
       </section>
     </div>
   );
