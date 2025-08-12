@@ -115,7 +115,9 @@ export default function QuotationPage() {
       // 其他必要字段
       'notes', 'currency', 'from', 'amountInWords', 'paymentDate',
       // 支付条款字段
-      'additionalPaymentTerms'
+      'additionalPaymentTerms',
+      // 显示控制字段
+      'showBank', 'showStamp'
     ]);
     
     // 合并 SETTINGS_ALLOWED_KEYS
@@ -556,6 +558,22 @@ export default function QuotationPage() {
                   </button>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  {/* HK Stamp按钮 - 仅在确认订单模式显示 */}
+                  {activeTab === 'confirmation' && (
+                    <button
+                      type="button"
+                      onClick={() => updateData({ showStamp: !data.showStamp })}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                        data.showStamp
+                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 border border-purple-300 dark:border-purple-700'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                      title="在PDF中添加香港印章"
+                    >
+                      <span className={`w-2 h-2 rounded-full ${data.showStamp ? 'bg-purple-500' : 'bg-gray-400'}`}></span>
+                      HK Stamp
+                    </button>
+                  )}
                   <Link
                     href={`/history?tab=${activeTab}`}
                     className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
@@ -707,6 +725,7 @@ export default function QuotationPage() {
                     data={data}
                     onChange={updateData}
                   />
+
                   {/* 银行信息区域 */}
                   {activeTab === 'confirmation' && data.showBank && (
                     <div className="mb-6">

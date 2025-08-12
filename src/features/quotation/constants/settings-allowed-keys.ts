@@ -5,8 +5,6 @@
 
 export const SETTINGS_ALLOWED_KEYS = new Set([
   // 显示控制开关
-  'showBank',
-  'showStamp',
   'showInvoiceReminder',
   
   // 模板配置
