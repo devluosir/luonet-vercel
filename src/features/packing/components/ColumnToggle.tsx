@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Columns } from 'lucide-react';
 import { useTablePrefsHydrated } from '../state/useTablePrefs';
 
+type Col = 'hsCode'|'description'|'quantity'|'unit'|'unitPrice'|'amount'|'netWeight'|'grossWeight'|'packageQty'|'dimensions';
+
 const ALL_COLS: { key: string; label: string }[] = [
   { key: 'hsCode', label: 'HS Code' },
   { key: 'price', label: 'Price' },
@@ -27,8 +29,8 @@ export function ColumnToggle({
 
   // 处理重量和包装列的联动
   const handleWeightAndPackageToggle = () => {
-    const weightCols = ['netWeight', 'grossWeight', 'packageQty'];
-    const hasAnyWeightCol = weightCols.some(col => visibleCols.includes(col as any));
+    const weightCols: Col[] = ['netWeight', 'grossWeight', 'packageQty'];
+    const hasAnyWeightCol = weightCols.some(col => visibleCols.includes(col));
     
     if (hasAnyWeightCol) {
       // 如果任何一个重量列可见，则隐藏所有重量列
@@ -43,8 +45,8 @@ export function ColumnToggle({
 
   // 处理价格列的联动
   const handlePriceToggle = () => {
-    const priceCols = ['unitPrice', 'amount'];
-    const hasAnyPriceCol = priceCols.some(col => visibleCols.includes(col as any));
+    const priceCols: Col[] = ['unitPrice', 'amount'];
+    const hasAnyPriceCol = priceCols.some(col => visibleCols.includes(col));
     
     if (hasAnyPriceCol) {
       // 如果任何一个价格列可见，则隐藏所有价格列
@@ -70,12 +72,12 @@ export function ColumnToggle({
   };
 
   // 检查重量和包装列的状态
-  const weightCols = ['netWeight', 'grossWeight', 'packageQty'];
-  const hasAnyWeightCol = weightCols.some(col => visibleCols.includes(col as any));
+  const weightCols: Col[] = ['netWeight', 'grossWeight', 'packageQty'];
+  const hasAnyWeightCol = weightCols.some(col => visibleCols.includes(col));
 
   // 检查价格列的状态
-  const priceCols = ['unitPrice', 'amount'];
-  const hasAnyPriceCol = priceCols.some(col => visibleCols.includes(col as any));
+  const priceCols: Col[] = ['unitPrice', 'amount'];
+  const hasAnyPriceCol = priceCols.some(col => visibleCols.includes(col));
 
   return (
     <div className="flex items-center gap-0.5">
@@ -167,7 +169,7 @@ export function ColumnToggle({
                   {/* 尺寸列按钮 */}
                   <button
                     type="button"
-                    onClick={() => !isDisabled && toggleCol(col.key as any)}
+                    onClick={() => !isDisabled && toggleCol(col.key as Col)}
                     disabled={isDisabled}
                     className={`px-1.5 py-1 text-xs font-medium rounded-l-lg transition-all duration-200 active:scale-95 ${
                       isDisabled
@@ -212,9 +214,9 @@ export function ColumnToggle({
               <button
                 key={col.key}
                 type="button"
-                onClick={() => toggleCol(col.key as any)}
+                onClick={() => toggleCol(col.key as Col)}
                 className={`px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
-                  visibleCols.includes(col.key as any)
+                  visibleCols.includes(col.key as Col)
                     ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'
                 }`}
