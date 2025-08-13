@@ -56,8 +56,7 @@ export function sanitizeQuotation(raw: any): QuotationData {
       remarks: fee.remarks ?? '',
     })),
     customUnits: raw.customUnits ?? [],
-    showPaymentTerms: true, // 常显，不再通过设置面板控制
-    showMainPaymentTerm: raw.showMainPaymentTerm ?? false,
+    showMainPaymentTerm: raw.showMainPaymentTerm ?? false, // 统一控制付款条款显示
     showInvoiceReminder: raw.showInvoiceReminder ?? false,
     additionalPaymentTerms: raw.additionalPaymentTerms ?? '',
     paymentMethod: raw.paymentMethod ?? 'T/T',
@@ -103,8 +102,7 @@ export function pickDraft(full: any) {
     showBank: full.showBank,
     showStamp: full.showStamp,
     customUnits: full.customUnits,
-    showPaymentTerms: full.showPaymentTerms,
-    showMainPaymentTerm: full.showMainPaymentTerm,
+    showMainPaymentTerm: full.showMainPaymentTerm, // 统一控制付款条款显示
     showInvoiceReminder: full.showInvoiceReminder,
     additionalPaymentTerms: full.additionalPaymentTerms,
     paymentMethod: full.paymentMethod,

@@ -50,6 +50,6 @@ export function getDefaultNotes(salesPerson: string, type: 'quotation' | 'confir
   return [
     'Price based on EXW-Shanghai',
     'Delivery terms: As mentioned above, subj to unsold',
-    'Payment term: 100% TT in advance',
+    // 付款条款已移除，默认不显示
   ];
 } 

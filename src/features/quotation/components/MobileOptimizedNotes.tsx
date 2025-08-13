@@ -315,6 +315,7 @@ const MobileNoteItem = memo<MobileNoteItemProps>(({
   const [editValue, setEditValue] = useState(note.content || '');
   const { gestureState, touchHandlers } = useTouchGestures();
   const [isExpanded, setIsExpanded] = useState(!isMobile);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // 🚀 更新编辑值
   useEffect(() => {
@@ -328,16 +329,37 @@ const MobileNoteItem = memo<MobileNoteItemProps>(({
     onSaveEdit(editValue);
   }, [editValue, onSaveEdit]);
 
+  // 自动调整textarea高度的函数
+  const adjustTextareaHeight = useCallback((textarea: HTMLTextAreaElement) => {
+    textarea.style.height = 'auto';
+    const minHeight = isMobile ? 100 : 80; // 对应 min-h-[100px] 和 min-h-[80px]
+    const maxHeight = 200;
+    const capped = Math.max(minHeight, Math.min(textarea.scrollHeight, maxHeight));
+    textarea.style.height = `${capped}px`;
+  }, [isMobile]);
+
+  // 当进入编辑状态时，立即调整textarea高度
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      // 使用setTimeout确保DOM已更新
+      setTimeout(() => {
+        if (textareaRef.current) {
+          adjustTextareaHeight(textareaRef.current);
+        }
+      }, 0);
+    }
+  }, [isEditing, adjustTextareaHeight]);
+
   // 🚀 键盘处理
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSave();
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Escape') {
+      // Escape 键取消编辑
       e.preventDefault();
       onCancelEdit();
     }
-  }, [handleSave, onCancelEdit]);
+    // Enter 键和 Shift+Enter 键都允许换行，不做特殊处理
+    // 失去焦点时会自动保存
+  }, [onCancelEdit]);
 
   // 🚀 长按处理
   useEffect(() => {
@@ -420,16 +442,20 @@ const MobileNoteItem = memo<MobileNoteItemProps>(({
             {isEditing ? (
               <div className="space-y-3">
                 <textarea
+                  ref={textareaRef}
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className={`w-full border border-gray-300 dark:border-[#3A3A3C] rounded-lg px-3 py-2
                     bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7]
                     focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF]
-                    resize-none ${isMobile ? 'text-base min-h-[100px]' : 'text-sm min-h-[80px]'}`}
-                  placeholder="输入条款内容..."
+                    resize-none overflow-auto ${isMobile ? 'text-base min-h-[100px]' : 'text-sm min-h-[80px]'}`}
+                  placeholder="输入条款内容... (Esc 取消)"
                   autoFocus
                   style={{ fontSize: isMobile ? 16 : 14 }} // 防止iOS缩放
+                  onInput={(e) => {
+                    adjustTextareaHeight(e.currentTarget);
+                  }}
                 />
                 
                 {/* 编辑操作按钮 */}

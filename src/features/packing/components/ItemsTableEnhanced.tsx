@@ -309,19 +309,38 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     return mergedCells;
   };
 
-  // 合并单元格相关工具函数
-  const getMergedCellInfo = (rowIndex: number, mergedCells: MergedCellInfo[]) => {
-    return mergedCells.find(cell => rowIndex >= cell.startRow && rowIndex <= cell.endRow);
+  // 合并单元格相关工具函数 - 使用 useMemo 优化性能
+  const mergedCellInfoMap = useMemo(() => {
+    const packageQtyMap = new Map<number, MergedCellInfo>();
+    const dimensionsMap = new Map<number, MergedCellInfo>();
+    
+    mergedPackageQtyCells.forEach(cell => {
+      for (let i = cell.startRow; i <= cell.endRow; i++) {
+        packageQtyMap.set(i, cell);
+      }
+    });
+    
+    mergedDimensionsCells.forEach(cell => {
+      for (let i = cell.startRow; i <= cell.endRow; i++) {
+        dimensionsMap.set(i, cell);
+      }
+    });
+    
+    return { packageQty: packageQtyMap, dimensions: dimensionsMap };
+  }, [mergedPackageQtyCells, mergedDimensionsCells]);
+
+  const getMergedCellInfo = (rowIndex: number, column: 'packageQty' | 'dimensions') => {
+    const map = column === 'packageQty' ? mergedCellInfoMap.packageQty : mergedCellInfoMap.dimensions;
+    return map.get(rowIndex);
   };
 
-  const shouldRenderCell = (rowIndex: number, mergedCells: MergedCellInfo[]) => {
-    const mergedInfo = getMergedCellInfo(rowIndex, mergedCells);
+  const shouldRenderCell = (rowIndex: number, column: 'packageQty' | 'dimensions') => {
+    const mergedInfo = getMergedCellInfo(rowIndex, column);
     return !mergedInfo || mergedInfo.startRow === rowIndex;
   };
 
   const findContainingMergedCell = (rowIndex: number, column: 'packageQty' | 'dimensions') => {
-    const mergedCells = column === 'packageQty' ? mergedPackageQtyCells : mergedDimensionsCells;
-    return mergedCells.find(cell => rowIndex >= cell.startRow && rowIndex <= cell.endRow);
+    return getMergedCellInfo(rowIndex, column);
   };
 
   const findNextMergedGroupStartBeforeEnd = (currentEndRow: number, column: 'packageQty' | 'dimensions') => {
@@ -374,7 +393,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
 
   const splitMergedCell = (rowIndex: number) => {
     const column = contextMenu?.column || 'packageQty';
-    const mergedInfo = getMergedCellInfo(rowIndex, column === 'packageQty' ? mergedPackageQtyCells : mergedDimensionsCells);
+    const mergedInfo = getMergedCellInfo(rowIndex, column);
     if (!mergedInfo || !mergedInfo.isMerged) return;
 
     const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [] };
@@ -597,25 +616,41 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     }
   };
 
-  // 计算 Other Fee 总额
-  const otherFeesTotal = data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
+  // 使用 useMemo 优化 Other Fee 总额计算
+  const otherFeesTotal = useMemo(() => {
+    return data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
+  }, [data.otherFees]);
 
   // 计算合并单元格数据
   const packageQtyMergeMode = data.packageQtyMergeMode || 'auto';
   const dimensionsMergeMode = data.dimensionsMergeMode || 'auto';
   
-  // 计算合并单元格数据 - 直接计算，不使用 useCallback 避免依赖项问题
-  const mergedPackageQtyCells = packageQtyMergeMode === 'manual' 
-    ? (data.manualMergedCells?.packageQty || [])
-    : calculateMergedCells(data.items, 'auto', 'packageQty');
+  // 使用 useMemo 优化合并单元格计算，避免每次渲染都重新计算
+  const mergedPackageQtyCells = useMemo(() => {
+    if (packageQtyMergeMode === 'manual') {
+      return data.manualMergedCells?.packageQty || [];
+    }
+    // 只在自动模式下且没有现有自动合并数据时才计算
+    if (!data.autoMergedCells?.packageQty?.length) {
+      return calculateMergedCells(data.items, 'auto', 'packageQty');
+    }
+    return data.autoMergedCells.packageQty;
+  }, [packageQtyMergeMode, data.manualMergedCells?.packageQty, data.autoMergedCells?.packageQty]);
     
-  const mergedDimensionsCells = dimensionsMergeMode === 'manual'
-    ? (data.manualMergedCells?.dimensions || [])
-    : calculateMergedCells(data.items, 'auto', 'dimensions');
+  const mergedDimensionsCells = useMemo(() => {
+    if (dimensionsMergeMode === 'manual') {
+      return data.manualMergedCells?.dimensions || [];
+    }
+    // 只在自动模式下且没有现有自动合并数据时才计算
+    if (!data.autoMergedCells?.dimensions?.length) {
+      return calculateMergedCells(data.items, 'auto', 'dimensions');
+    }
+    return data.autoMergedCells.dimensions;
+  }, [dimensionsMergeMode, data.manualMergedCells?.dimensions, data.autoMergedCells?.dimensions]);
 
   // 确保自动合并单元格数据被传递到主数据中
   useEffect(() => {
-    if (onDataChange) {
+    if (onDataChange && (packageQtyMergeMode === 'auto' || dimensionsMergeMode === 'auto')) {
       const newAutoMergedCells = {
         packageQty: packageQtyMergeMode === 'auto' ? mergedPackageQtyCells : [],
         dimensions: dimensionsMergeMode === 'auto' ? mergedDimensionsCells : []
@@ -623,7 +658,15 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
       
       // 只有当自动合并数据发生变化时才更新
       const currentAutoMergedCells = data.autoMergedCells || { packageQty: [], dimensions: [] };
-      const hasChanged = JSON.stringify(currentAutoMergedCells) !== JSON.stringify(newAutoMergedCells);
+      
+      // 优化比较逻辑，避免频繁的 JSON.stringify
+      const hasChanged = 
+        currentAutoMergedCells.packageQty.length !== newAutoMergedCells.packageQty.length ||
+        currentAutoMergedCells.dimensions.length !== newAutoMergedCells.dimensions.length ||
+        // 只有在长度相同时才进行深度比较
+        (currentAutoMergedCells.packageQty.length === newAutoMergedCells.packageQty.length &&
+         currentAutoMergedCells.dimensions.length === newAutoMergedCells.dimensions.length &&
+         JSON.stringify(currentAutoMergedCells) !== JSON.stringify(newAutoMergedCells));
       
       if (hasChanged) {
         console.log('更新自动合并单元格数据:', newAutoMergedCells);
@@ -633,12 +676,12 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
         });
       }
     }
-  }, [mergedPackageQtyCells, mergedDimensionsCells, packageQtyMergeMode, dimensionsMergeMode, onDataChange, data]);
+  }, [mergedPackageQtyCells, mergedDimensionsCells, packageQtyMergeMode, dimensionsMergeMode, onDataChange, data.autoMergedCells]);
 
 
   
-  // 修改总计计算逻辑，考虑合并单元格，避免重复计算
-  const calculateTotals = () => {
+  // 使用 useMemo 优化总计计算，避免每次渲染都重新计算
+  const calculatedTotals = useMemo(() => {
     let totalPrice = 0;
     let netWeight = 0;
     let grossWeight = 0;
@@ -694,10 +737,12 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
       grossWeight,
       packageQty
     };
-  };
-
-  const calculatedTotals = calculateTotals();
-  const totalAmount = calculatedTotals.totalPrice + otherFeesTotal;
+  }, [data.items, mergedPackageQtyCells, mergedDimensionsCells]);
+  
+  // 使用 useMemo 优化总金额计算
+  const totalAmount = useMemo(() => {
+    return calculatedTotals.totalPrice + otherFeesTotal;
+  }, [calculatedTotals.totalPrice, otherFeesTotal]);
 
   // 检查是否有分组数据
   const hasGroupedItems = data.items.some(item => item.groupId);
@@ -1178,9 +1223,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         </td>
                       ) : (
                         // 非分组模式下，使用合并单元格功能
-                        shouldRenderCell(index, mergedPackageQtyCells) && (
+                        shouldRenderCell(index, 'packageQty') && (
                           (() => {
-                            const packageQtyMergedInfo = getMergedCellInfo(index, mergedPackageQtyCells);
+                            const packageQtyMergedInfo = getMergedCellInfo(index, 'packageQty');
                             const packageQtyRowSpan = packageQtyMergedInfo ? packageQtyMergedInfo.endRow - packageQtyMergedInfo.startRow + 1 : 1;
                             const packageQtyIsMerged = !!packageQtyMergedInfo?.isMerged;
                             
@@ -1255,9 +1300,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         </td>
                       ) : (
                         // 非分组模式下，使用合并单元格功能
-                        shouldRenderCell(index, mergedDimensionsCells) && (
+                        shouldRenderCell(index, 'dimensions') && (
                           (() => {
-                            const dimensionsMergedInfo = getMergedCellInfo(index, mergedDimensionsCells);
+                            const dimensionsMergedInfo = getMergedCellInfo(index, 'dimensions');
                             const dimensionsRowSpan = dimensionsMergedInfo ? dimensionsMergedInfo.endRow - dimensionsMergedInfo.startRow + 1 : 1;
                             const dimensionsIsMerged = !!dimensionsMergedInfo?.isMerged;
                             

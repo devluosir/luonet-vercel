@@ -127,7 +127,6 @@ export interface PackingFormProps {
   saveMessage?: string;
   onGenerate?: () => void;
   onPreview?: () => void;
-  onSave?: () => void;
   onExportExcel?: () => void;
 }
 
@@ -154,7 +153,6 @@ export interface ActionButtonsProps {
   saveMessage: string;
   onGenerate: () => void;
   onPreview: () => void;
-  onSave: () => void;
   onExportExcel: () => void;
 }
 

@@ -41,7 +41,6 @@ function termsToString(terms: string[]): string {
 
 export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps) {
   const {
-    showPaymentTerms = false,
     paymentDate = '',
     additionalPaymentTerms = '',
     showInvoiceReminder = false,
@@ -49,7 +48,8 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
     date = '' // 发票日期作为基准
   } = data;
 
-  const [showMainTerm, setShowMainTerm] = useState(showPaymentTerms);
+  // 统一使用data.showPaymentTerms，简化状态管理
+  const showMainTerm = data.showPaymentTerms ?? false;
   const [extra, setExtra] = useState('');
   const [showPresets, setShowPresets] = useState(false);
   const presetsRef = useRef<HTMLDivElement>(null);
@@ -72,15 +72,10 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
     ? `Please state our invoice no. "${invoiceNoExternal?.trim() || 'TBD'}" on your payment documents.`
     : '';
 
-  // 同步showMainTerm到data
-  React.useEffect(() => {
-    updateData({ showPaymentTerms: showMainTerm });
-  }, [showMainTerm, updateData]);
-
-  // 同步data.showPaymentTerms到showMainTerm
-  React.useEffect(() => {
-    setShowMainTerm(showPaymentTerms);
-  }, [showPaymentTerms]);
+  // 简化的更新函数
+  const updateShowMainTerm = useCallback((checked: boolean) => {
+    updateData({ showPaymentTerms: checked });
+  }, [updateData]);
 
 
 
@@ -274,7 +269,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
           <input
             type="checkbox"
             checked={showMainTerm}
-            onChange={(e) => setShowMainTerm(e.target.checked)}
+            onChange={(e) => updateShowMainTerm(e.target.checked)}
             className="h-4 w-4 accent-black dark:accent-white"
           />
           <span>Full payment not later than</span>

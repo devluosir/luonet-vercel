@@ -54,8 +54,7 @@ export interface QuotationData {
   showStamp: boolean;
   otherFees?: OtherFee[];
   customUnits?: string[];
-  showPaymentTerms?: boolean;
-  showMainPaymentTerm?: boolean;
+  showMainPaymentTerm?: boolean; // 统一控制付款条款显示
   showInvoiceReminder?: boolean;
   additionalPaymentTerms?: string;
   paymentMethod?: 'T/T' | 'L/C' | 'D/P' | 'D/A' | 'Open Account';

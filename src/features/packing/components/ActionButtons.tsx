@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, Save, Eye, FileSpreadsheet } from 'lucide-react';
+import { Download, Eye, FileSpreadsheet } from 'lucide-react';
 import { ActionButtonsProps } from '../types';
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
@@ -10,53 +10,68 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   saveMessage,
   onGenerate,
   onPreview,
-  onSave,
   onExportExcel
 }) => {
   return (
     <section className="rounded-2xl border border-slate-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/30 shadow-sm p-4">
-      <div className="flex flex-col sm:flex-row gap-3">
-        {/* 生成按钮 */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
+        {/* 主要操作按钮 - 生成PDF */}
         <button
           type="button"
           onClick={onGenerate}
           disabled={isGenerating}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#007AFF] hover:bg-[#0056CC] disabled:bg-gray-400 text-white font-medium rounded-xl transition-all duration-200 ease-out shadow-sm hover:shadow-md disabled:cursor-not-allowed"
+          className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl
+            bg-[#007AFF] dark:bg-[#0A84FF] hover:bg-[#007AFF]/90 dark:hover:bg-[#0A84FF]/90
+            text-white font-medium text-[15px] leading-relaxed
+            transition-all duration-300 ease-out
+            focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
+            shadow-sm hover:shadow-md dark:shadow-[#0A84FF]/10
+            disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Download className="w-4 h-4" />
-          {isGenerating ? '生成中...' : '生成装箱单'}
+          <Download className="w-5 h-5" />
+          {isGenerating ? 'Generating...' : 'Generate PDF'}
         </button>
 
-        {/* 预览按钮 */}
-        <button
-          type="button"
-          onClick={onPreview}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-all duration-200 ease-out shadow-sm hover:shadow-md"
-        >
-          <Eye className="w-4 h-4" />
-          预览
-        </button>
+        {/* 次要操作按钮组 */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          {/* 预览按钮 */}
+          <button
+            type="button"
+            onClick={onPreview}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl font-medium
+              bg-white dark:bg-[#1C1C1E]
+              text-[#007AFF] dark:text-[#0A84FF]
+              border border-[#007AFF]/20 dark:border-[#0A84FF]/20
+              flex items-center justify-center gap-2
+              hover:bg-[#007AFF]/[0.05] dark:hover:bg-[#0A84FF]/[0.05]
+              hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30
+              active:bg-[#007AFF]/[0.1] dark:active:bg-[#0A84FF]/[0.1]
+              transition-all duration-200"
+          >
+            <Eye className="w-4 h-4" />
+            Preview
+          </button>
 
-        {/* 保存按钮 */}
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={isSaving}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-medium rounded-xl transition-all duration-200 ease-out shadow-sm hover:shadow-md disabled:cursor-not-allowed"
-        >
-          <Save className="w-4 h-4" />
-          {isSaving ? '保存中...' : '保存'}
-        </button>
 
-        {/* 导出Excel按钮 */}
-        <button
-          type="button"
-          onClick={onExportExcel}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-xl transition-all duration-200 ease-out shadow-sm hover:shadow-md"
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          导出Excel
-        </button>
+
+          {/* Excel导出按钮 */}
+          <button
+            type="button"
+            onClick={onExportExcel}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl font-medium
+              bg-white dark:bg-[#1C1C1E]
+              text-[#007AFF] dark:text-[#0A84FF]
+              border border-[#007AFF]/20 dark:border-[#0A84FF]/20
+              flex items-center justify-center gap-2
+              hover:bg-[#007AFF]/[0.05] dark:hover:bg-[#0A84FF]/[0.05]
+              hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30
+              active:bg-[#007AFF]/[0.1] dark:active:bg-[#0A84FF]/[0.1]
+              transition-all duration-200"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Excel
+          </button>
+        </div>
       </div>
 
       {/* 保存消息 */}

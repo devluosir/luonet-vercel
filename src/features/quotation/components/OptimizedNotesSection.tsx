@@ -298,6 +298,7 @@ const OptimizedSortableNote: React.FC<OptimizedSortableNoteProps> = memo(({
   const options = note.id === 'payment_terms' ? PAYMENT_TERMS_OPTIONS : DELIVERY_TERMS_OPTIONS;
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(note.content || '');
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // 🚀 优化12: 使用useCallback缓存编辑相关函数
   const handleStartEdit = useCallback(() => {
@@ -316,14 +317,14 @@ const OptimizedSortableNote: React.FC<OptimizedSortableNoteProps> = memo(({
   }, [note.content]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSaveEdit();
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Escape') {
+      // Escape 键取消编辑
       e.preventDefault();
       handleCancelEdit();
     }
-  }, [handleSaveEdit, handleCancelEdit]);
+    // Enter 键和 Shift+Enter 键都允许换行，不做特殊处理
+    // 失去焦点时会自动保存
+  }, [handleCancelEdit]);
 
   // 🚀 优化13: 缓存按钮点击处理函数
   const handleVisibilityClick = useCallback((e: React.MouseEvent) => {
@@ -345,9 +346,28 @@ const OptimizedSortableNote: React.FC<OptimizedSortableNoteProps> = memo(({
     }
   }, [note.id, options, onUpdateContent]);
 
+  // 自动调整textarea高度的函数
+  const adjustTextareaHeight = useCallback((textarea: HTMLTextAreaElement) => {
+    textarea.style.height = 'auto';
+    const capped = Math.min(textarea.scrollHeight, 128); // ~ max-h-32
+    textarea.style.height = `${capped}px`;
+  }, []);
+
   const handleEditValueChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setEditValue(e.target.value);
   }, []);
+
+  // 当进入编辑状态时，立即调整textarea高度
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      // 使用setTimeout确保DOM已更新
+      setTimeout(() => {
+        if (textareaRef.current) {
+          adjustTextareaHeight(textareaRef.current);
+        }
+      }, 0);
+    }
+  }, [isEditing, adjustTextareaHeight]);
 
   return (
     <div
@@ -395,14 +415,18 @@ const OptimizedSortableNote: React.FC<OptimizedSortableNoteProps> = memo(({
                 <div className="flex-1 min-w-0">
                   {isEditing ? (
                     <textarea
+                      ref={textareaRef}
                       value={editValue}
                       onChange={handleEditValueChange}
                       onKeyDown={handleKeyDown}
                       onBlur={handleSaveEdit}
-                      className="w-full text-sm border border-gray-300 dark:border-[#3A3A3C] rounded px-2 py-1 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] resize-none"
+                      className="w-full h-auto min-h-8 max-h-32 text-sm border border-gray-300 dark:border-[#3A3A3C] rounded px-2 py-1 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] resize-none overflow-auto"
                       rows={1}
-                      placeholder="输入条款内容..."
+                      placeholder="输入条款内容... (Esc 取消)"
                       autoFocus
+                      onInput={(e) => {
+                        adjustTextareaHeight(e.currentTarget);
+                      }}
                     />
                   ) : (
                     <div 

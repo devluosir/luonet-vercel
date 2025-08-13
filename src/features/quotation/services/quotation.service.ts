@@ -73,7 +73,9 @@ export function initDataFromSources(): QuotationData {
         // 确保items至少有一个空项
         items: parsed.items && parsed.items.length > 0 ? parsed.items : defaultData.items,
         // 确保templateConfig有正确的默认值
-        templateConfig: parsed.templateConfig || defaultData.templateConfig
+        templateConfig: parsed.templateConfig || defaultData.templateConfig,
+        // 确保付款条款使用默认值false
+        showMainPaymentTerm: defaultData.showMainPaymentTerm
       };
     }
   } catch (error) {

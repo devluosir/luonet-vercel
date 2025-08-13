@@ -57,8 +57,7 @@ export function getInitialQuotationData(): QuotationData {
     showStamp: false,
     otherFees: [],
     customUnits: [],
-    showPaymentTerms: true, // 常显，不再通过设置面板控制
-    showMainPaymentTerm: false,
+    showMainPaymentTerm: false, // 统一控制付款条款显示
     showInvoiceReminder: false,
     additionalPaymentTerms: '',
     paymentMethod: 'T/T',

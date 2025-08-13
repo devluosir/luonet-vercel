@@ -47,7 +47,6 @@ export default function PackingPage() {
     saveMessage,
     handleGenerate,
     handlePreview,
-    handleSave,
     handleExportExcel
   } = usePackingActions(data, editId);
 
@@ -103,7 +102,6 @@ export default function PackingPage() {
         saveMessage={saveMessage}
         onGenerate={handleGenerate}
         onPreview={handlePreviewClick}
-        onSave={handleSave}
         onExportExcel={handleExportExcel}
       />
       <Footer />

@@ -254,6 +254,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
   const [editValue, setEditValue] = useState(note.content || '');
   const [showOptions, setShowOptions] = useState(false);
   const optionsRef = React.useRef<HTMLDivElement | null>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (optionsRef.current && !optionsRef.current.contains(e.target as Node)) {
@@ -279,6 +280,25 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
     setEditValue(note.content || '');
   };
 
+  // 自动调整textarea高度的函数
+  const adjustTextareaHeight = (textarea: HTMLTextAreaElement) => {
+    textarea.style.height = 'auto';
+    const capped = Math.min(textarea.scrollHeight, 128); // ~ max-h-32
+    textarea.style.height = `${capped}px`;
+  };
+
+  // 当进入编辑状态时，立即调整textarea高度
+  React.useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      // 使用setTimeout确保DOM已更新
+      setTimeout(() => {
+        if (textareaRef.current) {
+          adjustTextareaHeight(textareaRef.current);
+        }
+      }, 0);
+    }
+  }, [isEditing]);
+
   const handleSaveEdit = () => {
     onUpdateContent(note.id, editValue);
     setIsEditing(false);
@@ -290,13 +310,13 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSaveEdit();
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Escape') {
+      // Escape 键取消编辑
       e.preventDefault();
       handleCancelEdit();
     }
+    // Enter 键和 Shift+Enter 键都允许换行，不做特殊处理
+    // 失去焦点时会自动保存
   };
 
 
@@ -350,19 +370,17 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
                 <div className="flex-1 min-w-0">
                   {isEditing ? (
                     <textarea
+                      ref={textareaRef}
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       onKeyDown={handleKeyDown}
                       onBlur={handleSaveEdit}
                       className="w-full h-auto min-h-8 max-h-32 box-border text-sm leading-5 border border-gray-300 dark:border-[#3A3A3C] rounded px-2 py-1 bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7] focus:outline-none focus:ring-1 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF] resize-none overflow-auto"
                       rows={1}
-                      placeholder="输入条款内容..."
+                      placeholder="输入条款内容... (Esc 取消)"
                       autoFocus
                       onInput={(e) => {
-                        const el = e.currentTarget;
-                        el.style.height = 'auto';
-                        const capped = Math.min(el.scrollHeight, 128); // ~ max-h-32
-                        el.style.height = `${capped}px`;
+                        adjustTextareaHeight(e.currentTarget);
                       }}
                     />
                   ) : (

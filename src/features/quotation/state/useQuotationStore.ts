@@ -11,7 +11,7 @@ import { getLocalStorageJSON, getLocalStorageString } from '@/utils/safeLocalSto
 const KNOWN_KEYS = new Set<keyof QuotationData>([
   'quotationNo', 'contractNo', 'date', 'notes', 'from', 'to', 'inquiryNo', 'currency',
   'paymentDate', 'items', 'amountInWords', 'showDescription', 'showRemarks', 'showBank', 
-  'showStamp', 'otherFees', 'customUnits', 'showPaymentTerms', 'showMainPaymentTerm', 'showInvoiceReminder',
+  'showStamp', 'otherFees', 'customUnits', 'showMainPaymentTerm', 'showInvoiceReminder',
   'additionalPaymentTerms', 'templateConfig'
 ]);
 
