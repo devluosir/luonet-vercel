@@ -237,16 +237,6 @@ export const SettingsPanel = React.memo(() => {
             <span className="text-gray-600 dark:text-gray-400 text-[9px]">%</span>
           </div>
 
-          {/* 定金金额显示 */}
-          {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 && (
-            <div className="flex items-center gap-1">
-              <span className="text-gray-600 dark:text-gray-400 text-[9px]">
-                {data.currency === 'USD' ? '$' : '¥'}
-                {data.depositAmount.toFixed(2)}
-              </span>
-            </div>
-          )}
-
           {/* Balance切换按钮 */}
           {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 && (
             <div className="flex items-center gap-1">
@@ -266,7 +256,7 @@ export const SettingsPanel = React.memo(() => {
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:border-green-400'
                 }`}
               >
-                {data.showBalance ? 'Balance' : 'Deposit'}
+                Balance
               </button>
             </div>
           )}
