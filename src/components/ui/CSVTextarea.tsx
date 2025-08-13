@@ -27,6 +27,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
 }) => {
   const [tableData, setTableData] = useState<CellData[][]>([]);
   const [selectedCells, setSelectedCells] = useState<{row: number, col: number}[]>([]);
+  const [showTable, setShowTable] = useState<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // 初始化表格数据
@@ -465,7 +466,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
 
         {/* 表格内容 */}
         <div className="max-h-96 overflow-auto">
-          {tableData.length > 0 ? (
+          {showTable && tableData.length > 0 ? (
             <table className="w-full border-collapse">
               <tbody>
                 {tableData.map((row, rowIndex) => (
