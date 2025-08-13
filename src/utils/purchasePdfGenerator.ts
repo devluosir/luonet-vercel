@@ -227,7 +227,7 @@ function renderTableInPDF(
         const textStartY = cellY + (rowHeight - textHeight) / 2 + lineHeight;
         
         // 绘制文本
-        wrappedText.forEach((line, lineIndex) => {
+        wrappedText.forEach((line: string, lineIndex) => {
           const textY = textStartY + (lineIndex * lineHeight);
           doc.text(line, cellX + cellPadding, textY);
         });
