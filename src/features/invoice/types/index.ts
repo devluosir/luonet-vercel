@@ -66,6 +66,8 @@ export interface InvoiceData {
   templateConfig: InvoiceTemplateConfig;
   customUnits?: string[];
   otherFees: OtherFee[];
+  depositPercentage?: number;
+  depositAmount?: number;
 }
 
 export interface InvoiceHistoryItem {

@@ -197,7 +197,57 @@ export const SettingsPanel = React.memo(() => {
         {/* 分隔线 */}
         <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
-        {/* 第六组：自定义单位 */}
+        {/* 第六组：定金设置 */}
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Deposit:</span>
+          
+          {/* 定金百分比输入 */}
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              value={data.depositPercentage || ''}
+              onChange={(e) => {
+                const percentage = parseFloat(e.target.value) || 0;
+                const totalAmount = data.items.reduce((sum, item) => sum + (item.amount || 0), 0) + data.otherFees.reduce((sum, fee) => sum + fee.amount, 0);
+                const depositAmount = percentage > 0 ? (percentage / 100) * totalAmount : undefined;
+                updateData({ 
+                  depositPercentage: percentage > 0 ? percentage : undefined,
+                  depositAmount: depositAmount
+                });
+              }}
+              placeholder="0"
+              className="w-16 px-2 py-1 rounded text-[9px]
+                bg-white/90 dark:bg-[#1c1c1e]/90
+                border border-gray-200/30 dark:border-[#2c2c2e]/50
+                focus:outline-none focus:ring-1
+                focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
+                text-gray-800 dark:text-gray-200
+                text-center
+                [appearance:textfield] 
+                [&::-webkit-outer-spin-button]:appearance-none 
+                [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            <span className="text-gray-600 dark:text-gray-400 text-[9px]">%</span>
+          </div>
+
+          {/* 定金金额显示 */}
+          {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-gray-600 dark:text-gray-400 text-[9px]">
+                {data.currency === 'USD' ? '$' : '¥'}
+                {data.depositAmount.toFixed(2)}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* 分隔线 */}
+        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+
+        {/* 第七组：自定义单位 */}
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Units:</span>
           

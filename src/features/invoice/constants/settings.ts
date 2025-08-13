@@ -128,5 +128,7 @@ export const DEFAULT_INVOICE_DATA = {
     stampType: 'none' as const
   },
   customUnits: [],
-  otherFees: []
+  otherFees: [],
+  depositPercentage: undefined,
+  depositAmount: undefined
 };

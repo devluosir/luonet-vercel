@@ -56,6 +56,8 @@ export interface PDFGeneratorData {
   paymentDate: string;
   additionalPaymentTerms?: string;
   showInvoiceReminder: boolean;
+  depositPercentage?: number;
+  depositAmount?: number;
 }
 
 export interface PdfType {

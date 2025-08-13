@@ -534,16 +534,47 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   doc.text(totalAmountValue, valueX, finalY + 8, { align: 'right' });
   setCnFont(doc, 'normal');
 
+  let currentY = finalY + 8;
+
+  // 显示定金信息
+  if (data.depositPercentage && data.depositPercentage > 0) {
+    const depositAmount = data.depositAmount || (data.depositPercentage / 100) * totalAmount;
+    const depositValue = `${data.currency === 'USD' ? '$' : '¥'}${depositAmount.toFixed(2)}`;
+    const depositLabel = `${data.depositPercentage}% DEPOSIT:`;
+    
+    const depositValueX = pageWidth - margin - 5;
+    const depositLabelX = depositValueX - doc.getTextWidth(depositValue) - 28;
+
+    setCnFont(doc, 'bold');
+    doc.text(depositLabel, depositLabelX, currentY + 8);
+    doc.text(depositValue, depositValueX, currentY + 8, { align: 'right' });
+    setCnFont(doc, 'normal');
+    
+    currentY += 8;
+  }
+
   // 显示大写金额
   doc.setFontSize(8);
   setCnFont(doc, 'bold');
-  const amountInWords = `SAY TOTAL ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${data.amountInWords.dollars}${data.amountInWords.hasDecimals ? ` AND ${data.amountInWords.cents}` : ' ONLY'}`;
+  
+  // 根据是否有定金决定显示哪个金额的大写
+  let amountInWords: string;
+  if (data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0) {
+    // 显示定金金额的大写
+    const { numberToWords } = require('../features/invoice/utils/calculations');
+    const depositWords = numberToWords(data.depositAmount);
+    amountInWords = `SAY ${data.depositPercentage}% Deposit ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${depositWords.dollars}${depositWords.hasDecimals ? ` AND ${depositWords.cents}` : ' ONLY'}`;
+  } else {
+    // 显示总金额的大写
+    amountInWords = `SAY TOTAL ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${data.amountInWords.dollars}${data.amountInWords.hasDecimals ? ` AND ${data.amountInWords.cents}` : ' ONLY'}`;
+  }
+  
   const lines = doc.splitTextToSize(amountInWords, pageWidth - (margin * 2));
   lines.forEach((line: string, index: number) => {
-    doc.text(String(line), margin, finalY + 15 + (index * 5));
+    doc.text(String(line), margin, currentY + 15 + (index * 5));
   });
 
-  return finalY + 15 + (lines.length * 5) + 8;
+  return currentY + 15 + (lines.length * 5) + 8;
 }
 
 // 渲染银行信息和付款条款

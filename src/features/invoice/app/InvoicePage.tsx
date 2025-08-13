@@ -22,7 +22,7 @@ import { InvoiceActions } from '../components/InvoiceActions';
 import { PaymentTermsSection } from '../components/PaymentTermsSection';
 import { InvoiceInfoCompact } from '../components/InvoiceInfoCompact';
 import { INPUT_CLASSNAMES } from '../constants/settings';
-import { getTotalAmount } from '../utils/calculations';
+import { getTotalAmount, numberToWords } from '../utils/calculations';
 
 /**
  * 发票主页面组件
@@ -223,35 +223,76 @@ export const InvoicePage = () => {
                   </button>
                 </div>
                 
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-sm font-medium text-gray-500 hidden md:inline">Total Amount</span>
-                  <div className="text-right">
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-500">Total Amount:</span>
                     <span className="text-xl font-semibold tracking-tight whitespace-nowrap">
                       {data.currency === 'USD' ? '$' : '¥'}
                       {totalAmount.toFixed(2)}
                     </span>
                   </div>
+                  {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-500">
+                        {data.depositPercentage}% Deposit:
+                      </span>
+                      <span className="text-lg font-semibold tracking-tight whitespace-nowrap text-blue-600 dark:text-blue-400">
+                        {data.currency === 'USD' ? '$' : '¥'}
+                        {data.depositAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* 英文大写金额显示区域 */}
               <div className="mt-4 mb-8">
                 <div className="inline text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">SAY TOTAL </span>
-                  <span className="text-blue-500">
-                    {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
-                  </span>
-                  <span className="text-gray-600 dark:text-gray-400">{data.amountInWords.dollars}</span>
-                  {data.amountInWords.hasDecimals && (
+                  {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 ? (
+                    // 显示定金金额的大写
+                    (() => {
+                      const depositWords = numberToWords(data.depositAmount);
+                      return (
+                        <>
+                          <span className="text-gray-600 dark:text-gray-400">SAY {data.depositPercentage}% DEPOSIT </span>
+                          <span className="text-blue-500">
+                            {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
+                          </span>
+                          <span className="text-gray-600 dark:text-gray-400">{depositWords.dollars}</span>
+                          {depositWords.hasDecimals && (
+                            <>
+                              <span className="text-red-500"> AND </span>
+                              <span className="text-gray-600 dark:text-gray-400">
+                                {depositWords.cents}
+                              </span>
+                            </>
+                          )}
+                          {!depositWords.hasDecimals && (
+                            <span className="text-gray-600 dark:text-gray-400"> ONLY</span>
+                          )}
+                        </>
+                      );
+                    })()
+                  ) : (
+                    // 显示总金额的大写
                     <>
-                      <span className="text-red-500"> AND </span>
-                      <span className="text-gray-600 dark:text-gray-400">
-                        {data.amountInWords.cents}
+                      <span className="text-gray-600 dark:text-gray-400">SAY TOTAL </span>
+                      <span className="text-blue-500">
+                        {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
                       </span>
+                      <span className="text-gray-600 dark:text-gray-400">{data.amountInWords.dollars}</span>
+                      {data.amountInWords.hasDecimals && (
+                        <>
+                          <span className="text-red-500"> AND </span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            {data.amountInWords.cents}
+                          </span>
+                        </>
+                      )}
+                      {!data.amountInWords.hasDecimals && (
+                        <span className="text-gray-600 dark:text-gray-400"> ONLY</span>
+                      )}
                     </>
-                  )}
-                  {!data.amountInWords.hasDecimals && (
-                    <span className="text-gray-600 dark:text-gray-400"> ONLY</span>
                   )}
                 </div>
               </div>

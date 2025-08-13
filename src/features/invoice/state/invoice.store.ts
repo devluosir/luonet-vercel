@@ -137,11 +137,17 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
                          (state.data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
       const amountInWords = numberToWords(totalAmount);
       
+      // 更新定金金额
+      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
+        ? (state.data.depositPercentage / 100) * totalAmount 
+        : undefined;
+      
       return { 
         data: { 
           ...state.data, 
           items: newItems,
-          amountInWords 
+          amountInWords,
+          depositAmount
         } 
       };
     });
@@ -172,7 +178,25 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
       const newItems = state.data.items
         .filter((_, i) => i !== index)
         .map((item, i) => ({ ...item, lineNo: i + 1 }));
-      return { data: { ...state.data, items: newItems } };
+      
+      // 计算新的总金额和金额大写
+      const totalAmount = newItems.reduce((sum, item) => sum + item.amount, 0) +
+                         (state.data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
+      const amountInWords = numberToWords(totalAmount);
+      
+      // 更新定金金额
+      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
+        ? (state.data.depositPercentage / 100) * totalAmount 
+        : undefined;
+      
+      return { 
+        data: { 
+          ...state.data, 
+          items: newItems,
+          amountInWords,
+          depositAmount
+        } 
+      };
     });
   },
 
@@ -193,7 +217,25 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
   removeOtherFee: (id) => {
     set((state) => {
       const newFees = state.data.otherFees?.filter(f => f.id !== id) || [];
-      return { data: { ...state.data, otherFees: newFees } };
+      
+      // 计算新的总金额和金额大写
+      const totalAmount = state.data.items.reduce((sum, item) => sum + item.amount, 0) +
+                         newFees.reduce((sum, fee) => sum + fee.amount, 0);
+      const amountInWords = numberToWords(totalAmount);
+      
+      // 更新定金金额
+      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
+        ? (state.data.depositPercentage / 100) * totalAmount 
+        : undefined;
+      
+      return { 
+        data: { 
+          ...state.data, 
+          otherFees: newFees,
+          amountInWords,
+          depositAmount
+        } 
+      };
     });
   },
 
@@ -209,11 +251,17 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
                          newFees.reduce((sum, fee) => sum + fee.amount, 0);
       const amountInWords = numberToWords(totalAmount);
       
+      // 更新定金金额
+      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
+        ? (state.data.depositPercentage / 100) * totalAmount 
+        : undefined;
+      
       return { 
         data: { 
           ...state.data, 
           otherFees: newFees,
-          amountInWords 
+          amountInWords,
+          depositAmount
         } 
       };
     });
