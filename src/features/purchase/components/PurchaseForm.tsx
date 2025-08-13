@@ -5,7 +5,7 @@ import { BankInfoSection } from '@/components/purchase/BankInfoSection';
 import PurchaseBaseInfo from '@/components/purchase/PurchaseBaseInfo';
 import { usePurchaseStore } from '../state/purchase.store';
 import { useAutoResizeTextareas } from '@/hooks/useAutoResizeTextareas';
-import { CSVTextarea } from '@/components/ui/CSVTextarea';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 
 export default function PurchaseForm() {
   const { 
@@ -155,12 +155,11 @@ export default function PurchaseForm() {
                   客户确认订单时对于项目的<strong className="text-blue-600 font-bold">规格描述</strong>供你们参考：
                 </span>
               </div>
-              <CSVTextarea
+              <RichTextEditor
                 value={data.projectSpecification}
                 onChange={(value) => updateData({ projectSpecification: value })}
-                placeholder="项目规格描述（支持制表符和CSV格式，可直接粘贴Excel数据）"
-                className={`${inputClass} resize-none overflow-hidden`}
-                rows={3}
+                placeholder="项目规格描述（支持富文本编辑，可插入表格、图片等）"
+                className="w-full"
               />
             </div>
 

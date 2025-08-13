@@ -34,24 +34,163 @@ function renderTableInPDF(
 
   const tableData = lines.map(line => line.split('\t').map(cell => cell.trim()));
   
-  // 计算列宽
-  const columnCount = Math.max(...tableData.map(row => row.length));
-  const columnWidth = Math.min(maxWidth / columnCount, 40); // 最大列宽40mm
+  // 检测合并单元格（通过空单元格判断）
+  const processedData: Array<Array<{value: string, rowSpan: number, colSpan: number}>> = [];
+  
+  for (let rowIndex = 0; rowIndex < tableData.length; rowIndex++) {
+    const row = tableData[rowIndex];
+    const processedRow: Array<{value: string, rowSpan: number, colSpan: number}> = [];
+    
+    for (let colIndex = 0; colIndex < row.length; colIndex++) {
+      const cell = row[colIndex];
+      
+      // 检查是否应该跳过这个单元格（被合并的）
+      let shouldSkip = false;
+      for (let r = 0; r < rowIndex; r++) {
+        for (let c = 0; c < processedData[r]?.length; c++) {
+          const existingCell = processedData[r][c];
+          if (existingCell.rowSpan > 1 && r + existingCell.rowSpan > rowIndex) {
+            if (c + existingCell.colSpan > colIndex) {
+              shouldSkip = true;
+              break;
+            }
+          }
+        }
+        if (shouldSkip) break;
+      }
+      
+      if (shouldSkip) {
+        continue;
+      }
+      
+      // 计算合并范围
+      let rowSpan = 1;
+      let colSpan = 1;
+      
+      // 检查向下合并（包括空单元格）
+      for (let r = rowIndex + 1; r < tableData.length; r++) {
+        const nextCell = tableData[r][colIndex];
+        // 如果当前单元格不为空，检查下一行是否为空或相同
+        if (cell !== '') {
+          if (nextCell === '' || nextCell === cell) {
+            rowSpan++;
+          } else {
+            break;
+          }
+        } else {
+          // 如果当前单元格为空，检查是否应该被上面的单元格合并
+          let shouldBeMerged = false;
+          for (let checkRow = rowIndex - 1; checkRow >= 0; checkRow--) {
+            const checkCell = tableData[checkRow][colIndex];
+            if (checkCell !== '') {
+              // 检查这个单元格是否已经向下合并到这里
+              let checkRowSpan = 1;
+              for (let sr = checkRow + 1; sr < tableData.length; sr++) {
+                if (tableData[sr][colIndex] === '' || tableData[sr][colIndex] === checkCell) {
+                  checkRowSpan++;
+                } else {
+                  break;
+                }
+              }
+              if (checkRow + checkRowSpan > rowIndex) {
+                shouldBeMerged = true;
+                break;
+              }
+            }
+          }
+          if (shouldBeMerged) {
+            continue; // 跳过这个空单元格
+          }
+        }
+      }
+      
+      // 检查向右合并
+      for (let c = colIndex + 1; c < row.length; c++) {
+        const nextCell = row[c];
+        if (cell !== '') {
+          if (nextCell === '' || nextCell === cell) {
+            colSpan++;
+          } else {
+            break;
+          }
+        }
+      }
+      
+      // 只有当单元格不为空或者有合并范围时才添加
+      if (cell !== '' || rowSpan > 1 || colSpan > 1) {
+        processedRow.push({
+          value: cell,
+          rowSpan,
+          colSpan
+        });
+      }
+    }
+    
+    processedData.push(processedRow);
+  }
+  
+  // 计算列宽 - 根据内容自适应
+  const columnCount = Math.max(...processedData.map(row => row.length));
+  const minColumnWidth = 15; // 最小列宽15mm
+  const maxColumnWidth = 50; // 最大列宽50mm
+  
+  // 计算每列的最大内容宽度
+  const columnWidths: number[] = [];
+  for (let col = 0; col < columnCount; col++) {
+    let maxWidth = 0;
+    processedData.forEach(row => {
+      if (row[col]) {
+        const textWidth = doc.getTextWidth(row[col].value);
+        maxWidth = Math.max(maxWidth, textWidth);
+      }
+    });
+    // 添加一些内边距
+    columnWidths[col] = Math.max(minColumnWidth, Math.min(maxColumnWidth, maxWidth + 4));
+  }
+  
+  // 如果总宽度超过可用宽度，按比例缩小
+  const totalWidth = columnWidths.reduce((sum, width) => sum + width, 0);
+  if (totalWidth > maxWidth) {
+    const scale = maxWidth / totalWidth;
+    columnWidths.forEach((width, index) => {
+      columnWidths[index] = Math.max(minColumnWidth, width * scale);
+    });
+  }
   
   // 计算表格总宽度
-  const tableWidth = columnWidth * columnCount;
+  const tableWidth = columnWidths.reduce((sum, width) => sum + width, 0);
   
-  // 检查是否需要分页
-  const rowHeight = 6; // 每行高度6mm
-  const totalHeight = tableData.length * rowHeight;
+  // 计算每行的实际高度（支持多行文本）
+  const rowHeights: number[] = [];
+  const cellPadding = 2; // 单元格内边距
+  const lineHeight = 4; // 行高
+  
+  processedData.forEach((row, rowIndex) => {
+    let maxCellHeight = 6; // 最小行高
+    
+    row.forEach((cell, colIndex) => {
+      if (cell.value) {
+        const availableWidth = columnWidths[colIndex] - (cellPadding * 2);
+        const wrappedText = doc.splitTextToSize(cell.value, availableWidth);
+        const cellHeight = Math.max(6, wrappedText.length * lineHeight + (cellPadding * 2));
+        maxCellHeight = Math.max(maxCellHeight, cellHeight);
+      }
+    });
+    
+    rowHeights[rowIndex] = maxCellHeight;
+  });
+  
+  // 计算总高度
+  const totalHeight = rowHeights.reduce((sum, height) => sum + height, 0);
   let currentY = checkAndAddPage(startY, totalHeight);
   
   // 绘制表格边框和内容
   setCnFont(doc, 'normal');
   doc.setFontSize(9);
   
-  tableData.forEach((row, rowIndex) => {
-    const rowY = currentY + (rowIndex * rowHeight);
+  processedData.forEach((row, rowIndex) => {
+    const rowY = currentY;
+    const rowHeight = rowHeights[rowIndex];
     
     // 绘制行边框
     doc.setDrawColor(0, 0, 0);
@@ -59,8 +198,9 @@ function renderTableInPDF(
     doc.line(startX, rowY, startX + tableWidth, rowY);
     
     // 绘制单元格内容和边框
+    let cellX = startX;
     row.forEach((cell, colIndex) => {
-      const cellX = startX + (colIndex * columnWidth);
+      const cellWidth = columnWidths[colIndex] * cell.colSpan;
       const cellY = rowY;
       
       // 绘制垂直边框
@@ -68,7 +208,7 @@ function renderTableInPDF(
       
       // 绘制单元格内容
       doc.setTextColor(0, 0, 0);
-      const cellText = cell || '';
+      const cellText = cell.value || '';
       
       // 如果是第一行，使用粗体
       if (rowIndex === 0) {
@@ -77,24 +217,376 @@ function renderTableInPDF(
         setCnFont(doc, 'normal');
       }
       
-      // 文本居中显示
-      const textWidth = doc.getTextWidth(cellText);
-      const textX = cellX + (columnWidth - textWidth) / 2;
-      const textY = cellY + (rowHeight / 2) + 2; // 垂直居中，稍微向下偏移
+      if (cellText) {
+        // 文本换行处理
+        const availableWidth = cellWidth - (cellPadding * 2);
+        const wrappedText = doc.splitTextToSize(cellText, availableWidth);
+        
+        // 计算文本起始位置（垂直居中）
+        const textHeight = wrappedText.length * lineHeight;
+        const textStartY = cellY + (rowHeight - textHeight) / 2 + lineHeight;
+        
+        // 绘制文本
+        wrappedText.forEach((line, lineIndex) => {
+          const textY = textStartY + (lineIndex * lineHeight);
+          doc.text(line, cellX + cellPadding, textY);
+        });
+      }
       
-      doc.text(cellText, textX, textY);
+      cellX += cellWidth;
     });
     
     // 绘制最后一列的右边框
-    const lastCellX = startX + (columnCount * columnWidth);
-    doc.line(lastCellX, rowY, lastCellX, rowY + rowHeight);
+    doc.line(cellX, rowY, cellX, rowY + rowHeight);
+    
+    currentY += rowHeight;
   });
   
   // 绘制底部边框
-  const bottomY = currentY + (tableData.length * rowHeight);
-  doc.line(startX, bottomY, startX + tableWidth, bottomY);
+  doc.line(startX, currentY, startX + tableWidth, currentY);
   
-  return bottomY + 5; // 返回表格底部位置，加上5mm间距
+  return currentY + 5; // 返回表格底部位置，加上5mm间距
+}
+
+/**
+ * 在PDF中渲染富文本内容
+ */
+function renderRichTextInPDF(
+  doc: jsPDF, 
+  htmlText: string, 
+  startX: number, 
+  startY: number, 
+  maxWidth: number,
+  checkAndAddPage: (y: number, needed?: number) => number
+): number {
+  let currentY = startY;
+  
+  // 检查是否在客户端环境
+  if (typeof window === 'undefined') {
+    // 服务器端环境，使用简单的文本解析
+    return renderSimpleRichText(doc, htmlText, startX, startY, maxWidth, checkAndAddPage);
+  }
+  
+  // 客户端环境，使用DOM解析
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlText;
+  
+  // 递归处理DOM节点
+  const processNode = (node: Node, x: number, y: number): number => {
+    let nodeY = y;
+    
+    if (node.nodeType === Node.TEXT_NODE) {
+      // 处理文本节点
+      const text = node.textContent || '';
+      if (text.trim()) {
+        const wrappedText = doc.splitTextToSize(text, maxWidth);
+        nodeY = checkAndAddPage(nodeY, wrappedText.length * 4);
+        wrappedText.forEach((line: string) => {
+          doc.text(line, x, nodeY);
+          nodeY += 4;
+        });
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as HTMLElement;
+      const tagName = element.tagName.toLowerCase();
+      
+      switch (tagName) {
+        case 'br':
+          nodeY += 6; // 换行
+          break;
+          
+        case 'p':
+          // 段落
+          nodeY += 4; // 段落间距
+          for (const child of element.childNodes) {
+            nodeY = processNode(child, x, nodeY);
+          }
+          nodeY += 4; // 段落间距
+          break;
+          
+        case 'strong':
+        case 'b':
+          // 粗体
+          setCnFont(doc, 'bold');
+          for (const child of element.childNodes) {
+            nodeY = processNode(child, x, nodeY);
+          }
+          setCnFont(doc, 'normal');
+          break;
+          
+        case 'em':
+        case 'i':
+          // 斜体（在PDF中可能显示为正常字体）
+          for (const child of element.childNodes) {
+            nodeY = processNode(child, x, nodeY);
+          }
+          break;
+          
+        case 'u':
+          // 下划线（在PDF中可能不显示）
+          for (const child of element.childNodes) {
+            nodeY = processNode(child, x, nodeY);
+          }
+          break;
+          
+        case 'ul':
+        case 'ol':
+          // 列表
+          nodeY += 4;
+          for (const child of element.childNodes) {
+            if (child.nodeType === Node.ELEMENT_NODE && (child as HTMLElement).tagName.toLowerCase() === 'li') {
+              const listItem = child as HTMLElement;
+              const bullet = tagName === 'ul' ? '• ' : '1. ';
+              const text = bullet + (listItem.textContent || '');
+              const wrappedText = doc.splitTextToSize(text, maxWidth - 10);
+              nodeY = checkAndAddPage(nodeY, wrappedText.length * 4);
+              wrappedText.forEach((line: string) => {
+                doc.text(line, x + 10, nodeY);
+                nodeY += 4;
+              });
+              nodeY += 2;
+            }
+          }
+          break;
+          
+        case 'table':
+          // 表格
+          const tableRows = element.querySelectorAll('tr');
+          const rowHeight = 6;
+          const totalHeight = tableRows.length * rowHeight;
+          nodeY = checkAndAddPage(nodeY, totalHeight);
+          
+          tableRows.forEach((row, rowIndex) => {
+            const cells = row.querySelectorAll('td, th');
+            const cellWidth = maxWidth / cells.length;
+            
+            cells.forEach((cell, cellIndex) => {
+              const cellX = x + (cellIndex * cellWidth);
+              const cellText = cell.textContent || '';
+              const wrappedCellText = doc.splitTextToSize(cellText, cellWidth - 2);
+              
+              // 绘制单元格边框
+              doc.setDrawColor(0, 0, 0);
+              doc.setLineWidth(0.1);
+              doc.rect(cellX, nodeY, cellWidth, rowHeight);
+              
+              // 绘制文本
+              wrappedCellText.forEach((line: string, lineIndex: number) => {
+                if (lineIndex === 0) {
+                  doc.text(line, cellX + 1, nodeY + 3);
+                }
+              });
+            });
+            nodeY += rowHeight;
+          });
+          break;
+          
+        case 'img':
+          // 图片（在PDF中可能不显示，只显示占位符）
+          const imgText = '[图片]';
+          const wrappedImgText = doc.splitTextToSize(imgText, maxWidth);
+          nodeY = checkAndAddPage(nodeY, wrappedImgText.length * 4);
+          wrappedImgText.forEach((line: string) => {
+            doc.text(line, x, nodeY);
+            nodeY += 4;
+          });
+          break;
+          
+        case 'a':
+          // 链接（在PDF中显示为普通文本）
+          for (const child of element.childNodes) {
+            nodeY = processNode(child, x, nodeY);
+          }
+          break;
+          
+        default:
+          // 其他元素，递归处理子节点
+          for (const child of element.childNodes) {
+            nodeY = processNode(child, x, nodeY);
+          }
+      }
+    }
+    
+    return nodeY;
+  };
+  
+  // 处理所有子节点
+  for (const child of tempDiv.childNodes) {
+    currentY = processNode(child, startX, currentY);
+  }
+  
+  return currentY + 5; // 返回底部位置，加上5mm间距
+}
+
+/**
+ * 服务器端简单的富文本解析（不使用DOM）
+ */
+function renderSimpleRichText(
+  doc: jsPDF, 
+  htmlText: string, 
+  startX: number, 
+  startY: number, 
+  maxWidth: number,
+  checkAndAddPage: (y: number, needed?: number) => number
+): number {
+  let currentY = startY;
+  
+  // 简单的HTML标签处理
+  let text = htmlText;
+  
+  // 移除HTML标签，保留文本内容
+  text = text
+    .replace(/<br\s*\/?>/gi, '\n') // 换行
+    .replace(/<\/p>/gi, '\n\n') // 段落结束
+    .replace(/<p[^>]*>/gi, '') // 段落开始
+    .replace(/<strong[^>]*>|<\/strong>|<b[^>]*>|<\/b>/gi, '**') // 粗体标记
+    .replace(/<em[^>]*>|<\/em>|<i[^>]*>|<\/i>/gi, '*') // 斜体标记
+    .replace(/<u[^>]*>|<\/u>/gi, '_') // 下划线标记
+    .replace(/<ul[^>]*>|<\/ul>|<ol[^>]*>|<\/ol>/gi, '') // 列表容器
+    .replace(/<li[^>]*>|<\/li>/gi, '\n• ') // 列表项
+    .replace(/<table[^>]*>|<\/table>/gi, '') // 表格容器
+    .replace(/<tr[^>]*>|<\/tr>/gi, '\n') // 表格行
+    .replace(/<td[^>]*>|<\/td>|<th[^>]*>|<\/th>/gi, '\t') // 表格单元格
+    .replace(/<img[^>]*>/gi, '[图片]') // 图片
+    .replace(/<a[^>]*>|<\/a>/gi, '') // 链接
+    .replace(/<[^>]*>/g, ''); // 移除其他HTML标签
+  
+  // 处理粗体文本
+  const boldRegex = /\*\*(.*?)\*\*/g;
+  let match;
+  let lastIndex = 0;
+  let processedText = '';
+  
+  while ((match = boldRegex.exec(text)) !== null) {
+    processedText += text.slice(lastIndex, match.index);
+    processedText += `[BOLD]${match[1]}[/BOLD]`;
+    lastIndex = match.index + match[0].length;
+  }
+  processedText += text.slice(lastIndex);
+  
+  // 处理斜体文本
+  const italicRegex = /\*(.*?)\*/g;
+  lastIndex = 0;
+  text = processedText;
+  processedText = '';
+  
+  while ((match = italicRegex.exec(text)) !== null) {
+    processedText += text.slice(lastIndex, match.index);
+    processedText += `[ITALIC]${match[1]}[/ITALIC]`;
+    lastIndex = match.index + match[0].length;
+  }
+  processedText += text.slice(lastIndex);
+  
+  // 处理下划线文本
+  const underlineRegex = /_(.*?)_/g;
+  lastIndex = 0;
+  text = processedText;
+  processedText = '';
+  
+  while ((match = underlineRegex.exec(text)) !== null) {
+    processedText += text.slice(lastIndex, match.index);
+    processedText += `[UNDERLINE]${match[1]}[/UNDERLINE]`;
+    lastIndex = match.index + match[0].length;
+  }
+  processedText += text.slice(lastIndex);
+  
+  // 按行处理文本
+  const lines = processedText.split('\n');
+  
+  for (const line of lines) {
+    if (line.trim() === '') {
+      continue; // 跳过空行，不添加额外间距
+    }
+    
+    // 检查是否包含制表符（表格）
+    if (line.includes('\t')) {
+      const cells = line.split('\t');
+      const cellWidth = maxWidth / cells.length;
+      const rowHeight = 6;
+      
+      currentY = checkAndAddPage(currentY, rowHeight);
+      
+      cells.forEach((cell, cellIndex) => {
+        const cellX = startX + (cellIndex * cellWidth);
+        const cellText = cell.trim();
+        
+        // 绘制单元格边框
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.1);
+        doc.rect(cellX, currentY, cellWidth, rowHeight);
+        
+        // 绘制文本
+        if (cellText) {
+          const wrappedCellText = doc.splitTextToSize(cellText, cellWidth - 2);
+          wrappedCellText.forEach((line: string, lineIndex: number) => {
+            if (lineIndex === 0) {
+              doc.text(line, cellX + 1, currentY + 3);
+            }
+          });
+        }
+      });
+      
+      currentY += rowHeight;
+    } else {
+      // 普通文本行
+      let currentX = startX;
+      let currentLine = line;
+      
+      // 处理格式化标记
+      const formatRegex = /\[(BOLD|ITALIC|UNDERLINE)\](.*?)\[\/(BOLD|ITALIC|UNDERLINE)\]/g;
+      let formatMatch;
+      let textStart = 0;
+      
+      while ((formatMatch = formatRegex.exec(line)) !== null) {
+        // 先渲染标记前的文本
+        const beforeText = line.slice(textStart, formatMatch.index);
+        if (beforeText) {
+          const wrappedText = doc.splitTextToSize(beforeText, maxWidth - (currentX - startX));
+          currentY = checkAndAddPage(currentY, wrappedText.length * 4);
+          wrappedText.forEach((textLine: string) => {
+            doc.text(textLine, currentX, currentY);
+            currentY += 4;
+          });
+          currentX = startX;
+        }
+        
+        // 渲染格式化文本
+        const formatType = formatMatch[1];
+        const formatText = formatMatch[2];
+        
+        if (formatType === 'BOLD') {
+          setCnFont(doc, 'bold');
+        }
+        
+        const wrappedFormatText = doc.splitTextToSize(formatText, maxWidth);
+        currentY = checkAndAddPage(currentY, wrappedFormatText.length * 4);
+        wrappedFormatText.forEach((textLine: string) => {
+          doc.text(textLine, currentX, currentY);
+          currentY += 4;
+        });
+        
+        if (formatType === 'BOLD') {
+          setCnFont(doc, 'normal');
+        }
+        
+        currentX = startX;
+        textStart = formatMatch.index + formatMatch[0].length;
+      }
+      
+      // 渲染剩余的文本
+      const remainingText = line.slice(textStart);
+      if (remainingText) {
+        const wrappedText = doc.splitTextToSize(remainingText, maxWidth);
+        currentY = checkAndAddPage(currentY, wrappedText.length * 4);
+        wrappedText.forEach((textLine: string) => {
+          doc.text(textLine, currentX, currentY);
+          currentY += 4;
+        });
+      }
+    }
+  }
+  
+  return currentY + 5;
 }
 
 // 扩展jsPDF类型
@@ -350,11 +842,14 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       currentY += 5;
     }
 
-    // 项目规格描述（支持表格格式）
+    // 项目规格描述（支持富文本格式）
     const specText = data.projectSpecification || '';
     if (specText.trim()) {
-      // 检查是否包含制表符，如果是则渲染为表格
-      if (specText.includes('\t')) {
+      // 检查是否包含HTML标签，如果是则渲染为富文本
+      if (specText.includes('<') && specText.includes('>')) {
+        currentY = renderRichTextInPDF(doc, specText, contentMargin, currentY, contentMaxWidth, checkAndAddPage);
+      } else if (specText.includes('\t')) {
+        // 检查是否包含制表符，如果是则渲染为表格
         currentY = renderTableInPDF(doc, specText, contentMargin, currentY, contentMaxWidth, checkAndAddPage);
       } else {
         // 普通文本渲染
