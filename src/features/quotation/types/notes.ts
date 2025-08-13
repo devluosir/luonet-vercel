@@ -18,7 +18,7 @@ export const DEFAULT_NOTES_CONFIG: NoteConfig[] = [
   { id: 'price_based_on', visible: true, order: 1, content: 'Price Basis: EXW Shanghai, China.' },    // 2. Price based on
   { id: 'excluding_hpfc', visible: true, order: 2, content: 'Excluding handling & packing charge and freight cost.' },
   { id: 'delivery_terms', visible: true, order: 3, content: 'Delivery Terms: As stated above, subject to prior sale.' },     // 3. Delivery terms
-  { id: 'payment_terms', visible: false, order: 4, content: 'Payment Term: 30 days.' },      // 4. Payment term - 统一由showMainPaymentTerm控制
+  { id: 'payment_terms', visible: true, order: 4, content: 'Payment Term: 30 days.' },      // 4. Payment term - 现在默认可见
   { id: 'validity', visible: true, order: 5, content: 'Validity: 10 days.' },           // 5. Validity
 ];
 

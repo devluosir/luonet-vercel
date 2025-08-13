@@ -108,6 +108,9 @@ export const OptimizedNotesSection: React.FC<NotesSectionProps> = memo(() => {
         updateNoteContent('delivery_terms', extractEnglishContent(template[3]));
         updateNoteContent('payment_terms', extractEnglishContent(template[4]));
         updateNoteContent('validity', extractEnglishContent(template[5]));
+        
+        // 确保payment_terms条款可见
+        updateNoteVisibility('payment_terms', true);
       } else {
         // FOB和CIF模板有5个条目，隐藏excluding_hpfc条款
         updateNoteContent('delivery_time', extractEnglishContent(template[0]));
@@ -117,12 +120,13 @@ export const OptimizedNotesSection: React.FC<NotesSectionProps> = memo(() => {
         updateNoteContent('payment_terms', extractEnglishContent(template[3]));
         updateNoteContent('validity', extractEnglishContent(template[4]));
         
-        // 隐藏excluding_hpfc条款
+        // 隐藏excluding_hpfc条款，确保payment_terms条款可见
         const { updateNoteVisibility } = useQuotationStore.getState();
         updateNoteVisibility('excluding_hpfc', false);
+        updateNoteVisibility('payment_terms', true);
       }
     }, 100);
-  }, [updateNoteContent]);
+  }, [updateNoteContent, updateNoteVisibility]);
 
   // 🚀 优化8: 缓存配置切换函数
   const toggleConfig = useCallback((e: React.MouseEvent) => {
