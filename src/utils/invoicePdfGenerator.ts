@@ -418,7 +418,7 @@ function getColumnStyles(data: PDFGeneratorData, tableWidth: number): Record<str
   // 定义各列的相对宽度权重（参考包装清单PDF的设置）
   const baseWidths = {
     no: 3,           // No.
-    hsCode: 6,       // HS Code
+    hsCode: 8,       // HS Code - 增加宽度
     partName: 13,    // Part Name
     description: 16, // Description
     remarks: 12,     // Remarks - 增加宽度
