@@ -18,6 +18,7 @@ export interface User {
 export interface PermissionMap {
   permissions: {
     quotation: boolean;
+    confirmation: boolean;
     packing: boolean;
     invoice: boolean;
     purchase: boolean;

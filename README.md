@@ -337,6 +337,11 @@ mluonet/
 ## 更新日志
 
 ### 最新版本 (2025-01-08)
+- ✅ **类型错误修复**: 修复构建过程中的TypeScript类型错误
+  - **权限类型统一**: 修复 `PermissionMap` 接口中缺少 `confirmation` 字段的问题
+  - **DocumentType定义统一**: 统一两个不同文件中的 `DocumentType` 定义顺序
+  - **类型安全**: 确保 `accessibleDocumentTypes` 返回正确的 `DocumentType[]` 类型
+  - **构建成功**: 修复后构建过程顺利完成，无类型错误
 - ✅ **报价模块Excel导出功能**: 为销售确认页面添加Excel导出功能
   - **Excel导出服务**: 创建专门的Excel导出服务，支持报价单和销售确认两种格式
   - **销售确认优化**: 针对销售确认页面的特殊需求，提供专门的Excel模板

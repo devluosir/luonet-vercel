@@ -1,15 +1,14 @@
-import { Permission } from '@/types/permissions';
+import type { Permission, PermissionMap } from '@/types/permissions';
+import type { DocumentType } from '@/utils/dashboardUtils';
 
-import type { PermissionMap } from '@/features/dashboard/types';
-
-// 使用 Map 加速权限判断
+// 创建权限映射Map
 export const createPermissionMap = (permissions: Permission[]): Map<string, boolean> => {
   const permissionMap = new Map<string, boolean>();
-  permissions.forEach(perm => {
-    if (perm.canAccess) {
-      permissionMap.set(perm.moduleId, true);
-    }
+  
+  permissions.forEach(permission => {
+    permissionMap.set(permission.moduleId, permission.canAccess);
   });
+  
   return permissionMap;
 };
 
@@ -82,7 +81,7 @@ export const buildPermissionMap = (
   // 构建可访问的文档类型列表
   const accessibleDocumentTypes = Object.entries(documentTypePermissions)
     .filter(([_, hasAccess]) => hasAccess)
-    .map(([type, _]) => type);
+    .map(([type, _]) => type as DocumentType);
 
   return {
     permissions: permissionsResult,

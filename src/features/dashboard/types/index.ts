@@ -52,5 +52,5 @@ export interface SuccessMessage {
 
 // 文档筛选器类型
 export type TimeFilter = 'today' | '3days' | 'week' | 'month';
-export type DocumentType = 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase';
+export type DocumentType = 'quotation' | 'confirmation' | 'invoice' | 'packing' | 'purchase';
 export type TypeFilter = 'all' | DocumentType;
