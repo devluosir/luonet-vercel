@@ -27,7 +27,7 @@ import {
   filterToolsModules 
 } from '@/features/dashboard/utils/moduleFilters';
 import type { DashboardModule } from '@/features/dashboard/types';
-import { ThemeDebugger } from '@/components/ThemeDebugger';
+// 调试组件已移除
 
 
 export default function DashboardPage() {
@@ -194,8 +194,7 @@ export default function DashboardPage() {
 
       <Footer />
 
-      {/* 主题调试器 - 仅在开发环境显示 */}
-      {process.env.NODE_ENV === 'development' && <ThemeDebugger />}
+      {/* 调试组件已移除 */}
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { useMailForm } from '../hooks/useMailForm';
 import { useMailStore } from '../state/mail.store';
 import { ChevronUp } from 'lucide-react';
 import { useState } from 'react';
-import { ThemeDebugger } from '@/components/ThemeDebugger';
+// 调试组件已移除
 
 export default function MailPage() {
   const activeTab = useActiveTab();
@@ -78,7 +78,7 @@ export default function MailPage() {
       <Footer />
 
       {/* 主题调试器 - 仅在开发环境显示 */}
-      {process.env.NODE_ENV === 'development' && <ThemeDebugger />}
+      {/* 调试组件已移除 */}
     </div>
   );
 }

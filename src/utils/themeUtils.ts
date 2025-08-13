@@ -190,8 +190,7 @@ export class ThemeManager {
       return; // 配置没有变化，跳过更新
     }
     
-    console.log('🔄 更新主题配置:', { 当前: this.config, 更新: updates });
-    console.log('🔄 配置已更新:', { 之前: oldConfig, 之后: this.config });
+    // 调试日志已关闭
     
     this.saveToStorage();
     this.debouncedApplyTheme();
@@ -256,24 +255,24 @@ export class ThemeManager {
       return;
     }
     
-    console.log('🔄 应用主题到DOM:', this.config);
+    // 调试日志已关闭
     
     // 应用深色模式类
     if (this.config.mode === 'dark') {
       root.classList.add('dark');
-      console.log('🔄 添加dark类');
+      // 调试日志已关闭
     } else {
       root.classList.remove('dark');
-      console.log('🔄 移除dark类');
+      // 调试日志已关闭
     }
 
     // 应用按钮主题类
     if (this.config.buttonTheme === 'classic') {
       root.classList.add('classic-theme');
-      console.log('🔄 添加classic-theme类');
+      // 调试日志已关闭
     } else {
       root.classList.remove('classic-theme');
-      console.log('🔄 移除classic-theme类');
+      // 调试日志已关闭
     }
 
     // 设置CSS变量
@@ -281,7 +280,7 @@ export class ThemeManager {
     
     // 记录已应用的配置
     this.lastAppliedConfig = configString;
-    console.log('🔄 当前HTML类名:', root.className);
+    // 调试日志已关闭
   }
 
   /**
@@ -315,7 +314,7 @@ export class ThemeManager {
     const isDark = this.config.mode === 'dark';
     const isClassic = this.config.buttonTheme === 'classic';
 
-    console.log('🎨 设置模块按钮CSS变量:', { isDark, isClassic });
+    // 调试日志已关闭
 
     // 定义模块颜色映射
     const moduleColors = {
@@ -347,12 +346,7 @@ export class ThemeManager {
         root.style.setProperty(`--${moduleId}-hover-from`, hoverFromColor);
         root.style.setProperty(`--${moduleId}-hover-to`, hoverToColor);
         
-        console.log(`🎨 ${moduleId} 经典主题变量已设置:`, {
-          from: fromColor,
-          to: toColor,
-          hoverFrom: hoverFromColor,
-          hoverTo: hoverToColor
-        });
+        // 调试日志已关闭
       } else {
         // 彩色主题：清除之前设置的CSS变量，让globals.css中的定义生效
         const propertiesToRemove = [
@@ -366,18 +360,13 @@ export class ThemeManager {
           root.style.removeProperty(prop);
         });
         
-        console.log(`🎨 ${moduleId} 彩色主题变量已清除:`, propertiesToRemove);
-        
-        // 验证清除是否成功
-        const fromValue = root.style.getPropertyValue(`--${moduleId}-from`);
-        const toValue = root.style.getPropertyValue(`--${moduleId}-to`);
-        console.log(`🎨 ${moduleId} 清除后验证:`, { from: fromValue, to: toValue });
+        // 调试日志已关闭
       }
       
       // 设置图标和徽章颜色
       root.style.setProperty(`--${moduleId}-icon-color`, color);
       root.style.setProperty(`--${moduleId}-badge-bg`, color);
-      console.log(`🎨 ${moduleId} 图标和徽章颜色: ${color}`);
+      // 调试日志已关闭
     });
     
     // 强制重新计算样式
@@ -393,10 +382,7 @@ export class ThemeManager {
     // 触发重排以强制重新计算样式
     document.body.offsetHeight;
     
-    // 延迟执行以确保样式更新
-    setTimeout(() => {
-      console.log('🎨 样式重新计算完成');
-    }, 10);
+    // 调试日志已关闭
   }
 
   /**
@@ -407,19 +393,19 @@ export class ThemeManager {
 
     try {
       const stored = localStorage.getItem('theme-config');
-      console.log('🔄 从localStorage加载配置:', stored);
+      // 调试日志已关闭
       
       if (stored) {
         const parsed = JSON.parse(stored);
-        console.log('🔄 解析的配置:', parsed);
+        // 调试日志已关闭
         this.config = { ...DEFAULT_THEME, ...parsed };
-        console.log('🔄 合并后的配置:', this.config);
+        // 调试日志已关闭
       } else {
-        console.log('🔄 没有找到存储的配置，使用默认配置:', DEFAULT_THEME);
+        // 调试日志已关闭
       }
     } catch (error) {
       console.error('🔄 加载主题配置失败:', error);
-      console.log('🔄 使用默认配置:', DEFAULT_THEME);
+      // 调试日志已关闭
     }
   }
 
@@ -431,12 +417,10 @@ export class ThemeManager {
 
     try {
       const configString = JSON.stringify(this.config);
-      console.log('🔄 保存配置到localStorage:', configString);
+      // 调试日志已关闭
       localStorage.setItem('theme-config', configString);
       
-      // 验证保存是否成功
-      const saved = localStorage.getItem('theme-config');
-      console.log('🔄 验证保存结果:', saved);
+      // 调试日志已关闭
     } catch (error) {
       console.error('🔄 保存主题配置失败:', error);
     }

@@ -18,10 +18,10 @@ export function useThemeManager() {
       return;
     }
 
-    console.log('🔄 useThemeManager: 设置监听器');
+    // 调试日志已关闭
     
     const unsubscribe = themeManager.addListener((newConfig) => {
-      console.log('🔄 useThemeManager: 收到配置更新:', newConfig);
+      // 调试日志已关闭
       setConfig(newConfig);
     });
 
@@ -33,7 +33,7 @@ export function useThemeManager() {
 
     return () => {
       if (listenerRef.current) {
-        console.log('🔄 useThemeManager: 清理监听器');
+        // 调试日志已关闭
         listenerRef.current();
         listenerRef.current = null;
         isInitializedRef.current = false;

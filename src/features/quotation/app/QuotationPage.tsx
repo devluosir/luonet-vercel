@@ -20,6 +20,7 @@ import { saveOrUpdate } from '../services/quotation.service';
 import { useGenerateService } from '../services/generate.service';
 import { downloadPdf } from '../services/generate.service';
 import { buildPreviewPayload } from '../services/preview.service';
+import { exportQuotationToExcel, exportSalesConfirmationToExcel } from '../services/excel.service';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { usePdfWarmup } from '@/hooks/usePdfWarmup';
 
@@ -50,7 +51,7 @@ import { SettingsPanel } from '@/components/quotation/SettingsPanel';
 import { ImportDataButton } from '@/components/quotation/ImportDataButton';
 import { PasteDialog } from '@/components/quotation/PasteDialog';
 import { Footer } from '@/components/Footer';
-import { Clipboard, History, Save, Settings, Download, Eye, Activity } from 'lucide-react';
+import { Clipboard, History, Save, Settings, Download, Eye, Activity, FileSpreadsheet } from 'lucide-react';
 
 
 
@@ -490,6 +491,23 @@ export default function QuotationPage() {
     }
   };
   
+  // 处理Excel导出
+  const handleExportExcel = () => {
+    if (!data) return;
+    
+    try {
+      if (activeTab === 'confirmation') {
+        exportSalesConfirmationToExcel(data);
+      } else {
+        exportQuotationToExcel(data, activeTab);
+      }
+      showToast('Excel导出成功', 'success');
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      showToast('Excel导出失败，请重试', 'error');
+    }
+  };
+
   // 处理表单提交
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -599,6 +617,14 @@ export default function QuotationPage() {
                     title={editId ? '保存修改' : '保存新记录'}
                   >
                     <Save className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportExcel}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
+                    title="导出Excel"
+                  >
+                    <FileSpreadsheet className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                   </button>
                   <button
                     type="button"
@@ -857,6 +883,25 @@ export default function QuotationPage() {
                       )}
                     </div>
                   </button>
+
+                  {/* Excel导出按钮 */}
+                  <button
+                    type="button"
+                    onClick={handleExportExcel}
+                    className="px-4 py-2 rounded-xl text-sm font-medium 
+                      transition-all duration-300
+                      bg-orange-600 hover:bg-orange-700 text-white font-medium
+                      shadow-sm hover:shadow-md
+                      active:scale-[0.98] active:shadow-inner
+                      transform transition-all duration-75 ease-out
+                      w-full sm:w-auto sm:min-w-[120px] h-10"
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <FileSpreadsheet className="w-4 h-4" />
+                      <span>导出Excel</span>
+                    </div>
+                  </button>
+
                   {/* 预览进度条 */}
                   {isPreviewing && (
                     <div className="mt-2 w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">

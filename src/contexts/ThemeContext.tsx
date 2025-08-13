@@ -31,10 +31,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // 监听主题变化
   useEffect(() => {
-    console.log('🔄 ThemeProvider: 设置监听器');
+    // 调试日志已关闭
     
     const unsubscribe = themeManager.addListener((newConfig) => {
-      console.log('🔄 ThemeProvider: 收到配置更新:', newConfig);
+      // 调试日志已关闭
       setConfig(newConfig);
     });
 
@@ -42,7 +42,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
 
     return () => {
-      console.log('🔄 ThemeProvider: 清理监听器');
+      // 调试日志已关闭
       unsubscribe();
     };
   }, []);

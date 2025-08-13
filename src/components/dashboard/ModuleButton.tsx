@@ -87,7 +87,7 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
 
   // 开发环境下调试CSS变量
   if (process.env.NODE_ENV === 'development') {
-    console.log(`🎨 ${module.id} 按钮CSS变量:`, cssVariables);
+    // 调试日志已关闭
   }
 
   return (
