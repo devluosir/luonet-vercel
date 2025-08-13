@@ -17,6 +17,86 @@ function setCnFont(doc: jsPDF, style: 'normal'|'bold'|'italic'|'bolditalic' = 'n
   }
 }
 
+/**
+ * 在PDF中渲染表格
+ */
+function renderTableInPDF(
+  doc: jsPDF, 
+  tableText: string, 
+  startX: number, 
+  startY: number, 
+  maxWidth: number,
+  checkAndAddPage: (y: number, needed?: number) => number
+): number {
+  // 解析表格数据
+  const lines = tableText.split('\n').filter(line => line.trim());
+  if (lines.length === 0) return startY;
+
+  const tableData = lines.map(line => line.split('\t').map(cell => cell.trim()));
+  
+  // 计算列宽
+  const columnCount = Math.max(...tableData.map(row => row.length));
+  const columnWidth = Math.min(maxWidth / columnCount, 40); // 最大列宽40mm
+  
+  // 计算表格总宽度
+  const tableWidth = columnWidth * columnCount;
+  
+  // 检查是否需要分页
+  const rowHeight = 6; // 每行高度6mm
+  const totalHeight = tableData.length * rowHeight;
+  let currentY = checkAndAddPage(startY, totalHeight);
+  
+  // 绘制表格边框和内容
+  setCnFont(doc, 'normal');
+  doc.setFontSize(9);
+  
+  tableData.forEach((row, rowIndex) => {
+    const rowY = currentY + (rowIndex * rowHeight);
+    
+    // 绘制行边框
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.1);
+    doc.line(startX, rowY, startX + tableWidth, rowY);
+    
+    // 绘制单元格内容和边框
+    row.forEach((cell, colIndex) => {
+      const cellX = startX + (colIndex * columnWidth);
+      const cellY = rowY;
+      
+      // 绘制垂直边框
+      doc.line(cellX, cellY, cellX, cellY + rowHeight);
+      
+      // 绘制单元格内容
+      doc.setTextColor(0, 0, 0);
+      const cellText = cell || '';
+      
+      // 如果是第一行，使用粗体
+      if (rowIndex === 0) {
+        setCnFont(doc, 'bold');
+      } else {
+        setCnFont(doc, 'normal');
+      }
+      
+      // 文本居中显示
+      const textWidth = doc.getTextWidth(cellText);
+      const textX = cellX + (columnWidth - textWidth) / 2;
+      const textY = cellY + (rowHeight / 2) + 2; // 垂直居中，稍微向下偏移
+      
+      doc.text(cellText, textX, textY);
+    });
+    
+    // 绘制最后一列的右边框
+    const lastCellX = startX + (columnCount * columnWidth);
+    doc.line(lastCellX, rowY, lastCellX, rowY + rowHeight);
+  });
+  
+  // 绘制底部边框
+  const bottomY = currentY + (tableData.length * rowHeight);
+  doc.line(startX, bottomY, startX + tableWidth, bottomY);
+  
+  return bottomY + 5; // 返回表格底部位置，加上5mm间距
+}
+
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
   lastAutoTable: {
@@ -270,18 +350,26 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       currentY += 5;
     }
 
-    // 项目规格描述（多行文本框）
+    // 项目规格描述（支持表格格式）
     const specText = data.projectSpecification || '';
-    const wrappedSpecText = doc.splitTextToSize(specText, contentMaxWidth);
-    if (wrappedSpecText.length > 0) {
-      currentY = checkAndAddPage(currentY, wrappedSpecText.length * 4);
-      doc.setTextColor(0, 0, 255); // 设置蓝色
-      wrappedSpecText.forEach((line: string) => {
-        doc.text(line, contentMargin, currentY);
-        currentY += 4; 
-      });
-      doc.setTextColor(0, 0, 0); // 恢复黑色
-      currentY += 5;
+    if (specText.trim()) {
+      // 检查是否包含制表符，如果是则渲染为表格
+      if (specText.includes('\t')) {
+        currentY = renderTableInPDF(doc, specText, contentMargin, currentY, contentMaxWidth, checkAndAddPage);
+      } else {
+        // 普通文本渲染
+        const wrappedSpecText = doc.splitTextToSize(specText, contentMaxWidth);
+        if (wrappedSpecText.length > 0) {
+          currentY = checkAndAddPage(currentY, wrappedSpecText.length * 4);
+          doc.setTextColor(0, 0, 255); // 设置蓝色
+          wrappedSpecText.forEach((line: string) => {
+            doc.text(line, contentMargin, currentY);
+            currentY += 4; 
+          });
+          doc.setTextColor(0, 0, 0); // 恢复黑色
+          currentY += 5;
+        }
+      }
     }
 
     // 2. 付款条件
