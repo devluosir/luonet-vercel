@@ -40,7 +40,7 @@ export const isQuotationUpgraded = (quotationRecord: any, confirmationRecords: a
 ```typescript
 export const getDocumentsByType = (type: DocumentType): DocumentWithType[] => {
   if (type === 'quotation') {
-    const quotationHistory = getSafeLocalStorage('quotation_history') || [];
+    const quotationHistory = getLocalStorageJSON('quotation_history', []);
     const confirmationRecords = quotationHistory.filter((doc: any) => doc.type === 'confirmation');
     
     return quotationHistory

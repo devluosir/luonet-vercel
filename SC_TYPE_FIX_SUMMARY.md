@@ -63,7 +63,7 @@ if (type === 'confirmation' && !data.contractNo) {
 ```typescript
 // 对于confirmation类型，需要从quotation_history中筛选出type为'confirmation'的记录
 if (type === 'confirmation') {
-  const quotationHistory = getSafeLocalStorage('quotation_history') || [];
+  const quotationHistory = getLocalStorageJSON('quotation_history', []);
   const confirmationDocs = quotationHistory
     .filter((doc: any) => doc.type === 'confirmation')
     .map((doc: any) => ({ ...doc, type: 'confirmation' as DocumentType }));

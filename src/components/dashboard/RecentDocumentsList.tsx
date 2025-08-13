@@ -73,7 +73,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
   // 获取文档编号
   const getDocumentNumber = (doc: DocumentWithType) => {
-    const data = doc.data as Record<string, unknown> | undefined;
+    const data = doc.data as any; // 使用any类型避免类型转换错误
     let num = '';
     switch (doc.type) {
       case 'quotation': 
@@ -99,7 +99,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
   // 获取文档名称
   const getDocumentName = (doc: DocumentWithType) => {
-    const data = doc.data as Record<string, unknown> | undefined;
+    const data = doc.data as any; // 使用any类型避免类型转换错误
     let name = '';
     
     // 尝试从不同字段获取名称
@@ -150,7 +150,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       filtered = filtered.filter(doc => {
         try {
           // 获取搜索文本 - 用于搜索功能
-          const data = doc.data as Record<string, unknown> | undefined;
+          const data = doc.data as any; // 使用any类型避免类型转换错误
           const documentNumber = getDocumentNumber(doc);
           const documentName = getDocumentName(doc);
           
