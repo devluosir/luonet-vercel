@@ -27,7 +27,7 @@ export const exportQuotationToExcel = (data: QuotationData, type: 'quotation' | 
     
     // 添加文档基本信息
     const documentNo = type === 'confirmation' ? (data.contractNo || data.quotationNo) : data.quotationNo;
-    const documentType = type === 'confirmation' ? 'ORDER CONFIRMATION' : 'QUOTATION';
+    const documentType = type === 'confirmation' ? 'SALES CONFIRMATION' : 'QUOTATION';
     
     // 添加标题 - 与PDF保持一致，居中显示
     excelData.push(['', '', '', documentType, '', '', '', '']);
@@ -155,7 +155,7 @@ export const exportSalesConfirmationToExcel = (data: QuotationData): void => {
     const contractNo = data.contractNo || data.quotationNo;
     
     // 添加标题 - 与PDF保持一致，居中显示
-    excelData.push(['', '', '', 'ORDER CONFIRMATION', '', '', '', '']);
+    excelData.push(['', '', '', 'SALES CONFIRMATION', '', '', '', '']);
     excelData.push([]); // 空行
     
     // 添加基础信息区域 - 左右对齐布局

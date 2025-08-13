@@ -146,7 +146,7 @@ export const generateOrderConfirmationPDF = async (
     // 添加标题
     doc.setFontSize(14);
     safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
-    const title = 'ORDER CONFIRMATION';
+    const title = 'SALES CONFIRMATION';
     const titleWidth = doc.getTextWidth(title);
     const titleX = margin + (pageWidth - 2 * margin - titleWidth) / 2;
     doc.text(title, titleX, startY);

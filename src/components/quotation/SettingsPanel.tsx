@@ -206,6 +206,8 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
         {/* 分隔线 */}
         <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
+
+
         {/* 换行控制：小屏换行，中屏不换行 */}
         <div className="w-full sm:w-auto"></div>
 
