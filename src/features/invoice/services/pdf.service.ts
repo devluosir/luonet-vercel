@@ -47,7 +47,11 @@ export class PDFService {
       showPaymentTerms: data.showPaymentTerms,
       paymentDate: data.paymentDate,
       additionalPaymentTerms: data.additionalPaymentTerms,
-      showInvoiceReminder: data.showInvoiceReminder
+      showInvoiceReminder: data.showInvoiceReminder,
+      depositPercentage: data.depositPercentage,
+      depositAmount: data.depositAmount,
+      showBalance: data.showBalance,
+      balanceAmount: data.balanceAmount
     };
   }
 

@@ -546,11 +546,16 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
     const depositLabelX = depositValueX - doc.getTextWidth(depositValue) - 28;
 
     setCnFont(doc, 'bold');
-    doc.text(depositLabel, depositLabelX, currentY + 8);
-    doc.text(depositValue, depositValueX, currentY + 8, { align: 'right' });
+    doc.text(depositLabel, depositLabelX, currentY + 5);
+    // 如果没有显示Balance，则Deposit金额显示为蓝色
+    if (!data.showBalance) {
+      doc.setTextColor(0, 0, 255); // 蓝色
+    }
+    doc.text(depositValue, depositValueX, currentY + 5, { align: 'right' });
+    doc.setTextColor(0, 0, 0); // 恢复黑色
     setCnFont(doc, 'normal');
     
-    currentY += 8;
+    currentY += 5;
     
     // 如果显示Balance，也显示尾款信息
     if (data.showBalance) {
@@ -562,11 +567,14 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
       const balanceLabelX = balanceValueX - doc.getTextWidth(balanceValue) - 28;
 
       setCnFont(doc, 'bold');
-      doc.text(balanceLabel, balanceLabelX, currentY + 8);
-      doc.text(balanceValue, balanceValueX, currentY + 8, { align: 'right' });
+      doc.text(balanceLabel, balanceLabelX, currentY + 5);
+      // Balance金额显示为蓝色
+      doc.setTextColor(0, 0, 255); // 蓝色
+      doc.text(balanceValue, balanceValueX, currentY + 5, { align: 'right' });
+      doc.setTextColor(0, 0, 0); // 恢复黑色
       setCnFont(doc, 'normal');
       
-      currentY += 8;
+      currentY += 5;
     }
   }
 
@@ -596,10 +604,10 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   
   const lines = doc.splitTextToSize(amountInWords, pageWidth - (margin * 2));
   lines.forEach((line: string, index: number) => {
-    doc.text(String(line), margin, currentY + 15 + (index * 5));
+    doc.text(String(line), margin, currentY + 6 + (index * 5));
   });
 
-  return currentY + 15 + (lines.length * 5) + 8;
+  return currentY + 6 + (lines.length * 5) + 8;
 }
 
 // 渲染银行信息和付款条款
