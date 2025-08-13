@@ -11,8 +11,8 @@ const inter = Inter({ subsets: ['latin'] });
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'MLUONET - 企业管理系统',
-  description: '现代化的企业管理系统，提供完整的业务管理解决方案',
+  title: 'Luo & Company - 管理系统',
+  description: 'Luo & Company 提供专业的报价单、销售确认单和发票管理系统，帮助企业管理业务流程，提高工作效率。',
 };
 
 export default function RootLayout({
