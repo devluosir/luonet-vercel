@@ -386,7 +386,13 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
 
   // 添加新行
   const addRow = () => {
-    const newData = [...tableData, ['']];
+    const newRow: CellData[] = [{
+      value: '',
+      rowSpan: 1,
+      colSpan: 1,
+      isMerged: false
+    }];
+    const newData = [...tableData, newRow];
     setTableData(newData);
     const csvText = tableToCSV(newData);
     onChange(csvText);
@@ -402,7 +408,15 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
 
   // 添加新列
   const addColumn = () => {
-    const newData = tableData.map(row => [...row, '']);
+    const newData = tableData.map(row => [
+      ...row, 
+      {
+        value: '',
+        rowSpan: 1,
+        colSpan: 1,
+        isMerged: false
+      }
+    ]);
     setTableData(newData);
     const csvText = tableToCSV(newData);
     onChange(csvText);
@@ -412,8 +426,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
   const deleteColumn = (colIndex: number) => {
     const newData = tableData.map(row => row.filter((_, index) => index !== colIndex));
     setTableData(newData);
-    const csvText = tableToCSV(newData);
-    onChange(csvText);
+    onChange(tableToCSV(newData));
   };
 
 
