@@ -90,7 +90,7 @@ export const getStartDateByFilter = (filter: TimeFilter): Date => {
 
 // 根据权限过滤文档类型
 export const getAccessibleDocumentTypes = (permissionMap: any): DocumentType[] => {
-  return ['quotation', 'confirmation', 'invoice', 'packing', 'purchase']
+  return (['quotation', 'confirmation', 'invoice', 'packing', 'purchase'] as DocumentType[])
     .filter(type => {
       const permissionKey = type === 'confirmation' ? 'quotation' : type;
       return permissionMap.documentTypePermissions[permissionKey];
@@ -101,7 +101,7 @@ export const getAccessibleDocumentTypes = (permissionMap: any): DocumentType[] =
 export const loadAllDocumentsByPermissions = (permissionMap: any): DocumentWithType[] => {
   const allDocuments: DocumentWithType[] = [];
   
-  ['quotation', 'confirmation', 'invoice', 'packing', 'purchase'].forEach(type => {
+  (['quotation', 'confirmation', 'invoice', 'packing', 'purchase'] as DocumentType[]).forEach(type => {
     const permissionKey = type === 'confirmation' ? 'quotation' : type;
     if (permissionMap.documentTypePermissions[permissionKey]) {
       // 使用修复后的getDocumentsByType函数来加载文档

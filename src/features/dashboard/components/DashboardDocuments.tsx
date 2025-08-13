@@ -1,6 +1,6 @@
 import React from 'react';
 import { RecentDocumentsList } from '@/components/dashboard/RecentDocumentsList';
-import { DocumentWithType } from '@/utils/dashboardUtils';
+import { DocumentWithType, DocumentType } from '@/utils/dashboardUtils';
 
 interface PermissionMap {
   documentTypePermissions: {
@@ -10,7 +10,7 @@ interface PermissionMap {
     invoice: boolean;
     purchase: boolean;
   };
-  accessibleDocumentTypes: string[];
+  accessibleDocumentTypes: DocumentType[];
 }
 
 interface DashboardDocumentsProps {

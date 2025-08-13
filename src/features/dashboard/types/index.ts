@@ -40,7 +40,7 @@ export interface PermissionMap {
     invoice: boolean;
     purchase: boolean;
   };
-  accessibleDocumentTypes: string[];
+  accessibleDocumentTypes: DocumentType[];
 }
 
 // 成功消息类型

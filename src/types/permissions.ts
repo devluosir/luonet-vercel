@@ -1,3 +1,5 @@
+import type { DocumentType } from '@/utils/dashboardUtils';
+
 export interface Permission {
   id: string;
   moduleId: string;
@@ -30,5 +32,5 @@ export interface PermissionMap {
     invoice: boolean;
     purchase: boolean;
   };
-  accessibleDocumentTypes: string[];
+  accessibleDocumentTypes: DocumentType[];
 } 
