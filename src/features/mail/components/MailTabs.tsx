@@ -15,7 +15,7 @@ interface MailTabsProps {
 }
 
 export function MailTabs({ activeTab, onTabChange, showSettings, onToggleSettings, field, mailType, setMailType }: MailTabsProps) {
-  const tabs = [
+  const tabs: Array<{ value: MailTab; label: string }> = [
     { value: 'mail', label: 'Mail' },
     { value: 'reply', label: 'Reply' }
   ];
