@@ -127,25 +127,28 @@ export function ChatInterface({ showSettings, onToggleSettings }: ChatInterfaceP
           </div>
         )}
 
-        {/* 主输入区域 */}
-        <div className="relative">
+        {/* 主输入区域 - 重新设计布局 */}
+        <div className="space-y-4">
           {/* 邮件内容输入 */}
-          <TextAreaField
-            {...field(activeTab === 'mail' ? 'mail' : 'reply')}
-            label={activeTab === 'mail' ? FORM_LABELS.mail : FORM_LABELS.reply}
-            placeholder={activeTab === 'mail' ? PLACEHOLDERS.mail : PLACEHOLDERS.reply}
-            required
-            rows={3}
-          />
+          <div>
+            <TextAreaField
+              {...field(activeTab === 'mail' ? 'mail' : 'reply')}
+              label={activeTab === 'mail' ? FORM_LABELS.mail : FORM_LABELS.reply}
+              placeholder={activeTab === 'mail' ? PLACEHOLDERS.mail : PLACEHOLDERS.reply}
+              required
+              rows={4}
+            />
+          </div>
           
-          {/* 生成按钮 - 放在输入框内部右下角 */}
-          <div className="absolute bottom-3 right-3">
+          {/* 操作按钮区域 - 放在输入框下方，右对齐 */}
+          <div className="flex justify-end items-center gap-3">
+            {/* 生成按钮 - 主要操作按钮 */}
             <GenerateButton
               onClick={generateMail}
               loading={isLoading}
               disabled={!canGenerate}
               isReply={activeTab === 'reply'}
-              variant="compact"
+              variant="default"
             />
           </div>
         </div>

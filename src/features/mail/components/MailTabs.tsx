@@ -15,23 +15,29 @@ interface MailTabsProps {
 }
 
 export function MailTabs({ activeTab, onTabChange, showSettings, onToggleSettings, field, mailType, setMailType }: MailTabsProps) {
-  const tabs: { value: MailTab; label: string }[] = [
+  const tabs = [
     { value: 'mail', label: 'Mail' },
     { value: 'reply', label: 'Reply' }
   ];
 
+  // 构建设置按钮的CSS变量对象
+  const settingsButtonVariables = {
+    '--bg-gradient': 'linear-gradient(135deg, rgba(107, 114, 128, 0.08), rgba(107, 114, 128, 0.12))',
+    '--text-color': '#171717',
+    '--icon-color': '#6b7280',
+    '--shadow': '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+  };
+
   return (
     <div className="flex justify-between items-center mb-8 relative">
       {/* 选项卡 */}
-      <div className="flex gap-1 p-1 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-2xl border border-gray-200 dark:border-gray-600 shadow-sm">
+      <div className="mail-tabs-container flex gap-1 p-1 rounded-2xl">
         {tabs.map((tab) => (
           <button
             key={tab.value}
             onClick={() => onTabChange(tab.value)}
-            className={`px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
-              activeTab === tab.value
-                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-105'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
+            className={`mail-tab-button px-6 py-3 rounded-xl text-sm transition-all duration-300 ${
+              activeTab === tab.value ? 'active' : ''
             }`}
           >
             {tab.label}
@@ -73,16 +79,15 @@ export function MailTabs({ activeTab, onTabChange, showSettings, onToggleSetting
         {/* 设置按钮 */}
         <button
           onClick={onToggleSettings}
-          className={`flex items-center justify-center gap-2 px-4 py-2.5 h-10 relative group cursor-pointer rounded-lg transition-all duration-300 flex-shrink-0 ${
-            showSettings
-              ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+          className={`mail-settings-button flex items-center justify-center gap-2 px-4 py-2.5 h-10 relative group cursor-pointer rounded-lg transition-all duration-300 flex-shrink-0 ${
+            showSettings ? 'active' : ''
           }`}
+          style={settingsButtonVariables as React.CSSProperties}
           title="设置"
         >
           {/* 图标容器 */}
           <div className="icon-container w-4 h-4 flex items-center justify-center flex-shrink-0">
-            <Settings className="w-4 h-4 text-current" />
+            <Settings className="icon w-4 h-4" />
           </div>
 
           {/* 文字 */}

@@ -27,6 +27,7 @@ import {
   filterToolsModules 
 } from '@/features/dashboard/utils/moduleFilters';
 import type { DashboardModule } from '@/features/dashboard/types';
+import { ThemeDebugger } from '@/components/ThemeDebugger';
 
 
 export default function DashboardPage() {
@@ -177,63 +178,24 @@ export default function DashboardPage() {
             />
 
             {/* 最近文档列表 */}
-            {permissionMap.accessibleDocumentTypes.length > 0 && (
-              <DashboardDocuments
-                documents={recentDocuments}
-                timeFilter={timeFilter}
-                typeFilter={typeFilter}
-                showAllFilters={showAllFilters}
-                onTimeFilterChange={setTimeFilter}
-                onTypeFilterChange={setTypeFilter}
-                onShowAllFiltersChange={setShowAllFilters}
-                permissionMap={permissionMap}
-              />
-            )}
-
-
+            <DashboardDocuments
+              documents={recentDocuments}
+              timeFilter={timeFilter}
+              typeFilter={typeFilter}
+              showAllFilters={showAllFilters}
+              onTimeFilterChange={setTimeFilter}
+              onTypeFilterChange={setTypeFilter}
+              onShowAllFiltersChange={setShowAllFilters}
+              permissionMap={permissionMap}
+            />
           </div>
         </div>
       </div>
-      
-      {/* 强制 Tailwind JIT 包含所有 Apple 风格渐变类名 */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="hidden">
-          {/* 淡雅默认渐变 */}
-          from-blue-100 to-blue-200 from-emerald-100 to-emerald-200
-          from-cyan-100 to-cyan-200 from-violet-100 to-violet-200  
-          from-orange-100 to-orange-200 from-indigo-100 to-indigo-200
-          from-pink-100 to-pink-200 from-fuchsia-100 to-fuchsia-200
-          from-gray-100 to-gray-200
 
-          {/* 悬停增强渐变 */}
-          hover:from-blue-200 hover:to-blue-300 hover:from-emerald-200 hover:to-emerald-300
-          hover:from-cyan-200 hover:to-cyan-300 hover:from-violet-200 hover:to-violet-300
-          hover:from-orange-200 hover:to-orange-300 hover:from-indigo-200 hover:to-indigo-300
-          hover:from-pink-200 hover:to-pink-300 hover:from-fuchsia-200 hover:to-fuchsia-300
-          hover:from-gray-200 hover:to-gray-300
-
-          {/* 暗色模式默认 */}
-          dark:from-blue-300/70 dark:to-blue-500/70 dark:from-emerald-300/70 dark:to-emerald-500/70
-          dark:from-cyan-300/70 dark:to-cyan-500/70 dark:from-violet-300/70 dark:to-violet-500/70
-          dark:from-orange-300/70 dark:to-orange-500/70 dark:from-indigo-300/70 dark:to-indigo-500/70
-          dark:from-pink-300/70 dark:to-pink-500/70 dark:from-fuchsia-300/70 dark:to-fuchsia-500/70
-          dark:from-gray-300/70 dark:to-gray-500/70
-
-          {/* 暗色模式悬停 */}
-          dark:hover:from-blue-400/80 dark:hover:to-blue-600/80 dark:hover:from-emerald-400/80 dark:hover:to-emerald-600/80
-          dark:hover:from-cyan-400/80 dark:hover:to-cyan-600/80 dark:hover:from-violet-400/80 dark:hover:to-violet-600/80
-          dark:hover:from-orange-400/80 dark:hover:to-orange-600/80 dark:hover:from-indigo-400/80 dark:hover:to-indigo-600/80
-          dark:hover:from-pink-400/80 dark:hover:to-pink-600/80 dark:hover:from-fuchsia-400/80 dark:hover:to-fuchsia-600/80
-          dark:hover:from-gray-400/80 dark:hover:to-gray-600/80
-
-          {/* 其他样式 */}
-          bg-white/30 backdrop-blur-sm bg-gradient-to-br text-neutral-800
-        </div>
-      )}
-      
       <Footer />
-      
 
+      {/* 主题调试器 - 仅在开发环境显示 */}
+      {process.env.NODE_ENV === 'development' && <ThemeDebugger />}
     </div>
   );
 }

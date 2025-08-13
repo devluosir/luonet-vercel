@@ -1,92 +1,122 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useThemeManager } from '@/hooks/useThemeManager';
-import { themeManager } from '@/utils/themeUtils';
 
 export const ThemeDebugger: React.FC = () => {
-  const { config, buttonTheme, mode } = useThemeManager();
-  const [debugInfo, setDebugInfo] = useState<any>({});
+  const { buttonTheme, mode } = useThemeManager();
+  const [cssVariables, setCssVariables] = useState<Record<string, string>>({});
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // 收集调试信息
-    const info = {
-      config,
-      buttonTheme,
-      mode,
-      htmlClasses: typeof window !== 'undefined' ? document.documentElement.className : '',
-      cssVariables: typeof window !== 'undefined' ? {
-        primaryColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color'),
-        bgPrimary: getComputedStyle(document.documentElement).getPropertyValue('--bg-primary'),
-      } : {},
-      localStorage: typeof window !== 'undefined' ? {
-        themeConfig: localStorage.getItem('theme-config'),
-        themeSettings: localStorage.getItem('theme-settings'),
-      } : {},
+    const updateCSSVariables = () => {
+      if (typeof window === 'undefined') return;
+
+      const root = document.documentElement;
+      const variables: Record<string, string> = {};
+
+      // 检查所有模块的CSS变量
+      const modules = ['quotation', 'confirmation', 'packing', 'invoice', 'purchase', 'ai-email', 'history', 'customer'];
+      
+      modules.forEach(moduleId => {
+        const fromValue = getComputedStyle(root).getPropertyValue(`--${moduleId}-from`);
+        const toValue = getComputedStyle(root).getPropertyValue(`--${moduleId}-to`);
+        const hoverFromValue = getComputedStyle(root).getPropertyValue(`--${moduleId}-hover-from`);
+        const hoverToValue = getComputedStyle(root).getPropertyValue(`--${moduleId}-hover-to`);
+        const iconColorValue = getComputedStyle(root).getPropertyValue(`--${moduleId}-icon-color`);
+        const badgeBgValue = getComputedStyle(root).getPropertyValue(`--${moduleId}-badge-bg`);
+
+        variables[`${moduleId}-from`] = fromValue.trim() || '未定义';
+        variables[`${moduleId}-to`] = toValue.trim() || '未定义';
+        variables[`${moduleId}-hover-from`] = hoverFromValue.trim() || '未定义';
+        variables[`${moduleId}-hover-to`] = hoverToValue.trim() || '未定义';
+        variables[`${moduleId}-icon-color`] = iconColorValue.trim() || '未定义';
+        variables[`${moduleId}-badge-bg`] = badgeBgValue.trim() || '未定义';
+      });
+
+      // 检查邮件模块的CSS变量
+      const mailModules = ['mail-generate', 'mail-settings'];
+      
+      mailModules.forEach(moduleId => {
+        const fromValue = getComputedStyle(root).getPropertyValue(`--${moduleId}-from`);
+        const toValue = getComputedStyle(root).getPropertyValue(`--${moduleId}-to`);
+        const hoverFromValue = getComputedStyle(root).getPropertyValue(`--${moduleId}-hover-from`);
+        const hoverToValue = getComputedStyle(root).getPropertyValue(`--${moduleId}-hover-to`);
+        const iconColorValue = getComputedStyle(root).getPropertyValue(`--${moduleId}-icon-color`);
+        const badgeBgValue = getComputedStyle(root).getPropertyValue(`--${moduleId}-badge-bg`);
+
+        variables[`${moduleId}-from`] = fromValue.trim() || '未定义';
+        variables[`${moduleId}-to`] = toValue.trim() || '未定义';
+        variables[`${moduleId}-hover-from`] = hoverFromValue.trim() || '未定义';
+        variables[`${moduleId}-hover-to`] = hoverToValue.trim() || '未定义';
+        variables[`${moduleId}-icon-color`] = iconColorValue.trim() || '未定义';
+        variables[`${moduleId}-badge-bg`] = badgeBgValue.trim() || '未定义';
+      });
+
+      setCssVariables(variables);
     };
-    
-    setDebugInfo(info);
-  }, [config, buttonTheme, mode]);
 
-  const testModuleColors = (moduleId: string) => {
-    const colors = themeManager.getModuleColors(moduleId, buttonTheme);
-    console.log(`Module ${moduleId} colors:`, colors);
-    return colors;
-  };
+    // 初始更新
+    updateCSSVariables();
 
-  const forceRefresh = () => {
-    themeManager.updateConfig(config);
-  };
+    // 监听主题变化
+    const interval = setInterval(updateCSSVariables, 1000);
 
-  if (process.env.NODE_ENV !== 'development') {
-    return null;
+    return () => clearInterval(interval);
+  }, [buttonTheme, mode]);
+
+  if (!isVisible) {
+    return (
+      <button
+        onClick={() => setIsVisible(true)}
+        className="fixed bottom-4 right-4 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm z-50 hover:bg-blue-700"
+      >
+        调试主题
+      </button>
+    );
   }
 
   return (
-    <div className="fixed bottom-4 right-4 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 z-50">
-      <h3 className="text-sm font-bold mb-2">主题调试器</h3>
-      
-      <div className="space-y-2 text-xs">
-        <div>
-          <strong>当前配置:</strong>
-          <pre className="bg-gray-100 dark:bg-gray-900 p-2 rounded mt-1 overflow-auto">
-            {JSON.stringify(config, null, 2)}
-          </pre>
+    <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-4 max-w-md max-h-96 overflow-y-auto shadow-lg z-50">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">主题调试器</h3>
+        <button
+          onClick={() => setIsVisible(false)}
+          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        <div className="text-sm">
+          <p><strong>当前主题:</strong> {mode} + {buttonTheme}</p>
+          <p><strong>HTML类名:</strong> {typeof window !== 'undefined' ? document.documentElement.className : 'N/A'}</p>
         </div>
-        
-        <div>
-          <strong>HTML类名:</strong>
-          <div className="bg-gray-100 dark:bg-gray-900 p-2 rounded mt-1">
-            {debugInfo.htmlClasses || 'N/A'}
-          </div>
+
+        <div className="text-xs space-y-2">
+          <h4 className="font-semibold">CSS变量状态:</h4>
+          {Object.entries(cssVariables).map(([key, value]) => (
+            <div key={key} className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">{key}:</span>
+              <span className={`${value === '未定义' ? 'text-red-500' : 'text-green-600'}`}>
+                {value}
+              </span>
+            </div>
+          ))}
         </div>
-        
-        <div>
-          <strong>CSS变量:</strong>
-          <pre className="bg-gray-100 dark:bg-gray-900 p-2 rounded mt-1 overflow-auto">
-            {JSON.stringify(debugInfo.cssVariables, null, 2)}
-          </pre>
-        </div>
-        
-        <div>
-          <strong>LocalStorage:</strong>
-          <pre className="bg-gray-100 dark:bg-gray-900 p-2 rounded mt-1 overflow-auto">
-            {JSON.stringify(debugInfo.localStorage, null, 2)}
-          </pre>
-        </div>
-        
-        <div className="flex gap-2">
+
+        <div className="text-xs">
+          <h4 className="font-semibold mb-2">调试命令:</h4>
           <button
-            onClick={() => testModuleColors('quotation')}
-            className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+            onClick={() => {
+              console.log('🎨 当前CSS变量:', cssVariables);
+              console.log('🎨 HTML类名:', document.documentElement.className);
+              console.log('🎨 主题配置:', { mode, buttonTheme });
+            }}
+            className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
           >
-            测试报价单颜色
-          </button>
-          <button
-            onClick={forceRefresh}
-            className="px-2 py-1 bg-green-500 text-white rounded text-xs"
-          >
-            强制刷新
+            输出到控制台
           </button>
         </div>
       </div>

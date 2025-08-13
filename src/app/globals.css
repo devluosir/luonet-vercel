@@ -106,6 +106,23 @@
   --customer-icon-color: #a21caf;
   --customer-badge-bg: #a21caf;
 
+  /* 🎨 邮件模块按钮颜色变量 - 彩色主题 */
+  /* 邮件生成按钮 - 蓝色 */
+  --mail-generate-from: rgba(59, 130, 246, 0.15);
+  --mail-generate-to: rgba(59, 130, 246, 0.25);
+  --mail-generate-hover-from: rgba(59, 130, 246, 0.25);
+  --mail-generate-hover-to: rgba(59, 130, 246, 0.35);
+  --mail-generate-icon-color: #2563eb;
+  --mail-generate-badge-bg: #2563eb;
+
+  /* 邮件设置按钮 - 灰色 */
+  --mail-settings-from: rgba(107, 114, 128, 0.08);
+  --mail-settings-to: rgba(107, 114, 128, 0.12);
+  --mail-settings-hover-from: rgba(107, 114, 128, 0.12);
+  --mail-settings-hover-to: rgba(107, 114, 128, 0.18);
+  --mail-settings-icon-color: #6b7280;
+  --mail-settings-badge-bg: #6b7280;
+
   /* 通用按钮变量 */
   --icon-bg-color: transparent;
   --badge-text-color: #ffffff;
@@ -113,10 +130,6 @@
   --border-style: 1px solid var(--border-secondary);
   --shadow-style: var(--shadow-md);
   --customer-badge-bg: #a21caf;
-
-  /* 通用按钮变量 */
-  --icon-bg-color: transparent;
-  --badge-text-color: #ffffff;
 }
 
 /* 深色模式变量 */
@@ -197,6 +210,23 @@ html.dark {
   --customer-hover-to: rgba(192, 38, 211, 0.35);
   --customer-icon-color: #d946ef;
   --customer-badge-bg: #c026d3;
+
+  /* 🎨 深色模式邮件模块按钮颜色变量 */
+  /* 邮件生成按钮 - 蓝色 */
+  --mail-generate-from: rgba(59, 130, 246, 0.25);
+  --mail-generate-to: rgba(59, 130, 246, 0.35);
+  --mail-generate-hover-from: rgba(59, 130, 246, 0.35);
+  --mail-generate-hover-to: rgba(59, 130, 246, 0.45);
+  --mail-generate-icon-color: #60a5fa;
+  --mail-generate-badge-bg: #3b82f6;
+
+  /* 邮件设置按钮 - 灰色 */
+  --mail-settings-from: rgba(156, 163, 175, 0.15);
+  --mail-settings-to: rgba(156, 163, 175, 0.25);
+  --mail-settings-hover-from: rgba(156, 163, 175, 0.25);
+  --mail-settings-hover-to: rgba(156, 163, 175, 0.35);
+  --mail-settings-icon-color: #9ca3af;
+  --mail-settings-badge-bg: #6b7280;
 }
 
 /* 🎨 Classic主题的CSS变量 - 浅色模式 (三星风格) */
@@ -264,9 +294,26 @@ html.classic-theme {
   --customer-hover-to: #d946ef;
   --customer-icon-color: #ffffff;
   --customer-badge-bg: #a21caf;
+
+  /* 🎨 经典主题邮件模块按钮颜色变量 */
+  /* 邮件生成按钮 - 三星深色蓝色渐变 */
+  --mail-generate-from: #1e40af;
+  --mail-generate-to: #2563eb;
+  --mail-generate-hover-from: #2563eb;
+  --mail-generate-hover-to: #3b82f6;
+  --mail-generate-icon-color: #ffffff;
+  --mail-generate-badge-bg: #1e40af;
+
+  /* 邮件设置按钮 - 三星灰色渐变 */
+  --mail-settings-from: #374151;
+  --mail-settings-to: #4b5563;
+  --mail-settings-hover-from: #4b5563;
+  --mail-settings-hover-to: #6b7280;
+  --mail-settings-icon-color: #ffffff;
+  --mail-settings-badge-bg: #374151;
 }
 
-/* 🎨 Classic主题的CSS变量 - 深色模式 (三星风格) */
+/* �� Classic主题的CSS变量 - 深色模式 (三星风格) */
 html.dark.classic-theme {
   /* 报价单 - 三星深色蓝色渐变 */
   --quotation-from: #1e3a8a;
@@ -331,6 +378,23 @@ html.dark.classic-theme {
   --customer-hover-to: #c026d3;
   --customer-icon-color: #ffffff;
   --customer-badge-bg: #86198f;
+
+  /* 🎨 深色经典主题邮件模块按钮颜色变量 */
+  /* 邮件生成按钮 - 三星深色蓝色渐变 */
+  --mail-generate-from: #1e3a8a;
+  --mail-generate-to: #1e40af;
+  --mail-generate-hover-from: #1e40af;
+  --mail-generate-hover-to: #2563eb;
+  --mail-generate-icon-color: #ffffff;
+  --mail-generate-badge-bg: #1e3a8a;
+
+  /* 邮件设置按钮 - 三星深色灰色渐变 */
+  --mail-settings-from: #1f2937;
+  --mail-settings-to: #374151;
+  --mail-settings-hover-from: #374151;
+  --mail-settings-hover-to: #4b5563;
+  --mail-settings-icon-color: #ffffff;
+  --mail-settings-badge-bg: #1f2937;
 }
 
 /* 主题切换动画 */
@@ -342,81 +406,357 @@ html.dark.classic-theme {
 
 
 
-/* 🎨 邮件页面按钮样式 - 采用与模块按钮相同的设计模式 */
-.mail-generate-button,
-.mail-settings-button {
-  /* 重置全局过渡动画，避免冲突 */
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  
-  /* 确保背景色不被覆盖 */
-  background-image: var(--bg-gradient) !important;
-  background-color: transparent !important;
-  
-  /* 确保文本颜色不被覆盖 */
-  color: var(--text-color) !important;
-  
-  /* 确保阴影不被覆盖 */
-  box-shadow: var(--shadow) !important;
-  
-  /* Apple风格高级效果 */
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
-  border-radius: 12px !important;
-  position: relative !important;
-  overflow: hidden !important;
+
+
+/* 🎨 优化的邮件生成按钮样式 - 简化版本 */
+.mail-generate-button-optimized {
+  /* 基础样式 */
+  transition: all 0.3s ease !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.25)) !important;
+  color: #171717 !important;
+  border-radius: 16px !important;
   border: none !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* 邮件按钮悬停状态 */
-.mail-generate-button:hover,
-.mail-settings-button:hover {
-  background-image: var(--bg-gradient-hover) !important;
-  transform: translateY(-2px) scale(1.02) !important;
-  box-shadow: var(--shadow-hover) !important;
-  backdrop-filter: blur(25px) !important;
-  -webkit-backdrop-filter: blur(25px) !important;
+/* 优化按钮悬停状态 - 简化版本 */
+.mail-generate-button-optimized:hover {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  background-image: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  background-color: #3b82f6 !important;
+  color: white !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* 邮件按钮激活状态 */
-.mail-generate-button:active,
-.mail-settings-button:active {
-  transform: translateY(0) scale(0.98) !important;
-  box-shadow: var(--shadow) !important;
+/* 🎨 紧凑型邮件生成按钮样式 - 简化版本 */
+.mail-generate-button-compact {
+  /* 基础样式 */
+  transition: all 0.3s ease !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.25)) !important;
+  color: #171717 !important;
+  border-radius: 12px !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 紧凑按钮悬停状态 - 简化版本 */
+.mail-generate-button-compact:hover {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  background-image: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  background-color: #3b82f6 !important;
+  color: white !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.15) !important;
+}
+
+
+
+/* 优化按钮激活状态 */
+.mail-generate-button-optimized:active {
+  transform: translateY(-1px) scale(0.98) !important;
+  box-shadow: 
+    0 10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.05) !important;
   transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* 邮件按钮图标容器 */
-.mail-generate-button .icon-container,
-.mail-settings-button .icon-container {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  color: var(--icon-color) !important;
-  border-radius: 8px !important;
+/* 优化按钮图标样式 */
+.mail-generate-button-optimized .send-icon {
+  color: #2563eb !important;
+  stroke: #2563eb !important;
+  fill: none !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* 优化按钮悬停时图标 */
+.mail-generate-button-optimized:hover .send-icon {
+  color: white !important;
+  stroke: white !important;
+  fill: none !important;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15)) !important;
+  transform: scale(1.1) !important;
+}
+
+/* 发送箭头动画 */
+.mail-generate-button-optimized .send-arrow {
+  opacity: 0.8 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.mail-generate-button-optimized:hover .send-arrow {
+  opacity: 1 !important;
+  transform: translateX(2px) !important;
+}
+
+
+
+
+
+
+
+/* 🎨 加载动画样式优化 */
+.loading-container {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.loading-ring {
+  animation: spin 1s linear infinite !important;
+}
+
+.loading-ring-bg {
+  stroke: currentColor !important;
+  opacity: 0.2 !important;
+}
+
+.loading-ring-progress {
+  fill: currentColor !important;
+  opacity: 0.8 !important;
+}
+
+.loading-center {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.loading-dot {
+  width: 4px !important;
+  height: 4px !important;
+  background-color: currentColor !important;
+  border-radius: 50% !important;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+}
+
+/* 深色模式适配 */
+html.dark .mail-generate-button-optimized,
+html.dark .mail-generate-button-compact {
+  box-shadow: 
+    0 10px 25px -5px rgba(0, 0, 0, 0.3),
+    0 8px 10px -6px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+html.dark .mail-generate-button-optimized:hover,
+html.dark .mail-generate-button-compact:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.35), rgba(59, 130, 246, 0.45)) !important;
+  background-image: linear-gradient(135deg, rgba(59, 130, 246, 0.35), rgba(59, 130, 246, 0.45)) !important;
+  background-color: transparent !important;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.4),
+    0 12px 24px -6px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+
+
+
+
+/* 🎨 选项卡按钮样式 - 现代化切换效果 */
+.mail-tab-button {
+  position: relative !important;
+  overflow: hidden !important;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.025em !important;
+  border: none !important;
+  outline: none !important;
+}
+
+/* 选项卡按钮 - 激活状态 */
+.mail-tab-button.active {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  color: #ffffff !important;
+  box-shadow: 
+    0 10px 15px -3px rgba(59, 130, 246, 0.3),
+    0 4px 6px -2px rgba(59, 130, 246, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+}
+
+/* 选项卡按钮 - 非激活状态 */
+.mail-tab-button:not(.active) {
+  background: transparent !important;
+  color: #6b7280 !important;
+  box-shadow: none !important;
+  border: 1px solid transparent !important;
+}
+
+/* 选项卡按钮 - 悬停状态 */
+.mail-tab-button:not(.active):hover {
+  background: rgba(255, 255, 255, 0.8) !important;
+  color: #374151 !important;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* 深色模式选项卡按钮 */
+html.dark .mail-tab-button:not(.active) {
+  color: #9ca3af !important;
+}
+
+html.dark .mail-tab-button:not(.active):hover {
+  background: rgba(55, 65, 81, 0.8) !important;
+  color: #d1d5db !important;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.2),
+    0 2px 4px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 选项卡容器样式 */
+.mail-tabs-container {
+  background: linear-gradient(135deg, rgba(249, 250, 251, 0.8), rgba(243, 244, 246, 0.8)) !important;
+  border: 1px solid rgba(229, 231, 235, 0.6) !important;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
   backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(10px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 深色模式选项卡容器 */
+html.dark .mail-tabs-container {
+  background: linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.8)) !important;
+  border: 1px solid rgba(75, 85, 99, 0.4) !important;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.2),
+    0 2px 4px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+
+
+/* 🎨 SelectField 组件样式 - 现代化设计 */
+.mail-select-field {
+  position: relative !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* 邮件按钮悬停时图标容器 */
-.mail-generate-button:hover .icon-container,
-.mail-settings-button:hover .icon-container {
-  background-color: rgba(255, 255, 255, 0.15) !important;
-  transform: scale(1.1) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-/* 邮件按钮图标 */
-.mail-generate-button .icon,
-.mail-settings-button .icon {
-  color: var(--icon-color) !important;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1)) !important;
+.mail-select-field select {
+  appearance: none !important;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e") !important;
+  background-position: right 0.5rem center !important;
+  background-repeat: no-repeat !important;
+  background-size: 1.5em 1.5em !important;
+  padding-right: 2.5rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.025em !important;
+  border: 1px solid rgba(229, 231, 235, 0.8) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.1) !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* 邮件按钮悬停时图标 */
-.mail-generate-button:hover .icon,
-.mail-settings-button:hover .icon {
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15)) !important;
+/* SelectField 悬停状态 */
+.mail-select-field:hover select {
+  border-color: rgba(209, 213, 219, 0.8) !important;
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* SelectField 聚焦状态 */
+.mail-select-field select:focus {
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  box-shadow: 
+    0 0 0 3px rgba(59, 130, 246, 0.1),
+    0 4px 8px rgba(0, 0, 0, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.06) !important;
+  outline: none !important;
+}
+
+/* 深色模式 SelectField */
+html.dark .mail-select-field select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e") !important;
+  border-color: rgba(75, 85, 99, 0.6) !important;
+  background-color: rgba(31, 41, 55, 0.8) !important;
+  color: #f9fafb !important;
+}
+
+html.dark .mail-select-field:hover select {
+  border-color: rgba(107, 114, 128, 0.8) !important;
+  background-color: rgba(55, 65, 81, 0.8) !important;
+}
+
+html.dark .mail-select-field select:focus {
+  border-color: rgba(96, 165, 250, 0.5) !important;
+  box-shadow: 
+    0 0 0 3px rgba(96, 165, 250, 0.1),
+    0 4px 8px rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 🎨 TextAreaField 组件样式 - 现代化设计 */
+.mail-textarea-field {
+  position: relative !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.mail-textarea-field textarea {
+  font-weight: 400 !important;
+  letter-spacing: 0.025em !important;
+  line-height: 1.6 !important;
+  border: 1px solid rgba(229, 231, 235, 0.8) !important;
+  border-radius: 1rem !important;
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+/* TextAreaField 悬停状态 */
+.mail-textarea-field:hover textarea {
+  border-color: rgba(209, 213, 219, 0.8) !important;
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* TextAreaField 聚焦状态 */
+.mail-textarea-field textarea:focus {
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  box-shadow: 
+    0 0 0 3px rgba(59, 130, 246, 0.1),
+    0 8px 16px rgba(0, 0, 0, 0.1),
+    0 4px 8px rgba(0, 0, 0, 0.06) !important;
+  outline: none !important;
+  transform: translateY(-2px) !important;
+}
+
+/* 深色模式 TextAreaField */
+html.dark .mail-textarea-field textarea {
+  border-color: rgba(75, 85, 99, 0.6) !important;
+  background-color: rgba(31, 41, 55, 0.8) !important;
+  color: #f9fafb !important;
+}
+
+html.dark .mail-textarea-field:hover textarea {
+  border-color: rgba(107, 114, 128, 0.8) !important;
+  background-color: rgba(55, 65, 81, 0.8) !important;
+}
+
+html.dark .mail-textarea-field textarea:focus {
+  border-color: rgba(96, 165, 250, 0.5) !important;
+  box-shadow: 
+    0 0 0 3px rgba(96, 165, 250, 0.1),
+    0 8px 16px rgba(0, 0, 0, 0.2),
+    0 4px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* 🎨 模块按钮专用样式 - Apple风格高级效果 */
@@ -959,3 +1299,113 @@ html.dark, html.dark body {
     height: 2rem; /* h-8 更紧凑 */
   }
 }
+
+/* 强制确保邮件生成按钮悬停颜色正确 */
+.mail-generate-button-optimized:hover,
+.mail-generate-button-optimized:focus:hover,
+.mail-generate-button-optimized:active:hover,
+.mail-generate-button-compact:hover,
+.mail-generate-button-compact:focus:hover,
+.mail-generate-button-compact:active:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.35)) !important;
+  background-image: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.35)) !important;
+  background-color: transparent !important;
+  color: var(--text-color) !important;
+  border: none !important;
+}
+
+/* 确保禁用状态下的悬停颜色 */
+.mail-generate-button-optimized:disabled:hover,
+.mail-generate-button-compact:disabled:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.35)) !important;
+  background-image: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.35)) !important;
+  background-color: transparent !important;
+  opacity: 0.5 !important;
+}
+
+/* 强制确保悬停颜色正确显示 - 最高优先级 */
+button.mail-generate-button-optimized:hover,
+button.mail-generate-button-compact:hover {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  background-image: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  background-color: #3b82f6 !important;
+  color: white !important;
+  border: none !important;
+  outline: none !important;
+}
+
+
+
+
+
+/* 深色模式适配 */
+html.dark button.mail-generate-button-optimized:hover,
+html.dark button.mail-generate-button-compact:hover {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6) !important;
+  background-image: linear-gradient(135deg, #60a5fa, #3b82f6) !important;
+  background-color: #60a5fa !important;
+  color: white !important;
+}
+
+
+
+
+
+
+
+
+
+/* 🎨 设置按钮样式 - 简化版本 */
+.mail-settings-button {
+  /* 基础样式 */
+  transition: all 0.3s ease !important;
+  background: linear-gradient(135deg, rgba(107, 114, 128, 0.08), rgba(107, 114, 128, 0.12)) !important;
+  color: #171717 !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(229, 231, 235, 0.6) !important;
+  font-weight: 500 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* 设置按钮悬停状态 - 简化版本 */
+.mail-settings-button:hover {
+  background: linear-gradient(135deg, rgba(107, 114, 128, 0.15), rgba(107, 114, 128, 0.25)) !important;
+  color: #374151 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 设置按钮激活状态 */
+.mail-settings-button.active {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  color: white !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 16px -4px rgba(59, 130, 246, 0.25) !important;
+}
+
+/* 设置按钮图标样式 */
+.mail-settings-button .icon {
+  color: #6b7280 !important;
+  transition: all 0.3s ease !important;
+}
+
+/* 设置按钮悬停时图标 */
+.mail-settings-button:hover .icon {
+  color: #374151 !important;
+  transform: scale(1.1) !important;
+}
+
+/* 设置按钮激活时图标 */
+.mail-settings-button.active .icon {
+  color: white !important;
+  transform: scale(1.1) !important;
+}
+
+
+
+
+
+
+
+

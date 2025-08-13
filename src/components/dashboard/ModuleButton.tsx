@@ -67,17 +67,33 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
     customer: 'bg-fuchsia-600 dark:bg-fuchsia-500',
   };
 
+  // 验证CSS变量是否存在，如果不存在则使用默认值
+  const getCSSVariableWithFallback = (variableName: string, fallback: string): string => {
+    if (typeof window === 'undefined') return fallback;
+    
+    const value = getComputedStyle(document.documentElement).getPropertyValue(variableName);
+    return value.trim() || fallback;
+  };
+
+  // 构建CSS变量对象，包含错误处理
+  const cssVariables = {
+    '--bg-gradient': `linear-gradient(135deg, ${getCSSVariableWithFallback(`--${module.id}-from`, 'rgba(59, 130, 246, 0.08)')}, ${getCSSVariableWithFallback(`--${module.id}-to`, 'rgba(59, 130, 246, 0.12)')})`,
+    '--bg-gradient-hover': `linear-gradient(135deg, ${getCSSVariableWithFallback(`--${module.id}-hover-from`, 'rgba(59, 130, 246, 0.12)')}, ${getCSSVariableWithFallback(`--${module.id}-hover-to`, 'rgba(59, 130, 246, 0.18)')})`,
+    '--text-color': getCSSVariableWithFallback('--text-primary', '#171717'),
+    '--icon-color': getCSSVariableWithFallback(`--${module.id}-icon-color`, '#2563eb'),
+    '--badge-bg': getCSSVariableWithFallback(`--${module.id}-badge-bg`, '#2563eb'),
+    '--badge-text': getCSSVariableWithFallback('--badge-text-color', '#ffffff'),
+  };
+
+  // 开发环境下调试CSS变量
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`🎨 ${module.id} 按钮CSS变量:`, cssVariables);
+  }
+
   return (
     <button
       className="module-button dashboard-module-button flex items-center justify-start gap-3 sm:gap-4 px-4 sm:px-5 py-4 sm:py-5 h-[96px] w-full relative group cursor-pointer"
-      style={{
-        '--bg-gradient': `linear-gradient(135deg, var(--${module.id}-from), var(--${module.id}-to))`,
-        '--bg-gradient-hover': `linear-gradient(135deg, var(--${module.id}-hover-from), var(--${module.id}-hover-to))`,
-        '--text-color': 'var(--text-primary)',
-        '--icon-color': `var(--${module.id}-icon-color)`,
-        '--badge-bg': `var(--${module.id}-badge-bg)`,
-        '--badge-text': 'var(--badge-text-color)',
-      } as React.CSSProperties}
+      style={cssVariables as React.CSSProperties}
       onClick={() => onClick(module)}
       onMouseEnter={() => onHover?.(module)}
     >

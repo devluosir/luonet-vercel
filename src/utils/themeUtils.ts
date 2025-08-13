@@ -327,6 +327,8 @@ export class ThemeManager {
       'ai-email': { light: '#4f46e5', dark: '#818cf8' },
       history: { light: '#db2777', dark: '#f472b6' },
       customer: { light: '#a21caf', dark: '#d946ef' },
+      'mail-generate': { light: '#2563eb', dark: '#60a5fa' },
+      'mail-settings': { light: '#6b7280', dark: '#9ca3af' },
     };
 
     // 为每个模块设置CSS变量
@@ -335,25 +337,66 @@ export class ThemeManager {
       
       if (isClassic) {
         // 经典主题：白色/灰色背景，彩色悬停
-        root.style.setProperty(`--${moduleId}-from`, isDark ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)');
-        root.style.setProperty(`--${moduleId}-to`, isDark ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)');
-        root.style.setProperty(`--${moduleId}-hover-from`, isDark ? 'rgba(59, 130, 246, 0.8)' : 'rgba(219, 234, 254, 1)');
-        root.style.setProperty(`--${moduleId}-hover-to`, isDark ? 'rgba(37, 99, 235, 0.8)' : 'rgba(191, 219, 254, 1)');
-        console.log(`🎨 ${moduleId} 经典主题变量已设置`);
+        const fromColor = isDark ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+        const toColor = isDark ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+        const hoverFromColor = isDark ? 'rgba(59, 130, 246, 0.8)' : 'rgba(219, 234, 254, 1)';
+        const hoverToColor = isDark ? 'rgba(37, 99, 235, 0.8)' : 'rgba(191, 219, 254, 1)';
+        
+        root.style.setProperty(`--${moduleId}-from`, fromColor);
+        root.style.setProperty(`--${moduleId}-to`, toColor);
+        root.style.setProperty(`--${moduleId}-hover-from`, hoverFromColor);
+        root.style.setProperty(`--${moduleId}-hover-to`, hoverToColor);
+        
+        console.log(`🎨 ${moduleId} 经典主题变量已设置:`, {
+          from: fromColor,
+          to: toColor,
+          hoverFrom: hoverFromColor,
+          hoverTo: hoverToColor
+        });
       } else {
         // 彩色主题：清除之前设置的CSS变量，让globals.css中的定义生效
-        root.style.removeProperty(`--${moduleId}-from`);
-        root.style.removeProperty(`--${moduleId}-to`);
-        root.style.removeProperty(`--${moduleId}-hover-from`);
-        root.style.removeProperty(`--${moduleId}-hover-to`);
-        console.log(`🎨 ${moduleId} 彩色主题变量已清除`);
+        const propertiesToRemove = [
+          `--${moduleId}-from`,
+          `--${moduleId}-to`, 
+          `--${moduleId}-hover-from`,
+          `--${moduleId}-hover-to`
+        ];
+        
+        propertiesToRemove.forEach(prop => {
+          root.style.removeProperty(prop);
+        });
+        
+        console.log(`🎨 ${moduleId} 彩色主题变量已清除:`, propertiesToRemove);
+        
+        // 验证清除是否成功
+        const fromValue = root.style.getPropertyValue(`--${moduleId}-from`);
+        const toValue = root.style.getPropertyValue(`--${moduleId}-to`);
+        console.log(`🎨 ${moduleId} 清除后验证:`, { from: fromValue, to: toValue });
       }
       
       // 设置图标和徽章颜色
       root.style.setProperty(`--${moduleId}-icon-color`, color);
       root.style.setProperty(`--${moduleId}-badge-bg`, color);
-      console.log(`🎨 ${moduleId} 图标颜色: ${color}`);
+      console.log(`🎨 ${moduleId} 图标和徽章颜色: ${color}`);
     });
+    
+    // 强制重新计算样式
+    this.forceStyleRecalculation();
+  }
+
+  /**
+   * 强制重新计算样式
+   */
+  private forceStyleRecalculation(): void {
+    if (typeof window === 'undefined') return;
+    
+    // 触发重排以强制重新计算样式
+    document.body.offsetHeight;
+    
+    // 延迟执行以确保样式更新
+    setTimeout(() => {
+      console.log('🎨 样式重新计算完成');
+    }, 10);
   }
 
   /**
