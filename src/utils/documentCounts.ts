@@ -1,4 +1,5 @@
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
+import { isQuotationUpgraded } from '@/utils/dashboardUtils';
 
 // 统一的文档计数工具函数
 export const getAllDocuments = (): { type: string, id: string, createdAt: string, [key: string]: any }[] => {
@@ -23,10 +24,23 @@ export const getQuotationCount = (): number => {
   try {
     if (typeof window === 'undefined') return 0;
     const quotationHistory = getLocalStorageJSON('quotation_history', []);
-    // 只获取type为'quotation'的记录
-    return quotationHistory.filter((item: any) => 
-      'type' in item && item.type === 'quotation'
-    ).length;
+    
+    // 获取所有confirmation记录，用于过滤
+    const confirmationRecords = quotationHistory.filter((item: any) => 
+      'type' in item && item.type === 'confirmation'
+    );
+    
+    // 只获取type为'quotation'且未升级的记录
+    return quotationHistory.filter((item: any) => {
+      // 只保留type为'quotation'的记录
+      if (!('type' in item) || item.type !== 'quotation') return false;
+      
+      // 检查这个报价单是否已经升级为confirmation
+      const isUpgraded = isQuotationUpgraded(item, confirmationRecords);
+      
+      // 如果已升级，则不计入报价单数量
+      return !isUpgraded;
+    }).length;
   } catch (error) {
     console.error('获取报价单数量失败:', error);
     return 0;

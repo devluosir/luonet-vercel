@@ -1,9 +1,8 @@
-import { getSafeLocalStorage } from './documentCounts';
-import { HistoryItem } from './historyImportExport';
+import { getSafeLocalStorage } from '@/utils/safeLocalStorage';
+import type { HistoryItem } from '@/features/history/types';
 
-// 文档类型常量定义
-export const DOCUMENT_TYPES = ['quotation', 'confirmation', 'invoice', 'packing', 'purchase'] as const;
-export type DocumentType = typeof DOCUMENT_TYPES[number];
+// 文档类型定义
+export type DocumentType = 'quotation' | 'confirmation' | 'invoice' | 'packing' | 'purchase';
 
 // 时间筛选类型
 export type TimeFilter = 'today' | '3days' | 'week' | 'month';
@@ -21,6 +20,15 @@ export const emitPermissionChanged = (message = '权限已更新') => {
   }
 };
 
+// 检测报价单是否已升级为confirmation的工具函数
+export const isQuotationUpgraded = (quotationRecord: any, confirmationRecords: any[]): boolean => {
+  return confirmationRecords.some((confirmation: any) => {
+    // 比较报价单号和合同号，如果相同说明已升级
+    return confirmation.data?.contractNo === quotationRecord.quotationNo || 
+           confirmation.quotationNo === quotationRecord.quotationNo;
+  });
+};
+
 // 文档加载工具函数
 export const getDocumentsByType = (type: DocumentType): DocumentWithType[] => {
   if (type === 'confirmation') {
@@ -29,6 +37,26 @@ export const getDocumentsByType = (type: DocumentType): DocumentWithType[] => {
     return quotationHistory
       .filter((doc: any) => doc.type === 'confirmation')
       .map((doc: any) => ({ ...doc, type: 'confirmation' as DocumentType }));
+  } else if (type === 'quotation') {
+    // quotation类型的数据也存储在quotation_history中，但只加载type为'quotation'的记录
+    // 同时过滤掉已经升级为confirmation的报价单
+    const quotationHistory = getSafeLocalStorage('quotation_history') || [];
+    
+    // 获取所有confirmation记录，用于过滤
+    const confirmationRecords = quotationHistory.filter((doc: any) => doc.type === 'confirmation');
+    
+    return quotationHistory
+      .filter((doc: any) => {
+        // 只保留type为'quotation'的记录
+        if (doc.type !== 'quotation') return false;
+        
+        // 检查这个报价单是否已经升级为confirmation
+        const isUpgraded = isQuotationUpgraded(doc, confirmationRecords);
+        
+        // 如果已升级，则不显示在报价单列表中
+        return !isUpgraded;
+      })
+      .map((doc: any) => ({ ...doc, type: 'quotation' as DocumentType }));
   } else {
     const storageKey = `${type}_history`;
     const docs = getSafeLocalStorage(storageKey) || [];
@@ -61,29 +89,22 @@ export const getStartDateByFilter = (filter: TimeFilter): Date => {
 
 // 根据权限过滤文档类型
 export const getAccessibleDocumentTypes = (permissionMap: any): DocumentType[] => {
-  return DOCUMENT_TYPES.filter(type => {
-    const permissionKey = type === 'confirmation' ? 'quotation' : type;
-    return permissionMap.documentTypePermissions[permissionKey];
-  });
+  return ['quotation', 'confirmation', 'invoice', 'packing', 'purchase']
+    .filter(type => {
+      const permissionKey = type === 'confirmation' ? 'quotation' : type;
+      return permissionMap.documentTypePermissions[permissionKey];
+    });
 };
 
 // 加载所有有权限的文档
 export const loadAllDocumentsByPermissions = (permissionMap: any): DocumentWithType[] => {
   const allDocuments: DocumentWithType[] = [];
   
-  DOCUMENT_TYPES.forEach(type => {
+  ['quotation', 'confirmation', 'invoice', 'packing', 'purchase'].forEach(type => {
     const permissionKey = type === 'confirmation' ? 'quotation' : type;
     if (permissionMap.documentTypePermissions[permissionKey]) {
-      // 对于confirmation类型，需要从quotation_history中筛选出type为'confirmation'的记录
-      if (type === 'confirmation') {
-        const quotationHistory = getSafeLocalStorage('quotation_history') || [];
-        const confirmationDocs = quotationHistory
-          .filter((doc: any) => doc.type === 'confirmation')
-          .map((doc: any) => ({ ...doc, type: 'confirmation' as DocumentType }));
-        allDocuments.push(...confirmationDocs);
-      } else {
-        allDocuments.push(...getDocumentsByType(type));
-      }
+      // 使用修复后的getDocumentsByType函数来加载文档
+      allDocuments.push(...getDocumentsByType(type));
     }
   });
   
