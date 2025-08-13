@@ -68,6 +68,8 @@ export interface InvoiceData {
   otherFees: OtherFee[];
   depositPercentage?: number;
   depositAmount?: number;
+  showBalance?: boolean;
+  balanceAmount?: number;
 }
 
 export interface InvoiceHistoryItem {

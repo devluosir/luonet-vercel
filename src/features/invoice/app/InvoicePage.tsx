@@ -232,15 +232,31 @@ export const InvoicePage = () => {
                     </span>
                   </div>
                   {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-500">
-                        {data.depositPercentage}% Deposit:
-                      </span>
-                      <span className="text-lg font-semibold tracking-tight whitespace-nowrap text-blue-600 dark:text-blue-400">
-                        {data.currency === 'USD' ? '$' : '¥'}
-                        {data.depositAmount.toFixed(2)}
-                      </span>
-                    </div>
+                    <>
+                      {/* 总是显示定金 */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-500">
+                          {data.depositPercentage}% Deposit:
+                        </span>
+                        <span className="text-lg font-semibold tracking-tight whitespace-nowrap text-blue-600 dark:text-blue-400">
+                          {data.currency === 'USD' ? '$' : '¥'}
+                          {data.depositAmount.toFixed(2)}
+                        </span>
+                      </div>
+                      
+                      {/* 当显示Balance时，也显示尾款 */}
+                      {data.showBalance && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-500">
+                            {100 - data.depositPercentage}% Balance:
+                          </span>
+                          <span className="text-lg font-semibold tracking-tight whitespace-nowrap text-green-600 dark:text-green-400">
+                            {data.currency === 'USD' ? '$' : '¥'}
+                            {data.balanceAmount?.toFixed(2) || (totalAmount - data.depositAmount).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -249,30 +265,58 @@ export const InvoicePage = () => {
               <div className="mt-4 mb-8">
                 <div className="inline text-sm">
                   {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 ? (
-                    // 显示定金金额的大写
-                    (() => {
-                      const depositWords = numberToWords(data.depositAmount);
-                      return (
-                        <>
-                          <span className="text-gray-600 dark:text-gray-400">SAY {data.depositPercentage}% DEPOSIT </span>
-                          <span className="text-blue-500">
-                            {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
-                          </span>
-                          <span className="text-gray-600 dark:text-gray-400">{depositWords.dollars}</span>
-                          {depositWords.hasDecimals && (
-                            <>
-                              <span className="text-red-500"> AND </span>
-                              <span className="text-gray-600 dark:text-gray-400">
-                                {depositWords.cents}
-                              </span>
-                            </>
-                          )}
-                          {!depositWords.hasDecimals && (
-                            <span className="text-gray-600 dark:text-gray-400"> ONLY</span>
-                          )}
-                        </>
-                      );
-                    })()
+                    data.showBalance ? (
+                      // 显示尾款金额的大写
+                      (() => {
+                        const balanceAmount = data.balanceAmount || (totalAmount - data.depositAmount);
+                        const balanceWords = numberToWords(balanceAmount);
+                        return (
+                          <>
+                            <span className="text-gray-600 dark:text-gray-400">SAY {100 - data.depositPercentage}% Balance </span>
+                            <span className="text-blue-500">
+                              {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
+                            </span>
+                            <span className="text-gray-600 dark:text-gray-400">{balanceWords.dollars}</span>
+                            {balanceWords.hasDecimals && (
+                              <>
+                                <span className="text-red-500"> AND </span>
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  {balanceWords.cents}
+                                </span>
+                              </>
+                            )}
+                            {!balanceWords.hasDecimals && (
+                              <span className="text-gray-600 dark:text-gray-400"> ONLY</span>
+                            )}
+                          </>
+                        );
+                      })()
+                    ) : (
+                      // 显示定金金额的大写
+                      (() => {
+                        const depositWords = numberToWords(data.depositAmount);
+                        return (
+                          <>
+                            <span className="text-gray-600 dark:text-gray-400">SAY {data.depositPercentage}% Deposit </span>
+                            <span className="text-blue-500">
+                              {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
+                            </span>
+                            <span className="text-gray-600 dark:text-gray-400">{depositWords.dollars}</span>
+                            {depositWords.hasDecimals && (
+                              <>
+                                <span className="text-red-500"> AND </span>
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  {depositWords.cents}
+                                </span>
+                              </>
+                            )}
+                            {!depositWords.hasDecimals && (
+                              <span className="text-gray-600 dark:text-gray-400"> ONLY</span>
+                            )}
+                          </>
+                        );
+                      })()
+                    )
                   ) : (
                     // 显示总金额的大写
                     <>

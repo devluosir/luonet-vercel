@@ -142,12 +142,18 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
         ? (state.data.depositPercentage / 100) * totalAmount 
         : undefined;
       
+      // 更新尾款金额
+      const balanceAmount = state.data.showBalance && depositAmount 
+        ? totalAmount - depositAmount 
+        : undefined;
+      
       return { 
         data: { 
           ...state.data, 
           items: newItems,
           amountInWords,
-          depositAmount
+          depositAmount,
+          balanceAmount
         } 
       };
     });
@@ -189,12 +195,18 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
         ? (state.data.depositPercentage / 100) * totalAmount 
         : undefined;
       
+      // 更新尾款金额
+      const balanceAmount = state.data.showBalance && depositAmount 
+        ? totalAmount - depositAmount 
+        : undefined;
+      
       return { 
         data: { 
           ...state.data, 
           items: newItems,
           amountInWords,
-          depositAmount
+          depositAmount,
+          balanceAmount
         } 
       };
     });

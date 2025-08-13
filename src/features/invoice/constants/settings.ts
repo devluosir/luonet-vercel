@@ -130,5 +130,7 @@ export const DEFAULT_INVOICE_DATA = {
   customUnits: [],
   otherFees: [],
   depositPercentage: undefined,
-  depositAmount: undefined
+  depositAmount: undefined,
+  showBalance: false,
+  balanceAmount: undefined
 };

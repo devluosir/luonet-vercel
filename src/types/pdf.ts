@@ -58,6 +58,8 @@ export interface PDFGeneratorData {
   showInvoiceReminder: boolean;
   depositPercentage?: number;
   depositAmount?: number;
+  showBalance?: boolean;
+  balanceAmount?: number;
 }
 
 export interface PdfType {

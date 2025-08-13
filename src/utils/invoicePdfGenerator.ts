@@ -540,7 +540,7 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   if (data.depositPercentage && data.depositPercentage > 0) {
     const depositAmount = data.depositAmount || (data.depositPercentage / 100) * totalAmount;
     const depositValue = `${data.currency === 'USD' ? '$' : '¥'}${depositAmount.toFixed(2)}`;
-    const depositLabel = `${data.depositPercentage}% DEPOSIT:`;
+    const depositLabel = `${data.depositPercentage}% Deposit:`;
     
     const depositValueX = pageWidth - margin - 5;
     const depositLabelX = depositValueX - doc.getTextWidth(depositValue) - 28;
@@ -551,6 +551,23 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
     setCnFont(doc, 'normal');
     
     currentY += 8;
+    
+    // 如果显示Balance，也显示尾款信息
+    if (data.showBalance) {
+      const balanceAmount = data.balanceAmount || (totalAmount - depositAmount);
+      const balanceValue = `${data.currency === 'USD' ? '$' : '¥'}${balanceAmount.toFixed(2)}`;
+      const balanceLabel = `${100 - data.depositPercentage}% Balance:`;
+      
+      const balanceValueX = pageWidth - margin - 5;
+      const balanceLabelX = balanceValueX - doc.getTextWidth(balanceValue) - 28;
+
+      setCnFont(doc, 'bold');
+      doc.text(balanceLabel, balanceLabelX, currentY + 8);
+      doc.text(balanceValue, balanceValueX, currentY + 8, { align: 'right' });
+      setCnFont(doc, 'normal');
+      
+      currentY += 8;
+    }
   }
 
   // 显示大写金额
@@ -560,10 +577,18 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   // 根据是否有定金决定显示哪个金额的大写
   let amountInWords: string;
   if (data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0) {
-    // 显示定金金额的大写
     const { numberToWords } = require('../features/invoice/utils/calculations');
-    const depositWords = numberToWords(data.depositAmount);
-    amountInWords = `SAY ${data.depositPercentage}% Deposit ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${depositWords.dollars}${depositWords.hasDecimals ? ` AND ${depositWords.cents}` : ' ONLY'}`;
+    
+    if (data.showBalance) {
+      // 显示尾款金额的大写
+      const balanceAmount = data.balanceAmount || (totalAmount - data.depositAmount);
+      const balanceWords = numberToWords(balanceAmount);
+      amountInWords = `SAY ${100 - data.depositPercentage}% Balance ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${balanceWords.dollars}${balanceWords.hasDecimals ? ` AND ${balanceWords.cents}` : ' ONLY'}`;
+    } else {
+      // 显示定金金额的大写
+      const depositWords = numberToWords(data.depositAmount);
+      amountInWords = `SAY ${data.depositPercentage}% Deposit ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${depositWords.dollars}${depositWords.hasDecimals ? ` AND ${depositWords.cents}` : ' ONLY'}`;
+    }
   } else {
     // 显示总金额的大写
     amountInWords = `SAY TOTAL ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${data.amountInWords.dollars}${data.amountInWords.hasDecimals ? ` AND ${data.amountInWords.cents}` : ' ONLY'}`;
