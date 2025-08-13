@@ -227,7 +227,7 @@ function renderTableInPDF(
         const textStartY = cellY + (rowHeight - textHeight) / 2 + lineHeight;
         
         // 绘制文本
-        wrappedText.forEach((line: string, lineIndex) => {
+        wrappedText.forEach((line: string, lineIndex: number) => {
           const textY = textStartY + (lineIndex * lineHeight);
           doc.text(line, cellX + cellPadding, textY);
         });
@@ -298,9 +298,9 @@ function renderRichTextInPDF(
         case 'p':
           // 段落
           nodeY += 4; // 段落间距
-          for (const child of element.childNodes) {
+          Array.from(element.childNodes).forEach((child) => {
             nodeY = processNode(child, x, nodeY);
-          }
+          });
           nodeY += 4; // 段落间距
           break;
           
@@ -308,32 +308,32 @@ function renderRichTextInPDF(
         case 'b':
           // 粗体
           setCnFont(doc, 'bold');
-          for (const child of element.childNodes) {
+          Array.from(element.childNodes).forEach((child) => {
             nodeY = processNode(child, x, nodeY);
-          }
+          });
           setCnFont(doc, 'normal');
           break;
           
         case 'em':
         case 'i':
           // 斜体（在PDF中可能显示为正常字体）
-          for (const child of element.childNodes) {
+          Array.from(element.childNodes).forEach((child) => {
             nodeY = processNode(child, x, nodeY);
-          }
+          });
           break;
           
         case 'u':
           // 下划线（在PDF中可能不显示）
-          for (const child of element.childNodes) {
+          Array.from(element.childNodes).forEach((child) => {
             nodeY = processNode(child, x, nodeY);
-          }
+          });
           break;
           
         case 'ul':
         case 'ol':
           // 列表
           nodeY += 4;
-          for (const child of element.childNodes) {
+          Array.from(element.childNodes).forEach((child) => {
             if (child.nodeType === Node.ELEMENT_NODE && (child as HTMLElement).tagName.toLowerCase() === 'li') {
               const listItem = child as HTMLElement;
               const bullet = tagName === 'ul' ? '• ' : '1. ';
@@ -346,7 +346,7 @@ function renderRichTextInPDF(
               });
               nodeY += 2;
             }
-          }
+          });
           break;
           
         case 'table':
@@ -394,16 +394,16 @@ function renderRichTextInPDF(
           
         case 'a':
           // 链接（在PDF中显示为普通文本）
-          for (const child of element.childNodes) {
+          Array.from(element.childNodes).forEach((child) => {
             nodeY = processNode(child, x, nodeY);
-          }
+          });
           break;
           
         default:
           // 其他元素，递归处理子节点
-          for (const child of element.childNodes) {
+          Array.from(element.childNodes).forEach((child) => {
             nodeY = processNode(child, x, nodeY);
-          }
+          });
       }
     }
     
@@ -411,9 +411,9 @@ function renderRichTextInPDF(
   };
   
   // 处理所有子节点
-  for (const child of tempDiv.childNodes) {
+  Array.from(tempDiv.childNodes).forEach((child) => {
     currentY = processNode(child, startX, currentY);
-  }
+  });
   
   return currentY + 5; // 返回底部位置，加上5mm间距
 }
