@@ -88,8 +88,8 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
         for (let r = 0; r < rowIndex; r++) {
           for (let c = 0; c < processedData[r]?.length; c++) {
             const existingCell = processedData[r][c];
-            if (existingCell.rowSpan > 1 && r + existingCell.rowSpan > rowIndex) {
-              if (c + existingCell.colSpan > colIndex) {
+            if ((existingCell.rowSpan ?? 1) > 1 && r + (existingCell.rowSpan ?? 1) > rowIndex) {
+              if (c + (existingCell.colSpan ?? 1) > colIndex) {
                 shouldSkip = true;
                 break;
               }
@@ -365,7 +365,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
     const newData = [...tableData];
     const currentCell = newData[cell.row]?.[cell.col];
     
-    if (currentCell && currentCell.isMerged && (currentCell.rowSpan > 1 || currentCell.colSpan > 1)) {
+    if (currentCell && currentCell.isMerged && ((currentCell.rowSpan ?? 1) > 1 || (currentCell.colSpan ?? 1) > 1)) {
       // 恢复为普通单元格
       newData[cell.row][cell.col] = {
         value: currentCell.value,
@@ -472,7 +472,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
                   <tr key={rowIndex} className="border-b border-gray-200 dark:border-gray-600">
                     {row.map((cell, colIndex) => {
                       // 跳过被合并的单元格
-                      if (cell.isMerged && (cell.rowSpan === 1 && cell.colSpan === 1)) {
+                      if (cell.isMerged && ((cell.rowSpan ?? 1) === 1 && (cell.colSpan ?? 1) === 1)) {
                         return null;
                       }
                       
