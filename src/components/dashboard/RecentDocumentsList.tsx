@@ -77,19 +77,19 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     let num = '';
     switch (doc.type) {
       case 'quotation': 
-        num = doc.quotationNo || (data?.quotationNo as string) || '';
+        num = (doc as any).quotationNo || (data?.quotationNo as string) || '';
         break;
       case 'confirmation': 
-        num = doc.contractNo || (data?.contractNo as string) || doc.quotationNo || (data?.quotationNo as string) || '';
+        num = (doc as any).contractNo || (data?.contractNo as string) || (doc as any).quotationNo || (data?.quotationNo as string) || '';
         break;
       case 'invoice': 
-        num = doc.invoiceNo || (data?.invoiceNo as string) || '';
+        num = (doc as any).invoiceNo || (data?.invoiceNo as string) || '';
         break;
       case 'purchase': 
-        num = doc.orderNo || (data?.orderNo as string) || '';
+        num = (doc as any).orderNo || (data?.orderNo as string) || '';
         break;
       case 'packing': 
-        num = doc.invoiceNo || (data?.invoiceNo as string) || doc.orderNo || (data?.orderNo as string) || '';
+        num = (doc as any).invoiceNo || (data?.invoiceNo as string) || (doc as any).orderNo || (data?.orderNo as string) || '';
         break;
       default: 
         num = doc.id;
@@ -104,11 +104,11 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     
     // 尝试从不同字段获取名称
     if (doc.type === 'purchase') {
-      name = doc.supplierName || (data?.supplierName as string) || '未命名供应商';
+      name = (doc as any).supplierName || (data?.supplierName as string) || '未命名供应商';
     } else if (doc.type === 'packing') {
-      name = doc.consigneeName || (data?.consigneeName as string) || '未命名收货人';
+      name = (doc as any).consigneeName || (data?.consigneeName as string) || '未命名收货人';
     } else {
-      name = doc.customerName || (data?.customerName as string) || '未命名客户';
+      name = (doc as any).customerName || (data?.customerName as string) || '未命名客户';
     }
     
     // 处理多行文本，取第一行
@@ -155,9 +155,9 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
           const documentName = getDocumentName(doc);
           
           // 扩展搜索范围，包括data字段中的信息
-          const customerName = doc.customerName || (data?.customerName as string) || '';
-          const supplierName = doc.supplierName || (data?.supplierName as string) || '';
-          const consigneeName = doc.consigneeName || (data?.consigneeName as string) || '';
+          const customerName = (doc as any).customerName || (data?.customerName as string) || '';
+          const supplierName = (doc as any).supplierName || (data?.supplierName as string) || '';
+          const consigneeName = (doc as any).consigneeName || (data?.consigneeName as string) || '';
           
           const searchText = `${documentNumber} ${documentName} ${customerName} ${supplierName} ${consigneeName}`.toLowerCase();
           return searchText.includes(searchLower);
