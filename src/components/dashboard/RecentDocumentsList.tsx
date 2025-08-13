@@ -1,41 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  FileText, 
-  Receipt, 
-  Package, 
-  ShoppingCart, 
-  Search,
-  Archive,
-  X,
-  ChevronUp,
-  ChevronDown
-} from 'lucide-react';
-
-
-
-interface Document {
-  id: string;
-  type: string;
-  quotationNo?: string;
-  invoiceNo?: string;
-  orderNo?: string;
-  contractNo?: string;
-  customerName?: string;
-  supplierName?: string;
-  consigneeName?: string;
-  date?: string;
-  updatedAt?: string;
-  createdAt?: string;
-  totalAmount?: number;
-  currency?: string;
-  documentType?: string;
-  data?: unknown;
-  [key: string]: unknown;
-}
+import { Search, X, ChevronDown, ChevronUp, Archive } from 'lucide-react';
+import { FileText, Package, Receipt, ShoppingCart } from 'lucide-react';
+import { DocumentWithType } from '@/utils/dashboardUtils';
 
 interface RecentDocumentsListProps {
-  documents: Document[];
+  documents: DocumentWithType[];
   timeFilter: 'today' | '3days' | 'week' | 'month';
   typeFilter: 'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase';
   onTimeFilterChange: (filter: 'today' | '3days' | 'week' | 'month') => void;
@@ -102,7 +72,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
   };
 
   // 获取文档编号
-  const getDocumentNumber = (doc: Document) => {
+  const getDocumentNumber = (doc: DocumentWithType) => {
     const data = doc.data as Record<string, unknown> | undefined;
     let num = '';
     switch (doc.type) {
@@ -128,7 +98,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
   };
 
   // 获取文档名称
-  const getDocumentName = (doc: Document) => {
+  const getDocumentName = (doc: DocumentWithType) => {
     const data = doc.data as Record<string, unknown> | undefined;
     let name = '';
     
@@ -296,7 +266,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     }
   };
 
-  const handleDocumentClick = (doc: Document) => {
+  const handleDocumentClick = (doc: DocumentWithType) => {
     // 对于confirmation类型，需要跳转到quotation页面并设置tab
     if (doc.type === 'confirmation') {
       const editPath = `/quotation/edit/${doc.id}?tab=confirmation`;

@@ -1,4 +1,4 @@
-import { getSafeLocalStorage } from '@/utils/safeLocalStorage';
+import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 import type { HistoryItem } from '@/features/history/types';
 
 // 文档类型定义
@@ -8,7 +8,8 @@ export type DocumentType = 'quotation' | 'confirmation' | 'invoice' | 'packing' 
 export type TimeFilter = 'today' | '3days' | 'week' | 'month';
 
 // 扩展的文档类型，包含 HistoryItem 的所有属性以及 type 属性
-export interface DocumentWithType extends HistoryItem {
+export interface DocumentWithType extends Omit<HistoryItem, 'type'> {
+  id: string; // 确保id字段是必需的
   type: DocumentType;
   [key: string]: unknown;
 }
@@ -33,14 +34,14 @@ export const isQuotationUpgraded = (quotationRecord: any, confirmationRecords: a
 export const getDocumentsByType = (type: DocumentType): DocumentWithType[] => {
   if (type === 'confirmation') {
     // confirmation类型的数据存储在quotation_history中
-    const quotationHistory = getSafeLocalStorage('quotation_history') || [];
+    const quotationHistory = getLocalStorageJSON('quotation_history', []);
     return quotationHistory
       .filter((doc: any) => doc.type === 'confirmation')
       .map((doc: any) => ({ ...doc, type: 'confirmation' as DocumentType }));
   } else if (type === 'quotation') {
     // quotation类型的数据也存储在quotation_history中，但只加载type为'quotation'的记录
     // 同时过滤掉已经升级为confirmation的报价单
-    const quotationHistory = getSafeLocalStorage('quotation_history') || [];
+    const quotationHistory = getLocalStorageJSON('quotation_history', []);
     
     // 获取所有confirmation记录，用于过滤
     const confirmationRecords = quotationHistory.filter((doc: any) => doc.type === 'confirmation');
@@ -59,7 +60,7 @@ export const getDocumentsByType = (type: DocumentType): DocumentWithType[] => {
       .map((doc: any) => ({ ...doc, type: 'quotation' as DocumentType }));
   } else {
     const storageKey = `${type}_history`;
-    const docs = getSafeLocalStorage(storageKey) || [];
+    const docs = getLocalStorageJSON(storageKey, []);
     return docs.map((doc: HistoryItem) => ({ ...doc, type }));
   }
 };
