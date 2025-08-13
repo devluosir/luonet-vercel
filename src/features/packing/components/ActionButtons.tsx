@@ -83,15 +83,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         </div>
       )}
 
-      {/* 文档类型提示 */}
-      <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <p className="text-xs text-blue-700 dark:text-blue-300 text-center">
-          当前文档类型: {
-            data.documentType === 'proforma' ? '形式发票 Proforma Invoice' :
-            data.documentType === 'packing' ? '装箱单 Packing List' : '形式发票 + 装箱单 Proforma Invoice & Packing List'
-          }
-        </p>
-      </div>
+
     </section>
   );
 };

@@ -125,6 +125,8 @@ export interface PackingFormProps {
   isGenerating?: boolean;
   isSaving?: boolean;
   saveMessage?: string;
+  saveSuccess?: boolean;
+  onSave?: () => void;
   onGenerate?: () => void;
   onPreview?: () => void;
   onExportExcel?: () => void;

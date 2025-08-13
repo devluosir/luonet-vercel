@@ -43,7 +43,35 @@ export const usePackingActions = (data: PackingData, editId?: string) => {
     }
   }, [data]);
 
-  // 移除 handleSave 函数，因为保存功能已集成到 handleGenerate 中
+  // 独立保存功能
+  const handleSave = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      // 获取编辑 ID（从 URL 或 state）
+      const existingId = editId || (pathname?.startsWith('/packing/edit/') ? pathname.split('/').pop() : undefined);
+      
+      // 保存记录
+      const saveResult = await savePackingHistory(data, existingId);
+      
+      if (saveResult) {
+        setSaveMessage('保存成功');
+        // 如果是新记录，更新 editId
+        if (!existingId && saveResult.id) {
+          // 这里可以通过回调函数更新 editId
+          console.log('新记录已保存，ID:', saveResult.id);
+        }
+      } else {
+        setSaveMessage('保存失败');
+      }
+    } catch (error) {
+      console.error('Error saving packing data:', error);
+      setSaveMessage('保存失败');
+    } finally {
+      setIsSaving(false);
+      // 3秒后清除消息
+      setTimeout(() => setSaveMessage(''), 3000);
+    }
+  }, [data, editId, pathname]);
 
   // 导出Excel功能
   const handleExportExcel = useCallback(() => {
@@ -114,6 +142,7 @@ export const usePackingActions = (data: PackingData, editId?: string) => {
     isGenerating,
     isSaving,
     saveMessage,
+    handleSave,
     handleGenerate,
     handlePreview,
     handleExportExcel

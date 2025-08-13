@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Download, Settings, History, Eye, FileSpreadsheet } from 'lucide-react';
+import { ArrowLeft, Download, Settings, History, Eye, FileSpreadsheet, Save } from 'lucide-react';
 import { PackingFormProps } from '../types';
 import { BasicInfoSection } from './BasicInfoSection';
 import { ItemsTableSection } from './ItemsTableSection';
@@ -26,6 +26,8 @@ export const PackingForm: React.FC<PackingFormProps> = ({
   isGenerating = false,
   isSaving = false,
   saveMessage = '',
+  saveSuccess = false,
+  onSave = () => {},
   onGenerate = () => {},
   onPreview = () => {},
   onExportExcel = () => {}
@@ -47,6 +49,11 @@ export const PackingForm: React.FC<PackingFormProps> = ({
   // 处理数据变更
   const handleDataChange = (newData: Partial<typeof data>) => {
     onDataChange({ ...data, ...newData });
+  };
+
+  // 处理保存
+  const handleSave = () => {
+    onSave();
   };
 
   // 处理设置面板回调
@@ -119,7 +126,29 @@ export const PackingForm: React.FC<PackingFormProps> = ({
                   >
                     <FileSpreadsheet className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                   </button>
-                  {/* 移除 Save 按钮，因为保存功能已集成到其他地方 */}
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0 relative"
+                    title={editId ? '保存修改' : '保存新记录'}
+                  >
+                    {isSaving ? (
+                      <svg className="animate-spin h-5 w-5 text-gray-600 dark:text-[#98989D]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <Save className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
+                    )}
+                    {saveMessage && (
+                      <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 text-xs text-white rounded-lg whitespace-nowrap ${
+                        saveSuccess ? 'bg-green-500' : 'bg-red-500'
+                      }`}>
+                        {saveMessage}
+                      </div>
+                    )}
+                  </button>
                   <button
                     type="button"
                     onClick={() => setShowSettings(!showSettings)}

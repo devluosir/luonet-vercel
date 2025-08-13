@@ -45,6 +45,7 @@ export default function PackingPage() {
     isGenerating,
     isSaving,
     saveMessage,
+    handleSave,
     handleGenerate,
     handlePreview,
     handleExportExcel
@@ -100,6 +101,8 @@ export default function PackingPage() {
         isGenerating={isGenerating}
         isSaving={isSaving}
         saveMessage={saveMessage}
+        saveSuccess={saveMessage === '保存成功'}
+        onSave={handleSave}
         onGenerate={handleGenerate}
         onPreview={handlePreviewClick}
         onExportExcel={handleExportExcel}
