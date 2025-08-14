@@ -72,6 +72,8 @@ export interface QuotationData {
   depositAmount?: number;
   showBalance?: boolean;
   balanceAmount?: number;
+  // 时间戳
+  updatedAt?: string;
 }
 
 export interface CustomWindow extends Window {
