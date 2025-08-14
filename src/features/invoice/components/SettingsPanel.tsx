@@ -217,9 +217,14 @@ export const SettingsPanel = React.memo(() => {
                 const percentage = parseFloat(e.target.value) || 0;
                 const totalAmount = data.items.reduce((sum, item) => sum + (item.amount || 0), 0) + data.otherFees.reduce((sum, fee) => sum + fee.amount, 0);
                 const depositAmount = percentage > 0 ? (percentage / 100) * totalAmount : undefined;
+                
+                // 如果Balance按钮打开，同时更新balanceAmount
+                const balanceAmount = (data.showBalance && depositAmount) ? (totalAmount - depositAmount) : undefined;
+                
                 updateData({ 
                   depositPercentage: percentage > 0 ? percentage : undefined,
-                  depositAmount: depositAmount
+                  depositAmount: depositAmount,
+                  balanceAmount: balanceAmount
                 });
               }}
               placeholder="0"

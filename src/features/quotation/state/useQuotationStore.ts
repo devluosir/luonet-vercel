@@ -12,7 +12,8 @@ const KNOWN_KEYS = new Set<keyof QuotationData>([
   'quotationNo', 'contractNo', 'date', 'notes', 'from', 'to', 'inquiryNo', 'currency',
   'paymentDate', 'items', 'amountInWords', 'showDescription', 'showRemarks', 'showBank', 
   'showStamp', 'otherFees', 'customUnits', 'showMainPaymentTerm', 'showInvoiceReminder',
-  'additionalPaymentTerms', 'templateConfig'
+  'additionalPaymentTerms', 'templateConfig', 'depositPercentage', 'depositAmount', 
+  'showBalance', 'balanceAmount'
 ]);
 
 // 浅比较工具函数
@@ -189,7 +190,16 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
     if (process.env.NODE_ENV === 'development') {
       console.log('[updateItems] 更新items', items?.length);
     }
-    return { data: { ...state.data, items, updatedAt: Date.now() } };
+    
+    // 计算新的总金额和amountInWords
+    const totalAmount = (items || []).reduce((sum, item) => sum + (item.amount || 0), 0) +
+                       (state.data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
+    
+    // 动态导入numberToWords函数
+    const { numberToWords } = require('@/utils/quotationCalculations');
+    const amountInWords = numberToWords(totalAmount);
+    
+    return { data: { ...state.data, items, amountInWords, updatedAt: Date.now() } };
   }),
   updateFromParse: (parseResult) => set((state) => {
     // ✅ 字段统一 + 严禁在流转时清空描述/备注
@@ -208,12 +218,21 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
       });
     }
     
+    // 计算新的总金额和amountInWords
+    const totalAmount = (normalized || []).reduce((sum, item) => sum + (item.amount || 0), 0) +
+                       (state.data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
+    
+    // 动态导入numberToWords函数
+    const { numberToWords } = require('@/utils/quotationCalculations');
+    const amountInWords = numberToWords(totalAmount);
+    
     return { 
       data: { 
         ...state.data, 
         items: normalized, 
         mergedRemarks: parseResult.mergedRemarks || [],
         mergedDescriptions: parseResult.mergedDescriptions || [],
+        amountInWords,
         updatedAt: Date.now() 
       } 
     };
@@ -228,7 +247,16 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
     if (process.env.NODE_ENV === 'development') {
       console.log('[updateOtherFees] 更新otherFees', fees?.length);
     }
-    return { data: { ...state.data, otherFees: fees, updatedAt: Date.now() } };
+    
+    // 计算新的总金额和amountInWords
+    const totalAmount = (state.data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0) +
+                       (fees || []).reduce((sum, fee) => sum + fee.amount, 0);
+    
+    // 动态导入numberToWords函数
+    const { numberToWords } = require('@/utils/quotationCalculations');
+    const amountInWords = numberToWords(totalAmount);
+    
+    return { data: { ...state.data, otherFees: fees, amountInWords, updatedAt: Date.now() } };
   }),
   updateData: (updates) => set((state) => {
     // 🚫 0号热补丁：在选择态下，严禁把 to 写成空串（抖动/清空都挡掉）
@@ -253,7 +281,20 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
     const cleanedPatch = devAuditPatch(patch, 'updateData');
     const next = { ...state.data, ...cleanedPatch };
     
-    if (shallowEqual(next, state.data)) {
+    // 自动计算amountInWords（当items或otherFees发生变化时）
+    let finalData = { ...next };
+    if (cleanedPatch.items || cleanedPatch.otherFees) {
+      const totalAmount = (next.items || []).reduce((sum, item) => sum + (item.amount || 0), 0) +
+                         (next.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
+      
+      // 动态导入numberToWords函数
+      const { numberToWords } = require('@/utils/quotationCalculations');
+      const amountInWords = numberToWords(totalAmount);
+      
+      finalData = { ...finalData, amountInWords };
+    }
+    
+    if (shallowEqual(finalData, state.data)) {
       if (process.env.NODE_ENV === 'development') {
         console.log('[updateData] 无变化，跳过更新', cleanedPatch);
       }
@@ -261,7 +302,7 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
     }
     
     // 有变更时自动更新updatedAt（Store统一管理）
-    const finalData = { ...next, updatedAt: Date.now() };
+    finalData = { ...finalData, updatedAt: Date.now() };
     
     if (process.env.NODE_ENV === 'development') {
       console.log('[updateData] 应用更新+updatedAt', cleanedPatch);

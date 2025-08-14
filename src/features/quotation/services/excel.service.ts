@@ -225,6 +225,16 @@ export const exportSalesConfirmationToExcel = (data: QuotationData): void => {
     excelData.push([]); // 空行
     excelData.push(['', '', '', '', '', 'Total Amount', formatNumber(totalAmount), '']);
     
+    // 添加定金和尾款信息
+    if (data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0) {
+      excelData.push(['', '', '', '', '', `${data.depositPercentage}% Deposit`, formatNumber(data.depositAmount), '']);
+      
+      if (data.showBalance) {
+        const balanceAmount = data.balanceAmount || (totalAmount - data.depositAmount);
+        excelData.push(['', '', '', '', '', `${100 - data.depositPercentage}% Balance`, formatNumber(balanceAmount), '']);
+      }
+    }
+    
     // 添加备注
     if (data.notes && data.notes.length > 0) {
       excelData.push([]); // 空行

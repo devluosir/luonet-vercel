@@ -257,8 +257,107 @@ export const generateOrderConfirmationPDF = async (
     doc.text(totalAmountLabel, labelX, currentY);
     doc.text(totalAmountValue, valueX, currentY, { align: 'right' });
 
-    // 更新currentY，为后续内容预留空间
-    currentY += 10;
+    // 添加定金和尾款信息
+    if (data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0) {
+      currentY += 5;
+      
+      // 定金信息
+      const depositAmount = data.depositAmount || (data.depositPercentage / 100) * total;
+      const depositValue = `${currencySymbols[data.currency]}${depositAmount.toFixed(2)}`;
+      const depositLabel = `${data.depositPercentage}% Deposit:`;
+      
+      const depositValueX = pageWidth - margin - 5;
+      const depositLabelX = depositValueX - doc.getTextWidth(depositValue) - 28;
+
+      safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
+      doc.text(depositLabel, depositLabelX, currentY);
+      // 如果没有显示Balance，则Deposit金额显示为蓝色
+      if (!data.showBalance) {
+        doc.setTextColor(0, 0, 255); // 蓝色
+      }
+      doc.text(depositValue, depositValueX, currentY, { align: 'right' });
+      doc.setTextColor(0, 0, 0); // 恢复黑色
+      safeSetCnFont(doc, 'normal', preview ? 'preview' : 'export');
+      
+      currentY += 5;
+      
+      // 如果显示Balance，也显示尾款信息
+      if (data.showBalance) {
+        const balanceAmount = data.balanceAmount || (total - depositAmount);
+        const balanceValue = `${currencySymbols[data.currency]}${balanceAmount.toFixed(2)}`;
+        const balanceLabel = `${100 - data.depositPercentage}% Balance:`;
+        
+        const balanceValueX = pageWidth - margin - 5;
+        const balanceLabelX = balanceValueX - doc.getTextWidth(balanceValue) - 28;
+
+        safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
+        doc.text(balanceLabel, balanceLabelX, currentY);
+        // Balance金额显示为蓝色
+        doc.setTextColor(0, 0, 255); // 蓝色
+        doc.text(balanceValue, balanceValueX, currentY, { align: 'right' });
+        doc.setTextColor(0, 0, 0); // 恢复黑色
+        safeSetCnFont(doc, 'normal', preview ? 'preview' : 'export');
+        
+        currentY += 5;
+      }
+    }
+
+    // 显示大写金额 - 根据内容类型优化间距
+    // 根据是否有定金/尾款调整间距
+    if (data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0) {
+      if (data.showBalance) {
+        currentY += 4; // 有尾款时，减少间距
+      } else {
+        currentY += 4; // 只有定金时，减少间距
+      }
+    } else {
+      currentY += 8; // 无定金时，保持原有间距
+    }
+    
+    doc.setFontSize(8);
+    safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
+    
+    // 根据是否有定金决定显示哪个金额的大写
+    let amountInWords: string;
+    if (data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0) {
+      const { numberToWords } = require('../features/invoice/utils/calculations');
+      
+      if (data.showBalance) {
+        // 显示尾款金额的大写
+        const balanceAmount = data.balanceAmount || (total - data.depositAmount);
+        const balanceWords = numberToWords(balanceAmount);
+        amountInWords = `SAY ${100 - data.depositPercentage}% Balance ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${balanceWords.dollars}${balanceWords.hasDecimals ? ` AND ${balanceWords.cents}` : ' ONLY'}`;
+      } else {
+        // 显示定金金额的大写
+        const depositWords = numberToWords(data.depositAmount);
+        amountInWords = `SAY ${data.depositPercentage}% Deposit ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${depositWords.dollars}${depositWords.hasDecimals ? ` AND ${depositWords.cents}` : ' ONLY'}`;
+      }
+    } else {
+      // 显示总金额的大写
+      amountInWords = `SAY TOTAL ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${data.amountInWords.dollars}${data.amountInWords.hasDecimals ? ` AND ${data.amountInWords.cents}` : ' ONLY'}`;
+    }
+    
+    const lines = doc.splitTextToSize(amountInWords, pageWidth - (margin * 2));
+    lines.forEach((line: string, index: number) => {
+      doc.text(String(line), margin, currentY + (index * 5));
+    });
+
+    // 大写金额后的间距 - 根据后续内容动态调整
+    currentY += (lines.length * 5);
+    
+    // 检查是否有其他内容（银行信息或付款条款）
+    const hasBankInfo = data.showBank;
+    const hasPaymentTerms = data.showMainPaymentTerm || data.additionalPaymentTerms || data.showInvoiceReminder;
+    const hasOtherContent = hasBankInfo || hasPaymentTerms;
+    
+    // 根据内容类型调整间距
+    if (hasBankInfo) {
+      currentY += 10; // 有银行信息时保持较大间距
+    } else if (hasPaymentTerms) {
+      currentY += 6; // 只有付款条款时使用较小间距
+    } else {
+      currentY += 6; // 只有Notes时使用较小间距
+    }
 
     // 计算印章尺寸
     const stampWidth = 73;  // 香港印章宽度：73mm
@@ -355,7 +454,14 @@ export const generateOrderConfirmationPDF = async (
 
     // 添加备注
     if (validNotes.length > 0) {
-      currentY += 8;
+      // 根据是否有其他内容调整Notes开始时的间距
+      if (hasBankInfo) {
+        currentY += 8; // 有银行信息时保持较大间距
+      } else if (hasPaymentTerms) {
+        currentY += 0; // 只有付款条款时不增加额外间距
+      } else {
+        currentY += 0; // 只有Notes时不增加额外间距
+      }
       doc.setFontSize(9);
       doc.setFont('NotoSansSC', 'bold');
       doc.text('Notes:', leftMargin, currentY);

@@ -21,6 +21,12 @@ export const SETTINGS_ALLOWED_KEYS = new Set([
   'additionalPaymentTerms',
   'showMainPaymentTerm',
   'paymentDate',
+  
+  // 定金和尾款功能
+  'depositPercentage',
+  'depositAmount',
+  'showBalance',
+  'balanceAmount',
 ]);
 
 /**

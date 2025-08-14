@@ -15,6 +15,10 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
   const [fromOptions, setFromOptions] = useState<string[]>(['Roger', 'Sharon', 'Emily', 'Summer', 'Nina']);
   const [isClient, setIsClient] = useState(false);
 
+  // 计算总金额
+  const totalAmount = data.items.reduce((sum, item) => sum + (item.amount || 0), 0) + 
+                     (data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
+
   // 获取From选项的函数
   const getFromOptions = useCallback(() => {
     const options = ['Roger', 'Sharon', 'Emily', 'Summer', 'Nina'];
@@ -206,14 +210,82 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
         {/* 分隔线 */}
         <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
+        {/* 第四组：定金设置 - 仅在销售确认页面显示 */}
+        {activeTab === 'confirmation' && (
+          <>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Deposit:</span>
+              
+              {/* 定金百分比输入 */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={data.depositPercentage || ''}
+                  onChange={(e) => {
+                    const percentage = parseFloat(e.target.value) || 0;
+                    const depositAmount = percentage > 0 ? (percentage / 100) * totalAmount : undefined;
+                    
+                    // 如果Balance按钮打开，同时更新balanceAmount
+                    const balanceAmount = (data.showBalance && depositAmount) ? (totalAmount - depositAmount) : undefined;
+                    
+                    onChange({ 
+                      ...data,
+                      depositPercentage: percentage > 0 ? percentage : undefined,
+                      depositAmount: depositAmount,
+                      balanceAmount: balanceAmount
+                    });
+                  }}
+                  placeholder="0"
+                  className="w-16 px-2 py-1 rounded text-[9px]
+                    bg-white/90 dark:bg-[#1c1c1e]/90
+                    border border-gray-200/30 dark:border-[#2c2c2e]/50
+                    focus:outline-none focus:ring-1
+                    focus:ring-[#007AFF]/40 dark:focus:ring-[#0A84FF]/40
+                    text-gray-800 dark:text-gray-200
+                    text-center
+                    [appearance:textfield] 
+                    [&::-webkit-outer-spin-button]:appearance-none 
+                    [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <span className="text-gray-600 dark:text-gray-400 text-[9px]">%</span>
+              </div>
 
+              {/* Balance切换按钮 */}
+              {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newShowBalance = !data.showBalance;
+                      const balanceAmount = newShowBalance ? (totalAmount - (data.depositAmount || 0)) : undefined;
+                      onChange({ 
+                        ...data,
+                        showBalance: newShowBalance,
+                        balanceAmount: balanceAmount
+                      });
+                    }}
+                    className={`px-2 py-1 rounded text-[9px] font-medium transition-all ${
+                      data.showBalance 
+                        ? 'bg-green-500 text-white shadow-sm' 
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:border-green-400'
+                    }`}
+                  >
+                    Balance
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 分隔线 */}
+            <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+          </>
+        )}
 
         {/* 换行控制：小屏换行，中屏不换行 */}
         <div className="w-full sm:w-auto"></div>
-
-
-
-
 
         {/* 第五组：自定义单位 */}
         <div className="flex flex-wrap items-center gap-3">

@@ -30,8 +30,18 @@ export interface QuotationData extends BaseDocument {
   showStamp: boolean;
   
   // 金额信息
-  amountInWords: string;
+  amountInWords: {
+    dollars: string;
+    cents: string;
+    hasDecimals: boolean;
+  };
   additionalPaymentTerms: string;
+  
+  // 定金和尾款功能
+  depositPercentage?: number;
+  depositAmount?: number;
+  showBalance?: boolean;
+  balanceAmount?: number;
 }
 
 // 商品项

@@ -64,6 +64,11 @@ export function getInitialQuotationData(): QuotationData {
     templateConfig: { 
       headerType: 'bilingual', 
       stampType: 'none' 
-    }
+    },
+    // 定金和尾款功能默认值
+    depositPercentage: undefined,
+    depositAmount: undefined,
+    showBalance: false,
+    balanceAmount: undefined
   };
 } 
