@@ -253,8 +253,8 @@ export const generateOrderConfirmationPDF = async (
     const totalAmountValue = `${currencySymbols[data.currency]}${total.toFixed(2)}`;
     
     // 简化布局：标签左对齐，金额右对齐
-    const labelX = pageWidth - margin - 58; // 标签位置（更靠左）
-    const valueX = pageWidth - margin - 13;  // 金额位置（更靠右）
+    const labelX = pageWidth - margin - 80; // 标签位置（更靠左）
+    const valueX = pageWidth - margin - 10;  // 金额位置（更靠右）
 
     doc.text(totalAmountLabel, labelX, currentY);
     doc.text(totalAmountValue, valueX, currentY, { align: 'right' });
@@ -276,10 +276,10 @@ export const generateOrderConfirmationPDF = async (
       const depositValue = `${currencySymbols[data.currency]}${depositAmount.toFixed(2)}`;
       const depositLabel = `${data.depositPercentage}% Deposit:`;
       
-      const depositValueX = pageWidth - margin - 13;
+      const depositValueX = pageWidth - margin - 10;
       
       // Deposit标签和金额对齐
-      const depositLabelX = pageWidth - margin - 56;
+      const depositLabelX = pageWidth - margin - 80;
 
       safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
       doc.text(depositLabel, depositLabelX, currentY);
@@ -303,10 +303,10 @@ export const generateOrderConfirmationPDF = async (
         const balanceValue = `${currencySymbols[data.currency]}${balanceAmount.toFixed(2)}`;
         const balanceLabel = `${100 - data.depositPercentage}% Balance:`;
         
-        const balanceValueX = pageWidth - margin - 13;
+        const balanceValueX = pageWidth - margin - 10;
         
         // Balance标签和金额对齐
-        const balanceLabelX = pageWidth - margin - 56.5;
+        const balanceLabelX = pageWidth - margin - 80;
 
         safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
         doc.text(balanceLabel, balanceLabelX, currentY);
