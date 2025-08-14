@@ -215,7 +215,7 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
         amountInWords, 
         depositAmount,
         balanceAmount,
-        updatedAt: Date.now() 
+        updatedAt: new Date().toISOString() 
       } 
     };
   }),
@@ -262,7 +262,7 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
         amountInWords,
         depositAmount,
         balanceAmount,
-        updatedAt: Date.now() 
+        updatedAt: new Date().toISOString() 
       } 
     };
   }),
@@ -301,7 +301,7 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
         amountInWords, 
         depositAmount,
         balanceAmount,
-        updatedAt: Date.now() 
+        updatedAt: new Date().toISOString() 
       } 
     };
   }),
@@ -349,7 +349,7 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
     }
     
     // 有变更时自动更新updatedAt（Store统一管理）
-    finalData = { ...finalData, updatedAt: Date.now() };
+    finalData = { ...finalData, updatedAt: new Date().toISOString() };
     
     if (process.env.NODE_ENV === 'development') {
       console.log('[updateData] 应用更新+updatedAt', cleanedPatch);
@@ -370,7 +370,7 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
         console.log('[updateFrom] 更新from和notes', { from, notes: nextNotes });
         eventSampler.log('updateFrom', { from, notesCount: nextNotes.length });
       }
-      return { data: { ...state.data, from, notes: nextNotes, updatedAt: Date.now() } };
+      return { data: { ...state.data, from, notes: nextNotes, updatedAt: new Date().toISOString() } };
   }),
   
   // 更新from字段为当前用户
@@ -385,7 +385,7 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
         const formattedUser = currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase();
         const nextNotes = getDefaultNotes(formattedUser, state.tab);
         return { 
-          data: { ...state.data, from: formattedUser, notes: nextNotes, updatedAt: Date.now() }
+          data: { ...state.data, from: formattedUser, notes: nextNotes, updatedAt: new Date().toISOString() }
         };
       }
     } catch (error) {
@@ -405,7 +405,7 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
       console.log('[updateCurrency] 更新currency', currency);
       eventSampler.log('updateCurrency', { currency });
     }
-    return { data: { ...state.data, currency, updatedAt: Date.now() } };
+    return { data: { ...state.data, currency, updatedAt: new Date().toISOString() } };
   }),
   
   // 新增：Notes配置相关actions
