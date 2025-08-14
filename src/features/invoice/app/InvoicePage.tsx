@@ -224,17 +224,19 @@ export const InvoicePage = () => {
                 </div>
                 
                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 relative">
                     <span className="text-sm font-medium text-gray-500">Total Amount:</span>
                     <span className="text-xl font-semibold tracking-tight whitespace-nowrap">
                       {data.currency === 'USD' ? '$' : '¥'}
                       {totalAmount.toFixed(2)}
                     </span>
+                    {/* Total Amount 下划线 */}
+                    <div className="absolute bottom-0 left-0 right-0 h-px bg-gray-400 dark:bg-gray-500"></div>
                   </div>
                   {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 && (
                     <>
                       {/* 总是显示定金 */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 relative">
                         <span className="text-sm font-medium text-gray-500">
                           {data.depositPercentage}% Deposit:
                         </span>
@@ -242,11 +244,13 @@ export const InvoicePage = () => {
                           {data.currency === 'USD' ? '$' : '¥'}
                           {data.depositAmount.toFixed(2)}
                         </span>
+                        {/* Deposit 下划线 */}
+                        <div className="absolute bottom-0 left-0 right-0 h-px bg-gray-400 dark:bg-gray-500"></div>
                       </div>
                       
                       {/* 当显示Balance时，也显示尾款 */}
                       {data.showBalance && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 relative">
                           <span className="text-sm font-medium text-gray-500">
                             {100 - data.depositPercentage}% Balance:
                           </span>
@@ -254,6 +258,8 @@ export const InvoicePage = () => {
                             {data.currency === 'USD' ? '$' : '¥'}
                             {data.balanceAmount?.toFixed(2) || (totalAmount - data.depositAmount).toFixed(2)}
                           </span>
+                          {/* Balance 下划线 */}
+                          <div className="absolute bottom-0 left-0 right-0 h-px bg-gray-400 dark:bg-gray-500"></div>
                         </div>
                       )}
                     </>
@@ -262,7 +268,7 @@ export const InvoicePage = () => {
               </div>
 
               {/* 英文大写金额显示区域 */}
-              <div className="mt-4 mb-8">
+              <div className="mt-16 mb-8">
                 <div className="inline text-sm">
                   {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 ? (
                     data.showBalance ? (

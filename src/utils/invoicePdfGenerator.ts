@@ -534,6 +534,14 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   doc.text(totalAmountValue, valueX, finalY + 8, { align: 'right' });
   setCnFont(doc, 'normal');
 
+  // 计算Total Amount下划线宽度（作为标准长度）
+  const totalLabelWidth = doc.getTextWidth('Total Amount:');
+  const totalAmountWidth = doc.getTextWidth(totalAmountValue);
+  const standardUnderlineWidth = totalLabelWidth + totalAmountWidth + 5; // 5mm为标签和金额之间的间距
+  
+  // 为Total Amount添加下划线（包含标签和金额）
+  doc.line(labelX, finalY + 9, labelX + standardUnderlineWidth, finalY + 9);
+
   let currentY = finalY + 8;
 
   // 显示定金信息
@@ -555,6 +563,9 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
     doc.setTextColor(0, 0, 0); // 恢复黑色
     setCnFont(doc, 'normal');
     
+    // 为Deposit添加下划线（使用标准长度）
+    doc.line(depositLabelX, currentY + 6, depositLabelX + standardUnderlineWidth, currentY + 6);
+    
     currentY += 5;
     
     // 如果显示Balance，也显示尾款信息
@@ -573,6 +584,9 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
       doc.text(balanceValue, balanceValueX, currentY + 5, { align: 'right' });
       doc.setTextColor(0, 0, 0); // 恢复黑色
       setCnFont(doc, 'normal');
+      
+      // 为Balance添加下划线（使用标准长度）
+      doc.line(balanceLabelX, currentY + 6, balanceLabelX + standardUnderlineWidth, currentY + 6);
       
       currentY += 5;
     }
@@ -604,7 +618,7 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   
   const lines = doc.splitTextToSize(amountInWords, pageWidth - (margin * 2));
   lines.forEach((line: string, index: number) => {
-    doc.text(String(line), margin, currentY + 5 + (index * 5));
+    doc.text(String(line), margin, currentY + 9 + (index * 5));
   });
 
   return currentY + 6 + (lines.length * 5) + 5;
