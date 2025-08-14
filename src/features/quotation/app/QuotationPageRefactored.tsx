@@ -45,7 +45,7 @@ const quotationStore = createBaseDocumentStore<QuotationData>(
     paymentDate: '',
     showBank: true,
     showStamp: true,
-    amountInWords: '',
+    amountInWords: { dollars: '', cents: '', hasDecimals: false },
     additionalPaymentTerms: '',
   },
   'quotation'
