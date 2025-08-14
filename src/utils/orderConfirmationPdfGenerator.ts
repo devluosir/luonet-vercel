@@ -251,11 +251,21 @@ export const generateOrderConfirmationPDF = async (
     doc.setFont('NotoSansSC', 'bold');
     const totalAmountLabel = 'Total Amount:';
     const totalAmountValue = `${currencySymbols[data.currency]}${total.toFixed(2)}`;
-    const valueX = pageWidth - margin - 5;
-    const labelX = valueX - doc.getTextWidth(totalAmountValue) - 28;
+    
+    // 简化布局：标签左对齐，金额右对齐
+    const labelX = pageWidth - margin - 58; // 标签位置（更靠左）
+    const valueX = pageWidth - margin - 13;  // 金额位置（更靠右）
 
     doc.text(totalAmountLabel, labelX, currentY);
     doc.text(totalAmountValue, valueX, currentY, { align: 'right' });
+    
+    // 计算Total Amount下划线宽度（作为标准长度）
+    const totalLabelWidth = doc.getTextWidth(totalAmountLabel);
+    const totalAmountWidth = doc.getTextWidth(totalAmountValue);
+    const standardUnderlineWidth = totalLabelWidth + totalAmountWidth + 5; // 5mm为标签和金额之间的间距
+    
+    // 为Total Amount添加下划线（包含标签和金额）
+    doc.line(labelX, currentY + 1, labelX + standardUnderlineWidth, currentY + 1);
 
     // 添加定金和尾款信息
     if (data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0) {
@@ -266,8 +276,10 @@ export const generateOrderConfirmationPDF = async (
       const depositValue = `${currencySymbols[data.currency]}${depositAmount.toFixed(2)}`;
       const depositLabel = `${data.depositPercentage}% Deposit:`;
       
-      const depositValueX = pageWidth - margin - 5;
-      const depositLabelX = depositValueX - doc.getTextWidth(depositValue) - 28;
+      const depositValueX = pageWidth - margin - 13;
+      
+      // Deposit标签和金额对齐
+      const depositLabelX = pageWidth - margin - 56;
 
       safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
       doc.text(depositLabel, depositLabelX, currentY);
@@ -276,6 +288,10 @@ export const generateOrderConfirmationPDF = async (
         doc.setTextColor(0, 0, 255); // 蓝色
       }
       doc.text(depositValue, depositValueX, currentY, { align: 'right' });
+      
+      // 为Deposit添加下划线（使用标准长度）
+      doc.line(depositLabelX, currentY + 1, depositLabelX + standardUnderlineWidth, currentY + 1);
+      
       doc.setTextColor(0, 0, 0); // 恢复黑色
       safeSetCnFont(doc, 'normal', preview ? 'preview' : 'export');
       
@@ -287,14 +303,20 @@ export const generateOrderConfirmationPDF = async (
         const balanceValue = `${currencySymbols[data.currency]}${balanceAmount.toFixed(2)}`;
         const balanceLabel = `${100 - data.depositPercentage}% Balance:`;
         
-        const balanceValueX = pageWidth - margin - 5;
-        const balanceLabelX = balanceValueX - doc.getTextWidth(balanceValue) - 28;
+        const balanceValueX = pageWidth - margin - 13;
+        
+        // Balance标签和金额对齐
+        const balanceLabelX = pageWidth - margin - 56.5;
 
         safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
         doc.text(balanceLabel, balanceLabelX, currentY);
         // Balance金额显示为蓝色
         doc.setTextColor(0, 0, 255); // 蓝色
         doc.text(balanceValue, balanceValueX, currentY, { align: 'right' });
+        
+        // 为Balance添加下划线（使用标准长度）
+        doc.line(balanceLabelX, currentY + 1, balanceLabelX + standardUnderlineWidth, currentY + 1);
+        
         doc.setTextColor(0, 0, 0); // 恢复黑色
         safeSetCnFont(doc, 'normal', preview ? 'preview' : 'export');
         

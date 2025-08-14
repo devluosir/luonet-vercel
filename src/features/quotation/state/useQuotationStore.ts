@@ -199,7 +199,25 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
     const { numberToWords } = require('@/utils/quotationCalculations');
     const amountInWords = numberToWords(totalAmount);
     
-    return { data: { ...state.data, items, amountInWords, updatedAt: Date.now() } };
+    // 重新计算depositAmount和balanceAmount
+    const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
+      ? (state.data.depositPercentage / 100) * totalAmount 
+      : undefined;
+    
+    const balanceAmount = state.data.showBalance && depositAmount 
+      ? totalAmount - depositAmount 
+      : undefined;
+    
+    return { 
+      data: { 
+        ...state.data, 
+        items, 
+        amountInWords, 
+        depositAmount,
+        balanceAmount,
+        updatedAt: Date.now() 
+      } 
+    };
   }),
   updateFromParse: (parseResult) => set((state) => {
     // ✅ 字段统一 + 严禁在流转时清空描述/备注
@@ -226,6 +244,15 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
     const { numberToWords } = require('@/utils/quotationCalculations');
     const amountInWords = numberToWords(totalAmount);
     
+    // 重新计算depositAmount和balanceAmount
+    const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
+      ? (state.data.depositPercentage / 100) * totalAmount 
+      : undefined;
+    
+    const balanceAmount = state.data.showBalance && depositAmount 
+      ? totalAmount - depositAmount 
+      : undefined;
+    
     return { 
       data: { 
         ...state.data, 
@@ -233,6 +260,8 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
         mergedRemarks: parseResult.mergedRemarks || [],
         mergedDescriptions: parseResult.mergedDescriptions || [],
         amountInWords,
+        depositAmount,
+        balanceAmount,
         updatedAt: Date.now() 
       } 
     };
@@ -256,7 +285,25 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
     const { numberToWords } = require('@/utils/quotationCalculations');
     const amountInWords = numberToWords(totalAmount);
     
-    return { data: { ...state.data, otherFees: fees, amountInWords, updatedAt: Date.now() } };
+    // 重新计算depositAmount和balanceAmount
+    const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
+      ? (state.data.depositPercentage / 100) * totalAmount 
+      : undefined;
+    
+    const balanceAmount = state.data.showBalance && depositAmount 
+      ? totalAmount - depositAmount 
+      : undefined;
+    
+    return { 
+      data: { 
+        ...state.data, 
+        otherFees: fees, 
+        amountInWords, 
+        depositAmount,
+        balanceAmount,
+        updatedAt: Date.now() 
+      } 
+    };
   }),
   updateData: (updates) => set((state) => {
     // 🚫 0号热补丁：在选择态下，严禁把 to 写成空串（抖动/清空都挡掉）

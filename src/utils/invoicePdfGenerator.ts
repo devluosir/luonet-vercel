@@ -527,7 +527,7 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   const totalAmountValue = `${data.currency === 'USD' ? '$' : '¥'}${totalAmount.toFixed(2)}`;
   
   const valueX = pageWidth - margin - 5;
-  const labelX = valueX - doc.getTextWidth(totalAmountValue) - 28;
+  const labelX = valueX - doc.getTextWidth(totalAmountValue) - 22;
 
   setCnFont(doc, 'bold');
   doc.text('Total Amount:', labelX, finalY + 8);
@@ -543,7 +543,7 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
     const depositLabel = `${data.depositPercentage}% Deposit:`;
     
     const depositValueX = pageWidth - margin - 5;
-    const depositLabelX = depositValueX - doc.getTextWidth(depositValue) - 28;
+    const depositLabelX = depositValueX - doc.getTextWidth(depositValue) - 22;
 
     setCnFont(doc, 'bold');
     doc.text(depositLabel, depositLabelX, currentY + 5);
@@ -564,7 +564,7 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
       const balanceLabel = `${100 - data.depositPercentage}% Balance:`;
       
       const balanceValueX = pageWidth - margin - 5;
-      const balanceLabelX = balanceValueX - doc.getTextWidth(balanceValue) - 28;
+      const balanceLabelX = balanceValueX - doc.getTextWidth(balanceValue) - 22;
 
       setCnFont(doc, 'bold');
       doc.text(balanceLabel, balanceLabelX, currentY + 5);
@@ -604,10 +604,10 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   
   const lines = doc.splitTextToSize(amountInWords, pageWidth - (margin * 2));
   lines.forEach((line: string, index: number) => {
-    doc.text(String(line), margin, currentY + 6 + (index * 5));
+    doc.text(String(line), margin, currentY + 5 + (index * 5));
   });
 
-  return currentY + 6 + (lines.length * 5) + 8;
+  return currentY + 6 + (lines.length * 5) + 5;
 }
 
 // 渲染银行信息和付款条款
