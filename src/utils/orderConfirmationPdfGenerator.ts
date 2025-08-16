@@ -396,11 +396,11 @@ export const generateOrderConfirmationPDF = async (
     
     // 根据内容类型调整间距
     if (hasBankInfo) {
-      currentY += 6; // 有银行信息时保持较大间距
+      currentY += 5; // 有银行信息时减少间距
     } else if (hasPaymentTerms) {
-      currentY += 6; // 只有付款条款时使用较小间距
+      currentY += 5; // 只有付款条款时使用较小间距
     } else {
-      currentY += 6; // 只有Notes时使用较小间距
+      currentY += 5; // 只有Notes时使用较小间距
     }
 
     // 计算印章尺寸
@@ -500,7 +500,7 @@ export const generateOrderConfirmationPDF = async (
     if (validNotes.length > 0) {
       // 根据是否有其他内容调整Notes开始时的间距
       if (hasBankInfo) {
-        currentY += 8; // 有银行信息时保持较大间距
+        currentY += 0; // 有银行信息时减少间距
       } else if (hasPaymentTerms) {
         currentY += 0; // 只有付款条款时不增加额外间距
       } else {
@@ -544,7 +544,7 @@ export const generateOrderConfirmationPDF = async (
         currentY = 20;
       }
 
-      currentY += 5;
+      currentY += 5; // 减少银行信息标题前的间距
       doc.setFontSize(9);
       doc.setFont('NotoSansSC', 'bold');
       doc.text('Bank Information:', leftMargin, currentY);
