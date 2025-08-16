@@ -231,7 +231,7 @@ export const generateOrderConfirmationPDF = async (
 
     // 获取表格结束的Y坐标
     const finalY = doc.lastAutoTable.finalY || currentY;
-    currentY = finalY + 10;
+    currentY = finalY + 3; // 减少主表与总额表格之间的间距
 
     // 检查剩余空间是否足够显示总金额
     const requiredSpace = 20; // 显示总金额所需的最小空间(mm)
@@ -239,90 +239,112 @@ export const generateOrderConfirmationPDF = async (
     // 如果当前页剩余空间不足，添加新页面
     if (pageHeight - currentY < requiredSpace) {
       doc.addPage();
-      currentY = margin + 10;
+      currentY = margin + 7;
     }
 
-    // 添加总金额
+    // 添加总金额、定金和余额信息（使用表格样式，参考发票模块）
     const itemsTotal = (data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0);
     const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
     const total = itemsTotal + feesTotal;
     
-    doc.setFontSize(10);
-    doc.setFont('NotoSansSC', 'bold');
-    const totalAmountLabel = 'Total Amount:';
+    // 准备表格数据
+    const tableData: any[][] = [];
+    
+    // 添加总金额行
     const totalAmountValue = `${currencySymbols[data.currency]}${total.toFixed(2)}`;
+    tableData.push([
+      { content: 'Total Amount:', styles: { fontStyle: 'bold', fontSize: 9 } },
+      { content: totalAmountValue, styles: { fontStyle: 'bold', fontSize: 9 } }
+    ]);
     
-    // 简化布局：标签左对齐，金额右对齐
-    const labelX = pageWidth - margin - 80; // 标签位置（更靠左）
-    const valueX = pageWidth - margin - 10;  // 金额位置（更靠右）
-
-    doc.text(totalAmountLabel, labelX, currentY);
-    doc.text(totalAmountValue, valueX, currentY, { align: 'right' });
-    
-    // 计算Total Amount下划线宽度（作为标准长度）
-    const totalLabelWidth = doc.getTextWidth(totalAmountLabel);
-    const totalAmountWidth = doc.getTextWidth(totalAmountValue);
-    const standardUnderlineWidth = totalLabelWidth + totalAmountWidth + 5; // 5mm为标签和金额之间的间距
-    
-    // 为Total Amount添加下划线（包含标签和金额）
-    doc.line(labelX, currentY + 1, labelX + standardUnderlineWidth, currentY + 1);
-
-    // 添加定金和尾款信息
+    // 添加定金和余额信息
     if (data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0) {
-      currentY += 5;
-      
-      // 定金信息
       const depositAmount = data.depositAmount || (data.depositPercentage / 100) * total;
       const depositValue = `${currencySymbols[data.currency]}${depositAmount.toFixed(2)}`;
       const depositLabel = `${data.depositPercentage}% Deposit:`;
       
-      const depositValueX = pageWidth - margin - 10;
+      // 根据是否显示余额来决定定金金额的颜色
+      const depositColor = data.showBalance ? [0, 0, 0] : [0, 0, 255]; // 显示余额时定金为黑色，否则为蓝色
       
-      // Deposit标签和金额对齐
-      const depositLabelX = pageWidth - margin - 80;
-
-      safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
-      doc.text(depositLabel, depositLabelX, currentY);
-      // 如果没有显示Balance，则Deposit金额显示为蓝色
-      if (!data.showBalance) {
-        doc.setTextColor(0, 0, 255); // 蓝色
-      }
-      doc.text(depositValue, depositValueX, currentY, { align: 'right' });
+      tableData.push([
+        { content: depositLabel, styles: { fontStyle: 'bold', fontSize: 9 } },
+        { content: depositValue, styles: { fontStyle: 'bold', fontSize: 9, textColor: depositColor } }
+      ]);
       
-      // 为Deposit添加下划线（使用标准长度）
-      doc.line(depositLabelX, currentY + 1, depositLabelX + standardUnderlineWidth, currentY + 1);
-      
-      doc.setTextColor(0, 0, 0); // 恢复黑色
-      safeSetCnFont(doc, 'normal', preview ? 'preview' : 'export');
-      
-      currentY += 5;
-      
-      // 如果显示Balance，也显示尾款信息
       if (data.showBalance) {
         const balanceAmount = data.balanceAmount || (total - depositAmount);
         const balanceValue = `${currencySymbols[data.currency]}${balanceAmount.toFixed(2)}`;
         const balanceLabel = `${100 - data.depositPercentage}% Balance:`;
-        
-        const balanceValueX = pageWidth - margin - 10;
-        
-        // Balance标签和金额对齐
-        const balanceLabelX = pageWidth - margin - 80;
-
-        safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
-        doc.text(balanceLabel, balanceLabelX, currentY);
-        // Balance金额显示为蓝色
-        doc.setTextColor(0, 0, 255); // 蓝色
-        doc.text(balanceValue, balanceValueX, currentY, { align: 'right' });
-        
-        // 为Balance添加下划线（使用标准长度）
-        doc.line(balanceLabelX, currentY + 1, balanceLabelX + standardUnderlineWidth, currentY + 1);
-        
-        doc.setTextColor(0, 0, 0); // 恢复黑色
-        safeSetCnFont(doc, 'normal', preview ? 'preview' : 'export');
-        
-        currentY += 5;
+        tableData.push([
+          { content: balanceLabel, styles: { fontStyle: 'bold', fontSize: 9 } },
+          { content: balanceValue, styles: { fontStyle: 'bold', fontSize: 9, textColor: [0, 0, 255] } }
+        ]);
       }
     }
+    
+    // 计算表格宽度和位置
+    const tableWidth = 58; // 表格宽度58mm
+    const tableX = pageWidth - margin - tableWidth; // 右对齐
+    
+    // 使用autoTable创建摘要表格
+    doc.autoTable({
+      startY: currentY + 2, // 减少间距，让总额表格更靠近主表
+      head: [], // 无表头
+      body: tableData,
+      theme: 'plain',
+      styles: {
+        fontSize: 8,
+        cellPadding: 2, // 与主表格保持一致
+        lineColor: [255, 255, 255], // 白色线条，相当于隐藏
+        lineWidth: 0, // 线条宽度设为0
+        textColor: [0, 0, 0],
+        font: 'NotoSansSC',
+        valign: 'middle'
+      },
+      headStyles: {
+        fontSize: 8,
+        fontStyle: 'bold',
+        halign: 'center',
+        font: 'NotoSansSC',
+        valign: 'middle'
+      },
+      columnStyles: {
+        0: { halign: 'right', cellWidth: 30 }, // 标签列居右对齐，宽度30mm
+        1: { halign: 'left', cellWidth: 28 } // 金额列居左对齐，宽度28mm
+      },
+      margin: { left: tableX, right: margin },
+      tableWidth: tableWidth,
+      showFoot: 'never',
+      didDrawCell: (data: any) => {
+        // 隐藏单元格边框
+        if (data.cell && data.cell.styles) {
+          data.cell.styles.lineWidth = 0;
+          data.cell.styles.lineColor = [255, 255, 255]; // 白色，相当于隐藏
+        }
+        
+        // 为每个单元格添加下划线
+        if (data.cell && data.cell.x && data.cell.y && data.cell.width) {
+          const cellX = data.cell.x;
+          const cellY = data.cell.y;
+          const cellWidth = data.cell.width;
+          const cellHeight = data.cell.height || 8; // 默认高度8mm
+          
+          // 在单元格底部绘制下划线
+          doc.setDrawColor(0, 0, 0); // 黑色
+          doc.setLineWidth(0.1); // 线条宽度0.1mm
+          doc.line(cellX, cellY + cellHeight - 1, cellX + cellWidth, cellY + cellHeight - 1);
+        }
+      },
+      willDrawCell: (data: any) => {
+        // 隐藏单元格边框
+        if (data.cell && data.cell.styles) {
+          data.cell.styles.lineWidth = 0;
+          data.cell.styles.lineColor = [255, 255, 255]; // 白色，相当于隐藏
+        }
+      }
+    });
+    
+    currentY = doc.lastAutoTable.finalY + 2;
 
     // 显示大写金额 - 根据内容类型优化间距
     // 根据是否有定金/尾款调整间距
@@ -333,7 +355,7 @@ export const generateOrderConfirmationPDF = async (
         currentY += 4; // 只有定金时，减少间距
       }
     } else {
-      currentY += 8; // 无定金时，保持原有间距
+      currentY += 4; // 无定金时，保持原有间距
     }
     
     doc.setFontSize(8);
@@ -374,7 +396,7 @@ export const generateOrderConfirmationPDF = async (
     
     // 根据内容类型调整间距
     if (hasBankInfo) {
-      currentY += 10; // 有银行信息时保持较大间距
+      currentY += 6; // 有银行信息时保持较大间距
     } else if (hasPaymentTerms) {
       currentY += 6; // 只有付款条款时使用较小间距
     } else {
