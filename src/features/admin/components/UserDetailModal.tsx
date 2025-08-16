@@ -155,23 +155,20 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
                         <div className="text-xs text-gray-500 dark:text-gray-400">模块访问权限</div>
                       </div>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={isEnabled}
-                        onChange={() => togglePermission(module.id)}
-                      />
-                      <div className={`w-11 h-6 rounded-full peer transition-all duration-200 ${
+                    <button
+                      type="button"
+                      onClick={() => togglePermission(module.id)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                         isEnabled 
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-600' 
+                          ? 'bg-blue-600' 
                           : 'bg-gray-200 dark:bg-gray-700'
-                      } peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300/50 dark:peer-focus:ring-blue-800/50`}>
-                        <div className={`absolute top-0.5 left-0.5 bg-white rounded-full h-5 w-5 transition-transform duration-200 shadow-sm ${
-                          isEnabled ? 'translate-x-5' : 'translate-x-0'
-                        }`}></div>
-                      </div>
-                    </label>
+                      }`}
+                      aria-label={`${isEnabled ? '关闭' : '开启'}${module.name}权限`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                        isEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
                   </div>
                 );
               })}

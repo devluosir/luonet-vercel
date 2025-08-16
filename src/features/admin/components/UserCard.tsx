@@ -72,22 +72,7 @@ export function UserCard({ user, onEdit }: UserCardProps) {
           </div>
         </div>
 
-        {/* 权限概览 */}
-        <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">权限概览:</div>
-          <div className="flex flex-wrap gap-1">
-            {user.permissions?.filter(p => p.canAccess).slice(0, 3).map(perm => (
-              <span key={perm.moduleId} className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full">
-                {perm.moduleId}
-              </span>
-            ))}
-            {user.permissions?.filter(p => p.canAccess).length > 3 && (
-              <span className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400 rounded-full">
-                +{user.permissions.filter(p => p.canAccess).length - 3}
-              </span>
-            )}
-          </div>
-        </div>
+
       </div>
     </div>
   );
