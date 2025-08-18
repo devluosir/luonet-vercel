@@ -107,7 +107,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
               )}
             </div>
             
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-2">
               {MODULE_PERMISSIONS.map(module => {
                 const permission = permissions.find(p => p.moduleId === module.id);
                 const isEnabled = permission?.canAccess || false;
