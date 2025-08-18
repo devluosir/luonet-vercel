@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Permission } from '../types';
 
 // 权限模块列表
@@ -14,10 +14,13 @@ export const MODULE_PERMISSIONS = [
 
 export function usePermissions() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [originalPermissions, setOriginalPermissions] = useState<Permission[]>([]);
 
   // 初始化权限数据
   const initializePermissions = useCallback((userPermissions: Permission[]) => {
-    setPermissions(userPermissions || []);
+    const perms = userPermissions || [];
+    setPermissions(perms);
+    setOriginalPermissions(perms);
   }, []);
 
   // 切换权限开关
@@ -38,18 +41,18 @@ export function usePermissions() {
 
   // 重置权限
   const resetPermissions = useCallback(() => {
-    setPermissions([]);
-  }, []);
+    setPermissions(originalPermissions);
+  }, [originalPermissions]);
 
   // 检查权限是否已更改
-  const hasChanges = useCallback((originalPermissions: Permission[]) => {
+  const hasChanges = useMemo(() => {
     if (permissions.length !== originalPermissions.length) return true;
     
     return permissions.some(perm => {
       const original = originalPermissions.find(p => p.moduleId === perm.moduleId);
       return !original || original.canAccess !== perm.canAccess;
     });
-  }, [permissions]);
+  }, [permissions, originalPermissions]);
 
   return {
     permissions,
