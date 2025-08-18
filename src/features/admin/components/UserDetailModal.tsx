@@ -11,18 +11,28 @@ interface UserDetailModalProps {
   user: UserType | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (userId: string, permissions: Permission[]) => Promise<void>;
+  onSave: (userId: string, permissions: Permission[], isAdmin: boolean, isActive: boolean) => Promise<void>;
 }
 
 export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { permissions, initializePermissions, togglePermission, hasChanges, resetPermissions } = usePermissions();
+  const { 
+    permissions, 
+    isAdmin, 
+    isActive,
+    initializePermissions, 
+    togglePermission, 
+    toggleAdmin,
+    toggleActive,
+    hasChanges, 
+    resetPermissions 
+  } = usePermissions();
 
   // 初始化权限数据
   useEffect(() => {
     if (user && isOpen) {
-      initializePermissions(user.permissions || []);
+      initializePermissions(user.permissions || [], user.isAdmin, user.status);
     }
   }, [user, isOpen, initializePermissions]);
 
@@ -34,7 +44,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
     setError(null);
     
     try {
-      await onSave(user.id, permissions);
+      await onSave(user.id, permissions, isAdmin, isActive);
       onClose();
     } catch (error) {
       setError('保存失败，请重试');
@@ -48,7 +58,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
   const handleCancel = () => {
     if (user) {
       resetPermissions();
-      initializePermissions(user.permissions || []);
+      initializePermissions(user.permissions || [], user.isAdmin, user.status);
     }
     onClose();
   };
@@ -87,7 +97,13 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
           <ErrorMessage message={error || ''} />
 
           {/* 用户状态 */}
-          <UserStatusBadge isAdmin={user.isAdmin} isActive={user.status} />
+          <UserStatusBadge 
+            isAdmin={isAdmin} 
+            isActive={isActive} 
+            onToggleAdmin={toggleAdmin}
+            onToggleActive={toggleActive}
+            disabled={saving}
+          />
 
           {/* 权限设置 */}
           <div className="space-y-2 sm:space-y-3">
@@ -97,7 +113,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
                 <button
                   onClick={() => {
                     resetPermissions();
-                    initializePermissions(user.permissions || []);
+                    initializePermissions(user.permissions || [], user.isAdmin, user.status);
                   }}
                   className="flex items-center gap-1 px-1.5 sm:px-2 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
                 >

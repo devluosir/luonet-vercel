@@ -17,18 +17,26 @@
 - **紧凑设计**：小屏幕上的开关按钮和间距都进行了优化，确保2列布局的可用性
 - **开关按钮优化**：统一开关按钮尺寸（h-5 w-9），确保在小屏幕上清晰可见和易于操作
 
-#### 3. 组件化重构
+#### 3. 用户状态管理
+- **管理员权限开关**：支持切换用户的管理员状态，蓝色开关表示管理员权限
+- **账户状态开关**：支持启用/禁用用户账户，绿色表示启用，灰色表示禁用
+- **状态同步**：用户状态变化会触发保存按钮的启用状态
+- **重置功能**：重置按钮会同时恢复用户状态和模块权限到原始状态
+- **直观布局**：用户类型和账户状态并排显示，每个项目显示当前状态文字（普通用户/管理员、启用/禁用）
+- **颜色设置**：使用标准Tailwind颜色类，确保开关状态清晰可见
+
+#### 4. 组件化重构
 - **PermissionToggle**：独立的权限开关组件，支持复用
 - **UserStatusBadge**：用户状态徽章组件，显示管理员和活跃状态
 - **ErrorMessage**：错误消息组件，统一错误提示样式
 - **ActionButtons**：操作按钮组件，包含保存和取消功能
 
-#### 4. 性能优化
+#### 5. 性能优化
 - **useMemo 优化**：将 `hasChanges` 改为 `useMemo`，避免不必要的重新计算
 - **状态管理优化**：添加 `originalPermissions` 状态，提高重置功能效率
 - **组件记忆化**：使用 `memo` 包装所有子组件，减少不必要的重渲染
 
-#### 5. 用户体验改进
+#### 6. 用户体验改进
 - **简化操作流程**：减少按钮尺寸，优化交互反馈
 - **清晰的信息层级**：重新组织信息展示顺序，突出重要信息
 - **响应式设计**：保持在不同屏幕尺寸下的良好显示效果
@@ -46,13 +54,13 @@
 ```
 src/features/admin/
 ├── components/
-│   ├── UserDetailModal.tsx      # 主模态框组件（响应式优化）
+│   ├── UserDetailModal.tsx      # 主模态框组件（响应式优化 + 用户状态管理）
 │   ├── PermissionToggle.tsx     # 权限开关组件（响应式优化）
-│   ├── UserStatusBadge.tsx      # 用户状态徽章
+│   ├── UserStatusBadge.tsx      # 用户状态开关组件（新增开关功能）
 │   ├── ErrorMessage.tsx         # 错误消息组件
 │   └── ActionButtons.tsx        # 操作按钮组件（响应式优化）
 ├── hooks/
-│   └── usePermissions.ts        # 权限管理钩子
+│   └── usePermissions.ts        # 权限管理钩子（扩展用户状态管理）
 └── types/
     └── index.ts                 # 类型定义
 ```
@@ -67,7 +75,10 @@ import { UserDetailModal } from './components/UserDetailModal';
   user={selectedUser}
   isOpen={isModalOpen}
   onClose={() => setIsModalOpen(false)}
-  onSave={handleSavePermissions}
+  onSave={async (userId, permissions, isAdmin, isActive) => {
+    // 处理保存逻辑，包括权限、管理员状态和账户状态
+    await updateUserPermissions(userId, permissions, isAdmin, isActive);
+  }}
 />
 ```
 
