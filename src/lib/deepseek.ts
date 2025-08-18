@@ -11,9 +11,7 @@ interface _DeepSeekError {
   status?: number;
 }
 
-if (!process.env.DEEPSEEK_API_KEY) {
-  throw new Error('Missing DEEPSEEK_API_KEY environment variable');
-}
+// Environment variable check moved inside functions to avoid build-time errors
 
 const BASE_URL = 'https://api.deepseek.com/v1';
 
@@ -38,6 +36,10 @@ interface RequestData {
 }
 
 async function makeRequest(url: string, data: RequestData): Promise<DeepSeekResponse> {
+  if (!process.env.DEEPSEEK_API_KEY) {
+    throw new Error('Missing DEEPSEEK_API_KEY environment variable');
+  }
+  
   const response = await fetch(url, {
     method: 'POST',
     headers: {

@@ -28,13 +28,26 @@ export function useUsers() {
     }
   }, []);
 
-  // 更新用户权限
-  const updateUserPermissions = useCallback(async (userId: string, permissions: Permission[]) => {
+  // 更新用户权限和状态
+  const updateUserPermissions = useCallback(async (userId: string, permissions: Permission[], isAdmin?: boolean, isActive?: boolean) => {
     try {
+      // 更新权限
       await apiRequestWithError(API_ENDPOINTS.USERS.PERMISSIONS(userId), {
         method: 'PUT',
         body: JSON.stringify({ permissions })
       });
+      
+      // 如果提供了用户状态信息，也更新用户状态
+      if (isAdmin !== undefined || isActive !== undefined) {
+        const userUpdates: any = {};
+        if (isAdmin !== undefined) userUpdates.isAdmin = isAdmin;
+        if (isActive !== undefined) userUpdates.status = isActive;
+        
+        await apiRequestWithError(API_ENDPOINTS.USERS.UPDATE(userId), {
+          method: 'PUT',
+          body: JSON.stringify(userUpdates)
+        });
+      }
       
       // 刷新用户列表
       await fetchUsers();
