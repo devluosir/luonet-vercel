@@ -4,20 +4,14 @@ import { User } from '../types';
 
 interface UserListProps {
   users: User[];
-  filteredUsers: User[];
   loading: boolean;
-  searchTerm: string;
-  statusFilter: 'all' | 'active' | 'inactive';
   onCreateUser: () => void;
   onEditUser: (user: User) => void;
 }
 
 export function UserList({ 
   users, 
-  filteredUsers, 
   loading, 
-  searchTerm, 
-  statusFilter, 
   onCreateUser, 
   onEditUser 
 }: UserListProps) {
@@ -30,19 +24,19 @@ export function UserList({
     );
   }
 
-  if (filteredUsers.length === 0) {
+  if (users.length === 0) {
     return (
       <EmptyState
-        searchTerm={searchTerm}
-        statusFilter={statusFilter}
+        searchTerm=""
+        statusFilter="all"
         onCreateUser={onCreateUser}
       />
     );
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-      {filteredUsers.map((user) => (
+    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
+      {users.map((user) => (
         <UserCard
           key={user.id}
           user={user}

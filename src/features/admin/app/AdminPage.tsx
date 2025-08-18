@@ -6,7 +6,6 @@ import { Footer } from '@/components/Footer';
 import { useSession, signOut } from 'next-auth/react';
 import { useUsers } from '../hooks/useUsers';
 import { UserStats } from '../components/UserStats';
-import { UserFilters } from '../components/UserFilters';
 import { UserList } from '../components/UserList';
 import { CreateUserModal } from '../components/CreateUserModal';
 import { UserDetailModal } from '../components/UserDetailModal';
@@ -20,8 +19,6 @@ export default function AdminPage() {
   // 本地状态
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -80,28 +77,6 @@ export default function AdminPage() {
     checkPermissionsAndLoad();
   }, [mounted, session, status, hasAdminPermission, router, checkPermissionsAndLoad]);
 
-  // 过滤用户
-  const filteredUsers = useMemo(() => {
-    let filtered = users;
-
-    // 搜索过滤
-    if (searchTerm) {
-      filtered = filtered.filter(user => 
-        user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    // 状态过滤
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(user => 
-        statusFilter === 'active' ? user.status : !user.status
-      );
-    }
-
-    return filtered;
-  }, [users, searchTerm, statusFilter]);
-
   // 处理登出
   const handleLogout = async () => {
     try {
@@ -119,8 +94,8 @@ export default function AdminPage() {
   };
 
   // 保存权限
-  const handleSavePermissions = async (userId: string, permissions: any[]) => {
-    await updateUserPermissions(userId, permissions);
+  const handleSavePermissions = async (userId: string, permissions: any[], isAdmin: boolean, isActive: boolean) => {
+    await updateUserPermissions(userId, permissions, isAdmin, isActive);
   };
 
   // 避免闪烁的加载状态
@@ -228,21 +203,10 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* 搜索和筛选 */}
-          <UserFilters
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
-          />
-
           {/* 用户列表 */}
           <UserList
             users={users}
-            filteredUsers={filteredUsers}
             loading={loading}
-            searchTerm={searchTerm}
-            statusFilter={statusFilter}
             onCreateUser={() => setShowCreateModal(true)}
             onEditUser={handleEditUser}
           />

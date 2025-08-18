@@ -2,7 +2,6 @@
 export { default as AdminPage } from './app/AdminPage';
 export { UserCard } from './components/UserCard';
 export { UserStats } from './components/UserStats';
-export { UserFilters } from './components/UserFilters';
 export { UserList } from './components/UserList';
 export { UserDetailModal } from './components/UserDetailModal';
 export { CreateUserModal } from './components/CreateUserModal';
