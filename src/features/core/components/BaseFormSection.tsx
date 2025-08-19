@@ -29,10 +29,10 @@ export function BaseFormSection({
   };
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}>
+    <div className={`${className}`}>
       {/* 区块标题 */}
       <div
-        className={`px-6 py-4 border-b border-gray-200 dark:border-gray-700 ${
+        className={`px-6 py-4 ${
           collapsible ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700' : ''
         }`}
         onClick={handleToggle}

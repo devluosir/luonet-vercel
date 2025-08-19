@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useMemo, memo, useEffect } from 'react';
-import { Settings, Plus, Sparkles, Zap } from 'lucide-react';
+import { Settings, Plus, Sparkles } from 'lucide-react';
 import { useQuotationStore } from '../state/useQuotationStore';
 import { OptimizedNotesSection } from './OptimizedNotesSection';
 import { MobileOptimizedNotes } from './MobileOptimizedNotes';
@@ -38,36 +38,7 @@ const useDeviceDetection = () => {
   return deviceInfo;
 };
 
-// 🚀 性能监控hook
-const usePerformanceMonitoring = () => {
-  const [metrics, setMetrics] = useState({
-    renderTime: 0,
-    updateCount: 0,
-    lastUpdate: Date.now(),
-  });
 
-  const trackRender = useCallback(() => {
-    const startTime = performance.now();
-    
-    return () => {
-      const endTime = performance.now();
-      const renderTime = endTime - startTime;
-      
-      setMetrics(prev => ({
-        renderTime,
-        updateCount: prev.updateCount + 1,
-        lastUpdate: Date.now(),
-      }));
-
-      // 性能警告
-      if (process.env.NODE_ENV === 'development' && renderTime > 16) {
-        console.warn(`[NotesPerf] 渲染时间过长: ${renderTime.toFixed(2)}ms`);
-      }
-    };
-  }, []);
-
-  return { metrics, trackRender };
-};
 
 interface UltimatePowerNotesSectionProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -93,17 +64,14 @@ export const UltimatePowerNotesSection: React.FC<UltimatePowerNotesSectionProps>
   
   const notesActions = useOptimizedNotesActions();
   const { isMobile, isTablet, isTouch } = useDeviceDetection();
-  const { metrics, trackRender } = usePerformanceMonitoring();
   
   const [viewMode, setViewMode] = useState<'auto' | 'desktop' | 'mobile' | 'advanced'>('auto');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const cleanup = trackRender();
     setMounted(true);
-    return cleanup;
-  }, [trackRender]);
+  }, []);
 
   // 🚀 自动选择最佳视图模式
   const effectiveViewMode = useMemo(() => {
@@ -256,20 +224,7 @@ export const UltimatePowerNotesSection: React.FC<UltimatePowerNotesSectionProps>
     </div>
   ), [viewMode]);
 
-  // 🚀 渲染性能监控 (仅开发环境)
-  const renderPerformanceMonitor = useCallback(() => {
-    if (process.env.NODE_ENV !== 'development') return null;
 
-    return (
-      <div className="text-xs text-gray-400 dark:text-gray-500 mt-2 p-2 bg-gray-50 dark:bg-[#1C1C1E] rounded">
-        <div>渲染时间: {metrics.renderTime.toFixed(2)}ms</div>
-        <div>更新次数: {metrics.updateCount}</div>
-        <div>设备: {isMobile ? '移动端' : isTablet ? '平板' : '桌面端'}</div>
-        <div>视图模式: {effectiveViewMode}</div>
-        <div>可见Notes: {visibleNotes.length}/{notesConfig.length}</div>
-      </div>
-    );
-  }, [metrics, isMobile, isTablet, effectiveViewMode, visibleNotes.length, notesConfig.length]);
 
   if (!mounted) {
     // SSR期间显示简化版本
@@ -298,10 +253,6 @@ export const UltimatePowerNotesSection: React.FC<UltimatePowerNotesSectionProps>
           <h3 className="text-base font-semibold text-gray-800 dark:text-[#F5F5F7]">
             Notes
           </h3>
-          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-            <Zap className="w-3 h-3" />
-            <span>优化版</span>
-          </div>
         </div>
         
         {renderModeSelector()}
@@ -311,9 +262,6 @@ export const UltimatePowerNotesSection: React.FC<UltimatePowerNotesSectionProps>
       <div className="relative">
         {renderNotesContent()}
       </div>
-
-      {/* 性能监控 (仅开发环境) */}
-      {renderPerformanceMonitor()}
     </div>
   );
 });

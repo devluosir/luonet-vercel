@@ -484,7 +484,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* 左列：用户信息和询价单号 */}
-      <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
+      <div>
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
           {displayTitle}
         </h3>
@@ -617,7 +617,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
       </div>
 
       {/* 右列：根据类型显示不同内容 */}
-      <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
+      <div>
     
         <div className="space-y-4">
           {type === 'quotation' ? (

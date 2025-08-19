@@ -229,7 +229,7 @@ const ConfigPanel = memo<{
         <button
           type="button"
           onClick={handleFobClick}
-          className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-colors"
+          className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/30 transition-colors"
         >
           FOB离岸价
         </button>

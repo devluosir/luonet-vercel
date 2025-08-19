@@ -157,7 +157,7 @@ export default function BaseInfoCompact({
   }
 
   return (
-    <section className={`rounded-2xl border border-slate-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/30 shadow-sm p-4 ${className || ''}`}>
+    <section className={`${className || ''}`}>
       {/* 行1：左大右小 */}
       <div className="grid grid-cols-12 gap-3">
         {/* 客户信息 */}

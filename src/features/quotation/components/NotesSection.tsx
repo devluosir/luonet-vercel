@@ -147,8 +147,8 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
               onClick={() => applyTemplate('fob')}
               className={`p-1.5 rounded border border-gray-300 dark:border-gray-600 transition-colors ${
                 selectedTemplate === 'fob'
-                  ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                  : 'hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-300 text-gray-400 dark:text-gray-500'
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                  : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-300 text-gray-400 dark:text-gray-500'
               }`}
               title="套用 FOB 模板"
             >
@@ -169,7 +169,7 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
             <button
               type="button"
               onClick={addNote}
-              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-300 text-gray-400 dark:text-gray-500"
+              className="p-1.5 rounded border border-gray-300 dark:border-gray-600 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/30 transition-colors"
               title="新增条款"
             >
               <Plus className="w-4 h-4" />

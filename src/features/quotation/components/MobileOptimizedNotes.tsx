@@ -153,19 +153,15 @@ export const MobileOptimizedNotes = memo<MobileOptimizedNotesProps>(({
         </h4>
         <div className="grid grid-cols-1 gap-2">
           {[
-            { key: 'exw' as const, label: 'EXW工厂交货', color: 'purple' },
-            { key: 'fob' as const, label: 'FOB离岸价', color: 'indigo' },
-            { key: 'cif' as const, label: 'CIF到岸价', color: 'teal' },
-          ].map(({ key, label, color }) => (
+            { key: 'exw' as const, label: 'EXW工厂交货', className: 'bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/30 border-purple-200 dark:border-purple-800' },
+            { key: 'fob' as const, label: 'FOB离岸价', className: 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800' },
+            { key: 'cif' as const, label: 'CIF到岸价', className: 'bg-teal-100 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 hover:bg-teal-200 dark:hover:bg-teal-900/30 border-teal-200 dark:border-teal-800' },
+          ].map(({ key, label, className }) => (
             <button
               key={key}
               type="button"
               onClick={() => onApplyTemplate(key)}
-              className={`flex items-center justify-center h-12 rounded-lg text-sm font-medium transition-all duration-200 active:scale-95
-                bg-${color}-100 dark:bg-${color}-900/20 
-                text-${color}-700 dark:text-${color}-300 
-                hover:bg-${color}-200 dark:hover:bg-${color}-900/30
-                border border-${color}-200 dark:border-${color}-800`}
+              className={`flex items-center justify-center h-12 rounded-lg text-sm font-medium transition-all duration-200 active:scale-95 border ${className}`}
               style={{ minHeight: TOUCH_TARGET_SIZE }}
             >
               {label}
