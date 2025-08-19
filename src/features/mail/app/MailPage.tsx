@@ -59,6 +59,7 @@ export default function MailPage() {
       <main className="flex-1">
         <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
           <BackButton />
+          
           <div className="w-full max-w-4xl mx-auto relative">
             <MailTabs 
               activeTab={activeTab} 
