@@ -3,21 +3,11 @@ import React, { useState } from 'react';
 interface SettingsPanelProps {
   isVisible: boolean;
   documentType: 'proforma' | 'packing' | 'both';
-  showHsCode: boolean;
-  showDimensions: boolean;
-  showWeightAndPackage: boolean;
-  showPrice: boolean;
   dimensionUnit: string;
-  currency: string;
   headerType: 'none' | 'bilingual' | 'english';
   customUnits?: string[];
   onDocumentTypeChange: (type: 'proforma' | 'packing' | 'both') => void;
-  onToggleHsCode: (show: boolean) => void;
-  onToggleDimensions: (show: boolean) => void;
-  onToggleWeightAndPackage: (show: boolean) => void;
-  onTogglePrice: (show: boolean) => void;
   onDimensionUnitChange: (unit: string) => void;
-  onCurrencyChange: (currency: string) => void;
   onHeaderTypeChange: (type: 'none' | 'bilingual' | 'english') => void;
   onCustomUnitsChange: (units: string[]) => void;
 }
@@ -25,21 +15,11 @@ interface SettingsPanelProps {
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   isVisible,
   documentType,
-  showHsCode,
-  showDimensions,
-  showWeightAndPackage,
-  showPrice,
   dimensionUnit,
-  currency,
   headerType,
   customUnits = [],
   onDocumentTypeChange,
-  onToggleHsCode,
-  onToggleDimensions,
-  onToggleWeightAndPackage,
-  onTogglePrice,
   onDimensionUnitChange,
-  onCurrencyChange,
   onHeaderTypeChange,
   onCustomUnitsChange
 }) => {
@@ -121,157 +101,37 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             </div>
           </div>
 
+
+
           {/* 分隔线 - 在大屏显示 */}
           <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
 
-          {/* 换行控制：小屏换行，中屏不换行 */}
-          <div className="w-full sm:w-auto"></div>
-
-          {/* 第三组：显示选项 */}
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Show:</span>
-            
-            {/* HS Code */}
-            <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
-              <input
-                type="checkbox"
-                checked={showHsCode}
-                onChange={(e) => onToggleHsCode(e.target.checked)}
-                className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
-                  checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
-                  focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
-                  relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
-                  before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
-                  checked:before:scale-100 before:transition-transform before:duration-200"
-                style={{
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'none'
-                }}
-              />
-              <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">HS</span>
-            </label>
-            
-            {/* Weight & Package */}
-            <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
-              <input
-                type="checkbox"
-                checked={showWeightAndPackage}
-                onChange={(e) => onToggleWeightAndPackage(e.target.checked)}
-                className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
-                  checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
-                  focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
-                  relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
-                  before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
-                  checked:before:scale-100 before:transition-transform before:duration-200"
-                style={{
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'none'
-                }}
-              />
-              <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Weight</span>
-            </label>
-            
-            {/* Dimensions */}
-            <div className="flex items-center gap-1">
-              <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
-                <input
-                  type="checkbox"
-                  checked={showDimensions}
-                  onChange={(e) => onToggleDimensions(e.target.checked)}
-                  className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
-                    checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
-                    focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
-                    relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
-                    before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
-                    checked:before:scale-100 before:transition-transform before:duration-200"
-                  style={{
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'none'
-                  }}
-                />
-                <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Size</span>
-              </label>
-              <div className="flex gap-0.5 ml-1">
-                <button
-                  type="button"
-                  onClick={() => onDimensionUnitChange('cm')}
-                  className={`text-[9px] px-1 py-0.5 rounded font-medium ${
-                    dimensionUnit === 'cm' 
-                      ? 'bg-[#007AFF] text-white' 
-                      : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-300'
-                  }`}
-                >
-                  cm
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDimensionUnitChange('mm')}
-                  className={`text-[9px] px-1 py-0.5 rounded font-medium ${
-                    dimensionUnit === 'mm' 
-                      ? 'bg-[#007AFF] text-white' 
-                      : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-300'
-                  }`}
-                >
-                  mm
-                </button>
-              </div>
-            </div>
-            
-            {/* Price */}
-            <div className="flex items-center gap-1">
-              <label className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
-                <input
-                  type="checkbox"
-                  checked={showPrice}
-                  onChange={(e) => onTogglePrice(e.target.checked)}
-                  className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
-                    checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
-                    focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
-                    relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
-                    before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
-                    checked:before:scale-100 before:transition-transform before:duration-200"
-                  style={{
-                    WebkitAppearance: 'none',
-                    MozAppearance: 'none'
-                  }}
-                />
-                <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">Price</span>
-              </label>
-              <div className="flex gap-0.5 ml-1">
-                <button
-                  type="button"
-                  onClick={() => onCurrencyChange('USD')}
-                  className={`text-[9px] px-1 py-0.5 rounded font-medium ${
-                    currency === 'USD' 
-                      ? 'bg-[#007AFF] text-white' 
-                      : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-300'
-                  }`}
-                >
-                  $
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onCurrencyChange('EUR')}
-                  className={`text-[9px] px-1 py-0.5 rounded font-medium ${
-                    currency === 'EUR' 
-                      ? 'bg-[#007AFF] text-white' 
-                      : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-300'
-                  }`}
-                >
-                  €
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onCurrencyChange('CNY')}
-                  className={`text-[9px] px-1 py-0.5 rounded font-medium ${
-                    currency === 'CNY' 
-                      ? 'bg-[#007AFF] text-white' 
-                      : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-300'
-                  }`}
-                >
-                  ¥
-                </button>
-              </div>
+          {/* 第三组：尺寸单位 */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Size Unit:</span>
+            <div className="flex gap-0.5">
+              <button
+                type="button"
+                onClick={() => onDimensionUnitChange('cm')}
+                className={`text-[9px] px-1 py-0.5 rounded font-medium ${
+                  dimensionUnit === 'cm' 
+                    ? 'bg-[#007AFF] text-white' 
+                    : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-300'
+                }`}
+              >
+                cm
+              </button>
+              <button
+                type="button"
+                onClick={() => onDimensionUnitChange('mm')}
+                className={`text-[9px] px-1 py-0.5 rounded font-medium ${
+                  dimensionUnit === 'mm' 
+                    ? 'bg-[#007AFF] text-white' 
+                    : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-300'
+                }`}
+              >
+                mm
+              </button>
             </div>
           </div>
 

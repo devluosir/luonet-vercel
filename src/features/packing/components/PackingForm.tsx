@@ -12,6 +12,7 @@ import { ActionButtons } from './ActionButtons';
 import { SettingsPanel } from '../../../components/packinglist/SettingsPanel';
 import { ShippingMarksModal } from '../../../components/packinglist/ShippingMarksModal';
 import { calculatePackingTotals } from '../utils/calculations';
+import { useTablePrefsHydrated } from '../state/useTablePrefs';
 
 
 
@@ -33,6 +34,7 @@ export const PackingForm: React.FC<PackingFormProps> = ({
   onExportExcel = () => {}
 }) => {
   const pathname = usePathname();
+  const { setCols } = useTablePrefsHydrated();
   const [showSettings, setShowSettings] = useState(false);
   const [showShippingMarks, setShowShippingMarks] = useState(false);
   const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
@@ -60,19 +62,31 @@ export const PackingForm: React.FC<PackingFormProps> = ({
   const handleDocumentTypeChange = (type: 'proforma' | 'packing' | 'both') => {
     const updates: Partial<typeof data> = { documentType: type };
     
-    // 根据文档类型自动调整显示选项
+    // 根据文档类型自动调整显示选项和列控制状态
     switch (type) {
       case 'proforma':
         updates.showPrice = true;
         updates.showWeightAndPackage = false;
+        updates.showDimensions = false;
+        updates.showHsCode = true;
+        // 同步列控制状态：显示价格列，隐藏重量包装列和尺寸列
+        setCols(['description', 'quantity', 'unit', 'hsCode', 'unitPrice', 'amount']);
         break;
       case 'packing':
         updates.showPrice = false;
         updates.showWeightAndPackage = true;
+        updates.showDimensions = true;
+        updates.showHsCode = true;
+        // 同步列控制状态：显示重量包装列和尺寸列，隐藏价格列
+        setCols(['description', 'quantity', 'unit', 'hsCode', 'netWeight', 'grossWeight', 'packageQty', 'dimensions']);
         break;
       case 'both':
         updates.showPrice = true;
         updates.showWeightAndPackage = true;
+        updates.showDimensions = true;
+        updates.showHsCode = true;
+        // 同步列控制状态：显示所有列
+        setCols(['description', 'quantity', 'unit', 'hsCode', 'unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty', 'dimensions']);
         break;
     }
     
@@ -164,24 +178,11 @@ export const PackingForm: React.FC<PackingFormProps> = ({
               <SettingsPanel
                 isVisible={showSettings}
                 documentType={data.documentType}
-                showHsCode={data.showHsCode}
-                showDimensions={data.showDimensions}
-                showWeightAndPackage={data.showWeightAndPackage}
-                showPrice={data.showPrice}
                 dimensionUnit={data.dimensionUnit}
-                currency={data.currency}
                 headerType={data.templateConfig.headerType}
                 customUnits={data.customUnits}
                 onDocumentTypeChange={handleDocumentTypeChange}
-                onToggleHsCode={(show) => handleDataChange({ showHsCode: show })}
-                onToggleDimensions={(show) => handleDataChange({ showDimensions: show })}
-                onToggleWeightAndPackage={(show) => handleDataChange({ showWeightAndPackage: show })}
-                onTogglePrice={(show) => handleDataChange({ 
-                  showPrice: show,
-                  otherFees: show ? data.otherFees : []
-                })}
                 onDimensionUnitChange={(unit) => handleDataChange({ dimensionUnit: unit })}
-                onCurrencyChange={(currency) => handleDataChange({ currency })}
                 onHeaderTypeChange={(headerType) => handleDataChange({ 
                   templateConfig: { ...data.templateConfig, headerType } 
                 })}
