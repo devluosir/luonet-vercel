@@ -210,8 +210,18 @@ export async function generatePackingListPDF(
     //   currentY = renderShippingMarks(doc, data, currentY, pageWidth, margin);
     // }
 
+    // 读取页面的列显示设置
+    let visibleCols: string[] | undefined;
+    try {
+      if (typeof window !== 'undefined') {
+        visibleCols = JSON.parse(localStorage.getItem('pk.visibleCols') || 'null');
+      }
+    } catch (e) {
+      console.warn('Failed to read packing table column preferences:', e);
+    }
+
     // 商品表格 - 紧跟在基本信息后
-    currentY = await renderPackingTable(doc, data, currentY, mergedPackageQtyCells, mergedDimensionsCells);
+    currentY = await renderPackingTable(doc, data, currentY, mergedPackageQtyCells, mergedDimensionsCells, visibleCols);
 
     // 备注
     renderRemarks(doc, data, currentY, pageWidth, margin);
@@ -441,7 +451,8 @@ async function renderPackingTable(
     endRow: number;
     content: string;
     isMerged: boolean;
-  }>
+  }>,
+  visibleCols?: string[]
 ): Promise<number> {
   // 计算页面宽度和边距
   const pageWidth = doc.internal.pageSize.width;
@@ -466,13 +477,30 @@ async function renderPackingTable(
     dimensions: 6
   };
 
-  // 计算总权重
-  let totalWeight = baseWidths.no + baseWidths.description;
-  if (data.showHsCode) totalWeight += baseWidths.hsCode;
-  totalWeight += baseWidths.qty + baseWidths.unit;
-  if (data.showPrice) totalWeight += baseWidths.unitPrice + baseWidths.amount;
-  if (data.showWeightAndPackage) totalWeight += baseWidths.netWeight + baseWidths.grossWeight + baseWidths.pkgs;
-  if (data.showDimensions) totalWeight += baseWidths.dimensions;
+  // 确定显示的列（优先使用页面设置，回退到数据开关）
+  const showDescription = visibleCols ? visibleCols.includes('description') : true;
+  const showHsCode = visibleCols ? visibleCols.includes('hsCode') : data.showHsCode;
+  const showQuantity = visibleCols ? visibleCols.includes('quantity') : true;
+  const showUnit = visibleCols ? visibleCols.includes('unit') : true;
+  const showUnitPrice = visibleCols ? visibleCols.includes('unitPrice') : data.showPrice;
+  const showAmount = visibleCols ? visibleCols.includes('amount') : data.showPrice;
+  const showNetWeight = visibleCols ? visibleCols.includes('netWeight') : data.showWeightAndPackage;
+  const showGrossWeight = visibleCols ? visibleCols.includes('grossWeight') : data.showWeightAndPackage;
+  const showPackageQty = visibleCols ? visibleCols.includes('packageQty') : data.showWeightAndPackage;
+  const showDimensions = visibleCols ? visibleCols.includes('dimensions') : data.showDimensions;
+
+  // 计算总权重，基于实际显示的列
+  let totalWeight = baseWidths.no;
+  if (showDescription) totalWeight += baseWidths.description;
+  if (showHsCode) totalWeight += baseWidths.hsCode;
+  if (showQuantity) totalWeight += baseWidths.qty;
+  if (showUnit) totalWeight += baseWidths.unit;
+  if (showUnitPrice) totalWeight += baseWidths.unitPrice;
+  if (showAmount) totalWeight += baseWidths.amount;
+  if (showNetWeight) totalWeight += baseWidths.netWeight;
+  if (showGrossWeight) totalWeight += baseWidths.grossWeight;
+  if (showPackageQty) totalWeight += baseWidths.pkgs;
+  if (showDimensions) totalWeight += baseWidths.dimensions;
 
   // 计算单位权重对应的宽度
   const unitWidth = tableWidth / totalWeight;
@@ -575,20 +603,17 @@ async function renderPackingTable(
   }
 
   // 准备表头
-  const headers = [['No.', 'Description']];
-  if (data.showHsCode) headers[0].push('HS Code');
-  headers[0].push('Qty', 'Unit');
-  if (data.showPrice) headers[0].push('U/Price', 'Amount');
-  if (data.showWeightAndPackage) {
-    headers[0].push(
-      'N.W.\n(kg)',
-      'G.W.\n(kg)',
-      'Pkgs'
-    );
-  }
-  if (data.showDimensions) {
-    headers[0].push(`Dimensions\n(${data.dimensionUnit})`);
-  }
+  const headers = [['No.']];
+  if (showDescription) headers[0].push('Description');
+  if (showHsCode) headers[0].push('HS Code');
+  if (showQuantity) headers[0].push('Qty');
+  if (showUnit) headers[0].push('Unit');
+  if (showUnitPrice) headers[0].push('U/Price');
+  if (showAmount) headers[0].push('Amount');
+  if (showNetWeight) headers[0].push('N.W.\n(kg)');
+  if (showGrossWeight) headers[0].push('G.W.\n(kg)');
+  if (showPackageQty) headers[0].push('Pkgs');
+  if (showDimensions) headers[0].push(`Dimensions\n(${data.dimensionUnit})`);
 
   // 准备数据行（支持分组合并单元格）
   const body: RowInput[] = [];
@@ -608,11 +633,11 @@ async function renderPackingTable(
   let rowIndex = 0;
   data.items.forEach((item) => {
     const row: CellInput[] = [
-      rowIndex + 1, // 用当前序号
-      item.description
+      rowIndex + 1 // 用当前序号
     ];
     
-    if (data.showHsCode) row.push(item.hsCode);
+    if (showDescription) row.push(item.description);
+    if (showHsCode) row.push(item.hsCode);
     
     console.log(`PDF生成 - Row ${rowIndex} 单位信息:`, {
       originalUnit: item.unit,
@@ -625,30 +650,20 @@ async function renderPackingTable(
       }
     });
     
-
-
     // 确保单位有默认值，并使用单复数处理
     const unit = item.unit || 'pc';
-    row.push(
-      item.quantity.toString(),
-      getUnitDisplay(unit, item.quantity) // 使用单复数处理函数
-    );
+    if (showQuantity) row.push(item.quantity.toString());
+    if (showUnit) row.push(getUnitDisplay(unit, item.quantity)); // 使用单复数处理函数
     
-    if (data.showPrice) {
-      row.push(
-        item.unitPrice.toFixed(2),
-        item.totalPrice.toFixed(2)
-      );
-    }
+    if (showUnitPrice) row.push(item.unitPrice.toFixed(2));
+    if (showAmount) row.push(item.totalPrice.toFixed(2));
     
-    if (data.showWeightAndPackage) {
-      // 处理Net Weight和Gross Weight列（不合并）
-      row.push(
-        item.netWeight.toFixed(2),
-        item.grossWeight.toFixed(2)
-      );
+    // 处理重量列
+    if (showNetWeight) row.push(item.netWeight.toFixed(2));
+    if (showGrossWeight) row.push(item.grossWeight.toFixed(2));
       
-      // 处理Package Qty列的合并
+    // 处理Package Qty列的合并
+    if (showPackageQty) {
       const packageQtyMergedInfo = getMergedCellInfo(rowIndex, mergedPackageQtyCells);
       console.log(`Row ${rowIndex} Package Qty合并信息:`, {
         item: item.packageQty,
@@ -680,7 +695,7 @@ async function renderPackingTable(
       }
     }
     
-    if (data.showDimensions) {
+    if (showDimensions) {
       // 处理Dimensions列的合并
       const dimensionsMergedInfo = getMergedCellInfo(rowIndex, mergedDimensionsCells);
       console.log(`Row ${rowIndex} Dimensions合并信息:`, {
@@ -718,14 +733,17 @@ async function renderPackingTable(
     rowIndex++;
   });
 
-  // 计算需要合并的列数（No. + Description + HS Code + Qty + Unit + U/Price）
-  let mergeColCount = 2; // No. + Description
-  if (data.showHsCode) mergeColCount += 1;
-  mergeColCount += 2; // Qty + Unit
-  if (data.showPrice) mergeColCount += 1; // U/Price
+  // 计算需要合并的列数，基于实际显示的列
+  let mergeColCount = 1; // No.
+  if (showDescription) mergeColCount += 1;
+  if (showHsCode) mergeColCount += 1;
+  if (showQuantity) mergeColCount += 1;
+  if (showUnit) mergeColCount += 1;
+  if (showUnitPrice) mergeColCount += 1;
+  // 不包括Amount列，因为Other Fee的金额要显示在Amount列
 
   // 添加 other fees 行
-  if (data.showPrice && data.otherFees && data.otherFees.length > 0) {
+  if (showAmount && data.otherFees && data.otherFees.length > 0) {
     data.otherFees.forEach(fee => {
       const feeRow: CellInput[] = [
         {
