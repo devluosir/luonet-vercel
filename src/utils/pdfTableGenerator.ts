@@ -351,7 +351,7 @@ export const generateTableConfig = (
             }
           },
           {
-            content: getUnitDisplay(item.unit || '', item.quantity || 0, data.customUnits || []),
+            content: getUnitDisplay(item.unit || 'pc', item.quantity || 0, data.customUnits || []),
             styles: { 
               halign: 'center' as const,
               ...(item.highlight?.unit ? { textColor: [255, 0, 0] } : {})

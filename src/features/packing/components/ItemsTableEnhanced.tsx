@@ -34,8 +34,9 @@ const selectInputClassName = `${baseInputClassName} text-center cursor-pointer
   bg-[url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")] 
   bg-[length:1rem_1rem] bg-[right_0.5rem_center] bg-no-repeat pr-8`;
 
-// 默认单位列表（需要单复数变化的单位）
-const defaultUnits = ['pc', 'set', 'length'] as const;
+// 导入单位处理模块
+import { useUnitHandler } from '@/hooks/useUnitHandler';
+import { UnitSelector } from '@/components/ui/UnitSelector';
 
 interface PackingOtherFee {
   id: number;
@@ -577,40 +578,30 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     }
   };
 
-  // 获取单位显示文本
-  const getUnitDisplay = (baseUnit: string, quantity: number) => {
-    if (defaultUnits.includes(baseUnit as typeof defaultUnits[number])) {
-      return quantity === 1 ? baseUnit : `${baseUnit}s`;
-    }
-    return baseUnit;
-  };
-
-  // 获取所有可用单位
-  const getAllUnits = () => {
-    return [...defaultUnits, ...(data.customUnits || [])];
-  };
+  // 使用单位处理Hook
+  const { 
+    handleItemChange: handleUnitItemChange, 
+    getDisplayUnit, 
+    allUnits 
+  } = useUnitHandler(data.customUnits || []);
 
   // 处理单位变更
   const handleUnitChange = (index: number, value: string) => {
-    const baseUnit = value.replace(/s$/, '');
-    const quantity = data.items[index].quantity;
-    const newUnit = defaultUnits.includes(baseUnit as typeof defaultUnits[number]) 
-      ? getUnitDisplay(baseUnit, quantity) 
-      : value;
-    onItemChange(index, 'unit', newUnit);
+    const item = data.items[index];
+    const result = handleUnitItemChange(item, 'unit', value);
+    onItemChange(index, 'unit', result.unit);
   };
 
-  // 处理数量变更时同时更新单位（确保只接受整数）
+  // 处理数量变更（确保只接受整数）
   const handleQuantityChange = (index: number, value: string | number) => {
     const quantity = typeof value === 'string' ? parseInt(value) || 0 : Math.floor(Number(value));
-    const baseUnit = data.items[index].unit.replace(/s$/, '');
-    const newUnit = defaultUnits.includes(baseUnit as typeof defaultUnits[number]) 
-      ? getUnitDisplay(baseUnit, quantity) 
-      : data.items[index].unit;
+    const item = data.items[index];
+    const result = handleUnitItemChange(item, 'quantity', quantity);
     
-    onItemChange(index, 'quantity', quantity);
-    if (newUnit !== data.items[index].unit) {
-      onItemChange(index, 'unit', newUnit);
+    onItemChange(index, 'quantity', result.quantity);
+    // 如果单位发生变化，同时更新单位
+    if (result.unit !== item.unit) {
+      onItemChange(index, 'unit', result.unit);
     }
   };
 
@@ -920,7 +911,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                             const value = e.target.value;
                             if (/^\d*$/.test(value)) {
                               setEditingQtyAmount(value);
-                              handleQuantityChange(index, value === '' ? 0 : parseInt(value));
+                              // 只在输入过程中更新数量，不触发单位更新
+                              const quantity = value === '' ? 0 : parseInt(value);
+                              onItemChange(index, 'quantity', quantity);
                             }
                           }}
                           onFocus={(e) => {
@@ -932,6 +925,12 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                           onBlur={() => {
                             setEditingQtyIndex(null);
                             setEditingQtyAmount('');
+                            // 失焦时更新单位（如果需要）
+                            const item = data.items[index];
+                            const result = handleUnitItemChange(item, 'quantity', item.quantity);
+                            if (result.unit !== item.unit) {
+                              onItemChange(index, 'unit', result.unit);
+                            }
                           }}
                           className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input"
                           placeholder="0"
@@ -942,22 +941,14 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                     
                     {effectiveVisibleCols.includes('unit') && (
                       <td className="py-2 px-4 text-center text-sm">
-                        <select
+                        <UnitSelector
                           value={item.unit}
-                          onChange={(e) => handleUnitChange(index, e.target.value)}
+                          quantity={item.quantity}
+                          customUnits={data.customUnits || []}
+                          onChange={(unit) => handleUnitChange(index, unit)}
+                          onDoubleClick={() => handleDoubleClick(index, 'unit')}
                           className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center cursor-pointer appearance-none ios-optimized-input"
-                        >
-                          {getAllUnits().map(unit => {
-                            const displayUnit = defaultUnits.includes(unit as typeof defaultUnits[number]) 
-                              ? getUnitDisplay(unit, item.quantity) 
-                              : unit;
-                            return (
-                              <option key={unit} value={displayUnit}>
-                                {displayUnit}
-                              </option>
-                            );
-                          })}
-                        </select>
+                        />
                       </td>
                     )}
                     

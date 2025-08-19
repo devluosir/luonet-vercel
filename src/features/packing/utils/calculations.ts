@@ -1,7 +1,5 @@
 import { PackingData, PackingTotals, PackingItem } from '../types';
-
-// 默认单位列表（需要单复数变化的单位）
-const defaultUnits = ['pc', 'set', 'length'] as const;
+import { getUnitDisplay as getUnitDisplayFromUtils } from '@/utils/unitUtils';
 
 /**
  * 计算总价
@@ -11,13 +9,10 @@ export const calculateTotalPrice = (quantity: number, unitPrice: number): number
 };
 
 /**
- * 处理单位的单复数
+ * 处理单位的单复数（使用统一的工具函数）
  */
 export const getUnitDisplay = (baseUnit: string, quantity: number): string => {
-  if (defaultUnits.includes(baseUnit as typeof defaultUnits[number])) {
-    return quantity > 1 ? `${baseUnit}s` : baseUnit;
-  }
-  return baseUnit;
+  return getUnitDisplayFromUtils(baseUnit, quantity);
 };
 
 /**

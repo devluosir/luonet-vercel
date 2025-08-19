@@ -338,7 +338,7 @@ async function renderInvoiceTable(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       ...(data.showPartName ? [{ content: item.partname, styles: item.highlight?.partname ? { textColor: [255, 0, 0] } : {} }] : []),
       ...(data.showDescription ? [{ content: item.description, styles: item.highlight?.description ? { textColor: [255, 0, 0] } : {} }] : []),
       { content: item.quantity || '', styles: item.highlight?.quantity ? { textColor: [255, 0, 0] } : {} },
-      { content: item.quantity ? item.unit : '', styles: item.highlight?.unit ? { textColor: [255, 0, 0] } : {} },
+      { content: item.quantity ? getUnitDisplay(item.unit || 'pc', item.quantity) : '', styles: item.highlight?.unit ? { textColor: [255, 0, 0] } : {} },
       { content: Number(item.unitPrice).toFixed(2), styles: item.highlight?.unitPrice ? { textColor: [255, 0, 0] } : {} },
       { content: Number(item.amount).toFixed(2), styles: item.highlight?.amount ? { textColor: [255, 0, 0] } : {} },
       ...(data.showRemarks ? [{ content: item.remarks || '', styles: item.highlight?.remarks ? { textColor: [255, 0, 0] } : {} }] : [])

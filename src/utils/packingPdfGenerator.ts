@@ -5,6 +5,7 @@ import { embeddedResources } from '@/lib/embedded-resources';
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { setCnFont, validateFontRegistration } from '@/utils/pdfFontUtils';
 import { MergedCellInfo } from '@/features/packing/types';
+import { getUnitDisplay } from '@/utils/unitUtils';
 
 // 扩展 jsPDF 类型
 interface ExtendedJsPDF extends Omit<jsPDF, 'getImageProperties' | 'setPage'> {
@@ -602,6 +603,8 @@ async function renderPackingTable(
     return !mergedInfo || mergedInfo.startRow === rowIndex;
   };
 
+  // 直接使用表格中存储的单位值，不做任何处理
+
   let rowIndex = 0;
   data.items.forEach((item) => {
     const row: CellInput[] = [
@@ -610,9 +613,25 @@ async function renderPackingTable(
     ];
     
     if (data.showHsCode) row.push(item.hsCode);
+    
+    console.log(`PDF生成 - Row ${rowIndex} 单位信息:`, {
+      originalUnit: item.unit,
+      quantity: item.quantity,
+      itemData: {
+        id: item.id,
+        description: item.description,
+        quantity: item.quantity,
+        unit: item.unit
+      }
+    });
+    
+
+
+    // 确保单位有默认值，并使用单复数处理
+    const unit = item.unit || 'pc';
     row.push(
       item.quantity.toString(),
-      item.unit
+      getUnitDisplay(unit, item.quantity) // 使用单复数处理函数
     );
     
     if (data.showPrice) {

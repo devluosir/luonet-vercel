@@ -82,6 +82,7 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
       id: Date.now() + index,
       serialNo: (data.items.length + index + 1).toString(),
       totalPrice: item.quantity * item.unitPrice,
+      unit: item.unit || 'pc', // 确保导入的数据有默认单位
     }));
     
     onDataChange({ ...data, items: [...data.items, ...processed] });
@@ -95,7 +96,7 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
       description: r.description || '',
       hsCode: r.hsCode || '',
       quantity: Number(r.quantity) || 0,
-      unit: r.unit || 'pc',
+      unit: r.unit || 'pc', // 确保有默认单位
       unitPrice: Number(r.unitPrice) || 0,
       totalPrice: (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0),
       netWeight: Number(r.netWeight) || 0,
@@ -182,7 +183,7 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
             grossWeight: 0,
             packageQty: 0,
             dimensions: '',
-            unit: '',
+            unit: 'pc', // 设置默认单位为 'pc'
             groupId: data.currentGroupId
           };
           onDataChange({ ...data, items: [...data.items, newItem] });
