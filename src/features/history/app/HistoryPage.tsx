@@ -213,6 +213,7 @@ export function HistoryPage() {
           isOpen={showExportModal}
           onClose={() => useHistoryStore.getState().setShowExportModal(false)}
           activeTab={activeTab}
+          selectedIds={useHistoryStore.getState().selectedItems}
         />
       )}
       {showImportModal && (

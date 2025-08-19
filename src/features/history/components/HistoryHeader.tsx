@@ -111,7 +111,11 @@ export function HistoryHeader({
               <button
                 onClick={onBatchDelete}
                 disabled={isDeleting}
-                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ 
+                  backgroundColor: isDeleting ? '#9ca3af' : '#dc2626',
+                  color: 'white'
+                }}
               >
                 {isDeleting ? '删除中...' : `删除选中 (${selectedCount})`}
               </button>

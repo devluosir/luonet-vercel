@@ -291,7 +291,8 @@ export default function ConfirmationHistoryTab({
                     </button>
                     <button
                       onClick={() => onDelete(item.id)}
-                      className="hidden sm:inline-flex p-1.5 sm:p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:text-red-400 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
+                      className="hidden sm:inline-flex p-1.5 sm:p-2 rounded-lg transition-all duration-200"
+                      style={{ color: '#ef4444' }}
                       title="删除"
                     >
                       <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />

@@ -813,7 +813,7 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
 };
 
 // 执行导出
-export const executeExport = (exportType: 'current' | 'all' | 'filtered', activeTab: HistoryType, filteredData?: HistoryItem[]): ExportResult => {
+export const executeExport = (exportType: 'current' | 'all' | 'filtered' | 'selected', activeTab: HistoryType, filteredData?: HistoryItem[], selectedIds?: Set<string>): ExportResult => {
   let jsonData = '';
   let fileName = '';
   let exportStats = '';
@@ -853,6 +853,57 @@ export const executeExport = (exportType: 'current' | 'all' | 'filtered', active
           exportStats = `装箱单：${packingData.length} 条`;
           break;
       }
+      break;
+
+    case 'selected':
+      // 导出选中的单据
+      if (!selectedIds || selectedIds.size === 0) {
+        throw new Error('请先选择要导出的单据');
+      }
+
+      let selectedData: HistoryItem[] = [];
+      
+      // 根据当前选项卡获取对应的历史数据
+      switch (activeTab) {
+        case 'quotation':
+        case 'confirmation':
+          const allQuotationData = getQuotationHistory();
+          selectedData = allQuotationData.filter(item => 
+            selectedIds.has(item.id) && 
+            (activeTab === 'quotation' ? item.type === 'quotation' : item.type === 'confirmation')
+          );
+          break;
+        case 'invoice':
+          const allInvoiceData = getInvoiceHistory();
+          selectedData = allInvoiceData.filter(item => selectedIds.has(item.id));
+          break;
+        case 'purchase':
+          const allPurchaseData = getPurchaseHistory();
+          selectedData = allPurchaseData.filter(item => selectedIds.has(item.id));
+          break;
+        case 'packing':
+          const allPackingData = getPackingHistory();
+          selectedData = allPackingData.filter(item => selectedIds.has(item.id));
+          break;
+      }
+
+      if (selectedData.length === 0) {
+        throw new Error('未找到选中的单据数据');
+      }
+
+      const selectedExportData = {
+        metadata: {
+          exportDate: new Date().toISOString(),
+          totalRecords: selectedData.length,
+          exportType: 'selected',
+          activeTab: activeTab
+        },
+        records: selectedData
+      };
+
+      jsonData = JSON.stringify(selectedExportData, null, 2);
+      fileName = `selected_${activeTab}_${format(new Date(), 'yyyy-MM-dd')}.json`;
+      exportStats = `选中单据：${selectedData.length} 条`;
       break;
 
     case 'all':

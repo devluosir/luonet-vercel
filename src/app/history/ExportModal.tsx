@@ -1,4 +1,4 @@
-import { Download, Archive, FileText, CheckCircle, XCircle, X } from 'lucide-react';
+import { Download, Archive, FileText, CheckCircle, XCircle, X, CheckSquare } from 'lucide-react';
 import { useState } from 'react';
 import { executeExport, downloadFile } from '@/utils/historyImportExport';
 import type { HistoryType, HistoryItem } from '@/utils/historyImportExport';
@@ -8,13 +8,15 @@ interface ExportModalProps {
   onClose: () => void;
   activeTab: HistoryType;
   filteredData?: HistoryItem[];
+  selectedIds?: Set<string>;
 }
 
 export default function ExportModal({
   isOpen,
   onClose,
   activeTab,
-  filteredData
+  filteredData,
+  selectedIds
 }: ExportModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; content: string } | null>(null);
@@ -39,23 +41,26 @@ export default function ExportModal({
   };
 
   // 导出
-  const handleExport = async (type: 'current' | 'all' | 'filtered') => {
+  const handleExport = async (type: 'current' | 'all' | 'filtered' | 'selected') => {
     setIsLoading(true);
     clearMessage();
     
     try {
-      const { jsonData, fileName, exportStats } = executeExport(type, activeTab, filteredData);
+      const { jsonData, fileName, exportStats } = executeExport(type, activeTab, filteredData, selectedIds);
       if (downloadFile(jsonData, fileName)) {
         showMessage('success', `导出成功！\n${exportStats}`);
       } else {
         showMessage('error', '导出失败，请重试');
       }
     } catch (error) {
-      showMessage('error', '导出失败，请重试');
+      const errorMessage = error instanceof Error ? error.message : '导出失败，请重试';
+      showMessage('error', errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const selectedCount = selectedIds?.size || 0;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -126,6 +131,33 @@ export default function ExportModal({
         )}
 
         <div className="space-y-3 mb-6">
+          {/* 选中单据导出按钮 */}
+          {selectedCount > 0 && (
+            <button
+              onClick={() => handleExport('selected')}
+              disabled={isLoading}
+              className="w-full p-4 text-left bg-gradient-to-r from-orange-50 to-red-50 dark:from-gray-700 dark:to-gray-800 rounded-lg border border-orange-200 dark:border-orange-800 hover:from-orange-100 hover:to-red-100 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                  {isLoading ? (
+                    <div className="w-4 h-4 border-2 border-orange-600 dark:border-orange-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <CheckSquare className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                  )}
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    导出选中单据 ({selectedCount} 条)
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    仅导出当前选中的单据数据
+                  </div>
+                </div>
+              </div>
+            </button>
+          )}
+
           <button
             onClick={() => handleExport('current')}
             disabled={isLoading}
