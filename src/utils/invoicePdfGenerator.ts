@@ -3,6 +3,7 @@ import 'jspdf-autotable';
 import { PDFGeneratorData } from '@/types/pdf';
 import { getInvoiceTitle } from '@/utils/pdfHelpers';
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
+import { getUnitDisplay } from '@/utils/unitUtils';
 
 /**
  * 统一字体设置工具 - 确保大小写一致且带兜底
@@ -337,8 +338,8 @@ async function renderInvoiceTable(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       ...(data.showHsCode ? [{ content: item.hsCode, styles: item.highlight?.hsCode ? { textColor: [255, 0, 0] } : {} }] : []),
       ...(data.showPartName ? [{ content: item.partname, styles: item.highlight?.partname ? { textColor: [255, 0, 0] } : {} }] : []),
       ...(data.showDescription ? [{ content: item.description, styles: item.highlight?.description ? { textColor: [255, 0, 0] } : {} }] : []),
-      { content: item.quantity || '', styles: item.highlight?.quantity ? { textColor: [255, 0, 0] } : {} },
-      { content: item.quantity ? getUnitDisplay(item.unit || 'pc', item.quantity) : '', styles: item.highlight?.unit ? { textColor: [255, 0, 0] } : {} },
+      { content: item.quantity.toString(), styles: item.highlight?.quantity ? { textColor: [255, 0, 0] } : {} },
+      { content: getUnitDisplay(item.unit || 'pc', item.quantity), styles: item.highlight?.unit ? { textColor: [255, 0, 0] } : {} },
       { content: Number(item.unitPrice).toFixed(2), styles: item.highlight?.unitPrice ? { textColor: [255, 0, 0] } : {} },
       { content: Number(item.amount).toFixed(2), styles: item.highlight?.amount ? { textColor: [255, 0, 0] } : {} },
       ...(data.showRemarks ? [{ content: item.remarks || '', styles: item.highlight?.remarks ? { textColor: [255, 0, 0] } : {} }] : [])

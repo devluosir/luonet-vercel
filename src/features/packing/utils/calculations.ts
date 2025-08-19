@@ -125,9 +125,7 @@ export const createNewPackingItem = (index: number, data: PackingData): PackingI
  */
 export const updateItemUnitDisplay = (item: PackingItem, quantity: number): PackingItem => {
   const baseUnit = item.unit.replace(/s$/, '');
-  const newUnit = defaultUnits.includes(baseUnit as typeof defaultUnits[number])
-    ? getUnitDisplay(baseUnit, quantity)
-    : item.unit;
+  const newUnit = getUnitDisplay(baseUnit, quantity);
 
   return {
     ...item,

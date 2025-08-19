@@ -9,8 +9,9 @@ import { ImportDataButton } from './ImportDataButton';
 import { ColumnToggle } from './ColumnToggle';
 import { QuickImport } from './QuickImport';
 
-// 默认单位列表
-const DEFAULT_UNITS = ['pc', 'set', 'length'];
+// 导入单位处理模块
+import { useUnitHandler } from '@/hooks/useUnitHandler';
+import { UnitSelector } from '@/components/ui/UnitSelector';
 
 // 合并单元格信息类型
 export interface MergedCellInfo {
@@ -100,6 +101,10 @@ export const ItemsTable = React.memo(() => {
   const [editingOtherFeeAmount, setEditingOtherFeeAmount] = useState<string>('');
   const [importPreset, setImportPreset] = useState<{ raw: string; parsed: any } | null>(null);
 
+  // iOS输入框样式
+  const iosCaretStyle = { caretColor: '#007AFF' } as React.CSSProperties;
+  const iosCaretStyleDark = { caretColor: '#0A84FF' } as React.CSSProperties;
+
   // 列显示状态 - HS code、Part Name、Description、Remarks 可控，其他列常显
   // 互锁规则：Part Name 和 Description 至少必须显示一个
   const visibleCols = useMemo(() => {
@@ -127,6 +132,13 @@ export const ItemsTable = React.memo(() => {
     return;
   }, []);
 
+  // 处理iOS输入框焦点
+  const onFocusIOS = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    if (e.target.style.transform) {
+      e.target.style.transform = 'translateZ(0)';
+    }
+  };
+
 
 
 
@@ -143,7 +155,14 @@ export const ItemsTable = React.memo(() => {
   // 处理数量变化
   const handleQuantityChange = (index: number, value: string) => {
     const numValue = parseFloat(value) || 0;
-    updateLineItem(index, 'quantity', numValue);
+    const item = data.items[index];
+    const result = handleUnitItemChange(item, 'quantity', numValue);
+    
+    updateLineItem(index, 'quantity', result.quantity);
+    // 如果单位发生变化，同时更新单位
+    if (result.unit !== item.unit) {
+      updateLineItem(index, 'unit', result.unit);
+    }
   };
 
   // 处理单价变化
@@ -160,7 +179,9 @@ export const ItemsTable = React.memo(() => {
 
   // 处理单位变化
   const handleUnitChange = (index: number, value: string) => {
-    updateLineItem(index, 'unit', value);
+    const item = data.items[index];
+    const result = handleUnitItemChange(item, 'unit', value);
+    updateLineItem(index, 'unit', result.unit);
   };
 
   // 处理HS Code变化
@@ -193,25 +214,21 @@ export const ItemsTable = React.memo(() => {
     updateOtherFee(id, 'remarks', value);
   };
 
-  // 获取所有可用单位
-  const getAllUnits = () => {
-    return [...DEFAULT_UNITS, ...(data.customUnits || [])];
-  };
-
-  // 获取单位显示文本
-  const getUnitDisplay = (baseUnit: string, quantity: number) => {
-    if (DEFAULT_UNITS.includes(baseUnit)) return quantity === 1 ? baseUnit : `${baseUnit}s`;
-    return baseUnit;
-  };
+  // 使用单位处理Hook
+  const { 
+    handleItemChange: handleUnitItemChange, 
+    getDisplayUnit, 
+    allUnits 
+  } = useUnitHandler(data.customUnits || []);
 
   // 处理导入数据
   const handleImport = (newItems: LineItem[]) => {
     const processed = newItems.map((item, index) => {
-      const baseUnit = (item.unit || 'pc').replace(/s$/, '');
+      const result = handleUnitItemChange(item, 'quantity', item.quantity);
       return {
         ...item,
         lineNo: data.items.length + index + 1,
-        unit: DEFAULT_UNITS.includes(baseUnit) ? getUnitDisplay(baseUnit, item.quantity) : item.unit,
+        unit: result.unit,
         amount: item.quantity * item.unitPrice,
       };
     });
@@ -254,7 +271,9 @@ export const ItemsTable = React.memo(() => {
         const v = e.target.value;
         if (/^\d*$/.test(v)) {
           setEditingQtyAmount(v);
-          handleQuantityChange(index, v === '' ? '0' : v);
+          // 只在输入过程中更新数量，不触发单位更新
+          const quantity = v === '' ? 0 : parseInt(v);
+          updateLineItem(index, 'quantity', quantity);
         }
       },
       onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
@@ -265,6 +284,12 @@ export const ItemsTable = React.memo(() => {
       onBlur: () => {
         setEditingQtyIndex(null);
         setEditingQtyAmount('');
+        // 失焦时更新单位（如果需要）
+        const item = data.items[index];
+        const result = handleUnitItemChange(item, 'quantity', item.quantity);
+        if (result.unit !== item.unit) {
+          updateLineItem(index, 'unit', result.unit);
+        }
       },
     };
   };
@@ -326,12 +351,7 @@ export const ItemsTable = React.memo(() => {
     ['hsCode', 'partName', 'description', 'remarks'].includes(col)
   );
 
-  // 焦点处理
-  const onFocusIOS = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const el = e.target as HTMLElement & { style: any };
-    el.style.caretColor = isDarkMode ? '#0A84FF' : '#007AFF';
-    el.style.webkitCaretColor = isDarkMode ? '#0A84FF' : '#007AFF';
-  };
+
 
   return (
     <div className="space-y-0">
@@ -435,34 +455,24 @@ export const ItemsTable = React.memo(() => {
                       onDoubleClick={() => handleDoubleClick(index, 'quantity')}
                       className={`w-full px-3 py-2 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
                         focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                        text-[13px] text-center ios-optimized-input ${item.highlight?.quantity ? HIGHLIGHT_CLASS : ''}`}
-                      style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
-                    placeholder="0"
+                        text-[13px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
+                        [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${item.highlight?.quantity ? HIGHLIGHT_CLASS : ''}`}
+                      style={isDarkMode ? iosCaretStyleDark : iosCaretStyle}
+                      placeholder="0"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
-                  <select
+                  <UnitSelector
                     value={item.unit}
-                    onChange={(e) => handleUnitChange(index, e.target.value)}
-                      onDoubleClick={() => handleDoubleClick(index, 'unit')}
-                      onFocus={onFocusIOS}
-                      className={`w-full px-3 py-2 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
-                        focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                        text-[13px] text-center cursor-pointer appearance-none ios-optimized-input ${item.highlight?.unit ? HIGHLIGHT_CLASS : ''}`}
-                      style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
-                    >
-                      {getAllUnits().map((unit) => {
-                        const display = DEFAULT_UNITS.includes(unit)
-                          ? getUnitDisplay(unit, item.quantity)
-                          : unit;
-                        return (
-                          <option key={unit} value={display}>
-                            {display}
-                      </option>
-                        );
-                      })}
-                  </select>
+                    quantity={item.quantity}
+                    customUnits={data.customUnits || []}
+                    onChange={(unit) => handleUnitChange(index, unit)}
+                    onDoubleClick={() => handleDoubleClick(index, 'unit')}
+                    className={`w-full px-3 py-2 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
+                      focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
+                      text-[13px] text-center cursor-pointer appearance-none ios-optimized-input ${item.highlight?.unit ? HIGHLIGHT_CLASS : ''}`}
+                  />
                 </div>
               </div>
 
@@ -477,8 +487,9 @@ export const ItemsTable = React.memo(() => {
                       onDoubleClick={() => handleDoubleClick(index, 'unitPrice')}
                       className={`w-full px-3 py-2 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
                         focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                        text-[13px] text-center ios-optimized-input ${item.highlight?.unitPrice ? HIGHLIGHT_CLASS : ''}`}
-                      style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
+                        text-[13px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
+                        [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${item.highlight?.unitPrice ? HIGHLIGHT_CLASS : ''}`}
+                      style={isDarkMode ? iosCaretStyleDark : iosCaretStyle}
                     placeholder="0.00"
                     />
                   </div>
@@ -492,7 +503,7 @@ export const ItemsTable = React.memo(() => {
                       className={`w-full px-3 py-2 bg-transparent text-[13px] text-center ios-optimized-input ${
                               item.highlight?.amount ? HIGHLIGHT_CLASS : ''
                             }`}
-                      style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
+                      style={isDarkMode ? iosCaretStyleDark : iosCaretStyle}
                   />
                 </div>
               </div>
@@ -584,8 +595,9 @@ export const ItemsTable = React.memo(() => {
                       onDoubleClick={() => handleOtherFeeDoubleClick(index, 'amount')}
                       className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
                         focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                        text-[13px] text-center ios-optimized-input ${fee.highlight?.amount ? HIGHLIGHT_CLASS : ''}`}
-                      style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
+                        text-[13px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
+                        [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${fee.highlight?.amount ? HIGHLIGHT_CLASS : ''}`}
+                      style={isDarkMode ? iosCaretStyleDark : iosCaretStyle}
                       placeholder="0.00"
                     />
                   </div>
@@ -722,32 +734,21 @@ export const ItemsTable = React.memo(() => {
                             focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
                             [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${item.highlight?.quantity ? HIGHLIGHT_CLASS : ''}`}
-                          style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
+                          style={isDarkMode ? iosCaretStyleDark : iosCaretStyle}
                         />
                       </td>
 
                       <td className="w-24 px-2 py-2">
-                        <select
+                        <UnitSelector
                           value={item.unit}
-                          onChange={(e) => handleUnitChange(index, e.target.value)}
+                          quantity={item.quantity}
+                          customUnits={data.customUnits || []}
+                          onChange={(unit) => handleUnitChange(index, unit)}
                           onDoubleClick={() => handleDoubleClick(index, 'unit')}
-                          onFocus={onFocusIOS}
                           className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
                             focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-center cursor-pointer appearance-none ios-optimized-input ${item.highlight?.unit ? HIGHLIGHT_CLASS : ''}`}
-                          style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
-                        >
-                          {getAllUnits().map((unit) => {
-                            const display = DEFAULT_UNITS.includes(unit)
-                              ? getUnitDisplay(unit, item.quantity)
-                              : unit;
-                            return (
-                              <option key={unit} value={display}>
-                                {display}
-                              </option>
-                            );
-                          })}
-                        </select>
+                        />
                       </td>
 
                       <td className="w-32 px-2 py-2">
@@ -760,7 +761,7 @@ export const ItemsTable = React.memo(() => {
                             focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                             text-[13px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
                             [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${item.highlight?.unitPrice ? HIGHLIGHT_CLASS : ''}`}
-                          style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
+                          style={isDarkMode ? iosCaretStyleDark : iosCaretStyle}
                         />
                       </td>
 
@@ -773,7 +774,7 @@ export const ItemsTable = React.memo(() => {
                           className={`w-full px-3 py-1.5 bg-transparent text-[13px] text-center ios-optimized-input ${
                             item.highlight?.amount ? HIGHLIGHT_CLASS : ''
                           }`}
-                          style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
+                          style={isDarkMode ? iosCaretStyleDark : iosCaretStyle}
                         />
                       </td>
 
@@ -858,8 +859,9 @@ export const ItemsTable = React.memo(() => {
                             onDoubleClick={() => handleOtherFeeDoubleClick(index, 'amount')}
                             className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
                               focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
-                              text-[13px] text-center whitespace-pre-wrap ios-optimized-input ${fee.highlight?.amount ? HIGHLIGHT_CLASS : ''}`}
-                            style={isDarkMode ? { caretColor: '#0A84FF' } : { caretColor: '#007AFF' }}
+                              text-[13px] text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
+                              [&::-webkit-inner-spin-button]:appearance-none ios-optimized-input ${fee.highlight?.amount ? HIGHLIGHT_CLASS : ''}`}
+                            style={isDarkMode ? iosCaretStyleDark : iosCaretStyle}
                             placeholder="0.00"
                           />
                         </td>
