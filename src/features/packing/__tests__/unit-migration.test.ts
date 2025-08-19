@@ -53,7 +53,7 @@ describe('Packing Module Unit Migration', () => {
     invoiceNo: '',
     date: '',
     consignee: { name: '' },
-    markingNo: '',
+  
     remarks: '',
     remarkOptions: { shipsSpares: false, customsPurpose: false },
     documentType: 'packing' as const,

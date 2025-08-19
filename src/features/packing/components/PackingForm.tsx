@@ -10,7 +10,7 @@ import { ItemsTableSection } from './ItemsTableSection';
 import { RemarksSection } from './RemarksSection';
 import { ActionButtons } from './ActionButtons';
 import { SettingsPanel } from '../../../components/packinglist/SettingsPanel';
-import { ShippingMarksModal } from '../../../components/packinglist/ShippingMarksModal';
+
 import { calculatePackingTotals } from '../utils/calculations';
 import { useTablePrefsHydrated } from '../state/useTablePrefs';
 
@@ -36,7 +36,7 @@ export const PackingForm: React.FC<PackingFormProps> = ({
   const pathname = usePathname();
   const { setCols } = useTablePrefsHydrated();
   const [showSettings, setShowSettings] = useState(false);
-  const [showShippingMarks, setShowShippingMarks] = useState(false);
+
   const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
   const [editingUnitPrice, setEditingUnitPrice] = useState<string>('');
   const [editingFeeIndex, setEditingFeeIndex] = useState<number | null>(null);
@@ -195,7 +195,6 @@ export const PackingForm: React.FC<PackingFormProps> = ({
                 <BasicInfoSection
                   data={data}
                   onDataChange={handleDataChange}
-                  onShowShippingMarks={() => setShowShippingMarks(true)}
                 />
               </div>
 
@@ -241,13 +240,7 @@ export const PackingForm: React.FC<PackingFormProps> = ({
         </div>
       </main>
 
-      {/* Shipping Marks Modal */}
-      <ShippingMarksModal
-        isOpen={showShippingMarks}
-        onClose={() => setShowShippingMarks(false)}
-        value={data.markingNo}
-        onChange={(value) => handleDataChange({ markingNo: value })}
-      />
+
     </div>
   );
 };

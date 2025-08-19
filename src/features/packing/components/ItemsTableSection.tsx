@@ -219,7 +219,7 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
           invoiceNo: data.invoiceNo,
           date: data.date,
           consignee: data.consignee,
-          markingNo: data.markingNo,
+
           items: data.items,
           otherFees: data.otherFees,
           currency: data.currency,

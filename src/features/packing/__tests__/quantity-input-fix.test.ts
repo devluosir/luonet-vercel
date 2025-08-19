@@ -39,7 +39,7 @@ describe('Quantity Input Fix', () => {
     invoiceNo: '',
     date: '',
     consignee: { name: '' },
-    markingNo: '',
+  
     remarks: '',
     remarkOptions: { shipsSpares: false, customsPurpose: false },
     documentType: 'packing' as const,

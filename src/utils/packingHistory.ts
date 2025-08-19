@@ -23,7 +23,7 @@ interface PackingData {
   consignee: {
     name: string;
   };
-  markingNo: string;
+
   items: PackingItem[];
   currency: string;
   remarks: string;

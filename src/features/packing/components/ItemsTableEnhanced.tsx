@@ -94,7 +94,7 @@ interface PackingData {
   consignee: {
     name: string;
   };
-  markingNo: string;
+
   items: PackingItem[];
   otherFees?: PackingOtherFee[];
   currency: string;

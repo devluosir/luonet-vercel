@@ -11,7 +11,7 @@ const getInitialData = (): PackingData => ({
   consignee: {
     name: ''
   },
-  markingNo: '',
+
   items: [{
     id: 1,
     serialNo: '',

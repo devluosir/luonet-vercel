@@ -152,9 +152,7 @@ function ConsigneeField({
   );
 }
 
-export const BasicInfoSection: React.FC<BasicInfoSectionProps & {
-  onShowShippingMarks: () => void;
-}> = ({ data, onDataChange, onShowShippingMarks }) => {
+export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({ data, onDataChange }) => {
 
   const handleConsigneeChange = (consigneeName: string) => {
     onDataChange({ ...data, consignee: { ...data.consignee, name: consigneeName } });
@@ -179,9 +177,38 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps & {
                 placeholder={' '}
               />
             </div>
-            {/* 订单号 */}
+          </div>
+        </div>
+
+        {/* 右侧：单据信息 */}
+        <div className="col-span-12 md:col-span-6 lg:col-span-6">
+          <div className="space-y-3">
+            {/* 第一行：发票号 + 日期并排 */}
+            <div className="grid grid-cols-12 gap-2">
+              <div className="col-span-7">
+                <Field label="发票号 Invoice No.">
+                  <input
+                    placeholder={' '}
+                    value={data.invoiceNo || ''}
+                    onChange={(e) => onDataChange({ ...data, invoiceNo: e.target.value })}
+                    className="fi"
+                  />
+                </Field>
+              </div>
+              <div className="col-span-5">
+                <Field label="日期 Date">
+                  <input
+                    type="date"
+                    value={data.date || ''}
+                    onChange={(e) => onDataChange({ ...data, date: e.target.value })}
+                    className="fi"
+                  />
+                </Field>
+              </div>
+            </div>
+            {/* 第二行：客户订单号 */}
             <div>
-              <Field label="订单号 Order No.">
+              <Field label="客户订单号 Customer Order No.">
                 <input
                   placeholder={' '}
                   value={data.orderNo || ''}
@@ -189,57 +216,6 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps & {
                   className="fi"
                 />
               </Field>
-            </div>
-          </div>
-        </div>
-
-        {/* 右侧：单据信息 */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-6 space-y-[10px]">
-          {/* 第一行：发票号 + 日期并排 */}
-          <div className="grid grid-cols-12 gap-2">
-            <div className="col-span-7">
-              <Field label="发票号 Invoice No.">
-                <input
-                  placeholder={' '}
-                  value={data.invoiceNo || ''}
-                  onChange={(e) => onDataChange({ ...data, invoiceNo: e.target.value })}
-                  className="fi"
-                />
-              </Field>
-            </div>
-            <div className="col-span-5">
-              <Field label="日期 Date">
-                <input
-                  type="date"
-                  value={data.date || ''}
-                  onChange={(e) => onDataChange({ ...data, date: e.target.value })}
-                  className="fi"
-                />
-              </Field>
-            </div>
-          </div>
-          
-          {/* 第二行：唛头号 */}
-          <div>
-            <div className="relative">
-              <Field label="唛头号 Shipping Marks">
-                <input
-                  placeholder={' '}
-                  value={data.markingNo || ''}
-                  onChange={(e) => onDataChange({ ...data, markingNo: e.target.value })}
-                  className="fi pr-10"
-                />
-              </Field>
-              <button
-                type="button"
-                onClick={onShowShippingMarks}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#007AFF] hover:text-[#0056CC] transition-colors"
-                title="编辑唛头"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
             </div>
           </div>
         </div>

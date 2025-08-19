@@ -211,25 +211,59 @@ export async function generatePackingListPDF(
         if (headerImageBase64) {
           const headerImage = `data:image/png;base64,${headerImageBase64}`;
           const imgProperties = doc.getImageProperties(headerImage);
-          const imgWidth = pageWidth - (margin * 2);  // 使用动态边距
-          const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
+          
+          // 检查是否显示marks列（用于判断是否需要横向模式）
+          const showMarks = visibleCols ? visibleCols.includes('marks') : true;
+          const shouldUseCompactHeader = isLandscape && showMarks;
+          
+          // 根据条件调整抬头大小和位置
+          let imgWidth, imgHeight, imgX, imgY, titleFontSize, titleSpacing, titleYSpacing;
+          if (shouldUseCompactHeader) {
+            // 横向模式且显示marks列：参考报价页的设置，限制最大高度
+            const maxHeight = 35; // 比报价页稍小，因为横向模式空间有限
+            imgWidth = pageWidth - (margin * 2);
+            imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
+            
+            if (imgHeight > maxHeight) {
+              imgHeight = maxHeight;
+              imgWidth = imgHeight * (imgProperties.width / imgProperties.height);
+            }
+            
+            imgX = (pageWidth - imgWidth) / 2; // 水平居中
+            imgY = margin * 0.6; // 向上移动，但不要太多
+            titleFontSize = 12; // 横向模式使用更小的字体
+            titleSpacing = 3; // 横向模式减少间距
+            titleYSpacing = 8; // 横向模式减少间距
+          } else {
+            // 其他情况：参考发票页的设置，使用固定边距
+            imgWidth = pageWidth - 30; // 左右各留15mm，与发票页一致
+            imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
+            imgX = 15; // 左边距15mm，与发票页一致
+            imgY = 15; // 上边距15mm，与发票页一致
+            titleFontSize = 14;
+            titleSpacing = 5;
+            titleYSpacing = 10;
+          }
+          
           doc.addImage(
             headerImage,
             'PNG',
-            margin,  // 使用动态边距
-            margin,  // 使用动态边距
+            imgX,
+            imgY,
             imgWidth,
             imgHeight,
             undefined,
             'FAST'  // 使用快速压缩
           );
-          doc.setFontSize(14);
+          
+          // 调整标题字体大小和位置
+          doc.setFontSize(titleFontSize);
           setCnFont(doc, 'bold');
           const title = getPackingListTitle(data);
           const titleWidth = doc.getTextWidth(title);
-          const titleY = margin + imgHeight + 5;  // 标题Y坐标
+          const titleY = imgY + imgHeight + titleSpacing; // 标题Y坐标
           doc.text(title, (pageWidth - titleWidth) / 2, titleY);
-          currentY = titleY + 10;
+          currentY = titleY + titleYSpacing;
         } else {
           // 如果没有找到对应的表头图片，使用无表头的处理方式
           currentY = handleNoHeader(doc, data, margin, pageWidth);

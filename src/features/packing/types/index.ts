@@ -67,7 +67,7 @@ export interface PackingData {
   consignee: {
     name: string;
   };
-  markingNo: string;
+
   items: PackingItem[];
   otherFees?: OtherFee[];
   currency: string;
