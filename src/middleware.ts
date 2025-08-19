@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 const PUBLIC_ROUTES = [
   '/',
   '/api/auth',
+  '/api/health', // 健康检查端点
   '/test-login',
   // Next.js 内部的 not-found 路由在构建与运行时需要放行
   '/_not-found',

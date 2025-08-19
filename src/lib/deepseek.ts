@@ -37,7 +37,12 @@ interface RequestData {
 
 async function makeRequest(url: string, data: RequestData): Promise<DeepSeekResponse> {
   if (!process.env.DEEPSEEK_API_KEY) {
-    throw new Error('Missing DEEPSEEK_API_KEY environment variable');
+    console.error('❌ DEEPSEEK_API_KEY 环境变量未设置');
+    console.error('💡 请检查以下位置:');
+    console.error('   1. 本地开发: .env.local 文件');
+    console.error('   2. Vercel部署: 项目设置 → Environment Variables');
+    console.error('   3. 确保API密钥格式正确: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+    throw new Error('API配置错误: DEEPSEEK_API_KEY 未设置，请检查环境变量配置');
   }
   
   // 创建AbortController用于超时控制
