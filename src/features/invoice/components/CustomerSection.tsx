@@ -146,11 +146,11 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
 
   // 选择客户
   const handleSelectCustomer = (customer: SavedCustomer) => {
-    onChange({ to: customer.name, customerPO: customer.po || '' });
+    onChange({ to: customer.name, customerPO: customer.customerPO || '' });
     setShowSavedCustomers(false);
     
     // 记录客户使用情况
-    recordCustomerUsage(customer.name);
+    recordCustomerUsage(customer.name, 'invoice', 'draft');
   };
 
   // 自动匹配客户
@@ -160,10 +160,10 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
     const matchIndex = findBestCustomerMatch(to, savedCustomers);
     if (matchIndex !== -1) {
       const matchedCustomer = savedCustomers[matchIndex];
-      onChange({ to: matchedCustomer.name, customerPO: matchedCustomer.po || '' });
+      onChange({ to: matchedCustomer.name, customerPO: matchedCustomer.customerPO || '' });
       
       // 记录客户使用情况
-      recordCustomerUsage(matchedCustomer.name);
+      recordCustomerUsage(matchedCustomer.name, 'invoice', 'draft');
     }
   };
 
@@ -219,7 +219,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
           >
             {filteredCustomers.map((customer, index) => (
               <button
-                key={customer.id || index}
+                key={index}
                 type="button"
                 onClick={() => handleSelectCustomer(customer)}
                 className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 
@@ -229,9 +229,9 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
                 <div className="font-medium text-gray-900 dark:text-white">
                   {customer.name}
                 </div>
-                {customer.po && (
+                {customer.customerPO && (
                   <div className="text-sm text-gray-500 dark:text-gray-400">
-                    PO: {customer.po}
+                    PO: {customer.customerPO}
                   </div>
                 )}
               </button>
