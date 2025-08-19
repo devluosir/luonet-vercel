@@ -27,11 +27,13 @@ export const generatePdf = async (data: PackingData): Promise<Blob | null> => {
       dimensionsMergeMode: data.dimensionsMergeMode || 'auto',
       manualMergedCells: data.manualMergedCells || {
         packageQty: [],
-        dimensions: []
+        dimensions: [],
+        marks: []
       },
       autoMergedCells: data.autoMergedCells || {
         packageQty: [],
-        dimensions: []
+        dimensions: [],
+        marks: []
       }
     };
 

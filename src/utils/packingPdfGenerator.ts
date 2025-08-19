@@ -696,7 +696,7 @@ async function renderPackingTable(
   }
 
   // 准备表头
-  const headers = [[]];
+  const headers: string[][] = [[]];
   if (showMarks) headers[0].push('Marks');
   headers[0].push('No.');
   if (showDescription) headers[0].push('Description');

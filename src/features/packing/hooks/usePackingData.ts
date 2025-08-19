@@ -48,13 +48,16 @@ const getInitialData = (): PackingData => ({
   // 合并单元格相关
   packageQtyMergeMode: 'auto',
   dimensionsMergeMode: 'auto',
+  marksMergeMode: 'auto',
   manualMergedCells: {
     packageQty: [],
-    dimensions: []
+    dimensions: [],
+    marks: []
   },
   autoMergedCells: {
     packageQty: [],
-    dimensions: []
+    dimensions: [],
+    marks: []
   }
 });
 
