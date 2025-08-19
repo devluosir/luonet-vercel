@@ -341,7 +341,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   return (
     <div className="space-y-0">
       {/* 移动端按钮行 */}
-      <div className="block md:hidden mb-4">
+      <div className="block md:hidden mb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 flex-wrap">
             {/* 分组按钮 */}

@@ -758,7 +758,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   return (
     <div className="space-y-0">
       {/* 工具栏 */}
-      <div className="flex items-center justify-between mb-8 px-4 py-3 bg-gray-50/50 dark:bg-gray-800/30 rounded-lg border border-gray-200/50 dark:border-gray-700/50">
+      <div className="flex items-center justify-between mb-4 px-4 py-3">
         <div className="flex items-center gap-4">
           {/* 导入按钮 */}
           {onImport && <ImportDataButton onImport={onImport} />}
@@ -850,7 +850,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
 
       {/* 桌面端表格视图 - 中屏及以上显示 */}
       <div className="hidden md:block overflow-x-auto rounded-2xl border border-gray-200/30 dark:border-white/10
-                    bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl shadow-lg mt-6">
+                    bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-xl shadow-lg mt-2">
         <div className="min-w-[800px] lg:min-w-[1000px] xl:min-w-[1200px]">
           <table className="w-full">
             <thead>
