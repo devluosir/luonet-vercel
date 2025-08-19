@@ -11,7 +11,7 @@ import {
   History
 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
-import { CustomerSection } from '@/components/invoice/CustomerSection';
+import { CustomerSection } from '../components/CustomerSection';
 import { ItemsTable } from '../components/ItemsTable';
 import PDFPreviewModal from '@/components/history/PDFPreviewModal';
 import { useInvoiceStore } from '../state/invoice.store';

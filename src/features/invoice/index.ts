@@ -7,6 +7,7 @@ export { InvoicePage } from './app/InvoicePage';
 export { SettingsPanel } from './components/SettingsPanel';
 export { InvoiceActions } from './components/InvoiceActions';
 export { PaymentTermsSection } from './components/PaymentTermsSection';
+export { CustomerSection } from './components/CustomerSection';
 
 // 导出服务
 export { exportInvoiceToExcel } from './services/excel.service';

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getInvoiceHistory } from '@/utils/invoiceHistory';
 import InvoicePage from '../../page';
-import type { InvoiceData } from '@/types/invoice';
+import type { InvoiceData } from '@/features/invoice';
 
 interface CustomWindow extends Window {
   __INVOICE_DATA__?: InvoiceData;
