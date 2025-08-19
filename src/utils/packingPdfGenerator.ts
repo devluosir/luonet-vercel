@@ -502,9 +502,9 @@ async function renderPackingTable(
   
   // 定义各列的相对宽度权重
   const baseWidths = {
-    marks: isLandscape ? 6 : 5, // 增加marks列宽度，横向模式6，纵向模式5
+    marks: isLandscape ? 8 : 7, // 进一步增加marks列宽度，横向模式8，纵向模式7
     no: 2, // 减少序号列宽度
-    description: data.showHsCode ? (isLandscape ? 14 : 12) : (isLandscape ? 18 : 16), // 适当减少描述列宽度
+    description: data.showHsCode ? (isLandscape ? 13 : 11) : (isLandscape ? 17 : 15), // 适当减少描述列宽度
     hsCode: 5, // 减少HS Code列宽度
     qty: 3, // 减少数量列宽度
     unit: 3, // 减少单位列宽度
@@ -827,7 +827,9 @@ async function renderPackingTable(
   });
 
   // 计算需要合并的列数，基于实际显示的列
-  let mergeColCount = 1; // No.
+  let mergeColCount = 0; // 从0开始计算
+  if (showMarks) mergeColCount += 1; // 包含marks列
+  mergeColCount += 1; // No.
   if (showDescription) mergeColCount += 1;
   if (showHsCode) mergeColCount += 1;
   if (showQuantity) mergeColCount += 1;
