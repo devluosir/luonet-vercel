@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ItemsTableEnhanced } from './ItemsTableEnhanced';
 import { useTablePrefsHydrated } from '../state/useTablePrefs';
 import { ItemsTableSectionProps } from '../types';
@@ -31,6 +31,7 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
   // 合并模式状态管理 - 从主数据初始化
   const [packageQtyMergeMode, setPackageQtyMergeMode] = useState<'auto' | 'manual'>(data.packageQtyMergeMode || 'auto');
   const [dimensionsMergeMode, setDimensionsMergeMode] = useState<'auto' | 'manual'>(data.dimensionsMergeMode || 'auto');
+  const [marksMergeMode, setMarksMergeMode] = useState<'auto' | 'manual'>(data.marksMergeMode || 'auto'); // 新增marks合并模式
   
   // 手动合并数据状态 - 从主数据初始化
   const [manualMergedCells, setManualMergedCells] = useState<{
@@ -46,9 +47,16 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
       content: string;
       isMerged: boolean;
     }>;
+    marks: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
   }>(data.manualMergedCells || {
     packageQty: [],
-    dimensions: []
+    dimensions: [],
+    marks: []
   });
 
   // 当主数据中的合并相关数据发生变化时，同步更新本地状态
@@ -59,10 +67,13 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
     if (data.dimensionsMergeMode !== dimensionsMergeMode) {
       setDimensionsMergeMode(data.dimensionsMergeMode || 'auto');
     }
+    if (data.marksMergeMode !== marksMergeMode) {
+      setMarksMergeMode(data.marksMergeMode || 'auto');
+    }
     if (data.manualMergedCells && JSON.stringify(data.manualMergedCells) !== JSON.stringify(manualMergedCells)) {
       setManualMergedCells(data.manualMergedCells);
     }
-  }, [data.packageQtyMergeMode, data.dimensionsMergeMode, data.manualMergedCells, packageQtyMergeMode, dimensionsMergeMode, manualMergedCells]);
+  }, [data.packageQtyMergeMode, data.dimensionsMergeMode, data.marksMergeMode, data.manualMergedCells, packageQtyMergeMode, dimensionsMergeMode, marksMergeMode, manualMergedCells]);
 
   // 记忆化合并模式变更回调函数
   const handlePackageQtyMergeModeChange = useCallback((mode: 'auto' | 'manual') => {
@@ -73,6 +84,11 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
   const handleDimensionsMergeModeChange = useCallback((mode: 'auto' | 'manual') => {
     setDimensionsMergeMode(mode);
     onDataChange({ ...data, dimensionsMergeMode: mode });
+  }, [onDataChange, data]);
+
+  const handleMarksMergeModeChange = useCallback((mode: 'auto' | 'manual') => {
+    setMarksMergeMode(mode);
+    onDataChange({ ...data, marksMergeMode: mode });
   }, [onDataChange, data]);
 
   // 处理导入数据
@@ -109,6 +125,65 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
     onDataChange({ ...data, items: finalItems });
   };
 
+  // 计算自动合并数据
+  const autoMergedCells = useMemo(() => {
+    const calculateAutoMergedCells = (items: any[], column: 'packageQty' | 'dimensions' | 'marks') => {
+      const mergedCells: any[] = [];
+      if (!items || items.length === 0) return mergedCells;
+
+      let currentStart = 0;
+      let currentContent = column === 'packageQty' ? items[0]?.packageQty.toString() : 
+                          column === 'dimensions' ? items[0]?.dimensions : 
+                          items[0]?.marks || '';
+
+      for (let i = 1; i <= items.length; i++) {
+        const currentItem = items[i];
+        const prevItem = items[i - 1];
+
+        const prevContent = column === 'packageQty' ? prevItem?.packageQty.toString() : 
+                           column === 'dimensions' ? prevItem?.dimensions : 
+                           prevItem?.marks || '';
+        const currentContentValue = currentItem
+          ? column === 'packageQty' ? currentItem.packageQty.toString() : 
+            column === 'dimensions' ? currentItem.dimensions : 
+            currentItem.marks || ''
+          : '';
+
+        // 合并逻辑：相同内容合并，但排除0和空值
+        const shouldEndMerge = !currentItem || 
+          (currentContentValue !== prevContent) ||
+          // 排除无意义的合并（所有列都排除空值）
+          (prevContent === '0' || prevContent === '') ||
+          (currentContentValue === '0' || currentContentValue === '') ||
+          // 对于Dimensions列，排除纯数字的合并
+          (column === 'dimensions' && /^\d+$/.test(prevContent)) ||
+          (column === 'dimensions' && currentContentValue && /^\d+$/.test(currentContentValue));
+
+        if (shouldEndMerge) {
+          if (i - 1 > currentStart) {
+            // 有合并的行
+            mergedCells.push({ startRow: currentStart, endRow: i - 1, content: currentContent, isMerged: true });
+          } else {
+            // 单行，不合并
+            mergedCells.push({ startRow: currentStart, endRow: currentStart, content: currentContent, isMerged: false });
+          }
+          
+          if (currentItem) {
+            currentStart = i;
+            currentContent = currentContentValue;
+          }
+        }
+      }
+      return mergedCells;
+    };
+
+    return {
+      packageQty: calculateAutoMergedCells(data.items, 'packageQty'),
+      dimensions: calculateAutoMergedCells(data.items, 'dimensions'),
+      marks: calculateAutoMergedCells(data.items, 'marks')
+    };
+  }, [data.items]);
+
   // 处理手动合并数据变更
   const handleManualMergeChange = (newManualMergedCells: typeof manualMergedCells) => {
     setManualMergedCells(newManualMergedCells);
@@ -116,10 +191,24 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
     onDataChange({ 
       ...data, 
       manualMergedCells: newManualMergedCells,
+      autoMergedCells, // 添加自动合并数据
       packageQtyMergeMode,
-      dimensionsMergeMode
+      dimensionsMergeMode,
+      marksMergeMode
     });
   };
+
+  // 当数据变更时，确保自动合并数据也被更新
+  useEffect(() => {
+    onDataChange({ 
+      ...data, 
+      autoMergedCells,
+      manualMergedCells,
+      packageQtyMergeMode,
+      dimensionsMergeMode,
+      marksMergeMode
+    });
+  }, [autoMergedCells, manualMergedCells, packageQtyMergeMode, dimensionsMergeMode, marksMergeMode, data.items]);
 
   return (
     <section>
@@ -149,7 +238,9 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
           // 合并单元格相关
           packageQtyMergeMode,
           dimensionsMergeMode,
-          manualMergedCells
+          marksMergeMode, // 新增marks合并模式
+          manualMergedCells,
+          autoMergedCells // 添加自动合并数据
         }}
         totals={totals}
         editingFeeIndex={editingFeeIndex}
@@ -174,6 +265,7 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
           const newItem = {
             id: Date.now(),
             serialNo: '',
+            marks: '', // 新增marks字段默认值
             description: '',
             hsCode: '',
             quantity: 0,
@@ -217,6 +309,7 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
         // 合并单元格相关回调
         onPackageQtyMergeModeChange={handlePackageQtyMergeModeChange}
         onDimensionsMergeModeChange={handleDimensionsMergeModeChange}
+        onMarksMergeModeChange={handleMarksMergeModeChange} // 新增marks合并模式回调
         onManualMergedCellsChange={handleManualMergeChange}
         // 导入相关
         onImport={handleImport}

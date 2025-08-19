@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Columns } from 'lucide-react';
 import { useTablePrefsHydrated } from '../state/useTablePrefs';
 
-type Col = 'hsCode'|'description'|'quantity'|'unit'|'unitPrice'|'amount'|'netWeight'|'grossWeight'|'packageQty'|'dimensions';
+type Col = 'marks'|'hsCode'|'description'|'quantity'|'unit'|'unitPrice'|'amount'|'netWeight'|'grossWeight'|'packageQty'|'dimensions';
 
 const ALL_COLS: { key: string; label: string }[] = [
+  { key: 'marks', label: 'Marks' },
   { key: 'hsCode', label: 'HS Code' },
   { key: 'price', label: 'Price' },
   { key: 'weightAndPackage', label: 'Weight & Package' },
@@ -14,16 +15,20 @@ const ALL_COLS: { key: string; label: string }[] = [
 interface ColumnToggleProps {
   packageQtyMergeMode?: 'auto' | 'manual';
   dimensionsMergeMode?: 'auto' | 'manual';
+  marksMergeMode?: 'auto' | 'manual'; // 新增marks合并模式
   onPackageQtyMergeModeChange?: (mode: 'auto' | 'manual') => void;
   onDimensionsMergeModeChange?: (mode: 'auto' | 'manual') => void;
+  onMarksMergeModeChange?: (mode: 'auto' | 'manual') => void; // 新增marks合并模式回调
   hasGroupedItems?: boolean;
 }
 
 export function ColumnToggle({ 
   packageQtyMergeMode = 'auto', 
   dimensionsMergeMode = 'auto',
+  marksMergeMode = 'auto', // 新增marks合并模式默认值
   onPackageQtyMergeModeChange,
   onDimensionsMergeModeChange,
+  onMarksMergeModeChange, // 新增marks合并模式回调
   hasGroupedItems = false
 }: ColumnToggleProps) {
   const { visibleCols, toggleCol, setCols } = useTablePrefsHydrated();
@@ -71,6 +76,12 @@ export function ColumnToggle({
   const toggleDimensionsMergeMode = () => {
     const newMode = dimensionsMergeMode === 'auto' ? 'manual' : 'auto';
     onDimensionsMergeModeChange?.(newMode);
+  };
+
+  // 切换marks合并模式
+  const toggleMarksMergeMode = () => {
+    const newMode = marksMergeMode === 'auto' ? 'manual' : 'auto';
+    onMarksMergeModeChange?.(newMode);
   };
 
   // 检查重量和包装列的状态
@@ -158,6 +169,53 @@ export function ColumnToggle({
                 >
                   {col.label}
                 </button>
+              );
+            }
+            
+            // 处理marks列的特殊逻辑
+            if (col.key === 'marks') {
+              const isMarksVisible = visibleCols.includes('marks');
+              
+              return (
+                <div key={col.key} className="flex items-center">
+                  {/* marks列按钮 */}
+                  <button
+                    type="button"
+                    onClick={() => toggleCol(col.key as Col)}
+                    className={`px-1.5 py-1 text-xs font-medium rounded-l-lg transition-all duration-200 active:scale-95 ${
+                      isMarksVisible
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-800/50'
+                    }`}
+                    title="切换marks列"
+                  >
+                    {col.label}
+                  </button>
+                  
+                  {/* marks合并模式切换按钮 - 仅在无分组数据时显示 */}
+                  {isMarksVisible && !hasGroupedItems && (
+                    <button
+                      type="button"
+                      onClick={toggleMarksMergeMode}
+                      className={`px-1.5 py-1 text-xs font-medium rounded-r-lg transition-all duration-200 active:scale-95 flex items-center gap-1 border-l border-current/20 ${
+                        marksMergeMode === 'auto'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 shadow-sm'
+                          : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 shadow-sm'
+                      }`}
+                      title={marksMergeMode === 'auto' ? '切换到手动合并模式' : '切换到自动合并模式'}
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M8 6l4-2 4 2M8 18l4 2 4-2M12 4v16"
+                        />
+                      </svg>
+                      {marksMergeMode === 'auto' ? '自动' : '手动'}
+                    </button>
+                  )}
+                </div>
               );
             }
             

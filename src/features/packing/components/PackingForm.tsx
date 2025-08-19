@@ -45,7 +45,8 @@ export const PackingForm: React.FC<PackingFormProps> = ({
   // 计算总计
   const totals = calculatePackingTotals(data, {
     packageQty: data.manualMergedCells?.packageQty || [],
-    dimensions: data.manualMergedCells?.dimensions || []
+    dimensions: data.manualMergedCells?.dimensions || [],
+    marks: data.manualMergedCells?.marks || []
   });
 
   // 处理数据变更

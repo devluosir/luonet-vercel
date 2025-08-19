@@ -20,7 +20,11 @@ export const getUnitDisplay = (baseUnit: string, quantity: number): string => {
  */
 export const calculatePackingTotals = (
   data: PackingData, 
-  mergedCells?: { packageQty: Array<{ startRow: number; endRow: number; isMerged: boolean }>; dimensions: Array<{ startRow: number; endRow: number; isMerged: boolean }> }
+  mergedCells?: { 
+    packageQty: Array<{ startRow: number; endRow: number; isMerged: boolean }>; 
+    dimensions: Array<{ startRow: number; endRow: number; isMerged: boolean }>;
+    marks: Array<{ startRow: number; endRow: number; isMerged: boolean }>;
+  }
 ): PackingTotals => {
   let totalPrice = 0;
   let netWeight = 0;
@@ -33,7 +37,8 @@ export const calculatePackingTotals = (
   if (mergedCells) {
     const allMergedCells = [
       ...mergedCells.packageQty,
-      ...mergedCells.dimensions
+      ...mergedCells.dimensions,
+      ...mergedCells.marks
     ];
     
     allMergedCells.forEach(cell => {
@@ -52,7 +57,8 @@ export const calculatePackingTotals = (
     const isInMergedCell = processedMergedRows.has(index);
     const isMergeStart = mergedCells ? [
       ...mergedCells.packageQty,
-      ...mergedCells.dimensions
+      ...mergedCells.dimensions,
+      ...mergedCells.marks
     ].some(cell => cell.isMerged && cell.startRow === index) : false;
     
     // 如果不在合并单元格中，或者是合并的起始行，则计算
@@ -100,6 +106,7 @@ export const createNewPackingItem = (index: number, data: PackingData): PackingI
   const newItem: PackingItem = {
     id: index + 1,
     serialNo: (index + 1).toString(),
+    marks: '', // 新增marks字段默认值
     description: '',
     hsCode: '',
     quantity: 0,

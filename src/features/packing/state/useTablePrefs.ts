@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { useEffect, useState } from 'react';
 import { getLocalStorageJSON, setLocalStorage } from '../../../utils/safeLocalStorage';
 
-type Col = 'hsCode'|'description'|'quantity'|'unit'|'unitPrice'|'amount'|'netWeight'|'grossWeight'|'packageQty'|'dimensions';
+type Col = 'marks'|'hsCode'|'description'|'quantity'|'unit'|'unitPrice'|'amount'|'netWeight'|'grossWeight'|'packageQty'|'dimensions';
 
 type TablePrefsState = {
   visibleCols: Col[];

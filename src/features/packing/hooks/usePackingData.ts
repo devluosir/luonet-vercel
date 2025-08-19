@@ -15,6 +15,7 @@ const getInitialData = (): PackingData => ({
   items: [{
     id: 1,
     serialNo: '',
+    marks: '', // 新增marks字段默认值
     description: '',
     hsCode: '',
     quantity: 0,

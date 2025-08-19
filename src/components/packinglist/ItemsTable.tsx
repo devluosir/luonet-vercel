@@ -47,6 +47,7 @@ interface PackingOtherFee {
 interface PackingItem {
   id: number;
   serialNo: string;
+  marks?: string; // 新增marks字段
   description: string;
   hsCode: string;
   quantity: number;
@@ -368,6 +369,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 const newItem = {
                   id: Date.now(),
                   serialNo: '',
+                  marks: '', // 新增marks字段默认值
                   description: '',
                   hsCode: '',
                   quantity: 0,
@@ -447,6 +449,22 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Marks */}
+              <div>
+                <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Marks</label>
+                <input
+                  type="text"
+                  value={item.marks || ''}
+                  onChange={(e) => onItemChange(index, 'marks', e.target.value)}
+                  className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                    focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                    text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                    placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                    ios-optimized-input"
+                  placeholder="Marks"
+                />
+              </div>
+              
               {/* 描述 */}
               <div className="sm:col-span-2">
                 <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>

@@ -58,6 +58,7 @@ interface MergedCellInfo {
 interface PackingItem {
   id: number;
   serialNo: string;
+  marks?: string; // 新增marks字段
   description: string;
   hsCode: string;
   quantity: number;
@@ -70,6 +71,7 @@ interface PackingItem {
   unit: string;
   groupId?: string;
   highlight?: {
+    marks?: boolean; // 新增marks高亮选项
     description?: boolean;
     hsCode?: boolean;
     quantity?: boolean;
@@ -116,13 +118,16 @@ interface PackingData {
   // 合并单元格相关
   packageQtyMergeMode?: 'auto' | 'manual';
   dimensionsMergeMode?: 'auto' | 'manual';
+  marksMergeMode?: 'auto' | 'manual'; // 新增marks合并模式
   manualMergedCells?: {
     packageQty: MergedCellInfo[];
     dimensions: MergedCellInfo[];
+    marks: MergedCellInfo[]; // 新增marks手动合并数据
   };
   autoMergedCells?: {
     packageQty: MergedCellInfo[];
     dimensions: MergedCellInfo[];
+    marks: MergedCellInfo[]; // 新增marks自动合并数据
   };
 }
 
@@ -150,9 +155,11 @@ interface ItemsTableEnhancedProps {
   // 合并单元格相关
   onPackageQtyMergeModeChange?: (mode: 'auto' | 'manual') => void;
   onDimensionsMergeModeChange?: (mode: 'auto' | 'manual') => void;
+  onMarksMergeModeChange?: (mode: 'auto' | 'manual') => void; // 新增marks合并模式回调
   onManualMergedCellsChange?: (manualMergedCells: {
     packageQty: MergedCellInfo[];
     dimensions: MergedCellInfo[];
+    marks: MergedCellInfo[]; // 新增marks手动合并数据
   }) => void;
   // 导入相关
   onImport?: (newItems: any[]) => void;
@@ -178,6 +185,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   // 合并单元格相关
   onPackageQtyMergeModeChange,
   onDimensionsMergeModeChange,
+  onMarksMergeModeChange, // 新增marks合并模式回调
   onManualMergedCellsChange,
   // 导入相关
   onImport,
@@ -204,7 +212,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     x: number;
     y: number;
     rowIndex: number;
-    column?: 'packageQty' | 'dimensions';
+    column?: 'packageQty' | 'dimensions' | 'marks';
   } | null>(null);
 
   // iOS输入框样式
@@ -225,7 +233,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   const calculateMergedCells = (
     items: PackingItem[],
     mode: 'auto' | 'manual' = 'auto',
-    column: 'packageQty' | 'dimensions' = 'packageQty'
+    column: 'packageQty' | 'dimensions' | 'marks' = 'packageQty'
   ): MergedCellInfo[] => {
     const mergedCells: MergedCellInfo[] = [];
     if (!items || items.length === 0) return mergedCells;
@@ -241,14 +249,16 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
         mergedCells.push({
           startRow: index,
           endRow: index,
-          content: column === 'packageQty' ? item.packageQty.toString() : item.dimensions,
+          content: column === 'packageQty' ? item.packageQty.toString() : 
+                  column === 'dimensions' ? item.dimensions : 
+                  item.marks || '',
           isMerged: false,
         });
       });
       
       // 应用手动合并数据
-      const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [] };
-      const manualCells = currentManualMergedCells[column] || [];
+      const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [], marks: [] };
+      const manualCells = Array.isArray(currentManualMergedCells[column]) ? currentManualMergedCells[column] : [];
       
       if (manualCells.length > 0) {
         // 移除被合并的独立单元格
@@ -271,26 +281,34 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     }
 
     let currentStart = 0;
-    let currentContent = column === 'packageQty' ? items[0]?.packageQty.toString() : items[0]?.dimensions;
+    let currentContent = column === 'packageQty' ? items[0]?.packageQty.toString() : 
+                        column === 'dimensions' ? items[0]?.dimensions : 
+                        items[0]?.marks || '';
 
     for (let i = 1; i <= items.length; i++) {
       const currentItem = items[i];
       const prevItem = items[i - 1];
 
-      const prevContent = column === 'packageQty' ? prevItem?.packageQty.toString() : prevItem?.dimensions;
+      const prevContent = column === 'packageQty' ? prevItem?.packageQty.toString() : 
+                         column === 'dimensions' ? prevItem?.dimensions : 
+                         prevItem?.marks || '';
       const currentContentValue = currentItem
-        ? column === 'packageQty' ? currentItem.packageQty.toString() : currentItem.dimensions
+        ? column === 'packageQty' ? currentItem.packageQty.toString() : 
+          column === 'dimensions' ? currentItem.dimensions : 
+          currentItem.marks || ''
         : '';
 
       // 合并逻辑：相同内容合并，但排除0和空值
       const shouldEndMerge = !currentItem || 
         (currentContentValue !== prevContent) ||
-        // 排除无意义的合并
+        // 排除无意义的合并（所有列都排除空值）
         (prevContent === '0' || prevContent === '') ||
         (currentContentValue === '0' || currentContentValue === '') ||
         // 对于Dimensions列，排除纯数字的合并
         (column === 'dimensions' && /^\d+$/.test(prevContent)) ||
         (column === 'dimensions' && currentContentValue && /^\d+$/.test(currentContentValue));
+
+
 
       if (shouldEndMerge) {
         if (i - 1 > currentStart) {
@@ -313,6 +331,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   // 计算合并单元格数据 - 需要在使用之前声明
   const packageQtyMergeMode = data.packageQtyMergeMode || 'auto';
   const dimensionsMergeMode = data.dimensionsMergeMode || 'auto';
+  const marksMergeMode = data.marksMergeMode || 'auto'; // 新增marks合并模式
   
   // 使用 useMemo 优化合并单元格计算，避免每次渲染都重新计算
   const mergedPackageQtyCells = useMemo(() => {
@@ -321,7 +340,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     }
     // 自动模式下直接计算，不依赖 data.autoMergedCells
     return calculateMergedCells(data.items, 'auto', 'packageQty');
-  }, [packageQtyMergeMode, data.manualMergedCells?.packageQty, data.items.length]);
+  }, [packageQtyMergeMode, data.manualMergedCells?.packageQty, data.items]);
     
   const mergedDimensionsCells = useMemo(() => {
     if (dimensionsMergeMode === 'manual') {
@@ -329,12 +348,21 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     }
     // 自动模式下直接计算，不依赖 data.autoMergedCells
     return calculateMergedCells(data.items, 'auto', 'dimensions');
-  }, [dimensionsMergeMode, data.manualMergedCells?.dimensions, data.items.length]);
+  }, [dimensionsMergeMode, data.manualMergedCells?.dimensions, data.items]);
+
+  const mergedMarksCells = useMemo(() => {
+    if (marksMergeMode === 'manual') {
+      return data.manualMergedCells?.marks || [];
+    }
+    // 自动模式下直接计算，不依赖 data.autoMergedCells
+    return calculateMergedCells(data.items, 'auto', 'marks');
+  }, [marksMergeMode, data.manualMergedCells?.marks, data.items]);
 
   // 合并单元格相关工具函数 - 使用 useMemo 优化性能
   const mergedCellInfoMap = useMemo(() => {
     const packageQtyMap = new Map<number, MergedCellInfo>();
     const dimensionsMap = new Map<number, MergedCellInfo>();
+    const marksMap = new Map<number, MergedCellInfo>();
     
     mergedPackageQtyCells.forEach(cell => {
       for (let i = cell.startRow; i <= cell.endRow; i++) {
@@ -348,25 +376,35 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
       }
     });
     
-    return { packageQty: packageQtyMap, dimensions: dimensionsMap };
-  }, [mergedPackageQtyCells, mergedDimensionsCells]);
+    mergedMarksCells.forEach(cell => {
+      for (let i = cell.startRow; i <= cell.endRow; i++) {
+        marksMap.set(i, cell);
+      }
+    });
+    
+    return { packageQty: packageQtyMap, dimensions: dimensionsMap, marks: marksMap };
+  }, [mergedPackageQtyCells, mergedDimensionsCells, mergedMarksCells]);
 
-  const getMergedCellInfo = (rowIndex: number, column: 'packageQty' | 'dimensions') => {
-    const map = column === 'packageQty' ? mergedCellInfoMap.packageQty : mergedCellInfoMap.dimensions;
+  const getMergedCellInfo = (rowIndex: number, column: 'packageQty' | 'dimensions' | 'marks') => {
+    const map = column === 'packageQty' ? mergedCellInfoMap.packageQty : 
+               column === 'dimensions' ? mergedCellInfoMap.dimensions :
+               mergedCellInfoMap.marks;
     return map.get(rowIndex);
   };
 
-  const shouldRenderCell = (rowIndex: number, column: 'packageQty' | 'dimensions') => {
+  const shouldRenderCell = (rowIndex: number, column: 'packageQty' | 'dimensions' | 'marks') => {
     const mergedInfo = getMergedCellInfo(rowIndex, column);
     return !mergedInfo || mergedInfo.startRow === rowIndex;
   };
 
-  const findContainingMergedCell = (rowIndex: number, column: 'packageQty' | 'dimensions') => {
+  const findContainingMergedCell = (rowIndex: number, column: 'packageQty' | 'dimensions' | 'marks') => {
     return getMergedCellInfo(rowIndex, column);
   };
 
-  const findNextMergedGroupStartBeforeEnd = (currentEndRow: number, column: 'packageQty' | 'dimensions') => {
-    const mergedCells = column === 'packageQty' ? mergedPackageQtyCells : mergedDimensionsCells;
+  const findNextMergedGroupStartBeforeEnd = (currentEndRow: number, column: 'packageQty' | 'dimensions' | 'marks') => {
+    const mergedCells = column === 'packageQty' ? mergedPackageQtyCells : 
+                       column === 'dimensions' ? mergedDimensionsCells :
+                       mergedMarksCells;
     for (let i = 0; i < mergedCells.length; i++) {
       const c = mergedCells[i];
       if (c.isMerged && c.startRow > currentEndRow) return c.startRow - 1;
@@ -374,8 +412,10 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     return data.items.length - 1;
   };
 
-  const findPrevMergedGroupEndAfterStart = (currentStartRow: number, column: 'packageQty' | 'dimensions') => {
-    const mergedCells = column === 'packageQty' ? mergedPackageQtyCells : mergedDimensionsCells;
+  const findPrevMergedGroupEndAfterStart = (currentStartRow: number, column: 'packageQty' | 'dimensions' | 'marks') => {
+    const mergedCells = column === 'packageQty' ? mergedPackageQtyCells : 
+                       column === 'dimensions' ? mergedDimensionsCells :
+                       mergedMarksCells;
     for (let i = mergedCells.length - 1; i >= 0; i--) {
       const c = mergedCells[i];
       if (c.isMerged && c.endRow < currentStartRow) return c.endRow + 1;
@@ -383,7 +423,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     return 0;
   };
 
-  const manualMergeRows = (startRow: number, endRow: number, column: 'packageQty' | 'dimensions' = 'packageQty') => {
+  const manualMergeRows = (startRow: number, endRow: number, column: 'packageQty' | 'dimensions' | 'marks' = 'packageQty') => {
     if (startRow === endRow) return;
     const field = column;
     
@@ -391,7 +431,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     const startItem = data.items?.[startRow];
     if (!startItem) return;
     
-    const mergedContent = column === 'packageQty' ? startItem.packageQty.toString() : startItem.dimensions;
+    const mergedContent = column === 'packageQty' ? startItem.packageQty.toString() : 
+                         column === 'dimensions' ? startItem.dimensions : 
+                         startItem.marks || '';
     
     // 添加调试信息
     console.log('手动合并调试:', {
@@ -404,10 +446,11 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     
     // 创建合并单元格，以起始行的内容为准
     const cell: MergedCellInfo = { startRow, endRow, content: mergedContent, isMerged: true };
-    const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [] };
+    const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [], marks: [] };
+    const currentColumnCells = Array.isArray(currentManualMergedCells[column]) ? currentManualMergedCells[column] : [];
     const newManualMergedCells = {
       ...currentManualMergedCells,
-      [column]: [...currentManualMergedCells[column], cell].sort((a, b) => a.startRow - b.startRow)
+      [column]: [...currentColumnCells, cell].sort((a, b) => a.startRow - b.startRow)
     };
     console.log('手动合并成功:', { mergedContent, cell, newManualMergedCells });
     onManualMergedCellsChange?.(newManualMergedCells);
@@ -418,10 +461,11 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     const mergedInfo = getMergedCellInfo(rowIndex, column);
     if (!mergedInfo || !mergedInfo.isMerged) return;
 
-    const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [] };
+    const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [], marks: [] };
+    const currentColumnCells = Array.isArray(currentManualMergedCells[column]) ? currentManualMergedCells[column] : [];
     const newManualMergedCells = {
       ...currentManualMergedCells,
-      [column]: currentManualMergedCells[column].filter((c) => !(c.startRow === mergedInfo.startRow && c.endRow === mergedInfo.endRow))
+      [column]: currentColumnCells.filter((c) => !(c.startRow === mergedInfo.startRow && c.endRow === mergedInfo.endRow))
     };
     onManualMergedCellsChange?.(newManualMergedCells);
   };
@@ -433,10 +477,11 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     if (existing) {
       const newStart = Math.min(existing.startRow, startRow);
       const newEnd = Math.max(existing.endRow, endRow);
-      const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [] };
+      const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [], marks: [] };
+      const currentColumnCells = Array.isArray(currentManualMergedCells[column]) ? currentManualMergedCells[column] : [];
       const newManualMergedCells = {
         ...currentManualMergedCells,
-        [column]: currentManualMergedCells[column].filter((c) => !(c.startRow === existing.startRow && c.endRow === existing.endRow))
+        [column]: currentColumnCells.filter((c) => !(c.startRow === existing.startRow && c.endRow === existing.endRow))
       };
       onManualMergedCellsChange?.(newManualMergedCells);
       manualMergeRows(newStart, newEnd, column);
@@ -445,7 +490,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     }
   };
 
-  const handleContextMenu = (e: React.MouseEvent, rowIndex: number, column?: 'packageQty' | 'dimensions') => {
+  const handleContextMenu = (e: React.MouseEvent, rowIndex: number, column?: 'packageQty' | 'dimensions' | 'marks') => {
     e.preventDefault();
     setContextMenu({ visible: true, x: e.clientX, y: e.clientY, rowIndex, column });
   };
@@ -651,7 +696,8 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     // 处理合并单元格，标记已合并的行
     const allMergedCells = [
       ...mergedPackageQtyCells,
-      ...mergedDimensionsCells
+      ...mergedDimensionsCells,
+      ...mergedMarksCells
     ];
     
     allMergedCells.forEach(cell => {
@@ -696,7 +742,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
       grossWeight,
       packageQty
     };
-  }, [data.items, mergedPackageQtyCells, mergedDimensionsCells]);
+  }, [data.items, mergedPackageQtyCells, mergedDimensionsCells, mergedMarksCells]);
   
   // 使用 useMemo 优化总金额计算
   const totalAmount = useMemo(() => {
@@ -707,7 +753,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   const hasGroupedItems = data.items.some(item => item.groupId);
 
   // 获取可见列
-  const effectiveVisibleCols = isHydrated ? visibleCols : ['description', 'quantity', 'unit', 'netWeight', 'grossWeight', 'packageQty', 'unitPrice', 'amount'];
+  const effectiveVisibleCols = isHydrated ? visibleCols : ['marks', 'description', 'quantity', 'unit', 'netWeight', 'grossWeight', 'packageQty', 'unitPrice', 'amount'];
 
   return (
     <div className="space-y-0">
@@ -787,8 +833,10 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
           <ColumnToggle 
             packageQtyMergeMode={data.packageQtyMergeMode || 'auto'}
             dimensionsMergeMode={data.dimensionsMergeMode || 'auto'}
+            marksMergeMode={data.marksMergeMode || 'auto'} // 新增marks合并模式
             onPackageQtyMergeModeChange={onPackageQtyMergeModeChange}
             onDimensionsMergeModeChange={onDimensionsMergeModeChange}
+            onMarksMergeModeChange={onMarksMergeModeChange} // 新增marks合并模式回调
             hasGroupedItems={hasGroupedItems}
           />
           {onInsertImported && (
@@ -808,6 +856,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
             <thead>
               <tr className="border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10
                             bg-[#007AFF]/5 dark:bg-[#0A84FF]/5">
+                {effectiveVisibleCols.includes('marks') && (
+                  <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[80px]">Marks</th>
+                )}
                 <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[40px]">No.</th>
                 {effectiveVisibleCols.includes('description') && (
                   <th className="py-2 px-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 w-[200px] lg:w-[280px] xl:w-[350px]">Description</th>
@@ -859,6 +910,84 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                 
                 return (
                   <tr key={item.id} className={`border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10 ${groupBg}`}>
+                    {effectiveVisibleCols.includes('marks') && (
+                      // 当有分组数据时，使用普通单元格渲染
+                      hasGroupedItems ? (
+                        <td className="py-2 px-4 text-center text-sm">
+                          <input
+                            type="text"
+                            value={item.marks || ''}
+                            onChange={(e) => onItemChange(index, 'marks', e.target.value)}
+                            className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
+                            placeholder="Marks"
+                          />
+                        </td>
+                      ) : (
+                        // 非分组模式下，使用合并单元格功能
+                        shouldRenderCell(index, 'marks') && (
+                          (() => {
+                            const marksMergedInfo = getMergedCellInfo(index, 'marks');
+                            const marksRowSpan = marksMergedInfo ? marksMergedInfo.endRow - marksMergedInfo.startRow + 1 : 1;
+                            const marksIsMerged = !!marksMergedInfo?.isMerged;
+                            
+                            return (
+                              <td 
+                                className={`py-2 px-4 text-center text-sm ${
+                                  marksIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
+                                }`}
+                                rowSpan={marksIsMerged ? marksRowSpan : undefined}
+                                onContextMenu={(e) => handleContextMenu(e, index, 'marks')}
+                              >
+                                <input
+                                  type="text"
+                                  value={marksIsMerged ? marksMergedInfo.content : (item.marks || '')}
+                                  onChange={(e) => {
+                                    const newValue = e.target.value;
+                                    if (marksIsMerged && marksMergedInfo) {
+                                      // 如果是合并单元格，使用批量更新
+                                      
+                                      // 使用批量更新，避免React状态更新的竞态条件
+                                      if (onDataChange) {
+                                        const newItems = [...data.items];
+                                        for (let i = marksMergedInfo.startRow; i <= marksMergedInfo.endRow; i++) {
+                                          newItems[i] = { ...newItems[i], marks: newValue };
+                                        }
+                                        onDataChange({ ...data, items: newItems });
+                                      } else {
+                                        // 如果没有onDataChange，则使用单个更新
+                                        for (let i = marksMergedInfo.startRow; i <= marksMergedInfo.endRow; i++) {
+                                          onItemChange(i, 'marks', newValue);
+                                        }
+                                      }
+                                      
+                                      // 如果是手动合并模式，更新合并单元格的内容
+                                      if (marksMergeMode === 'manual' && onManualMergedCellsChange) {
+                                        const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [], marks: [] };
+                                        const updatedMarks = currentManualMergedCells.marks.map(cell => 
+                                          cell.startRow === marksMergedInfo.startRow && cell.endRow === marksMergedInfo.endRow
+                                            ? { ...cell, content: newValue }
+                                            : cell
+                                        );
+                                        onManualMergedCellsChange({
+                                          ...currentManualMergedCells,
+                                          marks: updatedMarks
+                                        });
+                                      }
+                                    } else {
+                                      // 普通单元格，只更新当前行
+                                      onItemChange(index, 'marks', newValue);
+                                    }
+                                  }}
+                                  onDoubleClick={() => handleDoubleClick(index, 'marks')}
+                                  className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input ${item.highlight?.marks ? highlightClass : ''} ${marksIsMerged ? 'border-blue-200 dark:border-blue-700' : ''}`}
+                                  placeholder="Marks"
+                                />
+                              </td>
+                            );
+                          })()
+                        )
+                      )
+                    )}
                     <td className="py-2 px-4 text-center text-sm">
                       <span 
                         className="flex items-center justify-center w-5 h-5 rounded-full text-xs text-gray-400 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors"
@@ -1204,7 +1333,38 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                                     const value = e.target.value;
                                     if (/^\d*$/.test(value)) {
                                       setEditingPackageQtyAmount(value);
-                                      onItemChange(index, 'packageQty', value === '' ? 0 : parseInt(value));
+                                      const newValue = value === '' ? 0 : parseInt(value);
+                                      if (packageQtyIsMerged && packageQtyMergedInfo) {
+                                        // 如果是合并单元格，使用批量更新
+                                        if (onDataChange) {
+                                          const newItems = [...data.items];
+                                          for (let i = packageQtyMergedInfo.startRow; i <= packageQtyMergedInfo.endRow; i++) {
+                                            newItems[i] = { ...newItems[i], packageQty: newValue };
+                                          }
+                                          onDataChange({ ...data, items: newItems });
+                                        } else {
+                                          // 如果没有onDataChange，则使用单个更新
+                                          for (let i = packageQtyMergedInfo.startRow; i <= packageQtyMergedInfo.endRow; i++) {
+                                            onItemChange(i, 'packageQty', newValue);
+                                          }
+                                        }
+                                        // 如果是手动合并模式，更新合并单元格的内容
+                                        if (packageQtyMergeMode === 'manual' && onManualMergedCellsChange) {
+                                          const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [], marks: [] };
+                                          const updatedPackageQty = currentManualMergedCells.packageQty.map(cell => 
+                                            cell.startRow === packageQtyMergedInfo.startRow && cell.endRow === packageQtyMergedInfo.endRow
+                                              ? { ...cell, content: newValue.toString() }
+                                              : cell
+                                          );
+                                          onManualMergedCellsChange({
+                                            ...currentManualMergedCells,
+                                            packageQty: updatedPackageQty
+                                          });
+                                        }
+                                      } else {
+                                        // 普通单元格，只更新当前行
+                                        onItemChange(index, 'packageQty', newValue);
+                                      }
                                     }
                                   }}
                                   onFocus={(e) => {
@@ -1278,8 +1438,39 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                                   inputMode="text"
                                   value={editingDimensionsIndex === index ? editingDimensionsValue : item.dimensions}
                                   onChange={(e) => {
-                                    setEditingDimensionsValue(e.target.value);
-                                    onItemChange(index, 'dimensions', e.target.value);
+                                    const newValue = e.target.value;
+                                    setEditingDimensionsValue(newValue);
+                                    if (dimensionsIsMerged && dimensionsMergedInfo) {
+                                      // 如果是合并单元格，使用批量更新
+                                      if (onDataChange) {
+                                        const newItems = [...data.items];
+                                        for (let i = dimensionsMergedInfo.startRow; i <= dimensionsMergedInfo.endRow; i++) {
+                                          newItems[i] = { ...newItems[i], dimensions: newValue };
+                                        }
+                                        onDataChange({ ...data, items: newItems });
+                                      } else {
+                                        // 如果没有onDataChange，则使用单个更新
+                                        for (let i = dimensionsMergedInfo.startRow; i <= dimensionsMergedInfo.endRow; i++) {
+                                          onItemChange(i, 'dimensions', newValue);
+                                        }
+                                      }
+                                      // 如果是手动合并模式，更新合并单元格的内容
+                                      if (dimensionsMergeMode === 'manual' && onManualMergedCellsChange) {
+                                        const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [], marks: [] };
+                                        const updatedDimensions = currentManualMergedCells.dimensions.map(cell => 
+                                          cell.startRow === dimensionsMergedInfo.startRow && cell.endRow === dimensionsMergedInfo.endRow
+                                            ? { ...cell, content: newValue }
+                                            : cell
+                                        );
+                                        onManualMergedCellsChange({
+                                          ...currentManualMergedCells,
+                                          dimensions: updatedDimensions
+                                        });
+                                      }
+                                    } else {
+                                      // 普通单元格，只更新当前行
+                                      onItemChange(index, 'dimensions', newValue);
+                                    }
                                   }}
                                   onFocus={(e) => {
                                     setEditingDimensionsIndex(index);
@@ -1405,7 +1596,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
           mergeToRow(start, end);
         }}
         isManualMode={
-          contextMenu?.column === 'packageQty' ? packageQtyMergeMode === 'manual' : dimensionsMergeMode === 'manual'
+          contextMenu?.column === 'packageQty' ? packageQtyMergeMode === 'manual' : 
+          contextMenu?.column === 'dimensions' ? dimensionsMergeMode === 'manual' :
+          contextMenu?.column === 'marks' ? marksMergeMode === 'manual' : false
         }
         canMergeUp={(contextMenu?.rowIndex ?? 0) > 0}
         canMergeDown={(contextMenu?.rowIndex ?? 0) < data.items.length - 1}

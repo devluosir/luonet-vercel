@@ -10,6 +10,7 @@ export interface MergedCellInfo {
 export interface PackingItem {
   id: number;
   serialNo: string;
+  marks?: string; // 新增marks字段
   description: string;
   hsCode: string;
   quantity: number;
@@ -22,6 +23,7 @@ export interface PackingItem {
   unit: string;
   groupId?: string;
   highlight?: {
+    marks?: boolean; // 新增marks高亮选项
     description?: boolean;
     hsCode?: boolean;
     quantity?: boolean;
@@ -84,13 +86,16 @@ export interface PackingData {
   // 合并单元格相关
   packageQtyMergeMode?: 'auto' | 'manual';
   dimensionsMergeMode?: 'auto' | 'manual';
+  marksMergeMode?: 'auto' | 'manual'; // 新增marks合并模式
   manualMergedCells?: {
     packageQty: MergedCellInfo[];
     dimensions: MergedCellInfo[];
+    marks: MergedCellInfo[]; // 新增marks手动合并数据
   };
   autoMergedCells?: {
     packageQty: MergedCellInfo[];
     dimensions: MergedCellInfo[];
+    marks: MergedCellInfo[]; // 新增marks自动合并数据
   };
 }
 

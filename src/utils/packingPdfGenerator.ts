@@ -19,6 +19,7 @@ interface ExtendedJsPDF extends Omit<jsPDF, 'getImageProperties' | 'setPage'> {
 interface PackingItem {
   id: number;
   serialNo: string;
+  marks?: string; // 新增marks字段
   description: string;
   hsCode: string;
   quantity: number;
@@ -67,6 +68,7 @@ interface PackingData {
   // 合并单元格相关
   packageQtyMergeMode?: 'auto' | 'manual';
   dimensionsMergeMode?: 'auto' | 'manual';
+  marksMergeMode?: 'auto' | 'manual'; // 新增marks合并模式
   manualMergedCells?: {
     packageQty: Array<{
       startRow: number;
@@ -75,6 +77,12 @@ interface PackingData {
       isMerged: boolean;
     }>;
     dimensions: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+    marks: Array<{
       startRow: number;
       endRow: number;
       content: string;
@@ -89,6 +97,12 @@ interface PackingData {
       isMerged: boolean;
     }>;
     dimensions: Array<{
+      startRow: number;
+      endRow: number;
+      content: string;
+      isMerged: boolean;
+    }>;
+    marks: Array<{
       startRow: number;
       endRow: number;
       content: string;
@@ -117,6 +131,7 @@ export async function generatePackingListPDF(
   // 直接使用页面传递的合并单元格数据，不再重新计算
   const packageQtyMergeMode = data.packageQtyMergeMode || 'auto';
   const dimensionsMergeMode = data.dimensionsMergeMode || 'auto';
+  const marksMergeMode = data.marksMergeMode || 'auto'; // 新增marks合并模式
   
   // 根据合并模式选择对应的数据源
   const mergedPackageQtyCells = packageQtyMergeMode === 'manual' 
@@ -127,23 +142,46 @@ export async function generatePackingListPDF(
     ? (data.manualMergedCells?.dimensions || [])
     : (data.autoMergedCells?.dimensions || []);
 
+  const mergedMarksCells = marksMergeMode === 'manual'
+    ? (data.manualMergedCells?.marks || [])
+    : (data.autoMergedCells?.marks || []);
+
   // 添加调试信息
   console.log('PDF合并单元格数据:', {
     packageQtyMergeMode,
     dimensionsMergeMode,
+    marksMergeMode,
     mergedPackageQtyCells,
     mergedDimensionsCells,
+    mergedMarksCells,
     itemsCount: data.items.length,
     items: data.items.map((item, index) => ({
       index,
       packageQty: item.packageQty,
-      dimensions: item.dimensions
+      dimensions: item.dimensions,
+      marks: item.marks
     }))
   });
 
+  // 读取页面的列显示设置，判断是否需要横向模式
+  let visibleCols: string[] | undefined;
+  let showMarks = false;
+  try {
+    if (typeof window !== 'undefined') {
+      visibleCols = JSON.parse(localStorage.getItem('pk.visibleCols') || 'null');
+      showMarks = visibleCols ? visibleCols.includes('marks') : true; // 默认显示marks列
+    }
+  } catch (e) {
+    console.warn('Failed to read packing table column preferences:', e);
+    showMarks = true; // 出错时默认显示marks列
+  }
+
+  // 当marks列显示时，使用横向模式以适应更多列
+  const orientation = showMarks ? 'landscape' : 'portrait';
+
   // 创建 PDF 文档
   const doc = new jsPDF({
-    orientation: 'portrait',
+    orientation: orientation,
     unit: 'mm',
     format: 'a4',
     putOnlyUsedFonts: true,
@@ -159,7 +197,9 @@ export async function generatePackingListPDF(
 
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
-    const margin = 20;
+    const isLandscape = pageWidth > pageHeight;
+    // 调整边距，确保表格不会太靠近纸边
+    const margin = isLandscape ? 20 : 25;
     let currentY = margin;
 
     // 添加表头
@@ -171,13 +211,13 @@ export async function generatePackingListPDF(
         if (headerImageBase64) {
           const headerImage = `data:image/png;base64,${headerImageBase64}`;
           const imgProperties = doc.getImageProperties(headerImage);
-          const imgWidth = pageWidth - 30;  // 左右各留15mm
+          const imgWidth = pageWidth - (margin * 2);  // 使用动态边距
           const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
           doc.addImage(
             headerImage,
             'PNG',
-            15,  // 左边距15mm
-            15,  // 上边距15mm
+            margin,  // 使用动态边距
+            margin,  // 使用动态边距
             imgWidth,
             imgHeight,
             undefined,
@@ -210,18 +250,8 @@ export async function generatePackingListPDF(
     //   currentY = renderShippingMarks(doc, data, currentY, pageWidth, margin);
     // }
 
-    // 读取页面的列显示设置
-    let visibleCols: string[] | undefined;
-    try {
-      if (typeof window !== 'undefined') {
-        visibleCols = JSON.parse(localStorage.getItem('pk.visibleCols') || 'null');
-      }
-    } catch (e) {
-      console.warn('Failed to read packing table column preferences:', e);
-    }
-
     // 商品表格 - 紧跟在基本信息后
-    currentY = await renderPackingTable(doc, data, currentY, mergedPackageQtyCells, mergedDimensionsCells, visibleCols);
+    currentY = await renderPackingTable(doc, data, currentY, mergedPackageQtyCells, mergedDimensionsCells, mergedMarksCells, visibleCols);
 
     // 备注
     renderRemarks(doc, data, currentY, pageWidth, margin);
@@ -452,11 +482,19 @@ async function renderPackingTable(
     content: string;
     isMerged: boolean;
   }>,
+  mergedMarksCells: Array<{
+    startRow: number;
+    endRow: number;
+    content: string;
+    isMerged: boolean;
+  }>,
   visibleCols?: string[]
 ): Promise<number> {
   // 计算页面宽度和边距
   const pageWidth = doc.internal.pageSize.width;
-  const margin = 15; // 左右边距各15mm
+  const isLandscape = doc.internal.pageSize.width > doc.internal.pageSize.height;
+  // 增加边距，避免表格太靠近纸边
+  const margin = isLandscape ? 15 : 20; // 横向模式15mm，纵向模式20mm
   const tableWidth = pageWidth - (margin * 2); // 表格实际可用宽度
 
   // 设置列宽度和对齐方式
@@ -464,20 +502,22 @@ async function renderPackingTable(
   
   // 定义各列的相对宽度权重
   const baseWidths = {
-    no: 3,
-    description: data.showHsCode ? 12 : 15,
-    hsCode: 6,
-    qty: 4,
-    unit: 4,
-    unitPrice: 5,
-    amount: 6,
-    netWeight: 5,
-    grossWeight: 5,
-    pkgs: 4,
-    dimensions: 6
+    marks: isLandscape ? 6 : 5, // 增加marks列宽度，横向模式6，纵向模式5
+    no: 2, // 减少序号列宽度
+    description: data.showHsCode ? (isLandscape ? 14 : 12) : (isLandscape ? 18 : 16), // 适当减少描述列宽度
+    hsCode: 5, // 减少HS Code列宽度
+    qty: 3, // 减少数量列宽度
+    unit: 3, // 减少单位列宽度
+    unitPrice: 4, // 减少单价列宽度
+    amount: 5, // 减少金额列宽度
+    netWeight: 4, // 减少净重列宽度
+    grossWeight: 4, // 减少毛重列宽度
+    pkgs: 3, // 减少包装数列宽度
+    dimensions: 5 // 减少尺寸列宽度
   };
 
   // 确定显示的列（优先使用页面设置，回退到数据开关）
+  const showMarks = visibleCols ? visibleCols.includes('marks') : true; // 默认显示marks列
   const showDescription = visibleCols ? visibleCols.includes('description') : true;
   const showHsCode = visibleCols ? visibleCols.includes('hsCode') : data.showHsCode;
   const showQuantity = visibleCols ? visibleCols.includes('quantity') : true;
@@ -490,7 +530,9 @@ async function renderPackingTable(
   const showDimensions = visibleCols ? visibleCols.includes('dimensions') : data.showDimensions;
 
   // 计算总权重，基于实际显示的列
-  let totalWeight = baseWidths.no;
+  let totalWeight = 0;
+  if (showMarks) totalWeight += baseWidths.marks;
+  totalWeight += baseWidths.no;
   if (showDescription) totalWeight += baseWidths.description;
   if (showHsCode) totalWeight += baseWidths.hsCode;
   if (showQuantity) totalWeight += baseWidths.qty;
@@ -507,41 +549,52 @@ async function renderPackingTable(
 
   // 表格基础样式
   const tableStyles = {
-    fontSize: 8,
-    cellPadding: { top: 2, bottom: 2, left: 1, right: 1 },
+    fontSize: isLandscape ? 7 : 8, // 横向模式下使用稍小的字体
+    cellPadding: { top: 1, bottom: 1, left: 1, right: 1 }, // 减少上下内边距
     lineColor: [0, 0, 0] as [number, number, number],
     lineWidth: 0.1,
     font: 'NotoSansSC',
     valign: 'middle' as const,
-    minCellHeight: 8
+    minCellHeight: 6 // 减少单元格最小高度
   };
 
   // 表头样式
   const headStyles = {
     fillColor: [255, 255, 255] as [number, number, number],
     textColor: [0, 0, 0] as [number, number, number],
-    fontSize: 8,
+    fontSize: isLandscape ? 7 : 8, // 横向模式下使用稍小的字体
     fontStyle: 'bold' as const,
     halign: 'center' as const,
     font: 'NotoSansSC',
     valign: 'middle' as const,
-    cellPadding: { top: 2, bottom: 2, left: 1, right: 1 },
-    minCellHeight: 12 // 增加表头高度以适应换行
+    cellPadding: { top: 1, bottom: 1, left: 1, right: 1 }, // 减少上下内边距
+    minCellHeight: 8 // 减少表头高度
   };
 
   // 设置每列的宽度和对齐方式
-  columnStyles[0] = { 
+  let currentColumnIndex = 0;
+  
+  if (showMarks) {
+    columnStyles[currentColumnIndex] = { 
+      halign: 'center' as const, 
+      cellWidth: baseWidths.marks * unitWidth 
+    };
+    currentColumnIndex++;
+  }
+  
+  columnStyles[currentColumnIndex] = { 
     halign: 'center' as const, 
     cellWidth: baseWidths.no * unitWidth 
   };
-  columnStyles[1] = { 
+  currentColumnIndex++;
+  
+  columnStyles[currentColumnIndex] = { 
     halign: 'center' as const, 
     cellWidth: baseWidths.description * unitWidth 
   };
+  currentColumnIndex++;
 
-  let currentColumnIndex = 2;
-
-  if (data.showHsCode) {
+  if (showHsCode) {
     columnStyles[currentColumnIndex] = { 
       halign: 'center' as const, 
       cellWidth: baseWidths.hsCode * unitWidth 
@@ -562,12 +615,14 @@ async function renderPackingTable(
   currentColumnIndex++;
 
   // Price 相关列
-  if (data.showPrice) {
+  if (showUnitPrice) {
     columnStyles[currentColumnIndex] = { 
       halign: 'center' as const, 
       cellWidth: baseWidths.unitPrice * unitWidth 
     };
     currentColumnIndex++;
+  }
+  if (showAmount) {
     columnStyles[currentColumnIndex] = { 
       halign: 'center' as const, 
       cellWidth: baseWidths.amount * unitWidth 
@@ -576,17 +631,21 @@ async function renderPackingTable(
   }
 
   // Weight 和 Package 相关列
-  if (data.showWeightAndPackage) {
+  if (showNetWeight) {
     columnStyles[currentColumnIndex] = { 
       halign: 'center' as const, 
       cellWidth: baseWidths.netWeight * unitWidth 
     };
     currentColumnIndex++;
+  }
+  if (showGrossWeight) {
     columnStyles[currentColumnIndex] = { 
       halign: 'center' as const, 
       cellWidth: baseWidths.grossWeight * unitWidth 
     };
     currentColumnIndex++;
+  }
+  if (showPackageQty) {
     columnStyles[currentColumnIndex] = { 
       halign: 'center' as const, 
       cellWidth: baseWidths.pkgs * unitWidth 
@@ -595,7 +654,7 @@ async function renderPackingTable(
   }
 
   // Dimensions 列
-  if (data.showDimensions) {
+  if (showDimensions) {
     columnStyles[currentColumnIndex] = { 
       halign: 'center' as const, 
       cellWidth: baseWidths.dimensions * unitWidth 
@@ -603,17 +662,19 @@ async function renderPackingTable(
   }
 
   // 准备表头
-  const headers = [['No.']];
+  const headers = [[]];
+  if (showMarks) headers[0].push('Marks');
+  headers[0].push('No.');
   if (showDescription) headers[0].push('Description');
   if (showHsCode) headers[0].push('HS Code');
   if (showQuantity) headers[0].push('Qty');
   if (showUnit) headers[0].push('Unit');
   if (showUnitPrice) headers[0].push('U/Price');
   if (showAmount) headers[0].push('Amount');
-  if (showNetWeight) headers[0].push('N.W.\n(kg)');
-  if (showGrossWeight) headers[0].push('G.W.\n(kg)');
+  if (showNetWeight) headers[0].push('N.W.(kg)');
+  if (showGrossWeight) headers[0].push('G.W.(kg)');
   if (showPackageQty) headers[0].push('Pkgs');
-  if (showDimensions) headers[0].push(`Dimensions\n(${data.dimensionUnit})`);
+  if (showDimensions) headers[0].push(`Dimensions(${data.dimensionUnit})`);
 
   // 准备数据行（支持分组合并单元格）
   const body: RowInput[] = [];
@@ -632,9 +693,41 @@ async function renderPackingTable(
 
   let rowIndex = 0;
   data.items.forEach((item) => {
-    const row: CellInput[] = [
-      rowIndex + 1 // 用当前序号
-    ];
+    const row: CellInput[] = [];
+    
+    if (showMarks) {
+      // 处理Marks列的合并
+      const marksMergedInfo = getMergedCellInfo(rowIndex, mergedMarksCells);
+      console.log(`Row ${rowIndex} Marks合并信息:`, {
+        item: item.marks,
+        mergedInfo: marksMergedInfo,
+        isStartRow: marksMergedInfo?.startRow === rowIndex,
+        isMerged: marksMergedInfo?.isMerged
+      });
+      
+      if (marksMergedInfo && marksMergedInfo.isMerged && marksMergedInfo.startRow === rowIndex) {
+        // 这是合并单元格的起始行
+        const rowSpan = marksMergedInfo.endRow - marksMergedInfo.startRow + 1;
+        console.log(`Row ${rowIndex} 添加Marks合并单元格:`, {
+          content: marksMergedInfo.content,
+          rowSpan: rowSpan
+        });
+        row.push({
+          content: marksMergedInfo.content,
+          rowSpan: rowSpan,
+          styles: { valign: 'middle', halign: 'center' }
+        });
+      } else if (marksMergedInfo && marksMergedInfo.isMerged) {
+        // 这是被合并的行，跳过该列（不添加任何内容）
+        console.log(`Row ${rowIndex} 跳过Marks列（被合并）`);
+        // 在jspdf-autotable中，被合并的行会自动处理
+      } else {
+        // 普通行，正常显示
+        console.log(`Row ${rowIndex} 添加Marks普通单元格:`, item.marks || '');
+        row.push(item.marks || '');
+      }
+    }
+    row.push(rowIndex + 1); // 用当前序号
     
     if (showDescription) row.push(item.description);
     if (showHsCode) row.push(item.hsCode);
