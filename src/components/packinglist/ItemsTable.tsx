@@ -491,7 +491,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   <input
                     type="text"
                     inputMode="numeric"
-                    value={editingQtyIndex === index ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
+                    value={editingQtyIndex === index ? editingQtyAmount : item.quantity.toString()}
                     onChange={(e) => {
                       const value = e.target.value;
                       if (/^\d*$/.test(value)) {
@@ -503,7 +503,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     }}
                     onFocus={(e) => {
                       setEditingQtyIndex(index);
-                      setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
+                      setEditingQtyAmount(item.quantity.toString());
                       e.target.select();
                       handleIOSInputFocus(e);
                     }}
@@ -1129,7 +1129,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                       <input
                         type="text"
                         inputMode="numeric"
-                        value={editingQtyIndex === index ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
+                        value={editingQtyIndex === index ? editingQtyAmount : item.quantity.toString()}
                         onChange={(e) => {
                           const value = e.target.value;
                           if (/^\d*$/.test(value)) {
@@ -1141,7 +1141,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         }}
                         onFocus={(e) => {
                           setEditingQtyIndex(index);
-                          setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
+                          setEditingQtyAmount(item.quantity.toString());
                           e.target.select();
                           handleIOSInputFocus(e);
                         }}

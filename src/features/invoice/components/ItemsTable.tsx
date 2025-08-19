@@ -249,7 +249,7 @@ export const ItemsTable = React.memo(() => {
     if (!item) return { value: '', onChange: () => {}, onFocus: () => {}, onBlur: () => {} };
     
     return {
-      value: editingQtyIndex === index ? editingQtyAmount : (item.quantity === 0 ? '' : String(item.quantity)),
+      value: editingQtyIndex === index ? editingQtyAmount : String(item.quantity),
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
         const v = e.target.value;
         if (/^\d*$/.test(v)) {
@@ -259,7 +259,7 @@ export const ItemsTable = React.memo(() => {
       },
       onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
         setEditingQtyIndex(index);
-        setEditingQtyAmount(item.quantity === 0 ? '' : String(item.quantity));
+        setEditingQtyAmount(String(item.quantity));
         e.target.select();
       },
       onBlur: () => {

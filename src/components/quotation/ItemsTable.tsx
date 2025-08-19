@@ -9,6 +9,8 @@ import { useEffectOncePerChange } from '@/hooks/useEffectOncePerChange';
 import { buildMergeKey } from '@/utils/mergeKey';
 import type { QuotationData, LineItem, OtherFee } from '@/types/quotation';
 import type { ParseResult } from '@/features/quotation/utils/quickSmartParse';
+import { useUnitHandler } from '@/hooks/useUnitHandler';
+import { UnitSelector } from '@/components/ui/UnitSelector';
 
 /* =========================================================================
  * Section 1: Types / Constants
@@ -36,7 +38,6 @@ interface ItemsTableProps {
 }
 
 const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
-const defaultUnits = ['pc', 'set', 'length'] as const;
 
 const iosCaretStyle = { caretColor: '#007AFF' } as React.CSSProperties;
 const iosCaretStyleDark = { caretColor: '#0A84FF' } as React.CSSProperties;
@@ -334,7 +335,13 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   useEffect(() => onRemarksMergeModeChange?.(remarksMergeMode), [remarksMergeMode, onRemarksMergeModeChange]);
 
   const effectiveVisibleCols = isHydrated ? visibleCols : ['partName', 'quantity', 'unit', 'unitPrice', 'amount', 'remarks'];
-  const availableUnits = [...defaultUnits, ...(data.customUnits || [])] as const;
+  
+  // 使用统一的单位处理hook
+  const { 
+    handleItemChange: handleUnitItemChange, 
+    getDisplayUnit, 
+    allUnits 
+  } = useUnitHandler(data.customUnits || []);
 
   const updateItems = useCallback(
     (newItems: LineItem[]) => {
@@ -497,10 +504,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     el.style.webkitCaretColor = isDarkMode ? '#0A84FF' : '#007AFF';
   };
 
-  const getUnitDisplay = (baseUnit: string, quantity: number) => {
-    if ((defaultUnits as readonly string[]).includes(baseUnit)) return quantity === 1 ? baseUnit : `${baseUnit}s`;
-    return baseUnit;
-  };
+
 
   const handleItemChange = (index: number, field: keyof LineItem, value: string | number) => {
     const items = data.items || [];
@@ -512,14 +516,24 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       (updated as any)[field] = num;
       updated.amount = (updated.quantity ?? 0) * (updated.unitPrice ?? 0);
       if (field === 'quantity' && typeof updated.unit === 'string') {
-        const baseUnit = updated.unit.replace(/s$/, '');
-        updated.unit = getUnitDisplay(baseUnit, num);
+        // 使用统一的单位处理逻辑
+        const result = handleUnitItemChange(updated, 'quantity', num);
+        updated.unit = result.unit;
       }
     } else {
       (updated as any)[field] = value as any;
     }
 
     newItems[index] = updated;
+    updateItems(newItems);
+  };
+
+  // 处理单位变更
+  const handleUnitChange = (index: number, value: string) => {
+    const item = data.items[index];
+    const result = handleUnitItemChange(item, 'unit', value);
+    const newItems = [...data.items];
+    newItems[index] = { ...item, unit: result.unit };
     updateItems(newItems);
   };
 
@@ -597,10 +611,11 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       console.log('[ItemsTable] handleImport 被调用，新数据项数量:', newItems.length);
     }
     const processed = newItems.map((item) => {
-      const baseUnit = (item.unit || 'pc').replace(/s$/, '');
+      // 使用统一的单位处理逻辑
+      const result = handleUnitItemChange(item, 'quantity', item.quantity);
       return {
         ...item,
-        unit: (defaultUnits as readonly string[]).includes(baseUnit) ? getUnitDisplay(baseUnit, item.quantity) : item.unit,
+        unit: result.unit,
         amount: item.quantity * item.unitPrice,
       };
     });
@@ -773,7 +788,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     if (!item) return { value: '', onChange: () => {}, onFocus: () => {}, onBlur: () => {} };
     
     return {
-      value: editingQtyIndex === index ? editingQtyAmount : (item.quantity === 0 ? '' : String(item.quantity)),
+      value: editingQtyIndex === index ? editingQtyAmount : String(item.quantity),
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
         const v = e.target.value;
         if (/^\d*$/.test(v)) {
@@ -783,7 +798,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       },
       onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
         setEditingQtyIndex(index);
-        setEditingQtyAmount(item.quantity === 0 ? '' : String(item.quantity));
+        setEditingQtyAmount(String(item.quantity));
         e.target.select();
         onFocusIOS(e);
       },
@@ -932,27 +947,16 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
-                    <select
+                    <UnitSelector
                       value={item.unit}
-                      onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
+                      quantity={item.quantity}
+                      customUnits={data.customUnits || []}
+                      onChange={(unit) => handleUnitChange(index, unit)}
                       onDoubleClick={() => handleDoubleClick(index, 'unit')}
-                      onFocus={onFocusIOS}
                       className={`w-full px-3 py-2 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
                         focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                         text-[13px] text-center cursor-pointer appearance-none ios-optimized-input ${item.highlight?.unit ? highlightClass : ''}`}
-                      style={isDarkMode ? iosCaretStyleDark : iosCaretStyle}
-                    >
-                      {availableUnits.map((unit) => {
-                        const display = (defaultUnits as readonly string[]).includes(unit as string)
-                          ? getUnitDisplay(unit as string, item.quantity)
-                          : (unit as string);
-                        return (
-                          <option key={unit as string} value={display}>
-                            {display}
-                          </option>
-                        );
-                      })}
-                    </select>
+                    />
                   </div>
                 </div>
 
@@ -1225,27 +1229,16 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         {/* Unit */}
                         {effectiveVisibleCols.includes('unit') && (
                           <td className="w-24 px-2 py-2">
-                            <select
+                            <UnitSelector
                               value={item.unit}
-                              onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
+                              quantity={item.quantity}
+                              customUnits={data.customUnits || []}
+                              onChange={(unit) => handleUnitChange(index, unit)}
                               onDoubleClick={() => handleDoubleClick(index, 'unit')}
-                              onFocus={onFocusIOS}
                               className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
                                 focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50
                                 text-[13px] text-center cursor-pointer appearance-none ios-optimized-input ${item.highlight?.unit ? highlightClass : ''}`}
-                              style={isDarkMode ? iosCaretStyleDark : iosCaretStyle}
-                            >
-                              {availableUnits.map((unit) => {
-                                const display = (defaultUnits as readonly string[]).includes(unit as string)
-                                  ? getUnitDisplay(unit as string, item.quantity)
-                                  : (unit as string);
-                                return (
-                                  <option key={unit as string} value={display}>
-                                    {display}
-                                  </option>
-                                );
-                              })}
-                            </select>
+                            />
                           </td>
                         )}
 

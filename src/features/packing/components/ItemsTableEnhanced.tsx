@@ -906,7 +906,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         <input
                           type="text"
                           inputMode="numeric"
-                          value={editingQtyIndex === index ? editingQtyAmount : (item.quantity > 0 ? item.quantity.toString() : '')}
+                          value={editingQtyIndex === index ? editingQtyAmount : item.quantity.toString()}
                           onChange={(e) => {
                             const value = e.target.value;
                             if (/^\d*$/.test(value)) {
@@ -918,7 +918,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                           }}
                           onFocus={(e) => {
                             setEditingQtyIndex(index);
-                            setEditingQtyAmount(item.quantity === 0 ? '' : item.quantity.toString());
+                            setEditingQtyAmount(item.quantity.toString());
                             e.target.select();
                             handleIOSInputFocus(e);
                           }}
