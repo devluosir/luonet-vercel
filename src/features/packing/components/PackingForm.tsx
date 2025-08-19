@@ -198,7 +198,7 @@ export const PackingForm: React.FC<PackingFormProps> = ({
               </div>
 
               {/* 商品表格区域 */}
-              <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-100 dark:border-[#3A3A3C]">
+              <div className="px-4 sm:px-6 py-4 sm:py-6">
                 <ItemsTableSection
                   data={data}
                   onDataChange={handleDataChange}
@@ -215,7 +215,7 @@ export const PackingForm: React.FC<PackingFormProps> = ({
               </div>
 
               {/* 备注区域 */}
-              <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-100 dark:border-[#3A3A3C]">
+              <div className="px-4 sm:px-6 py-4 sm:py-6">
                 <RemarksSection
                   data={data}
                   onDataChange={handleDataChange}
@@ -223,7 +223,7 @@ export const PackingForm: React.FC<PackingFormProps> = ({
               </div>
 
               {/* 操作按钮区域 */}
-              <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-gray-100 dark:border-[#3A3A3C] bg-gray-50 dark:bg-[#1C1C1E] rounded-b-2xl sm:rounded-b-3xl">
+              <div className="px-4 sm:px-6 py-4 sm:py-6 bg-gray-50 dark:bg-[#1C1C1E] rounded-b-2xl sm:rounded-b-3xl">
                 <ActionButtons
                   data={data}
                   isGenerating={isGenerating}

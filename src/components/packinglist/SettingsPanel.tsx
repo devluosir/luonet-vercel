@@ -63,7 +63,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   return (
     <div className={`overflow-hidden transition-all duration-300 ease-in-out
       ${isVisible ? 'opacity-100 px-4 sm:px-6 py-2 h-auto' : 'opacity-0 px-0 py-0 h-0'}`}>
-      <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/50 rounded-lg p-3 shadow-sm">
+      <div>
         
         {/* 响应式布局容器 */}
         <div className="flex flex-wrap items-center gap-3 text-xs">

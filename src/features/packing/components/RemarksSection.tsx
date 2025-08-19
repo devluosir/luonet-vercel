@@ -28,7 +28,7 @@ export const RemarksSection: React.FC<RemarksSectionProps> = ({
   onDataChange
 }) => {
   return (
-    <section className="rounded-2xl border border-slate-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/30 shadow-sm p-4">
+    <section>
       <div className="space-y-4">
         {/* 备注选项 */}
         <div>

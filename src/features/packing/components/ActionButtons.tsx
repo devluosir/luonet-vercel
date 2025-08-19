@@ -13,7 +13,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   onExportExcel
 }) => {
   return (
-    <section className="rounded-2xl border border-slate-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/30 shadow-sm p-4">
+    <section>
       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
         {/* 主要操作按钮 - 生成PDF */}
         <button
