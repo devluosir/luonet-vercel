@@ -44,7 +44,7 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 4, // 降低拖拽触发距离
+        distance: 8, // 增加拖拽触发距离，减少意外触发
       },
     }),
     useSensor(KeyboardSensor, {
@@ -329,8 +329,8 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
     <div
       ref={setNodeRef}
       style={style}
-      className={`transition-all duration-300 hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded-lg border ${
-        isDragging ? 'shadow-lg scale-105 bg-gray-100 dark:bg-[#3A3A3C]' : ''
+      className={`transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-[#3A3A3C] rounded-lg border ${
+        isDragging ? 'bg-gray-100 dark:bg-[#3A3A3C] opacity-80' : ''
       } ${
         isEditing
           ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800'
