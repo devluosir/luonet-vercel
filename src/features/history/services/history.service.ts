@@ -15,6 +15,7 @@ import {
   getPackingHistory, 
   deletePackingHistory 
 } from '@/utils/packingHistory';
+import { isQuotationUpgraded } from '@/utils/dashboardUtils';
 
 export class HistoryService {
   /**
@@ -23,7 +24,25 @@ export class HistoryService {
   static getHistory(type: HistoryType): HistoryItem[] {
     switch (type) {
       case 'quotation':
-        return getQuotationHistory().filter(item => item.type === 'quotation');
+        // 获取所有报价单记录
+        const quotationHistory = getQuotationHistory();
+        
+        // 获取所有confirmation记录，用于过滤
+        const confirmationRecords = quotationHistory.filter((item: any) => 
+          'type' in item && item.type === 'confirmation'
+        );
+        
+        // 只返回type为'quotation'且未升级的记录
+        return quotationHistory.filter((item: any) => {
+          // 只保留type为'quotation'的记录
+          if (!('type' in item) || item.type !== 'quotation') return false;
+          
+          // 检查这个报价单是否已经升级为confirmation
+          const isUpgraded = isQuotationUpgraded(item, confirmationRecords);
+          
+          // 如果已升级，则不显示在报价单列表中
+          return !isUpgraded;
+        });
       case 'confirmation':
         return getQuotationHistory().filter(item => item.type === 'confirmation');
       case 'invoice':
