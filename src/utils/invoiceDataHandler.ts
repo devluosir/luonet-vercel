@@ -1,4 +1,4 @@
-import type { LineItem } from '@/types/invoice';
+import type { LineItem } from '@/features/invoice';
 
 // 计算金额
 export const calculateAmount = (quantity: number, unitPrice: number) => {

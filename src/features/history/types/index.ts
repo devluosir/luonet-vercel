@@ -1,5 +1,5 @@
 import type { QuotationData } from '@/types/quotation';
-import type { InvoiceData } from '@/types/invoice';
+import type { InvoiceData } from '@/features/invoice';
 import type { PurchaseOrderData } from '@/types/purchase';
 import type { PackingData } from '@/types/packing-history';
 
