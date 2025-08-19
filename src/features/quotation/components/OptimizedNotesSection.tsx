@@ -395,9 +395,9 @@ const OptimizedSortableNote: React.FC<OptimizedSortableNoteProps> = memo(({
               <button
                 type="button"
                 onClick={handleVisibilityClick}
-                className={`inline-flex items-center justify-center w-6 h-6 transition-all duration-200 ${
+                className={`inline-flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 ${
                   note.visible 
-                    ? 'text-gray-400 hover:text-red-600 dark:hover:text-red-400' 
+                    ? 'text-gray-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400' 
                     : 'text-gray-400'
                 }`}
                 title={note.visible ? `隐藏条款 (当前序号: ${noteIndex})` : '显示条款'}

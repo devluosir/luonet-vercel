@@ -72,10 +72,7 @@ export function NotesSection({ data, onChange }: NotesSectionProps) {
         {data.notes.map((note, index) => (
           <div key={index} className="flex items-start gap-3 group">
             <div 
-              className="mt-[11px] text-xs text-gray-400 w-5 flex-shrink-0 text-center
-                group-hover:text-[#FF3B30] dark:group-hover:text-[#FF453A]
-                group-hover:bg-[#FF3B30]/10 dark:group-hover:bg-[#FF453A]/10
-                cursor-pointer select-none transition-all duration-200 rounded"
+              className="flex items-center justify-center w-5 h-5 rounded-full text-xs text-gray-400 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors flex-shrink-0"
               onClick={() => {
                 const newNotes = [...data.notes];
                 newNotes.splice(index, 1);
@@ -85,7 +82,7 @@ export function NotesSection({ data, onChange }: NotesSectionProps) {
                 });
               }}
             >
-              {index + 1}.
+              {index + 1}
             </div>
             <div className="flex-1 relative group">
               <textarea
