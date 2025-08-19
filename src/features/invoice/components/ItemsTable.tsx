@@ -662,7 +662,7 @@ export const ItemsTable = React.memo(() => {
                         }`}
                       >
                         <span
-                          className="flex items-center justify-center w-5 h-5 rounded-full text-xs cursor-pointer transition-colors"
+                          className="flex items-center justify-center w-5 h-5 rounded-full text-xs text-gray-400 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors"
                           onClick={() => handleSoftDelete(index)}
                           title="Click to delete"
                         >
@@ -808,11 +808,11 @@ export const ItemsTable = React.memo(() => {
                           }`}
                         >
                           <span
-                            className="flex items-center justify-center w-5 h-5 rounded-full text-xs cursor-pointer transition-colors"
+                            className="flex items-center justify-center w-5 h-5 rounded-full text-xs text-gray-400 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors"
                             onClick={() => handleOtherFeeSoftDelete(index)}
                             title="Click to delete"
                           >
-                            ×
+                            {(data.items?.length || 0) + index + 1}
                           </span>
                         </td>
                         <td 
