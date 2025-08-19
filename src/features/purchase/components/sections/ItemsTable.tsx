@@ -155,8 +155,7 @@ const ItemRow = memo(({ id, index }: { id: string; index: number }) => {
       <td className="py-2 pl-2 text-right text-gray-800 dark:text-[#F5F5F7]">{amount.toFixed(2)}</td>
       <td className="py-2 pl-2">
         <button 
-          className="w-6 h-6 rounded-full transition-colors flex items-center justify-center text-sm font-medium"
-          style={{ color: '#ef4444' }}
+          className="w-6 h-6 rounded-full transition-colors flex items-center justify-center text-sm font-medium text-gray-400 hover:bg-red-100 hover:text-red-600"
           aria-label="删除"
           onClick={() => removeItem(id)}
         >

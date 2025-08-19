@@ -446,8 +446,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               {data.items.length > 1 && (
                 <button
                   onClick={() => handleSoftDelete(index)}
-                  className="flex items-center justify-center w-5 h-5 rounded-full text-xs cursor-pointer transition-colors"
-                  style={{ color: '#ef4444' }}
+                  className="flex items-center justify-center w-5 h-5 rounded-full text-xs text-gray-400 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors"
                 >
                   ×
                 </button>
@@ -1100,9 +1099,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     <tr key={item.id} className={`border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10 ${groupBg}`}>
                       <td className="py-2 px-4 text-center text-sm">
                       <span 
-                          className="flex items-center justify-center w-5 h-5 rounded-full text-xs cursor-pointer transition-colors"
+                          className="flex items-center justify-center w-5 h-5 rounded-full text-xs text-gray-400 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors"
                         onClick={() => handleSoftDelete(index)}
-                        style={{ color: '#ef4444' }}
                       >
                         {index + 1}
                       </span>

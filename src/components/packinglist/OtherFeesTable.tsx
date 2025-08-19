@@ -57,8 +57,7 @@ export function OtherFeesTable({
                 {/* 序号列 - 与主表格完全一致 */}
                 <td className="py-2 px-4 text-center text-sm">
                   <span 
-                    className="flex items-center justify-center w-5 h-5 rounded-full text-xs cursor-pointer transition-colors"
-                    style={{ color: '#ef4444' }}
+                    className="flex items-center justify-center w-5 h-5 rounded-full text-xs text-gray-400 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors"
                     onClick={() => onDeleteFee(index)}
                     title="Click to delete"
                   >

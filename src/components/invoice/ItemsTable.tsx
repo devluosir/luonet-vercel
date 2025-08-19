@@ -596,8 +596,7 @@ export default function ItemsTable({
                      }`}>
                   <div className="w-[40px] px-4">
                     <span 
-                      className="flex items-center justify-center w-6 h-6 rounded-full cursor-pointer transition-colors"
-                      style={{ color: '#ef4444' }}
+                      className="flex items-center justify-center w-6 h-6 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors"
                       onClick={() => {
                         const newFees = invoiceData.otherFees?.filter(f => f.id !== fee.id) || [];
                         setInvoiceData(prev => ({ ...prev, otherFees: newFees }));

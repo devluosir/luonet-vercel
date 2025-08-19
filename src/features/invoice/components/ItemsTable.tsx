@@ -369,7 +369,7 @@ export const ItemsTable = React.memo(() => {
           <div key={item.lineNo} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5EA] dark:border-[#2C2C2E]">
               <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Item #{index + 1}</div>
-              <button type="button" onClick={() => handleSoftDelete(index)} className="transition-colors p-1" style={{ color: '#ef4444' }} title="删除此项">
+              <button type="button" onClick={() => handleSoftDelete(index)} className="transition-colors p-1 text-gray-400 hover:bg-red-100 hover:text-red-600" title="删除此项">
                 ×
               </button>
             </div>
@@ -524,7 +524,7 @@ export const ItemsTable = React.memo(() => {
               <div key={fee.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#E5E5EA] dark:border-[#2C2C2E]">
                   <div className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">Other Fee #{index + 1}</div>
-                  <button type="button" onClick={() => handleOtherFeeSoftDelete(index)} className="transition-colors p-1" style={{ color: '#ef4444' }} title="删除此项">
+                  <button type="button" onClick={() => handleOtherFeeSoftDelete(index)} className="transition-colors p-1 text-gray-400 hover:bg-red-100 hover:text-red-600" title="删除此项">
                     ×
                   </button>
                 </div>
