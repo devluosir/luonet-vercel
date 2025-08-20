@@ -836,11 +836,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     setCnFont(doc, 'normal');
     doc.setTextColor(0, 0, 0);
     doc.text('供你们参考；', contentMargin + doc.getTextWidth('客户确认订单时对于项目的规格描述'), currentY);
-
-    // 只有当有规格描述内容时才添加额外的行间距
-    if (data.projectSpecification) {
-      currentY += 5;
-    }
+    currentY += 5; // 为"供你们参考；"这句话添加行间距
 
     // 项目规格描述（支持富文本格式）
     const specText = data.projectSpecification || '';
@@ -865,6 +861,9 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
           currentY += 5;
         }
       }
+    } else {
+      // 当没有规格描述内容时，也要添加适当的间距
+      currentY += 3;
     }
 
     // 2. 付款条件
