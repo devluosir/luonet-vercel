@@ -517,7 +517,7 @@ const getFromOptions = useCallback(() => {
   }, [getFromOptions, value.from, onChange, value]);
 
   return (
-    <section className={`rounded-2xl border border-slate-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/30 shadow-sm p-4 ${className || ''}`}>
+    <section className={`${className || ''}`}>
       {/* 对称布局：左右各6列 */}
       <div className="grid grid-cols-12 gap-3">
         {/* 左侧：供应商信息 */}

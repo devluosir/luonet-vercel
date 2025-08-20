@@ -1,6 +1,9 @@
 'use client';
 import React from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { Footer } from '@/components/Footer';
 import PurchaseHeader from '../components/PurchaseHeader';
 import PurchaseForm from '../components/PurchaseForm';
@@ -16,6 +19,7 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
 });
 
 export default function PurchasePage() {
+  const pathname = usePathname();
   const { showPreview, previewItem, setShowPreview, setPreviewItem } = usePurchaseStore();
   
   // 初始化逻辑
@@ -28,8 +32,21 @@ export default function PurchasePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
       <main className="flex-1">
         <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
+          {/* 返回按钮 */}
+          <Link 
+            href={
+              pathname?.includes('/edit/') ? '/history?tab=purchase' : 
+              pathname?.includes('/copy/') ? '/history?tab=purchase' : 
+              '/dashboard'
+            } 
+            className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Link>
+
           {/* 主卡片容器内容 */}
-          <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl sm:rounded-3xl shadow-lg">
+          <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl sm:rounded-3xl shadow-lg mt-6">
             <PurchaseHeader />
             <PurchaseForm />
             <PurchaseActions />

@@ -116,9 +116,9 @@ export default function PurchaseForm() {
         {/* 主体内容 - 优化布局 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* 左侧列 */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* 1. 供货范围和成交价格 */}
-            <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl">
+            <div>
               <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">1. 供货范围和成交价格</h3>
               <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
                 客户确认贵司于<strong className="text-blue-600"><span suppressHydrationWarning>{data.supplierQuoteDate || '日期'}</span></strong> <strong className="text-red-600"><span suppressHydrationWarning>{data.yourRef || 'Your ref'}</span></strong>报价提供的项目价格、规格和交货条件；
@@ -164,7 +164,7 @@ export default function PurchaseForm() {
             </div>
 
             {/* 2. 付款条件 */}
-            <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl">
+            <div>
               <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">2. 付款条件</h3>
               <textarea
                 ref={paymentTermsRef}
@@ -177,7 +177,7 @@ export default function PurchaseForm() {
             </div>
 
             {/* 3. 发票要求 */}
-            <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl">
+            <div>
               <div className="flex items-center gap-3 mb-3">
                 <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">3. 发票要求</h3>
                 <button
@@ -217,9 +217,9 @@ export default function PurchaseForm() {
           </div>
 
           {/* 右侧列 */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* 4. 关于交货 */}
-            <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl">
+            <div>
               <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">4. 关于交货</h3>
               <div className="mb-3">
                 <span className="text-gray-600 dark:text-gray-300 text-sm">收货人信息如下：</span>
@@ -235,7 +235,7 @@ export default function PurchaseForm() {
             </div>
 
             {/* 5. 客户的订单号码 */}
-            <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl">
+            <div>
               <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">5. 客户的订单号码</h3>
               <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
                 请在交货时写在交货文件中和包装箱外部：
@@ -251,7 +251,7 @@ export default function PurchaseForm() {
             </div>
 
             {/* 6. 印章 */}
-            <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl">
+            <div>
               <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">6. 印章</h3>
               <div className="flex gap-2">
                 {[
