@@ -76,6 +76,12 @@ export default function CustomerPage() {
     }
   };
 
+  // 处理查看详情
+  const handleViewDetail = (customer: Customer) => {
+    const customerName = customer.name.split('\n')[0] || customer.name;
+    router.push(`/customer/detail?id=${encodeURIComponent(customer.name)}&name=${encodeURIComponent(customerName)}`);
+  };
+
   // 处理表单提交
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,7 +177,8 @@ export default function CustomerPage() {
             <CustomerList 
               customers={customers} 
               onEdit={handleEdit} 
-              onDelete={handleDelete} 
+              onDelete={handleDelete}
+              onViewDetail={handleViewDetail}
             />
           ) : activeTab === 'suppliers' ? (
             <SupplierList 

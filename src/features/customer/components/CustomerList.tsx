@@ -1,13 +1,14 @@
-import { Edit, Trash2, Users } from 'lucide-react';
+import { Edit, Trash2, Users, Eye } from 'lucide-react';
 import { Customer } from '../types';
 
 interface CustomerListProps {
   customers: Customer[];
   onEdit: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
+  onViewDetail?: (customer: Customer) => void;
 }
 
-export function CustomerList({ customers, onEdit, onDelete }: CustomerListProps) {
+export function CustomerList({ customers, onEdit, onDelete, onViewDetail }: CustomerListProps) {
   if (customers.length === 0) {
     return (
       <div className="p-8 text-center">
@@ -52,8 +53,13 @@ export function CustomerList({ customers, onEdit, onDelete }: CustomerListProps)
             return (
               <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                 <td className="px-6 py-4">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    {title}
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => onViewDetail?.(customer)}
+                      className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-left"
+                    >
+                      {title}
+                    </button>
                   </div>
                   {lines.length > 1 && (
                     <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -66,15 +72,26 @@ export function CustomerList({ customers, onEdit, onDelete }: CustomerListProps)
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
+                    {onViewDetail && (
+                      <button
+                        onClick={() => onViewDetail(customer)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                        title="查看详情"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => onEdit(customer)}
                       className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                      title="编辑"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => onDelete(customer)}
                       className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                      title="删除"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

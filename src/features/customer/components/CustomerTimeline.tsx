@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Calendar, FileText, Package, Receipt, ShoppingCart, Plus, Filter, Search } from 'lucide-react';
-import { TimelineService } from '../services/timelineService';
-import type { CustomerTimelineEvent, TimelineEventType, TimelineEventStatus } from '../types/timeline';
+import { useState } from 'react';
+import { Calendar, FileText, Package, Receipt, Search, Filter } from 'lucide-react';
+import { useCustomerTimeline } from '../hooks/useCustomerTimeline';
+import type { CustomerTimelineEvent, TimelineEventType, TimelineEventStatus } from '../types';
 
 interface CustomerTimelineProps {
   customerId: string;
@@ -16,7 +16,7 @@ const eventTypeIcons = {
   confirmation: FileText,
   packing: Package,
   invoice: Receipt,
-  custom: ShoppingCart
+  custom: FileText
 };
 
 // 事件类型颜色映射
@@ -36,66 +36,15 @@ const statusColors = {
 };
 
 export function CustomerTimeline({ customerId, customerName }: CustomerTimelineProps) {
-  const [events, setEvents] = useState<CustomerTimelineEvent[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<CustomerTimelineEvent[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({
-    eventTypes: [] as TimelineEventType[],
-    status: [] as TimelineEventStatus[],
-    searchText: ''
-  });
-
-  // 加载时间轴事件
-  const loadEvents = () => {
-    setLoading(true);
-    try {
-      const customerEvents = TimelineService.getEventsByCustomer(customerId);
-      setEvents(customerEvents);
-      setFilteredEvents(customerEvents);
-    } catch (error) {
-      console.error('加载时间轴事件失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 应用筛选
-  const applyFilters = () => {
-    let filtered = [...events];
-
-    // 按事件类型筛选
-    if (filters.eventTypes.length > 0) {
-      filtered = filtered.filter(event => filters.eventTypes.includes(event.type));
-    }
-
-    // 按状态筛选
-    if (filters.status.length > 0) {
-      filtered = filtered.filter(event => filters.status.includes(event.status));
-    }
-
-    // 按搜索文本筛选
-    if (filters.searchText) {
-      const searchText = filters.searchText.toLowerCase();
-      filtered = filtered.filter(event => 
-        event.title.toLowerCase().includes(searchText) ||
-        event.description?.toLowerCase().includes(searchText) ||
-        event.documentNo?.toLowerCase().includes(searchText)
-      );
-    }
-
-    setFilteredEvents(filtered);
-  };
-
-  // 重置筛选
-  const resetFilters = () => {
-    setFilters({
-      eventTypes: [],
-      status: [],
-      searchText: ''
-    });
-    setFilteredEvents(events);
-  };
+  
+  const {
+    events,
+    loading,
+    filters,
+    setFilters,
+    syncHistory
+  } = useCustomerTimeline(customerId);
 
   // 格式化日期
   const formatDate = (dateString: string) => {
@@ -135,14 +84,6 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
     return labels[status];
   };
 
-  useEffect(() => {
-    loadEvents();
-  }, [customerId]);
-
-  useEffect(() => {
-    applyFilters();
-  }, [filters, events]);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -161,11 +102,18 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
             {customerName} 的时间轴
           </h3>
           <span className="text-sm text-gray-500">
-            ({filteredEvents.length} 个事件)
+            ({events.length} 个事件)
           </span>
         </div>
         
         <div className="flex items-center space-x-2">
+          <button
+            onClick={syncHistory}
+            className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+          >
+            <Calendar className="h-4 w-4" />
+            <span>同步历史</span>
+          </button>
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
@@ -178,8 +126,8 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
 
       {/* 筛选器 */}
       {showFilters && (
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 搜索 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -196,77 +144,27 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
                 />
               </div>
             </div>
-
-            {/* 事件类型筛选 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                事件类型
-              </label>
-              <select
-                multiple
-                value={filters.eventTypes}
-                onChange={(e) => {
-                  const selected = Array.from(e.target.selectedOptions, option => option.value as TimelineEventType);
-                  setFilters(prev => ({ ...prev, eventTypes: selected }));
-                }}
-                className="w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              >
-                <option value="quotation">报价单</option>
-                <option value="confirmation">销售确认</option>
-                <option value="packing">装箱单</option>
-                <option value="invoice">财务发票</option>
-                <option value="custom">自定义</option>
-              </select>
-            </div>
-
-            {/* 状态筛选 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                状态
-              </label>
-              <select
-                multiple
-                value={filters.status}
-                onChange={(e) => {
-                  const selected = Array.from(e.target.selectedOptions, option => option.value as TimelineEventStatus);
-                  setFilters(prev => ({ ...prev, status: selected }));
-                }}
-                className="w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              >
-                <option value="pending">进行中</option>
-                <option value="completed">已完成</option>
-                <option value="cancelled">已取消</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-2">
-            <button
-              onClick={resetFilters}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-            >
-              重置
-            </button>
           </div>
         </div>
       )}
 
       {/* 时间轴 */}
       <div className="space-y-4">
-        {filteredEvents.length === 0 ? (
+        {events.length === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>暂无时间轴事件</p>
+            <p className="text-sm mt-2">点击"同步历史"按钮从历史记录中提取事件</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredEvents.map((event, index) => {
+            {events.map((event, index) => {
               const IconComponent = eventTypeIcons[event.type];
               
               return (
                 <div key={event.id} className="relative">
                   {/* 时间轴线 */}
-                  {index < filteredEvents.length - 1 && (
+                  {index < events.length - 1 && (
                     <div className="absolute left-6 top-12 w-0.5 h-16 bg-gray-200 dark:bg-gray-600"></div>
                   )}
                   
