@@ -1,4 +1,4 @@
-import { Edit, Trash2, Users, Eye, Calendar, Clock } from 'lucide-react';
+import { Edit, Trash2, Users, Eye, Calendar, Clock, MapPin, Phone, Mail } from 'lucide-react';
 import { Customer } from '../types';
 import { TimelineService } from '../services/timelineService';
 import { FollowUpService } from '../services/timelineService';
@@ -31,93 +31,133 @@ export function CustomerList({ customers, onEdit, onDelete, onViewDetail }: Cust
     }
   };
 
+  // 格式化日期
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // 获取客户信息
+  const getCustomerInfo = (customer: Customer) => {
+    const lines = customer.name.split('\n');
+    const title = lines[0] || customer.name;
+    const content = customer.name;
+    
+    // 提取联系信息
+    const contactInfo = {
+      phone: '',
+      email: '',
+      address: ''
+    };
+    
+    lines.forEach(line => {
+      if (line.includes('@')) {
+        contactInfo.email = line.trim();
+      } else if (line.includes('+') || line.match(/\d{3,}/)) {
+        contactInfo.phone = line.trim();
+      } else if (line.includes('省') || line.includes('市') || line.includes('区') || line.includes('路')) {
+        contactInfo.address = line.trim();
+      }
+    });
+    
+    return { title, content, contactInfo };
+  };
+
   if (customers.length === 0) {
     return (
-      <div className="p-8 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-          <Users className="w-8 h-8 text-gray-400" />
+      <div className="text-center py-12">
+        <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+          <Users className="w-12 h-12 text-gray-400" />
         </div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
           暂无客户数据
         </h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">
+        <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md mx-auto">
           开始添加您的第一个客户，或者从历史记录中导入客户信息
         </p>
-        <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          提示：客户数据会从您的报价单、发票和装箱单历史记录中自动提取
+        <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg p-4 max-w-md mx-auto">
+          <p className="font-medium mb-2">💡 提示：</p>
+          <ul className="text-left space-y-1">
+            <li>• 客户数据会从您的报价单、发票和装箱单历史记录中自动提取</li>
+            <li>• 点击"添加新客户"按钮手动添加客户信息</li>
+            <li>• 使用"导入"功能批量导入客户数据</li>
+          </ul>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-50 dark:bg-gray-700">
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
-              客户信息
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
-              时间轴
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
-              跟进记录
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
-              创建时间
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
-              操作
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {customers.map((customer) => {
-            const lines = customer.name.split('\n');
-            const title = lines[0] || customer.name;
-            const content = customer.name;
-            const timelineCount = getTimelineCount(customer.name);
-            const followUpCount = getFollowUpCount(customer.name);
-            
-            return (
-              <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                <td className="px-6 py-4">
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => onViewDetail?.(customer)}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-left"
-                    >
+    <div className="space-y-4">
+      {/* 列表头部 */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            客户列表
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            共 {customers.length} 个客户
+          </p>
+        </div>
+        <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center space-x-1">
+            <Calendar className="w-4 h-4" />
+            <span>时间轴</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <Clock className="w-4 h-4" />
+            <span>跟进</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 客户卡片网格 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {customers.map((customer) => {
+          const { title, content, contactInfo } = getCustomerInfo(customer);
+          const timelineCount = getTimelineCount(customer.name);
+          const followUpCount = getFollowUpCount(customer.name);
+          
+          return (
+            <div key={customer.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 overflow-hidden group">
+              {/* 卡片头部 */}
+              <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors cursor-pointer" onClick={() => onViewDetail?.(customer)}>
                       {title}
-                    </button>
+                    </h3>
+                    {contactInfo.phone && (
+                      <div className="flex items-center mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        <Phone className="w-4 h-4 mr-2" />
+                        <span className="truncate">{contactInfo.phone}</span>
+                      </div>
+                    )}
+                    {contactInfo.email && (
+                      <div className="flex items-center mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        <Mail className="w-4 h-4 mr-2" />
+                        <span className="truncate">{contactInfo.email}</span>
+                      </div>
+                    )}
+                    {contactInfo.address && (
+                      <div className="flex items-center mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        <MapPin className="w-4 h-4 mr-2" />
+                        <span className="truncate">{contactInfo.address}</span>
+                      </div>
+                    )}
                   </div>
-                  {lines.length > 1 && (
-                    <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      {content}
-                    </div>
-                  )}
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
-                    <Calendar className="h-4 w-4" />
-                    <span>{timelineCount}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
-                    <Clock className="h-4 w-4" />
-                    <span>{followUpCount}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                  {customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : '-'}
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
+                  
+                  {/* 操作按钮 */}
+                  <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {onViewDetail && (
                       <button
                         onClick={() => onViewDetail(customer)}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                        className="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                         title="查看详情"
                       >
                         <Eye className="w-4 h-4" />
@@ -125,25 +165,64 @@ export function CustomerList({ customers, onEdit, onDelete, onViewDetail }: Cust
                     )}
                     <button
                       onClick={() => onEdit(customer)}
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                      className="p-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                       title="编辑"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => onDelete(customer)}
-                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                      className="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="删除"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                </div>
+              </div>
+
+              {/* 卡片内容 */}
+              <div className="p-6">
+                {/* 统计信息 */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex items-center justify-center mb-1">
+                      <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400 mr-1" />
+                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400">时间轴</span>
+                    </div>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">{timelineCount}</p>
+                  </div>
+                  <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <div className="flex items-center justify-center mb-1">
+                      <Clock className="w-4 h-4 text-green-600 dark:text-green-400 mr-1" />
+                      <span className="text-sm font-medium text-green-600 dark:text-green-400">跟进</span>
+                    </div>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">{followUpCount}</p>
+                  </div>
+                </div>
+
+                {/* 创建时间 */}
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">创建时间</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {formatDate(customer.createdAt)}
+                  </p>
+                </div>
+              </div>
+
+              {/* 卡片底部 */}
+              <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700">
+                <button
+                  onClick={() => onViewDetail?.(customer)}
+                  className="w-full text-center text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                >
+                  查看详情 →
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
