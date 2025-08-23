@@ -7,3 +7,5 @@ export { CustomerTabs } from './CustomerTabs';
 export { CustomerModal } from './CustomerModal';
 export { CustomerTimeline } from './CustomerTimeline';
 export { FollowUpManager } from './FollowUpManager';
+export { NewCustomerTracker } from './NewCustomerTracker';
+export { CustomEventForm } from './CustomEventForm';

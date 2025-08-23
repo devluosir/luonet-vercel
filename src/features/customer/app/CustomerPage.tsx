@@ -10,7 +10,8 @@ import {
   CustomerList, 
   SupplierList, 
   ConsigneeList, 
-  CustomerModal 
+  CustomerModal,
+  NewCustomerTracker
 } from '../components';
 import { useCustomerData, useCustomerActions, useCustomerForm } from '../hooks';
 import { Customer, Supplier, Consignee, TabType } from '../types';
@@ -18,7 +19,7 @@ import { Customer, Supplier, Consignee, TabType } from '../types';
 export default function CustomerPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabType>('customers');
+  const [activeTab, setActiveTab] = useState<TabType | 'new_customers'>('customers');
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -160,11 +161,13 @@ export default function CustomerPage() {
         <CustomerTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {/* 工具栏 */}
-        <CustomerToolbar 
-          activeTab={activeTab} 
-          onRefresh={refreshData} 
-          onAddNew={handleAddNew} 
-        />
+        {activeTab !== 'new_customers' && (
+          <CustomerToolbar 
+            activeTab={activeTab} 
+            onRefresh={refreshData} 
+            onAddNew={handleAddNew} 
+          />
+        )}
 
         {/* 数据列表 */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -186,25 +189,29 @@ export default function CustomerPage() {
               onEdit={handleEdit} 
               onDelete={handleDelete} 
             />
-          ) : (
+          ) : activeTab === 'consignees' ? (
             <ConsigneeList 
               consignees={consignees} 
               onEdit={handleEdit} 
               onDelete={handleDelete} 
             />
-          )}
+          ) : activeTab === 'new_customers' ? (
+            <NewCustomerTracker onRefresh={refreshData} />
+          ) : null}
         </div>
 
         {/* 模态框 */}
-        <CustomerModal
-          isOpen={showModal}
-          onClose={handleCloseModal}
-          formData={formData}
-          onInputChange={handleInputChange}
-          onSubmit={handleSubmit}
-          isEditing={!!(editingCustomer || editingSupplier || editingConsignee)}
-          activeTab={activeTab}
-        />
+        {activeTab !== 'new_customers' && (
+          <CustomerModal
+            isOpen={showModal}
+            onClose={handleCloseModal}
+            formData={formData}
+            onInputChange={handleInputChange}
+            onSubmit={handleSubmit}
+            isEditing={!!(editingCustomer || editingSupplier || editingConsignee)}
+            activeTab={activeTab}
+          />
+        )}
       </div>
     </div>
   );

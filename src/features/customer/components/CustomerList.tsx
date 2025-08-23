@@ -1,5 +1,7 @@
-import { Edit, Trash2, Users, Eye } from 'lucide-react';
+import { Edit, Trash2, Users, Eye, Calendar, Clock } from 'lucide-react';
 import { Customer } from '../types';
+import { TimelineService } from '../services/timelineService';
+import { FollowUpService } from '../services/timelineService';
 
 interface CustomerListProps {
   customers: Customer[];
@@ -9,6 +11,26 @@ interface CustomerListProps {
 }
 
 export function CustomerList({ customers, onEdit, onDelete, onViewDetail }: CustomerListProps) {
+  // 获取客户的时间轴事件数量
+  const getTimelineCount = (customerName: string) => {
+    try {
+      const events = TimelineService.getEventsByCustomer(customerName);
+      return events.length;
+    } catch (error) {
+      return 0;
+    }
+  };
+
+  // 获取客户的跟进记录数量
+  const getFollowUpCount = (customerName: string) => {
+    try {
+      const followUps = FollowUpService.getFollowUpsByCustomer(customerName);
+      return followUps.length;
+    } catch (error) {
+      return 0;
+    }
+  };
+
   if (customers.length === 0) {
     return (
       <div className="p-8 text-center">
@@ -37,6 +59,12 @@ export function CustomerList({ customers, onEdit, onDelete, onViewDetail }: Cust
               客户信息
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
+              时间轴
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
+              跟进记录
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
               创建时间
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
@@ -49,6 +77,8 @@ export function CustomerList({ customers, onEdit, onDelete, onViewDetail }: Cust
             const lines = customer.name.split('\n');
             const title = lines[0] || customer.name;
             const content = customer.name;
+            const timelineCount = getTimelineCount(customer.name);
+            const followUpCount = getFollowUpCount(customer.name);
             
             return (
               <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
@@ -66,6 +96,18 @@ export function CustomerList({ customers, onEdit, onDelete, onViewDetail }: Cust
                       {content}
                     </div>
                   )}
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
+                    <Calendar className="h-4 w-4" />
+                    <span>{timelineCount}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center space-x-1 text-sm text-gray-600 dark:text-gray-400">
+                    <Clock className="h-4 w-4" />
+                    <span>{followUpCount}</span>
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                   {customer.createdAt ? new Date(customer.createdAt).toLocaleDateString() : '-'}

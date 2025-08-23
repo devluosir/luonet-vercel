@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, FileText, Package, Receipt, Search, Filter } from 'lucide-react';
+import { Calendar, FileText, Package, Receipt, ShoppingCart, Plus, Filter, Search } from 'lucide-react';
 import { useCustomerTimeline } from '../hooks/useCustomerTimeline';
+import { CustomEventForm } from './CustomEventForm';
 import type { CustomerTimelineEvent, TimelineEventType, TimelineEventStatus } from '../types';
 
 interface CustomerTimelineProps {
@@ -16,7 +17,7 @@ const eventTypeIcons = {
   confirmation: FileText,
   packing: Package,
   invoice: Receipt,
-  custom: FileText
+  custom: ShoppingCart
 };
 
 // 事件类型颜色映射
@@ -37,13 +38,15 @@ const statusColors = {
 
 export function CustomerTimeline({ customerId, customerName }: CustomerTimelineProps) {
   const [showFilters, setShowFilters] = useState(false);
+  const [showCustomEventForm, setShowCustomEventForm] = useState(false);
   
   const {
     events,
     loading,
     filters,
     setFilters,
-    syncHistory
+    syncHistory,
+    addCustomEvent
   } = useCustomerTimeline(customerId);
 
   // 格式化日期
@@ -84,6 +87,17 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
     return labels[status];
   };
 
+  // 处理添加自定义事件
+  const handleAddCustomEvent = async (eventData: any) => {
+    try {
+      await addCustomEvent(eventData);
+      setShowCustomEventForm(false);
+    } catch (error) {
+      console.error('添加自定义事件失败:', error);
+      alert('添加自定义事件失败');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -107,6 +121,13 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
         </div>
         
         <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowCustomEventForm(true)}
+            className="flex items-center space-x-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4" />
+            <span>添加事件</span>
+          </button>
           <button
             onClick={syncHistory}
             className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
@@ -154,7 +175,7 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>暂无时间轴事件</p>
-            <p className="text-sm mt-2">点击"同步历史"按钮从历史记录中提取事件</p>
+            <p className="text-sm mt-2">点击"同步历史"按钮从历史记录中提取事件，或点击"添加事件"创建自定义事件</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -212,6 +233,16 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
           </div>
         )}
       </div>
+
+      {/* 自定义事件表单 */}
+      {showCustomEventForm && (
+        <CustomEventForm
+          customerId={customerId}
+          customerName={customerName}
+          onSubmit={handleAddCustomEvent}
+          onCancel={() => setShowCustomEventForm(false)}
+        />
+      )}
     </div>
   );
 }
