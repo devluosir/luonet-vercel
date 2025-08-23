@@ -1,4 +1,5 @@
 import { TimelineService } from './timelineService';
+import { NewCustomerService } from './newCustomerService';
 import type { CustomerTimelineEvent } from '../types';
 
 // 从报价单历史记录中提取时间轴事件
@@ -121,4 +122,73 @@ export function syncAllHistoryToTimeline() {
   extractTimelineFromInvoiceHistory();
   
   console.log('历史记录同步完成');
+}
+
+// 监听历史记录变化，自动更新时间轴
+export function setupTimelineAutoSync() {
+  if (typeof window === 'undefined') return;
+  
+  let syncTimeout: NodeJS.Timeout | null = null;
+  
+  const performSync = () => {
+    if (syncTimeout) {
+      clearTimeout(syncTimeout);
+    }
+    
+    syncTimeout = setTimeout(() => {
+      syncAllHistoryToTimeline();
+      NewCustomerService.autoDetectNewCustomers();
+    }, 1000);
+  };
+  
+  const handleStorageChange = (event: StorageEvent) => {
+    if (event.key && (
+      event.key.includes('quotation_history') ||
+      event.key.includes('packing_history') ||
+      event.key.includes('invoice_history') ||
+      event.key.includes('purchase_history')
+    )) {
+      performSync();
+    }
+  };
+  
+  // 监听localStorage变化
+  window.addEventListener('storage', handleStorageChange);
+  
+  // 监听自定义事件（用于同页面内的更新）
+  const handleCustomStorageChange = (event: CustomEvent) => {
+    if (event.detail?.key && (
+      event.detail.key.includes('quotation_history') ||
+      event.detail.key.includes('packing_history') ||
+      event.detail.key.includes('invoice_history') ||
+      event.detail.key.includes('purchase_history')
+    )) {
+      performSync();
+    }
+  };
+  
+  window.addEventListener('customStorageChange', handleCustomStorageChange as EventListener);
+  
+  // 返回清理函数
+  return () => {
+    if (syncTimeout) {
+      clearTimeout(syncTimeout);
+    }
+    window.removeEventListener('storage', handleStorageChange);
+    window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener);
+  };
+}
+
+// 初始化自动同步
+export function initAutoSync() {
+  if (typeof window === 'undefined') return;
+  
+  // 页面加载时执行一次同步
+  setTimeout(() => {
+    syncAllHistoryToTimeline();
+    NewCustomerService.autoDetectNewCustomers();
+  }, 2000);
+  
+  // 设置自动同步
+  return setupTimelineAutoSync();
 }

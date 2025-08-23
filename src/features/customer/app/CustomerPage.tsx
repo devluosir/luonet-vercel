@@ -13,7 +13,7 @@ import {
   CustomerModal,
   NewCustomerTracker
 } from '../components';
-import { useCustomerData, useCustomerActions, useCustomerForm } from '../hooks';
+import { useCustomerData, useCustomerActions, useCustomerForm, useAutoSync } from '../hooks';
 import { Customer, Supplier, Consignee, TabType } from '../types';
 
 export default function CustomerPage() {
@@ -29,6 +29,9 @@ export default function CustomerPage() {
   const { customers, suppliers, consignees, isLoading, refreshData } = useCustomerData();
   const { saveCustomer, saveSupplier, saveConsignee, deleteCustomer, deleteSupplier, deleteConsignee } = useCustomerActions();
   const { formData, resetForm, setFormDataForEdit, handleInputChange, validateForm } = useCustomerForm();
+  
+  // 启用自动同步
+  useAutoSync();
 
   // 处理添加新项目
   const handleAddNew = () => {
