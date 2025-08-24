@@ -837,24 +837,34 @@ async function renderPackingTable(
 
   // 添加 other fees 行
   if (showAmount && data.otherFees && data.otherFees.length > 0) {
-    data.otherFees.forEach(fee => {
-      const feeRow: CellInput[] = [
-        {
-          content: fee.description,
-          colSpan: mergeColCount,
-          styles: { 
-            halign: 'center',
-            ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {})
-          }
-        },
-        {
-          content: fee.amount.toFixed(2),
-          styles: { 
-            halign: 'center',
-            ...(fee.highlight?.amount ? { textColor: [255, 0, 0] } : {})
-          }
+    data.otherFees.forEach((fee, feeIndex) => {
+      const feeRow: CellInput[] = [];
+      
+      // 添加序号列 - 与主表格连续
+      feeRow.push({
+        content: (data.items.length + feeIndex + 1).toString(),
+        styles: { halign: 'center' }
+      });
+      
+      // 添加描述列 - 合并所有中间列
+      feeRow.push({
+        content: fee.description,
+        colSpan: mergeColCount - 1, // 减去序号列
+        styles: { 
+          halign: 'center',
+          ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {})
         }
-      ];
+      });
+      
+      // 添加金额列
+      feeRow.push({
+        content: fee.amount.toFixed(2),
+        styles: { 
+          halign: 'center',
+          ...(fee.highlight?.amount ? { textColor: [255, 0, 0] } : {})
+        }
+      });
+      
       body.push(feeRow);
     });
   }
