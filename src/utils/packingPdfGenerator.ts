@@ -3,7 +3,8 @@ import 'jspdf-autotable';
 import { UserOptions, RowInput, CellInput } from 'jspdf-autotable';
 import { embeddedResources } from '@/lib/embedded-resources';
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
-import { setCnFont, validateFontRegistration } from '@/utils/pdfFontUtils';
+import { safeSetCnFont } from '@/utils/pdf/ensureFont';
+import { validateFontRegistration } from '@/utils/pdfFontUtils';
 import { MergedCellInfo } from '@/features/packing/types';
 import { getUnitDisplay } from '@/utils/unitUtils';
 
@@ -257,7 +258,7 @@ export async function generatePackingListPDF(
           
           // 调整标题字体大小和位置
           doc.setFontSize(titleFontSize);
-          setCnFont(doc, 'bold');
+          safeSetCnFont(doc, 'bold', 'export');
           const title = getPackingListTitle(data);
           const titleWidth = doc.getTextWidth(title);
           const titleY = imgY + imgHeight + titleSpacing; // 标题Y坐标
@@ -287,7 +288,7 @@ export async function generatePackingListPDF(
     currentY = await renderPackingTable(doc, data, currentY, mergedPackageQtyCells, mergedDimensionsCells, mergedMarksCells, visibleCols);
 
     // 备注
-    renderRemarks(doc, data, currentY, pageWidth, margin);
+    currentY = renderRemarks(doc, data, currentY, pageWidth, margin);
 
     // 添加页码
     addPageNumbers(doc, pageWidth, pageHeight, margin);
@@ -338,19 +339,19 @@ function renderBasicInfo(doc: any, data: PackingData, startY: number, pageWidth:
   // 添加 SHIP'S SPARES IN TRANSIT（如果选中）- 放在Consignee上方
   if (data.remarkOptions.shipsSpares) {
     doc.setFontSize(8);
-    setCnFont(doc, 'bold');
+    safeSetCnFont(doc, 'bold', 'export');
     const text = '"SHIP\'S SPARES IN TRANSIT"';
     doc.text(text, margin, currentY);
     currentY += 5; // 项目间距5px
   }
 
   doc.setFontSize(8);
-  setCnFont(doc, 'normal');
+  safeSetCnFont(doc, 'normal', 'export');
 
   // 左侧：收货人信息
-  setCnFont(doc, 'bold');
+  safeSetCnFont(doc, 'bold', 'export');
   doc.text('Consignee:', margin, currentY);
-  setCnFont(doc, 'normal');
+  safeSetCnFont(doc, 'normal', 'export');
   
   let leftY = currentY;
   if (data.consignee.name.trim()) {
@@ -365,9 +366,9 @@ function renderBasicInfo(doc: any, data: PackingData, startY: number, pageWidth:
 
   // 左侧：Order No. - 只在有值时才显示
   if (data.orderNo && data.orderNo.trim()) {
-    setCnFont(doc, 'bold');
+    safeSetCnFont(doc, 'bold', 'export');
     doc.text('Order No.:', margin, leftY);
-    setCnFont(doc, 'bold');
+    safeSetCnFont(doc, 'bold', 'export');
     doc.setTextColor(0, 0, 255); // 设置为蓝色
     const orderNoText = data.orderNo.trim();
     const orderNoLines = doc.splitTextToSize(orderNoText, 130);
@@ -384,10 +385,10 @@ function renderBasicInfo(doc: any, data: PackingData, startY: number, pageWidth:
   const colonX = rightStartX + 30;
 
   // Invoice No. - 始终显示
-  setCnFont(doc, 'bold');
+  safeSetCnFont(doc, 'bold', 'export');
   doc.text('Invoice No.', colonX - 2, rightY, { align: 'right' });
   doc.text(':', colonX, rightY);
-  setCnFont(doc, 'bold');
+  safeSetCnFont(doc, 'bold', 'export');
   doc.setTextColor(255, 0, 0); // 设置为红色，与发票一致
   
   // 处理 Invoice No. 换行
@@ -400,19 +401,19 @@ function renderBasicInfo(doc: any, data: PackingData, startY: number, pageWidth:
   doc.setTextColor(0, 0, 0); // 重置为黑色
   rightY += Math.max(5, invoiceNoLines.length * 4); // 根据行数调整间距
 
-  setCnFont(doc, 'bold');
+  safeSetCnFont(doc, 'bold', 'export');
   doc.text('Date', colonX - 2, rightY, { align: 'right' });
   doc.text(':', colonX, rightY);
-  setCnFont(doc, 'normal');
+  safeSetCnFont(doc, 'normal', 'export');
   doc.text(data.date, colonX + 3, rightY);
 
   // 如果显示价格，则显示币种
   if (data.showPrice) {
     rightY += 5; // 项目间距5px
-    setCnFont(doc, 'bold');
+    safeSetCnFont(doc, 'bold', 'export');
     doc.text('Currency', colonX - 2, rightY, { align: 'right' });
     doc.text(':', colonX, rightY);
-    setCnFont(doc, 'normal');
+    safeSetCnFont(doc, 'normal', 'export');
     doc.text(data.currency, colonX + 3, rightY);
   }
 
@@ -433,14 +434,14 @@ function renderRemarks(doc: any, data: PackingData, startY: number, pageWidth: n
   }
   
   doc.setFontSize(10);
-  setCnFont(doc, 'normal');
+  safeSetCnFont(doc, 'normal', 'export');
   
   // 显示Notes标题
-  setCnFont(doc, 'bold');
+  safeSetCnFont(doc, 'bold', 'export');
   doc.text('Notes:', margin, currentY);
   currentY += 5;
   
-  setCnFont(doc, 'normal');
+  safeSetCnFont(doc, 'normal', 'export');
   
   // 添加备注选项
   if (data.remarkOptions.shipsSpares) {
@@ -466,7 +467,7 @@ function addPageNumbers(doc: any, pageWidth: number, pageHeight: number, margin:
     doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
     
     doc.setFontSize(8);
-    setCnFont(doc, 'normal');
+    safeSetCnFont(doc, 'normal', 'export');
     doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
   }
 }
@@ -474,7 +475,7 @@ function addPageNumbers(doc: any, pageWidth: number, pageHeight: number, margin:
 // 处理表头错误的情况
 function handleHeaderError(doc: any, data: PackingData, margin: number, pageWidth: number): number {
   doc.setFontSize(14);
-  setCnFont(doc, 'bold');
+  safeSetCnFont(doc, 'bold', 'export');
   const title = getPackingListTitle(data);
   const titleWidth = doc.getTextWidth(title);
   const titleY = margin + 5;
@@ -485,7 +486,7 @@ function handleHeaderError(doc: any, data: PackingData, margin: number, pageWidt
 // 处理无表头的情况
 function handleNoHeader(doc: any, data: PackingData, margin: number, pageWidth: number): number {
   doc.setFontSize(14);
-  setCnFont(doc, 'bold');
+  safeSetCnFont(doc, 'bold', 'export');
   const title = getPackingListTitle(data);
   const titleWidth = doc.getTextWidth(title);
   const titleY = margin + 5;
@@ -1025,7 +1026,7 @@ async function renderPackingTable(
         if (data.remarkOptions.customsPurpose) {
           const text = 'FOR CUSTOMS PURPOSE ONLY';
           const fontSize = 8;
-          setCnFont(doc, 'bold');
+          safeSetCnFont(doc, 'bold', 'export');
           doc.setFontSize(fontSize);
           doc.text(text, margin +5, tableData.cursor?.y ? tableData.cursor.y + 6 : startY + 6);
         }
