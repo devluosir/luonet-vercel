@@ -223,7 +223,6 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
           items: data.items,
           otherFees: data.otherFees,
           currency: data.currency,
-          remarks: data.remarks,
           remarkOptions: data.remarkOptions,
           showHsCode: data.showHsCode,
           showDimensions: data.showDimensions,

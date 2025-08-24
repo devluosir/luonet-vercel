@@ -100,7 +100,7 @@ export function useAnalytics() {
   const trackPageLoad = useCallback((loadTime: number) => {
     if (isFeatureEnabled('performanceMonitoring') && isClient) {
       AnalyticsManager.getInstance().trackPerformance('page_load_time', loadTime, 'ms');
-      AnalyticsManager.getInstance().trackEvent('page_loaded', ANALYTICS_EVENTS.PAGE_LOAD, {
+      AnalyticsManager.getInstance().trackEvent('page_loaded', 'performance', {
         loadTime,
         url: window.location.href,
         userAgent: navigator.userAgent

@@ -70,19 +70,6 @@ export const RemarksSection: React.FC<RemarksSectionProps> = ({
           </div>
         </div>
 
-        {/* 备注内容 */}
-        <div>
-          <Field label="备注内容 Remarks">
-            <textarea
-              rows={3}
-              placeholder={' '}
-              value={data.remarks || ''}
-              onChange={(e) => onDataChange({ ...data, remarks: e.target.value })}
-              className="fi-multiline resize-y"
-            />
-          </Field>
-        </div>
-
         {/* 自动生成的备注预览 */}
         {(data.remarkOptions.shipsSpares || data.remarkOptions.customsPurpose) && (
           <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">

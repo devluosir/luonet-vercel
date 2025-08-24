@@ -16,6 +16,7 @@ describe('Packing Module Unit Migration', () => {
       {
         id: 1,
         serialNo: '1',
+        marks: '',
         description: 'Test Item',
         hsCode: '',
         quantity: 1,
@@ -30,6 +31,7 @@ describe('Packing Module Unit Migration', () => {
       {
         id: 2,
         serialNo: '2',
+        marks: '',
         description: 'Test Item 2',
         hsCode: '',
         quantity: 2,
@@ -42,6 +44,7 @@ describe('Packing Module Unit Migration', () => {
         unit: 'pcs'
       }
     ],
+    otherFees: [],
     customUnits: ['kg', 'm'],
     showHsCode: true,
     showDimensions: true,
@@ -53,11 +56,23 @@ describe('Packing Module Unit Migration', () => {
     invoiceNo: '',
     date: '',
     consignee: { name: '' },
-  
-    remarks: '',
     remarkOptions: { shipsSpares: false, customsPurpose: false },
     documentType: 'packing' as const,
-    templateConfig: { headerType: 'bilingual' as const }
+    templateConfig: { headerType: 'bilingual' as const },
+    isInGroupMode: false,
+    packageQtyMergeMode: 'auto' as const,
+    dimensionsMergeMode: 'auto' as const,
+    marksMergeMode: 'auto' as const,
+    manualMergedCells: {
+      packageQty: [],
+      dimensions: [],
+      marks: []
+    },
+    autoMergedCells: {
+      packageQty: [],
+      dimensions: [],
+      marks: []
+    }
   };
 
   const mockOnItemChange = jest.fn();

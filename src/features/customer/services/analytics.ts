@@ -454,7 +454,7 @@ export class PerformanceMonitor {
 // 错误监控
 export class ErrorMonitor {
   private static instance: ErrorMonitor;
-  private listeners: { error: (event: ErrorEvent) => void; unhandledrejection: (event: PromiseRejectionEvent) => void } | null = null;
+  private listeners: { error: (event: globalThis.ErrorEvent) => void; unhandledrejection: (event: PromiseRejectionEvent) => void } | null = null;
   public isMonitoring: boolean = false;
 
   static getInstance(): ErrorMonitor {
@@ -475,10 +475,10 @@ export class ErrorMonitor {
 
     try {
       // 全局错误处理
-      const errorHandler = (event: ErrorEvent) => {
+      const errorHandler = (event: globalThis.ErrorEvent) => {
         analytics.trackError(
           event.message,
-          event.error?.stack,
+          (event as any).error?.stack,
           'global',
           'unhandled_error'
         );

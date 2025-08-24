@@ -98,7 +98,6 @@ interface PackingData {
   items: PackingItem[];
   otherFees?: PackingOtherFee[];
   currency: string;
-  remarks: string;
   remarkOptions: {
     shipsSpares: boolean;
     customsPurpose: boolean;

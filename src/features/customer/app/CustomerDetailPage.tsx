@@ -10,8 +10,8 @@ export default function CustomerDetailPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const customerId = searchParams.get('id');
-  const customerName = searchParams.get('name');
+  const customerId = searchParams?.get('id');
+  const customerName = searchParams?.get('name');
 
   const [activeTab, setActiveTab] = useState<'timeline' | 'followup'>('timeline');
 

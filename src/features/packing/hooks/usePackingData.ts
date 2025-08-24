@@ -29,7 +29,6 @@ const getInitialData = (): PackingData => ({
   }],
   otherFees: [],
   currency: 'USD',
-  remarks: '',
   remarkOptions: {
     shipsSpares: false,
     customsPurpose: false

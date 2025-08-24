@@ -71,7 +71,6 @@ export interface PackingData {
   items: PackingItem[];
   otherFees?: OtherFee[];
   currency: string;
-  remarks: string;
   remarkOptions: RemarkOptions;
   showHsCode: boolean;
   showDimensions: boolean;

@@ -267,7 +267,7 @@ export function FeatureFlagManager() {
                   const isEnabled = isFeatureEnabled(flagName as keyof typeof FEATURE_FLAGS);
                   const hasDependencies = flag.dependencies && flag.dependencies.length > 0;
                   const missingDeps = hasDependencies ? 
-                    flag.dependencies.filter(dep => !isFeatureEnabled(dep as keyof typeof FEATURE_FLAGS)) : [];
+                    flag.dependencies.filter((dep: string) => !isFeatureEnabled(dep as keyof typeof FEATURE_FLAGS)) : [];
                   
                   return (
                     <div 

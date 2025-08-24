@@ -51,7 +51,6 @@ interface PackingData {
     };
   }[];
   currency: string;
-  remarks: string;
   remarkOptions: {
     shipsSpares: boolean;
     customsPurpose: boolean;
@@ -169,11 +168,11 @@ export async function generatePackingListPDF(
   try {
     if (typeof window !== 'undefined') {
       visibleCols = JSON.parse(localStorage.getItem('pk.visibleCols') || 'null');
-      showMarks = visibleCols ? visibleCols.includes('marks') : true; // 默认显示marks列
+      showMarks = visibleCols ? visibleCols.includes('marks') : false; // 默认不显示marks列，与表格保持一致
     }
   } catch (e) {
     console.warn('Failed to read packing table column preferences:', e);
-    showMarks = true; // 出错时默认显示marks列
+    showMarks = false; // 出错时默认不显示marks列，与表格保持一致
   }
 
   // 当marks列显示时，使用横向模式以适应更多列
@@ -213,7 +212,7 @@ export async function generatePackingListPDF(
           const imgProperties = doc.getImageProperties(headerImage);
           
           // 检查是否显示marks列（用于判断是否需要横向模式）
-          const showMarks = visibleCols ? visibleCols.includes('marks') : true;
+          const showMarks = visibleCols ? visibleCols.includes('marks') : false;
           const shouldUseCompactHeader = isLandscape && showMarks;
           
           // 根据条件调整抬头大小和位置
@@ -425,38 +424,33 @@ function renderBasicInfo(doc: any, data: PackingData, startY: number, pageWidth:
 function renderRemarks(doc: any, data: PackingData, startY: number, pageWidth: number, margin: number): number {
   let currentY = startY;
   
-  // 检查是否有备注内容
-  const hasCustomRemarks = data.remarks && data.remarks.trim();
+  // 检查是否有备注选项
+  const hasRemarkOptions = data.remarkOptions.shipsSpares || data.remarkOptions.customsPurpose;
   
-  // 如果没有任何备注内容，直接返回
-  if (!hasCustomRemarks) {
+  // 如果没有任何备注选项，直接返回
+  if (!hasRemarkOptions) {
     return currentY;
   }
   
   doc.setFontSize(10);
   setCnFont(doc, 'normal');
   
-  // 显示Notes标题和编号
+  // 显示Notes标题
   setCnFont(doc, 'bold');
   doc.text('Notes:', margin, currentY);
   currentY += 5;
   
   setCnFont(doc, 'normal');
   
-  // 添加自定义备注（按行分割）
-  if (hasCustomRemarks) {
-    const customRemarkLines = data.remarks.split('\n').filter(line => line.trim());
-    customRemarkLines.forEach((item, index) => {
-      const numberedText = `${index + 1}. ${item.trim()}`;
-      const itemLines = doc.splitTextToSize(numberedText, pageWidth - (margin * 2));
-      itemLines.forEach((line: string, lineIndex: number) => {
-        // 确保line是有效的字符串
-        if (line && typeof line === 'string') {
-          doc.text(line, margin, currentY + (lineIndex * 4));
-        }
-      });
-      currentY += itemLines.length * 4 + 2; // 每个项目间增加2mm间距
-    });
+  // 添加备注选项
+  if (data.remarkOptions.shipsSpares) {
+    doc.text('1. SHIP\'S SPARES IN TRANSIT', margin, currentY);
+    currentY += 6;
+  }
+  
+  if (data.remarkOptions.customsPurpose) {
+    doc.text('2. FOR CUSTOMS PURPOSE ONLY', margin, currentY);
+    currentY += 6;
   }
   
   return currentY + 3;
@@ -551,7 +545,7 @@ async function renderPackingTable(
   };
 
   // 确定显示的列（优先使用页面设置，回退到数据开关）
-  const showMarks = visibleCols ? visibleCols.includes('marks') : true; // 默认显示marks列
+  const showMarks = visibleCols ? visibleCols.includes('marks') : false; // 默认不显示marks列，与表格保持一致
   const showDescription = visibleCols ? visibleCols.includes('description') : true;
   const showHsCode = visibleCols ? visibleCols.includes('hsCode') : data.showHsCode;
   const showQuantity = visibleCols ? visibleCols.includes('quantity') : true;
@@ -561,7 +555,7 @@ async function renderPackingTable(
   const showNetWeight = visibleCols ? visibleCols.includes('netWeight') : data.showWeightAndPackage;
   const showGrossWeight = visibleCols ? visibleCols.includes('grossWeight') : data.showWeightAndPackage;
   const showPackageQty = visibleCols ? visibleCols.includes('packageQty') : data.showWeightAndPackage;
-  const showDimensions = visibleCols ? visibleCols.includes('dimensions') : data.showDimensions;
+  const showDimensions = visibleCols ? visibleCols.includes('dimensions') : false; // 默认不显示尺寸列，与表格保持一致
 
   // 计算总权重，基于实际显示的列
   let totalWeight = 0;

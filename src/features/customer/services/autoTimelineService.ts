@@ -11,9 +11,10 @@ export function extractTimelineFromQuotationHistory() {
     quotationHistory.forEach((item: any) => {
       if (!item.data || !item.customerName) return;
       
+      const eventType: 'confirmation' | 'quotation' = item.type === 'confirmation' ? 'confirmation' : 'quotation';
       const eventData = {
         customerId: item.customerName,
-        type: item.type === 'confirmation' ? 'confirmation' : 'quotation',
+        type: eventType,
         title: `${item.type === 'confirmation' ? '销售确认' : '报价单'} ${item.quotationNo}`,
         description: `为客户 ${item.customerName} 创建${item.type === 'confirmation' ? '销售确认' : '报价单'}`,
         date: item.data.date || item.createdAt,

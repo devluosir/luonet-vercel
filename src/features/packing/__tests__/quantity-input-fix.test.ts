@@ -16,6 +16,7 @@ describe('Quantity Input Fix', () => {
       {
         id: 1,
         serialNo: '1',
+        marks: '',
         description: 'Test Item',
         hsCode: '',
         quantity: 1,
@@ -28,6 +29,7 @@ describe('Quantity Input Fix', () => {
         unit: 'pc'
       }
     ],
+    otherFees: [],
     customUnits: [],
     showHsCode: true,
     showDimensions: true,
@@ -39,11 +41,23 @@ describe('Quantity Input Fix', () => {
     invoiceNo: '',
     date: '',
     consignee: { name: '' },
-  
-    remarks: '',
     remarkOptions: { shipsSpares: false, customsPurpose: false },
     documentType: 'packing' as const,
-    templateConfig: { headerType: 'bilingual' as const }
+    templateConfig: { headerType: 'bilingual' as const },
+    isInGroupMode: false,
+    packageQtyMergeMode: 'auto' as const,
+    dimensionsMergeMode: 'auto' as const,
+    marksMergeMode: 'auto' as const,
+    manualMergedCells: {
+      packageQty: [],
+      dimensions: [],
+      marks: []
+    },
+    autoMergedCells: {
+      packageQty: [],
+      dimensions: [],
+      marks: []
+    }
   };
 
   const mockOnItemChange = jest.fn();

@@ -26,7 +26,6 @@ interface PackingData {
 
   items: PackingItem[];
   currency: string;
-  remarks: string;
   remarkOptions: {
     shipsSpares: boolean;
     customsPurpose: boolean;

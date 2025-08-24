@@ -128,6 +128,7 @@ export class TimelineAggregationService {
         
         aggregatedEvents.push({
           ...event,
+          description: event.description || '',
           weight,
           isAggregated: false
         });

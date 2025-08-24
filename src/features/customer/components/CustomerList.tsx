@@ -232,7 +232,7 @@ export function CustomerList({ customers, onEdit, onDelete, onViewDetail, search
                       {activity.label}
                     </span>
                     {needsFollowUpFlag && (
-                      <AlertCircle className="w-3 h-3 text-red-500" title="需要跟进" />
+                      <AlertCircle className="w-3 h-3 text-red-500" />
                     )}
                   </div>
                 </div>
