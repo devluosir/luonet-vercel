@@ -1,25 +1,29 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { initAutoSync } from '../services/autoTimelineService';
 
 export function useAutoSync() {
-  const cleanupRef = useRef<(() => void) | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
+  // 确保在客户端渲染
   useEffect(() => {
-    // 初始化自动同步
-    const cleanup = initAutoSync();
-    if (cleanup) {
-      cleanupRef.current = cleanup;
-    }
-
-    // 清理函数
-    return () => {
-      if (cleanupRef.current) {
-        cleanupRef.current();
-      }
-    };
+    setIsClient(true);
   }, []);
 
+  useEffect(() => {
+    // 只在客户端执行
+    if (typeof window === 'undefined' || !isClient) return;
+
+    // 初始化自动同步
+    const cleanup = initAutoSync();
+
+    return () => {
+      if (cleanup) {
+        cleanup();
+      }
+    };
+  }, [isClient]);
+
   return {
-    isActive: true
+    isActive: typeof window !== 'undefined' && isClient
   };
 }

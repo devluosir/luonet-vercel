@@ -180,15 +180,28 @@ export function setupTimelineAutoSync() {
 }
 
 // 初始化自动同步
-export function initAutoSync() {
-  if (typeof window === 'undefined') return;
+export function initAutoSync(): (() => void) | null {
+  if (typeof window === 'undefined') return null;
   
-  // 页面加载时执行一次同步
-  setTimeout(() => {
-    syncAllHistoryToTimeline();
+  try {
+    console.log('开始同步历史记录到时间轴...');
+    
+    // 同步历史记录到时间轴
+    extractTimelineFromQuotationHistory();
+    extractTimelineFromPackingHistory();
+    extractTimelineFromInvoiceHistory();
+    
+    // 自动识别新客户
     NewCustomerService.autoDetectNewCustomers();
-  }, 2000);
-  
-  // 设置自动同步
-  return setupTimelineAutoSync();
+    
+    console.log('历史记录同步完成');
+    
+    // 返回清理函数
+    return () => {
+      console.log('自动同步已停止');
+    };
+  } catch (error) {
+    console.error('自动同步初始化失败:', error);
+    return null;
+  }
 }

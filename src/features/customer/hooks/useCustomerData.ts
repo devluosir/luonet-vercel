@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Customer, Supplier, Consignee } from '../types';
 import { customerService } from '../services/customerService';
 import { supplierService } from '../services/supplierService';
@@ -9,62 +9,68 @@ export function useCustomerData() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [consignees, setConsignees] = useState<Consignee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
-  // 加载客户数据
-  const loadCustomers = async () => {
-    try {
-      const allCustomers = customerService.getAllCustomers();
-      setCustomers(allCustomers);
-    } catch (error) {
-      console.error('加载客户数据失败:', error);
-    }
-  };
-
-  // 加载供应商数据
-  const loadSuppliers = async () => {
-    try {
-      const allSuppliers = supplierService.getAllSuppliers();
-      setSuppliers(allSuppliers);
-    } catch (error) {
-      console.error('加载供应商数据失败:', error);
-    }
-  };
-
-  // 加载收货人数据
-  const loadConsignees = async () => {
-    try {
-      const allConsignees = consigneeService.getAllConsignees();
-      setConsignees(allConsignees);
-    } catch (error) {
-      console.error('加载收货人数据失败:', error);
-    }
-  };
-
-  // 加载所有数据
-  const loadAllData = async () => {
-    setIsLoading(true);
-    await Promise.all([loadCustomers(), loadSuppliers(), loadConsignees()]);
-    setIsLoading(false);
-  };
-
-  // 刷新数据
-  const refreshData = () => {
-    loadAllData();
-  };
-
+  // 确保在客户端渲染
   useEffect(() => {
-    loadAllData();
+    setIsClient(true);
   }, []);
 
-  return {
-    customers,
-    suppliers,
-    consignees,
-    isLoading,
-    loadCustomers,
-    loadSuppliers,
-    loadConsignees,
-    loadAllData,
-    refreshData
-  };
+  const loadCustomers = useCallback(async () => {
+    try {
+      if (typeof window === 'undefined' || !isClient) return;
+      const allCustomers = customerService.getAllCustomers();
+      setCustomers(allCustomers);
+    } catch (err) {
+      console.error('Failed to load customers:', err);
+      setError('Failed to load customers.');
+    }
+  }, [isClient]);
+
+  const loadSuppliers = useCallback(async () => {
+    try {
+      if (typeof window === 'undefined' || !isClient) return;
+      const allSuppliers = supplierService.getAllSuppliers();
+      setSuppliers(allSuppliers);
+    } catch (err) {
+      console.error('Failed to load suppliers:', err);
+      setError('Failed to load suppliers.');
+    }
+  }, [isClient]);
+
+  const loadConsignees = useCallback(async () => {
+    try {
+      if (typeof window === 'undefined' || !isClient) return;
+      const allConsignees = consigneeService.getAllConsignees();
+      setConsignees(allConsignees);
+    } catch (err) {
+      console.error('Failed to load consignees:', err);
+      setError('Failed to load consignees.');
+    }
+  }, [isClient]);
+
+  // 加载所有数据
+  const loadAllData = useCallback(async () => {
+    if (typeof window === 'undefined' || !isClient) return;
+
+    setIsLoading(true);
+    setError(null);
+    await Promise.all([loadCustomers(), loadSuppliers(), loadConsignees()]);
+    setIsLoading(false);
+  }, [loadCustomers, loadSuppliers, loadConsignees, isClient]);
+
+  useEffect(() => {
+    if (isClient) {
+      loadAllData();
+    }
+  }, [loadAllData, isClient]);
+
+  const refreshData = useCallback(() => {
+    if (isClient) {
+      loadAllData();
+    }
+  }, [loadAllData, isClient]);
+
+  return { customers, suppliers, consignees, isLoading, error, refreshData, isClient };
 }

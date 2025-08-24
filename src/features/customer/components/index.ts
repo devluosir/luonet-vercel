@@ -9,3 +9,5 @@ export { CustomerTimeline } from './CustomerTimeline';
 export { FollowUpManager } from './FollowUpManager';
 export { NewCustomerTracker } from './NewCustomerTracker';
 export { CustomEventForm } from './CustomEventForm';
+export { AdvancedSearch } from './AdvancedSearch';
+export { FeatureFlagManager } from './FeatureFlagManager';
