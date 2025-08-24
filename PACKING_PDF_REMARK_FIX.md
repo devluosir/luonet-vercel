@@ -76,9 +76,18 @@ safeSetCnFont(doc, 'normal', 'export');
 
 ## 修复效果
 
-1. **备注选项正常显示**: 勾选备注选项后，PDF预览能够正常生成，备注内容正确显示在PDF中
+1. **移除重复的备注显示**: 移除了`renderRemarks`函数生成的额外"Notes:"部分，避免与文档中已有的备注信息重复
 2. **字体设置更稳定**: 使用更安全的字体设置函数，减少字体相关的错误
 3. **位置计算准确**: 备注选项的渲染位置被正确计算，避免布局问题
+4. **PDF生成稳定**: 解决了"Invalid arguments passed to jsPDF.text"错误，确保PDF预览正常生成
+
+## 备注信息显示位置
+
+根据用户反馈，备注信息已在文档的其他位置正确显示：
+- 左上角的"Notes: 1. SHIP'S SPARES IN TRANSIT"（静态部分）
+- 标题下方的`"SHIP'S SPARES IN TRANSIT"`（动态生成）
+
+因此不需要在表格后额外显示"Notes:"部分。
 
 ## 测试验证
 

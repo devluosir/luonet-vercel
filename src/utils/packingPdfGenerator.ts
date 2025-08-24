@@ -287,8 +287,8 @@ export async function generatePackingListPDF(
     // 商品表格 - 紧跟在基本信息后
     currentY = await renderPackingTable(doc, data, currentY, mergedPackageQtyCells, mergedDimensionsCells, mergedMarksCells, visibleCols);
 
-    // 备注
-    currentY = renderRemarks(doc, data, currentY, pageWidth, margin);
+    // 备注 - 已移除，因为备注信息已在文档其他位置显示
+    // currentY = renderRemarks(doc, data, currentY, pageWidth, margin);
 
     // 添加页码
     addPageNumbers(doc, pageWidth, pageHeight, margin);
@@ -421,41 +421,10 @@ function renderBasicInfo(doc: any, data: PackingData, startY: number, pageWidth:
   return Math.max(leftY, rightY) - 3;
 }
 
-// 渲染备注
-function renderRemarks(doc: any, data: PackingData, startY: number, pageWidth: number, margin: number): number {
-  let currentY = startY;
-  
-  // 检查是否有备注选项
-  const hasRemarkOptions = data.remarkOptions.shipsSpares || data.remarkOptions.customsPurpose;
-  
-  // 如果没有任何备注选项，直接返回
-  if (!hasRemarkOptions) {
-    return currentY;
-  }
-  
-  doc.setFontSize(10);
-  safeSetCnFont(doc, 'normal', 'export');
-  
-  // 显示Notes标题
-  safeSetCnFont(doc, 'bold', 'export');
-  doc.text('Notes:', margin, currentY);
-  currentY += 5;
-  
-  safeSetCnFont(doc, 'normal', 'export');
-  
-  // 添加备注选项
-  if (data.remarkOptions.shipsSpares) {
-    doc.text('1. SHIP\'S SPARES IN TRANSIT', margin, currentY);
-    currentY += 6;
-  }
-  
-  if (data.remarkOptions.customsPurpose) {
-    doc.text('2. FOR CUSTOMS PURPOSE ONLY', margin, currentY);
-    currentY += 6;
-  }
-  
-  return currentY + 3;
-}
+// 渲染备注 - 已移除，因为备注信息已在文档其他位置显示
+// function renderRemarks(doc: any, data: PackingData, startY: number, pageWidth: number, margin: number): number {
+//   // 函数内容已移除
+// }
 
 // 添加页码
 function addPageNumbers(doc: any, pageWidth: number, pageHeight: number, margin: number): void {
