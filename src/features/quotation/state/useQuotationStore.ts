@@ -159,7 +159,16 @@ export const useQuotationStore = create<QuotationState>((set, get) => ({
   previewItem: null,
 
   // Actions
-  setTab: (tab) => set({ tab }),
+  setTab: (tab) => set((state) => {
+    // 当切换到销售确认tab时，自动设置showStamp为true
+    if (tab === 'confirmation' && !state.data.showStamp) {
+      return { 
+        tab,
+        data: { ...state.data, showStamp: true }
+      };
+    }
+    return { tab };
+  }),
   setData: (updater) => set((state) => ({ data: updater(state.data) })),
   setEditId: (id) => set({ editId: id }),
   setGenerating: (isGenerating) => set({ isGenerating }),
