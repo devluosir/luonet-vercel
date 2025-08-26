@@ -28,9 +28,8 @@ export const STAMP_TYPE_OPTIONS = [
   { value: 'hongkong', label: 'HK' }
 ] as const;
 
-// 显示选项
+// 显示选项 - 移除Bank选项，因为Bank按钮已移至PaymentTermsSection
 export const DISPLAY_OPTIONS = [
-  { key: 'showBank', label: 'Bank' }
 ] as const;
 
 // 输入框样式类名

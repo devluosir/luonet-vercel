@@ -182,7 +182,23 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
   return (
     <div className="space-y-3">
       {/* 标题移到框外 */}
-      <h3 className="font-medium text-gray-800 dark:text-gray-200">Payment Terms</h3>
+      <div className="flex items-center gap-2">
+        <h3 className="font-medium text-gray-800 dark:text-gray-200">Payment Terms</h3>
+        {/* Bank按钮 */}
+        <button
+          type="button"
+          onClick={() => updateData({ showBank: !data.showBank })}
+          className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+            data.showBank
+              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 border border-green-300 dark:border-green-700'
+              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
+          }`}
+          title="显示银行信息"
+        >
+          <span className={`w-2 h-2 rounded-full ${data.showBank ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+          Bank
+        </button>
+      </div>
       
       {/* 内容框 */}
       <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 md:p-4 space-y-3">

@@ -6,8 +6,7 @@ import {
   CURRENCY_OPTIONS, 
   HEADER_TYPE_OPTIONS, 
   INVOICE_TYPE_OPTIONS, 
-  STAMP_TYPE_OPTIONS,
-  DISPLAY_OPTIONS 
+  STAMP_TYPE_OPTIONS
 } from '../constants/settings';
 
 /**
@@ -50,9 +49,7 @@ export const SettingsPanel = React.memo(() => {
     });
   };
 
-  const handleDisplayOptionChange = (option: keyof Pick<typeof data, 'showBank'>, value: boolean) => {
-    updateData({ [option]: value });
-  };
+  // 移除handleDisplayOptionChange，因为Bank选项已移至PaymentTermsSection
 
   const handleCustomUnitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCustomUnit(e.target.value);
@@ -167,35 +164,6 @@ export const SettingsPanel = React.memo(() => {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* 分隔线 */}
-        <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
-
-        {/* 第五组：显示选项 */}
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Show:</span>
-          
-          {DISPLAY_OPTIONS.map(({ key, label }) => (
-            <label key={key} className="flex items-center gap-1 cursor-pointer p-1 -m-1 rounded min-h-[32px] touch-manipulation">
-              <input
-                type="checkbox"
-                checked={data[key]}
-                onChange={e => handleDisplayOptionChange(key, e.target.checked)}
-                className="w-4 h-4 sm:w-3 sm:h-3 flex-shrink-0 appearance-none border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 
-                  checked:bg-[#007AFF] checked:border-[#007AFF] checked:dark:bg-[#0A84FF] checked:dark:border-[#0A84FF]
-                  focus:ring-2 focus:ring-[#007AFF]/30 focus:ring-offset-1
-                  relative before:content-[''] before:absolute before:top-0.5 before:left-1 before:w-1 before:h-2 
-                  before:border-r-2 before:border-b-2 before:border-white before:rotate-45 before:scale-0 
-                  checked:before:scale-100 before:transition-transform before:duration-200"
-                style={{
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'none'
-                }}
-              />
-              <span className="text-gray-700 dark:text-gray-300 text-[11px] font-medium">{label}</span>
-            </label>
-          ))}
         </div>
 
         {/* 分隔线 */}
