@@ -722,7 +722,7 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       setCnFont(doc, 'normal');
       
       const titleWidth = doc.getTextWidth(titleText);
-      const spacing = 5; // 设置合适的间距
+      const spacing = 2; // 设置紧凑间距，与报价模块保持一致
       doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
       currentY += 5;
     } else if (data.showPaymentTerms) {
@@ -740,7 +740,7 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       
       // 增加标题和内容之间的间距
       const titleWidth = doc.getTextWidth(titleText);
-      const spacing = 5; // 设置合适的间距
+      const spacing = 2; // 设置紧凑间距，与报价模块保持一致
       
       if (parts[0]) {
         doc.text(parts[0], margin + titleWidth + spacing, currentY);
@@ -772,7 +772,7 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       
       // 计算各部分的宽度
       const titleWidth = doc.getTextWidth(titleText);
-      const spacing = 5; // 设置合适的间距
+      const spacing = 2; // 设置紧凑间距，与报价模块保持一致
       const prefixWidth = doc.getTextWidth(reminderPrefix);
       const invoiceNoWidth = doc.getTextWidth(invoiceNo);
       
