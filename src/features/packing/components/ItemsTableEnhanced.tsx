@@ -190,7 +190,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   onImport,
   onInsertImported
 }) => {
-  const { visibleCols, isHydrated } = useTablePrefsHydrated();
+  const { visibleCols, isHydrated, toggleCol, setCols } = useTablePrefsHydrated();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [editingQtyIndex, setEditingQtyIndex] = useState<number | null>(null);
   const [editingQtyAmount, setEditingQtyAmount] = useState<string>('');
@@ -754,95 +754,253 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   // 获取可见列
   const effectiveVisibleCols = isHydrated ? visibleCols : ['marks', 'description', 'quantity', 'unit', 'netWeight', 'grossWeight', 'packageQty', 'unitPrice', 'amount'];
 
+  // 移动端列设置选项显示状态
+  const [showMobileOptions, setShowMobileOptions] = useState(false);
+
   return (
     <div className="space-y-0">
       {/* 工具栏 */}
-      <div className="flex items-center justify-between mb-4 px-4 py-3">
-        <div className="flex items-center gap-4">
-          {/* 导入按钮 */}
-          {onImport && <ImportDataButton onImport={onImport} />}
-          
-          {/* 分组按钮 */}
-          <button
-            type="button"
-            onClick={() => {
-              if (data.isInGroupMode) {
-                onDataChange?.({ ...data, isInGroupMode: false, currentGroupId: undefined });
-              } else {
-                onDataChange?.({ ...data, isInGroupMode: true, currentGroupId: `group_${Date.now()}` });
-              }
-            }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-              data.isInGroupMode 
-                ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
-                : 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40'
-            }`}
-          >
-            {data.isInGroupMode ? '退出分组' : '添加分组'}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              const newItem = {
-                id: Date.now(),
-                serialNo: '',
-                description: '',
-                hsCode: '',
-                quantity: 0,
-                unitPrice: 0,
-                totalPrice: 0,
-                netWeight: 0,
-                grossWeight: 0,
-                packageQty: 0,
-                dimensions: '',
-                unit: '',
-                groupId: data.currentGroupId
-              };
-              onDataChange?.({ ...data, items: [...data.items, newItem] });
-            }}
-            className="px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40 text-xs font-medium transition-all duration-200"
-          >
-            添加商品
-          </button>
-
-          {data.showPrice && (
+      <div className="flex flex-col gap-3 mb-4 px-4 py-3">
+        {/* 第一行：操作按钮 */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* 导入按钮 */}
+            {onImport && <ImportDataButton onImport={onImport} />}
+            
+            {/* 分组按钮 */}
             <button
               type="button"
               onClick={() => {
-                const newOtherFee = {
-                  id: Date.now(),
-                  description: '',
-                  amount: 0
-                };
-                onDataChange?.({ 
-                  ...data, 
-                  otherFees: [...(data.otherFees || []), newOtherFee] 
-                });
+                if (data.isInGroupMode) {
+                  onDataChange?.({ ...data, isInGroupMode: false, currentGroupId: undefined });
+                } else {
+                  onDataChange?.({ ...data, isInGroupMode: true, currentGroupId: `group_${Date.now()}` });
+                }
               }}
-              className="px-3 py-1.5 rounded-lg bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 text-xs font-medium transition-all duration-200"
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                data.isInGroupMode 
+                  ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
+                  : 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40'
+              }`}
             >
-              添加费用
+              {data.isInGroupMode ? '退出分组' : '添加分组'}
             </button>
-          )}
+
+            <button
+              type="button"
+              onClick={() => {
+                const newItem = {
+                  id: Date.now(),
+                  serialNo: '',
+                  description: '',
+                  hsCode: '',
+                  quantity: 0,
+                  unitPrice: 0,
+                  totalPrice: 0,
+                  netWeight: 0,
+                  grossWeight: 0,
+                  packageQty: 0,
+                  dimensions: '',
+                  unit: '',
+                  groupId: data.currentGroupId
+                };
+                onDataChange?.({ ...data, items: [...data.items, newItem] });
+              }}
+              className="px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40 text-xs font-medium transition-all duration-200"
+            >
+              添加商品
+            </button>
+
+            {data.showPrice && (
+              <button
+                type="button"
+                onClick={() => {
+                  const newOtherFee = {
+                    id: Date.now(),
+                    description: '',
+                    amount: 0
+                  };
+                  onDataChange?.({ 
+                    ...data, 
+                    otherFees: [...(data.otherFees || []), newOtherFee] 
+                  });
+                }}
+                className="px-3 py-1.5 rounded-lg bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 text-xs font-medium transition-all duration-200"
+              >
+                添加费用
+              </button>
+            )}
+          </div>
+
+          {/* 右侧工具栏 */}
+          <div className="flex items-center gap-3">
+            <ColumnToggle 
+              packageQtyMergeMode={data.packageQtyMergeMode || 'auto'}
+              dimensionsMergeMode={data.dimensionsMergeMode || 'auto'}
+              marksMergeMode={data.marksMergeMode || 'auto'} // 新增marks合并模式
+              onPackageQtyMergeModeChange={onPackageQtyMergeModeChange}
+              onDimensionsMergeModeChange={onDimensionsMergeModeChange}
+              onMarksMergeModeChange={onMarksMergeModeChange} // 新增marks合并模式回调
+              hasGroupedItems={hasGroupedItems}
+              showMobileOptions={showMobileOptions}
+              onMobileOptionsChange={setShowMobileOptions}
+            />
+            {onInsertImported && (
+              <QuickImport
+                onInsert={onInsertImported}
+                onClosePreset={() => {}}
+              />
+            )}
+          </div>
         </div>
 
-        {/* 右侧工具栏 */}
-        <div className="flex items-center gap-3">
-          <ColumnToggle 
-            packageQtyMergeMode={data.packageQtyMergeMode || 'auto'}
-            dimensionsMergeMode={data.dimensionsMergeMode || 'auto'}
-            marksMergeMode={data.marksMergeMode || 'auto'} // 新增marks合并模式
-            onPackageQtyMergeModeChange={onPackageQtyMergeModeChange}
-            onDimensionsMergeModeChange={onDimensionsMergeModeChange}
-            onMarksMergeModeChange={onMarksMergeModeChange} // 新增marks合并模式回调
-            hasGroupedItems={hasGroupedItems}
-          />
-          {onInsertImported && (
-            <QuickImport
-              onInsert={onInsertImported}
-              onClosePreset={() => {}}
-            />
+        {/* 第二行：小屏时的列设置选项 */}
+        <div className="md:hidden">
+          {showMobileOptions && (
+            <div className="flex items-center gap-1 overflow-x-auto pb-2">
+              {/* Marks */}
+              <div className="flex items-center flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => toggleCol('marks')}
+                  className={`px-2 py-1 text-xs font-medium rounded-l-lg transition-all duration-200 ${
+                    visibleCols.includes('marks')
+                      ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  Marks
+                </button>
+                {visibleCols.includes('marks') && !hasGroupedItems && (
+                  <button
+                    type="button"
+                    onClick={() => onMarksMergeModeChange?.(data.marksMergeMode === 'auto' ? 'manual' : 'auto')}
+                    className={`px-2 py-1 text-xs font-medium rounded-r-lg transition-all duration-200 flex items-center gap-1 border-l border-current/20 ${
+                      (data.marksMergeMode || 'auto') === 'auto'
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                    }`}
+                  >
+                    {(data.marksMergeMode || 'auto') === 'auto' ? '自动' : '手动'}
+                  </button>
+                )}
+              </div>
+
+              {/* HS Code */}
+              <button
+                type="button"
+                onClick={() => toggleCol('hsCode')}
+                className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex-shrink-0 ${
+                  visibleCols.includes('hsCode')
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                HS Code
+              </button>
+
+              {/* Price */}
+              <button
+                type="button"
+                onClick={() => {
+                  const priceCols: any[] = ['unitPrice', 'amount'];
+                  const hasAnyPriceCol = priceCols.some(col => visibleCols.includes(col));
+                  const hasAnyWeightCol = ['netWeight', 'grossWeight', 'packageQty'].some(col => visibleCols.includes(col));
+                  
+                  if (hasAnyPriceCol) {
+                    const newCols = visibleCols.filter(col => !priceCols.includes(col));
+                    setCols(newCols);
+                  } else {
+                    const newCols = [...visibleCols, ...priceCols];
+                    setCols(newCols);
+                  }
+                }}
+                disabled={!visibleCols.some(col => ['unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty'].includes(col))}
+                className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex-shrink-0 ${
+                  !visibleCols.some(col => ['unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty'].includes(col))
+                    ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800'
+                    : visibleCols.some(col => ['unitPrice', 'amount'].includes(col))
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                }`}
+              >
+                Price
+              </button>
+
+              {/* Weight & Package */}
+              <div className="flex items-center flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const weightCols: any[] = ['netWeight', 'grossWeight', 'packageQty'];
+                    const hasAnyWeightCol = weightCols.some(col => visibleCols.includes(col));
+                    const hasAnyPriceCol = ['unitPrice', 'amount'].some(col => visibleCols.includes(col));
+                    
+                    if (hasAnyWeightCol) {
+                      const newCols = visibleCols.filter(col => !weightCols.includes(col));
+                      setCols(newCols);
+                    } else {
+                      const newCols = [...visibleCols, ...weightCols];
+                      setCols(newCols);
+                    }
+                  }}
+                  disabled={!visibleCols.some(col => ['unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty'].includes(col))}
+                  className={`px-2 py-1 text-xs font-medium rounded-l-lg transition-all duration-200 ${
+                    !visibleCols.some(col => ['unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty'].includes(col))
+                      ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800'
+                      : visibleCols.some(col => ['netWeight', 'grossWeight', 'packageQty'].includes(col))
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  Weight & Package
+                </button>
+                {visibleCols.includes('packageQty') && !hasGroupedItems && (
+                  <button
+                    type="button"
+                    onClick={() => onPackageQtyMergeModeChange?.(data.packageQtyMergeMode === 'auto' ? 'manual' : 'auto')}
+                    className={`px-2 py-1 text-xs font-medium rounded-r-lg transition-all duration-200 flex items-center gap-1 border-l border-current/20 ${
+                      (data.packageQtyMergeMode || 'auto') === 'auto'
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                    }`}
+                  >
+                    {(data.packageQtyMergeMode || 'auto') === 'auto' ? '自动' : '手动'}
+                  </button>
+                )}
+              </div>
+
+              {/* Dimensions */}
+              <div className="flex items-center flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => toggleCol('dimensions')}
+                  disabled={!visibleCols.some(col => ['netWeight', 'grossWeight', 'packageQty'].includes(col))}
+                  className={`px-2 py-1 text-xs font-medium rounded-l-lg transition-all duration-200 ${
+                    !visibleCols.some(col => ['netWeight', 'grossWeight', 'packageQty'].includes(col))
+                      ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800'
+                      : visibleCols.includes('dimensions')
+                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  Dimensions
+                </button>
+                {visibleCols.includes('dimensions') && !hasGroupedItems && (
+                  <button
+                    type="button"
+                    onClick={() => onDimensionsMergeModeChange?.(data.dimensionsMergeMode === 'auto' ? 'manual' : 'auto')}
+                    className={`px-2 py-1 text-xs font-medium rounded-r-lg transition-all duration-200 flex items-center gap-1 border-l border-current/20 ${
+                      (data.dimensionsMergeMode || 'auto') === 'auto'
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                        : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                    }`}
+                  >
+                    {(data.dimensionsMergeMode || 'auto') === 'auto' ? '自动' : '手动'}
+                  </button>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </div>
