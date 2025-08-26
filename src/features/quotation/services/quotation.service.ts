@@ -46,7 +46,7 @@ export async function saveOrUpdate(
 }
 
 // 从多个数据源初始化数据
-export function initDataFromSources(): QuotationData {
+export function initDataFromSources(tab: 'quotation' | 'confirmation' = 'quotation'): QuotationData {
   // 1. 优先使用全局注入的数据
   if (typeof window !== 'undefined') {
     const win = window as unknown as CustomWindow;
@@ -61,7 +61,7 @@ export function initDataFromSources(): QuotationData {
     if (draft) {
       const parsed = JSON.parse(draft);
       // 获取预设值作为基础
-      const defaultData = getInitialQuotationData();
+      const defaultData = getInitialQuotationData(tab);
       // 合并草稿数据和预设值，确保关键字段不会丢失
       return {
         ...defaultData,
@@ -83,7 +83,7 @@ export function initDataFromSources(): QuotationData {
   }
 
   // 3. 最后使用默认数据
-  return getInitialQuotationData();
+  return getInitialQuotationData(tab);
 }
 
 // 从多个数据源初始化Notes配置

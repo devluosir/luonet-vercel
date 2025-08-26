@@ -30,7 +30,8 @@ export function useInitQuotation() {
   useEffect(() => {
     if (!initialized.current) return;
     
-    const initialData = initDataFromSources();
+    const tab = getTabFromSearchParams(searchParams || undefined);
+    const initialData = initDataFromSources(tab);
     setData(() => initialData);
     
     // 初始化Notes配置

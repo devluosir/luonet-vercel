@@ -6,6 +6,7 @@
 export const SETTINGS_ALLOWED_KEYS = new Set([
   // 显示控制开关
   'showInvoiceReminder',
+  'showStamp', // HK印章显示控制
   
   // 模板配置
   'templateConfig', // 包含 headerType, stampType 等

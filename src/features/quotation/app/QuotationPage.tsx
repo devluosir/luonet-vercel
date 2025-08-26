@@ -578,22 +578,6 @@ export default function QuotationPage() {
                   </button>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {/* HK Stamp按钮 - 仅在确认订单模式显示 */}
-                  {activeTab === 'confirmation' && (
-                    <button
-                      type="button"
-                      onClick={() => updateData({ showStamp: !data.showStamp })}
-                      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                        data.showStamp
-                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 border border-purple-300 dark:border-purple-700'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                      title="在PDF中添加香港印章"
-                    >
-                      <span className={`w-2 h-2 rounded-full ${data.showStamp ? 'bg-purple-500' : 'bg-gray-400'}`}></span>
-                      HK Stamp
-                    </button>
-                  )}
                   <Link
                     href={`/history?tab=${activeTab}`}
                     className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"

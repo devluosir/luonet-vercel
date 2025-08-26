@@ -142,7 +142,7 @@ if (process.env.NODE_ENV === 'development') {
 export const useQuotationStore = create<QuotationState>((set, get) => ({
   // 初始状态
   tab: 'quotation',
-  data: getInitialQuotationData(), // 使用预设值而不是空值
+  data: getInitialQuotationData('quotation'), // 使用预设值而不是空值
   editId: undefined,
   isGenerating: false,
   generatingProgress: 0,

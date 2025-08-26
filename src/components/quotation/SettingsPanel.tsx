@@ -15,6 +15,8 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
   const [fromOptions, setFromOptions] = useState<string[]>(['Roger', 'Sharon', 'Emily', 'Summer', 'Nina']);
   const [isClient, setIsClient] = useState(false);
 
+
+
   // 计算总金额
   const totalAmount = data.items.reduce((sum, item) => sum + (item.amount || 0), 0) + 
                      (data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
@@ -284,10 +286,34 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
           </>
         )}
 
+        {/* 第五组：HK印章设置 - 仅在销售确认页面显示 */}
+        {activeTab === 'confirmation' && (
+          <>
+            <div className="flex items-center gap-1.5">
+              <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Stamp:</span>
+              <button
+                type="button"
+                onClick={() => onChange({ ...data, showStamp: !data.showStamp })}
+                className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                  data.showStamp
+                    ? 'bg-[#007AFF] text-white shadow-sm' 
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
+                }`}
+                title="在PDF中添加香港印章"
+              >
+                HK Stamp
+              </button>
+            </div>
+
+            {/* 分隔线 */}
+            <div className="hidden lg:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+          </>
+        )}
+
         {/* 换行控制：小屏换行，中屏不换行 */}
         <div className="w-full sm:w-auto"></div>
 
-        {/* 第五组：自定义单位 */}
+        {/* 第六组：自定义单位 */}
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Units:</span>
           

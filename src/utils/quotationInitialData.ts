@@ -4,7 +4,7 @@ import { getDefaultNotes } from './getDefaultNotes';
 import type { QuotationData } from '@/types/quotation';
 import { calculatePaymentDate } from './quotationCalculations';
 
-export function getInitialQuotationData(): QuotationData {
+export function getInitialQuotationData(pageType: 'quotation' | 'confirmation' = 'quotation'): QuotationData {
   const username = (() => {
     // 在服务器端渲染时，返回默认值避免水合错误
     if (typeof window === 'undefined') {
@@ -45,7 +45,7 @@ export function getInitialQuotationData(): QuotationData {
       amount: 0, 
       remarks: '' 
     }],
-    notes: getDefaultNotes(username, 'quotation'),
+    notes: getDefaultNotes(username, pageType),
     amountInWords: { 
       dollars: '', 
       cents: '', 
@@ -54,7 +54,7 @@ export function getInitialQuotationData(): QuotationData {
     showDescription: true,
     showRemarks: false,
     showBank: false,
-    showStamp: false,
+    showStamp: pageType === 'confirmation', // 销售确认页面默认开启HK印章
     otherFees: [],
     customUnits: [],
     showMainPaymentTerm: false, // 统一控制付款条款显示
