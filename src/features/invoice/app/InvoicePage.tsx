@@ -268,7 +268,7 @@ export const InvoicePage = () => {
               </div>
 
               {/* 英文大写金额显示区域 */}
-              <div className="mt-16 mb-8">
+              <div className="mt-12 mb-4">
                 <div className="inline text-sm">
                   {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 ? (
                     data.showBalance ? (
@@ -349,8 +349,8 @@ export const InvoicePage = () => {
 
               {/* 银行信息 */}
               {data.showBank && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Bank Information:</h3>
+                <div className="mt-4 mb-4">
+                  <h3 className="text-sm font-bold text-gray-600 dark:text-gray-400 mb-2">Bank Information:</h3>
                   <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-sm text-gray-600 dark:text-gray-400">
                     <p>Bank Name: The Hongkong and Shanghai Banking Corporation Limited</p>
                     <p>Swift Code: HSBCHKHHHKH</p>
@@ -362,7 +362,7 @@ export const InvoicePage = () => {
               )}
 
               {/* 付款条款 */}
-              <div className="mb-6">
+              <div className={data.showBank ? "mb-4" : "mt-4 mb-4"}>
                 <PaymentTermsSection 
                   data={data} 
                   onChange={updateData} 

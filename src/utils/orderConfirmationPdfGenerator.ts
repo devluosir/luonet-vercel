@@ -565,6 +565,7 @@ export const generateOrderConfirmationPDF = async (
         doc.text(info.value, leftMargin + doc.getTextWidth(info.label) + 2, currentY);
         currentY += 5;
       });
+      currentY += 3; // 增加银行信息与付款条款之间的间距
     }
 
     // 添加付款条款
