@@ -511,7 +511,7 @@ async function renderPackingTable(
     netWeight: 4, // 减少净重列宽度
     grossWeight: 4, // 减少毛重列宽度
     pkgs: 3, // 减少包装数列宽度
-    dimensions: 5 // 减少尺寸列宽度
+    dimensions: 8 // 增加尺寸列宽度，适应"Dimensions(mm)"等长标题
   };
 
   // 确定显示的列（优先使用页面设置，回退到数据开关）
