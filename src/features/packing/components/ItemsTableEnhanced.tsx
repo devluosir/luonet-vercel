@@ -6,6 +6,9 @@ import { OtherFeesTable } from '../../../components/packinglist/OtherFeesTable';
 import { ImportDataButton } from './ImportDataButton';
 import { QuickImport } from './QuickImport';
 
+// 导入Col类型
+type Col = 'marks'|'hsCode'|'description'|'quantity'|'unit'|'unitPrice'|'amount'|'netWeight'|'grossWeight'|'packageQty'|'dimensions';
+
 // 表格输入框基础样式
 const baseInputClassName = `w-full px-2 py-1.5 rounded-lg
   bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-sm
@@ -903,9 +906,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  const priceCols: any[] = ['unitPrice', 'amount'];
+                  const priceCols: Col[] = ['unitPrice', 'amount'];
                   const hasAnyPriceCol = priceCols.some(col => visibleCols.includes(col));
-                  const hasAnyWeightCol = ['netWeight', 'grossWeight', 'packageQty'].some(col => visibleCols.includes(col));
+                  const hasAnyWeightCol = (['netWeight', 'grossWeight', 'packageQty'] as Col[]).some(col => visibleCols.includes(col));
                   
                   if (hasAnyPriceCol) {
                     const newCols = visibleCols.filter(col => !priceCols.includes(col));
@@ -915,11 +918,11 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                     setCols(newCols);
                   }
                 }}
-                disabled={!visibleCols.some(col => ['unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty'].includes(col))}
+                disabled={!(visibleCols.some(col => ['unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty'].includes(col as string)))}
                 className={`px-2 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex-shrink-0 ${
-                  !visibleCols.some(col => ['unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty'].includes(col))
+                  !(visibleCols.some(col => ['unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty'].includes(col as string)))
                     ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800'
-                    : visibleCols.some(col => ['unitPrice', 'amount'].includes(col))
+                    : visibleCols.some(col => ['unitPrice', 'amount'].includes(col as string))
                       ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                 }`}
@@ -932,9 +935,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    const weightCols: any[] = ['netWeight', 'grossWeight', 'packageQty'];
+                    const weightCols: Col[] = ['netWeight', 'grossWeight', 'packageQty'];
                     const hasAnyWeightCol = weightCols.some(col => visibleCols.includes(col));
-                    const hasAnyPriceCol = ['unitPrice', 'amount'].some(col => visibleCols.includes(col));
+                    const hasAnyPriceCol = (['unitPrice', 'amount'] as Col[]).some(col => visibleCols.includes(col));
                     
                     if (hasAnyWeightCol) {
                       const newCols = visibleCols.filter(col => !weightCols.includes(col));
@@ -944,11 +947,11 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                       setCols(newCols);
                     }
                   }}
-                  disabled={!visibleCols.some(col => ['unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty'].includes(col))}
+                  disabled={!(visibleCols.some(col => ['unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty'].includes(col as string)))}
                   className={`px-2 py-1 text-xs font-medium rounded-l-lg transition-all duration-200 ${
-                    !visibleCols.some(col => ['unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty'].includes(col))
+                    !(visibleCols.some(col => ['unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty'].includes(col as string)))
                       ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800'
-                      : visibleCols.some(col => ['netWeight', 'grossWeight', 'packageQty'].includes(col))
+                      : visibleCols.some(col => ['netWeight', 'grossWeight', 'packageQty'].includes(col as string))
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                   }`}
@@ -975,9 +978,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                 <button
                   type="button"
                   onClick={() => toggleCol('dimensions')}
-                  disabled={!visibleCols.some(col => ['netWeight', 'grossWeight', 'packageQty'].includes(col))}
+                  disabled={!visibleCols.some(col => ['netWeight', 'grossWeight', 'packageQty'].includes(col as string))}
                   className={`px-2 py-1 text-xs font-medium rounded-l-lg transition-all duration-200 ${
-                    !visibleCols.some(col => ['netWeight', 'grossWeight', 'packageQty'].includes(col))
+                    !visibleCols.some(col => ['netWeight', 'grossWeight', 'packageQty'].includes(col as string))
                       ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800'
                       : visibleCols.includes('dimensions')
                         ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
