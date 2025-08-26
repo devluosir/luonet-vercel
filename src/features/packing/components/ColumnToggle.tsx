@@ -291,13 +291,18 @@ export function ColumnToggle({
 
           {/* 移动端布局 - 中屏以下显示，使用弹出模态框 */}
           <div className="md:hidden">
-            <div className="fixed inset-0 z-50 bg-black bg-opacity-50" onClick={() => setOpen(false)}>
-              <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1C1C1E] rounded-t-2xl p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setOpen(false)}>
+              <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1C1C1E] rounded-t-2xl p-4 max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                {/* 拖拽指示器 */}
+                <div className="flex justify-center mb-3">
+                  <div className="w-8 h-1 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                </div>
+                
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">列设置</h3>
                   <button
                     onClick={() => setOpen(false)}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -305,132 +310,133 @@ export function ColumnToggle({
                   </button>
                 </div>
                 
-                <div className="space-y-4">
-                  {ALL_COLS.map((col) => {
-                    if (col.key === 'weightAndPackage') {
-                      const isDisabled = !hasAnyPriceCol && !hasAnyWeightCol;
-                      
-                      return (
-                        <div key={col.key} className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{col.label}</span>
-                            <button
-                              type="button"
-                              onClick={handleWeightAndPackageToggle}
-                              disabled={isDisabled}
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                isDisabled
-                                  ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800'
-                                  : hasAnyWeightCol
-                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                              }`}
-                            >
-                              {hasAnyWeightCol ? '已启用' : '已禁用'}
-                            </button>
-                          </div>
-                          
-                          {/* 包装数量合并模式 */}
-                          {hasAnyWeightCol && visibleCols.includes('packageQty') && !hasGroupedItems && (
-                            <div className="ml-4 flex items-center justify-between pl-4 border-l-2 border-gray-200 dark:border-gray-700">
-                              <span className="text-sm text-gray-600 dark:text-gray-400">包装数量合并模式</span>
-                              <button
-                                type="button"
-                                onClick={togglePackageQtyMergeMode}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                                  packageQtyMergeMode === 'auto'
-                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                                }`}
-                              >
-                                {packageQtyMergeMode === 'auto' ? '自动' : '手动'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
-                    
-                    if (col.key === 'price') {
-                      const isDisabled = !hasAnyPriceCol && !hasAnyWeightCol;
-                      
-                      return (
-                        <div key={col.key} className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{col.label}</span>
-                          <button
-                            type="button"
-                            onClick={handlePriceToggle}
-                            disabled={isDisabled}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                              isDisabled
-                                ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800'
-                                : hasAnyPriceCol
-                                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                            }`}
-                          >
-                            {hasAnyPriceCol ? '已启用' : '已禁用'}
-                          </button>
-                        </div>
-                      );
-                    }
-                    
-                    if (col.key === 'dimensions') {
-                      return (
-                        <div key={col.key} className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{col.label}</span>
-                            <button
-                              type="button"
-                              onClick={() => toggleCol(col.key as Col)}
-                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                visibleCols.includes(col.key as Col)
-                                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                              }`}
-                            >
-                              {visibleCols.includes(col.key as Col) ? '已启用' : '已禁用'}
-                            </button>
-                          </div>
-                          
-                          {/* 尺寸合并模式 */}
-                          {visibleCols.includes('dimensions') && !hasGroupedItems && (
-                            <div className="ml-4 flex items-center justify-between pl-4 border-l-2 border-gray-200 dark:border-gray-700">
-                              <span className="text-sm text-gray-600 dark:text-gray-400">尺寸合并模式</span>
-                              <button
-                                type="button"
-                                onClick={toggleDimensionsMergeMode}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                                  dimensionsMergeMode === 'auto'
-                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                                }`}
-                              >
-                                {dimensionsMergeMode === 'auto' ? '自动' : '手动'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
-                    
-                    return (
-                      <div key={col.key} className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{col.label}</span>
+                <div className="space-y-2">
+                  {/* 第一行：Marks + HS Code + Price */}
+                  <div className="flex gap-2">
+                    {/* Marks 带合并模式 */}
+                    <div className="flex-1 flex">
+                      <button
+                        type="button"
+                        onClick={() => toggleCol('marks')}
+                        className={`flex-1 px-2 py-1.5 rounded-l text-xs font-medium transition-all duration-200 ${
+                          visibleCols.includes('marks')
+                            ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        Marks
+                      </button>
+                      {visibleCols.includes('marks') && !hasGroupedItems && (
                         <button
                           type="button"
-                          onClick={() => toggleCol(col.key as Col)}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                            visibleCols.includes(col.key as Col)
-                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                          onClick={toggleMarksMergeMode}
+                          className={`px-2 py-1.5 text-xs font-medium rounded-r transition-all duration-200 flex items-center gap-1 border-l border-current/20 ${
+                            marksMergeMode === 'auto'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                              : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                           }`}
                         >
-                          {visibleCols.includes(col.key as Col) ? '已启用' : '已禁用'}
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6l4-2 4 2M8 18l4 2 4-2M12 4v16" />
+                          </svg>
+                          {marksMergeMode === 'auto' ? '自动' : '手动'}
                         </button>
-                      </div>
-                    );
-                  })}
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleCol('hsCode')}
+                      className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-all duration-200 ${
+                        visibleCols.includes('hsCode')
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      HS Code
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePriceToggle}
+                      disabled={!hasAnyPriceCol && !hasAnyWeightCol}
+                      className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-all duration-200 ${
+                        !hasAnyPriceCol && !hasAnyWeightCol
+                          ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800'
+                          : hasAnyPriceCol
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                      }`}
+                    >
+                      Price
+                    </button>
+                  </div>
+
+                  {/* 第二行：Weight & Package + Dimensions（带合并模式） */}
+                  <div className="flex gap-2">
+                    {/* Weight & Package 带合并模式 */}
+                    <div className="flex-1 flex">
+                      <button
+                        type="button"
+                        onClick={handleWeightAndPackageToggle}
+                        disabled={!hasAnyPriceCol && !hasAnyWeightCol}
+                        className={`flex-1 px-2 py-1.5 rounded-l text-xs font-medium transition-all duration-200 ${
+                          !hasAnyPriceCol && !hasAnyWeightCol
+                            ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800'
+                            : hasAnyWeightCol
+                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        Weight & Package
+                      </button>
+                      {hasAnyWeightCol && visibleCols.includes('packageQty') && !hasGroupedItems && (
+                        <button
+                          type="button"
+                          onClick={togglePackageQtyMergeMode}
+                          className={`px-2 py-1.5 text-xs font-medium rounded-r transition-all duration-200 flex items-center gap-1 border-l border-current/20 ${
+                            packageQtyMergeMode === 'auto'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                              : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                          }`}
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6l4-2 4 2M8 18l4 2 4-2M12 4v16" />
+                          </svg>
+                          {packageQtyMergeMode === 'auto' ? '自动' : '手动'}
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Dimensions 带合并模式 */}
+                    <div className="flex-1 flex">
+                      <button
+                        type="button"
+                        onClick={() => toggleCol('dimensions')}
+                        className={`flex-1 px-2 py-1.5 rounded-l text-xs font-medium transition-all duration-200 ${
+                          visibleCols.includes('dimensions')
+                            ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        Dimensions
+                      </button>
+                      {visibleCols.includes('dimensions') && !hasGroupedItems && (
+                        <button
+                          type="button"
+                          onClick={toggleDimensionsMergeMode}
+                          className={`px-2 py-1.5 text-xs font-medium rounded-r transition-all duration-200 flex items-center gap-1 border-l border-current/20 ${
+                            dimensionsMergeMode === 'auto'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                              : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                          }`}
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6l4-2 4 2M8 18l4 2 4-2M12 4v16" />
+                          </svg>
+                          {dimensionsMergeMode === 'auto' ? '自动' : '手动'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

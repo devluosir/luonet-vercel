@@ -869,7 +869,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                 )}
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-4">
                 {/* Marks */}
                 {effectiveVisibleCols.includes('marks') && (
                   <div>
@@ -889,7 +889,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                 
                 {/* 描述 */}
                 {effectiveVisibleCols.includes('description') && (
-                  <div className="sm:col-span-2">
+                  <div>
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
                     <textarea
                       value={item.description}
@@ -925,168 +925,180 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                   </div>
                 )}
                 
-                {/* 数量 */}
-                {effectiveVisibleCols.includes('quantity') && (
-                  <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={item.quantity.toString()}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (/^\d*$/.test(value)) {
-                          const quantity = value === '' ? 0 : parseInt(value);
-                          onItemChange(index, 'quantity', quantity);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
-                      placeholder="0"
-                    />
+                {/* 数量 + 单位 */}
+                {(effectiveVisibleCols.includes('quantity') || effectiveVisibleCols.includes('unit')) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {effectiveVisibleCols.includes('quantity') && (
+                      <div>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={item.quantity.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*$/.test(value)) {
+                              const quantity = value === '' ? 0 : parseInt(value);
+                              handleQuantityChange(index, quantity);
+                            }
+                          }}
+                          className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
+                          placeholder="0"
+                        />
+                      </div>
+                    )}
+                    
+                    {effectiveVisibleCols.includes('unit') && (
+                      <div>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
+                        <UnitSelector
+                          value={item.unit}
+                          quantity={item.quantity}
+                          customUnits={data.customUnits || []}
+                          onChange={(unit) => handleUnitChange(index, unit)}
+                          className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7] text-center cursor-pointer appearance-none
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
                 
-                {/* 单位 */}
-                {effectiveVisibleCols.includes('unit') && (
-                  <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
-                    <input
-                      type="text"
-                      value={item.unit}
-                      onChange={(e) => onItemChange(index, 'unit', e.target.value)}
-                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
-                      placeholder="Unit"
-                    />
+                {/* 单价 + 金额 */}
+                {data.showPrice && (effectiveVisibleCols.includes('unitPrice') || effectiveVisibleCols.includes('amount')) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {effectiveVisibleCols.includes('unitPrice') && (
+                      <div>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">U/Price</label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={item.unitPrice.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*\.?\d*$/.test(value)) {
+                              const unitPrice = value === '' ? 0 : parseFloat(value) || 0;
+                              onItemChange(index, 'unitPrice', unitPrice);
+                            }
+                          }}
+                          className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    )}
+                    
+                    {effectiveVisibleCols.includes('amount') && (
+                      <div>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Amount</label>
+                        <div className="px-3 py-2 bg-gray-50 dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                          text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]">
+                          {(item.quantity * item.unitPrice).toFixed(2)}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 
-                {/* 单价 */}
-                {effectiveVisibleCols.includes('unitPrice') && data.showPrice && (
-                  <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">U/Price</label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={item.unitPrice.toString()}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (/^\d*\.?\d*$/.test(value)) {
-                          const unitPrice = value === '' ? 0 : parseFloat(value) || 0;
-                          onItemChange(index, 'unitPrice', unitPrice);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
-                      placeholder="0.00"
-                    />
+                {/* 净重 + 毛重 */}
+                {data.showWeightAndPackage && (effectiveVisibleCols.includes('netWeight') || effectiveVisibleCols.includes('grossWeight')) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {effectiveVisibleCols.includes('netWeight') && (
+                      <div>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">N.W.(kg)</label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={item.netWeight.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*\.?\d*$/.test(value)) {
+                              const netWeight = value === '' ? 0 : parseFloat(value) || 0;
+                              onItemChange(index, 'netWeight', netWeight);
+                            }
+                          }}
+                          className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    )}
+                    
+                    {effectiveVisibleCols.includes('grossWeight') && (
+                      <div>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">G.W.(kg)</label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={item.grossWeight.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*\.?\d*$/.test(value)) {
+                              const grossWeight = value === '' ? 0 : parseFloat(value) || 0;
+                              onItemChange(index, 'grossWeight', grossWeight);
+                            }
+                          }}
+                          className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
                 
-                {/* 金额 */}
-                {effectiveVisibleCols.includes('amount') && data.showPrice && (
-                  <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Amount</label>
-                    <div className="px-3 py-2 bg-gray-50 dark:bg-[#2C2C2E] border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                      text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]">
-                      {(item.quantity * item.unitPrice).toFixed(2)}
-                    </div>
-                  </div>
-                )}
-                
-                {/* 净重 */}
-                {effectiveVisibleCols.includes('netWeight') && data.showWeightAndPackage && (
-                  <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">N.W.(kg)</label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={item.netWeight.toString()}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (/^\d*\.?\d*$/.test(value)) {
-                          const netWeight = value === '' ? 0 : parseFloat(value) || 0;
-                          onItemChange(index, 'netWeight', netWeight);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
-                      placeholder="0.00"
-                    />
-                  </div>
-                )}
-                
-                {/* 毛重 */}
-                {effectiveVisibleCols.includes('grossWeight') && data.showWeightAndPackage && (
-                  <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">G.W.(kg)</label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={item.grossWeight.toString()}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (/^\d*\.?\d*$/.test(value)) {
-                          const grossWeight = value === '' ? 0 : parseFloat(value) || 0;
-                          onItemChange(index, 'grossWeight', grossWeight);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
-                      placeholder="0.00"
-                    />
-                  </div>
-                )}
-                
-                {/* 包装数量 */}
-                {effectiveVisibleCols.includes('packageQty') && data.showWeightAndPackage && (
-                  <div>
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Pkgs</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={item.packageQty.toString()}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (/^\d*$/.test(value)) {
-                          const packageQty = value === '' ? 0 : parseInt(value) || 0;
-                          onItemChange(index, 'packageQty', packageQty);
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
-                      placeholder="0"
-                    />
-                  </div>
-                )}
-                
-                {/* 尺寸 */}
-                {effectiveVisibleCols.includes('dimensions') && data.showDimensions && (
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Dimensions ({data.dimensionUnit})</label>
-                    <input
-                      type="text"
-                      value={item.dimensions}
-                      onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
-                      className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
-                        focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
-                        text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
-                      placeholder="L×W×H"
-                    />
+                {/* 包装数量 + 尺寸 */}
+                {(data.showWeightAndPackage || data.showDimensions) && (effectiveVisibleCols.includes('packageQty') || effectiveVisibleCols.includes('dimensions')) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {effectiveVisibleCols.includes('packageQty') && data.showWeightAndPackage && (
+                      <div>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Pkgs</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={item.packageQty.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^\d*$/.test(value)) {
+                              const packageQty = value === '' ? 0 : parseInt(value) || 0;
+                              onItemChange(index, 'packageQty', packageQty);
+                            }
+                          }}
+                          className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
+                          placeholder="0"
+                        />
+                      </div>
+                    )}
+                    
+                    {effectiveVisibleCols.includes('dimensions') && data.showDimensions && (
+                      <div>
+                        <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Dimensions ({data.dimensionUnit})</label>
+                        <input
+                          type="text"
+                          value={item.dimensions}
+                          onChange={(e) => onItemChange(index, 'dimensions', e.target.value)}
+                          className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
+                            focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
+                            text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
+                            placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
+                          placeholder="L×W×H"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
