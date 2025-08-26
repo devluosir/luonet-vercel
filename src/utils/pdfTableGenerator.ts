@@ -319,12 +319,14 @@ export const generateTableConfig = (
 
   // 检查指定行是否应该渲染 description 单元格
   const shouldRenderDescriptionCell = (rowIndex: number, mergedCells: MergedCellInfo[]): boolean => {
-    return mergedCells.some(cell => cell.startRow === rowIndex);
+    // Description列取消合并单元格功能，始终显示所有单元格
+    return true;
   };
 
   // 获取指定行的 description 合并信息
   const getMergedDescriptionCellInfo = (rowIndex: number, mergedCells: MergedCellInfo[]): MergedCellInfo | null => {
-    return mergedCells.find(cell => cell.startRow === rowIndex) || null;
+    // Description列取消合并单元格功能，始终返回null
+    return null;
   };
 
 
@@ -373,16 +375,11 @@ export const generateTableConfig = (
           }
         ];
 
-        // 添加 description 列（支持合并单元格）
-        if (showDescription && shouldRenderDescriptionCell(index, mergedDescriptionCells)) {
-          const mergedInfo = getMergedDescriptionCellInfo(index, mergedDescriptionCells);
-          const rowSpan = mergedInfo ? mergedInfo.endRow - mergedInfo.startRow + 1 : 1;
-          const isMerged = mergedInfo?.isMerged || false;
-          
+        // 添加 description 列（取消合并单元格功能）
+        if (showDescription) {
           // 在Part Name之后插入Description列
           row.splice(2, 0, {
-            content: mergedInfo?.content || '',
-            rowSpan: isMerged ? rowSpan : undefined,
+            content: item.description || '',
             styles: {
               halign: 'center' as const,
               ...(item.highlight?.description ? { textColor: [255, 0, 0] } : {})

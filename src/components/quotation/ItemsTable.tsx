@@ -26,7 +26,6 @@ interface ItemsTableProps {
   data: QuotationData;
   onItemsChange?: (items: LineItem[]) => void;
   onOtherFeesChange?: (fees: OtherFee[]) => void;
-  onDescriptionMergeModeChange?: (mode: 'auto' | 'manual') => void;
   onRemarksMergeModeChange?: (mode: 'auto' | 'manual') => void;
   onManualMergedCellsChange?: (manualMergedCells: {
     description: MergedCellInfo[];
@@ -113,15 +112,13 @@ const getMergedCellInfo = (rowIndex: number, merged: MergedCellInfo[]) => {
 };
 
 const shouldRenderDescriptionCell = (rowIndex: number, merged: MergedCellInfo[]) => {
-  // 如果没有合并信息，直接返回true（显示所有单元格）
-  if (merged.length === 0) return true;
-  return merged.some((cell) => cell.startRow === rowIndex);
+  // Description列取消合并单元格功能，始终显示所有单元格
+  return true;
 };
 
 const getMergedDescriptionCellInfo = (rowIndex: number, merged: MergedCellInfo[]) => {
-  // 如果没有合并信息，直接返回null
-  if (merged.length === 0) return null;
-  return merged.find((cell) => cell.startRow === rowIndex) || null;
+  // Description列取消合并单元格功能，始终返回null
+  return null;
 };
 
 /* =========================================================================
@@ -302,7 +299,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   data,
   onItemsChange,
   onOtherFeesChange,
-  onDescriptionMergeModeChange,
+
   onRemarksMergeModeChange,
   onManualMergedCellsChange,
   mergedRemarks = [],
@@ -316,7 +313,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   const { visibleCols, isHydrated } = useTablePrefsHydrated();
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  const [descriptionMergeMode, setDescriptionMergeMode] = useState<'auto' | 'manual'>('auto');
+
   const [remarksMergeMode, setRemarksMergeMode] = useState<'auto' | 'manual'>('auto');
 
   useEffect(() => {
@@ -858,9 +855,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
         </div>
         <div className="flex items-center gap-3">
           <ColumnToggle
-            descriptionMergeMode={descriptionMergeMode}
             remarksMergeMode={remarksMergeMode}
-            onDescriptionMergeModeChange={setDescriptionMergeMode}
             onRemarksMergeModeChange={setRemarksMergeMode}
           />
           <QuickImport
@@ -878,13 +873,13 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
           // 只在开发环境且有解析器合并信息时才显示调试信息
           if (index < 2 && process.env.NODE_ENV === 'development' && ((mergedRemarks?.length ?? 0) > 0 || (mergedDescriptions?.length ?? 0) > 0)) {
             console.info('[IT:row', index, '] flags', {
-              desc: { hide: !shouldRenderDescriptionCell(index, mergedDescriptionCells), start: !!getMergedDescriptionCellInfo(index, mergedDescriptionCells)?.isMerged },
+              desc: { hide: false, start: false }, // Description列已取消合并功能
               remark: { hide: !shouldRenderRemarkCell(index, mergedRemarksCells), start: !!getMergedCellInfo(index, mergedRemarksCells)?.isMerged },
             });
           }
 
-          const descMergedInfo = getMergedDescriptionCellInfo(index, mergedDescriptionCells);
-          const descIsMerged = !!descMergedInfo?.isMerged;
+          // Description列已取消合并功能，不再需要合并信息
+          const descIsMerged = false;
 
           const remarkMergedInfo = getMergedCellInfo(index, mergedRemarksCells);
           const remarkIsMerged = !!remarkMergedInfo?.isMerged;
@@ -914,16 +909,16 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 </div>
 
                 {/* Description */}
-                {effectiveVisibleCols.includes('description') && shouldRenderDescriptionCell(index, mergedDescriptionCells) && (
+                {effectiveVisibleCols.includes('description') && (
                   <div data-probe={`desc@row${index}`}>
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
                     <AutoGrowTextarea
-                      value={descIsMerged ? (descMergedInfo?.content || '') : getDesc(item)}
-                      onChange={(e) => handleTextareaChange(e, index, descIsMerged, descMergedInfo, 'description')}
+                      value={getDesc(item)}
+                      onChange={(e) => handleTextareaChange(e, index, false, null, 'description')}
                       onDoubleClick={() => handleDoubleClick(index, 'description')}
                       isDarkMode={isDarkMode}
                       onFocusIOS={onFocusIOS}
-                      className={`${item.highlight?.description ? highlightClass : ''} ${descIsMerged ? 'border-blue-200 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/20' : ''} border rounded-lg py-2`}
+                      className={`${item.highlight?.description ? highlightClass : ''} border rounded-lg py-2`}
                       placeholder="Enter description..."
                     />
                   </div>
@@ -1150,9 +1145,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 </thead>
                 <tbody className="bg-white/90 dark:bg-[#1C1C1E]/90">
                   {(data.items || []).map((item, index) => {
-                    const descMergedInfo = getMergedDescriptionCellInfo(index, mergedDescriptionCells);
-                    const descRowSpan = descMergedInfo ? descMergedInfo.endRow - descMergedInfo.startRow + 1 : 1;
-                    const descIsMerged = !!descMergedInfo?.isMerged;
+                    // Description列已取消合并功能，不再需要合并信息
+                    const descIsMerged = false;
 
                     const remarkMergedInfo = getMergedCellInfo(index, mergedRemarksCells);
                     const remarkRowSpan = remarkMergedInfo ? remarkMergedInfo.endRow - remarkMergedInfo.startRow + 1 : 1;
@@ -1188,22 +1182,18 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                         )}
 
                         {/* Description cell */}
-                        {effectiveVisibleCols.includes('description') && shouldRenderDescriptionCell(index, mergedDescriptionCells) && (
+                        {effectiveVisibleCols.includes('description') && (
                           <td
                             data-probe={`desc@row${index}`}
-                            className={`px-2 py-2 transition-all duration-300 ease-in-out ${
-                              descIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
-                            }`}
-                            rowSpan={descIsMerged ? descRowSpan : undefined}
-                            onContextMenu={(e) => handleContextMenu(e, index, 'description')}
+                            className="px-2 py-2 transition-all duration-300 ease-in-out"
                           >
                             <AutoGrowTextarea
-                              value={descIsMerged ? (descMergedInfo?.content || '') : getDesc(item)}
-                              onChange={(e) => handleTextareaChange(e, index, descIsMerged, descMergedInfo, 'description')}
+                              value={getDesc(item)}
+                              onChange={(e) => handleTextareaChange(e, index, false, null, 'description')}
                               onDoubleClick={() => handleDoubleClick(index, 'description')}
                               isDarkMode={isDarkMode}
                               onFocusIOS={onFocusIOS}
-                              className={`${item.highlight?.description ? highlightClass : ''} ${descIsMerged ? 'border-blue-200 dark:border-blue-700' : ''}`}
+                              className={`${item.highlight?.description ? highlightClass : ''}`}
                               title=""
                             />
                           </td>
@@ -1418,7 +1408,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
           mergeToRow(start, end);
         }}
         isManualMode={
-          contextMenu?.column === 'description' ? descriptionMergeMode === 'manual' : remarksMergeMode === 'manual'
+          contextMenu?.column === 'description' ? false : remarksMergeMode === 'manual'
         }
         canMergeUp={(contextMenu?.rowIndex ?? 0) > 0}
         canMergeDown={(contextMenu?.rowIndex ?? 0) < data.items.length - 1}

@@ -347,8 +347,7 @@ export default function QuotationPage() {
     }
   };
   
-  // 合并模式状态 - 分别管理两列
-  const [descriptionMergeMode, setDescriptionMergeMode] = useState<'auto' | 'manual'>('auto');
+  // 合并模式状态 - Description列已取消合并功能
   const [remarksMergeMode, setRemarksMergeMode] = useState<'auto' | 'manual'>('auto');
   
   // 手动合并数据状态
@@ -396,7 +395,6 @@ export default function QuotationPage() {
         saveOrUpdate(activeTab, data, notesConfig, editId),
         generatePdf(activeTab, data, notesConfig, setProgress, { 
           mode: 'final', 
-          descriptionMergeMode,
           remarksMergeMode,
           manualMergedCells
         })
@@ -449,7 +447,6 @@ export default function QuotationPage() {
         setPreviewProgress(mappedProgress);
       }, { 
         mode: 'preview', 
-        descriptionMergeMode,
         remarksMergeMode,
         manualMergedCells
       });
@@ -645,7 +642,7 @@ export default function QuotationPage() {
                   data={data} 
                   onItemsChange={handleItemsChange}
                   onOtherFeesChange={handleOtherFeesChange}
-                  onDescriptionMergeModeChange={setDescriptionMergeMode}
+
                   onRemarksMergeModeChange={setRemarksMergeMode}
                   onManualMergedCellsChange={handleManualMergeChange}
                   mergedRemarks={data.mergedRemarks}
