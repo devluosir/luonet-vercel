@@ -82,7 +82,10 @@ const calculateMergedCells = (
         : ((currentItem.description ?? currentItem.partName) || '')
       : '';
 
-    const shouldEndMerge = !currentItem || (currentContentValue !== prevContent && currentContentValue !== '');
+    // 修复合并逻辑：只有相同且非空的内容才合并，空行不合并
+    const shouldEndMerge = !currentItem || 
+      (currentContentValue !== prevContent) || 
+      (prevContent === '' && currentContentValue === ''); // 空行不合并
 
     if (shouldEndMerge) {
       if (i - 1 > currentStart) {
@@ -415,7 +418,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       return mergedRemarks.map((m) => ({ startRow: m.startRow, endRow: m.endRow, content: m.content, isMerged: true }));
     }
     
-    // 如果没有解析器合并信息，只在手动模式下进行合并检测
+    // 如果没有解析器合并信息，根据合并模式进行处理
     const items = data.items || [];
     if (items.length === 0) return [];
     
@@ -432,9 +435,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       return result.sort((a, b) => a.startRow - b.startRow);
     }
     
-    // 自动模式下，如果没有解析器合并信息，返回空数组（不进行任何合并检测）
-    return [];
-  }, [mergedRemarks?.length ?? 0, remarksKey, remarksMergeMode, manualMergedCells.remarks, data.items?.length ?? 0]);
+    // 自动模式下，使用calculateMergedCells函数进行合并检测
+    return calculateMergedCells(items, 'auto', 'remarks');
+  }, [mergedRemarks?.length ?? 0, remarksKey, remarksMergeMode, manualMergedCells.remarks, data.items]);
 
   const mergedDescriptionCells = useMemo(() => {
     // 暂时禁用description列的合并单元格功能
@@ -447,7 +450,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       }
     }
     return [];
-  }, [mergedDescriptions?.length ?? 0, data.items?.length ?? 0]);
+  }, [mergedDescriptions?.length ?? 0, data.items]);
 
   // 只在有解析器合并信息时才执行useEffect
   useEffectOncePerChange(`${remarksKey}|${remarksMergeMode}`, () => {

@@ -79,11 +79,10 @@ const calculateMergedCells = (
     const prevContent = column === 'remarks' ? (prevItem.remarks || '') : (prevItem.description || '');
     const currentContentValue = currentItem ? (column === 'remarks' ? (currentItem.remarks || '') : (currentItem.description || '')) : '';
     
-    // 检查是否需要结束当前合并
+    // 修复合并逻辑：只有相同且非空的内容才合并，空行不合并
     const shouldEndMerge = !currentItem || 
-                          currentContentValue !== prevContent ||
-                          !currentContentValue ||
-                          !prevContent;
+                          (currentContentValue !== prevContent) ||
+                          (prevContent === '' && currentContentValue === ''); // 空行不合并
 
     if (shouldEndMerge) {
       // 结束当前合并组
