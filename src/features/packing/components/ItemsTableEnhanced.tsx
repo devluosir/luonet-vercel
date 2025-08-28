@@ -131,6 +131,8 @@ interface PackingData {
     dimensions: MergedCellInfo[];
     marks: MergedCellInfo[]; // 新增marks自动合并数据
   };
+  // 🆕 保存时的列显示设置
+  savedVisibleCols?: string[] | null;
 }
 
 interface ItemsTableEnhancedProps {

@@ -57,7 +57,9 @@ const getInitialData = (): PackingData => ({
     packageQty: [],
     dimensions: [],
     marks: []
-  }
+  },
+  // 🆕 保存时的列显示设置
+  savedVisibleCols: null
 });
 
 interface CustomWindow extends Window {

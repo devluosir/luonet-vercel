@@ -78,6 +78,8 @@ interface PackingData {
   currentGroupId?: string;
   packageQtyMergeMode?: 'auto' | 'manual';
   dimensionsMergeMode?: 'auto' | 'manual';
+  // 🆕 保存时的列显示设置
+  savedVisibleCols?: string[] | null;
 }
 
 interface ItemsTableProps {

@@ -40,6 +40,8 @@ interface PackingData {
     headerType: 'none' | 'bilingual' | 'english';
   };
   customUnits?: string[];
+  // 🆕 保存时的列显示设置
+  savedVisibleCols?: string[] | null;
 }
 
 export interface PackingHistory {

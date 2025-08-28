@@ -109,6 +109,8 @@ interface PackingData {
       isMerged: boolean;
     }>;
   };
+  // 🆕 保存时的列显示设置
+  savedVisibleCols?: string[] | null;
 }
 
 

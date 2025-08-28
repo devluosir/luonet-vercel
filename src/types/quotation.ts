@@ -74,6 +74,8 @@ export interface QuotationData {
   balanceAmount?: number;
   // 时间戳
   updatedAt?: string;
+  // 🆕 保存时的列显示设置
+  savedVisibleCols?: string[] | null;
 }
 
 export interface CustomWindow extends Window {
