@@ -218,28 +218,48 @@ export async function generatePackingListPDF(
           
           // 根据条件调整抬头大小和位置
           let imgWidth, imgHeight, imgX, imgY, titleFontSize, titleSpacing, titleYSpacing;
+          
+          // 计算图片的原始宽高比
+          const aspectRatio = imgProperties.width / imgProperties.height;
+          
           if (shouldUseCompactHeader) {
-            // 横向模式且显示marks列：参考报价页的设置，限制最大高度
-            const maxHeight = 35; // 比报价页稍小，因为横向模式空间有限
-            imgWidth = pageWidth - (margin * 2);
-            imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
+            // 横向模式且显示marks列：保持与纵向模式相同的图片尺寸
+            // 使用纵向模式的标准尺寸，而不是根据横向纸张宽度缩放
+            const standardWidth = 210 - 30; // A4纵向模式的宽度减去30mm边距
+            const maxHeight = 40; // 与纵向模式保持一致的最大高度
             
+            // 使用纵向模式的标准宽度计算
+            imgWidth = standardWidth;
+            imgHeight = imgWidth / aspectRatio;
+            
+            // 如果高度超出限制，则按高度计算宽度
             if (imgHeight > maxHeight) {
               imgHeight = maxHeight;
-              imgWidth = imgHeight * (imgProperties.width / imgProperties.height);
+              imgWidth = imgHeight * aspectRatio;
             }
             
             imgX = (pageWidth - imgWidth) / 2; // 水平居中
-            imgY = margin * 0.6; // 向上移动，但不要太多
-            titleFontSize = 12; // 横向模式使用更小的字体
-            titleSpacing = 3; // 横向模式减少间距
-            titleYSpacing = 8; // 横向模式减少间距
+            imgY = 15; // 与纵向模式保持相同的上边距
+            titleFontSize = 14; // 与纵向模式保持相同的字体大小
+            titleSpacing = 5; // 与纵向模式保持相同的间距
+            titleYSpacing = 10; // 与纵向模式保持相同的间距
           } else {
-            // 其他情况：参考发票页的设置，使用固定边距
-            imgWidth = pageWidth - 30; // 左右各留15mm，与发票页一致
-            imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
-            imgX = 15; // 左边距15mm，与发票页一致
-            imgY = 15; // 上边距15mm，与发票页一致
+            // 纵向模式：保持图片比例，优化尺寸
+            const maxHeight = 40; // 纵向模式下允许更大的高度
+            const maxWidth = pageWidth - 30; // 左右各留15mm
+            
+            // 先按宽度计算高度
+            imgWidth = maxWidth;
+            imgHeight = imgWidth / aspectRatio;
+            
+            // 如果高度超出限制，则按高度计算宽度
+            if (imgHeight > maxHeight) {
+              imgHeight = maxHeight;
+              imgWidth = imgHeight * aspectRatio;
+            }
+            
+            imgX = (pageWidth - imgWidth) / 2; // 水平居中
+            imgY = 15; // 上边距15mm
             titleFontSize = 14;
             titleSpacing = 5;
             titleYSpacing = 10;
@@ -547,26 +567,26 @@ async function renderPackingTable(
 
   // 表格基础样式
   const tableStyles = {
-    fontSize: isLandscape ? 7 : 8, // 横向模式下使用稍小的字体
-    cellPadding: { top: 1, bottom: 1, left: 1, right: 1 }, // 减少上下内边距
+    fontSize: 8, // 横向和纵向模式保持一致的字体大小
+    cellPadding: { top: 1, bottom: 1, left: 1, right: 1 }, // 横向和纵向模式保持一致的内边距
     lineColor: [0, 0, 0] as [number, number, number],
     lineWidth: 0.1,
     font: 'NotoSansSC',
     valign: 'middle' as const,
-    minCellHeight: 6 // 减少单元格最小高度
+    minCellHeight: 6 // 横向和纵向模式保持一致的单元格最小高度
   };
 
   // 表头样式
   const headStyles = {
     fillColor: [255, 255, 255] as [number, number, number],
     textColor: [0, 0, 0] as [number, number, number],
-    fontSize: isLandscape ? 7 : 8, // 横向模式下使用稍小的字体
+    fontSize: 8, // 横向和纵向模式保持一致的表头字体大小
     fontStyle: 'bold' as const,
     halign: 'center' as const,
     font: 'NotoSansSC',
     valign: 'middle' as const,
-    cellPadding: { top: 1, bottom: 1, left: 1, right: 1 }, // 减少上下内边距
-    minCellHeight: 8 // 减少表头高度
+    cellPadding: { top: 1, bottom: 1, left: 1, right: 1 }, // 横向和纵向模式保持一致的内边距
+    minCellHeight: 8 // 横向和纵向模式保持一致的表头高度
   };
 
   // 设置每列的宽度和对齐方式
@@ -669,10 +689,10 @@ async function renderPackingTable(
   if (showUnit) headers[0].push('Unit');
   if (showUnitPrice) headers[0].push('U/Price');
   if (showAmount) headers[0].push('Amount');
-  if (showNetWeight) headers[0].push('N.W.(kg)');
-  if (showGrossWeight) headers[0].push('G.W.(kg)');
+  if (showNetWeight) headers[0].push(isLandscape ? 'N.W.(kg)' : 'N.W.\n(kg)');
+  if (showGrossWeight) headers[0].push(isLandscape ? 'G.W.(kg)' : 'G.W.\n(kg)');
   if (showPackageQty) headers[0].push('Pkgs');
-  if (showDimensions) headers[0].push(`Dimensions(${data.dimensionUnit})`);
+  if (showDimensions) headers[0].push(isLandscape ? `Dimensions(${data.dimensionUnit})` : `Dimensions\n(${data.dimensionUnit})`);
 
   // 准备数据行（支持分组合并单元格）
   const body: RowInput[] = [];
