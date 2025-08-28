@@ -452,14 +452,18 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               {/* Marks */}
               <div>
                 <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Marks</label>
-                <input
-                  type="text"
+                <textarea
                   value={item.marks || ''}
-                  onChange={(e) => onItemChange(index, 'marks', e.target.value)}
+                  onChange={(e) => {
+                    onItemChange(index, 'marks', e.target.value);
+                    e.target.style.height = '28px';
+                    e.target.style.height = `${e.target.scrollHeight}px`;
+                  }}
                   className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                     focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                     text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
                     placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                    transition-all duration-200 resize-none overflow-hidden min-h-[60px]
                     ios-optimized-input"
                   placeholder="Marks"
                 />

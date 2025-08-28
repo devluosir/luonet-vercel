@@ -1035,14 +1035,18 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                 {effectiveVisibleCols.includes('marks') && (
                   <div>
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Marks</label>
-                    <input
-                      type="text"
+                    <textarea
                       value={item.marks || ''}
-                      onChange={(e) => onItemChange(index, 'marks', e.target.value)}
+                      onChange={(e) => {
+                        onItemChange(index, 'marks', e.target.value);
+                        e.target.style.height = '28px';
+                        e.target.style.height = `${e.target.scrollHeight}px`;
+                      }}
                       className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                         focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
                         text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]
-                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]"
+                        placeholder:text-[#86868B] dark:placeholder:text-[#86868B]
+                        transition-all duration-200 resize-none overflow-hidden min-h-[60px]"
                       placeholder="Marks"
                     />
                   </div>
@@ -1395,11 +1399,20 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                       // 当有分组数据时，使用普通单元格渲染
                       hasGroupedItems ? (
                         <td className="py-2 px-4 text-center text-sm">
-                          <input
-                            type="text"
+                          <textarea
                             value={item.marks || ''}
-                            onChange={(e) => onItemChange(index, 'marks', e.target.value)}
-                            className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input"
+                            onChange={(e) => {
+                              onItemChange(index, 'marks', e.target.value);
+                              e.target.style.height = '28px';
+                              e.target.style.height = `${e.target.scrollHeight}px`;
+                            }}
+                            className="w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden ios-optimized-input"
+                            style={{ height: '28px' }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.stopPropagation();
+                              }
+                            }}
                             placeholder="Marks"
                           />
                         </td>
@@ -1419,11 +1432,12 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                                 rowSpan={marksIsMerged ? marksRowSpan : undefined}
                                 onContextMenu={(e) => handleContextMenu(e, index, 'marks')}
                               >
-                                <input
-                                  type="text"
+                                <textarea
                                   value={marksIsMerged ? marksMergedInfo.content : (item.marks || '')}
                                   onChange={(e) => {
                                     const newValue = e.target.value;
+                                    e.target.style.height = '28px';
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
                                     if (marksIsMerged && marksMergedInfo) {
                                       // 如果是合并单元格，使用批量更新
                                       
@@ -1460,7 +1474,13 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                                     }
                                   }}
                                   onDoubleClick={() => handleDoubleClick(index, 'marks')}
-                                  className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center ios-optimized-input ${item.highlight?.marks ? highlightClass : ''} ${marksIsMerged ? 'border-blue-200 dark:border-blue-700' : ''}`}
+                                  className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30 hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 text-[12px] text-[#1D1D1F] dark:text-[#F5F5F7] placeholder:text-[#86868B] dark:placeholder:text-[#86868B] transition-all duration-200 text-center whitespace-pre-wrap resize-y overflow-hidden ios-optimized-input ${item.highlight?.marks ? highlightClass : ''} ${marksIsMerged ? 'border-blue-200 dark:border-blue-700' : ''}`}
+                                  style={{ height: '28px' }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      e.stopPropagation();
+                                    }
+                                  }}
                                   placeholder="Marks"
                                 />
                               </td>
