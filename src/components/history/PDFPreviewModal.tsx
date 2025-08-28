@@ -129,7 +129,10 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
           const quotationData = item.data as any;
           const notesConfig = quotationData.notesConfig || [];
           
-          // 使用新的生成服务，传入notesConfig
+          // 🆕 从历史记录数据中提取保存时的列显示设置
+          const savedVisibleCols = quotationData.savedVisibleCols || null;
+          
+          // 使用新的生成服务，传入notesConfig和保存时的列显示设置
           const pdfBlob = await generatePdf(
             itemType, 
             quotationData, 
@@ -139,7 +142,8 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
               console.log(`PDF生成进度: ${progress}%`);
             }, 
             { 
-              mode: 'preview' 
+              mode: 'preview',
+              savedVisibleCols // 🆕 传递保存时的列显示设置
             }
           );
           pdfUrl = URL.createObjectURL(pdfBlob);
@@ -154,7 +158,9 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
           pdfUrl = URL.createObjectURL(pdfBlob);
         } else if (itemType === 'packing') {
           // @ts-ignore - 历史记录数据可能来自不同来源
-          const pdfBlob = await generatePackingListPDF(item.data);
+          const packingData = item.data as any;
+          const savedVisibleCols = packingData.savedVisibleCols || null;
+          const pdfBlob = await generatePackingListPDF(packingData, undefined, savedVisibleCols);
           pdfUrl = URL.createObjectURL(pdfBlob);
         }
       }
@@ -199,7 +205,10 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
           const quotationData = item.data as any;
           const notesConfig = quotationData.notesConfig || [];
           
-          // 使用新的生成服务，传入notesConfig
+          // 🆕 从历史记录数据中提取保存时的列显示设置
+          const savedVisibleCols = quotationData.savedVisibleCols || null;
+          
+          // 使用新的生成服务，传入notesConfig和保存时的列显示设置
           pdfBlob = await generatePdf(
             itemType, 
             quotationData, 
@@ -209,7 +218,8 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
               console.log(`PDF生成进度: ${progress}%`);
             }, 
             { 
-              mode: 'final' 
+              mode: 'final',
+              savedVisibleCols // 🆕 传递保存时的列显示设置
             }
           );
         } else if (itemType === 'invoice') {
@@ -221,7 +231,9 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
           pdfBlob = await generatePurchaseOrderPDF(item.data, false);
         } else if (itemType === 'packing') {
           // @ts-ignore - 历史记录数据可能来自不同来源
-          pdfBlob = await generatePackingListPDF(item.data);
+          const packingData = item.data as any;
+          const savedVisibleCols = packingData.savedVisibleCols || null;
+          pdfBlob = await generatePackingListPDF(packingData, undefined, savedVisibleCols);
         } else {
           throw new Error('未知的文档类型');
         }

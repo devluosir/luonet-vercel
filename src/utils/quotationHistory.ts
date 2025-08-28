@@ -17,6 +17,22 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
     const totalAmount = (data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0) +
       (data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0);
 
+    // 🆕 获取当前的列显示设置
+    let savedVisibleCols: string[] | null = null;
+    if (typeof window !== 'undefined') {
+      try {
+        savedVisibleCols = getLocalStorageJSON('qt.visibleCols', null);
+      } catch (e) {
+        console.warn('Failed to read table column preferences:', e);
+      }
+    }
+
+    // 🆕 将列显示设置添加到数据中
+    const dataWithVisibleCols = {
+      ...data,
+      savedVisibleCols
+    };
+
     // 如果提供了现有ID，则更新该记录
     if (existingId) {
       const index = history.findIndex(item => item.id === existingId);
@@ -38,7 +54,7 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
           quotationNo: type === 'confirmation' ? data.contractNo : data.quotationNo,
           totalAmount,
           currency: data.currency,
-          data
+          data: dataWithVisibleCols // 🆕 使用包含列显示设置的数据
         };
         history[index] = updatedHistory;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
@@ -71,7 +87,7 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
       quotationNo: type === 'confirmation' ? data.contractNo : data.quotationNo,
       totalAmount,
       currency: data.currency,
-      data
+      data: dataWithVisibleCols // 🆕 使用包含列显示设置的数据
     };
 
     history.unshift(newHistory);

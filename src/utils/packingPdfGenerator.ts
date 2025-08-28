@@ -115,11 +115,13 @@ interface PackingData {
 
 // 函数重载签名
 export async function generatePackingListPDF(data: PackingData): Promise<Blob>;
+export async function generatePackingListPDF(data: PackingData, totals?: { netWeight: number; grossWeight: number; packageQty: number; totalPrice: number }, savedVisibleCols?: string[]): Promise<Blob>;
 
 // 新增：导出PDF时可传入页面统计行 totals
 export async function generatePackingListPDF(
   data: PackingData,
-  _totals?: { netWeight: number; grossWeight: number; packageQty: number; totalPrice: number }
+  _totals?: { netWeight: number; grossWeight: number; packageQty: number; totalPrice: number },
+  savedVisibleCols?: string[] // 🆕 新增：保存时的列显示设置
 ): Promise<Blob> {
   // 检查是否在客户端环境
   if (typeof window === 'undefined') {
@@ -166,14 +168,21 @@ export async function generatePackingListPDF(
   // 读取页面的列显示设置，判断是否需要横向模式
   let visibleCols: string[] | undefined;
   let showMarks = false;
-  try {
-    if (typeof window !== 'undefined') {
-      visibleCols = JSON.parse(localStorage.getItem('pk.visibleCols') || 'null');
-      showMarks = visibleCols ? visibleCols.includes('marks') : false; // 默认不显示marks列，与表格保持一致
+  
+  // 🆕 优先使用保存时的列显示设置，如果没有则使用当前的localStorage设置
+  if (savedVisibleCols) {
+    visibleCols = savedVisibleCols;
+    showMarks = visibleCols.includes('marks');
+  } else {
+    try {
+      if (typeof window !== 'undefined') {
+        visibleCols = JSON.parse(localStorage.getItem('pk.visibleCols') || 'null');
+        showMarks = visibleCols ? visibleCols.includes('marks') : false; // 默认不显示marks列，与表格保持一致
+      }
+    } catch (e) {
+      console.warn('Failed to read packing table column preferences:', e);
+      showMarks = false; // 出错时默认不显示marks列，与表格保持一致
     }
-  } catch (e) {
-    console.warn('Failed to read packing table column preferences:', e);
-    showMarks = false; // 出错时默认不显示marks列，与表格保持一致
   }
 
   // 当marks列显示时，使用横向模式以适应更多列

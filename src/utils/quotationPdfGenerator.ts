@@ -38,7 +38,8 @@ export const generateQuotationPDF = async (
       content: string;
       isMerged: boolean;
     }>;
-  }
+  },
+  savedVisibleCols?: string[] // 🆕 新增：保存时的列显示设置
 ): Promise<Blob> => {
   const totalId = startTimer('pdf-generation');
   
@@ -52,7 +53,11 @@ export const generateQuotationPDF = async (
     
     // 读取页面列显示偏好，与页面表格保持一致
     let visibleCols: string[] | undefined;
-    if (typeof window !== 'undefined') {
+    
+    // 🆕 优先使用保存时的列显示设置，如果没有则使用当前的localStorage设置
+    if (savedVisibleCols) {
+      visibleCols = savedVisibleCols;
+    } else if (typeof window !== 'undefined') {
       visibleCols = getLocalStorageJSON('qt.visibleCols', []);
     }
     

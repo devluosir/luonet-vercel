@@ -73,7 +73,8 @@ export const generateOrderConfirmationPDF = async (
       content: string;
       isMerged: boolean;
     }>;
-  }
+  },
+  savedVisibleCols?: string[] // 🆕 新增：保存时的列显示设置
 ): Promise<Blob> => {
   // 检查是否在客户端环境
   if (typeof window === 'undefined') {
@@ -110,10 +111,16 @@ export const generateOrderConfirmationPDF = async (
 
     // 读取页面列显示偏好，与页面表格保持一致
     let visibleCols: string[] | undefined;
-    try {
-      visibleCols = JSON.parse(localStorage.getItem('qt.visibleCols') || 'null');
-    } catch (e) {
-      console.warn('Failed to read table column preferences:', e);
+    
+    // 🆕 优先使用保存时的列显示设置，如果没有则使用当前的localStorage设置
+    if (savedVisibleCols) {
+      visibleCols = savedVisibleCols;
+    } else {
+      try {
+        visibleCols = JSON.parse(localStorage.getItem('qt.visibleCols') || 'null');
+      } catch (e) {
+        console.warn('Failed to read table column preferences:', e);
+      }
     }
 
     // 添加头部图片

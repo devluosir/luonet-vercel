@@ -25,6 +25,7 @@ export const generatePdf = async (
         isMerged: boolean;
       }>;
     };
+    savedVisibleCols?: string[]; // 🆕 新增参数，用于传递保存时的列显示设置
   }
 ): Promise<Blob> => {
   // 数据准备阶段（不计入生成监控）
@@ -76,7 +77,8 @@ export const generatePdf = async (
           opts?.mode === 'preview' ? 'preview' : 'export', 
           opts?.descriptionMergeMode,
           opts?.remarksMergeMode,
-          opts?.manualMergedCells
+          opts?.manualMergedCells,
+          opts?.savedVisibleCols // 🆕 传递保存时的列显示设置
         );
       } else {
         const { generateOrderConfirmationPDF } = await import('@/utils/orderConfirmationPdfGenerator');
@@ -85,7 +87,8 @@ export const generatePdf = async (
           opts?.mode === 'preview', 
           opts?.descriptionMergeMode,
           opts?.remarksMergeMode,
-          opts?.manualMergedCells
+          opts?.manualMergedCells,
+          opts?.savedVisibleCols // 🆕 传递保存时的列显示设置
         );
       }
     }, { mode: opts?.mode === 'preview' ? 'preview' : 'export', operation: tab });
