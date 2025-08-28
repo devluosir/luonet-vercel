@@ -63,31 +63,31 @@ export const PackingForm: React.FC<PackingFormProps> = ({
   const handleDocumentTypeChange = (type: 'proforma' | 'packing' | 'both') => {
     const updates: Partial<typeof data> = { documentType: type };
     
-    // 根据文档类型自动调整显示选项和列控制状态
+    // 根据文档类型自动调整显示选项
     switch (type) {
       case 'proforma':
         updates.showPrice = true;
         updates.showWeightAndPackage = false;
         updates.showDimensions = false;
         updates.showHsCode = true;
-        // 同步列控制状态：显示价格列，隐藏重量包装列和尺寸列
-        setCols(['description', 'quantity', 'unit', 'hsCode', 'unitPrice', 'amount']);
+        // 🚫 移除全局列显示设置修改，避免影响其他单据
+        // setCols(['description', 'quantity', 'unit', 'hsCode', 'unitPrice', 'amount']);
         break;
       case 'packing':
         updates.showPrice = false;
         updates.showWeightAndPackage = true;
         updates.showDimensions = true;
         updates.showHsCode = true;
-        // 同步列控制状态：显示重量包装列和尺寸列，隐藏价格列
-        setCols(['description', 'quantity', 'unit', 'hsCode', 'netWeight', 'grossWeight', 'packageQty', 'dimensions']);
+        // 🚫 移除全局列显示设置修改，避免影响其他单据
+        // setCols(['description', 'quantity', 'unit', 'hsCode', 'netWeight', 'grossWeight', 'packageQty', 'dimensions']);
         break;
       case 'both':
         updates.showPrice = true;
         updates.showWeightAndPackage = true;
         updates.showDimensions = true;
         updates.showHsCode = true;
-        // 同步列控制状态：显示所有列
-        setCols(['description', 'quantity', 'unit', 'hsCode', 'unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty', 'dimensions']);
+        // 🚫 移除全局列显示设置修改，避免影响其他单据
+        // setCols(['description', 'quantity', 'unit', 'hsCode', 'unitPrice', 'amount', 'netWeight', 'grossWeight', 'packageQty', 'dimensions']);
         break;
     }
     

@@ -216,5 +216,6 @@ const pdfBlob = await generatePdf(
 - `src/utils/packingPdfGenerator.ts` - 支持保存时的列显示设置
 - `src/features/quotation/services/generate.service.ts` - 传递保存时的列显示设置
 - `src/components/history/PDFPreviewModal.tsx` - 使用保存时的列显示设置
+- `src/features/packing/components/PackingForm.tsx` - 移除全局列显示设置修改
 
 这个修复彻底解决了历史记录预览中列显示混乱的问题，确保用户看到的PDF与保存时的状态完全一致！🎯
