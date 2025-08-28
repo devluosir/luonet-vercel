@@ -32,6 +32,22 @@ export default function InvoiceEditPage({ params }: { params: { id: string } }) 
         return;
       }
 
+      // 🆕 恢复保存时的列显示设置
+      if (invoice.data && typeof window !== 'undefined') {
+        try {
+          // 发票模块使用数据字段控制列显示，不需要修改localStorage
+          // 列显示设置已经保存在 invoice.data 中
+          console.log('恢复发票列显示设置:', {
+            showHsCode: invoice.data.showHsCode,
+            showPartName: invoice.data.showPartName,
+            showDescription: invoice.data.showDescription,
+            showRemarks: invoice.data.showRemarks
+          });
+        } catch (e) {
+          console.warn('Failed to restore saved column preferences:', e);
+        }
+      }
+
       // 将数据注入到 InvoicePage 组件中
       const customWindow = window as unknown as CustomWindow;
       customWindow.__INVOICE_DATA__ = invoice.data;

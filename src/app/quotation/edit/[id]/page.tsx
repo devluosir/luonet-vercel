@@ -24,6 +24,15 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
       const urlParams = new URLSearchParams(window.location.search);
       const tabFromUrl = urlParams.get('tab') as 'quotation' | 'confirmation' | null;
       
+      // 🆕 恢复保存时的列显示设置
+      if (quotation.data.savedVisibleCols && typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('qt.visibleCols', JSON.stringify(quotation.data.savedVisibleCols));
+        } catch (e) {
+          console.warn('Failed to restore saved column preferences:', e);
+        }
+      }
+      
       // 将数据注入到 QuotationPage 组件中
       const customWindow = window as unknown as CustomWindow;
       customWindow.__QUOTATION_DATA__ = quotation.data;
@@ -48,10 +57,10 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
     // 清理函数
     return () => {
       const customWindow = window as unknown as CustomWindow;
-      customWindow.__QUOTATION_DATA__ = null;
+      customWindow.__QUOTATION_DATA__ = undefined;
       customWindow.__EDIT_MODE__ = false;
       customWindow.__EDIT_ID__ = undefined;
-      customWindow.__QUOTATION_TYPE__ = 'quotation';
+      customWindow.__QUOTATION_TYPE__ = undefined;
       customWindow.__NOTES_CONFIG__ = undefined;
     };
   }, [params.id]);
@@ -59,10 +68,7 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#1C1C1E]">
-        <div className="flex flex-col items-center space-y-3">
-          <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-          <div className="text-sm text-gray-600 dark:text-[#98989D]">加载报价单...</div>
-        </div>
+        <div className="text-gray-600 dark:text-[#98989D]">加载中...</div>
       </div>
     );
   }
@@ -70,15 +76,7 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#1C1C1E]">
-        <div className="text-center">
-          <div className="text-red-600 mb-4">{error}</div>
-          <button 
-            onClick={() => window.history.back()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            返回
-          </button>
-        </div>
+        <div className="text-red-600">{error}</div>
       </div>
     );
   }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPackingHistoryById } from '@/utils/packingHistory';
-import PackingPage from '../../page';
+import PackingPage from '@/features/packing/app/PackingPage';
 
 interface EditPackingPageProps {
   params: {
@@ -24,6 +24,15 @@ export default function EditPackingPage({ params }: EditPackingPageProps) {
       if (!historyItem) {
         setError('装箱单记录未找到');
         return;
+      }
+
+      // 🆕 恢复保存时的列显示设置
+      if (historyItem.data.savedVisibleCols && typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('pk.visibleCols', JSON.stringify(historyItem.data.savedVisibleCols));
+        } catch (e) {
+          console.warn('Failed to restore saved column preferences:', e);
+        }
       }
 
       // 将数据注入到全局变量中，供 PackingPage 使用

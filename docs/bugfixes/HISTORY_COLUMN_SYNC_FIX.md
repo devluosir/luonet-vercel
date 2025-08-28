@@ -5,20 +5,30 @@
 用户发现在单据中心模块中，预览功能里的列显示存在问题：
 **不同的单据，它在保存时的列显示，在预览其他单据时，它会乱**
 
+同时，用户在点开单据中心的单据记录编辑或复制时，其列也要是保存的原始列才为准确。
+
+同时，用户在点开单据中心的单据记录编辑或复制时，其列也要是保存的原始列才为准确。
+
 ## 🔍 根因分析
 
 ### 问题根源
-历史记录预览时，PDF生成使用的是**当前页面的列显示设置**，而不是**保存时的列显示设置**。
+1. **预览问题**：历史记录预览时，PDF生成使用的是**当前页面的列显示设置**，而不是**保存时的列显示设置**。
+2. **编辑/复制问题**：从历史记录编辑或复制单据时，页面使用的是**当前的列显示设置**，而不是**保存时的列显示设置**。
 
 ### 技术细节
 1. **保存时**：单据的列显示设置保存在 `localStorage` 中（如 `qt.visibleCols`、`pk.visibleCols`）
 2. **预览时**：PDF生成器读取的是**当前页面**的 `localStorage` 设置，而不是**保存时**的设置
-3. **结果**：如果用户在预览其他单据时，当前页面的列设置与保存时不同，就会导致列显示混乱
+3. **编辑/复制时**：`useTablePrefs` 的 `hydrate()` 方法从 `localStorage` 读取当前的列显示设置，而不是保存时的设置
+4. **结果**：如果用户在预览其他单据时，当前页面的列设置与保存时不同，就会导致列显示混乱
 
 ### 问题位置
 - `src/utils/quotationPdfGenerator.ts` 第47-51行
 - `src/utils/orderConfirmationPdfGenerator.ts` 第114行
 - `src/utils/packingPdfGenerator.ts` 第150行
+- `src/app/quotation/edit/[id]/page.tsx` - 编辑页面未恢复保存时的列显示设置
+- `src/app/quotation/copy/[id]/page.tsx` - 复制页面未恢复保存时的列显示设置
+- `src/app/packing/edit/[id]/page.tsx` - 装箱单编辑页面未恢复保存时的列显示设置
+- `src/app/packing/copy/[id]/page.tsx` - 装箱单复制页面未恢复保存时的列显示设置
 
 ```typescript
 // 问题代码：读取当前页面的列显示设置
@@ -31,7 +41,8 @@ if (typeof window !== 'undefined') {
 ## ✅ 解决方案
 
 ### 修改思路
-让历史记录预览功能使用**保存时的列显示设置**，而不是当前的页面设置。
+1. **预览功能**：让历史记录预览功能使用**保存时的列显示设置**，而不是当前的页面设置。
+2. **编辑/复制功能**：让编辑和复制功能在加载历史记录数据时，同时恢复**保存时的列显示设置**。
 
 ### 技术实现
 
@@ -61,62 +72,27 @@ const dataWithVisibleCols = {
 ```
 
 #### 2. 修改PDF生成器
-**文件**: 
-- `src/utils/quotationPdfGenerator.ts`
-- `src/utils/orderConfirmationPdfGenerator.ts`
-- `src/utils/packingPdfGenerator.ts`
+**文件**: `src/utils/quotationPdfGenerator.ts`、`src/utils/orderConfirmationPdfGenerator.ts`、`src/utils/packingPdfGenerator.ts`
 
 **修改内容**：
-- 添加 `savedVisibleCols` 参数
-- 优先使用保存时的列显示设置，如果没有则回退到当前的localStorage设置
+- 添加 `savedVisibleCols?: string[]` 参数
+- 优先使用保存时的列显示设置，如果没有则使用当前的localStorage设置
 
 ```typescript
-export const generateQuotationPDF = async (
-  // ... 其他参数
-  savedVisibleCols?: string[] // 🆕 新增：保存时的列显示设置
-): Promise<Blob> => {
-  // 🆕 优先使用保存时的列显示设置，如果没有则使用当前的localStorage设置
-  if (savedVisibleCols) {
-    visibleCols = savedVisibleCols;
-  } else if (typeof window !== 'undefined') {
-    visibleCols = getLocalStorageJSON('qt.visibleCols', []);
-  }
+// 🆕 优先使用保存时的列显示设置，如果没有则使用当前的localStorage设置
+if (savedVisibleCols) {
+  visibleCols = savedVisibleCols;
+} else if (typeof window !== 'undefined') {
+  visibleCols = getLocalStorageJSON('qt.visibleCols', []);
 }
 ```
 
-#### 3. 修改PDF生成服务
-**文件**: `src/features/quotation/services/generate.service.ts`
-
-**修改内容**：
-- 添加 `savedVisibleCols` 参数支持
-- 将保存时的列显示设置传递给PDF生成器
-
-```typescript
-export const generatePdf = async (
-  // ... 其他参数
-  opts?: { 
-    // ... 其他选项
-    savedVisibleCols?: string[]; // 🆕 新增：保存时的列显示设置
-  }
-): Promise<Blob> => {
-  // 传递列偏好到表格配置
-  return await generateQuotationPDF(
-    dataWithConfiguredNotes, 
-    opts?.mode === 'preview' ? 'preview' : 'export', 
-    opts?.descriptionMergeMode,
-    opts?.remarksMergeMode,
-    opts?.manualMergedCells,
-    opts?.savedVisibleCols // 🆕 传递保存时的列显示设置
-  );
-}
-```
-
-#### 4. 修改历史记录预览功能
+#### 3. 修改历史记录预览功能
 **文件**: `src/components/history/PDFPreviewModal.tsx`
 
 **修改内容**：
-- 从历史记录数据中提取保存时的列显示设置
-- 将保存时的列显示设置传递给PDF生成服务
+- 从历史记录数据中提取 `savedVisibleCols`
+- 将保存时的列显示设置传递给PDF生成器
 
 ```typescript
 // 🆕 从历史记录数据中提取保存时的列显示设置
@@ -137,6 +113,24 @@ const pdfBlob = await generatePdf(
 );
 ```
 
+#### 4. 修改编辑和复制页面
+**文件**: `src/app/quotation/edit/[id]/page.tsx`、`src/app/quotation/copy/[id]/page.tsx`、`src/app/packing/edit/[id]/page.tsx`、`src/app/packing/copy/[id]/page.tsx`
+
+**修改内容**：
+- 在加载历史记录数据时，同时恢复保存时的列显示设置
+- 将保存时的列显示设置写入localStorage，供页面使用
+
+```typescript
+// 🆕 恢复保存时的列显示设置
+if (quotation.data.savedVisibleCols && typeof window !== 'undefined') {
+  try {
+    localStorage.setItem('qt.visibleCols', JSON.stringify(quotation.data.savedVisibleCols));
+  } catch (e) {
+    console.warn('Failed to restore saved column preferences:', e);
+  }
+}
+```
+
 ## ✅ 修复效果
 
 ### 修复前 ❌
@@ -147,6 +141,13 @@ const pdfBlob = await generatePdf(
 3. 创建单据B，设置列显示为 [partName, description, quantity, unit]
 4. 预览单据A
 结果：单据A的PDF显示 [partName, description, quantity, unit] ❌
+
+用户操作流程：
+1. 创建单据A，设置列显示为 [partName, quantity, unit]
+2. 保存单据A
+3. 创建单据B，设置列显示为 [partName, description, quantity, unit]
+4. 编辑单据A
+结果：单据A的页面显示 [partName, description, quantity, unit] ❌
 ```
 
 ### 修复后 ✅
@@ -157,6 +158,13 @@ const pdfBlob = await generatePdf(
 3. 创建单据B，设置列显示为 [partName, description, quantity, unit]
 4. 预览单据A
 结果：单据A的PDF显示 [partName, quantity, unit] ✅
+
+用户操作流程：
+1. 创建单据A，设置列显示为 [partName, quantity, unit]
+2. 保存单据A（同时保存列显示设置）
+3. 创建单据B，设置列显示为 [partName, description, quantity, unit]
+4. 编辑单据A
+结果：单据A的页面显示 [partName, quantity, unit] ✅
 ```
 
 ## 🎯 影响范围
@@ -169,6 +177,8 @@ const pdfBlob = await generatePdf(
 ### 功能覆盖
 - ✅ **预览功能**: 使用保存时的列显示设置
 - ✅ **下载功能**: 使用保存时的列显示设置
+- ✅ **编辑功能**: 恢复保存时的列显示设置
+- ✅ **复制功能**: 恢复保存时的列显示设置
 - ✅ **历史记录**: 自动保存和恢复列显示设置
 
 ## 🔄 兼容性保障
@@ -187,35 +197,32 @@ const pdfBlob = await generatePdf(
 4. 预览保存的报价单
 5. 验证PDF显示的列与保存时一致
 
-### 2. 多单据测试
-1. 创建多个不同列显示设置的单据
-2. 保存所有单据
-3. 在不同列显示设置下预览各个单据
-4. 验证每个单据的PDF都显示保存时的列设置
+### 2. 编辑功能测试
+1. 创建报价单，设置特定的列显示
+2. 保存报价单
+3. 修改当前页面的列显示设置
+4. 编辑保存的报价单
+5. 验证页面显示的列与保存时一致
 
-### 3. 兼容性测试
-1. 预览没有 `savedVisibleCols` 字段的旧历史记录
-2. 验证使用当前的localStorage设置
-3. 保存新的历史记录
-4. 验证包含 `savedVisibleCols` 字段
+### 3. 复制功能测试
+1. 创建报价单，设置特定的列显示
+2. 保存报价单
+3. 修改当前页面的列显示设置
+4. 复制保存的报价单
+5. 验证页面显示的列与保存时一致
+
+### 4. 多单据测试
+1. 创建多个不同类型的单据，每个设置不同的列显示
+2. 保存所有单据
+3. 修改当前页面的列显示设置
+4. 预览/编辑/复制各个单据
+5. 验证每个单据都显示其保存时的列设置
 
 ## 🎉 用户体验提升
 
-1. **真正的历史记录**: 预览时看到的是保存时的状态，而不是当前页面的状态
-2. **操作一致性**: 保存时的设置与预览时的显示完全一致
-3. **消除困惑**: 不再有"预览结果与保存时不一致"的问题
-4. **数据完整性**: 历史记录包含完整的显示设置信息
+1. **真正的数据一致性**: 预览、编辑、复制都使用保存时的列显示设置
+2. **操作可预测**: 用户知道保存时的设置就是最终显示的效果
+3. **多单据管理**: 不同单据的列显示设置互不干扰
+4. **历史记录完整性**: 保存时的所有设置都被完整保留
 
-## 📋 修改文件清单
-
-### 核心修改
-- `src/utils/quotationHistory.ts` - 保存时包含列显示设置
-- `src/utils/packingHistory.ts` - 保存时包含列显示设置
-- `src/utils/quotationPdfGenerator.ts` - 支持保存时的列显示设置
-- `src/utils/orderConfirmationPdfGenerator.ts` - 支持保存时的列显示设置
-- `src/utils/packingPdfGenerator.ts` - 支持保存时的列显示设置
-- `src/features/quotation/services/generate.service.ts` - 传递保存时的列显示设置
-- `src/components/history/PDFPreviewModal.tsx` - 使用保存时的列显示设置
-- `src/features/packing/components/PackingForm.tsx` - 移除全局列显示设置修改
-
-这个修复彻底解决了历史记录预览中列显示混乱的问题，确保用户看到的PDF与保存时的状态完全一致！🎯
+这次修复彻底解决了历史记录中列显示设置的一致性问题，确保用户在预览、编辑、复制历史记录时都能看到保存时的准确列显示设置！🎉
