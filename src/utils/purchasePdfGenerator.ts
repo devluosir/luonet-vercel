@@ -329,6 +329,46 @@ function renderRichTextInPDF(
           });
           break;
           
+        case 's':
+        case 'strike':
+          // 删除线
+          Array.from(element.childNodes).forEach((child) => {
+            nodeY = processNode(child, x, nodeY);
+          });
+          break;
+          
+        case 'span':
+          // 处理span标签（可能包含样式）
+          const style = element.style;
+          if (style.fontSize) {
+            const fontSize = parseInt(style.fontSize);
+            const originalFontSize = doc.getFontSize();
+            doc.setFontSize(fontSize);
+            Array.from(element.childNodes).forEach((child) => {
+              nodeY = processNode(child, x, nodeY);
+            });
+            doc.setFontSize(originalFontSize);
+          } else if (style.color) {
+            const originalColor = doc.getTextColor();
+            // 将颜色字符串转换为RGB
+            const color = style.color;
+            if (color.startsWith('#')) {
+              const r = parseInt(color.slice(1, 3), 16);
+              const g = parseInt(color.slice(3, 5), 16);
+              const b = parseInt(color.slice(5, 7), 16);
+              doc.setTextColor(r, g, b);
+            }
+            Array.from(element.childNodes).forEach((child) => {
+              nodeY = processNode(child, x, nodeY);
+            });
+            doc.setTextColor(originalColor);
+          } else {
+            Array.from(element.childNodes).forEach((child) => {
+              nodeY = processNode(child, x, nodeY);
+            });
+          }
+          break;
+          
         case 'ul':
         case 'ol':
           // 列表
@@ -442,6 +482,10 @@ function renderSimpleRichText(
     .replace(/<strong[^>]*>|<\/strong>|<b[^>]*>|<\/b>/gi, '**') // 粗体标记
     .replace(/<em[^>]*>|<\/em>|<i[^>]*>|<\/i>/gi, '*') // 斜体标记
     .replace(/<u[^>]*>|<\/u>/gi, '_') // 下划线标记
+    .replace(/<s[^>]*>|<\/s>|<strike[^>]*>|<\/strike>/gi, '~~') // 删除线标记
+    .replace(/<span[^>]*style="[^"]*font-size:\s*([^;"]+)[^"]*"[^>]*>|<\/span>/gi, '') // 移除字体大小span
+    .replace(/<span[^>]*style="[^"]*color:\s*([^;"]+)[^"]*"[^>]*>|<\/span>/gi, '') // 移除颜色span
+    .replace(/<span[^>]*>|<\/span>/gi, '') // 移除其他span
     .replace(/<ul[^>]*>|<\/ul>|<ol[^>]*>|<\/ol>/gi, '') // 列表容器
     .replace(/<li[^>]*>|<\/li>/gi, '\n• ') // 列表项
     .replace(/<table[^>]*>|<\/table>/gi, '') // 表格容器
@@ -490,6 +534,19 @@ function renderSimpleRichText(
   }
   processedText += text.slice(lastIndex);
   
+  // 处理删除线文本
+  const strikethroughRegex = /~~(.*?)~~/g;
+  lastIndex = 0;
+  text = processedText;
+  processedText = '';
+  
+  while ((match = strikethroughRegex.exec(text)) !== null) {
+    processedText += text.slice(lastIndex, match.index);
+    processedText += `[STRIKETHROUGH]${match[1]}[/STRIKETHROUGH]`;
+    lastIndex = match.index + match[0].length;
+  }
+  processedText += text.slice(lastIndex);
+  
   // 按行处理文本
   const lines = processedText.split('\n');
   
@@ -533,7 +590,7 @@ function renderSimpleRichText(
       let currentLine = line;
       
       // 处理格式化标记
-      const formatRegex = /\[(BOLD|ITALIC|UNDERLINE)\](.*?)\[\/(BOLD|ITALIC|UNDERLINE)\]/g;
+      const formatRegex = /\[(BOLD|ITALIC|UNDERLINE|STRIKETHROUGH)\](.*?)\[\/(BOLD|ITALIC|UNDERLINE|STRIKETHROUGH)\]/g;
       let formatMatch;
       let textStart = 0;
       
@@ -568,6 +625,7 @@ function renderSimpleRichText(
         if (formatType === 'BOLD') {
           setCnFont(doc, 'normal');
         }
+        // 注意：删除线在PDF中可能不显示，但文本会正常显示
         
         currentX = startX;
         textStart = formatMatch.index + formatMatch[0].length;
