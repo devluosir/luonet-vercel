@@ -1041,7 +1041,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       }
     } else {
       // 当没有规格描述内容时，也要添加适当的间距
-      currentY += 3;
+      currentY += 8;
     }
 
     // 2. 付款条件
