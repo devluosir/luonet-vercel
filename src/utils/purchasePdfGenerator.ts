@@ -3,17 +3,17 @@ import { UserOptions } from 'jspdf-autotable';
 import { PurchaseOrderData } from '@/types/purchase';
 import { getBankInfo } from '@/utils/bankInfo';
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
+import { safeSetCnFont } from './pdf/ensureFont';
 
 /**
- * 统一字体设置工具 - 确保大小写一致且带兜底
+ * 统一字体设置工具 - 使用安全的字体设置函数
  */
 function setCnFont(doc: jsPDF, style: 'normal'|'bold'|'italic'|'bolditalic' = 'normal') {
-  const s = (style || 'normal').toLowerCase() as any;
   try {
-    doc.setFont('NotoSansSC', s);
+    safeSetCnFont(doc, style, 'export');
   } catch (e) {
     console.warn('[PDF] 中文字体设置失败，回退:', e);
-    doc.setFont('helvetica', s === 'bold' ? 'bold' : 'normal');
+    doc.setFont('helvetica', style === 'bold' ? 'bold' : 'normal');
   }
 }
 
@@ -248,6 +248,270 @@ function renderTableInPDF(
   return currentY + 5; // 返回表格底部位置，加上5mm间距
 }
 
+/** ---- 基础类型 ---- */
+type RGB = [number, number, number];
+
+interface PdfInlineStyle {
+  fontName?: string;              // e.g. 'Helvetica' / 'PingFangSC'，你项目里 setCnFont 时要保证已注册
+  fontBold?: boolean;
+  fontItalic?: boolean;
+  underline?: boolean;
+  strike?: boolean;
+  fontSize?: number;              // px 或 pt。下方统一用 jsPDF 的单位（默认 pt）
+  color?: RGB;                    // [r,g,b]
+}
+
+interface LayoutOptions {
+  x: number;             // 左起始
+  y: number;             // 顶部起始
+  maxWidth: number;      // 可排版区域宽度
+  lineHeight: number;    // 行高（推荐 = 字号 * 1.4）
+  paragraphSpacing?: number; // 段落间距，默认 0
+}
+
+/** ---- 工具：样式应用与测量 ---- */
+function applyStyle(doc: jsPDF, s: PdfInlineStyle) {
+  const name = s.fontName || 'Helvetica';
+  const style = (s.fontBold ? 'bold' : 'normal') + (s.fontItalic ? 'italic' : '');
+  // jsPDF 里组合样式通常是 'normal' | 'bold' | 'italic' | 'bolditalic'
+  const styleName =
+    s.fontBold && s.fontItalic ? 'bolditalic' :
+    s.fontBold ? 'bold' :
+    s.fontItalic ? 'italic' : 'normal';
+
+  doc.setFont(name, styleName as any);
+  doc.setFontSize(s.fontSize || 9);
+  const [r, g, b] = s.color ?? [0, 0, 0];
+  doc.setTextColor(r, g, b);
+}
+
+function textWidth(doc: jsPDF, text: string, s: PdfInlineStyle): number {
+  applyStyle(doc, s);
+  return doc.getTextWidth(text);
+}
+
+/** ---- 工具：下划线 / 删除线绘制 ---- */
+function drawDecoration(
+  doc: jsPDF, 
+  text: string,
+  x: number,
+  y: number,
+  s: PdfInlineStyle,
+  baseline: 'top' | 'alphabetic',
+) {
+  if (!s.underline && !s.strike) return;
+
+  applyStyle(doc, s);
+  const w = doc.getTextWidth(text);
+  const fs = s.fontSize || 9;
+
+  // 以绘制时的 baseline 决定线条位置；这里假定我们用 'top'（见下方 render 时的选项）
+  // 如果你项目中使用默认基线（alphabetic），可以适当调整偏移
+  const thickness = Math.max(0.5, fs * 0.06); // 线粗
+  const underlineOffset = fs * 0.15;          // 下划线距顶部偏移
+  const strikeOffset = fs * 0.45;             // 删除线距顶部偏移
+
+  const yOffsetTop = baseline === 'top' ? y : y - fs; // 若 baseline=alphabetic，可换算
+
+  if (s.underline) {
+    const uy = yOffsetTop + fs - underlineOffset;
+    doc.setLineWidth(thickness);
+    doc.line(x, uy, x + w, uy);
+  }
+  if (s.strike) {
+    const sy = yOffsetTop + strikeOffset;
+    doc.setLineWidth(thickness);
+    doc.line(x, sy, x + w, sy);
+  }
+}
+
+/** ---- 将颜色字符串解析为 RGB ---- */
+function parseColorToRGB(color: string | undefined): RGB | undefined {
+  if (!color) return undefined;
+  // 简单处理：#rrggbb / rgb(r,g,b) / 常见颜色名（可按需扩展）
+  const named: Record<string, RGB> = {
+    red: [255, 0, 0],
+    blue: [0, 0, 255],
+    green: [0, 128, 0],
+    black: [0, 0, 0],
+    white: [255, 255, 255],
+    gray: [128, 128, 128],
+    grey: [128, 128, 128],
+    yellow: [255, 255, 0],
+    orange: [255, 165, 0],
+    purple: [128, 0, 128],
+    // ... 按需扩展
+  };
+  if (color.startsWith('#') && (color.length === 7 || color.length === 4)) {
+    const hex = color.length === 4
+      ? '#' + color.slice(1).split('').map(c => c + c).join('')
+      : color;
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return [r, g, b];
+  }
+  if (color.startsWith('rgb')) {
+    const m = color.match(/rgb\(\s*(\d+)[^\d]+(\d+)[^\d]+(\d+)\s*\)/i);
+    if (m) return [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)];
+  }
+  const lower = color.toLowerCase();
+  if (named[lower]) return named[lower];
+  return undefined;
+}
+
+/** ---- 从 DOM 节点提取内联 runs（仅关注内联：b, i, u, s, font color, span style 等） ---- */
+interface TextRun {
+  text: string;
+  style: PdfInlineStyle;
+}
+interface Paragraph {
+  runs: TextRun[];
+  isListItem?: boolean; // 如需列表渲染可扩展
+}
+
+function cloneStyle(base: PdfInlineStyle): PdfInlineStyle {
+  return { ...base };
+}
+
+function isBlockElement(tag: string) {
+  return ['p', 'div', 'li', 'ul', 'ol', 'table', 'tr', 'td', 'th', 'h1','h2','h3','h4','h5','h6'].includes(tag);
+}
+
+function collectParagraphsFromHTML(html: string, baseStyle: PdfInlineStyle): Paragraph[] {
+  // 用一个临时容器解析（在浏览器端可用；若服务端需 JSDOM，自行注入）
+  const container = document.createElement('div');
+  container.innerHTML = html;
+
+  const paragraphs: Paragraph[] = [];
+  let current: Paragraph = { runs: [] };
+
+  function flushParagraph() {
+    if (current.runs.length) {
+      paragraphs.push(current);
+      current = { runs: [] };
+    }
+  }
+
+  function walk(node: Node, inherited: PdfInlineStyle) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const raw = (node.textContent || '').replace(/\r/g, '');
+      if (raw.length) {
+        current.runs.push({ text: raw, style: cloneStyle(inherited) });
+      }
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+
+    // 块级元素：结束当前段落，开始新段
+    if (isBlockElement(tag)) {
+      // 段落换行：先冲掉已有的
+      flushParagraph();
+      // 进入块内部
+      Array.from(el.childNodes).forEach(child => walk(child, inherited));
+      // 块结束再 flush（除非内部已经产生内容）
+      flushParagraph();
+      return;
+    }
+
+    // 处理内联样式
+    const nextStyle = cloneStyle(inherited);
+    if (tag === 'b' || tag === 'strong') nextStyle.fontBold = true;
+    if (tag === 'i' || tag === 'em') nextStyle.fontItalic = true;
+    if (tag === 'u') nextStyle.underline = true;
+    if (tag === 's' || tag === 'strike' || tag === 'del') nextStyle.strike = true;
+    if (tag === 'font') {
+      const color = (el.getAttribute('color') || '').trim();
+      const rgb = parseColorToRGB(color);
+      if (rgb) nextStyle.color = rgb;
+    }
+    // style 属性里的 color
+    const inlineColor = el.style?.color;
+    if (inlineColor) {
+      const rgb = parseColorToRGB(inlineColor);
+      if (rgb) nextStyle.color = rgb;
+    }
+
+    if (tag === 'br') {
+      // 用换行符标记，让后续布局阶段处理换行
+      current.runs.push({ text: '\n', style: cloneStyle(nextStyle) });
+      return;
+    }
+
+    Array.from(el.childNodes).forEach(child => walk(child, nextStyle));
+  }
+
+  Array.from(container.childNodes).forEach(n => walk(n, baseStyle));
+  // 收尾
+  flushParagraph();
+  return paragraphs;
+}
+
+/** ---- 将一个段落按"逐词布局，超宽换行"的方式绘制到 PDF ---- */
+function renderParagraphInline(
+  doc: jsPDF,
+  para: Paragraph,
+  opt: LayoutOptions,
+) {
+  const baseline: 'top' | 'alphabetic' = 'top'; // 推荐 'top'，便于自己控制行高
+  let x = opt.x;
+  let y = opt.y;
+  const right = opt.x + opt.maxWidth;
+
+  for (const run of para.runs) {
+    // 将 run.text 按"空白与非空白"分词；保留空格与换行
+    const tokens = run.text.split(/(\s+)/); // ["Hello", " ", "world", ...]
+    for (const tk of tokens) {
+      if (!tk) continue;
+
+      // 显式换行符
+      if (tk.includes('\n')) {
+        const parts = tk.split('\n');
+        for (let i = 0; i < parts.length; i++) {
+          const chunk = parts[i];
+          if (chunk) {
+            const w = textWidth(doc, chunk, run.style);
+            // 如果这一行放不下，先换行
+            if (x + w > right) {
+              x = opt.x;
+              y += opt.lineHeight;
+            }
+            applyStyle(doc, run.style);
+            doc.text(chunk, x, y, { baseline });
+            drawDecoration(doc, chunk, x, y, run.style, baseline);
+            x += w;
+          }
+          // 除了最后一个 part，其余都意味着一个换行
+          if (i < parts.length - 1) {
+            x = opt.x;
+            y += opt.lineHeight;
+          }
+        }
+        continue;
+      }
+
+      const w = textWidth(doc, tk, run.style);
+
+      // 软换行：本词太长则折到下一行
+      if (x + w > right && x !== opt.x) {
+        x = opt.x;
+        y += opt.lineHeight;
+      }
+
+      applyStyle(doc, run.style);
+      doc.text(tk, x, y, { baseline });
+      drawDecoration(doc, tk, x, y, run.style, baseline);
+      x += w;
+    }
+  }
+
+  // 返回绘制后的 y，用于上层叠加段落间距
+  return y;
+}
+
 /**
  * 在PDF中渲染富文本内容
  */
@@ -267,195 +531,47 @@ function renderRichTextInPDF(
     return renderSimpleRichText(doc, htmlText, startX, startY, maxWidth, checkAndAddPage);
   }
   
-  // 客户端环境，使用DOM解析
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = htmlText;
+  console.log('PDF生成器接收到的HTML:', htmlText);
   
-  // 递归处理DOM节点
-  const processNode = (node: Node, x: number, y: number): number => {
-    let nodeY = y;
-    
-    if (node.nodeType === Node.TEXT_NODE) {
-      // 处理文本节点
-      const text = node.textContent || '';
-      if (text.trim()) {
-        const wrappedText = doc.splitTextToSize(text, maxWidth);
-        nodeY = checkAndAddPage(nodeY, wrappedText.length * 4);
-        wrappedText.forEach((line: string) => {
-          doc.text(line, x, nodeY);
-          nodeY += 4;
-        });
-      }
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      const element = node as HTMLElement;
-      const tagName = element.tagName.toLowerCase();
-      
-      switch (tagName) {
-        case 'br':
-          nodeY += 6; // 换行
-          break;
-          
-        case 'p':
-          // 段落
-          nodeY += 4; // 段落间距
-          Array.from(element.childNodes).forEach((child) => {
-            nodeY = processNode(child, x, nodeY);
-          });
-          nodeY += 4; // 段落间距
-          break;
-          
-        case 'strong':
-        case 'b':
-          // 粗体
-          setCnFont(doc, 'bold');
-          Array.from(element.childNodes).forEach((child) => {
-            nodeY = processNode(child, x, nodeY);
-          });
-          setCnFont(doc, 'normal');
-          break;
-          
-        case 'em':
-        case 'i':
-          // 斜体（在PDF中可能显示为正常字体）
-          Array.from(element.childNodes).forEach((child) => {
-            nodeY = processNode(child, x, nodeY);
-          });
-          break;
-          
-        case 'u':
-          // 下划线（在PDF中可能不显示）
-          Array.from(element.childNodes).forEach((child) => {
-            nodeY = processNode(child, x, nodeY);
-          });
-          break;
-          
-        case 's':
-        case 'strike':
-          // 删除线
-          Array.from(element.childNodes).forEach((child) => {
-            nodeY = processNode(child, x, nodeY);
-          });
-          break;
-          
-        case 'span':
-          // 处理span标签（可能包含样式）
-          const style = element.style;
-          if (style.fontSize) {
-            const fontSize = parseInt(style.fontSize);
-            const originalFontSize = doc.getFontSize();
-            doc.setFontSize(fontSize);
-            Array.from(element.childNodes).forEach((child) => {
-              nodeY = processNode(child, x, nodeY);
-            });
-            doc.setFontSize(originalFontSize);
-          } else if (style.color) {
-            const originalColor = doc.getTextColor();
-            // 将颜色字符串转换为RGB
-            const color = style.color;
-            if (color.startsWith('#')) {
-              const r = parseInt(color.slice(1, 3), 16);
-              const g = parseInt(color.slice(3, 5), 16);
-              const b = parseInt(color.slice(5, 7), 16);
-              doc.setTextColor(r, g, b);
-            }
-            Array.from(element.childNodes).forEach((child) => {
-              nodeY = processNode(child, x, nodeY);
-            });
-            doc.setTextColor(originalColor);
-          } else {
-            Array.from(element.childNodes).forEach((child) => {
-              nodeY = processNode(child, x, nodeY);
-            });
-          }
-          break;
-          
-        case 'ul':
-        case 'ol':
-          // 列表
-          nodeY += 4;
-          Array.from(element.childNodes).forEach((child) => {
-            if (child.nodeType === Node.ELEMENT_NODE && (child as HTMLElement).tagName.toLowerCase() === 'li') {
-              const listItem = child as HTMLElement;
-              const bullet = tagName === 'ul' ? '• ' : '1. ';
-              const text = bullet + (listItem.textContent || '');
-              const wrappedText = doc.splitTextToSize(text, maxWidth - 10);
-              nodeY = checkAndAddPage(nodeY, wrappedText.length * 4);
-              wrappedText.forEach((line: string) => {
-                doc.text(line, x + 10, nodeY);
-                nodeY += 4;
-              });
-              nodeY += 2;
-            }
-          });
-          break;
-          
-        case 'table':
-          // 表格
-          const tableRows = element.querySelectorAll('tr');
-          const rowHeight = 6;
-          const totalHeight = tableRows.length * rowHeight;
-          nodeY = checkAndAddPage(nodeY, totalHeight);
-          
-          tableRows.forEach((row, rowIndex) => {
-            const cells = row.querySelectorAll('td, th');
-            const cellWidth = maxWidth / cells.length;
-            
-            cells.forEach((cell, cellIndex) => {
-              const cellX = x + (cellIndex * cellWidth);
-              const cellText = cell.textContent || '';
-              const wrappedCellText = doc.splitTextToSize(cellText, cellWidth - 2);
-              
-              // 绘制单元格边框
-              doc.setDrawColor(0, 0, 0);
-              doc.setLineWidth(0.1);
-              doc.rect(cellX, nodeY, cellWidth, rowHeight);
-              
-              // 绘制文本
-              wrappedCellText.forEach((line: string, lineIndex: number) => {
-                if (lineIndex === 0) {
-                  doc.text(line, cellX + 1, nodeY + 3);
-                }
-              });
-            });
-            nodeY += rowHeight;
-          });
-          break;
-          
-        case 'img':
-          // 图片（在PDF中可能不显示，只显示占位符）
-          const imgText = '[图片]';
-          const wrappedImgText = doc.splitTextToSize(imgText, maxWidth);
-          nodeY = checkAndAddPage(nodeY, wrappedImgText.length * 4);
-          wrappedImgText.forEach((line: string) => {
-            doc.text(line, x, nodeY);
-            nodeY += 4;
-          });
-          break;
-          
-        case 'a':
-          // 链接（在PDF中显示为普通文本）
-          Array.from(element.childNodes).forEach((child) => {
-            nodeY = processNode(child, x, nodeY);
-          });
-          break;
-          
-        default:
-          // 其他元素，递归处理子节点
-          Array.from(element.childNodes).forEach((child) => {
-            nodeY = processNode(child, x, nodeY);
-          });
-      }
-    }
-    
-    return nodeY;
+  // 使用新的"先布局、后绘制"方案
+  const baseStyle: PdfInlineStyle = {
+    fontName: 'NotoSansSC',   // 使用项目中的中文字体
+    fontSize: 9,              // 与PDF其他部分保持一致的字号
+    color: [0, 0, 0],
+    fontBold: false,
+    fontItalic: false,
+    underline: false,
+    strike: false,
   };
   
-  // 处理所有子节点
-  Array.from(tempDiv.childNodes).forEach((child) => {
-    currentY = processNode(child, startX, currentY);
-  });
+  // 1) 解析 HTML -> 段落（每段包含 runs）
+  const paragraphs = collectParagraphsFromHTML(htmlText, baseStyle);
+  console.log('解析出的段落数量:', paragraphs.length);
   
-  return currentY + 5; // 返回底部位置，加上5mm间距
+  // 2) 逐段排版绘制（不因样式变化换行）
+  const fs = baseStyle.fontSize || 9;
+  const lh = Math.round(fs * 1.4); // 增加行高倍数，确保行间距足够
+  const paragraphSpacing = 5; // 添加适当的段落间距
+  
+  for (const p of paragraphs) {
+    console.log('处理段落，runs数量:', p.runs.length);
+    const lastY = renderParagraphInline(doc, p, {
+      x: startX,
+      y: currentY,
+      maxWidth,
+      lineHeight: lh,
+      paragraphSpacing,
+    });
+    currentY = lastY + paragraphSpacing; // 添加段落间距
+  }
+  
+  // 恢复默认样式，确保后续渲染不受影响
+  setCnFont(doc, 'normal');
+  doc.setFontSize(9); // 恢复到PDF其他部分使用的字号
+  doc.setTextColor(0, 0, 0);
+  
+  // 在富文本内容结束后添加额外的间距，确保与下一个区域有合适的距离
+  return currentY + 8;
 }
 
 /**
@@ -485,6 +601,7 @@ function renderSimpleRichText(
     .replace(/<s[^>]*>|<\/s>|<strike[^>]*>|<\/strike>/gi, '~~') // 删除线标记
     .replace(/<span[^>]*style="[^"]*font-size:\s*([^;"]+)[^"]*"[^>]*>|<\/span>/gi, '') // 移除字体大小span
     .replace(/<span[^>]*style="[^"]*color:\s*([^;"]+)[^"]*"[^>]*>|<\/span>/gi, '') // 移除颜色span
+    .replace(/<font[^>]*color="[^"]*"[^>]*>|<\/font>/gi, '') // 移除font标签的颜色
     .replace(/<span[^>]*>|<\/span>/gi, '') // 移除其他span
     .replace(/<ul[^>]*>|<\/ul>|<ol[^>]*>|<\/ol>/gi, '') // 列表容器
     .replace(/<li[^>]*>|<\/li>/gi, '\n• ') // 列表项
@@ -894,13 +1011,16 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     setCnFont(doc, 'normal');
     doc.setTextColor(0, 0, 0);
     doc.text('供你们参考；', contentMargin + doc.getTextWidth('客户确认订单时对于项目的规格描述'), currentY);
-    currentY += 5; // 为"供你们参考；"这句话添加行间距
+    currentY += 2; // 减少间距，为富文本内容留出更紧凑的空间
 
     // 项目规格描述（支持富文本格式）
     const specText = data.projectSpecification || '';
     if (specText.trim()) {
+      console.log('规格描述文本:', specText); // 调试信息
+      
       // 检查是否包含HTML标签，如果是则渲染为富文本
       if (specText.includes('<') && specText.includes('>')) {
+        console.log('使用富文本渲染'); // 调试信息
         currentY = renderRichTextInPDF(doc, specText, contentMargin, currentY, contentMaxWidth, checkAndAddPage);
       } else if (specText.includes('\t')) {
         // 检查是否包含制表符，如果是则渲染为表格
@@ -1019,7 +1139,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       currentY += 4;
     });
 
-    currentY += 10;
+    currentY += 8;
 
     // 结尾确认语和印章
     const confirmationText = '上述订单，烦请确认！';

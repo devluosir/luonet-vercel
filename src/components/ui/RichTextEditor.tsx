@@ -27,7 +27,41 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   // 监听内容变化
   const handleInput = () => {
     if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
+      const html = editorRef.current.innerHTML;
+      onChange(html);
+      
+      // 开发环境下调试HTML结构
+      if (process.env.NODE_ENV === 'development') {
+        console.log('富文本编辑器HTML:', html);
+        console.log('富文本编辑器textContent:', editorRef.current.textContent);
+        
+        // 检查是否有颜色样式
+        const spans = editorRef.current.querySelectorAll('span[style*="color"]');
+        console.log('找到带颜色的span数量:', spans.length);
+        spans.forEach((span, index) => {
+          console.log(`Span ${index} 颜色样式:`, span.getAttribute('style'));
+          console.log(`Span ${index} 文本内容:`, span.textContent);
+          console.log(`Span ${index} 完整HTML:`, span.outerHTML);
+        });
+        
+        // 检查font标签的颜色
+        const fonts = editorRef.current.querySelectorAll('font[color]');
+        console.log('找到带颜色的font数量:', fonts.length);
+        fonts.forEach((font, index) => {
+          console.log(`Font ${index} 颜色属性:`, font.getAttribute('color'));
+          console.log(`Font ${index} 文本内容:`, font.textContent);
+        });
+        
+        // 检查所有子元素
+        const allElements = editorRef.current.querySelectorAll('*');
+        console.log('所有元素数量:', allElements.length);
+        allElements.forEach((el, index) => {
+          const htmlEl = el as HTMLElement;
+          if (htmlEl.style.color || el.getAttribute('color')) {
+            console.log(`带颜色的元素 ${index}:`, el.tagName, '颜色:', htmlEl.style.color || el.getAttribute('color'), '文本:', el.textContent);
+          }
+        });
+      }
     }
   };
 
@@ -39,19 +73,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     // 特殊处理某些命令
     switch (command) {
       case 'fontSize':
-        // 字体大小需要特殊处理
-        document.execCommand('fontSize', false, '7'); // 先设置为7
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          const span = document.createElement('span');
-          span.style.fontSize = value || '14px';
-          range.surroundContents(span);
-        }
+        // 字体大小处理 - 暂时禁用，保持默认字体大小
+        console.log('字体大小功能已禁用，使用默认字体大小');
         break;
       case 'foreColor':
-        // 文本颜色需要特殊处理
+        // 文本颜色处理 - 直接使用execCommand，确保HTML结构简单
         document.execCommand('foreColor', false, value);
+        console.log('设置颜色样式:', value); // 调试信息
         break;
       default:
         // 其他命令正常执行
@@ -187,8 +215,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               </button>
             </div>
 
-            {/* 字体大小 */}
-            <select
+            {/* 字体大小 - 暂时隐藏 */}
+            {/* <select
               onChange={(e) => execCommand('fontSize', e.target.value)}
               className="px-1 py-0.5 text-xs bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors duration-200"
             >
@@ -200,7 +228,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               <option value="24px">24px</option>
               <option value="28px">28px</option>
               <option value="32px">32px</option>
-            </select>
+            </select> */}
 
             {/* 文本颜色 */}
             <div className="flex gap-0.5">
