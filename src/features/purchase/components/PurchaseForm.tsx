@@ -5,7 +5,6 @@ import { BankInfoSection } from '@/components/purchase/BankInfoSection';
 import PurchaseBaseInfo from '@/components/purchase/PurchaseBaseInfo';
 import { usePurchaseStore } from '../state/purchase.store';
 import { useAutoResizeTextareas } from '@/hooks/useAutoResizeTextareas';
-import { RichTextEditor } from '@/components/ui/RichTextEditor';
 
 export default function PurchaseForm() {
   const { 
@@ -23,11 +22,12 @@ export default function PurchaseForm() {
   const deliveryInfoRef = useRef<HTMLTextAreaElement>(null);
   const orderNumbersRef = useRef<HTMLTextAreaElement>(null);
   const paymentTermsRef = useRef<HTMLTextAreaElement>(null);
+  const projectSpecificationRef = useRef<HTMLTextAreaElement>(null);
 
-  // 使用统一的textarea自动高度调整Hook（排除规格描述，因为使用CSVTextarea）
+  // 使用统一的textarea自动高度调整Hook（包含规格描述）
   useAutoResizeTextareas(
-    [deliveryInfoRef, orderNumbersRef, paymentTermsRef],
-    [data.deliveryInfo, data.orderNumbers, data.paymentTerms]
+    [deliveryInfoRef, orderNumbersRef, paymentTermsRef, projectSpecificationRef],
+    [data.deliveryInfo, data.orderNumbers, data.paymentTerms, data.projectSpecification]
   );
 
   // 确保客户端渲染
@@ -155,11 +155,13 @@ export default function PurchaseForm() {
                   客户确认订单时对于项目的<strong className="text-blue-600 font-bold">规格描述</strong>供你们参考：
                 </span>
               </div>
-              <RichTextEditor
+              <textarea
+                ref={projectSpecificationRef}
+                className={`${inputClass} resize-none overflow-hidden`}
+                rows={4}
                 value={data.projectSpecification}
-                onChange={(value) => updateData({ projectSpecification: value })}
-                placeholder="项目规格描述（支持富文本编辑，可插入表格、图片等）"
-                className="w-full"
+                onChange={e => updateData({ projectSpecification: e.target.value })}
+                placeholder="项目规格描述（可多行输入）"
               />
             </div>
 

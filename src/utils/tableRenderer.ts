@@ -315,13 +315,11 @@ function measureTable(doc: jsPDF, model: TableModel, maxWidth: number, base: Pdf
     const ex = expand(row);
     ex.forEach(({cell, start, span}) => {
       const fs = cell.style.fontSize ?? (base.fontSize || 12);
-      const lh = Math.round(fs * 1.25);                   // 更紧凑
-      const pad = cell.style.padding ?? 1.5;
-      const cellW = final.slice(start, start + span).reduce((a,b)=>a+b, 0) - pad * 2;
+      const cellW = final.slice(start, start + span).reduce((a,b)=>a+b, 0) - CELL_PADDING_X * 2;
 
-      const lines = layoutLines(doc, cell.text, cellW, cell.style, lh);
-      const h = Math.max(lh, lines.length * lh) + pad * 2;
-      rowH = Math.max(rowH, h);
+      // 使用新的行高计算函数
+      const cellH = calcCellHeight(doc, cell.text, cellW, fs);
+      rowH = Math.max(rowH, cellH);
     });
     rows[rIdx].height = rowH;
   });
@@ -342,21 +340,27 @@ function drawCellBox(doc: jsPDF, x: number, y: number, w: number, h: number, s: 
 }
 
 function drawCellText(doc: jsPDF, text: string, x: number, y: number, w: number, h: number, s: CellStyle) {
-  const pad = s.padding ?? 1.5;
+  const pad = CELL_PADDING_X;  // 使用统一的6px内边距
   const fs = s.fontSize ?? 12;
-  const lh = Math.round(fs * 1.25);
+  const lh = fs * LINE_HEIGHT;  // 使用统一的1.35倍行高
   const innerW = w - pad * 2;
   applyStyle(doc, s);
 
   const lines = layoutLines(doc, text, innerW, s, lh);
   const halign = s.halign || 'left';
-  const valign = s.valign || 'middle';
+  const valign = s.valign || 'top';  // 默认顶部对齐
 
-  let baseY = y + pad;                        // 顶部基线
-  const contentH = lines.length * lh;
-  if (valign === 'middle') baseY = y + (h - contentH) / 2;
-  else if (valign === 'bottom') baseY = y + h - pad - contentH;
+  // 顶部对齐：文本第一行在 y + pad + fontSize 处开始
+  let baseY = y + pad + fs;
+  if (valign === 'middle') {
+    const contentH = lines.length * lh;
+    baseY = y + (h - contentH) / 2 + fs;
+  } else if (valign === 'bottom') {
+    const contentH = lines.length * lh;
+    baseY = y + h - pad - contentH + fs;
+  }
 
+  // 逐行写入，每行都递增行高
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     let tx = x + pad;
@@ -409,4 +413,56 @@ export function renderTableInPDF(
     y += rowH;
   }
   return y;
+}
+
+// 统一参数
+const CELL_PADDING_X = 6;
+const CELL_PADDING_Y = 6;
+const LINE_HEIGHT = 1.35;
+
+// —— 根据文本宽度拆行并计算高度（使用你项目中 doc 的 splitTextToSize 和字体大小）
+export function calcCellHeight(
+  doc: jsPDF,
+  text: string,
+  maxContentWidth: number,
+  fontSize = 9
+): number {
+  const t = (text ?? '').toString();
+  const lines = doc.splitTextToSize(t, Math.max(0, maxContentWidth));
+  const baseH = lines.length * fontSize * LINE_HEIGHT;
+  return Math.ceil(baseH + CELL_PADDING_Y * 2);
+}
+
+// —— 绘制单元格（顶部对齐 + 文本换行 + 轻量内边距）
+export function drawCell(
+  doc: jsPDF,
+  text: string,
+  x: number,
+  y: number,
+  cellWidth: number,
+  cellHeight: number,
+  options: { align?: 'left'|'center'|'right'|'justify'; fontSize?: number; textColor?: [number,number,number] } = {}
+) {
+  const fontSize = options.fontSize ?? 9;
+  const align = options.align ?? 'left';
+
+  // 边框
+  doc.rect(x, y, cellWidth, cellHeight); // 你现有的边框绘制方式
+
+  // 文本区域
+  const contentX = x + CELL_PADDING_X;
+  const contentW = cellWidth - CELL_PADDING_X * 2;
+
+  // 顶部对齐：文本第一行在 y + CELL_PADDING_Y 处开始
+  const startY = y + CELL_PADDING_Y + fontSize; // 按你的 doc.text 基线规则微调
+  doc.setFontSize(fontSize);
+  if (options.textColor) doc.setTextColor(...options.textColor);
+
+  const lines = doc.splitTextToSize((text ?? '').toString(), Math.max(0, contentW));
+  // 多行写入
+  let cursorY = startY;
+  for (const line of lines) {
+    doc.text(line, contentX, cursorY, { align });
+    cursorY += fontSize * LINE_HEIGHT;
+  }
 }

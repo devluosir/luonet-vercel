@@ -151,30 +151,13 @@
 - 响应式设计
 - 无障碍访问支持
 
-## 测试
+## 注意
 
-可以通过访问 `/test-rich-text` 页面来测试富文本编辑器功能：
+⚠️ **此功能已被移除**
 
-1. 启动开发服务器：`npm run dev`
-2. 访问：`http://localhost:3000/test-rich-text`
-3. 测试各种功能：
-   - 文本格式化
-   - 插入表格
-   - 插入图片和链接
-   - 列表功能
-   - PDF预览
-
-## 未来改进
-
-1. **更多格式**：支持更多文本格式选项
-2. **图片上传**：支持本地图片上传
-3. **表格编辑**：支持表格单元格编辑
-4. **模板功能**：提供常用内容模板
-5. **协作编辑**：支持多人协作编辑
+根据项目需求，富文本编辑器功能已被移除，采购模块的规格描述字段现在使用普通的多行文本框。
 
 ## 相关文件
 
-- `src/components/ui/RichTextEditor.tsx` - 富文本编辑器组件
-- `src/features/purchase/components/PurchaseForm.tsx` - 采购表单集成
-- `src/utils/purchasePdfGenerator.ts` - PDF渲染支持
-- `src/app/test-rich-text/page.tsx` - 测试页面
+- `src/features/purchase/components/PurchaseForm.tsx` - 采购表单（使用普通textarea）
+- `src/utils/purchasePdfGenerator.ts` - PDF渲染支持（普通文本，蓝色字体）
