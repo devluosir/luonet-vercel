@@ -114,9 +114,9 @@ export default function PurchaseForm() {
         />
 
         {/* 主体内容 - 优化布局 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex flex-col md:flex-row gap-4">
           {/* 左侧列 */}
-          <div className="space-y-6">
+          <div className="flex-1 space-y-6 pr-6 bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded-xl p-4">
             {/* 1. 供货范围和成交价格 */}
             <div>
               <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">1. 供货范围和成交价格</h3>
@@ -186,7 +186,7 @@ export default function PurchaseForm() {
                   onClick={toggleBank}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                     data.showBank 
-                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700'
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-gray-700'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                   title={data.showBank ? '隐藏开票资料' : '显示开票资料'}
@@ -218,8 +218,10 @@ export default function PurchaseForm() {
             </div>
           </div>
 
+
+
           {/* 右侧列 */}
-          <div className="space-y-6">
+          <div className="flex-1 space-y-6 pl-6 bg-white dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded-xl p-4">
             {/* 4. 关于交货 */}
             <div>
               <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">4. 关于交货</h3>

@@ -160,7 +160,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       const labelWidth = doc.getTextWidth(item.label);
       
       setCnFont(doc, 'normal');
-      doc.setTextColor(0, 0, 255);
+      doc.setTextColor(0, 0, 0);
       doc.text(item.value || 'TBD', leftMargin + labelWidth + 2, leftY);
       leftY += 5;
     });
@@ -174,12 +174,16 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       setCnFont(doc, 'bold');
       doc.setTextColor(0, 0, 0);
       doc.text(item.label, colonX - 2, rightY, { align: 'right' });
-      doc.text(':', colonX, rightY);
       
       setCnFont(doc, 'normal');
-      doc.setTextColor(0, 0, 255);
+      // Order No. 使用红色，其他使用黑色
+      if (item.label === 'Order No.:') {
+        doc.setTextColor(255, 0, 0); // 红色
+      } else {
+        doc.setTextColor(0, 0, 0); // 黑色
+      }
       const valueText = item.value || 'TBD';
-      doc.text(valueText, colonX + 3, rightY);
+      doc.text(valueText, colonX - 1, rightY);
       rightY += 5;
     });
 
