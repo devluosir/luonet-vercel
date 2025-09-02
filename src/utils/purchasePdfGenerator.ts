@@ -318,12 +318,10 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     doc.text('4. 关于交货：', leftMargin, currentY);
     currentY += 5; // 标题与内容之间的间距
     
-    setCnFont(doc, 'normal');
-    doc.setTextColor(0, 0, 255);
-    doc.text('收货人信息如下：', contentMargin, currentY);
-    currentY += 5; // 标签与内容之间的间距
+
 
     // 交货信息（多行文本框）
+    setCnFont(doc, 'normal');
     const deliveryText = data.deliveryInfo || 'TBD';
     const wrappedDeliveryText = doc.splitTextToSize(deliveryText, contentMaxWidth);
     currentY = checkAndAddPage(currentY, wrappedDeliveryText.length * 4);

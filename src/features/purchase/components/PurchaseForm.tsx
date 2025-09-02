@@ -225,15 +225,12 @@ export default function PurchaseForm() {
             {/* 4. 关于交货 */}
             <div>
               <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">4. 关于交货</h3>
-              <div className="mb-3">
-                <span className="text-gray-600 dark:text-gray-300 text-sm">收货人信息如下：</span>
-              </div>
               <textarea
                 ref={deliveryInfoRef}
                 className={`${inputClass} resize-none overflow-hidden`}
                 rows={4}
                 placeholder="收货人信息（可多行输入）"
-                value={data.deliveryInfo}
+                value={data.deliveryInfo || '收货人信息如下：'}
                 onChange={e => updateData({ deliveryInfo: e.target.value })}
               />
             </div>
