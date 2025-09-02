@@ -4,6 +4,10 @@ import { PurchaseOrderData } from '@/types/purchase';
 import { getBankInfo } from '@/utils/bankInfo';
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { safeSetCnFont } from './pdf/ensureFont';
+import { renderTableInPDF, PdfInlineStyle } from './tableRenderer';
+
+/** ------------ 基础类型定义 ------------ */
+type RGB = [number, number, number];
 
 /**
  * 统一字体设置工具 - 使用安全的字体设置函数
@@ -17,250 +21,13 @@ function setCnFont(doc: jsPDF, style: 'normal'|'bold'|'italic'|'bolditalic' = 'n
   }
 }
 
-/**
- * 在PDF中渲染表格
- */
-function renderTableInPDF(
-  doc: jsPDF, 
-  tableText: string, 
-  startX: number, 
-  startY: number, 
-  maxWidth: number,
-  checkAndAddPage: (y: number, needed?: number) => number
-): number {
-  // 解析表格数据
-  const lines = tableText.split('\n').filter(line => line.trim());
-  if (lines.length === 0) return startY;
 
-  const tableData = lines.map(line => line.split('\t').map(cell => cell.trim()));
-  
-  // 检测合并单元格（通过空单元格判断）
-  const processedData: Array<Array<{value: string, rowSpan: number, colSpan: number}>> = [];
-  
-  for (let rowIndex = 0; rowIndex < tableData.length; rowIndex++) {
-    const row = tableData[rowIndex];
-    const processedRow: Array<{value: string, rowSpan: number, colSpan: number}> = [];
-    
-    for (let colIndex = 0; colIndex < row.length; colIndex++) {
-      const cell = row[colIndex];
-      
-      // 检查是否应该跳过这个单元格（被合并的）
-      let shouldSkip = false;
-      for (let r = 0; r < rowIndex; r++) {
-        for (let c = 0; c < processedData[r]?.length; c++) {
-          const existingCell = processedData[r][c];
-          if (existingCell.rowSpan > 1 && r + existingCell.rowSpan > rowIndex) {
-            if (c + existingCell.colSpan > colIndex) {
-              shouldSkip = true;
-              break;
-            }
-          }
-        }
-        if (shouldSkip) break;
-      }
-      
-      if (shouldSkip) {
-        continue;
-      }
-      
-      // 计算合并范围
-      let rowSpan = 1;
-      let colSpan = 1;
-      
-      // 检查向下合并（包括空单元格）
-      for (let r = rowIndex + 1; r < tableData.length; r++) {
-        const nextCell = tableData[r][colIndex];
-        // 如果当前单元格不为空，检查下一行是否为空或相同
-        if (cell !== '') {
-          if (nextCell === '' || nextCell === cell) {
-            rowSpan++;
-          } else {
-            break;
-          }
-        } else {
-          // 如果当前单元格为空，检查是否应该被上面的单元格合并
-          let shouldBeMerged = false;
-          for (let checkRow = rowIndex - 1; checkRow >= 0; checkRow--) {
-            const checkCell = tableData[checkRow][colIndex];
-            if (checkCell !== '') {
-              // 检查这个单元格是否已经向下合并到这里
-              let checkRowSpan = 1;
-              for (let sr = checkRow + 1; sr < tableData.length; sr++) {
-                if (tableData[sr][colIndex] === '' || tableData[sr][colIndex] === checkCell) {
-                  checkRowSpan++;
-                } else {
-                  break;
-                }
-              }
-              if (checkRow + checkRowSpan > rowIndex) {
-                shouldBeMerged = true;
-                break;
-              }
-            }
-          }
-          if (shouldBeMerged) {
-            continue; // 跳过这个空单元格
-          }
-        }
-      }
-      
-      // 检查向右合并
-      for (let c = colIndex + 1; c < row.length; c++) {
-        const nextCell = row[c];
-        if (cell !== '') {
-          if (nextCell === '' || nextCell === cell) {
-            colSpan++;
-          } else {
-            break;
-          }
-        }
-      }
-      
-      // 只有当单元格不为空或者有合并范围时才添加
-      if (cell !== '' || rowSpan > 1 || colSpan > 1) {
-        processedRow.push({
-          value: cell,
-          rowSpan,
-          colSpan
-        });
-      }
-    }
-    
-    processedData.push(processedRow);
-  }
-  
-  // 计算列宽 - 根据内容自适应
-  const columnCount = Math.max(...processedData.map(row => row.length));
-  const minColumnWidth = 15; // 最小列宽15mm
-  const maxColumnWidth = 50; // 最大列宽50mm
-  
-  // 计算每列的最大内容宽度
-  const columnWidths: number[] = [];
-  for (let col = 0; col < columnCount; col++) {
-    let maxWidth = 0;
-    processedData.forEach(row => {
-      if (row[col]) {
-        const textWidth = doc.getTextWidth(row[col].value);
-        maxWidth = Math.max(maxWidth, textWidth);
-      }
-    });
-    // 添加一些内边距
-    columnWidths[col] = Math.max(minColumnWidth, Math.min(maxColumnWidth, maxWidth + 4));
-  }
-  
-  // 如果总宽度超过可用宽度，按比例缩小
-  const totalWidth = columnWidths.reduce((sum, width) => sum + width, 0);
-  if (totalWidth > maxWidth) {
-    const scale = maxWidth / totalWidth;
-    columnWidths.forEach((width, index) => {
-      columnWidths[index] = Math.max(minColumnWidth, width * scale);
-    });
-  }
-  
-  // 计算表格总宽度
-  const tableWidth = columnWidths.reduce((sum, width) => sum + width, 0);
-  
-  // 计算每行的实际高度（支持多行文本）
-  const rowHeights: number[] = [];
-  const cellPadding = 2; // 单元格内边距
-  const lineHeight = 4; // 行高
-  
-  processedData.forEach((row, rowIndex) => {
-    let maxCellHeight = 6; // 最小行高
-    
-    row.forEach((cell, colIndex) => {
-      if (cell.value) {
-        const availableWidth = columnWidths[colIndex] - (cellPadding * 2);
-        const wrappedText = doc.splitTextToSize(cell.value, availableWidth);
-        const cellHeight = Math.max(6, wrappedText.length * lineHeight + (cellPadding * 2));
-        maxCellHeight = Math.max(maxCellHeight, cellHeight);
-      }
-    });
-    
-    rowHeights[rowIndex] = maxCellHeight;
-  });
-  
-  // 计算总高度
-  const totalHeight = rowHeights.reduce((sum, height) => sum + height, 0);
-  let currentY = checkAndAddPage(startY, totalHeight);
-  
-  // 绘制表格边框和内容
-  setCnFont(doc, 'normal');
-  doc.setFontSize(9);
-  
-  processedData.forEach((row, rowIndex) => {
-    const rowY = currentY;
-    const rowHeight = rowHeights[rowIndex];
-    
-    // 绘制行边框
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.1);
-    doc.line(startX, rowY, startX + tableWidth, rowY);
-    
-    // 绘制单元格内容和边框
-    let cellX = startX;
-    row.forEach((cell, colIndex) => {
-      const cellWidth = columnWidths[colIndex] * cell.colSpan;
-      const cellY = rowY;
-      
-      // 绘制垂直边框
-      doc.line(cellX, cellY, cellX, cellY + rowHeight);
-      
-      // 绘制单元格内容
-      doc.setTextColor(0, 0, 0);
-      const cellText = cell.value || '';
-      
-      // 如果是第一行，使用粗体
-      if (rowIndex === 0) {
-        setCnFont(doc, 'bold');
-      } else {
-        setCnFont(doc, 'normal');
-      }
-      
-      if (cellText) {
-        // 文本换行处理
-        const availableWidth = cellWidth - (cellPadding * 2);
-        const wrappedText = doc.splitTextToSize(cellText, availableWidth);
-        
-        // 计算文本起始位置（垂直居中）
-        const textHeight = wrappedText.length * lineHeight;
-        const textStartY = cellY + (rowHeight - textHeight) / 2 + lineHeight;
-        
-        // 绘制文本
-        wrappedText.forEach((line: string, lineIndex: number) => {
-          const textY = textStartY + (lineIndex * lineHeight);
-          doc.text(line, cellX + cellPadding, textY);
-        });
-      }
-      
-      cellX += cellWidth;
-    });
-    
-    // 绘制最后一列的右边框
-    doc.line(cellX, rowY, cellX, rowY + rowHeight);
-    
-    currentY += rowHeight;
-  });
-  
-  // 绘制底部边框
-  doc.line(startX, currentY, startX + tableWidth, currentY);
-  
-  return currentY + 5; // 返回表格底部位置，加上5mm间距
-}
+
+
+
+
 
 /** ---- 基础类型 ---- */
-type RGB = [number, number, number];
-
-interface PdfInlineStyle {
-  fontName?: string;              // e.g. 'Helvetica' / 'PingFangSC'，你项目里 setCnFont 时要保证已注册
-  fontBold?: boolean;
-  fontItalic?: boolean;
-  underline?: boolean;
-  strike?: boolean;
-  fontSize?: number;              // px 或 pt。下方统一用 jsPDF 的单位（默认 pt）
-  color?: RGB;                    // [r,g,b]
-}
-
 interface LayoutOptions {
   x: number;             // 左起始
   y: number;             // 顶部起始
@@ -271,23 +38,60 @@ interface LayoutOptions {
 
 /** ---- 工具：样式应用与测量 ---- */
 function applyStyle(doc: jsPDF, s: PdfInlineStyle) {
-  const name = s.fontName || 'Helvetica';
-  const style = (s.fontBold ? 'bold' : 'normal') + (s.fontItalic ? 'italic' : '');
-  // jsPDF 里组合样式通常是 'normal' | 'bold' | 'italic' | 'bolditalic'
-  const styleName =
+  const font = s.fontName || 'Helvetica';
+  const style =
     s.fontBold && s.fontItalic ? 'bolditalic' :
     s.fontBold ? 'bold' :
     s.fontItalic ? 'italic' : 'normal';
+  doc.setFont(font, style as any);
+  doc.setFontSize(s.fontSize || 12);
+  const [r,g,b] = s.color ?? [0,0,0];
+  doc.setTextColor(r,g,b);
+}
 
-  doc.setFont(name, styleName as any);
-  doc.setFontSize(s.fontSize || 9);
-  const [r, g, b] = s.color ?? [0, 0, 0];
-  doc.setTextColor(r, g, b);
+function parseColorToRGB(color?: string): RGB | undefined {
+  if (!color) return;
+  const named: Record<string, RGB> = {
+    black:[0,0,0], white:[255,255,255], red:[255,0,0], blue:[0,0,255],
+    green:[0,128,0], gray:[128,128,128], grey:[128,128,128],
+    yellow:[255,255,0], orange:[255,165,0], purple:[128,0,128], pink:[255,192,203], cyan:[0,255,255],
+  };
+  const s = color.trim().toLowerCase();
+  if (named[s]) return named[s];
+  if (s.startsWith('#')) {
+    const hex = s.length === 4 ? '#' + s.slice(1).split('').map(c=>c+c).join('') : s;
+    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+  }
+  const m = s.match(/rgb\((\d+)[^\d]+(\d+)[^\d]+(\d+)\)/);
+  if (m) return [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])];
 }
 
 function textWidth(doc: jsPDF, text: string, s: PdfInlineStyle): number {
   applyStyle(doc, s);
   return doc.getTextWidth(text);
+}
+
+/**
+ * 将制表符分隔的文本转换为HTML表格
+ */
+function convertTabTextToTable(text: string): string {
+  const lines = text.split('\n').filter(line => line.trim());
+  if (lines.length === 0) return '';
+  
+  let html = '<table border="1" cellpadding="3" cellspacing="0">';
+  
+  lines.forEach((line, index) => {
+    const cells = line.split('\t').map(cell => cell.trim());
+    html += '<tr>';
+    cells.forEach(cell => {
+      const tag = index === 0 ? 'th' : 'td';
+      html += `<${tag}>${cell}</${tag}>`;
+    });
+    html += '</tr>';
+  });
+  
+  html += '</table>';
+  return html;
 }
 
 /** ---- 工具：下划线 / 删除线绘制 ---- */
@@ -325,41 +129,6 @@ function drawDecoration(
   }
 }
 
-/** ---- 将颜色字符串解析为 RGB ---- */
-function parseColorToRGB(color: string | undefined): RGB | undefined {
-  if (!color) return undefined;
-  // 简单处理：#rrggbb / rgb(r,g,b) / 常见颜色名（可按需扩展）
-  const named: Record<string, RGB> = {
-    red: [255, 0, 0],
-    blue: [0, 0, 255],
-    green: [0, 128, 0],
-    black: [0, 0, 0],
-    white: [255, 255, 255],
-    gray: [128, 128, 128],
-    grey: [128, 128, 128],
-    yellow: [255, 255, 0],
-    orange: [255, 165, 0],
-    purple: [128, 0, 128],
-    // ... 按需扩展
-  };
-  if (color.startsWith('#') && (color.length === 7 || color.length === 4)) {
-    const hex = color.length === 4
-      ? '#' + color.slice(1).split('').map(c => c + c).join('')
-      : color;
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return [r, g, b];
-  }
-  if (color.startsWith('rgb')) {
-    const m = color.match(/rgb\(\s*(\d+)[^\d]+(\d+)[^\d]+(\d+)\s*\)/i);
-    if (m) return [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)];
-  }
-  const lower = color.toLowerCase();
-  if (named[lower]) return named[lower];
-  return undefined;
-}
-
 /** ---- 从 DOM 节点提取内联 runs（仅关注内联：b, i, u, s, font color, span style 等） ---- */
 interface TextRun {
   text: string;
@@ -379,9 +148,15 @@ function isBlockElement(tag: string) {
 }
 
 function collectParagraphsFromHTML(html: string, baseStyle: PdfInlineStyle): Paragraph[] {
+  // 预处理HTML，确保换行符被正确处理
+  const processedHtml = html
+    .replace(/\n/g, '<br>')  // 将纯文本的换行符转换为<br>标签
+    .replace(/\r/g, '')      // 移除回车符
+    .replace(/<br\s*\/?>/gi, '<br>'); // 标准化<br>标签
+  
   // 用一个临时容器解析（在浏览器端可用；若服务端需 JSDOM，自行注入）
   const container = document.createElement('div');
-  container.innerHTML = html;
+  container.innerHTML = processedHtml;
 
   const paragraphs: Paragraph[] = [];
   let current: Paragraph = { runs: [] };
@@ -436,8 +211,8 @@ function collectParagraphsFromHTML(html: string, baseStyle: PdfInlineStyle): Par
     }
 
     if (tag === 'br') {
-      // 用换行符标记，让后续布局阶段处理换行
-      current.runs.push({ text: '\n', style: cloneStyle(nextStyle) });
+      // 强制换行：结束当前段落，开始新段落
+      flushParagraph();
       return;
     }
 
@@ -516,62 +291,139 @@ function renderParagraphInline(
  * 在PDF中渲染富文本内容
  */
 function renderRichTextInPDF(
-  doc: jsPDF, 
-  htmlText: string, 
-  startX: number, 
-  startY: number, 
+  doc: jsPDF,
+  html: string,
+  startX: number,
+  startY: number,
   maxWidth: number,
-  checkAndAddPage: (y: number, needed?: number) => number
-): number {
-  let currentY = startY;
+  baseStyle: PdfInlineStyle,
+  lineHeight?: number,
+  paragraphSpacing: number = 5
+) {
+  const fs = baseStyle.fontSize || 12;
+  const lh = lineHeight ?? Math.round(fs * 1.4);
+  const pageBottom = doc.internal.pageSize.getHeight() - 20; // 统一底边距
+  const container = document.createElement('div');
+  container.innerHTML = html;
+
+  let y = startY;
+
+  const isBlock = (tag: string) =>
+    ['div','p','li','ul','ol','h1','h2','h3','h4','h5','h6','table'].includes(tag);
+
+  // 统一间距原则：有内容时与上方间距4pt，行间距4pt，与下方间距8pt
+  const lineSpacingBetweenText = 4;  // 文本行间距4pt
+  const richTextStartSpacing = 4;    // 富文本开始前与上方区域间距4pt
+  const richTextEndSpacing = 8;      // 富文本结束后与下方区域间距8pt
+  const spacingAroundTable = 4;      // 表格上下间距4pt（与文本保持一致）
+  const emptyContentSpacing = 8;     // 无内容时的默认间距8pt
   
-  // 检查是否在客户端环境
-  if (typeof window === 'undefined') {
-    // 服务器端环境，使用简单的文本解析
-    return renderSimpleRichText(doc, htmlText, startX, startY, maxWidth, checkAndAddPage);
+  // 简单的行高设置，确保文字能正常换行
+  const textLineHeight = fs + 8;
+
+  function renderInlineHTML(innerHTML: string) {
+    const paragraphs = collectParagraphsFromHTML(innerHTML, baseStyle);
+    if (paragraphs.length === 0) {
+      // 没有内容时，添加默认间距
+      y += emptyContentSpacing;
+      return;
+    }
+    
+    // 统一处理：无论单行还是多行，都使用相同的间距逻辑
+    for (let i = 0; i < paragraphs.length; i++) {
+      const p = paragraphs[i];
+      
+      // 渲染当前段落，返回段落结束后的y位置
+      const paragraphEndY = renderParagraphInline(doc, p, {
+        x: startX, y, maxWidth, lineHeight: textLineHeight, paragraphSpacing: 0
+      });
+      
+      // 更新当前y位置
+      y = paragraphEndY;
+      
+      // 如果不是最后一个段落，添加段落间距
+      if (i < paragraphs.length - 1) {
+        y += lineSpacingBetweenText;
+      }
+      
+      if (y > pageBottom) { doc.addPage(); y = 20; }
+    }
+  }
+
+  function walk(node: Node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const txt = (node.textContent || '').trim();
+      if (!txt) {
+        // 空文本节点也添加默认间距
+        y += emptyContentSpacing;
+        return;
+      }
+      // 用你已有的"纯文本段落"渲染（包装为段落）
+      renderInlineHTML(txt);
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+
+    if (tag === 'table') {
+      // 表格前加一小点间距（如前面刚结束一段）
+      y += spacingAroundTable;                            // ★ 小间距
+      y = renderTableInPDF(doc, el as HTMLTableElement, startX, y, maxWidth, baseStyle, pageBottom);
+      y += spacingAroundTable;                            // ★ 小间距
+      return;
+    }
+
+    // 对于非表格：先渲染其文字子片段（不包含任何表格），再递归处理子元素（其中的表格会被专门处理）
+    // 1) 把直接子节点中的"非表格部分"拼成一段 HTML 进行文本渲染
+    let buffer = '';
+    for (const child of Array.from(el.childNodes)) {
+      if (child.nodeType === Node.ELEMENT_NODE && (child as HTMLElement).tagName.toLowerCase() === 'table') {
+        if (buffer.trim()) {
+          renderInlineHTML(buffer);
+          buffer = '';
+        }
+        walk(child); // 单独处理 table
+      } else {
+        // 临时缓存文本/内联元素
+        buffer += (child as HTMLElement).outerHTML ?? child.textContent ?? '';
+      }
+    }
+    if (buffer.trim()) {
+      renderInlineHTML(buffer);
+      buffer = '';
+    }
+
+    // 2) 若这个元素本身是块级且没有子节点（比如 <p>纯文本被上面消费了），可在此处加段落分隔
+    if (isBlock(tag) && !el.childNodes.length) {
+      y += emptyContentSpacing; // 使用默认间距
+      if (y > pageBottom) { doc.addPage(); y = 20; }
+    }
+  }
+
+  // 检查是否有内容，如果没有内容则添加最小间距
+  const hasContent = Array.from(container.childNodes).some(node => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return (node.textContent || '').trim().length > 0;
+    }
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      return true; // 有元素节点就算有内容
+    }
+    return false;
+  });
+
+  if (!hasContent) {
+    y += emptyContentSpacing;
+  } else {
+    // 富文本框有内容时，在开始前添加适当的间距，避免与上部内容重叠
+    y += richTextStartSpacing;
+    Array.from(container.childNodes).forEach(walk);
+    // 富文本内容结束后，添加适当的间距
+    y += richTextEndSpacing; // 与下部区域间距为8
   }
   
-  console.log('PDF生成器接收到的HTML:', htmlText);
-  
-  // 使用新的"先布局、后绘制"方案
-  const baseStyle: PdfInlineStyle = {
-    fontName: 'NotoSansSC',   // 使用项目中的中文字体
-    fontSize: 9,              // 与PDF其他部分保持一致的字号
-    color: [0, 0, 0],
-    fontBold: false,
-    fontItalic: false,
-    underline: false,
-    strike: false,
-  };
-  
-  // 1) 解析 HTML -> 段落（每段包含 runs）
-  const paragraphs = collectParagraphsFromHTML(htmlText, baseStyle);
-  console.log('解析出的段落数量:', paragraphs.length);
-  
-  // 2) 逐段排版绘制（不因样式变化换行）
-  const fs = baseStyle.fontSize || 9;
-  const lh = Math.round(fs * 1.4); // 增加行高倍数，确保行间距足够
-  const paragraphSpacing = 5; // 添加适当的段落间距
-  
-  for (const p of paragraphs) {
-    console.log('处理段落，runs数量:', p.runs.length);
-    const lastY = renderParagraphInline(doc, p, {
-      x: startX,
-      y: currentY,
-      maxWidth,
-      lineHeight: lh,
-      paragraphSpacing,
-    });
-    currentY = lastY + paragraphSpacing; // 添加段落间距
-  }
-  
-  // 恢复默认样式，确保后续渲染不受影响
-  setCnFont(doc, 'normal');
-  doc.setFontSize(9); // 恢复到PDF其他部分使用的字号
-  doc.setTextColor(0, 0, 0);
-  
-  // 在富文本内容结束后添加额外的间距，确保与下一个区域有合适的距离
-  return currentY + 8;
+  return y;
 }
 
 /**
@@ -1021,10 +873,30 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       // 检查是否包含HTML标签，如果是则渲染为富文本
       if (specText.includes('<') && specText.includes('>')) {
         console.log('使用富文本渲染'); // 调试信息
-        currentY = renderRichTextInPDF(doc, specText, contentMargin, currentY, contentMaxWidth, checkAndAddPage);
+        const baseStyle: PdfInlineStyle = {
+          fontName: 'NotoSansSC',
+          fontSize: 9,
+          color: [0, 0, 160],
+          fontBold: false,
+          fontItalic: false,
+          underline: false,
+          strike: false,
+        };
+        currentY = renderRichTextInPDF(doc, specText, contentMargin, currentY, contentMaxWidth, baseStyle);
       } else if (specText.includes('\t')) {
         // 检查是否包含制表符，如果是则渲染为表格
-        currentY = renderTableInPDF(doc, specText, contentMargin, currentY, contentMaxWidth, checkAndAddPage);
+        // 注意：这里需要将制表符文本转换为HTML表格格式
+        const tableHtml = convertTabTextToTable(specText);
+        const baseStyle: PdfInlineStyle = {
+          fontName: 'NotoSansSC',
+          fontSize: 9,
+          color: [0, 0, 160],
+          fontBold: false,
+          fontItalic: false,
+          underline: false,
+          strike: false,
+        };
+        currentY = renderRichTextInPDF(doc, tableHtml, contentMargin, currentY, contentMaxWidth, baseStyle);
       } else {
         // 普通文本渲染
         const wrappedSpecText = doc.splitTextToSize(specText, contentMaxWidth);
