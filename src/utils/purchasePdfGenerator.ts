@@ -161,7 +161,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       
       setCnFont(doc, 'normal');
       doc.setTextColor(0, 0, 0);
-      doc.text(item.value || 'TBD', leftMargin + labelWidth + 2, leftY);
+      doc.text(item.value || '', leftMargin + labelWidth + 2, leftY);
       leftY += 5;
     });
 
@@ -182,7 +182,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       } else {
         doc.setTextColor(0, 0, 0); // 黑色
       }
-      const valueText = item.value || 'TBD';
+      const valueText = item.value || '';
       doc.text(valueText, colonX - 1, rightY);
       rightY += 5;
     });
@@ -199,16 +199,16 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     // 供应商报价信息
     setCnFont(doc, 'normal');
     doc.setTextColor(0, 0, 0);
-    doc.text('客户确认贵司于', contentMargin, currentY);
+    doc.text('客户确认贵司于 ', contentMargin, currentY);
     setCnFont(doc, 'bold');
     doc.setTextColor(0, 0, 255);
-    doc.text(data.supplierQuoteDate || 'TBD', contentMargin + doc.getTextWidth('客户确认贵司于'), currentY);
+    doc.text(data.supplierQuoteDate || ' ', contentMargin + doc.getTextWidth('客户确认贵司于 '), currentY);
     doc.setTextColor(0, 0, 0);
-    doc.text(' ', contentMargin + doc.getTextWidth('客户确认贵司于') + doc.getTextWidth(data.supplierQuoteDate || 'TBD'), currentY);
+    doc.text(' ', contentMargin + doc.getTextWidth('客户确认贵司于 ') + doc.getTextWidth(data.supplierQuoteDate || ' '), currentY);
     doc.setTextColor(255, 0, 0);
-    doc.text(data.yourRef || 'TBD', contentMargin + doc.getTextWidth('客户确认贵司于') + doc.getTextWidth(data.supplierQuoteDate || 'TBD') + doc.getTextWidth(' '), currentY);
+    doc.text(data.yourRef || ' ', contentMargin + doc.getTextWidth('客户确认贵司于 ') + doc.getTextWidth(data.supplierQuoteDate || ' ') + doc.getTextWidth(' '), currentY);
     doc.setTextColor(0, 0, 0);
-    doc.text('报价提供的项目价格、规格和交货条件；', contentMargin + doc.getTextWidth('客户确认贵司于') + doc.getTextWidth(data.supplierQuoteDate || 'TBD') + doc.getTextWidth(' ') + doc.getTextWidth(data.yourRef || 'TBD'), currentY);
+    doc.text(' 报价提供的项目价格、规格和交货条件；', contentMargin + doc.getTextWidth('客户确认贵司于 ') + doc.getTextWidth(data.supplierQuoteDate || ' ') + doc.getTextWidth(' ') + doc.getTextWidth(data.yourRef || ' '), currentY);
     currentY += 5;
 
     // 合同金额
