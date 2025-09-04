@@ -25,6 +25,15 @@ import { exportQuotationToExcel, exportSalesConfirmationToExcel } from '../servi
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { usePdfWarmup } from '@/hooks/usePdfWarmup';
 
+// 货币名称辅助函数
+const getCurrencyName = (currency: 'USD' | 'CNY' | 'EUR') => {
+  switch (currency) {
+    case 'USD': return 'US DOLLARS ';
+    case 'CNY': return 'CHINESE YUAN ';
+    case 'EUR': return 'EUROS ';
+    default: return 'US DOLLARS ';
+  }
+};
 
 // 动态导入组件
 import dynamic from 'next/dynamic';
@@ -760,7 +769,7 @@ export default function QuotationPage() {
                             <>
                               <span className="text-gray-600 dark:text-gray-400">SAY {100 - data.depositPercentage}% Balance </span>
                               <span className="text-blue-500">
-                                {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
+                                {getCurrencyName(data.currency)}
                               </span>
                               <span className="text-gray-600 dark:text-gray-400">{balanceWords.dollars}</span>
                               {balanceWords.hasDecimals && (
@@ -785,7 +794,7 @@ export default function QuotationPage() {
                             <>
                               <span className="text-gray-600 dark:text-gray-400">SAY {data.depositPercentage}% Deposit </span>
                               <span className="text-blue-500">
-                                {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
+                                {getCurrencyName(data.currency)}
                               </span>
                               <span className="text-gray-600 dark:text-gray-400">{depositWords.dollars}</span>
                               {depositWords.hasDecimals && (
@@ -808,7 +817,7 @@ export default function QuotationPage() {
                       <>
                         <span className="text-gray-600 dark:text-gray-400">SAY TOTAL </span>
                         <span className="text-blue-500">
-                          {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
+                          {getCurrencyName(data.currency)}
                         </span>
                         <span className="text-gray-600 dark:text-gray-400">{data.amountInWords.dollars}</span>
                         {data.amountInWords.hasDecimals && (
