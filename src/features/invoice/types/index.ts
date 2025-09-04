@@ -62,7 +62,7 @@ export interface InvoiceData {
   showRemarks: boolean;
   showBank: boolean;
   showInvoiceReminder: boolean;
-  currency: 'USD' | 'CNY';
+  currency: 'USD' | 'CNY' | 'EUR';
   templateConfig: InvoiceTemplateConfig;
   customUnits?: string[];
   otherFees: OtherFee[];
@@ -77,7 +77,7 @@ export interface InvoiceHistoryItem {
   customerName: string;
   invoiceNo: string;
   totalAmount: number;
-  currency: 'USD' | 'CNY';
+  currency: 'USD' | 'CNY' | 'EUR';
   data: InvoiceData;
   createdAt: string;
   updatedAt: string;

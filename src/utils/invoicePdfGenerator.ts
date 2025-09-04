@@ -298,7 +298,7 @@ async function renderCustomerInfo(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   // Currency
   doc.text('Currency', colonX - 2, rightInfoY + 10, { align: 'right' });
   doc.text(':', colonX, rightInfoY + 10);
-  doc.text(data.currency === 'USD' ? 'USD' : 'CNY', colonX + 3, rightInfoY + 10);
+  doc.text(data.currency, colonX + 3, rightInfoY + 10);
 
   // To 信息
   setCnFont(doc, 'bold');

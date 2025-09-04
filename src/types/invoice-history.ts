@@ -5,7 +5,7 @@ export interface InvoiceHistory {
   customerName: string;
   invoiceNo: string;
   totalAmount: number;
-  currency: 'USD' | 'CNY';
+  currency: 'USD' | 'CNY' | 'EUR';
   createdAt: string;
   updatedAt: string;
   data: InvoiceData;

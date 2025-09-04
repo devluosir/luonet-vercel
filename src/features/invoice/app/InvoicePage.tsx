@@ -18,11 +18,31 @@ import { useInvoiceStore } from '../state/invoice.store';
 import { useInvoiceForm } from '../hooks/useInvoiceForm';
 import { usePasteImport } from '../hooks/usePasteImport';
 import { SettingsPanel } from '../components/SettingsPanel';
+import { numberToWords } from '../utils/calculations';
+
+// 货币符号和名称辅助函数
+const getCurrencySymbol = (currency: 'USD' | 'CNY' | 'EUR') => {
+  switch (currency) {
+    case 'USD': return '$';
+    case 'CNY': return '¥';
+    case 'EUR': return '€';
+    default: return '$';
+  }
+};
+
+const getCurrencyName = (currency: 'USD' | 'CNY' | 'EUR') => {
+  switch (currency) {
+    case 'USD': return 'US DOLLARS ';
+    case 'CNY': return 'CHINESE YUAN ';
+    case 'EUR': return 'EUROS ';
+    default: return 'US DOLLARS ';
+  }
+};
 import { InvoiceActions } from '../components/InvoiceActions';
 import { PaymentTermsSection } from '../components/PaymentTermsSection';
 import { InvoiceInfoCompact } from '../components/InvoiceInfoCompact';
 import { INPUT_CLASSNAMES } from '../constants/settings';
-import { getTotalAmount, numberToWords } from '../utils/calculations';
+import { getTotalAmount } from '../utils/calculations';
 
 /**
  * 发票主页面组件
@@ -227,7 +247,7 @@ export const InvoicePage = () => {
                   <div className="flex items-center gap-2 relative">
                     <span className="text-sm font-medium text-gray-500">Total Amount:</span>
                     <span className="text-xl font-semibold tracking-tight whitespace-nowrap">
-                      {data.currency === 'USD' ? '$' : '¥'}
+                      {getCurrencySymbol(data.currency)}
                       {totalAmount.toFixed(2)}
                     </span>
                     {/* Total Amount 下划线 */}
@@ -241,7 +261,7 @@ export const InvoicePage = () => {
                           {data.depositPercentage}% Deposit:
                         </span>
                         <span className="text-lg font-semibold tracking-tight whitespace-nowrap text-blue-600 dark:text-blue-400">
-                          {data.currency === 'USD' ? '$' : '¥'}
+                          {getCurrencySymbol(data.currency)}
                           {data.depositAmount.toFixed(2)}
                         </span>
                         {/* Deposit 下划线 */}
@@ -255,7 +275,7 @@ export const InvoicePage = () => {
                             {100 - data.depositPercentage}% Balance:
                           </span>
                           <span className="text-lg font-semibold tracking-tight whitespace-nowrap text-green-600 dark:text-green-400">
-                            {data.currency === 'USD' ? '$' : '¥'}
+                            {getCurrencySymbol(data.currency)}
                             {data.balanceAmount?.toFixed(2) || (totalAmount - data.depositAmount).toFixed(2)}
                           </span>
                           {/* Balance 下划线 */}
@@ -280,7 +300,7 @@ export const InvoicePage = () => {
                           <>
                             <span className="text-gray-600 dark:text-gray-400">SAY {100 - data.depositPercentage}% Balance </span>
                             <span className="text-blue-500">
-                              {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
+                              {getCurrencyName(data.currency)}
                             </span>
                             <span className="text-gray-600 dark:text-gray-400">{balanceWords.dollars}</span>
                             {balanceWords.hasDecimals && (
@@ -305,7 +325,7 @@ export const InvoicePage = () => {
                           <>
                             <span className="text-gray-600 dark:text-gray-400">SAY {data.depositPercentage}% Deposit </span>
                             <span className="text-blue-500">
-                              {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
+                              {getCurrencyName(data.currency)}
                             </span>
                             <span className="text-gray-600 dark:text-gray-400">{depositWords.dollars}</span>
                             {depositWords.hasDecimals && (
@@ -328,7 +348,7 @@ export const InvoicePage = () => {
                     <>
                       <span className="text-gray-600 dark:text-gray-400">SAY TOTAL </span>
                       <span className="text-blue-500">
-                        {data.currency === 'USD' ? 'US DOLLARS ' : 'CHINESE YUAN '}
+                        {getCurrencyName(data.currency)}
                       </span>
                       <span className="text-gray-600 dark:text-gray-400">{data.amountInWords.dollars}</span>
                       {data.amountInWords.hasDecimals && (

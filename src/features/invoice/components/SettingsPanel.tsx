@@ -27,7 +27,7 @@ export const SettingsPanel = React.memo(() => {
   const totalAmount = data.items.reduce((sum, item) => sum + (item.amount || 0), 0) + 
                      data.otherFees.reduce((sum, fee) => sum + fee.amount, 0);
 
-  const handleCurrencyChange = (currency: 'USD' | 'CNY') => {
+  const handleCurrencyChange = (currency: 'USD' | 'CNY' | 'EUR') => {
     updateData({ currency });
   };
 

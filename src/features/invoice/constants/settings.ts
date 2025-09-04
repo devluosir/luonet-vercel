@@ -4,7 +4,8 @@ export const DEFAULT_UNITS = ['pc', 'set', 'length'] as const;
 // 币种选项
 export const CURRENCY_OPTIONS = [
   { value: 'USD', label: '$' },
-  { value: 'CNY', label: '¥' }
+  { value: 'CNY', label: '¥' },
+  { value: 'EUR', label: '€' }
 ] as const;
 
 // Header类型选项

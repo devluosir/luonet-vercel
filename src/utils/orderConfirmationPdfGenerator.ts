@@ -377,15 +377,15 @@ export const generateOrderConfirmationPDF = async (
         // 显示尾款金额的大写
         const balanceAmount = data.balanceAmount || (total - data.depositAmount);
         const balanceWords = numberToWords(balanceAmount);
-        amountInWords = `SAY ${100 - data.depositPercentage}% Balance ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${balanceWords.dollars}${balanceWords.hasDecimals ? ` AND ${balanceWords.cents}` : ' ONLY'}`;
+        amountInWords = `SAY ${100 - data.depositPercentage}% Balance ${data.currency === 'USD' ? 'US DOLLARS' : data.currency === 'EUR' ? 'EUROS' : 'CHINESE YUAN'} ${balanceWords.dollars}${balanceWords.hasDecimals ? ` AND ${balanceWords.cents}` : ' ONLY'}`;
       } else {
         // 显示定金金额的大写
         const depositWords = numberToWords(data.depositAmount);
-        amountInWords = `SAY ${data.depositPercentage}% Deposit ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${depositWords.dollars}${depositWords.hasDecimals ? ` AND ${depositWords.cents}` : ' ONLY'}`;
+        amountInWords = `SAY ${data.depositPercentage}% Deposit ${data.currency === 'USD' ? 'US DOLLARS' : data.currency === 'EUR' ? 'EUROS' : 'CHINESE YUAN'} ${depositWords.dollars}${depositWords.hasDecimals ? ` AND ${depositWords.cents}` : ' ONLY'}`;
       }
     } else {
       // 显示总金额的大写
-      amountInWords = `SAY TOTAL ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${data.amountInWords.dollars}${data.amountInWords.hasDecimals ? ` AND ${data.amountInWords.cents}` : ' ONLY'}`;
+      amountInWords = `SAY TOTAL ${data.currency === 'USD' ? 'US DOLLARS' : data.currency === 'EUR' ? 'EUROS' : 'CHINESE YUAN'} ${data.amountInWords.dollars}${data.amountInWords.hasDecimals ? ` AND ${data.amountInWords.cents}` : ' ONLY'}`;
     }
     
     const lines = doc.splitTextToSize(amountInWords, pageWidth - (margin * 2));
