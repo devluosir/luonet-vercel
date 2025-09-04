@@ -5,6 +5,20 @@ import { getInvoiceTitle } from '@/utils/pdfHelpers';
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { getUnitDisplay } from '@/utils/unitUtils';
 
+// 货币符号映射
+const currencySymbols: { [key: string]: string } = {
+  USD: '$',
+  EUR: '€',
+  CNY: '¥'
+};
+
+// 货币名称映射
+const currencyNames: { [key: string]: string } = {
+  USD: 'US DOLLARS',
+  EUR: 'EUROS',
+  CNY: 'CHINESE YUAN'
+};
+
 /**
  * 统一字体设置工具 - 确保大小写一致且带兜底
  */
@@ -530,7 +544,7 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   const tableData: any[][] = [];
   
   // 添加总金额行
-  const totalAmountValue = `${data.currency === 'USD' ? '$' : '¥'}${totalAmount.toFixed(2)}`;
+  const totalAmountValue = `${currencySymbols[data.currency] || '$'}${totalAmount.toFixed(2)}`;
   tableData.push([
     { content: 'Total Amount:', styles: { fontStyle: 'bold', fontSize: 9 } },
     { content: totalAmountValue, styles: { fontStyle: 'bold', fontSize: 9 } }
@@ -539,7 +553,7 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   // 添加定金和余额信息
   if (data.depositPercentage && data.depositPercentage > 0) {
     const depositAmount = data.depositAmount || (data.depositPercentage / 100) * totalAmount;
-    const depositValue = `${data.currency === 'USD' ? '$' : '¥'}${depositAmount.toFixed(2)}`;
+    const depositValue = `${currencySymbols[data.currency] || '$'}${depositAmount.toFixed(2)}`;
     const depositLabel = `${data.depositPercentage}% Deposit:`;
     
     // 根据是否显示余额来决定定金金额的颜色
@@ -552,7 +566,7 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
     
     if (data.showBalance) {
       const balanceAmount = data.balanceAmount || (totalAmount - depositAmount);
-      const balanceValue = `${data.currency === 'USD' ? '$' : '¥'}${balanceAmount.toFixed(2)}`;
+      const balanceValue = `${currencySymbols[data.currency] || '$'}${balanceAmount.toFixed(2)}`;
       const balanceLabel = `${100 - data.depositPercentage}% Balance:`;
       tableData.push([
         { content: balanceLabel, styles: { fontStyle: 'bold', fontSize: 9 } },
@@ -639,15 +653,15 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
       // 显示尾款金额的大写
       const balanceAmount = data.balanceAmount || (totalAmount - data.depositAmount);
       const balanceWords = numberToWords(balanceAmount);
-      amountInWords = `SAY ${100 - data.depositPercentage}% Balance ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${balanceWords.dollars}${balanceWords.hasDecimals ? ` AND ${balanceWords.cents}` : ' ONLY'}`;
+      amountInWords = `SAY ${100 - data.depositPercentage}% Balance ${currencyNames[data.currency] || 'US DOLLARS'} ${balanceWords.dollars}${balanceWords.hasDecimals ? ` AND ${balanceWords.cents}` : ' ONLY'}`;
     } else {
       // 显示定金金额的大写
       const depositWords = numberToWords(data.depositAmount);
-      amountInWords = `SAY ${data.depositPercentage}% Deposit ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${depositWords.dollars}${depositWords.hasDecimals ? ` AND ${depositWords.cents}` : ' ONLY'}`;
+      amountInWords = `SAY ${data.depositPercentage}% Deposit ${currencyNames[data.currency] || 'US DOLLARS'} ${depositWords.dollars}${depositWords.hasDecimals ? ` AND ${depositWords.cents}` : ' ONLY'}`;
     }
   } else {
     // 显示总金额的大写
-    amountInWords = `SAY TOTAL ${data.currency === 'USD' ? 'US DOLLARS' : 'CHINESE YUAN'} ${data.amountInWords.dollars}${data.amountInWords.hasDecimals ? ` AND ${data.amountInWords.cents}` : ' ONLY'}`;
+    amountInWords = `SAY TOTAL ${currencyNames[data.currency] || 'US DOLLARS'} ${data.amountInWords.dollars}${data.amountInWords.hasDecimals ? ` AND ${data.amountInWords.cents}` : ' ONLY'}`;
   }
   
   const lines = doc.splitTextToSize(amountInWords, pageWidth - (margin * 2));

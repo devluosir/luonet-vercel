@@ -20,6 +20,13 @@ interface ExtendedJsPDF extends Omit<jsPDF, 'getFont' | 'getImageProperties'> {
   getImageProperties: (image: string) => { width: number; height: number };
 }
 
+// 货币符号映射
+const currencySymbols: { [key: string]: string } = {
+  USD: '$',
+  EUR: '€',
+  CNY: '¥'
+};
+
 export const generateQuotationPDF = async (
   rawData: unknown, 
   mode: 'preview' | 'export' = 'export', 
@@ -249,7 +256,7 @@ export const generateQuotationPDF = async (
       doc.setFontSize(10);
       safeSetCnFont(doc, 'bold', mode);
       const totalAmountLabel = 'Total Amount:';
-      const totalAmountValue = `$${totalAmount.toFixed(2)}`;
+      const totalAmountValue = `${currencySymbols[data.currency] || '$'}${totalAmount.toFixed(2)}`;
       const valueX = pageWidth - margin - 5;
       const labelX = valueX - doc.getTextWidth(totalAmountValue) - 28;
 
