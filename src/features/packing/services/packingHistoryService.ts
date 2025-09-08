@@ -46,6 +46,37 @@ export const savePackingHistory = (data: PackingData, existingId?: string): Pack
       }
     }
 
+    // 🆕 检查是否已存在相同发票号的记录（与invoice模块保持一致）
+    if (data.invoiceNo && data.invoiceNo.trim() !== '') {
+      const existingPacking = history.find(item => 
+        item.invoiceNo === data.invoiceNo && 
+        item.invoiceNo.trim() !== '' // 避免空发票号的误匹配
+      );
+      
+      if (existingPacking) {
+        // 如果存在相同发票号，更新现有记录
+        const updatedHistory = history.map(item => {
+          if (item.id === existingPacking.id) {
+            return {
+              ...item,
+              consigneeName: data.consignee.name,
+              invoiceNo: data.invoiceNo,
+              orderNo: data.orderNo,
+              totalAmount,
+              currency: data.currency,
+              documentType: data.documentType,
+              data: data,
+              updatedAt: new Date().toISOString()
+            };
+          }
+          return item;
+        });
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
+        return updatedHistory.find(item => item.id === existingPacking.id) || null;
+      }
+    }
+
     // 创建新记录
     const newHistory: PackingHistory = {
       id: generateId(),
