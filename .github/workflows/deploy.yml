@@ -16,13 +16,13 @@ jobs:
         env:
           NODE_ENV: production
       - name: Deploy (Preview)
-        run: npx vercel --token ${{secrets.VERCEL_TOKEN}} --confirm
+        run: npx vercel --token ${{secrets.VERCEL_TOKEN}} --yes
         env:
           VERCEL_ORG_ID: ${{secrets.VERCEL_ORG_ID}}
           VERCEL_PROJECT_ID: ${{secrets.VERCEL_PROJECT_ID}}
       - name: Deploy (Production on main)
         if: github.ref == 'refs/heads/main'
-        run: npx vercel --prod --token ${{secrets.VERCEL_TOKEN}} --confirm
+        run: npx vercel --prod --token ${{secrets.VERCEL_TOKEN}} --yes
         env:
           VERCEL_ORG_ID: ${{secrets.VERCEL_ORG_ID}}
           VERCEL_PROJECT_ID: ${{secrets.VERCEL_PROJECT_ID}}
