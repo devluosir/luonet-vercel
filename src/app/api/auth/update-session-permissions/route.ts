@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       // 从后端API获取最新用户数据（包含权限）
 
       // 尝试直接通过用户名获取用户详情
-      let userUrl = `https://udb.luocompany.net/api/admin/users/by-username/${encodeURIComponent(userName)}`;
+      let userUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users/by-username/${encodeURIComponent(userName)}`;
       console.log('权限刷新API: 尝试直接获取用户详情:', userUrl);
       
       let userResponse = await fetch(userUrl, {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       if (!userResponse.ok) {
         console.log('权限刷新API: 直接获取用户详情失败，回退到用户列表方式');
         
-        const usersUrl = `https://udb.luocompany.net/api/admin/users?username=${encodeURIComponent(userName)}`;
+        const usersUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users?username=${encodeURIComponent(userName)}`;
         console.log('权限刷新API: 调用用户列表API:', usersUrl);
         
         const usersResponse = await fetch(usersUrl, {
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
           
           if (correctUser) {
             // 使用正确的用户ID调用单个用户API
-            userUrl = `https://udb.luocompany.net/api/admin/users/${correctUser.id}`;
+            userUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users/${correctUser.id}`;
             console.log('权限刷新API: 调用单个用户API:', userUrl);
             
             userResponse = await fetch(userUrl, {

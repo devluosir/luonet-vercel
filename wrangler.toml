@@ -12,6 +12,7 @@ API_TOKEN = "Kqm0uVxJuVRkJ1GUoAwT4SrfvYAbaVbcwV6jQ8hY"
 MAIN_SITE_URL = "https://luocompany.net"
 
 # 启用自定义域名配置，绑定 udb.luocompany.net
+# 注意：如果主站迁移到 Netlify，请确保 DNS 配置正确
 [[routes]]
 pattern = "udb.luocompany.net"
 zone_name = "luocompany.net"

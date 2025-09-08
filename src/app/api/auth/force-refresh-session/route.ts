@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     let userStatus = true;
     
     try {
-      const backendResponse = await fetch(`https://udb.luocompany.net/api/admin/users?username=${encodeURIComponent(username)}`, {
+      const backendResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users?username=${encodeURIComponent(username)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
