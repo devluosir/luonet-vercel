@@ -41,5 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 .specstory
+.vscode
+.cursorindexingignore
 packages/*/node_modules
 .env*.local
