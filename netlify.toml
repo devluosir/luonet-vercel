@@ -1,15 +1,8 @@
 [build]
   command = "npm run build"
-  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "18"
-
-# 重定向规则 - Next.js App Router 需要
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
 
 # 头部设置
 [[headers]]
