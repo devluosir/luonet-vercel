@@ -144,7 +144,7 @@ if (data.invoiceNo && data.invoiceNo.trim() !== '') {
 - 发票号唯一性约束生效
 - 数据更新正确性
 - 用户体验一致性
-- 与invoice模块行为一致
+- 与invoice模块行为一致 
 
 ## 📝 注意事项
 
