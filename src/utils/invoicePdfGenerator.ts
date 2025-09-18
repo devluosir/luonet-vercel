@@ -692,6 +692,17 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   }
   
   const lines = doc.splitTextToSize(amountInWords, pageWidth - (margin * 2));
+  
+  // 检查大写金额是否需要换页
+  const pageHeight = doc.internal.pageSize.height;
+  const pageBottom = pageHeight - margin;
+  const requiredHeight = lines.length * 5 + 10; // 大写金额所需高度 + 额外间距
+  
+  if (currentY + requiredHeight > pageBottom) {
+    doc.addPage();
+    currentY = margin;
+  }
+  
   lines.forEach((line: string, index: number) => {
     doc.text(String(line), margin, currentY + (index * 5));
   });

@@ -104,9 +104,18 @@ export const generateOrderConfirmationPDF = async (
       }
     }
 
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
-    const margin = 20;  // 页面边距
+  const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
+  const margin = 20;  // 页面边距
+  
+  // 分页检查函数
+  const checkAndAddPage = (y: number, needed = 20) => {
+    if (y + needed > pageHeight - margin) {
+      doc.addPage();
+      return margin;
+    }
+    return y;
+  };
     let startY = margin;
 
     // 读取页面列显示偏好，与页面表格保持一致
@@ -389,6 +398,11 @@ export const generateOrderConfirmationPDF = async (
     }
     
     const lines = doc.splitTextToSize(amountInWords, pageWidth - (margin * 2));
+    
+    // 检查大写金额是否需要换页
+    const requiredHeight = lines.length * 5 + 10; // 大写金额所需高度 + 额外间距
+    currentY = checkAndAddPage(currentY, requiredHeight);
+    
     lines.forEach((line: string, index: number) => {
       doc.text(String(line), margin, currentY + (index * 5));
     });
