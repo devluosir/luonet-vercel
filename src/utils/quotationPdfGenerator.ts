@@ -310,6 +310,11 @@ export const generateQuotationPDF = async (
     }
     endTimer(notesSetupId, 'notes-setup');
 
+    // 添加页码 - 在所有内容绘制完成后统一添加
+    const pageNumbersId = startTimer('page-numbers');
+    addPageNumbers(doc, pageWidth, pageHeight, margin, mode);
+    endTimer(pageNumbersId, 'page-numbers');
+
     // 生成PDF
     const pdfGenerationId = startTimer('pdf-blob-generation');
     const pdfBlob = doc.output('blob');
@@ -322,4 +327,19 @@ export const generateQuotationPDF = async (
     endTimer(totalId, 'pdf-generation');
     throw error;
   }
-}; 
+};
+
+// 添加页码函数
+function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: number, margin: number, mode: 'preview' | 'export'): void {
+  const totalPages = doc.getNumberOfPages();
+  
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
+    
+    doc.setFontSize(8);
+    safeSetCnFont(doc, 'normal', mode);
+    doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
+  }
+} 

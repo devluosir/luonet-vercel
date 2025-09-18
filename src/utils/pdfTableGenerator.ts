@@ -506,23 +506,11 @@ export const generateTableConfig = (
         doc.setFont('NotoSansSC', 'normal');
       }
       
-      // 清除页面底部区域并添加页码的通用函数
-      const addPageNumber = () => {
-        const pageHeight = doc.internal.pageSize.height;
-        // 清除页面底部区域
-        doc.setFillColor(255, 255, 255);
-        doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
-        
-        // 添加页码（使用安全字体设置）
-        const totalPages = doc.getNumberOfPages();
-        const str = `Page ${data.pageNumber} of ${totalPages}`;
-        doc.setFontSize(8);
-        safeSetFont(doc, 'NotoSansSC', 'normal', mode);
-        doc.text(str, pageWidth - margin, pageHeight - 12, { align: 'right' });
-      };
-
-      // 在每页绘制时添加页码
-      addPageNumber();
+      // 清除页面底部区域，但不添加页码
+      // 页码将在所有内容绘制完成后统一添加
+      const pageHeight = doc.internal.pageSize.height;
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
     },
     didDrawCell: (data) => {
       // 确保绘制所有单元格的边框
