@@ -384,10 +384,11 @@ async function renderInvoiceTable(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       { content: Number(item.amount).toFixed(2), styles: item.highlight?.amount ? { textColor: [255, 0, 0] } : {} },
       ...(data.showRemarks ? [{ content: item.remarks || '', styles: item.highlight?.remarks ? { textColor: [255, 0, 0] } : {} }] : [])
     ]),
-    ...(data.otherFees || []).map(fee => [
+    ...(data.otherFees || []).map((fee, index) => [
+      (data.items.length + index + 1), // 连续主表序号
       {
         content: fee.description,
-        colSpan: (data.showHsCode ? 1 : 0) + (data.showPartName ? 1 : 0) + (data.showDescription ? 1 : 0) + 4,
+        colSpan: (data.showHsCode ? 1 : 0) + (data.showPartName ? 1 : 0) + (data.showDescription ? 1 : 0) + 3, // 合并HS Code到Unit Price列（不包括Amount列）
         styles: { halign: 'center', ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {}) }
       },
       {
