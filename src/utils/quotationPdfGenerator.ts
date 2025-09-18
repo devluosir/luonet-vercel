@@ -103,6 +103,7 @@ export const generateQuotationPDF = async (
     // 设置页面参数
     const pageSetupId = startTimer('page-setup');
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 20;
     const contentWidth = pageWidth - (margin * 2);
     endTimer(pageSetupId, 'page-setup');
@@ -270,7 +271,6 @@ export const generateQuotationPDF = async (
     const notesSetupId = startTimer('notes-setup');
     if (data.notes && data.notes.length > 0) {
       // 检查剩余空间是否足够显示 Notes
-      const pageHeight = doc.internal.pageSize.getHeight();
       const remainingSpace = pageHeight - yPosition;
       if (remainingSpace < 40) {
         doc.addPage();
@@ -339,7 +339,8 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
     doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
     
     doc.setFontSize(8);
-    safeSetCnFont(doc, 'normal', mode);
+    // 使用类型断言来解决类型兼容性问题
+    safeSetCnFont(doc as any, 'normal', mode);
     doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
   }
 } 
