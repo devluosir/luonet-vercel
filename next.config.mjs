@@ -25,6 +25,8 @@ const nextConfig = {
     WORKER_URL: process.env.WORKER_URL,
     API_TOKEN: process.env.API_TOKEN
   },
+  // Vercel 优化配置
+  output: 'standalone',
   compress: true,
   poweredByHeader: false,
   generateEtags: false,
