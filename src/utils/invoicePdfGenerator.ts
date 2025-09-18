@@ -227,11 +227,32 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
     const tableResult = await renderInvoiceTable(doc, data, startY);
     let finalY = tableResult.finalY;
 
+    // 检查剩余空间，如果不足则添加新页面
+    const remainingSpace = pageHeight - finalY;
+    if (remainingSpace < 60) { // 为后续内容预留60mm空间
+      doc.addPage();
+      finalY = margin;
+    }
+
     // 总金额区域
     finalY = renderTotalAmount(doc, data, finalY, pageWidth, margin);
 
+    // 检查剩余空间，如果不足则添加新页面
+    const remainingSpaceAfterTotal = pageHeight - finalY;
+    if (remainingSpaceAfterTotal < 40) { // 为银行信息和付款条款预留40mm空间
+      doc.addPage();
+      finalY = margin;
+    }
+
     // 银行信息和付款条款
     finalY = await renderBankAndPaymentInfo(doc, data, finalY, pageWidth, margin);
+
+    // 检查剩余空间，如果不足则添加新页面
+    const remainingSpaceAfterBank = pageHeight - finalY;
+    if (remainingSpaceAfterBank < 50) { // 为印章预留50mm空间
+      doc.addPage();
+      finalY = margin;
+    }
 
     // 添加印章
     await renderStamp(doc, data, finalY, margin);
