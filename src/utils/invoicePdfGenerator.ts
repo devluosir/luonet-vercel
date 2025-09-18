@@ -227,9 +227,28 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
     const tableResult = await renderInvoiceTable(doc, data, startY);
     let finalY = tableResult.finalY;
 
-    // 检查剩余空间，如果不足则添加新页面
+    // 智能分页检查：只有在真正需要时才换页
     const remainingSpace = pageHeight - finalY;
-    if (remainingSpace < 60) { // 为后续内容预留60mm空间
+    
+    // 估算后续内容所需空间
+    let estimatedSpaceNeeded = 0;
+    
+    // 总金额区域估算（约20-25mm）
+    estimatedSpaceNeeded += 25;
+    
+    // 银行信息和付款条款估算（根据实际内容）
+    if (data.showBank) estimatedSpaceNeeded += 30; // 银行信息约30mm
+    if (data.showPaymentTerms || data.additionalPaymentTerms || data.showInvoiceReminder) {
+      estimatedSpaceNeeded += 20; // 付款条款约20mm
+    }
+    
+    // 印章估算（40mm）
+    if (data.templateConfig.stampType !== 'none') {
+      estimatedSpaceNeeded += 40;
+    }
+    
+    // 只有在剩余空间确实不足时才换页
+    if (remainingSpace < estimatedSpaceNeeded) {
       doc.addPage();
       finalY = margin;
     }
@@ -237,22 +256,8 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
     // 总金额区域
     finalY = renderTotalAmount(doc, data, finalY, pageWidth, margin);
 
-    // 检查剩余空间，如果不足则添加新页面
-    const remainingSpaceAfterTotal = pageHeight - finalY;
-    if (remainingSpaceAfterTotal < 40) { // 为银行信息和付款条款预留40mm空间
-      doc.addPage();
-      finalY = margin;
-    }
-
     // 银行信息和付款条款
     finalY = await renderBankAndPaymentInfo(doc, data, finalY, pageWidth, margin);
-
-    // 检查剩余空间，如果不足则添加新页面
-    const remainingSpaceAfterBank = pageHeight - finalY;
-    if (remainingSpaceAfterBank < 50) { // 为印章预留50mm空间
-      doc.addPage();
-      finalY = margin;
-    }
 
     // 添加印章
     await renderStamp(doc, data, finalY, margin);
