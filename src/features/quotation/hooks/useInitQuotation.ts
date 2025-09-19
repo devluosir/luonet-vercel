@@ -19,12 +19,19 @@ export function useInitQuotation() {
     const tab = getTabFromSearchParams(searchParams || undefined);
     setTab(tab);
 
-    // 初始化编辑ID
+    // 初始化编辑ID - 确保新创建时editId为undefined
     const editId = getEditIdFromPathname(pathname || undefined);
-    if (editId) {
-      setEditId(editId);
-    }
+    setEditId(editId); // 总是设置editId，即使是undefined
   }, []); // 只在组件挂载时执行一次
+
+  // 监听路径变化，确保editId正确更新
+  useEffect(() => {
+    if (!initialized.current) return;
+    
+    const editId = getEditIdFromPathname(pathname || undefined);
+    console.log(`[useInitQuotation] 路径变化: ${pathname}, editId: ${editId || 'undefined'}`);
+    setEditId(editId); // 总是设置editId，即使是undefined
+  }, [pathname, setEditId]);
 
   // 初始化数据 - 只在首个effect之后执行
   useEffect(() => {

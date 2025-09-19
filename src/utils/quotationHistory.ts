@@ -35,8 +35,10 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
 
     // 如果提供了现有ID，则更新该记录
     if (existingId) {
+      console.log(`[QuotationHistory] 尝试更新现有记录，ID: ${existingId}`);
       const index = history.findIndex(item => item.id === existingId);
       if (index !== -1) {
+        console.log(`[QuotationHistory] 找到现有记录，索引: ${index}，将更新该记录`);
         // 保留原始创建时间
         const originalCreatedAt = history[index].createdAt;
         
@@ -57,7 +59,33 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
           data: dataWithVisibleCols // 🆕 使用包含列显示设置的数据
         };
         history[index] = updatedHistory;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        } catch (storageError: any) {
+          // 处理配额超限错误
+          if (storageError?.name === 'QuotaExceededError' || storageError?.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+            console.warn('存储配额超限，尝试清理后重试...');
+            // 清理其他localStorage键，但保留当前历史记录
+            const keysToClean = Object.keys(localStorage).filter(k => 
+              (k.includes('draft') || k.includes('v2') || k.includes('temp') || k.includes('cache')) &&
+              k !== STORAGE_KEY // 不清理当前存储键
+            );
+            keysToClean.forEach(k => localStorage.removeItem(k));
+            
+            // 重试保存，如果仍然失败，则只保留最近的100条记录
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+              console.log('清理后保存成功');
+            } catch (retryError) {
+              console.warn('清理后仍然无法保存，保留最近100条记录');
+              const trimmedHistory = history.slice(-100); // 增加到100条
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
+            }
+          } else {
+            throw storageError;
+          }
+        }
         
         // 触发自定义事件，通知Dashboard页面更新
         if (typeof window !== 'undefined') {
@@ -67,11 +95,14 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
         }
         
         return updatedHistory;
+      } else {
+        console.log(`[QuotationHistory] 未找到现有记录，ID: ${existingId}，将创建新记录`);
       }
     }
 
     // 如果没有提供ID或找不到记录，创建新记录
-    const newId = existingId || generateId();
+    const newId = generateId();
+    console.log(`[QuotationHistory] 创建新记录，ID: ${newId}`);
     
     // 确保confirmation类型有正确的contractNo
     if (type === 'confirmation' && !data.contractNo) {
@@ -91,7 +122,33 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
     };
 
     history.unshift(newHistory);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    } catch (storageError: any) {
+      // 处理配额超限错误
+      if (storageError?.name === 'QuotaExceededError' || storageError?.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        console.warn('存储配额超限，尝试清理后重试...');
+        // 清理其他localStorage键，但保留当前历史记录
+        const keysToClean = Object.keys(localStorage).filter(k => 
+          (k.includes('draft') || k.includes('v2') || k.includes('temp') || k.includes('cache')) &&
+          k !== STORAGE_KEY // 不清理当前存储键
+        );
+        keysToClean.forEach(k => localStorage.removeItem(k));
+        
+        // 重试保存，如果仍然失败，则只保留最近的100条记录
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+          console.log('清理后保存成功');
+        } catch (retryError) {
+          console.warn('清理后仍然无法保存，保留最近100条记录');
+          const trimmedHistory = history.slice(-100); // 增加到100条
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
+        }
+      } else {
+        throw storageError;
+      }
+    }
     
     // 触发自定义事件，通知Dashboard页面更新
     if (typeof window !== 'undefined') {
@@ -102,6 +159,7 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
     
     return newHistory;
   } catch (error) {
+    console.error('Error saving quotation history:', error);
     return null;
   }
 };

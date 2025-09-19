@@ -30,7 +30,8 @@ export function useAutoSave<T>({ data, key, delay = 1000, enabled = true }: UseA
   // 清理旧数据
   const cleanupOldData = () => {
     const keysToClean = Object.keys(localStorage).filter(k => 
-      k.includes('quotation') || k.includes('draft') || k.includes('v2')
+      (k.includes('draft') || k.includes('v2') || k.includes('temp') || k.includes('cache')) &&
+      !k.includes('_history') // 不清理历史记录
     );
     keysToClean.forEach(k => localStorage.removeItem(k));
   };

@@ -107,11 +107,43 @@ export function HistoryPage() {
   useEffect(() => {
     setMounted(true);
     
+    // 监听localStorage变化，自动刷新数据
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key && (
+        event.key.includes('quotation_history') ||
+        event.key.includes('packing_history') ||
+        event.key.includes('invoice_history') ||
+        event.key.includes('purchase_history')
+      )) {
+        console.log('检测到localStorage变化，刷新历史记录...');
+        handleRefresh();
+      }
+    };
+
+    // 监听自定义存储变化事件
+    const handleCustomStorageChange = (event: CustomEvent) => {
+      if (event.detail?.key && (
+        event.detail.key.includes('quotation_history') ||
+        event.detail.key.includes('packing_history') ||
+        event.detail.key.includes('invoice_history') ||
+        event.detail.key.includes('purchase_history')
+      )) {
+        console.log('检测到自定义存储变化，刷新历史记录...');
+        handleRefresh();
+      }
+    };
+
+    // 添加事件监听器
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('customStorageChange', handleCustomStorageChange as EventListener);
+    
     // 组件卸载时的清理函数
     return () => {
       setMounted(false);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener);
     };
-  }, [setMounted]);
+  }, [setMounted, handleRefresh]);
 
   // 渲染Tab内容
   const renderTabContent = () => {

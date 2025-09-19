@@ -46,7 +46,26 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
           data
         };
         history[index] = updatedHistory;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        } catch (storageError: any) {
+          // 处理配额超限错误
+          if (storageError?.name === 'QuotaExceededError' || storageError?.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+            console.warn('存储配额超限，尝试清理后重试...');
+            // 清理旧数据
+            const keysToClean = Object.keys(localStorage).filter(k => 
+              k.includes('purchase') || k.includes('draft') || k.includes('v2')
+            );
+            keysToClean.forEach(k => localStorage.removeItem(k));
+            
+            // 只保留最近的50条记录
+            const trimmedHistory = history.slice(-50);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
+          } else {
+            throw storageError;
+          }
+        }
         
         // 触发自定义事件，通知Dashboard页面更新
         if (typeof window !== 'undefined') {
@@ -73,7 +92,26 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
     };
 
     history.unshift(newHistory);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    } catch (storageError: any) {
+      // 处理配额超限错误
+      if (storageError?.name === 'QuotaExceededError' || storageError?.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        console.warn('存储配额超限，尝试清理后重试...');
+        // 清理旧数据
+        const keysToClean = Object.keys(localStorage).filter(k => 
+          k.includes('purchase') || k.includes('draft') || k.includes('v2')
+        );
+        keysToClean.forEach(k => localStorage.removeItem(k));
+        
+        // 只保留最近的50条记录
+        const trimmedHistory = history.slice(-50);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
+      } else {
+        throw storageError;
+      }
+    }
     
     // 触发自定义事件，通知Dashboard页面更新
     if (typeof window !== 'undefined') {

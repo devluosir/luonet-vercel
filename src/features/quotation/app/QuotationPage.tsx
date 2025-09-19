@@ -342,13 +342,17 @@ export default function QuotationPage() {
     if (!data) return;
 
     try {
-                   const result = await saveOrUpdate(activeTab, data, notesConfig, editId);
+      const { saveQuotationHistory } = await import('@/utils/quotationHistory');
+      const result = await saveQuotationHistory(activeTab, data, editId);
+      
       if (result) {
-        if (!editId) {
+        if (result.id && !editId) {
           setEditId(result.id);
         }
         clearAutoSave();
-        showToast('保存成功', 'success');
+        showToast(activeTab === 'quotation' ? '报价单草稿保存成功' : '销售确认草稿保存成功', 'success');
+      } else {
+        showToast('保存失败，请重试', 'error');
       }
     } catch (error) {
       console.error('Error saving:', error);
@@ -399,19 +403,30 @@ export default function QuotationPage() {
     setProgress(5);
 
     try {
-      // 并行执行保存和PDF生成，去掉无意义的100ms延迟
-      const [saveResult, pdfBlob] = await Promise.all([
-        saveOrUpdate(activeTab, data, notesConfig, editId),
-        generatePdf(activeTab, data, notesConfig, setProgress, { 
-          mode: 'final', 
-          remarksMergeMode,
-          manualMergedCells
-        })
-      ]);
+      // 先保存数据，确保数据已保存（PDF生成时进行最终保存）
+      console.log(`[PDF生成] 开始保存数据，editId: ${editId}`);
+      const { saveQuotationHistory } = await import('@/utils/quotationHistory');
+      const saveResult = await saveQuotationHistory(activeTab, data, editId);
+      
+      if (!saveResult) {
+        showToast('数据保存失败，无法生成PDF', 'error');
+        return;
+      }
 
-      if (saveResult && !editId) {
+      // 更新editId如果保存成功（无论是新记录还是更新现有记录）
+      if (saveResult.id) {
+        console.log(`[PDF生成] 保存成功，记录ID: ${saveResult.id}，当前editId: ${editId}`);
         setEditId(saveResult.id);
       }
+
+      setProgress(30);
+
+      // 生成PDF
+      const pdfBlob = await generatePdf(activeTab, data, notesConfig, setProgress, { 
+        mode: 'final', 
+        remarksMergeMode,
+        manualMergedCells
+      });
 
       // 记录使用情况
       const documentNo = activeTab === 'confirmation' 
