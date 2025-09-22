@@ -540,13 +540,21 @@ export const generateOrderConfirmationPDF = async (
       const validNotes = data.notes?.filter(line => line?.trim() !== '') || [];
       
       validNotes.forEach((line: string, index: number) => {
-        // 添加编号
+        // 处理长文本自动换行，考虑编号的宽度
         const numberText = `${index + 1}. `;
         const numberWidth = doc.getTextWidth(numberText);
+        const wrappedText = doc.splitTextToSize(line, notesMaxWidth - numberWidth);
+        
+        // 估算当前条款所需空间：编号行 + 内容行数 * 行高 + 间距
+        const estimatedHeight = 5 + (wrappedText.length * 5) + 5;
+        
+        // 检查是否需要换页
+        currentY = checkAndAddPage(currentY, estimatedHeight);
+        
+        // 添加编号
         doc.text(numberText, leftMargin, currentY);
         
-        // 处理长文本自动换行，考虑编号的宽度
-        const wrappedText = doc.splitTextToSize(line, notesMaxWidth - numberWidth);
+        // 渲染内容行
         wrappedText.forEach((textLine: string, lineIndex: number) => {
           doc.text(textLine, leftMargin + numberWidth, currentY + (lineIndex * 5));
         });

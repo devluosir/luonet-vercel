@@ -270,16 +270,22 @@ export const generateQuotationPDF = async (
     // 添加备注
     const notesSetupId = startTimer('notes-setup');
     if (data.notes && data.notes.length > 0) {
-      // 检查剩余空间是否足够显示 Notes
-      const remainingSpace = pageHeight - yPosition;
-      if (remainingSpace < 40) {
-        doc.addPage();
-        yPosition = 20;
-      }
+      // 分页检查函数
+      const checkAndAddPage = (y: number, needed = 20) => {
+        if (y + needed > pageHeight - margin) {
+          doc.addPage();
+          return margin;
+        }
+        return y;
+      };
+
+      // 检查剩余空间是否足够显示 Notes 标题
+      yPosition = checkAndAddPage(yPosition, 20);
 
       doc.setFontSize(8);
       safeSetCnFont(doc, 'bold', mode);
       doc.text('Notes:', margin, yPosition);
+      yPosition += 5;
       
       // 设置普通字体用于条款内容
       safeSetCnFont(doc, 'normal', mode);
@@ -289,22 +295,29 @@ export const generateQuotationPDF = async (
       
       // 显示所有有效条款
       data.notes.forEach((note, index) => {
-        yPosition += 5;
-        // 显示序号
-        doc.text(`${index + 1}.`, margin, yPosition);
-        
         // 确保note是有效的字符串
         const noteText = typeof note === 'string' ? note.trim() : '';
         if (noteText) {
           // 处理长文本自动换行
           const wrappedText = doc.splitTextToSize(noteText, contentMaxWidth);
+          
+          // 估算当前条款所需空间：序号行 + 内容行数 * 行高 + 间距
+          const estimatedHeight = 5 + (wrappedText.length * 4) + 5;
+          
+          // 检查是否需要换页
+          yPosition = checkAndAddPage(yPosition, estimatedHeight);
+          
+          // 显示序号
+          doc.text(`${index + 1}.`, margin, yPosition);
+          
+          // 渲染内容行
           wrappedText.forEach((line: string, lineIndex: number) => {
             const lineY = yPosition + (lineIndex * 4);
             doc.text(line, margin + numberWidth, lineY);
           });
           
           // 更新Y坐标，确保下一条款在当前条款所有行之后
-          yPosition += (wrappedText.length - 1) * 4;
+          yPosition += (wrappedText.length - 1) * 4 + 5; // 添加条款间距
         }
       });
     }

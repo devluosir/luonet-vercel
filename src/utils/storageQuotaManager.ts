@@ -146,9 +146,9 @@ function compressAndSave(key: string, data: any): { success: boolean; message: s
       }
     }
     
-    return { success: false, message: '数据太大，无法保存' };
+    return { success: false, message: '数据太大，无法保存', trimmed: false };
   } catch (error) {
-    return { success: false, message: `压缩保存失败: ${error}` };
+    return { success: false, message: `压缩保存失败: ${error}`, trimmed: false };
   }
 }
 
