@@ -108,9 +108,11 @@ export const generateOrderConfirmationPDF = async (
   const pageHeight = doc.internal.pageSize.height;
   const margin = 20;  // 页面边距
   
-  // 分页检查函数
+  // 分页检查函数 - 优化为更智能的分页检查
   const checkAndAddPage = (y: number, needed = 20) => {
-    if (y + needed > pageHeight - margin) {
+    // 使用更宽松的边界检查，考虑页面底部的实际可用空间
+    const availableHeight = pageHeight - y - 30; // 预留30mm给页码和底部边距
+    if (needed > availableHeight) {
       doc.addPage();
       return margin;
     }
@@ -536,19 +538,17 @@ export const generateOrderConfirmationPDF = async (
       // 使用页面宽度减去左右边距作为 Notes 的最大宽度
       const notesMaxWidth = pageWidth - (margin * 2);
       
-      // 过滤掉空行，并重新计算序号
-      const validNotes = data.notes?.filter(line => line?.trim() !== '') || [];
-      
+      // 显示所有有效条款，在条款间进行分页检查
       validNotes.forEach((line: string, index: number) => {
         // 处理长文本自动换行，考虑编号的宽度
         const numberText = `${index + 1}. `;
         const numberWidth = doc.getTextWidth(numberText);
         const wrappedText = doc.splitTextToSize(line, notesMaxWidth - numberWidth);
         
-        // 估算当前条款所需空间：编号行 + 内容行数 * 行高 + 间距
-        const estimatedHeight = 5 + (wrappedText.length * 5) + 5;
+        // 估算当前条款所需空间：编号行 + 内容行数 * 行高 + 间距（减少额外间距）
+        const estimatedHeight = 3 + (wrappedText.length * 5) + 3;
         
-        // 检查是否需要换页
+        // 检查是否需要换页（在条款开始前检查，确保整个条款能完整显示）
         currentY = checkAndAddPage(currentY, estimatedHeight);
         
         // 添加编号

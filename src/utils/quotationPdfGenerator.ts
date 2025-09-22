@@ -270,17 +270,16 @@ export const generateQuotationPDF = async (
     // 添加备注
     const notesSetupId = startTimer('notes-setup');
     if (data.notes && data.notes.length > 0) {
-      // 分页检查函数
+      // 分页检查函数 - 优化为更智能的分页检查
       const checkAndAddPage = (y: number, needed = 20) => {
-        if (y + needed > pageHeight - margin) {
+        // 使用更宽松的边界检查，考虑页面底部的实际可用空间
+        const availableHeight = pageHeight - y - 30; // 预留30mm给页码和底部边距
+        if (needed > availableHeight) {
           doc.addPage();
           return margin;
         }
         return y;
       };
-
-      // 检查剩余空间是否足够显示 Notes 标题
-      yPosition = checkAndAddPage(yPosition, 20);
 
       doc.setFontSize(8);
       safeSetCnFont(doc, 'bold', mode);
@@ -293,7 +292,7 @@ export const generateQuotationPDF = async (
       const numberWidth = doc.getTextWidth('10.'); // 预留序号宽度
       const contentMaxWidth = pageWidth - margin - margin - numberWidth - 5; // 内容最大宽度
       
-      // 显示所有有效条款
+      // 显示所有有效条款，在条款间进行分页检查
       data.notes.forEach((note, index) => {
         // 确保note是有效的字符串
         const noteText = typeof note === 'string' ? note.trim() : '';
@@ -301,10 +300,10 @@ export const generateQuotationPDF = async (
           // 处理长文本自动换行
           const wrappedText = doc.splitTextToSize(noteText, contentMaxWidth);
           
-          // 估算当前条款所需空间：序号行 + 内容行数 * 行高 + 间距
-          const estimatedHeight = 5 + (wrappedText.length * 4) + 5;
+          // 估算当前条款所需空间：序号行 + 内容行数 * 行高 + 间距（减少额外间距）
+          const estimatedHeight = 3 + (wrappedText.length * 4) + 3;
           
-          // 检查是否需要换页
+          // 检查是否需要换页（在条款开始前检查，确保整个条款能完整显示）
           yPosition = checkAndAddPage(yPosition, estimatedHeight);
           
           // 显示序号
