@@ -108,10 +108,10 @@ export const generateOrderConfirmationPDF = async (
   const pageHeight = doc.internal.pageSize.height;
   const margin = 20;  // 页面边距
   
-  // 分页检查函数 - 优化为更智能的分页检查
+  // 分页检查函数 - 进一步优化为更宽松的分页检查
   const checkAndAddPage = (y: number, needed = 20) => {
-    // 使用更宽松的边界检查，考虑页面底部的实际可用空间
-    const availableHeight = pageHeight - y - 30; // 预留30mm给页码和底部边距
+    // 使用更宽松的边界检查，减少预留空间
+    const availableHeight = pageHeight - y - 15; // 只预留15mm给页码和底部边距
     if (needed > availableHeight) {
       doc.addPage();
       return margin;
@@ -545,8 +545,8 @@ export const generateOrderConfirmationPDF = async (
         const numberWidth = doc.getTextWidth(numberText);
         const wrappedText = doc.splitTextToSize(line, notesMaxWidth - numberWidth);
         
-        // 估算当前条款所需空间：编号行 + 内容行数 * 行高 + 间距（减少额外间距）
-        const estimatedHeight = 3 + (wrappedText.length * 5) + 3;
+        // 估算当前条款所需空间：编号行 + 内容行数 * 行高 + 间距（进一步减少额外间距）
+        const estimatedHeight = 2 + (wrappedText.length * 5) + 2;
         
         // 检查是否需要换页（在条款开始前检查，确保整个条款能完整显示）
         currentY = checkAndAddPage(currentY, estimatedHeight);
