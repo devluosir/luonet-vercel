@@ -64,6 +64,10 @@ export function sanitizeQuotation(raw: any): QuotationData {
       headerType: 'bilingual',
       stampType: 'none'
     },
+    // 🆕 保留notesConfig字段
+    notesConfig: raw.notesConfig,
+    // 🆕 保留savedVisibleCols字段
+    savedVisibleCols: raw.savedVisibleCols,
   };
 }
 

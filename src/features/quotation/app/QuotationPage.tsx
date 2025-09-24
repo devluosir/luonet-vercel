@@ -342,8 +342,8 @@ export default function QuotationPage() {
     if (!data) return;
 
     try {
-      const { saveQuotationHistory } = await import('@/utils/quotationHistory');
-      const result = await saveQuotationHistory(activeTab, data, editId);
+      // 使用正确的保存服务，确保notesConfig被保存
+      const result = await saveOrUpdate(activeTab, data, notesConfig, editId);
       
       if (result) {
         if (result.id && !editId) {
@@ -405,8 +405,8 @@ export default function QuotationPage() {
     try {
       // 先保存数据，确保数据已保存（PDF生成时进行最终保存）
       console.log(`[PDF生成] 开始保存数据，editId: ${editId}`);
-      const { saveQuotationHistory } = await import('@/utils/quotationHistory');
-      const saveResult = await saveQuotationHistory(activeTab, data, editId);
+      // 使用正确的保存服务，确保notesConfig被保存
+      const saveResult = await saveOrUpdate(activeTab, data, notesConfig, editId);
       
       if (!saveResult) {
         showToast('数据保存失败，无法生成PDF', 'error');
