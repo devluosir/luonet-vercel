@@ -46,12 +46,9 @@ export default function ExportModal({
     clearMessage();
     
     try {
-      const { jsonData, fileName, exportStats } = executeExport(type, activeTab, filteredData, selectedIds);
-      if (downloadFile(jsonData, fileName)) {
-        showMessage('success', `导出成功！\n${exportStats}`);
-      } else {
-        showMessage('error', '导出失败，请重试');
-      }
+      const { jsonData, fileName, exportStats } = executeExport(activeTab, selectedIds ? Array.from(selectedIds) : undefined);
+      downloadFile(jsonData, fileName);
+      showMessage('success', `导出成功！\n${exportStats}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '导出失败，请重试';
       showMessage('error', errorMessage);

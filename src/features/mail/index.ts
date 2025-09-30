@@ -31,4 +31,3 @@ export * from './types';
 
 // 工具
 export * from './utils/constants';
-export * from './utils/test-utils';

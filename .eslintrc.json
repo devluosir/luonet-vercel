@@ -1,7 +1,7 @@
 {
   "extends": "next/core-web-vitals",
   "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint", "./eslint-plugin-local"],
+  "plugins": ["@typescript-eslint"],
   "rules": {
     "@typescript-eslint/no-unused-vars": ["warn", {
       "argsIgnorePattern": "^_",
@@ -9,7 +9,6 @@
       "ignoreRestSiblings": true
     }],
     "@typescript-eslint/no-explicit-any": "warn",
-    "./eslint-plugin-local/no-spread-in-onchange": "warn"
   },
   "overrides": [
     {
