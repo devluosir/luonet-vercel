@@ -112,12 +112,12 @@ export async function getChineseFontBytes(): Promise<{ regular: Uint8Array; bold
   const [regular, bold] = await Promise.all([
     getFontBytes(
       'NotoSansSC-Regular-1.0.0',
-      '/fonts/compressed/NotoSansSC-Regular.ttf.gz',
+      '/fonts/NotoSansSC-Regular.ttf.gz',
       '/fonts/NotoSansSC-Regular.ttf',
     ),
     getFontBytes(
       'NotoSansSC-Bold-1.0.0',
-      '/fonts/compressed/NotoSansSC-Bold.ttf.gz',
+      '/fonts/NotoSansSC-Bold.ttf.gz',
       '/fonts/NotoSansSC-Bold.ttf',
     ),
   ]);
@@ -157,13 +157,13 @@ export async function getChineseFontBase64(): Promise<{ regular: string; bold: s
     getFontBase64(
       CACHE_KEYS.regular,
       CACHE_KEYS.regularB64,
-      '/fonts/compressed/NotoSansSC-Regular.ttf.gz',
+      '/fonts/NotoSansSC-Regular.ttf.gz',
       '/fonts/NotoSansSC-Regular.ttf',
     ),
     getFontBase64(
       CACHE_KEYS.bold,
       CACHE_KEYS.boldB64,
-      '/fonts/compressed/NotoSansSC-Bold.ttf.gz',
+      '/fonts/NotoSansSC-Bold.ttf.gz',
       '/fonts/NotoSansSC-Bold.ttf',
     ),
   ]);

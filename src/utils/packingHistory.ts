@@ -235,10 +235,29 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
   }
 };
 
+// 数据清理函数 - 确保所有字段都有正确的默认值
+const sanitizePackingHistoryItem = (item: any): PackingHistory => {
+  return {
+    id: item.id || '',
+    createdAt: item.createdAt || new Date().toISOString(),
+    updatedAt: item.updatedAt || new Date().toISOString(),
+    consigneeName: item.consigneeName || '',
+    invoiceNo: item.invoiceNo || '',
+    orderNo: item.orderNo || '',
+    totalAmount: typeof item.totalAmount === 'number' ? item.totalAmount : (parseFloat(item.totalAmount) || 0),
+    currency: item.currency || 'USD',
+    documentType: item.documentType || 'packing',
+    data: item.data || {}
+  };
+};
+
 // 获取所有历史记录
 export const getPackingHistory = (filters?: PackingHistoryFilters): PackingHistory[] => {
   try {
     let history = getLocalStorageJSON(STORAGE_KEY, []);
+
+    // 清理所有数据，确保字段完整性
+    history = history.map(sanitizePackingHistoryItem);
 
     if (filters) {
       // 搜索
@@ -268,7 +287,8 @@ export const getPackingHistory = (filters?: PackingHistoryFilters): PackingHisto
 export const getPackingHistoryById = (id: string): PackingHistory | null => {
   try {
     const history = getPackingHistory();
-    return history.find(item => item.id === id) || null;
+    const item = history.find(item => item.id === id);
+    return item ? sanitizePackingHistoryItem(item) : null;
   } catch (error) {
     console.error('Error getting packing history by id:', error);
     return null;

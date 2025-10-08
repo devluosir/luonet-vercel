@@ -1,6 +1,6 @@
 import { Download, Archive, FileText, CheckCircle, XCircle, X, CheckSquare } from 'lucide-react';
 import { useState } from 'react';
-import { executeExport, downloadFile } from '@/utils/historyImportExport';
+import { executeExport, fullExport, downloadFile } from '@/utils/historyImportExport';
 import type { HistoryType, HistoryItem } from '@/utils/historyImportExport';
 
 interface ExportModalProps {
@@ -46,9 +46,43 @@ export default function ExportModal({
     clearMessage();
     
     try {
-      const { jsonData, fileName, exportStats } = executeExport(activeTab, selectedIds ? Array.from(selectedIds) : undefined);
-      downloadFile(jsonData, fileName);
-      showMessage('success', `导出成功！\n${exportStats}`);
+      let result;
+      
+      switch (type) {
+        case 'current':
+          // 导出当前选项卡的所有数据
+          result = executeExport(activeTab);
+          break;
+        case 'all':
+          // 导出所有类型的数据
+          result = fullExport();
+          break;
+        case 'filtered':
+          // 导出筛选结果
+          if (filteredData && filteredData.length > 0) {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            const fileName = `${activeTab}_filtered_export_${timestamp}.json`;
+            const jsonData = JSON.stringify(filteredData, null, 2);
+            const exportStats = `筛选结果: ${filteredData.length} 条`;
+            result = { jsonData, fileName, exportStats };
+          } else {
+            throw new Error('没有筛选数据可导出');
+          }
+          break;
+        case 'selected':
+          // 导出选中的数据
+          if (selectedIds && selectedIds.size > 0) {
+            result = executeExport(activeTab, Array.from(selectedIds));
+          } else {
+            throw new Error('没有选中数据可导出');
+          }
+          break;
+        default:
+          throw new Error(`不支持的导出类型: ${type}`);
+      }
+      
+      downloadFile(result.jsonData, result.fileName);
+      showMessage('success', `导出成功！\n${result.exportStats}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '导出失败，请重试';
       showMessage('error', errorMessage);

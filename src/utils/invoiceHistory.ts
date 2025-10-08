@@ -2,13 +2,30 @@ import { InvoiceHistory } from '@/types/invoice-history';
 
 const STORAGE_KEY = 'invoice_history';
 
+// 数据清理函数 - 确保所有字段都有正确的默认值
+const sanitizeInvoiceHistoryItem = (item: any): InvoiceHistory => {
+  return {
+    id: item.id || '',
+    createdAt: item.createdAt || new Date().toISOString(),
+    updatedAt: item.updatedAt || new Date().toISOString(),
+    customerName: item.customerName || '',
+    invoiceNo: item.invoiceNo || '',
+    totalAmount: typeof item.totalAmount === 'number' ? item.totalAmount : (parseFloat(item.totalAmount) || 0),
+    currency: item.currency || 'USD',
+    data: item.data || {}
+  };
+};
+
 // 获取历史记录
 export const getInvoiceHistory = (): InvoiceHistory[] => {
   if (typeof window === 'undefined') return [];
   
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    const rawHistory = data ? JSON.parse(data) : [];
+    
+    // 清理所有数据，确保字段完整性
+    return rawHistory.map(sanitizeInvoiceHistoryItem);
   } catch (error) {
     console.error('Error loading invoice history:', error);
     return [];
