@@ -254,10 +254,10 @@ const sanitizePackingHistoryItem = (item: any): PackingHistory => {
 // 获取所有历史记录
 export const getPackingHistory = (filters?: PackingHistoryFilters): PackingHistory[] => {
   try {
-    let history = getLocalStorageJSON(STORAGE_KEY, []);
+    const rawHistory = getLocalStorageJSON(STORAGE_KEY, []) as any[];
 
     // 清理所有数据，确保字段完整性
-    history = history.map(sanitizePackingHistoryItem);
+    let history = rawHistory.map(sanitizePackingHistoryItem);
 
     if (filters) {
       // 搜索
