@@ -88,11 +88,6 @@ export const usePackingData = () => {
       if (injectedData) {
         setData(injectedData);
         setEditId(injectedEditId);
-        
-        // 清除注入的数据
-        delete customWindow.__PACKING_DATA__;
-        delete customWindow.__EDIT_MODE__;
-        delete customWindow.__EDIT_ID__;
       }
     }
   }, []);

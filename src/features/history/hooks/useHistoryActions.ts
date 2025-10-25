@@ -3,6 +3,10 @@ import { useRouter } from 'next/navigation';
 import { useHistoryStore } from '../state/history.store';
 import { HistoryService } from '../services/history.service';
 import type { HistoryType, HistoryItem } from '../types';
+import { convertConfirmationToPacking, hasMergedCells, getMergedCellsInfo } from '@/utils/convertConfirmationToPacking';
+import { savePackingHistory } from '@/utils/packingHistory';
+import { getQuotationHistory } from '@/utils/quotationHistory';
+import type { QuotationData } from '@/types/quotation';
 
 export function useHistoryActions() {
   const router = useRouter();
@@ -127,9 +131,46 @@ export function useHistoryActions() {
     setShowPreview(true);
   }, [setPreviewItem, setShowPreview]);
 
-  // 转换操作（仅用于confirmation）
+  // 转换操作（仅用于confirmation转换为packing）
   const handleConvert = useCallback((id: string) => {
-    router.push(`/quotation/edit/${id}?tab=quotation`);
+    try {
+      // 获取并验证订单确认记录
+      const confirmationItem = getQuotationHistory().find(item => item.id === id && item.type === 'confirmation');
+      if (!confirmationItem) {
+        throw new Error('未找到订单确认记录');
+      }
+
+      // 检查合并单元格并获取用户确认
+      const hasMerged = hasMergedCells(confirmationItem.data);
+      if (hasMerged) {
+        const mergedInfo = getMergedCellsInfo(confirmationItem.data);
+        const confirmMessage = 
+          `此订单确认包含${mergedInfo}。\n\n` +
+          '这些合并信息将被转换为装箱单的对应字段：\n' +
+          '- Part Name 和 Description 将合并到 Description 列\n\n' +
+          '是否继续转换？';
+        
+        if (!window.confirm(confirmMessage)) {
+          return;
+        }
+      }
+
+      // 执行转换
+      const packingData = convertConfirmationToPacking(confirmationItem.data);
+      
+      // 保存到历史记录
+      const newPackingHistory = savePackingHistory(packingData);
+      if (!newPackingHistory) {
+        throw new Error('保存装箱单失败');
+      }
+
+      // 转换成功，直接跳转到编辑页面
+      router.push(`/packing/edit/${newPackingHistory.id}`);
+      
+    } catch (error) {
+      console.error('转换订单确认为装箱单时出错:', error);
+      alert('转换失败: ' + (error instanceof Error ? error.message : '未知错误'));
+    }
   }, [router]);
 
   // 导出操作

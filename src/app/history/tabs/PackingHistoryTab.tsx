@@ -219,21 +219,21 @@ export default function PackingHistoryTab({
           </button>
           <button
             onClick={() => onSort('totalAmount')}
-            className="hidden md:flex w-36 flex-shrink-0 font-semibold pl-2 text-left hover:text-teal-600 dark:hover:text-teal-400 transition-colors flex items-center group whitespace-nowrap text-gray-900 dark:text-white"
+            className="md:flex w-36 flex-shrink-0 font-semibold pl-2 text-left hover:text-teal-600 dark:hover:text-teal-400 transition-colors items-center group whitespace-nowrap text-gray-900 dark:text-white hidden"
           >
             金额
             <span className="ml-1 flex items-center">{renderSortIcon('totalAmount')}</span>
           </button>
           <button
             onClick={() => onSort('updatedAt')}
-            className="hidden lg:flex w-40 flex-shrink-0 font-semibold pl-2 text-left hover:text-teal-600 dark:hover:text-teal-400 transition-colors flex items-center group whitespace-nowrap text-gray-900 dark:text-white"
+            className="lg:flex w-40 flex-shrink-0 font-semibold pl-2 text-left hover:text-teal-600 dark:hover:text-teal-400 transition-colors items-center group whitespace-nowrap text-gray-900 dark:text-white hidden"
           >
             修改时间
             <span className="ml-1 flex items-center">{renderSortIcon('updatedAt')}</span>
           </button>
           <button
             onClick={() => onSort('createdAt')}
-            className="hidden xl:flex w-40 flex-shrink-0 font-semibold pl-2 text-left hover:text-teal-600 dark:hover:text-teal-400 transition-colors flex items-center group whitespace-nowrap text-gray-900 dark:text-white"
+            className="xl:flex w-40 flex-shrink-0 font-semibold pl-2 text-left hover:text-teal-600 dark:hover:text-teal-400 transition-colors items-center group whitespace-nowrap text-gray-900 dark:text-white hidden"
           >
             创建时间
             <span className="ml-1 flex items-center">{renderSortIcon('createdAt')}</span>
