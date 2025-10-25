@@ -81,37 +81,8 @@ export function convertConfirmationToPacking(confirmationData: QuotationData): P
       headerType: confirmationData.templateConfig?.headerType || 'bilingual'
     },
     customUnits: confirmationData.customUnits || [],
-    // 分组模式默认关闭
-    isInGroupMode: false,
-    // 合并模式默认为自动
-    packageQtyMergeMode: 'auto',
-    dimensionsMergeMode: 'auto',
-    marksMergeMode: 'auto',
-    // 初始化合并单元格数据
-    manualMergedCells: {
-      packageQty: [],
-      dimensions: [],
-      marks: []
-    },
-    autoMergedCells: {
-      packageQty: [],
-      dimensions: [],
-      marks: confirmationData.mergedDescriptions?.map(merge => ({
-        startRow: merge.startRow,
-        endRow: merge.endRow,
-        content: merge.content,
-        isMerged: true
-      })) || []
-    },
     // 🔑 保留订单确认的列显示设置
-    savedVisibleCols: confirmationData.savedVisibleCols || null,
-    // 添加其他必需的字段
-    otherFees: [],
-    isGroupMode: false,
-    currentGroupId: undefined,
-    packageQtyMergeMode: 'auto',
-    dimensionsMergeMode: 'auto',
-    marksMergeMode: 'auto'
+    savedVisibleCols: confirmationData.savedVisibleCols || null
   };
 
   return packingData;
@@ -123,10 +94,10 @@ export function convertConfirmationToPacking(confirmationData: QuotationData): P
  * @returns 是否包含合并信息
  */
 export function hasMergedCells(confirmationData: QuotationData): boolean {
-  return (
-    (confirmationData.mergedRemarks && confirmationData.mergedRemarks.length > 0) ||
-    (confirmationData.mergedDescriptions && confirmationData.mergedDescriptions.length > 0)
-  );
+  const hasMergedRemarks = Array.isArray(confirmationData.mergedRemarks) && confirmationData.mergedRemarks.length > 0;
+  const hasMergedDescriptions = Array.isArray(confirmationData.mergedDescriptions) && confirmationData.mergedDescriptions.length > 0;
+  
+  return hasMergedRemarks || hasMergedDescriptions;
 }
 
 /**
@@ -137,14 +108,13 @@ export function hasMergedCells(confirmationData: QuotationData): boolean {
 export function getMergedCellsInfo(confirmationData: QuotationData): string {
   const info: string[] = [];
   
-  if (confirmationData.mergedDescriptions && confirmationData.mergedDescriptions.length > 0) {
+  if (Array.isArray(confirmationData.mergedDescriptions) && confirmationData.mergedDescriptions.length > 0) {
     info.push(`${confirmationData.mergedDescriptions.length}个合并的描述列`);
   }
   
-  if (confirmationData.mergedRemarks && confirmationData.mergedRemarks.length > 0) {
+  if (Array.isArray(confirmationData.mergedRemarks) && confirmationData.mergedRemarks.length > 0) {
     info.push(`${confirmationData.mergedRemarks.length}个合并的备注列`);
   }
   
   return info.join('，');
 }
-
