@@ -270,10 +270,13 @@ export const generateQuotationPDF = async (
     // 添加备注
     const notesSetupId = startTimer('notes-setup');
     if (data.notes && data.notes.length > 0) {
-      // 分页检查函数 - 最大化空间利用的分页检查
+      // 分页检查函数 - 确保内容不被页码区域截断
+      // 页码区域占用15mm（从pageHeight - 15开始），预留空间检查设为10mm
+      const FOOTER_HEIGHT = 10; // 预留空间检查
+      
       const checkAndAddPage = (y: number, needed = 20) => {
-        // 使用最宽松的边界检查，最小化预留空间
-        const availableHeight = pageHeight - y - 10; // 只预留10mm给页码和底部边距
+        // 预留足够空间给页码区域
+        const availableHeight = pageHeight - y - FOOTER_HEIGHT;
         if (needed > availableHeight) {
           doc.addPage();
           return margin;
@@ -348,7 +351,7 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     doc.setFillColor(255, 255, 255);
-    doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
+    doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
     
     doc.setFontSize(8);
     // 使用类型断言来解决类型兼容性问题
