@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
 import { fastRegisterFonts } from './globalFontRegistry';
-import { getHeaderImage } from './imageCache';
+import { getHeaderImage } from './imageLoader';
 import { startTimer, endTimer } from './performanceMonitor';
 import { safeSetFont, safeSetCnFont, getFontName } from './pdf/ensureFont';
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
