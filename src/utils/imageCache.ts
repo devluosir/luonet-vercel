@@ -7,6 +7,32 @@ const CACHE_KEYS = {
   headerEnglish: `header-english-${IMAGE_CACHE_VERSION}`
 };
 
+type HeaderType = 'bilingual' | 'english';
+
+function normalizeHeaderType(type: string | null | undefined): HeaderType {
+  const normalized = String(type || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '');
+
+  if (
+    normalized === 'bilingual' ||
+    normalized === 'cn+en' ||
+    normalized === 'cn-en' ||
+    normalized === 'cnen' ||
+    normalized === 'zh+en' ||
+    normalized === 'zh-en'
+  ) {
+    return 'bilingual';
+  }
+
+  if (normalized === 'english' || normalized === 'en') {
+    return 'english';
+  }
+
+  return 'bilingual';
+}
+
 /**
  * 获取缓存的图片 dataURL
  * @param cacheKey 缓存键名
@@ -50,11 +76,15 @@ export async function getCachedImage(
  * @param type 图片类型
  * @returns dataURL 字符串
  */
-export async function getHeaderImage(type: 'bilingual' | 'english'): Promise<string> {
-  const cacheKey = type === 'bilingual' ? CACHE_KEYS.headerBilingual : CACHE_KEYS.headerEnglish;
+export async function getHeaderImage(type: string): Promise<string> {
+  const normalizedType = normalizeHeaderType(type);
+  const cacheKey = normalizedType === 'bilingual' ? CACHE_KEYS.headerBilingual : CACHE_KEYS.headerEnglish;
   
   return getCachedImage(cacheKey, async () => {
-    const response = await fetch(`/images/header-${type}.png`);
+    const response = await fetch(`/images/header-${normalizedType}.png`);
+    if (!response.ok) {
+      throw new Error(`Header image request failed: ${response.status}`);
+    }
     const arrayBuffer = await response.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
     return btoa(String.fromCharCode.apply(null, Array.from(uint8Array)));
