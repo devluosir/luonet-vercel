@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
 import { fastRegisterFonts } from './globalFontRegistry';
-import { getHeaderImage } from './imageLoader';
+import { getHeaderImage, getHeaderImageFormat } from './imageLoader';
 import { startTimer, endTimer } from './performanceMonitor';
 import { safeSetFont, safeSetCnFont, getFontName } from './pdf/ensureFont';
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
@@ -115,7 +115,9 @@ export const generateQuotationPDF = async (
     if (headerType !== 'none') {
       const headerLoadingId = startTimer('header-loading');
       try {
-        const headerImage = await getHeaderImage(headerType as 'bilingual' | 'english');
+        const normalizedHeaderType = headerType as 'bilingual' | 'english';
+        const headerImage = await getHeaderImage(normalizedHeaderType);
+        const headerFormat = getHeaderImageFormat(normalizedHeaderType);
         
         // 直接使用base64数据，不创建Image对象避免HTTP请求
         const imgProperties = doc.getImageProperties(headerImage);
@@ -131,7 +133,7 @@ export const generateQuotationPDF = async (
         }
         
         const xPosition = margin + (contentWidth - imgWidth) / 2;
-        doc.addImage(headerImage, 'PNG', xPosition, yPosition, imgWidth, imgHeight);
+        doc.addImage(headerImage, headerFormat, xPosition, yPosition, imgWidth, imgHeight);
         yPosition += imgHeight + 10;
         endTimer(headerLoadingId, 'header-loading');
       } catch (error) {

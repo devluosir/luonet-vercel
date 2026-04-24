@@ -73,6 +73,10 @@ export async function getHeaderImage(headerType: 'bilingual' | 'english'): Promi
   }
 }
 
+export function getHeaderImageFormat(headerType: 'bilingual' | 'english'): 'JPEG' | 'PNG' {
+  return headerType === 'bilingual' ? 'JPEG' : 'PNG';
+}
+
 export async function getStampImage(stampType: 'shanghai' | 'hongkong'): Promise<string> {
   const stampLoading = performanceMonitor.start('获取印章图片');
   

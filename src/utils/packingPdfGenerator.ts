@@ -220,7 +220,9 @@ export async function generatePackingListPDF(
         const headerImageBase64 = getHeaderImage(data.templateConfig.headerType);
 
         if (headerImageBase64) {
-          const headerImage = `data:image/png;base64,${headerImageBase64}`;
+          const headerFormat = getHeaderImageFormat(data.templateConfig.headerType);
+          const mimeType = headerFormat === 'JPEG' ? 'image/jpeg' : 'image/png';
+          const headerImage = `data:${mimeType};base64,${headerImageBase64}`;
           const imgProperties = doc.getImageProperties(headerImage);
           
           // 检查是否显示marks列（用于判断是否需要横向模式）
@@ -278,7 +280,7 @@ export async function generatePackingListPDF(
           
           doc.addImage(
             headerImage,
-            'PNG',
+            headerFormat,
             imgX,
             imgY,
             imgWidth,
@@ -345,6 +347,10 @@ function getHeaderImage(headerType: 'none' | 'bilingual' | 'english'): string {
     default:
       return '';
   }
+}
+
+function getHeaderImageFormat(headerType: 'none' | 'bilingual' | 'english'): 'JPEG' | 'PNG' {
+  return headerType === 'bilingual' ? 'JPEG' : 'PNG';
 }
 
 // 获取箱单标题

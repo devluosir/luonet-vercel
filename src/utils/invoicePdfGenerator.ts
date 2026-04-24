@@ -134,6 +134,10 @@ async function getHeaderImageBase64(headerType: string): Promise<string> {
   }
 }
 
+function getHeaderImageFormat(headerType: string): 'JPEG' | 'PNG' {
+  return headerType === 'bilingual' ? 'JPEG' : 'PNG';
+}
+
 // 获取印章图片的简化版本
 async function getStampImage(stampType: string): Promise<string> {
   const { embeddedResources } = await import('@/lib/embedded-resources');
@@ -186,14 +190,17 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
     // 添加表头
     if (data.templateConfig.headerType !== 'none') {
       try {
-        const headerImageBase64 = await getHeaderImageBase64(data.templateConfig.headerType);
-        const headerImage = `data:image/png;base64,${headerImageBase64}`;
+        const headerType = data.templateConfig.headerType;
+        const headerImageBase64 = await getHeaderImageBase64(headerType);
+        const headerFormat = getHeaderImageFormat(headerType);
+        const mimeType = headerFormat === 'JPEG' ? 'image/jpeg' : 'image/png';
+        const headerImage = `data:${mimeType};base64,${headerImageBase64}`;
         const imgProperties = doc.getImageProperties(headerImage);
         const imgWidth = pageWidth - 30;  // 左右各留15mm
         const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
         doc.addImage(
           headerImage,
-          'PNG',
+          headerFormat,
           15,  // 左边距15mm
           15,  // 上边距15mm
           imgWidth,

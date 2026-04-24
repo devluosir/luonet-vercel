@@ -51,6 +51,10 @@ async function getHeaderImage(): Promise<string> {
   return embeddedResources.headerImage;
 }
 
+function getHeaderImageFormat(): 'JPEG' | 'PNG' {
+  return 'JPEG';
+}
+
 /**
  * 生成采购订单PDF
  */
@@ -96,13 +100,15 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
   try {
     // 添加表头
     try {
-      const headerImage = `data:image/png;base64,${await getHeaderImage()}`;
+      const headerFormat = getHeaderImageFormat();
+      const mimeType = headerFormat === 'JPEG' ? 'image/jpeg' : 'image/png';
+      const headerImage = `data:${mimeType};base64,${await getHeaderImage()}`;
       const imgProperties = doc.getImageProperties(headerImage);
       const imgWidth = pageWidth - 30;  // 左右各留15mm
       const imgHeight = (imgProperties.height * imgWidth) / imgProperties.width;
       doc.addImage(
         headerImage,
-        'PNG',
+        headerFormat,
         15,  // 左边距15mm
         15,  // 上边距15mm
         imgWidth,

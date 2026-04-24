@@ -5,7 +5,7 @@ import { UserOptions } from 'jspdf-autotable';
 import { generateTableConfig } from './pdfTableGenerator';
 import { ensureCnFonts } from '@/utils/pdfFonts';
 import { ensurePdfFont } from './pdfFontRegistry';
-import { getHeaderImage } from './imageLoader';
+import { getHeaderImage, getHeaderImageFormat } from './imageLoader';
 import { sanitizeQuotation } from './sanitizeQuotation';
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 import { safeSetCnFont } from './pdf/ensureFont';
@@ -140,7 +140,9 @@ export const generateOrderConfirmationPDF = async (
     const headerType = data.templateConfig?.headerType || 'bilingual';
     if (headerType !== 'none') {
       try {
-        const headerImage = await getHeaderImage(headerType as 'bilingual' | 'english');
+        const normalizedHeaderType = headerType as 'bilingual' | 'english';
+        const headerImage = await getHeaderImage(normalizedHeaderType);
+        const headerFormat = getHeaderImageFormat(normalizedHeaderType);
         
         // 使用jsPDF的getImageProperties方法获取图片尺寸，避免创建Image对象
         const imgProperties = doc.getImageProperties(headerImage);
@@ -156,7 +158,7 @@ export const generateOrderConfirmationPDF = async (
         }
         
         const xPosition = margin + (maxWidth - imgWidth) / 2;
-        doc.addImage(headerImage, 'PNG', xPosition, startY, imgWidth, imgHeight);
+        doc.addImage(headerImage, headerFormat, xPosition, startY, imgWidth, imgHeight);
         startY += imgHeight + 10;
       } catch (error) {
         console.error('头部图片加载失败，跳过:', error);

@@ -12,7 +12,7 @@ const resources = [
   },
   {
     name: 'headerImage',
-    path: path.join(__dirname, '../public/images/header-bilingual.png'),
+    path: path.join(__dirname, '../public/images/header-bilingual.jpg'),
   },
   {
     name: 'headerEnglish',
