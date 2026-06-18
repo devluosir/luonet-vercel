@@ -105,7 +105,7 @@ try {
 // 检查6: 测试是否通过
 console.log('\n6️⃣ 运行稳定性测试...');
 try {
-  execSync('npm test -- --testPathPattern=purchase.selectors.stability.test.ts', { 
+  execSync('npm test -- --testPathPatterns=purchase.selectors.stability.test.ts', { 
     stdio: 'inherit',
     encoding: 'utf8' 
   });
