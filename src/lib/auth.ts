@@ -39,9 +39,8 @@ export const authOptions: NextAuthOptions = {
               `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users?username=${encodeURIComponent(credentials.username)}`,
               {
                 headers: {
-                  'X-User-ID': 'system',
-                  'X-User-Name': 'system',
-                  'X-User-Admin': 'true',
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${process.env.API_TOKEN || ''}`,
                 }
               }
             );

@@ -52,9 +52,7 @@ export async function POST(request: NextRequest) {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-ID': session.user.id || session.user.username || '',
-          'X-User-Name': username,
-          'X-User-Admin': isAdmin ? 'true' : 'false',
+          'Authorization': `Bearer ${process.env.API_TOKEN || ''}`,
         },
         cache: 'no-store'
       });

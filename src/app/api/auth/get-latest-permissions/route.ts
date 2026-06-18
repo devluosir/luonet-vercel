@@ -3,16 +3,16 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import type { Permission } from '@/types/permissions';
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
-    // 从请求头获取用户信息
-    const userId = request.headers.get('X-User-ID');
-    const userName = request.headers.get('X-User-Name');
-    let isAdmin = request.headers.get('X-User-Admin') === 'true';
-
-    if (!userId || !userName) {
+    // 从 NextAuth session 读取用户身份（不信任客户端头）
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 });
     }
+    const userId = session.user.id || session.user.username || '';
+    const userName = session.user.username || session.user.name || '';
+    let isAdmin = !!session.user.isAdmin;
 
     // 优先从后端API获取最新权限
     let permissions: Permission[] = [];
@@ -21,13 +21,12 @@ export async function POST(request: NextRequest) {
     try {
       // 从后端API获取最新用户数据（包含权限）
       // 使用用户名查询，因为userId可能是用户名
-      const backendResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users?username=${encodeURIComponent(userName)}`, {
+      const workerBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net';
+      const backendResponse = await fetch(`${workerBase}/api/admin/users?username=${encodeURIComponent(userName)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-ID': userId,
-          'X-User-Name': userName,
-          'X-User-Admin': isAdmin ? 'true' : 'false',
+          'Authorization': `Bearer ${process.env.API_TOKEN || ''}`,
         },
         cache: 'no-store',
         next: { revalidate: 0 } // 强制不缓存
@@ -81,8 +80,6 @@ export async function POST(request: NextRequest) {
     // 如果后端获取失败，尝试从session获取权限
     if (permissions.length === 0) {
       try {
-        const session = await getServerSession(authOptions);
-        
         if (session?.user?.permissions) {
           if (Array.isArray(session.user.permissions)) {
             // 对象数组格式

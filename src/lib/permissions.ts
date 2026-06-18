@@ -496,11 +496,8 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       // 3. 如果session中没有权限数据，才从API获取
       const response = await fetch('/api/auth/get-latest-permissions', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'X-User-ID': session.user.id || session.user.username || '',
-          'X-User-Name': session.user.username || session.user.name || '',
-          'X-User-Admin': session.user.isAdmin ? 'true' : 'false'
         },
         cache: 'no-store'
       });

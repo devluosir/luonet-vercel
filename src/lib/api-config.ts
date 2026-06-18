@@ -7,13 +7,13 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb
 export const API_ENDPOINTS = {
   USERS: {
     CHANGE_PASSWORD: `${API_BASE_URL}/users/change-password`,
-    LIST: `${API_BASE_URL}/api/admin/users`,
-    CREATE: `${API_BASE_URL}/api/admin/users`,
-    GET: (id: string) => `${API_BASE_URL}/api/admin/users/${id}`,
-    UPDATE: (id: string) => `${API_BASE_URL}/api/admin/users/${id}`,
-    DELETE: (id: string) => `${API_BASE_URL}/api/admin/users/${id}`,
-    PERMISSIONS: (id: string) => `${API_BASE_URL}/api/admin/users/${id}/permissions`,
-    BATCH_PERMISSIONS: (id: string) => `${API_BASE_URL}/api/admin/users/${id}/permissions/batch`,
+    LIST: '/api/admin/users',
+    CREATE: '/api/admin/users',
+    GET: (id: string) => `/api/admin/users/${id}`,
+    UPDATE: (id: string) => `/api/admin/users/${id}`,
+    DELETE: (id: string) => `/api/admin/users/${id}`,
+    PERMISSIONS: (id: string) => `/api/admin/users/${id}/permissions`,
+    BATCH_PERMISSIONS: (id: string) => `/api/admin/users/${id}/permissions/batch`,
   },
   
   AUTH: {
@@ -59,12 +59,9 @@ export async function getUserInfo() {
 
 // 通用API请求函数
 export async function apiRequest(
-  url: string, 
+  url: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  // 获取用户信息
-  const userInfo = await getUserInfo();
-
   const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
@@ -73,19 +70,10 @@ export async function apiRequest(
     ...options,
   };
 
-  // 如果有用户信息，添加认证头
-  if (userInfo) {
-    // 使用用户信息作为认证
-    defaultOptions.headers = {
-      ...defaultOptions.headers,
-      'X-User-ID': userInfo.id,
-      'X-User-Name': userInfo.username,
-      'X-User-Admin': userInfo.isAdmin ? 'true' : 'false',
-    };
-  }
-
-  // 处理相对URL（本地API路由）
-  const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
+  // 代理路由使用相对路径，直连路由使用完整 URL
+  const fullUrl = url.startsWith('http')
+    ? url
+    : `${typeof window !== 'undefined' ? window.location.origin : ''}${url}`;
 
   return fetch(fullUrl, defaultOptions);
 }

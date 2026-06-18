@@ -8,13 +8,17 @@ interface Permission {
   canAccess: boolean;
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
-    // 从请求头获取用户信息
-    const userId = request.headers.get('X-User-ID');
-    const userName = request.headers.get('X-User-Name');
-    const isAdmin = request.headers.get('X-User-Admin') === 'true';
+    // 从 NextAuth session 获取用户信息，不信任客户端身份头
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: '用户未登录' }, { status: 401 });
+    }
 
+    const userId = session.user.id || session.user.username || '';
+    const userName = session.user.username || session.user.name || '';
+    const isAdmin = !!session.user.isAdmin;
     console.log('权限刷新API调用，用户信息:', { userId, userName, isAdmin });
 
     if (!userId || !userName) {
@@ -37,9 +41,7 @@ export async function POST(request: NextRequest) {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-ID': userId,
-          'X-User-Name': userName,
-          'X-User-Admin': isAdmin ? 'true' : 'false',
+          'Authorization': `Bearer ${process.env.API_TOKEN || ''}`,
         },
         cache: 'no-store'
       });
@@ -55,9 +57,7 @@ export async function POST(request: NextRequest) {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'X-User-ID': userId,
-            'X-User-Name': userName,
-            'X-User-Admin': isAdmin ? 'true' : 'false',
+            'Authorization': `Bearer ${process.env.API_TOKEN || ''}`,
           },
           cache: 'no-store'
         });
@@ -79,9 +79,7 @@ export async function POST(request: NextRequest) {
               method: 'GET',
               headers: {
                 'Content-Type': 'application/json',
-                'X-User-ID': correctUser.id,
-                'X-User-Name': userName,
-                'X-User-Admin': isAdmin ? 'true' : 'false',
+                'Authorization': `Bearer ${process.env.API_TOKEN || ''}`,
               },
               cache: 'no-store'
             });
@@ -136,14 +134,6 @@ export async function POST(request: NextRequest) {
         ];
       }
     }
-
-    // 获取当前session
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: '用户未登录' }, { status: 401 });
-    }
-
     // 更新session中的权限数据
     // 由于NextAuth的限制，我们需要通过重新生成token来更新session
     // 这里我们返回更新后的权限数据，并指示前端需要重新登录
