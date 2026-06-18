@@ -1,4 +1,5 @@
 import { InvoiceHistory } from '@/types/invoice-history';
+import { d1SyncDocument } from './d1Sync';
 
 const STORAGE_KEY = 'invoice_history';
 
@@ -56,7 +57,19 @@ export const addInvoiceHistory = (data: InvoiceHistory): boolean => {
   try {
     const history = getInvoiceHistory();
     history.unshift(data);
-    return saveInvoiceHistory(history);
+    const saved = saveInvoiceHistory(history);
+    if (saved) {
+      d1SyncDocument('create', {
+        id: data.id,
+        type: 'invoice',
+        doc_no: data.invoiceNo,
+        customer_name: data.customerName,
+        total_amount: data.totalAmount,
+        currency: data.currency,
+        data,
+      });
+    }
+    return saved;
   } catch (error) {
     console.error('Error adding invoice history:', error);
     return false;
@@ -68,7 +81,11 @@ export const deleteInvoiceHistory = (id: string): boolean => {
   try {
     const history = getInvoiceHistory();
     const filtered = history.filter(item => item.id !== id);
-    return saveInvoiceHistory(filtered);
+    const saved = saveInvoiceHistory(filtered);
+    if (saved) {
+      d1SyncDocument('delete', { id, type: 'invoice', doc_no: '', data: null });
+    }
+    return saved;
   } catch (error) {
     console.error('Error deleting invoice history:', error);
     return false;
@@ -242,4 +259,4 @@ export const exportInvoiceHistory = (): string => {
     console.error('Error exporting invoice history:', error);
     return '';
   }
-}; 
+};

@@ -1,5 +1,6 @@
 import { PurchaseOrderData } from '@/types/purchase';
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
+import { d1SyncDocument } from './d1Sync';
 
 export interface PurchaseHistory {
   id: string;
@@ -73,6 +74,17 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
             detail: { key: STORAGE_KEY }
           }));
         }
+
+        // D1 双写（fire-and-forget）
+        d1SyncDocument('update', {
+          id: existingId,
+          type: 'purchase',
+          doc_no: updatedHistory.orderNo || '',
+          customer_name: updatedHistory.supplierName,
+          total_amount: totalAmount,
+          currency: data.currency,
+          data,
+        });
         
         return updatedHistory;
       }
@@ -119,6 +131,17 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
         detail: { key: STORAGE_KEY }
       }));
     }
+
+    // D1 双写（fire-and-forget）
+    d1SyncDocument('create', {
+      id: newId,
+      type: 'purchase',
+      doc_no: newHistory.orderNo || '',
+      customer_name: newHistory.supplierName,
+      total_amount: totalAmount,
+      currency: data.currency,
+      data,
+    });
     
     return newHistory;
   } catch (error) {
@@ -167,6 +190,7 @@ export const deletePurchaseHistory = (id: string): boolean => {
     const history = getPurchaseHistory();
     const filtered = history.filter(item => item.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    d1SyncDocument('delete', { id, type: 'purchase', doc_no: '', data: null });
     return true;
   } catch (error) {
     console.error('Error deleting purchase history:', error);
@@ -211,4 +235,4 @@ export const importPurchaseHistory = (jsonData: string): boolean => {
     console.error('Error importing purchase history:', error);
     return false;
   }
-}; 
+};

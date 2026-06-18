@@ -2,6 +2,7 @@ import { QuotationData } from '@/types/quotation';
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 import { QuotationHistory, QuotationHistoryFilters } from '@/types/quotation-history';
 import { getDefaultNotes } from '@/utils/getDefaultNotes';
+import { d1SyncDocument } from './d1Sync';
 
 const STORAGE_KEY = 'quotation_history';
 
@@ -93,6 +94,17 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
             detail: { key: STORAGE_KEY }
           }));
         }
+
+        // D1 双写（fire-and-forget）
+        d1SyncDocument('update', {
+          id: existingId,
+          type,
+          doc_no: updatedHistory.quotationNo || '',
+          customer_name: updatedHistory.customerName,
+          total_amount: totalAmount,
+          currency: data.currency,
+          data: dataWithVisibleCols,
+        });
         
         return updatedHistory;
       } else {
@@ -156,6 +168,17 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
         detail: { key: STORAGE_KEY }
       }));
     }
+
+    // D1 双写（fire-and-forget）
+    d1SyncDocument('create', {
+      id: newId,
+      type,
+      doc_no: newHistory.quotationNo || '',
+      customer_name: newHistory.customerName,
+      total_amount: totalAmount,
+      currency: data.currency,
+      data: dataWithVisibleCols,
+    });
     
     return newHistory;
   } catch (error) {
@@ -208,6 +231,7 @@ export const deleteQuotationHistory = (id: string): boolean => {
     const history = getQuotationHistory();
     const filtered = history.filter(item => item.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    d1SyncDocument('delete', { id, type: 'quotation', doc_no: '', data: null });
     return true;
   } catch (error) {
     return false;
@@ -383,4 +407,4 @@ export const importQuotationHistory = (jsonData: string, mergeStrategy: 'replace
   } catch (error) {
     return false;
   }
-}; 
+};

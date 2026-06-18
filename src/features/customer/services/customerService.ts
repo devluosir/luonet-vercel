@@ -1,4 +1,5 @@
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
+import { d1SyncCustomer } from '@/utils/d1Sync';
 import { Customer, HistoryDocument } from '../types';
 
 // 从localStorage中提取客户数据
@@ -126,6 +127,17 @@ export function saveCustomer(customer: Customer): void {
     
     localStorage.setItem('customer_management', JSON.stringify(updatedCustomers));
     console.log('客户数据保存成功:', customer);
+
+    // D1 双写（fire-and-forget）
+    d1SyncCustomer(existingIndex >= 0 ? 'update' : 'create', {
+      id: customer.id,
+      type: 'customer',
+      name: customer.name,
+      email: customer.email || undefined,
+      phone: customer.phone || undefined,
+      address: customer.address || undefined,
+      data: { company: customer.company },
+    });
   } catch (error) {
     console.error('保存客户数据失败:', error);
     throw error;
@@ -140,8 +152,10 @@ export function deleteCustomer(customerId: string): void {
     const existingCustomers = getLocalStorageJSON<Customer[]>('customer_management', []);
     const updatedCustomers = existingCustomers.filter((c: Customer) => c.id !== customerId);
     localStorage.setItem('customer_management', JSON.stringify(updatedCustomers));
-    
     console.log('客户删除成功:', customerId);
+
+    // D1 双写（fire-and-forget）
+    d1SyncCustomer('delete', { id: customerId, type: 'customer', name: '' });
   } catch (error) {
     console.error('删除客户失败:', error);
     throw error;
