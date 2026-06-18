@@ -49,7 +49,7 @@ export const RemarksSection: React.FC<RemarksSectionProps> = ({
                 })}
                 className="w-4 h-4 text-[#007AFF] bg-gray-100 border-gray-300 rounded focus:ring-[#007AFF] focus:ring-2"
               />
-              <span className="text-sm text-gray-700 dark:text-gray-300">SHIP'S SPARES IN TRANSIT</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">SHIP&apos;S SPARES IN TRANSIT</span>
             </label>
             
             <label className="flex items-center space-x-2 cursor-pointer">
@@ -78,7 +78,7 @@ export const RemarksSection: React.FC<RemarksSectionProps> = ({
             </h4>
             <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
               {data.remarkOptions.shipsSpares && (
-                <p>• SHIP'S SPARES IN TRANSIT</p>
+                <p>• SHIP&apos;S SPARES IN TRANSIT</p>
               )}
               {data.remarkOptions.customsPurpose && (
                 <p>• FOR CUSTOMS PURPOSE ONLY</p>

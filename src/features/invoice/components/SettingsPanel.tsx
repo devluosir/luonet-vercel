@@ -308,3 +308,5 @@ export const SettingsPanel = React.memo(() => {
     </div>
   );
 });
+
+SettingsPanel.displayName = 'SettingsPanel';

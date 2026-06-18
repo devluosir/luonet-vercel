@@ -253,7 +253,7 @@ export function CustomerList({ customers, onEdit, onDelete, onViewDetail, search
       {searchQuery && filteredCustomers.length > 0 && (
         <div className="mt-4 p-3 bg-blue-50 rounded-lg">
           <p className="text-sm text-blue-800">
-            显示 {filteredCustomers.length} 个匹配"<strong>{searchQuery}</strong>"的客户
+            显示 {filteredCustomers.length} 个匹配&quot;<strong>{searchQuery}</strong>&quot;的客户
           </p>
         </div>
       )}

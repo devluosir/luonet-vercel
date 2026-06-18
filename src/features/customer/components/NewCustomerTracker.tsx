@@ -175,7 +175,7 @@ export function NewCustomerTracker({ onRefresh }: NewCustomerTrackerProps) {
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>暂无新客户记录</p>
-            <p className="text-sm mt-2">点击"自动识别"开始管理</p>
+            <p className="text-sm mt-2">点击&quot;自动识别&quot;开始管理</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200 dark:divide-gray-700">

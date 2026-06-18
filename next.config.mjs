@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
-  // 在构建时忽略 ESLint 错误，避免构建失败
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   experimental: {
     optimizePackageImports: ['lucide-react', '@headlessui/react'],

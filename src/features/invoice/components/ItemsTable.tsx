@@ -889,3 +889,5 @@ export const ItemsTable = React.memo(() => {
     </div>
   );
 });
+
+ItemsTable.displayName = 'ItemsTable';

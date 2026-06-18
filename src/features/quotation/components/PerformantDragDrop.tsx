@@ -77,11 +77,11 @@ export const PerformantDragDrop = memo<PerformantDragDropProps>(({
     });
   }, [notes]);
 
-  // 🚀 优化传感器配置 - 使用useMemo缓存，避免重复创建
-  const sensors = useMemo(() => useSensors(
+  // 🚀 优化传感器配置
+  const sensors = useSensors(
     useSensor(PointerSensor, DRAG_SENSORS_CONFIG.pointer),
     useSensor(KeyboardSensor, DRAG_SENSORS_CONFIG.keyboard)
-  ), []);
+  );
 
   // 🚀 获取当前拖拽的note
   const activeNote = useMemo(() => {

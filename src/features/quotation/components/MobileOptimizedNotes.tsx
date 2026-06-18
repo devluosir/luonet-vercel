@@ -144,7 +144,7 @@ export const MobileOptimizedNotes = memo<MobileOptimizedNotesProps>(({
   }, [notes]);
 
   // 🚀 移动端配置面板
-  const MobileConfigPanel = memo(() => (
+  const MobileConfigPanel = () => (
     <div className="bg-gray-50 dark:bg-[#2C2C2E] rounded-xl p-4 space-y-4">
       {/* 模板选择 */}
       <div>
@@ -211,7 +211,7 @@ export const MobileOptimizedNotes = memo<MobileOptimizedNotesProps>(({
         新增条款
       </button>
     </div>
-  ));
+  );
 
   return (
     <div className="space-y-4">

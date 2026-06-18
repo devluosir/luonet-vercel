@@ -16,8 +16,11 @@
       "rules": {
         "no-new-object": "error",
         "no-array-constructor": "error",
-        "@typescript-eslint/no-object-literal-type-assertion": "error"
+        "@typescript-eslint/consistent-type-assertions": ["error", {
+          "assertionStyle": "as",
+          "objectLiteralTypeAssertions": "never"
+        }]
       }
     }
   ]
-} 
+}

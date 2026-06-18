@@ -134,3 +134,5 @@ export const InvoiceActions = React.memo(() => {
     </div>
   );
 });
+
+InvoiceActions.displayName = 'InvoiceActions';

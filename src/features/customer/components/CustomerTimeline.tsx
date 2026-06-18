@@ -175,7 +175,7 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>暂无时间轴事件</p>
-            <p className="text-sm mt-2">点击"同步历史"按钮从历史记录中提取事件，或点击"添加事件"创建自定义事件</p>
+            <p className="text-sm mt-2">点击&quot;同步历史&quot;按钮从历史记录中提取事件，或点击&quot;添加事件&quot;创建自定义事件</p>
           </div>
         ) : (
           <div className="space-y-4">

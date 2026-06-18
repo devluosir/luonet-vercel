@@ -322,11 +322,11 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
           onChange={(e) => updateData({ showInvoiceReminder: e.target.checked })}
           className="h-4 w-4 accent-black dark:accent-white"
         />
-        <span>Please state our invoice no. "</span>
+        <span>Please state our invoice no. &quot;</span>
         <span className="font-medium text-orange-600 dark:text-orange-400">
           {invoiceNoExternal?.trim() || 'TBD'}
         </span>
-        <span>" on your payment documents.</span>
+        <span>&quot; on your payment documents.</span>
       </div>
 
       {/* 预览（简洁版本） */}

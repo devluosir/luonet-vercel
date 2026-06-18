@@ -41,8 +41,8 @@ export const OptimizedNotesSection: React.FC<NotesSectionProps> = memo(() => {
     setMounted(true);
   }, []);
 
-  // 🚀 优化2: 缓存传感器配置，避免每次渲染重新创建
-  const sensors = useMemo(() => useSensors(
+  // 🚀 优化2: 配置拖拽传感器
+  const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8, // 增加拖拽触发距离，减少意外触发
@@ -51,7 +51,7 @@ export const OptimizedNotesSection: React.FC<NotesSectionProps> = memo(() => {
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
-  ), []);
+  );
 
   // 🚀 优化3: 使用useMemo缓存可见Notes列表，减少重复计算
   const visibleNotes = useMemo(() => {

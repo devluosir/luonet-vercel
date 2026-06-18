@@ -556,7 +556,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
                   📋 从剪贴板粘贴表格
                 </button>
                 <div className="text-xs text-gray-400">
-                  或点击"添加行"开始创建表格
+                  或点击&quot;添加行&quot;开始创建表格
                 </div>
               </div>
             </div>
