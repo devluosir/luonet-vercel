@@ -1,133 +1,255 @@
-# MLUONET - 企业管理系统
+# LC App / MLUONET 企业业务管理系统
 
-[![版本](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/mluonet/mluonet)
-[![许可证](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![构建状态](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/mluonet/mluonet)
+LC App 是 Luo & Company 内部使用的业务单据与客户管理系统。基于 Next.js App Router，在同一个登录系统下协同处理报价、销售确认、装箱单、财务发票、采购订单、客户资料、历史记录和 AI 邮件助手。
 
-## 项目概述
+```text
+git@github.com:devluosir/luonet-vercel.git
+```
 
-MLUONET是一个现代化的企业管理系统，提供完整的业务管理解决方案，包括报价、采购、发票、装箱单等核心功能。
+## 当前状态
 
-## 主要功能
+- **应用版本**：`1.2.0`（最新 tag：`V26.4.24.0.1`，2026-04-24）
+- **主框架**：Next.js 14、React 18、TypeScript 5、Tailwind CSS 3
+- **部署**：Vercel 主站（香港 hkg1）+ Cloudflare Worker + D1（用户权限服务）
+- **认证**：NextAuth Credentials，远程调用 D1 用户 API 校验账密
+- **业务数据**：单据和客户数据保存在浏览器 `localStorage`；用户和权限保存在 Cloudflare D1
+- **PDF/Excel**：前端生成，中文字体与头图在构建时预嵌入（`scripts/embed-resources.js`）
+- **AI 邮件**：调用 DeepSeek Chat API（`/api/generate`）
 
-### 核心业务模块
-- **报价管理**: 创建和管理客户报价单
-  - **Notes自定义排序**: 支持拖拽排序和显示控制
-  - **默认排序**: Delivery time → Price based on → Delivery terms → Payment term → Validity
-  - **完整Notes类型**: 包含9种Notes类型，支持质量条款、保修条款等
-  - **序号开关合并**: 序号圆圈同时作为开关，点击切换显示/隐藏状态
-  - **卡片式布局**: 单行展示，Label — 内容格式，视觉更整齐
-  - **展开态强化**: 展开时背景色变化，箭头旋转，视觉层次清晰
-  - **收缩态标签**: 显示选中选项的标签提示，无需展开即可预览
-  - **分组选项**: 常用选项和其他选项分组展示，减少滚动压力
-  - **搜索功能**: 支持选项搜索，快速定位所需内容
-  - **拖拽编辑分离**: 拖拽句柄与编辑区域完全分离，避免冲突
-  - **内联编辑**: 点击文本进入编辑模式，Enter保存Esc取消，支持所有Notes类型
-  - **编辑状态提示**: 编辑时卡片高亮显示，拖拽句柄自动隐藏
-  - **错误处理**: 自动保存失败时自动清理存储空间，PDF生成时处理未定义数据
-  - **数据净化**: 统一的数据净化函数，确保PDF生成时数据格式正确
-  - **表头兼容修复**: 兼容历史 `headerType` 值（如 `CN+EN/cn+en`），避免报价PDF在双语模式下丢失表头
-  - **表头来源统一**: 报价PDF与订单确认PDF统一使用同一头图加载链路（`imageLoader`），确保 `CN+EN` 表头一致
-  - **存储优化**: 精简数据存储，避免localStorage配额超限
-  - **进度提示**: PDF预览和生成时显示独立的进度条和加载状态
-  - **性能优化**: 避免重复数据净化，减少不必要的处理开销
-  - **批量操作**: 全选/全不选/仅常用/恢复默认顺序
-  - **双语模板**: EXW工厂交货/FOB离岸价/CIF到岸价等一键套用
-  - **内联选择器**: Payment Terms和Delivery Terms支持下拉选择
-  - **空值防御**: 可见但内容为空的条款会显示提醒
-  - **配置面板**: 可选择显示/隐藏特定Notes类型
-  - **Excel导出功能**: 支持报价单和销售确认的Excel导出，包含完整的商品信息、费用明细和合同条款
-  - **订单确认转装箱单**: 一键将订单确认转换为装箱单，自动保留合并的名称和描述列信息
-- **采购管理**: 处理供应商采购订单
-- **发票管理**: 生成和管理发票
-- **装箱单管理**: 创建详细的装箱清单
-  - **从订单确认导入**: 支持从订单确认历史记录一键转换，保留所有合并单元格信息
-  - **智能字段映射**: 自动映射字段（如名称→唛头、描述→描述等）
-  - **数据完整性**: 保留合并单元格、高亮信息和列显示设置
-  - **用户友好**: 自动跳转到编辑页面完善信息
-- **邮件系统**: 集成AI邮件助手功能
-  - **ChatGPT风格界面**: 现代化的聊天界面，节省空间
-  - **邮件编写**: 支持多种语言和风格的邮件生成
-  - **邮件回复**: 基于原始邮件和回复草稿生成优化回复
-  - **多语言支持**: 支持英文、中文和双语模式
-  - **多种风格**: 正式、专业、友好、简洁、详细、非正式、激励等风格
-  - **智能诊断**: 自动检测连接问题并提供解决方案
-  - **健康检查**: 实时监控API连接状态
+## 功能地图
 
-### Dashboard 智能管理
-- **模块化设计**: 清晰的模块按钮和权限控制
-- **实时文档管理**: 支持时间筛选、类型筛选和搜索功能
-- **智能预加载**: 悬停预加载和权限动态预加载
-- **多源权限容错**: 支持 Store、Session、本地缓存三重权限源
-- **搜索高亮**: 支持文档编号、客户名称等关键词搜索和高亮显示
-- **响应式布局**: 完美适配移动端和桌面端
+| 模块 | 路由 | 主要数据 | 说明 |
+|------|------|---------|------|
+| 登录 | `/` | NextAuth session、本地权限缓存 | 登录后进入 `/dashboard` |
+| Dashboard | `/dashboard` | 各历史记录、权限缓存 | 快速创建单据、最近文档、按权限显示模块 |
+| 报价 / 销售确认 | `/quotation` | `quotation_history`、`draftQuotation`、`qt.visibleCols` | Tab 切换报价/确认、PDF、Excel、复制、编辑、订单确认转装箱单 |
+| 装箱单 | `/packing` | `packing_history`、`pk.visibleCols` | 支持从销售确认导入，生成装箱单 + 唛头 PDF |
+| 财务发票 | `/invoice` | `invoice_history` | 导入报价数据、PDF、Excel、复制、编辑 |
+| 采购订单 | `/purchase` | `purchase_history`、`draftPurchase` | 供应商、银行信息、PDF、自动草稿保存 |
+| 历史管理 | `/history` | 全部历史记录 | 搜索、筛选、批量删除、导入导出 JSON |
+| 客户管理 | `/customer`、`/customer/detail` | 客户/供应商/收货人、时间轴、跟进 | 从历史单据提取联系人，客户时间轴和跟进记录 |
+| AI 邮件助手 | `/mail` | DeepSeek API（无持久化） | 撰写、回复、多语言、多语气风格 |
+| 管理后台 | `/admin`、`/admin/users/[id]` | D1 User、Permission | 用户创建、账户状态、管理员状态、模块权限 |
 
-### 404页面娱乐功能
-- **五子棋游戏**: 经典的五子棋对战游戏
-- **2048游戏**: 数字合并游戏，支持AI推演功能
+**动态路由**（编辑/复制）：`/quotation/edit/[id]`、`/quotation/copy/[id]`、`/packing/edit/[id]`、`/packing/copy/[id]`、`/invoice/edit/[id]`、`/invoice/copy/[id]`、`/purchase/edit/[id]`、`/purchase/copy/[id]`
 
-## 技术栈
+## 技术架构
 
-- **前端框架**: Next.js 14 (App Router)
-- **UI组件**: Tailwind CSS
-- **图标库**: Lucide React
-- **状态管理**: React Hooks + Zustand
-- **主题管理**: 自定义主题系统 + CSS变量
-- **部署平台**: Vercel
+```text
+src/
+├── app/                    # Next.js App Router 页面和 API routes
+│   └── api/                # /api/auth、/api/generate、/api/health、/api/quotation
+├── features/               # 模块化业务代码（优先在这里开发）
+│   ├── admin/              # 用户和权限管理
+│   ├── core/               # 跨模块基类和公共服务
+│   ├── customer/           # 客户/供应商/收货人/时间轴/跟进
+│   ├── dashboard/          # 首页
+│   ├── history/            # 历史记录
+│   ├── invoice/            # 财务发票
+│   ├── mail/               # AI 邮件助手
+│   ├── packing/            # 装箱单
+│   ├── purchase/           # 采购订单
+│   └── quotation/          # 报价单 + 销售确认
+├── components/             # 共享组件 + 旧模块遗留（迁移中）
+├── hooks/                  # 跨模块 hooks（autoSave、permissions、PDF 预热等）
+├── lib/                    # auth.ts、d1-client.ts、deepseek.ts、api-config.ts
+├── utils/                  # PDF 生成器、历史记录、导入导出、存储、主题
+├── constants/              # permissions.ts、dashboardModules.ts、colorMap.ts
+└── types/                  # 跨模块类型定义
+```
 
-## 开发环境
+每个 feature 模块内部结构：`app/`（页面容器）、`components/`（UI）、`hooks/`（业务 hooks）、`services/`（数据 + PDF + Excel + API）、`state/`（Zustand store + selectors）、`types/`、`utils/`。
+
+## 数据与存储
+
+### Cloudflare D1（用户权限）
+
+`schema.sql` 定义三张表：
+
+```sql
+User        -- id、username、password(bcrypt)、email、status、isAdmin、lastLoginAt
+Permission  -- id、userId、moduleId、canAccess  （外键 User.id 级联删除）
+quotation_history  -- 旧表，保留兼容，主站历史目前不使用
+```
+
+Worker 入口：`src/worker.ts`。配置：`wrangler.toml`（Worker 名 `mluonet-users`，D1 binding `USERS_DB`，自定义域 `udb.luocompany.net`）。
+
+### 浏览器 localStorage（业务单据主存储）
+
+| Key | 用途 | 上限影响 |
+|-----|------|---------|
+| `quotation_history` | 报价单与销售确认，`type` 字段区分 | 高 |
+| `invoice_history` | 财务发票 | 中 |
+| `packing_history` | 装箱单 | 中 |
+| `purchase_history` | 采购订单 | 中 |
+| `customer_management` | 客户列表 | 中 |
+| `supplier_management` | 供应商列表 | 低 |
+| `consignee_management` | 收货人列表 | 低 |
+| `customer_timeline_events` | 客户时间轴 | 中 |
+| `customer_followups` | 跟进记录 | 低 |
+| `new_customer_tracking` | 新客户跟踪 | 低 |
+| `userCache`、`userInfo`、`latestPermissions` | 登录和权限缓存 | 低 |
+| `qt.visibleCols`、`pk.visibleCols` | 列显示偏好 | 极低 |
+| `themeConfig`、`theme-settings` | 主题设置 | 极低 |
+| `draftQuotation`、`draftPurchase` | 草稿暂存 | 低 |
+
+配额监控：`src/utils/storageQuotaManager.ts`（5MB 上限估算，超出时触发清理）。
+
+### IndexedDB（字体/图片缓存）
+
+`idb-keyval`：`src/utils/fontCache.ts`、`src/utils/imageCache.ts`，用于 PDF 中文字体和头图预缓存。
+
+## 认证与权限
+
+流程：
+
+1. 登录页 → NextAuth Credentials → `src/lib/auth.ts`
+2. `auth.ts` POST `https://udb.luocompany.net/api/auth/d1-users`，验证用户名 + bcrypt 密码
+3. 登录成功：JWT 写入 `username`、`isAdmin`、`permissions`（完整权限数组）
+4. 客户端 `src/app/providers.tsx` 同步 session → Zustand store → localStorage 缓存
+5. `src/middleware.ts` 拦截未登录用户和 `/admin` 路径
+
+权限模块（`src/constants/permissions.ts`）：
+```text
+quotation, packing, invoice, purchase, customer, history, ai-email, admin
+```
+
+修改权限逻辑时需同步检查：`permissions.ts`、`dashboardModules.ts`、`src/lib/permissions.ts`、`usePermissionInit.ts`、`usePermissionRefresh.ts`、`middleware.ts`、`src/features/admin`（共 7 处）。
+
+## PDF、Excel 与静态资源
+
+PDF 引擎：`jspdf` + `jspdf-autotable`。生成器：
+
+| 单据 | 文件 |
+|------|------|
+| 报价单 | `src/utils/quotationPdfGenerator.ts` |
+| 销售确认 | `src/utils/orderConfirmationPdfGenerator.ts` |
+| 发票 | `src/utils/invoicePdfGenerator.ts` |
+| 装箱单 | `src/utils/packingPdfGenerator.ts` |
+| 唛头 | `src/utils/shippingMarksPdfGenerator.ts` |
+| 采购 | `src/utils/purchasePdfGenerator.ts` |
+
+**构建前自动运行**：
 
 ```bash
-# 安装依赖
+node scripts/embed-resources.js
+```
+
+生成 `src/lib/embedded-resources.ts`，内嵌：
+
+- 中文字体：`public/fonts/NotoSansSC-Regular.ttf`、`public/fonts/NotoSansSC-Bold.ttf`（及 .gz）
+- PDF 头图：`public/images/header-bilingual.jpg`、`public/images/header-english.png`
+- 印章：`public/images/stamp-hongkong.png`、`public/images/stamp-shanghai.png`
+- Logo：`public/assets/logo/`
+
+## 环境变量
+
+本地开发创建 `.env.local`：
+
+```bash
+DEEPSEEK_API_KEY=sk-...
+NEXTAUTH_SECRET=replace-with-a-long-random-secret
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_API_BASE_URL=https://udb.luocompany.net
+NODE_ENV=development
+# 可选
+WORKER_URL=https://udb.luocompany.net
+API_TOKEN=replace-with-worker-token
+```
+
+⚠️ `wrangler.toml` 中目前含明文 `API_TOKEN`，后续需迁移到 Cloudflare secret 并轮换。
+
+## 本地开发
+
+```bash
 npm install
-
-# 启动开发服务器
-npm run dev
-
-# 构建生产版本
-npm run build
-
-# 启动生产服务器
-npm start
+npm run dev        # 访问 http://localhost:3000
 ```
 
-## 项目结构
+常用命令：
 
+```bash
+npm run build              # 生成嵌入资源 + Next.js 构建
+npm start                  # 运行生产构建
+npm run test               # Jest 全量测试
+npm run test:watch         # 监听测试
+npm run check:selectors    # 检查 selector 稳定性
+npm run check:autotable    # 检查废弃 AutoTable 用法
+npm run pre-release        # 发布前全量检查（check:selectors + test + lint）
 ```
-mluonet/
-├── src/
-│   ├── app/                 # Next.js App Router页面
-│   ├── components/          # React组件
-│   ├── constants/           # 常量配置
-│   ├── hooks/               # React Hooks
-│   ├── lib/                 # 工具库和配置
-│   ├── types/               # TypeScript类型定义
-│   └── utils/               # 工具函数
-├── public/                  # 静态资源
-└── scripts/                 # 构建脚本
+
+注意：`check:production` 指向不存在的 `scripts/pre-production-check.js`，用 `check:selectors` 替代。
+
+构建配置当前设置 `eslint.ignoreDuringBuilds = true`，构建通过不代表无 lint 问题。
+
+## 测试
+
+- 框架：Jest + `jsdom` 环境
+- 配置：`jest.config.js`、`jest.setup.js`
+- 路径别名：`@/* → src/*`
+- 覆盖范围：工具函数、PDF 单位显示、报价 store、采购 selector、客户时间轴
+
+发布前：
+
+```bash
+npm run pre-release
 ```
 
 ## 部署
 
-项目已配置为Vercel部署，包含以下优化：
+### Vercel 主站
 
-- **字体优化**: 中文字体压缩和预加载
-- **图片优化**: Logo和图标资源优化
-- **性能监控**: 实时性能数据收集
-- **错误处理**: 完善的错误边界和404页面
+- 配置：`vercel.json`
+- 区域：`hkg1`（香港）
+- 输出：standalone
+- 缓存策略：字体/logo 长缓存（1年）、图片短缓存（1天）、API 禁缓存
+- 安全头：`X-Content-Type-Options`、`X-Frame-Options`（DENY）、`X-XSS-Protection`
 
-## 最近改进（PDF头图体积优化）
+### Cloudflare Worker / D1
 
-- **问题根因**: `header-bilingual.png` 含透明通道（RGBA），在 jsPDF 中以 PNG 嵌入时压缩效率较差，导致 PDF 体积明显增大。
-- **已完成优化**:
-  - 新增 `public/images/header-bilingual.jpg`（无透明、适合 PDF 压缩）。
-  - PDF 头图改为按类型选择格式（双语头图走 `JPEG`，英文头图保留 `PNG`）。
-  - 资源嵌入脚本改为优先嵌入双语 JPG，避免旧的 RGBA PNG 进入 PDF 链路。
-- **预期收益**: 双语头图场景下 PDF 文件大小显著下降，同时保持头图清晰度在可接受范围。
-- **后续建议**:
-  - 若仍需进一步减小体积，可把双语头图宽度降到 `1800~2000px` 后再导出 JPG。
-  - 若部分打印场景需要更高清版本，可增加“高清导出”开关，按需切换高/低压缩头图。
+- 配置：`wrangler.toml`
+- Worker 名：`mluonet-users`
+- 入口：`src/worker.ts`
+- D1 binding：`USERS_DB`
+- 自定义域：`udb.luocompany.net`
 
-## 许可证
+```bash
+npx wrangler d1 execute mluonet-users --file schema.sql   # 更新数据库 schema
+npx wrangler deploy                                         # 部署 Worker
+```
 
-MIT License
+## Git 与 SSH
+
+```text
+origin git@github.com:devluosir/luonet-vercel.git
+```
+
+指定私钥：
+
+```bash
+GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git fetch origin
+```
+
+不要把私钥或 `.env.local` 提交进仓库。
+
+## 后续优化重点
+
+参见 `AGENTS.md` 推荐优化路线，按优先级：
+
+1. **安全**：Worker 管理接口从 `X-User-*` header 升级到签名验证；轮换已暴露 token。
+2. **数据持久化**：业务历史从 `localStorage` 迁移到服务端，解决多设备同步和 5MB 配额。
+3. **测试**：补 Playwright 关键路径集成测试（登录、PDF、导入导出）。
+4. **代码整合**：消除 `src/components` 与 `src/features` 之间的重复实现。
+5. **已知缺陷修复**：`check:production` 脚本路径、`validatePassword` bcrypt 分支、`silent-refresh` 服务端失效。
+6. **构建质量**：恢复 ESLint 构建检查，建立 CI 流程。
+
+## 文档索引
+
+- `AGENTS.md`：代理维护说明（完整技术细节）
+- `docs/README.md`：文档总目录（96 个文档）
+- `docs/core/`：项目总结、更新日志
+- `docs/features/`：各功能模块设计文档
+- `docs/bugfixes/`：问题修复记录
+- `docs/technical/`：性能、主题、稳定性、权限技术文档
+- `RELEASE_CHECKLIST.md`：发布检查清单
+- `VERCEL_DEPLOYMENT.md`：Vercel 部署说明
