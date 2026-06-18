@@ -614,3 +614,471 @@ npm run build       # 构建验证（TASK-05 完成后）
 - Playwright 端到端测试（需要专门的测试环境配置）
 - localStorage → D1 数据迁移前端层（依赖 TASK-08 完成后的 API 路由新增）
 - `src/components` 与 `src/features` 重复代码清理（分批推进，不急）
+
+---
+
+## TASK-09：Worker 管理接口改用 API_TOKEN Bearer 验证
+
+**优先级**：🔴 紧急（安全）  
+**估时**：20 分钟  
+**风险**：低。只改 Worker 认证逻辑，不改业务逻辑
+
+### 背景
+
+Worker 的 7 个管理接口目前信任 `X-User-ID / X-User-Name / X-User-Admin` 请求头，任何人向 `udb.luocompany.net` 发请求时伪造 `X-User-Admin: true` 即可获得管理员权限。需替换为 `Authorization: Bearer <API_TOKEN>` 验证（API_TOKEN 已作为 Cloudflare secret 存储）。
+
+### 改动
+
+**文件**：`src/worker.ts`
+
+**第 1 步**：扩展 `Env` 接口，新增 `API_TOKEN`
+
+找到：
+```ts
+export interface Env {
+  USERS_DB: D1Database;
+  DB: D1Database;
+}
+```
+
+替换为：
+```ts
+export interface Env {
+  USERS_DB: D1Database;
+  DB: D1Database;
+  API_TOKEN: string;
+}
+```
+
+**第 2 步**：在 `corsHeaders` 常量之后、`export default` 之前，插入 Bearer 验证辅助函数：
+
+```ts
+/** 验证请求携带的 Bearer token 是否与 Cloudflare secret 一致 */
+function verifyBearerToken(request: Request, env: Env): boolean {
+  const auth = request.headers.get('Authorization');
+  if (!auth || !auth.startsWith('Bearer ')) return false;
+  return auth.slice(7) === env.API_TOKEN;
+}
+```
+
+**第 3 步**：替换全部 7 个管理函数中的 X-User-* 认证块。
+
+每个函数开头都有类似下面的认证段：
+```ts
+// 检查认证 - 使用session头信息
+const sessionUserId = request.headers.get('X-User-ID');
+const userName = request.headers.get('X-User-Name');
+const isAdmin = request.headers.get('X-User-Admin') === 'true';
+
+if (!sessionUserId || !userName) {
+  return new Response(
+    JSON.stringify({ error: '未授权访问' }),
+    { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+  );
+}
+```
+
+将以上认证段（含 `const sessionUserId / userName / isAdmin` 三行 + `if (!sessionUserId || !userName)` 块）统一替换为：
+
+```ts
+if (!verifyBearerToken(request, env)) {
+  return new Response(
+    JSON.stringify({ error: '未授权访问' }),
+    { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+  );
+}
+```
+
+需替换的函数（共 7 个）：
+- `handleGetUsers`
+- `handleGetUser`
+- `handleUpdateUser`
+- `handleCreateUser`（还需保留 `isAdmin` 判断——见下方注意）
+- `handleUpdatePermissions`
+- `handleBatchUpdatePermissions`
+- `handleDeleteUser`（如有）
+- `handleDeletePermission`（如有）
+
+**⚠️ 注意 handleCreateUser 特殊处理**：该函数在认证段之后还有一个 `if (!isAdmin)` 检查。删除认证段后，同时删除这个 isAdmin 检查（因为 Bearer token 本身已代表来自受信任的服务端，管理员身份由调用方的 NextAuth session 保证）：
+
+找到并删除：
+```ts
+// 检查是否是管理员
+if (!isAdmin) {
+  return new Response(
+    JSON.stringify({ error: '只有管理员可以创建用户' }),
+    { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+  );
+}
+```
+
+**⚠️ 注意 handleUpdatePermissions**：函数中还有 `console.log('用户认证信息:', { sessionUserId, userName, isAdmin });`，删除 X-User-* 认证段后，同步删除这行 console.log（否则变量未定义会报错）。
+
+### 验证
+
+```bash
+npx tsc --noEmit
+# 预期：无类型错误
+
+# 部署 Worker 后手动验证（在本地 Mac 终端）：
+# 无 token → 401
+curl -s -o /dev/null -w "%{http_code}" \
+  https://udb.luocompany.net/api/admin/users
+
+# 带正确 token → 200
+curl -s -o /dev/null -w "%{http_code}" \
+  -H "Authorization: Bearer <你的API_TOKEN>" \
+  https://udb.luocompany.net/api/admin/users
+```
+
+### 部署（人工执行）
+
+```bash
+npx wrangler deploy
+```
+
+---
+
+## TASK-10：Next.js 管理 API 代理（浏览器 → Vercel → Worker）
+
+**优先级**：🔴 紧急（安全，配合 TASK-09）  
+**估时**：30 分钟  
+**风险**：中。涉及调用链重构，改完需测试管理后台的增删改查
+
+### 背景
+
+完成 TASK-09 后，Worker 管理接口只接受 Bearer token，浏览器（`api-config.ts`）直接调 Worker 的路径失效。需要：
+1. 新建 Next.js 代理路由 `/api/admin/[...path]`，由 Next.js 持有 Bearer token 并转发
+2. 更新客户端调用，将 Worker 直连改为本地代理
+3. 更新服务端 auth 路由，将 X-User-* 改为 Bearer token
+
+**前置条件**：TASK-09 已完成并部署。
+
+### 改动
+
+---
+
+#### 改动 1：新建文件 `src/app/api/admin/[...path]/route.ts`
+
+```ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+const WORKER_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net';
+
+function workerHeaders(): HeadersInit {
+  const token = process.env.API_TOKEN;
+  if (!token) throw new Error('API_TOKEN env var not set');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  };
+}
+
+async function proxyAdmin(request: NextRequest, pathSegments: string[]): Promise<NextResponse> {
+  // 1. 验证 NextAuth session
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: '未登录' }, { status: 401 });
+  }
+  if (!session.user.isAdmin) {
+    return NextResponse.json({ error: '需要管理员权限' }, { status: 403 });
+  }
+
+  // 2. 构造 Worker URL
+  const url = new URL(request.url);
+  const workerUrl = `${WORKER_BASE}/api/admin/${pathSegments.join('/')}${url.search}`;
+
+  // 3. 转发请求（带 Bearer token）
+  const body =
+    request.method !== 'GET' && request.method !== 'HEAD'
+      ? await request.text()
+      : undefined;
+
+  let workerResp: Response;
+  try {
+    workerResp = await fetch(workerUrl, {
+      method: request.method,
+      headers: workerHeaders(),
+      body,
+    });
+  } catch (err) {
+    return NextResponse.json({ error: 'Worker 请求失败' }, { status: 502 });
+  }
+
+  const data = await workerResp.json();
+  return NextResponse.json(data, { status: workerResp.status });
+}
+
+type RouteParams = { params: Promise<{ path: string[] }> };
+
+export async function GET(req: NextRequest, { params }: RouteParams) {
+  return proxyAdmin(req, (await params).path);
+}
+export async function POST(req: NextRequest, { params }: RouteParams) {
+  return proxyAdmin(req, (await params).path);
+}
+export async function PUT(req: NextRequest, { params }: RouteParams) {
+  return proxyAdmin(req, (await params).path);
+}
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
+  return proxyAdmin(req, (await params).path);
+}
+```
+
+---
+
+#### 改动 2：`src/lib/api-config.ts`
+
+将 `API_ENDPOINTS.USERS` 中所有指向 Worker 的 URL 改为本地代理路径，并简化 `apiRequest`（不再需要拼接 X-User-* 头）。
+
+找到：
+```ts
+export const API_ENDPOINTS = {
+  USERS: {
+    CHANGE_PASSWORD: `${API_BASE_URL}/users/change-password`,
+    LIST: `${API_BASE_URL}/api/admin/users`,
+    CREATE: `${API_BASE_URL}/api/admin/users`,
+    GET: (id: string) => `${API_BASE_URL}/api/admin/users/${id}`,
+    UPDATE: (id: string) => `${API_BASE_URL}/api/admin/users/${id}`,
+    DELETE: (id: string) => `${API_BASE_URL}/api/admin/users/${id}`,
+    PERMISSIONS: (id: string) => `${API_BASE_URL}/api/admin/users/${id}/permissions`,
+    BATCH_PERMISSIONS: (id: string) => `${API_BASE_URL}/api/admin/users/${id}/permissions/batch`,
+  },
+```
+
+替换为：
+```ts
+export const API_ENDPOINTS = {
+  USERS: {
+    CHANGE_PASSWORD: `${API_BASE_URL}/users/change-password`,
+    LIST: '/api/admin/users',                                             // ← 通过 Next.js 代理
+    CREATE: '/api/admin/users',
+    GET: (id: string) => `/api/admin/users/${id}`,
+    UPDATE: (id: string) => `/api/admin/users/${id}`,
+    DELETE: (id: string) => `/api/admin/users/${id}`,
+    PERMISSIONS: (id: string) => `/api/admin/users/${id}/permissions`,
+    BATCH_PERMISSIONS: (id: string) => `/api/admin/users/${id}/permissions/batch`,
+  },
+```
+
+找到 `apiRequest` 函数：
+```ts
+export async function apiRequest(
+  url: string, 
+  options: RequestInit = {}
+): Promise<Response> {
+  // 获取用户信息
+  const userInfo = await getUserInfo();
+
+  const defaultOptions: RequestInit = {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  };
+
+  // 如果有用户信息，添加认证头
+  if (userInfo) {
+    // 使用用户信息作为认证
+    defaultOptions.headers = {
+      ...defaultOptions.headers,
+      'X-User-ID': userInfo.id,
+      'X-User-Name': userInfo.username,
+      'X-User-Admin': userInfo.isAdmin ? 'true' : 'false',
+    };
+  }
+
+  // 处理相对URL（本地API路由）
+  const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
+
+  return fetch(fullUrl, defaultOptions);
+}
+```
+
+替换为：
+```ts
+export async function apiRequest(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const defaultOptions: RequestInit = {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  };
+
+  // 代理路由使用相对路径，直连路由使用完整 URL
+  const fullUrl = url.startsWith('http')
+    ? url
+    : `${typeof window !== 'undefined' ? window.location.origin : ''}${url}`;
+
+  return fetch(fullUrl, defaultOptions);
+}
+```
+
+---
+
+#### 改动 3：`src/app/api/auth/get-latest-permissions/route.ts`
+
+该 Next.js 路由在服务端调用 Worker，改为读 `API_TOKEN` env 变量并用 Bearer token，同时改为从 NextAuth session 读用户名（不再依赖 X-User-* 请求头）。
+
+找到函数开头：
+```ts
+export async function POST(request: NextRequest) {
+  try {
+    // 从请求头获取用户信息
+    const userId = request.headers.get('X-User-ID');
+    const userName = request.headers.get('X-User-Name');
+    let isAdmin = request.headers.get('X-User-Admin') === 'true';
+
+    if (!userId || !userName) {
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 });
+    }
+```
+
+替换为：
+```ts
+export async function POST(request: NextRequest) {
+  try {
+    // 从 NextAuth session 读取用户身份（不信任客户端头）
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 });
+    }
+    const userId = session.user.id || session.user.username || '';
+    const userName = session.user.username || session.user.name || '';
+    let isAdmin = !!session.user.isAdmin;
+```
+
+找到调用 Worker 的 `fetch`（第 24~34 行）：
+```ts
+      const backendResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users?username=${encodeURIComponent(userName)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-ID': userId,
+          'X-User-Name': userName,
+          'X-User-Admin': isAdmin ? 'true' : 'false',
+        },
+        cache: 'no-store',
+        next: { revalidate: 0 }
+      });
+```
+
+替换为：
+```ts
+      const workerBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net';
+      const backendResponse = await fetch(`${workerBase}/api/admin/users?username=${encodeURIComponent(userName)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.API_TOKEN || ''}`,
+        },
+        cache: 'no-store',
+        next: { revalidate: 0 }
+      });
+```
+
+---
+
+#### 改动 4：`src/lib/auth.ts`（silent-refresh Bearer token）
+
+找到 silent-refresh 中调用 Worker 的 fetch（TASK-06 已改为远程拉取，现在更新 headers）：
+```ts
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users?username=${encodeURIComponent(credentials.username)}`,
+      {
+        headers: {
+          'X-User-ID': 'system',
+          'X-User-Name': 'system',
+          'X-User-Admin': 'true',
+        }
+      }
+    );
+```
+
+替换为：
+```ts
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users?username=${encodeURIComponent(credentials.username)}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.API_TOKEN || ''}`,
+        }
+      }
+    );
+```
+
+---
+
+#### 改动 5：`src/lib/permissions.ts`
+
+找到调用 `/api/auth/get-latest-permissions` 的 fetch（约第 497~506 行）：
+```ts
+      const response = await fetch('/api/auth/get-latest-permissions', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-User-ID': session.user.id || session.user.username || '',
+          'X-User-Name': session.user.username || session.user.name || '',
+          'X-User-Admin': session.user.isAdmin ? 'true' : 'false'
+        },
+        cache: 'no-store'
+      });
+```
+
+替换为（移除 X-User-* 头，服务端路由改为从 session 读取身份）：
+```ts
+      const response = await fetch('/api/auth/get-latest-permissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store'
+      });
+```
+
+---
+
+### Vercel 环境变量（人工操作）
+
+在 Vercel 控制台 → Project → Settings → Environment Variables 中添加（不含 `NEXT_PUBLIC_` 前缀，保证不暴露给浏览器）：
+
+```
+API_TOKEN = <与 Cloudflare secret 相同的值>
+```
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run build
+
+# 本地测试（npm run dev 后）：
+# 1. 登录后访问 /admin → 用户列表正常加载
+# 2. 创建用户 → 成功
+# 3. 修改权限 → 成功
+# 4. 未登录时直接 fetch /api/admin/users → 返回 401
+```
+
+---
+
+## 执行顺序
+
+```
+TASK-09（改 Worker）→ 部署 Worker（npx wrangler deploy）
+  → TASK-10（改 Next.js）→ 在 Vercel 添加 API_TOKEN env var → 触发 Vercel 重新部署
+  → 验证管理后台功能正常
+```
+
+**每个任务完成后必跑：**
+```bash
+npx tsc --noEmit
+npm run build
+```

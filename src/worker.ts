@@ -17,15 +17,23 @@ interface D1Database {
 export interface Env {
   USERS_DB: D1Database;
   DB: D1Database;
+  API_TOKEN: string;
 }
 
 // CORS 配置
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-User-ID, X-User-Name, X-User-Admin, Cache-Control, Pragma',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Pragma',
   'Access-Control-Max-Age': '86400',
 };
+
+/** 验证请求携带的 Bearer token 是否与 Cloudflare secret 一致 */
+function verifyBearerToken(request: Request, env: Env): boolean {
+  const auth = request.headers.get('Authorization');
+  if (!auth || !auth.startsWith('Bearer ')) return false;
+  return auth.slice(7) === env.API_TOKEN;
+}
 
 export default {
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
@@ -266,12 +274,7 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
 
 async function handleGetUsers(request: Request, env: Env): Promise<Response> {
   try {
-    // 检查认证 - 使用session头信息
-    const userId = request.headers.get('X-User-ID');
-    const userName = request.headers.get('X-User-Name');
-    const isAdmin = request.headers.get('X-User-Admin') === 'true';
-    
-    if (!userId || !userName) {
+    if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
         { 
@@ -382,12 +385,7 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
 
 async function handleGetUser(request: Request, env: Env): Promise<Response> {
   try {
-    // 检查认证 - 使用session头信息
-    const sessionUserId = request.headers.get('X-User-ID');
-    const userName = request.headers.get('X-User-Name');
-    const isAdmin = request.headers.get('X-User-Admin') === 'true';
-    
-    if (!sessionUserId || !userName) {
+    if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
         { 
@@ -458,12 +456,7 @@ async function handleGetUser(request: Request, env: Env): Promise<Response> {
 
 async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
   try {
-    // 检查认证 - 使用session头信息
-    const sessionUserId = request.headers.get('X-User-ID');
-    const userName = request.headers.get('X-User-Name');
-    const isAdmin = request.headers.get('X-User-Admin') === 'true';
-    
-    if (!sessionUserId || !userName) {
+    if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
         { 
@@ -587,12 +580,7 @@ async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
 
 async function handleUpdatePermissions(request: Request, env: Env): Promise<Response> {
   try {
-    // 检查认证 - 使用session头信息
-    const sessionUserId = request.headers.get('X-User-ID');
-    const userName = request.headers.get('X-User-Name');
-    const isAdmin = request.headers.get('X-User-Admin') === 'true';
-    
-    if (!sessionUserId || !userName) {
+    if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
         { 
@@ -604,8 +592,6 @@ async function handleUpdatePermissions(request: Request, env: Env): Promise<Resp
         }
       );
     }
-    
-    console.log('用户认证信息:', { sessionUserId, userName, isAdmin });
 
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4];
@@ -662,12 +648,7 @@ async function handleUpdatePermissions(request: Request, env: Env): Promise<Resp
 
 async function handleBatchUpdatePermissions(request: Request, env: Env): Promise<Response> {
   try {
-    // 检查认证 - 使用session头信息
-    const sessionUserId = request.headers.get('X-User-ID');
-    const userName = request.headers.get('X-User-Name');
-    const isAdmin = request.headers.get('X-User-Admin') === 'true';
-    
-    if (!sessionUserId || !userName) {
+    if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
         { 
@@ -738,32 +719,11 @@ async function handleBatchUpdatePermissions(request: Request, env: Env): Promise
 
 async function handleCreateUser(request: Request, env: Env): Promise<Response> {
   try {
-    // 检查认证 - 使用session头信息
-    const sessionUserId = request.headers.get('X-User-ID');
-    const userName = request.headers.get('X-User-Name');
-    const isAdmin = request.headers.get('X-User-Admin') === 'true';
-    
-    console.log('创建用户请求 - 认证信息:', { sessionUserId, userName, isAdmin });
-    
-    if (!sessionUserId || !userName) {
+    if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
         { 
           status: 401, 
-          headers: { 
-            'Content-Type': 'application/json',
-            ...corsHeaders
-          } 
-        }
-      );
-    }
-
-    // 检查是否是管理员
-    if (!isAdmin) {
-      return new Response(
-        JSON.stringify({ error: '只有管理员可以创建用户' }),
-        { 
-          status: 403, 
           headers: { 
             'Content-Type': 'application/json',
             ...corsHeaders
@@ -875,30 +835,11 @@ async function handleCreateUser(request: Request, env: Env): Promise<Response> {
 
 async function handleDeleteUser(request: Request, env: Env): Promise<Response> {
   try {
-    // 检查认证 - 使用session头信息
-    const sessionUserId = request.headers.get('X-User-ID');
-    const userName = request.headers.get('X-User-Name');
-    const isAdmin = request.headers.get('X-User-Admin') === 'true';
-    
-    if (!sessionUserId || !userName) {
+    if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
         { 
           status: 401, 
-          headers: { 
-            'Content-Type': 'application/json',
-            ...corsHeaders
-          } 
-        }
-      );
-    }
-
-    // 检查是否是管理员
-    if (!isAdmin) {
-      return new Response(
-        JSON.stringify({ error: '只有管理员可以删除用户' }),
-        { 
-          status: 403, 
           headers: { 
             'Content-Type': 'application/json',
             ...corsHeaders
@@ -985,30 +926,11 @@ async function handleDeleteUser(request: Request, env: Env): Promise<Response> {
 
 async function handleDeletePermission(request: Request, env: Env): Promise<Response> {
   try {
-    // 检查认证 - 使用session头信息
-    const sessionUserId = request.headers.get('X-User-ID');
-    const userName = request.headers.get('X-User-Name');
-    const isAdmin = request.headers.get('X-User-Admin') === 'true';
-    
-    if (!sessionUserId || !userName) {
+    if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
         { 
           status: 401, 
-          headers: { 
-            'Content-Type': 'application/json',
-            ...corsHeaders
-          } 
-        }
-      );
-    }
-
-    // 检查是否是管理员
-    if (!isAdmin) {
-      return new Response(
-        JSON.stringify({ error: '只有管理员可以删除权限' }),
-        { 
-          status: 403, 
           headers: { 
             'Content-Type': 'application/json',
             ...corsHeaders
