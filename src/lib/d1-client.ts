@@ -1,3 +1,5 @@
+import bcrypt from 'bcryptjs';
+
 // 定义D1数据库接口
 interface D1Database {
   prepare: (sql: string) => {
@@ -242,21 +244,19 @@ export class D1UserClient {
   // 验证用户密码
   async validatePassword(userId: string, currentPassword: string): Promise<boolean> {
     const user = await this.getUserById(userId);
-    if (!user) return false;
+    if (!user || !user.password || !currentPassword) return false;
 
-    // 支持明文密码和bcrypt哈希
-    if (currentPassword === user.password) {
-      return true;
-    }
-
-    // 如果是bcrypt哈希，这里可以添加验证逻辑
-    // 目前暂时跳过bcrypt验证，直接返回false
+    // bcrypt 哈希密码：使用 bcrypt.compare 验证
     if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
-      // 这里应该使用bcrypt.compare，但为了简化，暂时跳过
-      return false;
+      try {
+        return await bcrypt.compare(currentPassword, user.password);
+      } catch {
+        return false;
+      }
     }
 
-    return false;
+    // 明文密码（旧账户兼容）：直接比较
+    return currentPassword === user.password;
   }
 
   // 更新用户密码
