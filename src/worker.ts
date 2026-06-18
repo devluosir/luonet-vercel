@@ -35,6 +35,53 @@ function verifyBearerToken(request: Request, env: Env): boolean {
   return auth.slice(7) === env.API_TOKEN;
 }
 
+function jsonResponse(data: unknown, status = 200): Response {
+  return new Response(
+    JSON.stringify(data),
+    {
+      status,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders,
+      },
+    }
+  );
+}
+
+function unauthorizedResponse(): Response {
+  return jsonResponse({ error: '未授权访问' }, 401);
+}
+
+function parseJsonData<T>(value: string | null, fallback: T): T {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+type DocumentRow = {
+  id: string;
+  user_id: string;
+  type: string;
+  doc_no: string;
+  customer_name: string | null;
+  total_amount: number | null;
+  currency: string | null;
+  status: string;
+  data: string;
+  created_at: string;
+  updated_at: string;
+};
+
+function serializeDocument(row: DocumentRow) {
+  return {
+    ...row,
+    data: parseJsonData<Record<string, unknown>>(row.data, {}),
+  };
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
     const url = new URL(request.url);
@@ -51,6 +98,27 @@ export default {
     // 处理用户认证
     if (path === '/api/auth/d1-users' && request.method === 'POST') {
       return handleUserAuth(request, env);
+    }
+
+    // 处理业务单据 API
+    if (path === '/api/documents' && request.method === 'GET') {
+      return handleListDocuments(request, env);
+    }
+
+    if (path === '/api/documents' && request.method === 'POST') {
+      return handleCreateDocument(request, env);
+    }
+
+    if (path.startsWith('/api/documents/') && path.split('/').length === 4 && request.method === 'GET') {
+      return handleGetDocument(request, env);
+    }
+
+    if (path.startsWith('/api/documents/') && path.split('/').length === 4 && request.method === 'PUT') {
+      return handleUpdateDocument(request, env);
+    }
+
+    if (path.startsWith('/api/documents/') && path.split('/').length === 4 && request.method === 'DELETE') {
+      return handleDeleteDocument(request, env);
     }
 
     // 处理用户管理
@@ -1010,3 +1078,210 @@ async function handleDeletePermission(request: Request, env: Env): Promise<Respo
     );
   }
 } 
+
+async function handleListDocuments(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('user_id');
+    if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
+
+    const type = url.searchParams.get('type');
+    const status = url.searchParams.get('status') || 'active';
+    const search = url.searchParams.get('search');
+    const limit = Math.min(Number(url.searchParams.get('limit')) || 100, 500);
+    const offset = Number(url.searchParams.get('offset')) || 0;
+
+    const conditions = ['user_id = ?'];
+    const values: Array<string | number> = [userId];
+
+    if (type) {
+      conditions.push('type = ?');
+      values.push(type);
+    }
+
+    if (status !== 'all') {
+      conditions.push('status = ?');
+      values.push(status);
+    }
+
+    if (search) {
+      conditions.push('(doc_no LIKE ? OR customer_name LIKE ?)');
+      values.push(`%${search}%`, `%${search}%`);
+    }
+
+    values.push(limit, offset);
+
+    const result = await env.USERS_DB.prepare(`
+      SELECT * FROM Document
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY updated_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(...values).all<DocumentRow>();
+
+    return jsonResponse({
+      documents: result.results.map(serializeDocument),
+      pagination: { limit, offset, count: result.results.length },
+    });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleGetDocument(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('user_id');
+    const documentId = url.pathname.split('/')[3];
+    if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
+
+    const document = await env.USERS_DB.prepare(`
+      SELECT * FROM Document
+      WHERE id = ? AND user_id = ?
+      LIMIT 1
+    `).bind(documentId, userId).first<DocumentRow>();
+
+    if (!document) return jsonResponse({ error: '单据不存在' }, 404);
+    return jsonResponse({ document: serializeDocument(document) });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleCreateDocument(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const body = await request.json();
+    const userId = body.user_id;
+    const type = body.type;
+    const docNo = body.doc_no;
+    const data = body.data;
+
+    if (!userId || !type || !docNo || data === undefined) {
+      return jsonResponse({ error: '缺少必要字段' }, 400);
+    }
+
+    const id = body.id || crypto.randomUUID();
+    const dataText = typeof data === 'string' ? data : JSON.stringify(data);
+
+    await env.USERS_DB.prepare(`
+      INSERT INTO Document (
+        id, user_id, type, doc_no, customer_name, total_amount, currency, status, data
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      id,
+      userId,
+      type,
+      docNo,
+      body.customer_name || null,
+      body.total_amount ?? null,
+      body.currency || 'USD',
+      body.status || 'active',
+      dataText
+    ).run();
+
+    const created = await env.USERS_DB.prepare(`
+      SELECT * FROM Document WHERE id = ? AND user_id = ? LIMIT 1
+    `).bind(id, userId).first<DocumentRow>();
+
+    return jsonResponse({ success: true, document: created ? serializeDocument(created) : null }, 201);
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleUpdateDocument(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const url = new URL(request.url);
+    const documentId = url.pathname.split('/')[3];
+    const body = await request.json();
+    const userId = body.user_id;
+    if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
+
+    const fields: string[] = [];
+    const values: Array<string | number | null> = [];
+    const updatableFields = [
+      'type',
+      'doc_no',
+      'customer_name',
+      'total_amount',
+      'currency',
+      'status',
+      'data',
+    ];
+
+    for (const field of updatableFields) {
+      if (Object.prototype.hasOwnProperty.call(body, field)) {
+        fields.push(`${field} = ?`);
+        const value = field === 'data' && typeof body[field] !== 'string'
+          ? JSON.stringify(body[field])
+          : body[field];
+        values.push(value ?? null);
+      }
+    }
+
+    if (fields.length === 0) {
+      return jsonResponse({ error: '没有可更新字段' }, 400);
+    }
+
+    values.push(userId, documentId);
+    const result = await env.USERS_DB.prepare(`
+      UPDATE Document
+      SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ? AND id = ?
+    `).bind(...values).run();
+
+    if (result.meta.changes === 0) return jsonResponse({ error: '单据不存在' }, 404);
+
+    const updated = await env.USERS_DB.prepare(`
+      SELECT * FROM Document WHERE id = ? AND user_id = ? LIMIT 1
+    `).bind(documentId, userId).first<DocumentRow>();
+
+    return jsonResponse({ success: true, document: updated ? serializeDocument(updated) : null });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleDeleteDocument(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('user_id');
+    const documentId = url.pathname.split('/')[3];
+    if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
+
+    const result = await env.USERS_DB.prepare(`
+      UPDATE Document
+      SET status = 'deleted', updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND user_id = ?
+    `).bind(documentId, userId).run();
+
+    if (result.meta.changes === 0) return jsonResponse({ error: '单据不存在' }, 404);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}

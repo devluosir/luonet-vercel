@@ -1082,3 +1082,739 @@ TASK-09（改 Worker）→ 部署 Worker（npx wrangler deploy）
 npx tsc --noEmit
 npm run build
 ```
+
+---
+
+## TASK-11：Worker Document CRUD API + Next.js 代理路由
+
+**优先级**：🟠 高（Phase 4 数据迁移基础）  
+**估时**：45 分钟  
+**风险**：低。只新增接口，不修改任何现有功能，前端暂不切换
+
+### 背景
+
+D1 中已有 `Document` 表。本任务在 Worker 新增 5 个 Document CRUD 端点，并在 Next.js 新建代理路由。前端暂不改动（TASK-13 再迁移）。
+
+---
+
+### 改动 1：`src/worker.ts` — 新增路由分发
+
+在主 `fetch` 函数内，`return new Response('Not Found', ...)` 之前插入以下路由（Document 相关）：
+
+```ts
+    // Document API
+    if (path === '/api/documents' && request.method === 'GET') {
+      return handleListDocuments(request, env);
+    }
+    if (path === '/api/documents' && request.method === 'POST') {
+      return handleCreateDocument(request, env);
+    }
+    if (path.startsWith('/api/documents/') && path.split('/').length === 4 && request.method === 'GET') {
+      return handleGetDocument(request, env);
+    }
+    if (path.startsWith('/api/documents/') && path.split('/').length === 4 && request.method === 'PUT') {
+      return handleUpdateDocument(request, env);
+    }
+    if (path.startsWith('/api/documents/') && path.split('/').length === 4 && request.method === 'DELETE') {
+      return handleDeleteDocument(request, env);
+    }
+```
+
+---
+
+### 改动 2：`src/worker.ts` — 新增 Document 处理函数
+
+在文件末尾（现有函数之后）追加以下全部函数：
+
+```ts
+// ─── Document CRUD ───────────────────────────────────────────
+
+async function handleListDocuments(request: Request, env: Env): Promise<Response> {
+  if (!verifyBearerToken(request, env)) {
+    return new Response(JSON.stringify({ error: '未授权访问' }), {
+      status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+  const url = new URL(request.url);
+  const userId = url.searchParams.get('user_id');
+  const type   = url.searchParams.get('type');
+  const limit  = Math.min(parseInt(url.searchParams.get('limit')  || '200'), 500);
+  const offset = parseInt(url.searchParams.get('offset') || '0');
+
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'user_id 必填' }), {
+      status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+  try {
+    const conditions: string[] = ["user_id = ?", "status = 'active'"];
+    const params: unknown[] = [userId];
+    if (type) { conditions.push('type = ?'); params.push(type); }
+    params.push(limit, offset);
+
+    const sql = `SELECT * FROM Document WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+    const { results } = await env.USERS_DB.prepare(sql).bind(...params).all<Record<string, unknown>>();
+
+    const documents = results.map(row => ({ ...row, data: JSON.parse(row.data as string) }));
+    return new Response(JSON.stringify({ documents }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: '服务器错误' }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+
+async function handleGetDocument(request: Request, env: Env): Promise<Response> {
+  if (!verifyBearerToken(request, env)) {
+    return new Response(JSON.stringify({ error: '未授权访问' }), {
+      status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+  const url = new URL(request.url);
+  const id     = url.pathname.split('/')[3];
+  const userId = url.searchParams.get('user_id');
+
+  try {
+    const row = await env.USERS_DB.prepare(
+      "SELECT * FROM Document WHERE id = ? AND status = 'active'"
+    ).bind(id).first<Record<string, unknown>>();
+
+    if (!row) {
+      return new Response(JSON.stringify({ error: '单据不存在' }), {
+        status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    if (userId && row.user_id !== userId) {
+      return new Response(JSON.stringify({ error: '无权访问' }), {
+        status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    return new Response(JSON.stringify({ ...row, data: JSON.parse(row.data as string) }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: '服务器错误' }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+
+async function handleCreateDocument(request: Request, env: Env): Promise<Response> {
+  if (!verifyBearerToken(request, env)) {
+    return new Response(JSON.stringify({ error: '未授权访问' }), {
+      status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+  try {
+    const body = await request.json() as {
+      user_id: string; type: string; doc_no: string;
+      customer_name?: string; total_amount?: number; currency?: string; data: unknown;
+    };
+    const { user_id, type, doc_no, customer_name, total_amount, currency, data } = body;
+
+    if (!user_id || !type || !doc_no || data === undefined) {
+      return new Response(JSON.stringify({ error: 'user_id、type、doc_no、data 必填' }), {
+        status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    const id  = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    await env.USERS_DB.prepare(`
+      INSERT INTO Document (id, user_id, type, doc_no, customer_name, total_amount, currency, data, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      id, user_id, type, doc_no,
+      customer_name ?? null,
+      total_amount ?? null,
+      currency ?? 'USD',
+      JSON.stringify(data),
+      now, now
+    ).run();
+
+    return new Response(JSON.stringify({ id, created_at: now }), {
+      status: 201, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: '服务器错误' }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+
+async function handleUpdateDocument(request: Request, env: Env): Promise<Response> {
+  if (!verifyBearerToken(request, env)) {
+    return new Response(JSON.stringify({ error: '未授权访问' }), {
+      status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+  try {
+    const url    = new URL(request.url);
+    const id     = url.pathname.split('/')[3];
+    const userId = url.searchParams.get('user_id');
+    const body   = await request.json() as {
+      doc_no?: string; customer_name?: string;
+      total_amount?: number; currency?: string; data?: unknown;
+    };
+
+    const existing = await env.USERS_DB.prepare(
+      "SELECT * FROM Document WHERE id = ? AND status = 'active'"
+    ).bind(id).first<Record<string, unknown>>();
+
+    if (!existing) {
+      return new Response(JSON.stringify({ error: '单据不存在' }), {
+        status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    if (userId && existing.user_id !== userId) {
+      return new Response(JSON.stringify({ error: '无权修改' }), {
+        status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    const now = new Date().toISOString();
+    await env.USERS_DB.prepare(`
+      UPDATE Document SET
+        doc_no        = COALESCE(?, doc_no),
+        customer_name = COALESCE(?, customer_name),
+        total_amount  = COALESCE(?, total_amount),
+        currency      = COALESCE(?, currency),
+        data          = COALESCE(?, data),
+        updated_at    = ?
+      WHERE id = ?
+    `).bind(
+      body.doc_no ?? null,
+      body.customer_name ?? null,
+      body.total_amount ?? null,
+      body.currency ?? null,
+      body.data !== undefined ? JSON.stringify(body.data) : null,
+      now, id
+    ).run();
+
+    return new Response(JSON.stringify({ success: true, updated_at: now }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: '服务器错误' }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+
+async function handleDeleteDocument(request: Request, env: Env): Promise<Response> {
+  if (!verifyBearerToken(request, env)) {
+    return new Response(JSON.stringify({ error: '未授权访问' }), {
+      status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+  try {
+    const url    = new URL(request.url);
+    const id     = url.pathname.split('/')[3];
+    const userId = url.searchParams.get('user_id');
+
+    const existing = await env.USERS_DB.prepare(
+      "SELECT user_id FROM Document WHERE id = ? AND status = 'active'"
+    ).bind(id).first<{ user_id: string }>();
+
+    if (!existing) {
+      return new Response(JSON.stringify({ error: '单据不存在' }), {
+        status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    if (userId && existing.user_id !== userId) {
+      return new Response(JSON.stringify({ error: '无权删除' }), {
+        status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    await env.USERS_DB.prepare(
+      "UPDATE Document SET status = 'deleted', updated_at = ? WHERE id = ?"
+    ).bind(new Date().toISOString(), id).run();
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: '服务器错误' }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+```
+
+---
+
+### 改动 3：新建文件 `src/app/api/documents/[[...path]]/route.ts`
+
+```ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+const WORKER_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net';
+
+function workerHeaders(): HeadersInit {
+  const token = process.env.API_TOKEN;
+  if (!token) throw new Error('API_TOKEN env var not set');
+  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+}
+
+async function proxyDocuments(
+  request: NextRequest,
+  pathSegments: string[]
+): Promise<NextResponse> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: '未登录' }, { status: 401 });
+  }
+
+  const userId = session.user.id || session.user.username || '';
+  const url = new URL(request.url);
+
+  // 构造 Worker URL，始终注入 user_id 保证数据隔离
+  const workerPath = pathSegments.length > 0
+    ? `/api/documents/${pathSegments.join('/')}`
+    : '/api/documents';
+  url.searchParams.set('user_id', userId);
+  const workerUrl = `${WORKER_BASE}${workerPath}?${url.searchParams.toString()}`;
+
+  let body: string | undefined;
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    const raw = await request.json().catch(() => ({}));
+    // 强制注入 user_id，防止客户端伪造
+    body = JSON.stringify({ ...raw, user_id: userId });
+  }
+
+  let workerResp: Response;
+  try {
+    workerResp = await fetch(workerUrl, {
+      method: request.method,
+      headers: workerHeaders(),
+      body,
+    });
+  } catch {
+    return NextResponse.json({ error: 'Worker 请求失败' }, { status: 502 });
+  }
+
+  const data = await workerResp.json();
+  return NextResponse.json(data, { status: workerResp.status });
+}
+
+type RouteParams = { params: Promise<{ path?: string[] }> };
+
+export async function GET(req: NextRequest, { params }: RouteParams) {
+  return proxyDocuments(req, (await params).path ?? []);
+}
+export async function POST(req: NextRequest, { params }: RouteParams) {
+  return proxyDocuments(req, (await params).path ?? []);
+}
+export async function PUT(req: NextRequest, { params }: RouteParams) {
+  return proxyDocuments(req, (await params).path ?? []);
+}
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
+  return proxyDocuments(req, (await params).path ?? []);
+}
+```
+
+---
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run build
+npx wrangler deploy
+
+# 部署后在本地 Mac 测试（替换 TOKEN 和 USER_ID）：
+
+# 列出文档（应返回空数组）
+curl -s -H "Authorization: Bearer <TOKEN>" \
+  "https://udb.luocompany.net/api/documents?user_id=<USER_ID>&type=quotation"
+
+# 创建文档
+curl -s -X POST \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"<USER_ID>","type":"quotation","doc_no":"QT-001","data":{"test":true}}' \
+  https://udb.luocompany.net/api/documents
+# 预期：{"id":"...","created_at":"..."}
+```
+
+### 提交
+
+```bash
+git add src/worker.ts src/app/api/documents/
+git commit -m "feat(api): Document CRUD API（Worker + Next.js 代理）"
+```
+
+---
+
+## TASK-12：Worker Customer CRUD API + Next.js 代理路由
+
+**优先级**：🟠 高  
+**估时**：30 分钟  
+**风险**：低。只新增接口，不修改任何现有功能
+
+### 改动 1：`src/worker.ts` — 新增路由分发
+
+在 Document 路由块之后（`return new Response('Not Found', ...)` 之前）插入：
+
+```ts
+    // Customer API
+    if (path === '/api/customers' && request.method === 'GET') {
+      return handleListCustomers(request, env);
+    }
+    if (path === '/api/customers' && request.method === 'POST') {
+      return handleCreateCustomer(request, env);
+    }
+    if (path.startsWith('/api/customers/') && path.split('/').length === 4 && request.method === 'GET') {
+      return handleGetCustomer(request, env);
+    }
+    if (path.startsWith('/api/customers/') && path.split('/').length === 4 && request.method === 'PUT') {
+      return handleUpdateCustomer(request, env);
+    }
+    if (path.startsWith('/api/customers/') && path.split('/').length === 4 && request.method === 'DELETE') {
+      return handleDeleteCustomer(request, env);
+    }
+```
+
+---
+
+### 改动 2：`src/worker.ts` — 新增 Customer 处理函数
+
+在 Document 函数块之后追加：
+
+```ts
+// ─── Customer CRUD ───────────────────────────────────────────
+
+async function handleListCustomers(request: Request, env: Env): Promise<Response> {
+  if (!verifyBearerToken(request, env)) {
+    return new Response(JSON.stringify({ error: '未授权访问' }), {
+      status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+  const url    = new URL(request.url);
+  const userId = url.searchParams.get('user_id');
+  const type   = url.searchParams.get('type');
+  const limit  = Math.min(parseInt(url.searchParams.get('limit')  || '500'), 1000);
+  const offset = parseInt(url.searchParams.get('offset') || '0');
+
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'user_id 必填' }), {
+      status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+  try {
+    const conditions: string[] = ["user_id = ?", "status = 'active'"];
+    const params: unknown[] = [userId];
+    if (type) { conditions.push('type = ?'); params.push(type); }
+    params.push(limit, offset);
+
+    const sql = `SELECT * FROM Customer WHERE ${conditions.join(' AND ')} ORDER BY name ASC LIMIT ? OFFSET ?`;
+    const { results } = await env.USERS_DB.prepare(sql).bind(...params).all<Record<string, unknown>>();
+
+    const customers = results.map(row => ({ ...row, data: JSON.parse(row.data as string) }));
+    return new Response(JSON.stringify({ customers }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: '服务器错误' }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+
+async function handleGetCustomer(request: Request, env: Env): Promise<Response> {
+  if (!verifyBearerToken(request, env)) {
+    return new Response(JSON.stringify({ error: '未授权访问' }), {
+      status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+  const url    = new URL(request.url);
+  const id     = url.pathname.split('/')[3];
+  const userId = url.searchParams.get('user_id');
+
+  try {
+    const row = await env.USERS_DB.prepare(
+      "SELECT * FROM Customer WHERE id = ? AND status = 'active'"
+    ).bind(id).first<Record<string, unknown>>();
+
+    if (!row) {
+      return new Response(JSON.stringify({ error: '客户不存在' }), {
+        status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    if (userId && row.user_id !== userId) {
+      return new Response(JSON.stringify({ error: '无权访问' }), {
+        status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    return new Response(JSON.stringify({ ...row, data: JSON.parse(row.data as string) }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: '服务器错误' }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+
+async function handleCreateCustomer(request: Request, env: Env): Promise<Response> {
+  if (!verifyBearerToken(request, env)) {
+    return new Response(JSON.stringify({ error: '未授权访问' }), {
+      status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+  try {
+    const body = await request.json() as {
+      user_id: string; type: string; name: string;
+      code?: string; email?: string; phone?: string; address?: string; data?: unknown;
+    };
+    const { user_id, type, name, code, email, phone, address, data } = body;
+
+    if (!user_id || !type || !name) {
+      return new Response(JSON.stringify({ error: 'user_id、type、name 必填' }), {
+        status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    const id  = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    await env.USERS_DB.prepare(`
+      INSERT INTO Customer (id, user_id, type, name, code, email, phone, address, data, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      id, user_id, type, name,
+      code    ?? null,
+      email   ?? null,
+      phone   ?? null,
+      address ?? null,
+      JSON.stringify(data ?? {}),
+      now, now
+    ).run();
+
+    return new Response(JSON.stringify({ id, created_at: now }), {
+      status: 201, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: '服务器错误' }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+
+async function handleUpdateCustomer(request: Request, env: Env): Promise<Response> {
+  if (!verifyBearerToken(request, env)) {
+    return new Response(JSON.stringify({ error: '未授权访问' }), {
+      status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+  try {
+    const url    = new URL(request.url);
+    const id     = url.pathname.split('/')[3];
+    const userId = url.searchParams.get('user_id');
+    const body   = await request.json() as {
+      name?: string; code?: string; email?: string;
+      phone?: string; address?: string; data?: unknown;
+    };
+
+    const existing = await env.USERS_DB.prepare(
+      "SELECT user_id FROM Customer WHERE id = ? AND status = 'active'"
+    ).bind(id).first<{ user_id: string }>();
+
+    if (!existing) {
+      return new Response(JSON.stringify({ error: '客户不存在' }), {
+        status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    if (userId && existing.user_id !== userId) {
+      return new Response(JSON.stringify({ error: '无权修改' }), {
+        status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    const now = new Date().toISOString();
+    await env.USERS_DB.prepare(`
+      UPDATE Customer SET
+        name       = COALESCE(?, name),
+        code       = COALESCE(?, code),
+        email      = COALESCE(?, email),
+        phone      = COALESCE(?, phone),
+        address    = COALESCE(?, address),
+        data       = COALESCE(?, data),
+        updated_at = ?
+      WHERE id = ?
+    `).bind(
+      body.name    ?? null,
+      body.code    ?? null,
+      body.email   ?? null,
+      body.phone   ?? null,
+      body.address ?? null,
+      body.data !== undefined ? JSON.stringify(body.data) : null,
+      now, id
+    ).run();
+
+    return new Response(JSON.stringify({ success: true, updated_at: now }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: '服务器错误' }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+
+async function handleDeleteCustomer(request: Request, env: Env): Promise<Response> {
+  if (!verifyBearerToken(request, env)) {
+    return new Response(JSON.stringify({ error: '未授权访问' }), {
+      status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+  try {
+    const url    = new URL(request.url);
+    const id     = url.pathname.split('/')[3];
+    const userId = url.searchParams.get('user_id');
+
+    const existing = await env.USERS_DB.prepare(
+      "SELECT user_id FROM Customer WHERE id = ? AND status = 'active'"
+    ).bind(id).first<{ user_id: string }>();
+
+    if (!existing) {
+      return new Response(JSON.stringify({ error: '客户不存在' }), {
+        status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    if (userId && existing.user_id !== userId) {
+      return new Response(JSON.stringify({ error: '无权删除' }), {
+        status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+    await env.USERS_DB.prepare(
+      "UPDATE Customer SET status = 'archived', updated_at = ? WHERE id = ?"
+    ).bind(new Date().toISOString(), id).run();
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: '服务器错误' }), {
+      status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
+}
+```
+
+---
+
+### 改动 3：新建文件 `src/app/api/customers/[[...path]]/route.ts`
+
+```ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+const WORKER_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net';
+
+function workerHeaders(): HeadersInit {
+  const token = process.env.API_TOKEN;
+  if (!token) throw new Error('API_TOKEN env var not set');
+  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+}
+
+async function proxyCustomers(
+  request: NextRequest,
+  pathSegments: string[]
+): Promise<NextResponse> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: '未登录' }, { status: 401 });
+  }
+
+  const userId = session.user.id || session.user.username || '';
+  const url = new URL(request.url);
+
+  const workerPath = pathSegments.length > 0
+    ? `/api/customers/${pathSegments.join('/')}`
+    : '/api/customers';
+  url.searchParams.set('user_id', userId);
+  const workerUrl = `${WORKER_BASE}${workerPath}?${url.searchParams.toString()}`;
+
+  let body: string | undefined;
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    const raw = await request.json().catch(() => ({}));
+    body = JSON.stringify({ ...raw, user_id: userId });
+  }
+
+  let workerResp: Response;
+  try {
+    workerResp = await fetch(workerUrl, {
+      method: request.method,
+      headers: workerHeaders(),
+      body,
+    });
+  } catch {
+    return NextResponse.json({ error: 'Worker 请求失败' }, { status: 502 });
+  }
+
+  const data = await workerResp.json();
+  return NextResponse.json(data, { status: workerResp.status });
+}
+
+type RouteParams = { params: Promise<{ path?: string[] }> };
+
+export async function GET(req: NextRequest, { params }: RouteParams) {
+  return proxyCustomers(req, (await params).path ?? []);
+}
+export async function POST(req: NextRequest, { params }: RouteParams) {
+  return proxyCustomers(req, (await params).path ?? []);
+}
+export async function PUT(req: NextRequest, { params }: RouteParams) {
+  return proxyCustomers(req, (await params).path ?? []);
+}
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
+  return proxyCustomers(req, (await params).path ?? []);
+}
+```
+
+---
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run build
+npx wrangler deploy
+
+# 创建客户测试：
+curl -s -X POST \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"<USER_ID>","type":"customer","name":"Test Co.","email":"test@example.com"}' \
+  https://udb.luocompany.net/api/customers
+# 预期：{"id":"...","created_at":"..."}
+
+# 列出客户：
+curl -s -H "Authorization: Bearer <TOKEN>" \
+  "https://udb.luocompany.net/api/customers?user_id=<USER_ID>"
+```
+
+### 提交
+
+```bash
+git add src/worker.ts src/app/api/customers/
+git commit -m "feat(api): Customer CRUD API（Worker + Next.js 代理）"
+```
+
+---
+
+## 执行顺序
+
+```
+TASK-11 → 部署 Worker → 验证 Document API
+TASK-12 → 部署 Worker → 验证 Customer API
+（TASK-13：前端写入改走 API，后续单独规划）
+```
+
+**每个任务完成后必跑：**
+```bash
+npx tsc --noEmit && npm run build
+```
