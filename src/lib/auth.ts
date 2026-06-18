@@ -33,43 +33,36 @@ export const authOptions: NextAuthOptions = {
         const isSilentRefresh = credentials.password === 'silent-refresh';
         
         if (isSilentRefresh) {
-          console.log('检测到silent-refresh请求:', credentials.username);
-          
-          // 对于silent-refresh，从本地缓存获取用户信息
-          if (typeof window !== 'undefined') {
-            try {
-              const userCache = localStorage.getItem('userCache');
-              if (userCache) {
-                const cacheData = JSON.parse(userCache);
-                console.log('silent-refresh: 从缓存获取用户信息', cacheData);
-                
-                return {
-                  id: cacheData.id || credentials.username,
-                  email: cacheData.email || "",
-                  name: cacheData.username || credentials.username,
-                  username: cacheData.username || credentials.username,
-                  isAdmin: cacheData.isAdmin || false,
-                  image: null,
-                  permissions: cacheData.permissions || [], // ✅ 使用缓存中的权限数据
-                  status: cacheData.status !== false
-                };
+          console.log('silent-refresh: 从远程重新获取用户信息:', credentials.username);
+          try {
+            const response = await fetch(
+              `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users?username=${encodeURIComponent(credentials.username)}`,
+              {
+                headers: {
+                  'X-User-ID': 'system',
+                  'X-User-Name': 'system',
+                  'X-User-Admin': 'true',
+                }
               }
-            } catch (error) {
-              console.error('silent-refresh: 获取缓存用户信息失败', error);
+            );
+            if (response.ok) {
+              const userData = await response.json();
+              return {
+                id: userData.id,
+                email: userData.email || '',
+                name: userData.username,
+                username: userData.username,
+                isAdmin: !!userData.isAdmin,
+                image: null,
+                permissions: userData.permissions || [],
+                status: userData.status !== false,
+              };
             }
+          } catch (error) {
+            console.error('silent-refresh: 远程获取用户信息失败', error);
           }
-          
-          // 如果缓存中没有数据，返回默认用户信息
-          return {
-            id: credentials.username,
-            email: "",
-            name: credentials.username,
-            username: credentials.username,
-            isAdmin: true, // 默认为管理员，实际应该从session获取
-            image: null,
-            permissions: [], // 权限会在后续的API调用中更新
-            status: true
-          };
+          // 远程获取失败时拒绝刷新，强制重新登录
+          throw new Error('会话刷新失败，请重新登录');
         }
 
         try {
