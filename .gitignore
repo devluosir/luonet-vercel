@@ -45,3 +45,9 @@ next-env.d.ts
 .cursorindexingignore
 packages/*/node_modules
 .env*.local
+
+# Playwright auth state and reports
+e2e/.auth/user.json
+e2e/.auth/*.json
+/playwright-report/
+/test-results/

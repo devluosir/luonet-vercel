@@ -3410,3 +3410,369 @@ npm run build
 git add src/utils/d1Pull.ts src/hooks/useD1Sync.ts src/app/providers.tsx
 git commit -m "feat(sync): 登录时从 D1 拉取数据合并到 localStorage（多设备同步）"
 ```
+
+---
+
+## TASK-16：Playwright E2E 测试套件
+
+**优先级**：🟡 中（质量保障）
+**估时**：45 分钟
+**风险**：极低，只新增文件，不改动业务代码
+
+### 背景
+
+`package.json` 已有 `"test:e2e": "playwright test"` 脚本，但 `@playwright/test` 未安装，也没有 `playwright.config.ts` 和 `e2e/` 目录。本任务补全这些缺失：
+
+- 安装依赖
+- 配置 Playwright（目标 URL、storageState 复用登录态）
+- 全局 setup：登录一次，保存 Cookie/localStorage 到 `e2e/.auth/user.json`
+- 四个核心测试文件：登录、Dashboard、报价单保存（含 D1 双写断言）、历史页
+
+测试凭据通过环境变量注入（`E2E_BASE_URL`、`E2E_USERNAME`、`E2E_PASSWORD`），不硬编码。
+
+### 涉及文件（全部新增）
+
+```
+playwright.config.ts
+e2e/global-setup.ts
+e2e/auth.spec.ts
+e2e/dashboard.spec.ts
+e2e/quotation-save.spec.ts
+e2e/history.spec.ts
+e2e/.auth/.gitkeep          ← 仅 .gitkeep，实际 user.json 由 gitignore 排除
+```
+
+同时修改：
+- `package.json` — 追加 `@playwright/test` 到 devDependencies
+- `.gitignore` — 追加 `e2e/.auth/`
+
+### 步骤 1：安装依赖
+
+```bash
+npm install -D @playwright/test
+npx playwright install chromium --with-deps
+```
+
+### 步骤 2：`playwright.config.ts`（项目根目录）
+
+```ts
+import { defineConfig, devices } from '@playwright/test';
+
+const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
+
+export default defineConfig({
+  testDir: './e2e',
+  timeout: 30_000,
+  retries: process.env.CI ? 1 : 0,
+  reporter: process.env.CI ? 'github' : 'list',
+  globalSetup: './e2e/global-setup.ts',
+
+  use: {
+    baseURL: BASE_URL,
+    storageState: 'e2e/.auth/user.json',
+    trace: 'on-first-retry',
+  },
+
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+});
+```
+
+### 步骤 3：`e2e/global-setup.ts`
+
+```ts
+import { chromium, FullConfig } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
+
+async function globalSetup(config: FullConfig) {
+  const baseURL = config.projects[0].use.baseURL ?? 'http://localhost:3000';
+  const username = process.env.E2E_USERNAME;
+  const password = process.env.E2E_PASSWORD;
+
+  if (!username || !password) {
+    throw new Error(
+      'E2E_USERNAME and E2E_PASSWORD must be set.\n' +
+      'Example: E2E_USERNAME=roger E2E_PASSWORD=secret npx playwright test'
+    );
+  }
+
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+
+  await page.goto(baseURL + '/');
+  await page.fill('#username', username);
+  await page.fill('#password', password);
+  await page.click('button[type="submit"]');
+
+  // 等待跳转到 dashboard
+  await page.waitForURL('**/dashboard', { timeout: 15_000 });
+
+  // 保存认证状态（Cookie + localStorage）
+  const authDir = path.join(process.cwd(), 'e2e', '.auth');
+  fs.mkdirSync(authDir, { recursive: true });
+  await page.context().storageState({ path: path.join(authDir, 'user.json') });
+
+  await browser.close();
+}
+
+export default globalSetup;
+```
+
+### 步骤 4：`e2e/auth.spec.ts`
+
+```ts
+import { test, expect } from '@playwright/test';
+
+test.describe('认证流程', () => {
+  // 此测试不依赖已登录状态，单独处理
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('未登录访问 /dashboard 应重定向到登录页', async ({ page }) => {
+    await page.goto('/dashboard');
+    // 应被重定向到根路径或包含登录表单
+    await expect(page.locator('#username')).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('填写正确凭据后跳转到 dashboard', async ({ page }) => {
+    const username = process.env.E2E_USERNAME!;
+    const password = process.env.E2E_PASSWORD!;
+
+    await page.goto('/');
+    await page.fill('#username', username);
+    await page.fill('#password', password);
+    await page.click('button[type="submit"]');
+
+    await page.waitForURL('**/dashboard', { timeout: 15_000 });
+    await expect(page).toHaveURL(/dashboard/);
+  });
+
+  test('填写错误密码显示错误信息', async ({ page }) => {
+    await page.goto('/');
+    await page.fill('#username', 'nonexistent_user_xyz');
+    await page.fill('#password', 'wrong_password_xyz');
+    await page.click('button[type="submit"]');
+
+    // 错误信息出现，页面留在登录页
+    await expect(page.locator('text=用户名或密码错误')).toBeVisible({ timeout: 8_000 });
+    await expect(page).toHaveURL(/^\//); // 仍在根路径
+  });
+});
+```
+
+### 步骤 5：`e2e/dashboard.spec.ts`
+
+```ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Dashboard 页面', () => {
+  test('已登录用户可访问 dashboard', async ({ page }) => {
+    await page.goto('/dashboard');
+    // 确认没有被重定向回登录页
+    await expect(page).not.toHaveURL(/^\/?$/);
+    // Dashboard 应包含至少一个导航链接
+    await expect(page.locator('a[href*="quotation"], a[href*="invoice"], nav')).toHaveCount({ minimum: 1 } as any);
+  });
+
+  test('dashboard 页面基础元素可见', async ({ page }) => {
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
+    // 页面应有可见内容（不是空白页）
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText.length).toBeGreaterThan(10);
+  });
+});
+```
+
+### 步骤 6：`e2e/quotation-save.spec.ts`
+
+测试重点：点击保存后，前端触发 D1 双写（`POST /api/documents`），验证请求被发出且返回 200。
+
+```ts
+import { test, expect } from '@playwright/test';
+
+test.describe('报价单保存 + D1 双写', () => {
+  test('保存报价单 → 触发 POST /api/documents', async ({ page }) => {
+    // 拦截 D1 双写请求（fire-and-forget，在点击保存后异步发出）
+    const d1RequestPromise = page.waitForRequest(
+      req => req.url().includes('/api/documents') && req.method() === 'POST',
+      { timeout: 15_000 }
+    );
+
+    await page.goto('/quotation');
+    await page.waitForLoadState('networkidle');
+
+    // 填写客户名称（第一个文本输入框通常是客户名称字段）
+    // 使用 label 文字定位（FormField 渲染 label 标签）
+    const customerInput = page.locator('label:has-text("客户名称") ~ * input, label:has-text("客户名称") + * input').first();
+    await customerInput.fill('E2E Test Customer');
+
+    // 点击保存按钮（新记录时 title 为 "保存新记录"）
+    await page.locator('button[title="保存新记录"], button[title="保存修改"]').click();
+
+    // 断言 D1 双写请求被触发
+    const d1Req = await d1RequestPromise;
+    expect(d1Req.method()).toBe('POST');
+    expect(d1Req.url()).toContain('/api/documents');
+
+    // 等待响应并断言状态码
+    const d1Resp = await d1Req.response();
+    expect(d1Resp).not.toBeNull();
+    // 允许 200（create）或 409（已存在但幂等）
+    expect([200, 201, 409]).toContain(d1Resp!.status());
+  });
+
+  test('保存后 localStorage 包含新记录', async ({ page }) => {
+    await page.goto('/quotation');
+    await page.waitForLoadState('networkidle');
+
+    // 清空现有历史以便计数
+    await page.evaluate(() => {
+      const existing = JSON.parse(localStorage.getItem('quotation_history') || '[]');
+      // 记录保存前数量
+      (window as any).__beforeCount = existing.length;
+    });
+
+    const customerInput = page.locator('label:has-text("客户名称") ~ * input, label:has-text("客户名称") + * input').first();
+    await customerInput.fill('E2E LocalStorage Test');
+
+    await page.locator('button[title="保存新记录"], button[title="保存修改"]').click();
+
+    // 等待 toast 出现（保存成功提示）
+    await expect(page.locator('text=保存成功')).toBeVisible({ timeout: 8_000 });
+
+    // 验证 localStorage 记录数 +1
+    const afterCount = await page.evaluate(() => {
+      const list = JSON.parse(localStorage.getItem('quotation_history') || '[]');
+      return list.length;
+    });
+    const beforeCount = await page.evaluate(() => (window as any).__beforeCount ?? 0);
+    expect(afterCount).toBeGreaterThan(beforeCount);
+  });
+});
+```
+
+### 步骤 7：`e2e/history.spec.ts`
+
+```ts
+import { test, expect } from '@playwright/test';
+
+test.describe('历史记录页', () => {
+  test('能访问历史页且不报错', async ({ page }) => {
+    await page.goto('/history');
+    await page.waitForLoadState('networkidle');
+    // 不被重定向回登录页
+    await expect(page).not.toHaveURL(/^\/?$/);
+    // 无 JavaScript 崩溃（检查 console）
+    const errors: string[] = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') errors.push(msg.text());
+    });
+    // 等待短暂时间收集错误
+    await page.waitForTimeout(1_000);
+    // 过滤掉已知的非致命警告（D1 pull 可能因测试环境无法访问而报错）
+    const fatalErrors = errors.filter(e =>
+      !e.includes('D1') && !e.includes('fetch') && !e.includes('network')
+    );
+    expect(fatalErrors).toHaveLength(0);
+  });
+
+  test('历史页包含页面标题或空状态文字', async ({ page }) => {
+    await page.goto('/history');
+    await page.waitForLoadState('networkidle');
+    // 应渲染出可读内容
+    const bodyText = await page.locator('body').innerText();
+    // 至少含有"历史"或"记录"等关键词，或空状态提示
+    expect(bodyText).toMatch(/历史|记录|暂无|empty/i);
+  });
+});
+```
+
+### 步骤 8：`e2e/.auth/.gitkeep`
+
+```bash
+mkdir -p e2e/.auth
+touch e2e/.auth/.gitkeep
+```
+
+### 步骤 9：更新 `.gitignore`
+
+在 `.gitignore` 末尾追加：
+
+```
+# Playwright auth state
+e2e/.auth/user.json
+e2e/.auth/*.json
+/playwright-report/
+/test-results/
+```
+
+### 步骤 10：更新 `package.json`
+
+在 `devDependencies` 中追加 `@playwright/test`（版本由 `npm install -D` 决定，写入后 commit）。
+
+同时在 `scripts` 中追加（如果尚不存在）：
+
+```json
+"test:e2e:ui": "playwright test --ui",
+"test:e2e:headed": "playwright test --headed"
+```
+
+### 验证命令
+
+```bash
+# 类型检查：playwright.config.ts 和 e2e/ 目录应无 TS 错误
+npx tsc --noEmit
+
+# 语法预检（不实际执行测试）
+npx playwright test --list
+
+# 实际运行（需要本地 dev server 或 .env.e2e 配置 E2E_BASE_URL）
+# E2E_BASE_URL=https://your-vercel-url E2E_USERNAME=xxx E2E_PASSWORD=yyy npx playwright test
+```
+
+### 运行说明
+
+本地运行需先启动 dev server：
+
+```bash
+# 终端 1
+npm run dev
+
+# 终端 2
+E2E_USERNAME=<用户名> E2E_PASSWORD=<密码> npm run test:e2e
+```
+
+针对 Vercel 生产环境：
+
+```bash
+E2E_BASE_URL=https://luonet-vercel.vercel.app \
+E2E_USERNAME=<用户名> \
+E2E_PASSWORD=<密码> \
+npm run test:e2e
+```
+
+CI 中在 GitHub Actions secrets 中设置 `E2E_BASE_URL`、`E2E_USERNAME`、`E2E_PASSWORD`，在 `.github/workflows/e2e.yml` 中 `env:` 块引用。
+
+### 提交
+
+```bash
+git add playwright.config.ts e2e/ .gitignore package.json package-lock.json
+git commit -m "test(e2e): 添加 Playwright E2E 测试套件（登录/Dashboard/报价单保存/历史页）"
+```
+
+---
+
+## 里程碑：数据管线完成（TASK-09 ~ TASK-15）
+
+| 层次 | 实现 | 文件 |
+|------|------|------|
+| **写入** | localStorage 主写 + D1 fire-and-forget | `d1Sync.ts` |
+| **迁移** | 管理员一键批量迁移历史数据 | `d1Migration.ts`, `D1MigrationPanel` |
+| **API** | Document / Customer CRUD 全套 | `worker.ts`, `/api/documents`, `/api/customers` |
+| **读取** | 登录时从 D1 拉取合并到 localStorage | `d1Pull.ts`, `useD1Sync.ts` |
+| **鉴权** | Bearer token（Worker）+ NextAuth session（Next.js 代理）| `worker.ts`, `/api/admin/[...path]` |
