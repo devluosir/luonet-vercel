@@ -14,7 +14,7 @@ const mockInitialState = {
   draft: {
     supplier: { name: '', attn: '' },
     bank: {},
-    settings: { poNo: '', currency: 'USD', date: '2024-01-01', purchaser: '' },
+    settings: { poNo: '', currency: 'USD' as const, date: '2024-01-01', purchaser: '' },
     items: [],
     notes: ''
   },
@@ -26,7 +26,7 @@ const mockInitialState = {
     ourRef: 'OUR001',
     date: '2025-01-08',
     contractAmount: '1000.00',
-    currency: 'CNY',
+    currency: 'CNY' as const,
     projectSpecification: 'Test project',
     paymentTerms: '交货后30天',
     invoiceRequirements: '如前；',
@@ -34,7 +34,7 @@ const mockInitialState = {
     deliveryInfo: 'Test delivery',
     orderNumbers: 'ON001',
     showStamp: false,
-    stampType: 'none',
+    stampType: 'none' as const,
     from: 'Test Purchaser',
   },
   isGenerating: false,
@@ -49,7 +49,7 @@ const mockInitialState = {
 
 beforeEach(() => {
   // 重置到稳定初始状态
-  usePurchaseStore.setState(mockInitialState, true);
+  usePurchaseStore.setState(mockInitialState);
 });
 
 describe('Purchase Selectors Stability Tests', () => {

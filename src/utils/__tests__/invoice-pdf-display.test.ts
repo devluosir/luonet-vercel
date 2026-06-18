@@ -1,5 +1,7 @@
 import { getUnitDisplay } from '../unitUtils';
 
+type TableCell = number | { content: string; styles: Record<string, unknown> };
+
 describe('Invoice PDF Display Tests', () => {
   describe('数量和单位显示测试', () => {
     it('应该正确显示数量为0的情况', () => {
@@ -74,7 +76,7 @@ describe('Invoice PDF Display Tests', () => {
 
     it('应该生成正确的表格行数据', () => {
       // 模拟PDF生成器中的逻辑
-      const tableRow = [
+      const tableRow: TableCell[] = [
         1, // index + 1
         { content: mockItem.quantity.toString(), styles: {} }, // 修复后：始终显示数量
         { content: getUnitDisplay(mockItem.unit || 'pc', mockItem.quantity), styles: {} }, // 修复后：始终显示单位
@@ -82,10 +84,10 @@ describe('Invoice PDF Display Tests', () => {
         { content: Number(mockItem.amount).toFixed(2), styles: {} }
       ];
 
-      expect(tableRow[1].content).toBe('0'); // 数量应该显示"0"
-      expect(tableRow[2].content).toBe('pc'); // 单位应该显示"pc"
-      expect(tableRow[3].content).toBe('10.50'); // 单价保持2位小数
-      expect(tableRow[4].content).toBe('0.00'); // 金额保持2位小数
+      expect((tableRow[1] as { content: string; styles: Record<string, unknown> }).content).toBe('0'); // 数量应该显示"0"
+      expect((tableRow[2] as { content: string; styles: Record<string, unknown> }).content).toBe('pc'); // 单位应该显示"pc"
+      expect((tableRow[3] as { content: string; styles: Record<string, unknown> }).content).toBe('10.50'); // 单价保持2位小数
+      expect((tableRow[4] as { content: string; styles: Record<string, unknown> }).content).toBe('0.00'); // 金额保持2位小数
     });
 
     it('应该与报价页面PDF保持一致的逻辑', () => {

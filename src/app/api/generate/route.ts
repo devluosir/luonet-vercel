@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateMail } from '@/lib/deepseek';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
+  // 认证检查：未登录用户不得调用 AI 邮件生成
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    return NextResponse.json(
+      { error: '请先登录后再使用 AI 邮件助手' },
+      { status: 401 }
+    );
+  }
+
   // 设置响应超时
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 120000); // 2分钟超时

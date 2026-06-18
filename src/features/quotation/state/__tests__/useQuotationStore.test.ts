@@ -34,12 +34,8 @@ describe('useQuotationStore Actions Contract Tests', () => {
     
     jest.clearAllMocks();
     // 清理控制台spy
-    if (global.console.log.mockRestore) {
-      global.console.log.mockRestore();
-    }
-    if (global.console.warn.mockRestore) {
-      global.console.warn.mockRestore();
-    }
+    (global.console.log as jest.Mock).mockRestore?.();
+    (global.console.warn as jest.Mock).mockRestore?.();
   });
 
   describe('updateFrom', () => {
@@ -129,7 +125,7 @@ describe('useQuotationStore Actions Contract Tests', () => {
     it('should warn and ignore notes in patch during development', () => {
       // 模拟开发环境
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
+      Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, writable: true });
       
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       
@@ -153,7 +149,7 @@ describe('useQuotationStore Actions Contract Tests', () => {
       );
       
       // 恢复环境
-      process.env.NODE_ENV = originalEnv;
+      Object.defineProperty(process.env, 'NODE_ENV', { value: originalEnv, configurable: true, writable: true });
       consoleWarnSpy.mockRestore();
     });
   });
