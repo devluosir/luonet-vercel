@@ -2,13 +2,20 @@
 
 import { SessionProvider } from 'next-auth/react';
 import { usePermissionInit } from '@/hooks/usePermissionInit';
+import { useD1Sync } from '@/hooks/useD1Sync';
 import { ToastProvider } from '@/components/ui/Toast';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 
 // ✅ 全局权限初始化组件
 function PermissionInitializer() {
   usePermissionInit();
-  return null; // 这个组件不渲染任何内容，只负责初始化
+  return null;
+}
+
+// ✅ 登录后从 D1 拉取数据到 localStorage（多设备同步）
+function D1SyncInitializer() {
+  useD1Sync();
+  return null;
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -20,9 +27,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ThemeProvider>
         <ToastProvider>
           <PermissionInitializer />
+          <D1SyncInitializer />
           {children}
         </ToastProvider>
       </ThemeProvider>
     </SessionProvider>
   );
-} 
+}

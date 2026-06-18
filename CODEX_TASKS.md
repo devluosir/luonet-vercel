@@ -3080,3 +3080,333 @@ git commit -m "feat(read): 读取路径切换到 D1 primary，localStorage 降�
 | TASK-13 | ✅ | 前端双写 D1（写入点） |
 | TASK-14 | 🔲 待执行 | 一次性历史迁移 + Worker upsert |
 | TASK-15 | 🔲 可选 | 读取切换 D1（高风险，TASK-14 后再议） |
+
+---
+
+## TASK-15：D1 → localStorage 登录拉取同步（多设备数据一致）
+
+**优先级**：🟡 中
+**估时**：20 分钟
+**风险**：低。不改任何现有读写逻辑，只在登录后后台合并一次数据。
+
+### 背景
+
+TASK-13 双写 + TASK-14 一次性迁移之后，D1 已有全量数据。
+本任务在用户登录后，后台从 D1 拉取数据并**合并**到 localStorage，实现多设备同步：
+- 设备 A 创建的单据，登录设备 B 后自动出现在历史列表
+- 读取路径不变（仍从 localStorage 读）；合并只在登录时发生一次
+- 合并策略：D1 的记录若比 localStorage 中的更新（`updated_at` 更新），则覆盖；本地更新的保留
+
+### 涉及文件
+
+| 文件 | 操作 |
+|------|------|
+| `src/utils/d1Pull.ts` | 新建（拉取 + 合并函数） |
+| `src/hooks/useD1Sync.ts` | 新建（React hook，登录后执行一次） |
+| `src/app/providers.tsx` | 修改（注入 D1SyncInitializer 组件） |
+
+---
+
+### 步骤一：新建 `src/utils/d1Pull.ts`
+
+```ts
+/**
+ * 从 D1 API 拉取数据并合并到 localStorage。
+ * 合并规则：D1 更新时间 > localStorage → 覆盖；否则保留本地。
+ * 仅在用户已登录时通过 /api/documents 和 /api/customers 代理调用。
+ */
+
+type D1Doc = {
+  id: string;
+  type: string;
+  doc_no: string;
+  customer_name: string | null;
+  total_amount: number | null;
+  currency: string;
+  data: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+type D1Customer = {
+  id: string;
+  type: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  data: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+async function fetchAll<T>(
+  url: string,
+  key: string,
+): Promise<T[]> {
+  const results: T[] = [];
+  let offset = 0;
+  const limit = 500;
+  while (true) {
+    const resp = await fetch(`${url}&limit=${limit}&offset=${offset}`);
+    if (!resp.ok) break;
+    const json = await resp.json();
+    const items: T[] = json[key] ?? [];
+    results.push(...items);
+    if (items.length < limit) break;
+    offset += limit;
+  }
+  return results;
+}
+
+function mergeIntoStorage<T extends { id: string; updatedAt?: string; updated_at?: string }>(
+  storageKey: string,
+  incoming: T[],
+): void {
+  const raw = localStorage.getItem(storageKey);
+  const existing: T[] = raw ? JSON.parse(raw) : [];
+  const map = new Map<string, T>(existing.map((item) => [item.id, item]));
+
+  for (const item of incoming) {
+    const local = map.get(item.id);
+    if (!local) {
+      map.set(item.id, item);
+    } else {
+      const localTime = new Date(local.updatedAt ?? local.updated_at ?? 0).getTime();
+      const remoteTime = new Date(item.updatedAt ?? item.updated_at ?? 0).getTime();
+      if (remoteTime > localTime) {
+        map.set(item.id, item);
+      }
+    }
+  }
+
+  const merged = Array.from(map.values()).sort((a, b) => {
+    const ta = new Date((a as any).createdAt ?? (a as any).created_at ?? 0).getTime();
+    const tb = new Date((b as any).createdAt ?? (b as any).created_at ?? 0).getTime();
+    return tb - ta;
+  });
+
+  localStorage.setItem(storageKey, JSON.stringify(merged));
+}
+
+function docToQuotationHistory(doc: D1Doc) {
+  return {
+    id: doc.id,
+    type: doc.type as 'quotation' | 'confirmation',
+    quotationNo: doc.doc_no || '',
+    customerName: doc.customer_name || '',
+    totalAmount: doc.total_amount || 0,
+    currency: doc.currency || 'USD',
+    createdAt: doc.created_at,
+    updatedAt: doc.updated_at,
+    data: doc.data,
+  };
+}
+
+function docToInvoiceHistory(doc: D1Doc) {
+  return {
+    id: doc.id,
+    invoiceNo: doc.doc_no || '',
+    customerName: doc.customer_name || '',
+    totalAmount: doc.total_amount || 0,
+    currency: doc.currency || 'USD',
+    createdAt: doc.created_at,
+    updatedAt: doc.updated_at,
+    // data field stored as full InvoiceHistory; extract inner data if present
+    data: (doc.data as any).data ?? doc.data,
+  };
+}
+
+function docToPackingHistory(doc: D1Doc) {
+  const d = doc.data as any;
+  return {
+    id: doc.id,
+    consigneeName: doc.customer_name || '',
+    invoiceNo: doc.doc_no || d?.invoiceNo || '',
+    orderNo: d?.orderNo || '',
+    totalAmount: doc.total_amount || 0,
+    currency: doc.currency || 'USD',
+    documentType: d?.documentType || 'packing',
+    createdAt: doc.created_at,
+    updatedAt: doc.updated_at,
+    data: doc.data,
+  };
+}
+
+function docToPurchaseHistory(doc: D1Doc) {
+  return {
+    id: doc.id,
+    supplierName: doc.customer_name || '',
+    orderNo: doc.doc_no || '',
+    totalAmount: doc.total_amount || 0,
+    currency: doc.currency || 'USD',
+    createdAt: doc.created_at,
+    updatedAt: doc.updated_at,
+    data: doc.data,
+  };
+}
+
+function d1CustomerToLocal(c: D1Customer, type: 'customer' | 'supplier' | 'consignee') {
+  return {
+    id: c.id,
+    name: c.name,
+    email: c.email || '',
+    phone: c.phone || '',
+    address: c.address || '',
+    company: (c.data as any)?.company || '',
+    createdAt: c.created_at,
+    updatedAt: c.updated_at,
+  };
+}
+
+/**
+ * 拉取全部 D1 数据并合并到 localStorage。
+ * 失败时静默（不影响现有功能）。
+ */
+export async function pullAllFromD1(): Promise<void> {
+  if (typeof window === 'undefined') return;
+
+  try {
+    // ── 单据 ────────────────────────────────────────────────
+    const [quotations, confirmations, invoices, packings, purchases] = await Promise.all([
+      fetchAll<D1Doc>('/api/documents?type=quotation', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=confirmation', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=invoice', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=packing', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=purchase', 'documents'),
+    ]);
+
+    mergeIntoStorage(
+      'quotation_history',
+      [...quotations, ...confirmations].map(docToQuotationHistory),
+    );
+    mergeIntoStorage('invoice_history', invoices.map(docToInvoiceHistory));
+    mergeIntoStorage('packing_history', packings.map(docToPackingHistory));
+    mergeIntoStorage('purchase_history', purchases.map(docToPurchaseHistory));
+
+    // ── 客户 ────────────────────────────────────────────────
+    const [customers, suppliers, consignees] = await Promise.all([
+      fetchAll<D1Customer>('/api/customers?type=customer', 'customers'),
+      fetchAll<D1Customer>('/api/customers?type=supplier', 'customers'),
+      fetchAll<D1Customer>('/api/customers?type=consignee', 'customers'),
+    ]);
+
+    mergeIntoStorage('customer_management', customers.map((c) => d1CustomerToLocal(c, 'customer')));
+    mergeIntoStorage('supplier_management', suppliers.map((c) => d1CustomerToLocal(c, 'supplier')));
+    mergeIntoStorage('consignee_management', consignees.map((c) => d1CustomerToLocal(c, 'consignee')));
+
+    console.log('[d1Pull] 同步完成');
+  } catch (err) {
+    console.warn('[d1Pull] 同步失败（不影响现有功能）:', err);
+  }
+}
+```
+
+---
+
+### 步骤二：新建 `src/hooks/useD1Sync.ts`
+
+```ts
+/**
+ * 用户登录后执行一次 D1 → localStorage 同步。
+ * 使用模块级 flag 确保同一浏览器会话只同步一次。
+ */
+import { useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { pullAllFromD1 } from '@/utils/d1Pull';
+
+let syncDone = false;
+
+export function useD1Sync(): void {
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    if (syncDone) return;
+    syncDone = true;
+
+    // 延迟 1s，避免与首屏渲染竞争
+    const timer = setTimeout(() => {
+      pullAllFromD1().catch(() => {/* 静默 */});
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [status]);
+}
+```
+
+---
+
+### 步骤三：修改 `src/app/providers.tsx`
+
+**3a. 在现有 import 行之后添加 import**（在 `import { usePermissionInit }` 之后）：
+
+```ts
+import { useD1Sync } from '@/hooks/useD1Sync';
+```
+
+**3b. 在 `PermissionInitializer` 组件之后添加新组件**
+
+找到：
+
+```tsx
+// ✅ 全局权限初始化组件
+function PermissionInitializer() {
+  usePermissionInit();
+  return null; // 这个组件不渲染任何内容，只负责初始化
+}
+```
+
+替换为：
+
+```tsx
+// ✅ 全局权限初始化组件
+function PermissionInitializer() {
+  usePermissionInit();
+  return null;
+}
+
+// ✅ 登录后从 D1 拉取数据到 localStorage（多设备同步）
+function D1SyncInitializer() {
+  useD1Sync();
+  return null;
+}
+```
+
+**3c. 在 `<PermissionInitializer />` 之后插入新组件**
+
+找到：
+
+```tsx
+          <PermissionInitializer />
+          {children}
+```
+
+替换为：
+
+```tsx
+          <PermissionInitializer />
+          <D1SyncInitializer />
+          {children}
+```
+
+---
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+部署后：
+1. 在设备 A 保存一份报价（双写到 D1）
+2. 在设备 B 登录（不同浏览器/无痕模式）
+3. 约 1 秒后刷新历史页面，确认设备 A 创建的记录出现在列表中
+
+### 提交
+
+```bash
+git add src/utils/d1Pull.ts src/hooks/useD1Sync.ts src/app/providers.tsx
+git commit -m "feat(sync): 登录时从 D1 拉取数据合并到 localStorage（多设备同步）"
+```
