@@ -8,7 +8,7 @@ database_name = "mluonet-users"
 database_id = "f8dac0b4-d25a-4d11-b64f-b592ea24e17d"
 
 [vars]
-API_TOKEN = "Kqm0uVxJuVRkJ1GUoAwT4SrfvYAbaVbcwV6jQ8hY"
+# API_TOKEN 已迁移到 Cloudflare secret（执行：npx wrangler secret put API_TOKEN）
 MAIN_SITE_URL = "https://luocompany.net"
 
 # 启用自定义域名配置，绑定 udb.luocompany.net
@@ -27,6 +27,7 @@ crons = []
 [env.production]
 workers_dev = false
 vars = { MAIN_SITE_URL = "https://luocompany.net" }
+# 注意：API_TOKEN 通过 Cloudflare secret 注入，不在此文件配置
 
 [env.development]
 workers_dev = true
