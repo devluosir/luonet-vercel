@@ -82,6 +82,28 @@ function serializeDocument(row: DocumentRow) {
   };
 }
 
+type CustomerRow = {
+  id: string;
+  user_id: string;
+  type: string;
+  name: string;
+  code: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  data: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+function serializeCustomer(row: CustomerRow) {
+  return {
+    ...row,
+    data: parseJsonData<Record<string, unknown>>(row.data, {}),
+  };
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
     const url = new URL(request.url);
@@ -119,6 +141,27 @@ export default {
 
     if (path.startsWith('/api/documents/') && path.split('/').length === 4 && request.method === 'DELETE') {
       return handleDeleteDocument(request, env);
+    }
+
+    // 处理客户资料 API
+    if (path === '/api/customers' && request.method === 'GET') {
+      return handleListCustomers(request, env);
+    }
+
+    if (path === '/api/customers' && request.method === 'POST') {
+      return handleCreateCustomer(request, env);
+    }
+
+    if (path.startsWith('/api/customers/') && path.split('/').length === 4 && request.method === 'GET') {
+      return handleGetCustomer(request, env);
+    }
+
+    if (path.startsWith('/api/customers/') && path.split('/').length === 4 && request.method === 'PUT') {
+      return handleUpdateCustomer(request, env);
+    }
+
+    if (path.startsWith('/api/customers/') && path.split('/').length === 4 && request.method === 'DELETE') {
+      return handleDeleteCustomer(request, env);
     }
 
     // 处理用户管理
@@ -1277,6 +1320,215 @@ async function handleDeleteDocument(request: Request, env: Env): Promise<Respons
     `).bind(documentId, userId).run();
 
     if (result.meta.changes === 0) return jsonResponse({ error: '单据不存在' }, 404);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleListCustomers(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('user_id');
+    if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
+
+    const type = url.searchParams.get('type');
+    const status = url.searchParams.get('status') || 'active';
+    const search = url.searchParams.get('search');
+    const limit = Math.min(Number(url.searchParams.get('limit')) || 100, 500);
+    const offset = Number(url.searchParams.get('offset')) || 0;
+
+    const conditions = ['user_id = ?'];
+    const values: Array<string | number> = [userId];
+
+    if (type) {
+      conditions.push('type = ?');
+      values.push(type);
+    }
+
+    if (status !== 'all') {
+      conditions.push('status = ?');
+      values.push(status);
+    }
+
+    if (search) {
+      conditions.push('(name LIKE ? OR code LIKE ? OR email LIKE ? OR phone LIKE ?)');
+      values.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    values.push(limit, offset);
+
+    const result = await env.USERS_DB.prepare(`
+      SELECT * FROM Customer
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY updated_at DESC
+      LIMIT ? OFFSET ?
+    `).bind(...values).all<CustomerRow>();
+
+    return jsonResponse({
+      customers: result.results.map(serializeCustomer),
+      pagination: { limit, offset, count: result.results.length },
+    });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleGetCustomer(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('user_id');
+    const customerId = url.pathname.split('/')[3];
+    if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
+
+    const customer = await env.USERS_DB.prepare(`
+      SELECT * FROM Customer
+      WHERE id = ? AND user_id = ?
+      LIMIT 1
+    `).bind(customerId, userId).first<CustomerRow>();
+
+    if (!customer) return jsonResponse({ error: '客户不存在' }, 404);
+    return jsonResponse({ customer: serializeCustomer(customer) });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleCreateCustomer(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const body = await request.json();
+    const userId = body.user_id;
+    const type = body.type;
+    const name = body.name;
+
+    if (!userId || !type || !name) {
+      return jsonResponse({ error: '缺少必要字段' }, 400);
+    }
+
+    const id = body.id || crypto.randomUUID();
+    const data = body.data === undefined ? '{}' : body.data;
+    const dataText = typeof data === 'string' ? data : JSON.stringify(data);
+
+    await env.USERS_DB.prepare(`
+      INSERT INTO Customer (
+        id, user_id, type, name, code, email, phone, address, data, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      id,
+      userId,
+      type,
+      name,
+      body.code || null,
+      body.email || null,
+      body.phone || null,
+      body.address || null,
+      dataText,
+      body.status || 'active'
+    ).run();
+
+    const created = await env.USERS_DB.prepare(`
+      SELECT * FROM Customer WHERE id = ? AND user_id = ? LIMIT 1
+    `).bind(id, userId).first<CustomerRow>();
+
+    return jsonResponse({ success: true, customer: created ? serializeCustomer(created) : null }, 201);
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleUpdateCustomer(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const url = new URL(request.url);
+    const customerId = url.pathname.split('/')[3];
+    const body = await request.json();
+    const userId = body.user_id;
+    if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
+
+    const fields: string[] = [];
+    const values: Array<string | null> = [];
+    const updatableFields = [
+      'type',
+      'name',
+      'code',
+      'email',
+      'phone',
+      'address',
+      'data',
+      'status',
+    ];
+
+    for (const field of updatableFields) {
+      if (Object.prototype.hasOwnProperty.call(body, field)) {
+        fields.push(`${field} = ?`);
+        const value = field === 'data' && typeof body[field] !== 'string'
+          ? JSON.stringify(body[field])
+          : body[field];
+        values.push(value ?? null);
+      }
+    }
+
+    if (fields.length === 0) {
+      return jsonResponse({ error: '没有可更新字段' }, 400);
+    }
+
+    values.push(userId, customerId);
+    const result = await env.USERS_DB.prepare(`
+      UPDATE Customer
+      SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ? AND id = ?
+    `).bind(...values).run();
+
+    if (result.meta.changes === 0) return jsonResponse({ error: '客户不存在' }, 404);
+
+    const updated = await env.USERS_DB.prepare(`
+      SELECT * FROM Customer WHERE id = ? AND user_id = ? LIMIT 1
+    `).bind(customerId, userId).first<CustomerRow>();
+
+    return jsonResponse({ success: true, customer: updated ? serializeCustomer(updated) : null });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleDeleteCustomer(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('user_id');
+    const customerId = url.pathname.split('/')[3];
+    if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
+
+    const result = await env.USERS_DB.prepare(`
+      UPDATE Customer
+      SET status = 'archived', updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND user_id = ?
+    `).bind(customerId, userId).run();
+
+    if (result.meta.changes === 0) return jsonResponse({ error: '客户不存在' }, 404);
     return jsonResponse({ success: true });
   } catch (error) {
     return jsonResponse({
