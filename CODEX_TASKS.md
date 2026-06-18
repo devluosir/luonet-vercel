@@ -8,8 +8,8 @@
 
 ## TASK-01：从 wrangler.toml 移除明文 API_TOKEN
 
-**优先级**：🔴 紧急（安全）  
-**估时**：5 分钟  
+**优先级**：🔴 紧急（安全）
+**估时**：5 分钟
 **风险**：极低，仅改配置文件
 
 ### 背景
@@ -71,8 +71,8 @@ npx wrangler deploy
 
 ## TASK-02：给 /api/generate 加 session 认证
 
-**优先级**：🔴 紧急（安全）  
-**估时**：15 分钟  
+**优先级**：🔴 紧急（安全）
+**估时**：15 分钟
 **风险**：低。只在入口加认证检查，不改业务逻辑
 
 ### 背景
@@ -137,7 +137,7 @@ npm run build
 # 3. 手动测试（本地启动后）：
 # curl -X POST http://localhost:3000/api/generate \
 #   -H "Content-Type: application/json" \
-#   -d '{"content":"test","language":"zh","type":"formal","mode":"mail"}' 
+#   -d '{"content":"test","language":"zh","type":"formal","mode":"mail"}'
 # 预期：返回 401 {"error":"请先登录后再使用 AI 邮件助手"}
 ```
 
@@ -145,8 +145,8 @@ npm run build
 
 ## TASK-03：修复 validatePassword bcrypt 分支
 
-**优先级**：🟠 高（功能 Bug）  
-**估时**：10 分钟  
+**优先级**：🟠 高（功能 Bug）
+**估时**：10 分钟
 **风险**：低。只修复一个 return false，不改接口
 
 ### 背景
@@ -215,8 +215,8 @@ npx tsc --noEmit
 
 ## TASK-04：修复 check:production 脚本路径
 
-**优先级**：🟡 中（工具修复）  
-**估时**：2 分钟  
+**优先级**：🟡 中（工具修复）
+**估时**：2 分钟
 **风险**：极低
 
 ### 背景
@@ -250,8 +250,8 @@ npm run check:production
 
 ## TASK-05：恢复 ESLint 构建检查
 
-**优先级**：🟡 中（代码质量）  
-**估时**：30 分钟（需先修复 lint 错误）  
+**优先级**：🟡 中（代码质量）
+**估时**：30 分钟（需先修复 lint 错误）
 **风险**：中。需先修复现有 lint 问题再开启，否则构建中断
 
 ### 背景
@@ -301,8 +301,8 @@ npm run build    # 构建通过
 
 ## TASK-06：修复 silent-refresh 服务端 window 访问
 
-**优先级**：🟡 中（逻辑 Bug）  
-**估时**：20 分钟  
+**优先级**：🟡 中（逻辑 Bug）
+**估时**：20 分钟
 **风险**：中。涉及认证流程，改完需测试登录
 
 ### 背景
@@ -319,7 +319,7 @@ const isSilentRefresh = credentials.password === 'silent-refresh';
 
 if (isSilentRefresh) {
   console.log('检测到silent-refresh请求:', credentials.username);
-  
+
   // 对于silent-refresh，从本地缓存获取用户信息
   if (typeof window !== 'undefined') {
     try {
@@ -327,7 +327,7 @@ if (isSilentRefresh) {
       // ... 使用缓存
     } catch (error) { ... }
   }
-  
+
   // 如果缓存中没有数据，返回默认用户信息
   return {
     id: credentials.username,
@@ -393,8 +393,8 @@ npx tsc --noEmit
 
 ## TASK-07：添加 GitHub Actions CI 流水线
 
-**优先级**：🟡 中（基础设施）  
-**估时**：15 分钟  
+**优先级**：🟡 中（基础设施）
+**估时**：15 分钟
 **风险**：极低，只新增文件
 
 ### 背景
@@ -471,8 +471,8 @@ cat .github/workflows/ci.yml
 
 ## TASK-08：扩展 D1 Schema（数据库迁移第一步）
 
-**优先级**：🟢 长期  
-**估时**：30 分钟（只改 schema，不改前端）  
+**优先级**：🟢 长期
+**估时**：30 分钟（只改 schema，不改前端）
 **风险**：低。只新增表，不修改现有表
 
 ### 背景
@@ -619,8 +619,8 @@ npm run build       # 构建验证（TASK-05 完成后）
 
 ## TASK-09：Worker 管理接口改用 API_TOKEN Bearer 验证
 
-**优先级**：🔴 紧急（安全）  
-**估时**：20 分钟  
+**优先级**：🔴 紧急（安全）
+**估时**：20 分钟
 **风险**：低。只改 Worker 认证逻辑，不改业务逻辑
 
 ### 背景
@@ -741,8 +741,8 @@ npx wrangler deploy
 
 ## TASK-10：Next.js 管理 API 代理（浏览器 → Vercel → Worker）
 
-**优先级**：🔴 紧急（安全，配合 TASK-09）  
-**估时**：30 分钟  
+**优先级**：🔴 紧急（安全，配合 TASK-09）
+**估时**：30 分钟
 **风险**：中。涉及调用链重构，改完需测试管理后台的增删改查
 
 ### 背景
@@ -866,7 +866,7 @@ export const API_ENDPOINTS = {
 找到 `apiRequest` 函数：
 ```ts
 export async function apiRequest(
-  url: string, 
+  url: string,
   options: RequestInit = {}
 ): Promise<Response> {
   // 获取用户信息
@@ -1023,7 +1023,7 @@ export async function POST(request: NextRequest) {
 ```ts
       const response = await fetch('/api/auth/get-latest-permissions', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'X-User-ID': session.user.id || session.user.username || '',
           'X-User-Name': session.user.username || session.user.name || '',
@@ -1087,8 +1087,8 @@ npm run build
 
 ## TASK-11：Worker Document CRUD API + Next.js 代理路由
 
-**优先级**：🟠 高（Phase 4 数据迁移基础）  
-**估时**：45 分钟  
+**优先级**：🟠 高（Phase 4 数据迁移基础）
+**估时**：45 分钟
 **风险**：低。只新增接口，不修改任何现有功能，前端暂不切换
 
 ### 背景
@@ -1451,8 +1451,8 @@ git commit -m "feat(api): Document CRUD API（Worker + Next.js 代理）"
 
 ## TASK-12：Worker Customer CRUD API + Next.js 代理路由
 
-**优先级**：🟠 高  
-**估时**：30 分钟  
+**优先级**：🟠 高
+**估时**：30 分钟
 **风险**：低。只新增接口，不修改任何现有功能
 
 ### 改动 1：`src/worker.ts` — 新增路由分发
@@ -1818,3 +1818,1265 @@ TASK-12 → 部署 Worker → 验证 Customer API
 ```bash
 npx tsc --noEmit && npm run build
 ```
+
+---
+
+## TASK-13：前端 localStorage → D1 双写（第一阶段）
+
+**优先级**：🟡 中（功能扩展）
+**估时**：30 分钟
+**风险**：低。localStorage 始终是主存储，D1 写入为后台 fire-and-forget，失败时仅打印警告，不影响现有 UX。
+
+### 背景
+
+TASK-11/12 已在 Worker + Next.js 建立了 Document/Customer CRUD API。
+本任务在前端现有 localStorage 写入点旁边添加异步 D1 同步调用，实现双写。
+**读取路径不改变**（仍从 localStorage 读取），避免引入任何功能回归。
+
+D1 写入路径：浏览器 `fetch('/api/documents')` → Next.js proxy（注入 `user_id`、Bearer token）→ Worker → D1。
+
+### 涉及文件
+
+| 文件 | 操作 |
+|------|------|
+| `src/utils/d1Sync.ts` | 新建（fire-and-forget 帮助函数） |
+| `src/utils/quotationHistory.ts` | 修改（3 处：update、create、delete） |
+| `src/utils/invoiceHistory.ts` | 修改（2 处：add、delete） |
+| `src/utils/packingHistory.ts` | 修改（3 处：update、invoiceNo 匹配 upsert、create） |
+| `src/utils/purchaseHistory.ts` | 修改（3 处：update、create、delete） |
+| `src/features/customer/services/customerService.ts` | 修改（2 处：save、delete） |
+
+---
+
+### 步骤一：新建 `src/utils/d1Sync.ts`
+
+创建以下文件，完整内容如下：
+
+```ts
+/**
+ * Fire-and-forget D1 同步帮助函数。
+ * 永不抛出异常，localStorage 始终是主存储。
+ * 通过 Next.js 代理（/api/documents、/api/customers）发送请求，
+ * 代理负责注入 user_id（从 NextAuth session 读取）和 Bearer token。
+ */
+
+export type D1DocType = 'quotation' | 'confirmation' | 'invoice' | 'packing' | 'purchase';
+
+export interface D1DocumentPayload {
+  id: string;
+  type: D1DocType;
+  doc_no: string;
+  customer_name?: string;
+  total_amount?: number;
+  currency?: string;
+  data: unknown;
+}
+
+/** 同步单条文档到 D1（create / update / delete），不等待结果。 */
+export function d1SyncDocument(
+  action: 'create' | 'update' | 'delete',
+  payload: D1DocumentPayload
+): void {
+  if (typeof window === 'undefined') return;
+  void (async () => {
+    try {
+      if (action === 'delete') {
+        await fetch(`/api/documents/${payload.id}`, { method: 'DELETE' });
+      } else if (action === 'update') {
+        await fetch(`/api/documents/${payload.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await fetch('/api/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+    } catch (err) {
+      console.warn('[d1Sync] document sync failed (localStorage unchanged):', err);
+    }
+  })();
+}
+
+export interface D1CustomerPayload {
+  id: string;
+  type: 'customer' | 'supplier' | 'consignee';
+  name: string;
+  code?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  data?: unknown;
+}
+
+/** 同步单条客户到 D1（create / update / delete），不等待结果。 */
+export function d1SyncCustomer(
+  action: 'create' | 'update' | 'delete',
+  payload: D1CustomerPayload
+): void {
+  if (typeof window === 'undefined') return;
+  void (async () => {
+    try {
+      if (action === 'delete') {
+        await fetch(`/api/customers/${payload.id}`, { method: 'DELETE' });
+      } else if (action === 'update') {
+        await fetch(`/api/customers/${payload.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await fetch('/api/customers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+    } catch (err) {
+      console.warn('[d1Sync] customer sync failed (localStorage unchanged):', err);
+    }
+  })();
+}
+```
+
+---
+
+### 步骤二：修改 `src/utils/quotationHistory.ts`
+
+**2a. 在文件顶部添加 import**（在 `import { getDefaultNotes }` 那行之后）：
+
+```ts
+import { d1SyncDocument } from './d1Sync';
+```
+
+**2b. 在 update 路径 return 之前添加同步调用**
+
+找到以下代码（update 路径，`existingId` 存在且找到记录的分支末尾，`return updatedHistory;` 之前的事件 dispatch 之后）：
+
+```ts
+        // 触发自定义事件，通知Dashboard页面更新
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('customStorageChange', {
+            detail: { key: STORAGE_KEY }
+          }));
+        }
+
+        return updatedHistory;
+      } else {
+        console.log(`[QuotationHistory] 未找到现有记录，ID: ${existingId}，将创建新记录`);
+      }
+```
+
+替换为：
+
+```ts
+        // 触发自定义事件，通知Dashboard页面更新
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('customStorageChange', {
+            detail: { key: STORAGE_KEY }
+          }));
+        }
+
+        // D1 双写（fire-and-forget）
+        d1SyncDocument('update', {
+          id: existingId,
+          type,
+          doc_no: updatedHistory.quotationNo || '',
+          customer_name: updatedHistory.customerName,
+          total_amount: totalAmount,
+          currency: data.currency,
+          data: dataWithVisibleCols,
+        });
+
+        return updatedHistory;
+      } else {
+        console.log(`[QuotationHistory] 未找到现有记录，ID: ${existingId}，将创建新记录`);
+      }
+```
+
+**2c. 在 create 路径 return 之前添加同步调用**
+
+找到以下代码（create 路径末尾，`return newHistory;` 之前的事件 dispatch 之后）：
+
+```ts
+    // 触发自定义事件，通知Dashboard页面更新
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('customStorageChange', {
+        detail: { key: STORAGE_KEY }
+      }));
+    }
+
+    return newHistory;
+  } catch (error) {
+    console.error('Error saving quotation history:', error);
+```
+
+替换为：
+
+```ts
+    // 触发自定义事件，通知Dashboard页面更新
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('customStorageChange', {
+        detail: { key: STORAGE_KEY }
+      }));
+    }
+
+    // D1 双写（fire-and-forget）
+    d1SyncDocument('create', {
+      id: newId,
+      type,
+      doc_no: newHistory.quotationNo || '',
+      customer_name: newHistory.customerName,
+      total_amount: totalAmount,
+      currency: data.currency,
+      data: dataWithVisibleCols,
+    });
+
+    return newHistory;
+  } catch (error) {
+    console.error('Error saving quotation history:', error);
+```
+
+**2d. 在 `deleteQuotationHistory` 中添加同步调用**
+
+找到：
+
+```ts
+export const deleteQuotationHistory = (id: string): boolean => {
+  try {
+    const history = getQuotationHistory();
+    const filtered = history.filter(item => item.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+```
+
+替换为：
+
+```ts
+export const deleteQuotationHistory = (id: string): boolean => {
+  try {
+    const history = getQuotationHistory();
+    const filtered = history.filter(item => item.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    d1SyncDocument('delete', { id, type: 'quotation', doc_no: '', data: null });
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+```
+
+---
+
+### 步骤三：修改 `src/utils/invoiceHistory.ts`
+
+**3a. 在文件顶部添加 import**（在第一行 `import { InvoiceHistory }` 之后）：
+
+```ts
+import { d1SyncDocument } from './d1Sync';
+```
+
+**3b. 修改 `addInvoiceHistory`**
+
+找到：
+
+```ts
+export const addInvoiceHistory = (data: InvoiceHistory): boolean => {
+  try {
+    const history = getInvoiceHistory();
+    history.unshift(data);
+    return saveInvoiceHistory(history);
+  } catch (error) {
+    console.error('Error adding invoice history:', error);
+    return false;
+  }
+};
+```
+
+替换为：
+
+```ts
+export const addInvoiceHistory = (data: InvoiceHistory): boolean => {
+  try {
+    const history = getInvoiceHistory();
+    history.unshift(data);
+    const saved = saveInvoiceHistory(history);
+    if (saved) {
+      d1SyncDocument('create', {
+        id: data.id,
+        type: 'invoice',
+        doc_no: data.invoiceNo,
+        customer_name: data.customerName,
+        total_amount: data.totalAmount,
+        currency: data.currency,
+        data,
+      });
+    }
+    return saved;
+  } catch (error) {
+    console.error('Error adding invoice history:', error);
+    return false;
+  }
+};
+```
+
+**3c. 修改 `deleteInvoiceHistory`**
+
+找到：
+
+```ts
+export const deleteInvoiceHistory = (id: string): boolean => {
+  try {
+    const history = getInvoiceHistory();
+    const filtered = history.filter(item => item.id !== id);
+    return saveInvoiceHistory(filtered);
+  } catch (error) {
+    console.error('Error deleting invoice history:', error);
+    return false;
+  }
+};
+```
+
+替换为：
+
+```ts
+export const deleteInvoiceHistory = (id: string): boolean => {
+  try {
+    const history = getInvoiceHistory();
+    const filtered = history.filter(item => item.id !== id);
+    const saved = saveInvoiceHistory(filtered);
+    if (saved) {
+      d1SyncDocument('delete', { id, type: 'invoice', doc_no: '', data: null });
+    }
+    return saved;
+  } catch (error) {
+    console.error('Error deleting invoice history:', error);
+    return false;
+  }
+};
+```
+
+---
+
+### 步骤四：修改 `src/utils/packingHistory.ts`
+
+**4a. 在文件顶部 `import { getLocalStorageJSON }` 之后添加 import**：
+
+```ts
+import { d1SyncDocument } from './d1Sync';
+```
+
+**4b. 在 existingId 找到记录的 return 之前添加同步（update 路径）**
+
+找到（existingId 匹配分支，事件 dispatch 之后、`return updatedHistory;` 之前）：
+
+```ts
+        // 触发自定义事件，通知Dashboard页面更新
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('customStorageChange', {
+            detail: { key: STORAGE_KEY }
+          }));
+        }
+
+        return updatedHistory;
+      }
+    }
+
+    // 🆕 检查是否已存在相同发票号的记录
+```
+
+替换为：
+
+```ts
+        // 触发自定义事件，通知Dashboard页面更新
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('customStorageChange', {
+            detail: { key: STORAGE_KEY }
+          }));
+        }
+
+        // D1 双写（fire-and-forget）
+        d1SyncDocument('update', {
+          id: existingId,
+          type: 'packing',
+          doc_no: updatedHistory.invoiceNo || updatedHistory.orderNo || '',
+          customer_name: updatedHistory.consigneeName,
+          total_amount: totalAmount,
+          currency: data.currency,
+          data: dataWithVisibleCols,
+        });
+
+        return updatedHistory;
+      }
+    }
+
+    // 🆕 检查是否已存在相同发票号的记录
+```
+
+**4c. 在 invoiceNo 匹配的 upsert 分支 return 之前添加同步**
+
+找到（invoiceNo 匹配分支末尾，事件 dispatch 之后、`return updatedHistory.find(...)` 之前）：
+
+```ts
+        // 触发自定义事件，通知Dashboard页面更新
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('customStorageChange', {
+            detail: { key: STORAGE_KEY }
+          }));
+        }
+
+        return updatedHistory.find(item => item.id === existingPacking.id) || null;
+```
+
+替换为：
+
+```ts
+        // 触发自定义事件，通知Dashboard页面更新
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('customStorageChange', {
+            detail: { key: STORAGE_KEY }
+          }));
+        }
+
+        // D1 双写（fire-and-forget）
+        d1SyncDocument('update', {
+          id: existingPacking.id,
+          type: 'packing',
+          doc_no: data.invoiceNo || data.orderNo || '',
+          customer_name: data.consignee.name,
+          total_amount: totalAmount,
+          currency: data.currency,
+          data: dataWithVisibleCols,
+        });
+
+        return updatedHistory.find(item => item.id === existingPacking.id) || null;
+```
+
+**4d. 在 create 路径 return 之前添加同步**
+
+找到（packingHistory create 路径末尾，事件 dispatch 之后、`return newHistory;` 之前）：
+
+```ts
+    // 触发自定义事件，通知Dashboard页面更新
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('customStorageChange', {
+        detail: { key: STORAGE_KEY }
+      }));
+    }
+
+    return newHistory;
+  } catch (error) {
+    console.error('Error saving packing history:', error);
+```
+
+替换为：
+
+```ts
+    // 触发自定义事件，通知Dashboard页面更新
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('customStorageChange', {
+        detail: { key: STORAGE_KEY }
+      }));
+    }
+
+    // D1 双写（fire-and-forget）
+    d1SyncDocument('create', {
+      id: newId,
+      type: 'packing',
+      doc_no: newHistory.invoiceNo || newHistory.orderNo || '',
+      customer_name: newHistory.consigneeName,
+      total_amount: totalAmount,
+      currency: data.currency,
+      data: dataWithVisibleCols,
+    });
+
+    return newHistory;
+  } catch (error) {
+    console.error('Error saving packing history:', error);
+```
+
+**4e. 修改 `deletePackingHistory`**
+
+找到：
+
+```ts
+export const deletePackingHistory = (id: string): boolean => {
+  try {
+    const history = getPackingHistory();
+    const filtered = history.filter(item => item.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+```
+
+替换为：
+
+```ts
+export const deletePackingHistory = (id: string): boolean => {
+  try {
+    const history = getPackingHistory();
+    const filtered = history.filter(item => item.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    d1SyncDocument('delete', { id, type: 'packing', doc_no: '', data: null });
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+```
+
+---
+
+### 步骤五：修改 `src/utils/purchaseHistory.ts`
+
+**5a. 在文件顶部（`import { getLocalStorageJSON }` 行之后）添加 import**：
+
+```ts
+import { d1SyncDocument } from './d1Sync';
+```
+
+**5b. 在 existingId 找到记录的分支末尾添加同步（update 路径）**
+
+找到（update 路径：existingId 匹配，事件 dispatch 之后、`return updatedHistory;` 之前）：
+
+```ts
+        // 触发自定义事件，通知Dashboard页面更新
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('customStorageChange', {
+            detail: { key: STORAGE_KEY }
+          }));
+        }
+
+        return updatedHistory;
+      }
+    }
+
+    // 如果没有提供ID或找不到记录，创建新记录
+```
+
+替换为：
+
+```ts
+        // 触发自定义事件，通知Dashboard页面更新
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('customStorageChange', {
+            detail: { key: STORAGE_KEY }
+          }));
+        }
+
+        // D1 双写（fire-and-forget）
+        d1SyncDocument('update', {
+          id: existingId,
+          type: 'purchase',
+          doc_no: updatedHistory.orderNo || '',
+          customer_name: updatedHistory.supplierName,
+          total_amount: totalAmount,
+          currency: data.currency,
+          data,
+        });
+
+        return updatedHistory;
+      }
+    }
+
+    // 如果没有提供ID或找不到记录，创建新记录
+```
+
+**5c. 在 create 路径 return 之前添加同步**
+
+找到（purchase create 路径末尾，事件 dispatch 之后、`return newHistory;` 之前）：
+
+```ts
+    // 触发自定义事件，通知Dashboard页面更新
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('customStorageChange', {
+        detail: { key: STORAGE_KEY }
+      }));
+    }
+
+    return newHistory;
+  } catch (error) {
+    console.error('Error saving purchase history:', error);
+```
+
+替换为：
+
+```ts
+    // 触发自定义事件，通知Dashboard页面更新
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('customStorageChange', {
+        detail: { key: STORAGE_KEY }
+      }));
+    }
+
+    // D1 双写（fire-and-forget）
+    d1SyncDocument('create', {
+      id: newId,
+      type: 'purchase',
+      doc_no: newHistory.orderNo || '',
+      customer_name: newHistory.supplierName,
+      total_amount: totalAmount,
+      currency: data.currency,
+      data,
+    });
+
+    return newHistory;
+  } catch (error) {
+    console.error('Error saving purchase history:', error);
+```
+
+**5d. 修改 `deletePurchaseHistory`**
+
+找到：
+
+```ts
+export const deletePurchaseHistory = (id: string): boolean => {
+  try {
+    const history = getPurchaseHistory();
+    const filtered = history.filter(item => item.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+```
+
+替换为：
+
+```ts
+export const deletePurchaseHistory = (id: string): boolean => {
+  try {
+    const history = getPurchaseHistory();
+    const filtered = history.filter(item => item.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    d1SyncDocument('delete', { id, type: 'purchase', doc_no: '', data: null });
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+```
+
+---
+
+### 步骤六：修改 `src/features/customer/services/customerService.ts`
+
+**6a. 在文件顶部（已有 import 行之后）添加 import**：
+
+```ts
+import { d1SyncCustomer } from '@/utils/d1Sync';
+```
+
+**6b. 修改 `saveCustomer` 函数**
+
+找到：
+
+```ts
+    localStorage.setItem('customer_management', JSON.stringify(updatedCustomers));
+    console.log('客户数据保存成功:', customer);
+  } catch (error) {
+    console.error('保存客户数据失败:', error);
+    throw error;
+  }
+}
+```
+
+替换为：
+
+```ts
+    localStorage.setItem('customer_management', JSON.stringify(updatedCustomers));
+    console.log('客户数据保存成功:', customer);
+
+    // D1 双写（fire-and-forget）
+    d1SyncCustomer(existingIndex >= 0 ? 'update' : 'create', {
+      id: customer.id,
+      type: 'customer',
+      name: customer.name,
+      email: customer.email || undefined,
+      phone: customer.phone || undefined,
+      address: customer.address || undefined,
+      data: { company: customer.company },
+    });
+  } catch (error) {
+    console.error('保存客户数据失败:', error);
+    throw error;
+  }
+}
+```
+
+**6c. 修改 `deleteCustomer` 函数**
+
+找到：
+
+```ts
+    localStorage.setItem('customer_management', JSON.stringify(updatedCustomers));
+
+    console.log('客户删除成功:', customerId);
+  } catch (error) {
+    console.error('删除客户失败:', error);
+    throw error;
+  }
+}
+```
+
+替换为：
+
+```ts
+    localStorage.setItem('customer_management', JSON.stringify(updatedCustomers));
+    console.log('客户删除成功:', customerId);
+
+    // D1 双写（fire-and-forget）
+    d1SyncCustomer('delete', { id: customerId, type: 'customer', name: '' });
+  } catch (error) {
+    console.error('删除客户失败:', error);
+    throw error;
+  }
+}
+```
+
+---
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+TypeScript 编译必须 0 错误，build 必须成功。
+
+### 手动冒烟测试（部署后）
+
+1. 登录系统，打开报价模块，保存一份报价
+2. 打开浏览器开发者工具 Network 标签
+3. 确认有一个 `POST /api/documents` 请求，状态 200
+4. 在 D1 管理界面（Cloudflare Dashboard → D1 → mluonet-users → Execute query）执行：
+   ```sql
+   SELECT id, type, doc_no, customer_name, status FROM Document ORDER BY created_at DESC LIMIT 5;
+   ```
+   确认有新行插入
+
+### 提交
+
+```bash
+git add src/utils/d1Sync.ts \
+        src/utils/quotationHistory.ts \
+        src/utils/invoiceHistory.ts \
+        src/utils/packingHistory.ts \
+        src/utils/purchaseHistory.ts \
+        src/features/customer/services/customerService.ts
+git commit -m "feat(sync): localStorage 双写 D1（第一阶段，fire-and-forget）"
+```
+
+---
+
+## 执行顺序汇总
+
+```
+TASK-11 ✅ → TASK-12 ✅ → TASK-13（本任务）
+```
+
+后续规划（不在本文件范围内）：
+- **TASK-14**：切换读取路径，优先从 D1 读取，localStorage 降为离线 fallback
+- **Playwright E2E**：覆盖登录、PDF 生成、导入导出流程
+
+---
+
+## TASK-14：D1 数据初始化（历史记录 + 客户批量迁移）
+
+**优先级**：🟡 中（TASK-15 前置）
+**估时**：25 分钟
+**风险**：低。Worker 改动仅影响创建时冲突处理；前端迁移工具是独立按钮，不改任何现有读写流程。
+
+### 背景
+
+TASK-13 实现了新数据的双写，但用户历史上已保存在 localStorage 的数据未同步到 D1。
+本任务：
+1. 将 Worker 的 Document/Customer create 改为 `INSERT OR REPLACE`（幂等，支持重复执行）
+2. 新增迁移工具函数 `migrateAllToD1()`，读取全部 localStorage 数据批量 POST 到 D1
+3. 在管理员页面添加迁移面板 UI（仅管理员可见）
+
+### 涉及文件
+
+| 文件 | 操作 |
+|------|------|
+| `src/worker.ts` | 修改 2 处 INSERT（幂等化） |
+| `src/utils/d1Migration.ts` | 新建（迁移工具函数） |
+| `src/features/admin/components/D1MigrationPanel.tsx` | 新建（迁移 UI 组件） |
+| `src/features/admin/app/AdminPage.tsx` | 修改（引入迁移面板） |
+
+---
+
+### 步骤一：修改 `src/worker.ts`（2 处）
+
+**1a.** 找到以下代码（`handleCreateDocument` 函数内）：
+
+```ts
+    await env.USERS_DB.prepare(`
+      INSERT INTO Document (
+        id, user_id, type, doc_no, customer_name, total_amount, currency, status, data
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+```
+
+替换为：
+
+```ts
+    await env.USERS_DB.prepare(`
+      INSERT OR REPLACE INTO Document (
+        id, user_id, type, doc_no, customer_name, total_amount, currency, status, data
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+```
+
+**1b.** 找到以下代码（`handleCreateCustomer` 函数内）：
+
+```ts
+    await env.USERS_DB.prepare(`
+      INSERT INTO Customer (
+        id, user_id, type, name, code, email, phone, address, data, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+```
+
+替换为：
+
+```ts
+    await env.USERS_DB.prepare(`
+      INSERT OR REPLACE INTO Customer (
+        id, user_id, type, name, code, email, phone, address, data, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+```
+
+---
+
+### 步骤二：新建 `src/utils/d1Migration.ts`
+
+完整文件内容如下：
+
+```ts
+/**
+ * 一次性 localStorage → D1 批量迁移工具。
+ * 通过 Next.js 代理（/api/documents、/api/customers）发送请求，
+ * 代理自动注入 user_id 和 Bearer token。
+ * INSERT OR REPLACE 保证幂等：可安全重复执行。
+ */
+
+import { getQuotationHistory } from '@/utils/quotationHistory';
+import { getInvoiceHistory } from '@/utils/invoiceHistory';
+import { getPackingHistory } from '@/utils/packingHistory';
+import { getPurchaseHistory } from '@/utils/purchaseHistory';
+import { getAllCustomers } from '@/features/customer/services/customerService';
+import { getAllSuppliers } from '@/features/customer/services/supplierService';
+import { getAllConsignees } from '@/features/customer/services/consigneeService';
+
+export interface MigrationResult {
+  documents: { success: number; failed: number; total: number };
+  customers: { success: number; failed: number; total: number };
+}
+
+export interface MigrationProgress {
+  phase: 'documents' | 'customers' | 'done';
+  current: number;
+  total: number;
+}
+
+/** 发送单次 POST，返回是否成功（不抛出异常）。 */
+async function post(url: string, body: unknown): Promise<boolean> {
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    // 200/201 = success；409 conflict = already exists (INSERT OR REPLACE handles this)
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** 每迁移 10 条暂停 100ms，避免 Worker 过载。 */
+async function maybeYield(index: number): Promise<void> {
+  if (index > 0 && index % 10 === 0) {
+    await new Promise<void>((r) => setTimeout(r, 100));
+  }
+}
+
+/**
+ * 读取全部 localStorage 历史和客户数据，批量 POST 到 D1。
+ * @param onProgress 进度回调，可用于更新 UI
+ */
+export async function migrateAllToD1(
+  onProgress?: (p: MigrationProgress) => void,
+): Promise<MigrationResult> {
+  if (typeof window === 'undefined') {
+    throw new Error('migrateAllToD1 must run in the browser');
+  }
+
+  const result: MigrationResult = {
+    documents: { success: 0, failed: 0, total: 0 },
+    customers: { success: 0, failed: 0, total: 0 },
+  };
+
+  // ── 收集全部单据 ────────────────────────────────────────────
+  const quotations = getQuotationHistory();
+  const invoices   = getInvoiceHistory();
+  const packings   = getPackingHistory();
+  const purchases  = getPurchaseHistory();
+
+  type DocPayload = {
+    id: string; type: string; doc_no: string;
+    customer_name?: string; total_amount?: number; currency?: string; data: unknown;
+  };
+
+  const docs: DocPayload[] = [
+    ...quotations.map((q) => ({
+      id: q.id,
+      type: q.type,
+      doc_no: q.quotationNo || '',
+      customer_name: q.customerName,
+      total_amount: q.totalAmount,
+      currency: q.currency,
+      data: q.data,
+    })),
+    ...invoices.map((i) => ({
+      id: i.id,
+      type: 'invoice' as const,
+      doc_no: i.invoiceNo || '',
+      customer_name: i.customerName,
+      total_amount: i.totalAmount,
+      currency: i.currency,
+      data: i,
+    })),
+    ...packings.map((p) => ({
+      id: p.id,
+      type: 'packing' as const,
+      doc_no: p.invoiceNo || p.orderNo || '',
+      customer_name: p.consigneeName,
+      total_amount: p.totalAmount,
+      currency: p.currency,
+      data: p.data,
+    })),
+    ...purchases.map((p) => ({
+      id: p.id,
+      type: 'purchase' as const,
+      doc_no: p.orderNo || '',
+      customer_name: p.supplierName,
+      total_amount: p.totalAmount,
+      currency: p.currency,
+      data: p.data,
+    })),
+  ];
+
+  result.documents.total = docs.length;
+
+  // ── 迁移单据 ────────────────────────────────────────────────
+  for (let i = 0; i < docs.length; i++) {
+    onProgress?.({ phase: 'documents', current: i + 1, total: docs.length });
+    const ok = await post('/api/documents', docs[i]);
+    if (ok) result.documents.success++;
+    else result.documents.failed++;
+    await maybeYield(i);
+  }
+
+  // ── 收集全部客户 ─────────────────────────────────────────────
+  type CustomerPayload = {
+    id: string; type: 'customer' | 'supplier' | 'consignee';
+    name: string; email?: string; phone?: string; address?: string; data?: unknown;
+  };
+
+  const customers: CustomerPayload[] = [
+    ...getAllCustomers().map((c) => ({
+      id: c.id, type: 'customer' as const, name: c.name,
+      email: c.email || undefined, phone: c.phone || undefined,
+      address: c.address || undefined,
+      data: { company: c.company },
+    })),
+    ...getAllSuppliers().map((s) => ({
+      id: s.id, type: 'supplier' as const, name: s.name,
+      email: s.email || undefined, phone: s.phone || undefined,
+      address: s.address || undefined,
+      data: { company: s.company },
+    })),
+    ...getAllConsignees().map((c) => ({
+      id: c.id, type: 'consignee' as const, name: c.name,
+      email: c.email || undefined, phone: c.phone || undefined,
+      address: c.address || undefined,
+      data: { company: c.company },
+    })),
+  ];
+
+  result.customers.total = customers.length;
+
+  // ── 迁移客户 ────────────────────────────────────────────────
+  for (let i = 0; i < customers.length; i++) {
+    onProgress?.({ phase: 'customers', current: i + 1, total: customers.length });
+    const ok = await post('/api/customers', customers[i]);
+    if (ok) result.customers.success++;
+    else result.customers.failed++;
+    await maybeYield(i);
+  }
+
+  onProgress?.({ phase: 'done', current: customers.length, total: customers.length });
+  return result;
+}
+```
+
+---
+
+### 步骤三：新建 `src/features/admin/components/D1MigrationPanel.tsx`
+
+完整文件内容如下：
+
+```tsx
+'use client';
+
+import { useState, useCallback } from 'react';
+import { Database, CloudUpload, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { migrateAllToD1, MigrationResult, MigrationProgress } from '@/utils/d1Migration';
+
+type MigrationState = 'idle' | 'running' | 'done' | 'error';
+
+export function D1MigrationPanel() {
+  const [state, setState]       = useState<MigrationState>('idle');
+  const [progress, setProgress] = useState<MigrationProgress | null>(null);
+  const [result, setResult]     = useState<MigrationResult | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleMigrate = useCallback(async () => {
+    setState('running');
+    setResult(null);
+    setErrorMsg('');
+    try {
+      const res = await migrateAllToD1((p) => setProgress(p));
+      setResult(res);
+      setState('done');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : '迁移失败');
+      setState('error');
+    }
+  }, []);
+
+  return (
+    <div className="mt-8 p-5 border border-blue-100 dark:border-blue-900/40 rounded-xl bg-blue-50/50 dark:bg-blue-900/10">
+      <div className="flex items-center gap-2 mb-1">
+        <Database className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        <h2 className="text-base font-semibold text-gray-800 dark:text-white">云端数据迁移</h2>
+      </div>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        将当前浏览器本地历史记录（报价、发票、装箱、采购）和客户数据一次性同步到云端
+        数据库。操作幂等，可安全重复执行。
+      </p>
+
+      {state === 'idle' && (
+        <button
+          onClick={handleMigrate}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white
+                     bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <CloudUpload className="w-4 h-4" />
+          开始迁移本地数据
+        </button>
+      )}
+
+      {state === 'running' && (
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+          {progress?.phase === 'documents'
+            ? `正在迁移单据 ${progress.current} / ${progress.total}…`
+            : progress?.phase === 'customers'
+            ? `正在迁移客户 ${progress.current} / ${progress.total}…`
+            : '处理中…'}
+        </div>
+      )}
+
+      {state === 'done' && result && (
+        <div className="space-y-1 text-sm">
+          <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium">
+            <CheckCircle className="w-4 h-4" />
+            迁移完成
+          </div>
+          <p className="text-gray-600 dark:text-gray-300">
+            单据：{result.documents.success} 条成功 / {result.documents.failed} 条失败
+            （共 {result.documents.total} 条）
+          </p>
+          <p className="text-gray-600 dark:text-gray-300">
+            客户：{result.customers.success} 条成功 / {result.customers.failed} 条失败
+            （共 {result.customers.total} 条）
+          </p>
+          <button
+            onClick={handleMigrate}
+            className="mt-2 text-xs text-blue-500 hover:underline"
+          >
+            再次执行
+          </button>
+        </div>
+      )}
+
+      {state === 'error' && (
+        <div className="flex items-center gap-2 text-red-500 text-sm">
+          <XCircle className="w-4 h-4" />
+          {errorMsg}
+          <button onClick={() => setState('idle')} className="ml-2 text-xs underline">
+            重试
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+### 步骤四：修改 `src/features/admin/app/AdminPage.tsx`
+
+**4a. 在 import 区块末尾（`import { User } from '../types';` 之后）添加**：
+
+```ts
+import { D1MigrationPanel } from '../components/D1MigrationPanel';
+```
+
+**4b. 在 `<UserList ... />` 之后，`{/* 弹窗 */}` 注释之前添加**：
+
+找到：
+
+```tsx
+          {/* 用户列表 */}
+          <UserList
+            users={users}
+            loading={loading}
+            onCreateUser={() => setShowCreateModal(true)}
+            onEditUser={handleEditUser}
+          />
+        </div>
+
+        {/* 弹窗 */}
+```
+
+替换为：
+
+```tsx
+          {/* 用户列表 */}
+          <UserList
+            users={users}
+            loading={loading}
+            onCreateUser={() => setShowCreateModal(true)}
+            onEditUser={handleEditUser}
+          />
+
+          {/* D1 数据迁移 */}
+          <D1MigrationPanel />
+        </div>
+
+        {/* 弹窗 */}
+```
+
+---
+
+### 验证
+
+```bash
+npx wrangler deploy
+npx tsc --noEmit
+npm run build
+```
+
+部署后登录管理员账户，访问 `/admin`，点击「开始迁移本地数据」按钮，确认进度更新正常，迁移完成后到 Cloudflare Dashboard → D1 查询确认数据已写入：
+
+```sql
+SELECT type, COUNT(*) as n FROM Document GROUP BY type;
+SELECT type, COUNT(*) as n FROM Customer GROUP BY type;
+```
+
+### 提交
+
+```bash
+git add src/worker.ts \
+        src/utils/d1Migration.ts \
+        src/features/admin/components/D1MigrationPanel.tsx \
+        src/features/admin/app/AdminPage.tsx
+git commit -m "feat(migration): D1 历史数据一次性迁移工具（INSERT OR REPLACE + 管理员 UI）"
+```
+
+---
+
+## TASK-15：读取路径切换 D1 Primary（可选，高风险）
+
+**优先级**：🟢 低（TASK-14 完成且数据确认完整后再执行）
+**估时**：40 分钟
+**风险**：中高。改变读取路径会影响所有页面加载。必须有完整的 D1 数据（TASK-14 执行后）才能切换。
+
+### 背景
+
+TASK-13 双写、TASK-14 初始化迁移后，D1 已有全量数据。
+本任务将 `getQuotationHistory()` 等读取函数改为优先从 D1 API 读取，localStorage 降为离线 fallback。
+
+### 设计原则
+
+1. 新增 `src/utils/d1Reader.ts`：提供 `fetchDocumentsFromD1(type)` 和 `fetchCustomersFromD1(type)` 函数
+2. 每个 `get*History()` 函数改为：先尝试 D1，失败或离线时 fallback 到 localStorage
+3. D1 读取结果**不写回 localStorage**（避免数据循环）
+4. 所有组件必须处理 async 读取（可能需要 Suspense 或 loading 状态）
+
+### 涉及文件（草案）
+
+| 文件 | 改动说明 |
+|------|---------|
+| `src/utils/d1Reader.ts` | 新建，封装 GET /api/documents 和 GET /api/customers |
+| `src/utils/quotationHistory.ts` | `getQuotationHistory()` 改为 async，优先 D1 |
+| `src/utils/invoiceHistory.ts` | `getInvoiceHistory()` 改为 async |
+| `src/utils/packingHistory.ts` | `getPackingHistory()` 改为 async |
+| `src/utils/purchaseHistory.ts` | `getPurchaseHistory()` 改为 async |
+| `src/features/customer/services/customerService.ts` | `getAllCustomers()` 改为 async |
+| 所有调用 `get*History()` 的组件/页面 | 添加 await 和 loading 状态 |
+
+> ⚠️ **执行前检查清单**：
+> 1. TASK-14 已执行，D1 数据已确认完整
+> 2. 在测试账户的 D1 中 `SELECT COUNT(*) FROM Document` 数量与 localStorage 条数一致
+> 3. 准备好回滚方案（改动放在单独分支，不影响 main）
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run build
+# 打开历史页面，确认数据正常显示
+# 断网状态下打开页面，确认 localStorage fallback 生效
+```
+
+### 提交
+
+```bash
+git add src/utils/d1Reader.ts \
+        src/utils/quotationHistory.ts \
+        src/utils/invoiceHistory.ts \
+        src/utils/packingHistory.ts \
+        src/utils/purchaseHistory.ts \
+        src/features/customer/services/customerService.ts
+git commit -m "feat(read): 读取路径切换到 D1 primary，localStorage 降为离线 fallback"
+```
+
+---
+
+## 全局任务优先级汇总
+
+| 任务 | 状态 | 说明 |
+|------|------|------|
+| TASK-01 ~ TASK-12 | ✅ | 安全、Bug、CI、Schema、API 全部完成 |
+| TASK-13 | ✅ | 前端双写 D1（写入点） |
+| TASK-14 | 🔲 待执行 | 一次性历史迁移 + Worker upsert |
+| TASK-15 | 🔲 可选 | 读取切换 D1（高风险，TASK-14 后再议） |

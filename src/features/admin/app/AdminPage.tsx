@@ -10,6 +10,7 @@ import { UserList } from '../components/UserList';
 import { CreateUserModal } from '../components/CreateUserModal';
 import { UserDetailModal } from '../components/UserDetailModal';
 import { User } from '../types';
+import { D1MigrationPanel } from '../components/D1MigrationPanel';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -210,6 +211,9 @@ export default function AdminPage() {
             onCreateUser={() => setShowCreateModal(true)}
             onEditUser={handleEditUser}
           />
+
+          {/* D1 数据迁移 */}
+          <D1MigrationPanel />
         </div>
 
         {/* 弹窗 */}

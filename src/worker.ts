@@ -1218,7 +1218,7 @@ async function handleCreateDocument(request: Request, env: Env): Promise<Respons
     const dataText = typeof data === 'string' ? data : JSON.stringify(data);
 
     await env.USERS_DB.prepare(`
-      INSERT INTO Document (
+      INSERT OR REPLACE INTO Document (
         id, user_id, type, doc_no, customer_name, total_amount, currency, status, data
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
@@ -1425,7 +1425,7 @@ async function handleCreateCustomer(request: Request, env: Env): Promise<Respons
     const dataText = typeof data === 'string' ? data : JSON.stringify(data);
 
     await env.USERS_DB.prepare(`
-      INSERT INTO Customer (
+      INSERT OR REPLACE INTO Customer (
         id, user_id, type, name, code, email, phone, address, data, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
