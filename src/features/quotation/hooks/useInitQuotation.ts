@@ -46,13 +46,16 @@ export function useInitQuotation() {
     setNotesConfig(initialNotesConfig);
   }, []); // 只在组件挂载时执行一次
 
-  // 更新URL参数以持久化tab状态
+  // 监听 searchParams 变化（侧边栏导航切换 tab 时触发）并同步到 store
   useEffect(() => {
     const tab = getTabFromSearchParams(searchParams || undefined);
+    // 同步到 store（处理侧边栏 /quotation?tab=confirmation 导航）
+    setTab(tab);
+    // 更新URL参数以持久化tab状态
     if (typeof window !== 'undefined' && tab) {
       const url = new URL(window.location.href);
       url.searchParams.set('tab', tab);
       window.history.replaceState(null, '', url.toString());
     }
-  }, [searchParams]);
+  }, [searchParams, setTab]);
 }

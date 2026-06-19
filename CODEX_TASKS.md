@@ -4664,6 +4664,61 @@ npx tsc --noEmit
 
 ---
 
+## TASK-24 ✅：修复侧边栏「销售确认」点击后 Tab 不切换
+
+**状态**：已完成
+
+### 根本原因
+
+`useInitQuotation.ts` 有两个 `useEffect`：
+
+1. **Mount effect**（`[]` 依赖）：读 `?tab=` → 调 `setTab` → 有 `initialized.current` 守卫，只跑一次
+2. **searchParams 监听 effect**（`[searchParams]` 依赖）：原本只做了 `window.history.replaceState`，**没有调 `setTab`**
+
+当用户从侧边栏点击「销售确认」（导航到 `/quotation?tab=confirmation`）时，App Router 不会 unmount/remount QuotationPage，只触发 `searchParams` 变化。第 1 个 effect 不重跑（守卫），第 2 个 effect 重跑但没同步 store → `activeTab` 停留在 'quotation'。
+
+### 修改文件
+
+**`src/features/quotation/hooks/useInitQuotation.ts`**
+
+```ts
+// 修改前（只更新 URL，不同步 store）：
+useEffect(() => {
+  const tab = getTabFromSearchParams(searchParams || undefined);
+  if (typeof window !== 'undefined' && tab) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState(null, '', url.toString());
+  }
+}, [searchParams]);
+
+// 修改后（先同步 store，再更新 URL）：
+useEffect(() => {
+  const tab = getTabFromSearchParams(searchParams || undefined);
+  // 同步到 store（处理侧边栏 /quotation?tab=confirmation 导航）
+  setTab(tab);
+  // 更新URL参数以持久化tab状态
+  if (typeof window !== 'undefined' && tab) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState(null, '', url.toString());
+  }
+}, [searchParams, setTab]);
+```
+
+### 验证
+
+```bash
+npx eslint src/features/quotation/hooks/useInitQuotation.ts
+# 期望：0 error（2 warnings 为既有问题，与本次无关）
+# 手动验证：
+# 1. 侧边栏点击「销售确认」→ 右侧内容切换到 Order Confirmation tab
+# 2. 侧边栏点击「报价单」→ 右侧内容切换到 Quotation tab
+# 3. 页面内点击 tab 按钮仍正常切换
+```
+
+---
+
 ## TASK-21 ✅：修复侧边栏权限过滤
 
 **状态**：已完成
