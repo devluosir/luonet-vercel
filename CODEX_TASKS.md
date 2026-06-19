@@ -4664,6 +4664,71 @@ npx tsc --noEmit
 
 ---
 
+## TASK-21 ✅：修复侧边栏权限过滤
+
+**状态**：已完成
+
+### 问题
+
+`AppSidebar.tsx` 的 `visibleItems` 过滤逻辑在 `permissionUser` 为 `null`（权限尚未加载）时，`?? false` 导致所有带 `permissionKey` 的项全被过滤掉，只剩 `首页` 和 `AI邮件` 两项（无 `permissionKey`）。
+
+### 修改文件
+
+**`src/components/layout/AppSidebar.tsx`**
+
+```tsx
+// 新增 isLoading 订阅
+const isLoading = usePermissionStore((state) => state.isLoading);
+
+const visibleItems = NAV_ITEMS.filter((item) => {
+  if (!item.permissionKey) return true;
+  // 权限加载中或 user 未就绪时，显示全部项目（避免闪烁消失）
+  if (isLoading || !permissionUser) return true;
+  // 管理员看全部
+  if (permissionUser.isAdmin) return true;
+  const moduleId = PERMISSION_MODULE_MAP[item.permissionKey];
+  if (!moduleId) return true;
+  return permissionUser.permissions?.some(
+    (permission) => permission.moduleId === moduleId && permission.canAccess
+  ) ?? false;
+});
+```
+
+---
+
+## TASK-22 ✅：StatsCards 改为 slim 单行横排
+
+**状态**：已完成
+
+### 问题
+
+原 StatsCards 用 `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5` 大卡布局，在宽屏实际渲染为 2-3 列，占据视口将近一半高度（约 340px），大数字"0"信息密度极低。
+
+### 修改文件
+
+**`src/features/dashboard/components/StatsCards.tsx`**（完全重写）
+
+- 从大卡网格改为单行横排 slim bar，高度约 50px
+- 最左侧「今日」标签，5 项用竖线分隔
+- 每项：图标 + 名称（sm+可见）+ 数字（右对齐，加粗彩色）
+- 点击跳转 `/history?type=xxx&time=today` 保持不变
+- 加载中显示 animate-pulse 占位
+
+---
+
+## TASK-23 ✅：Dashboard 布局更新 CODEX_TASKS.md
+
+**状态**：已完成
+
+TASK-21 + TASK-22 完成后，Dashboard 首屏内容层级为：
+1. slim 今日统计栏（~50px，一行）
+2. 快速创建模块按钮（不变）
+3. 搜索 + 近期单据（不需要滚动即可见）
+
+无需改动 DashboardPage.tsx，布局顺序和 padding 已合理。
+
+---
+
 ## 里程碑：数据管线完成（TASK-09 ~ TASK-15）
 
 | 层次 | 实现 | 文件 |

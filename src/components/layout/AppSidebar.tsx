@@ -120,12 +120,17 @@ export function AppSidebar({ className = '', onClose }: AppSidebarProps) {
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab');
   const permissionUser = usePermissionStore((state) => state.user);
+  const isLoading = usePermissionStore((state) => state.isLoading);
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (!item.permissionKey) return true;
+    // 权限加载中或 user 未就绪时，显示全部项目（避免闪烁消失）
+    if (isLoading || !permissionUser) return true;
+    // 管理员看全部
+    if (permissionUser.isAdmin) return true;
     const moduleId = PERMISSION_MODULE_MAP[item.permissionKey];
     if (!moduleId) return true;
-    return permissionUser?.permissions?.some(
+    return permissionUser.permissions?.some(
       (permission) => permission.moduleId === moduleId && permission.canAccess
     ) ?? false;
   });

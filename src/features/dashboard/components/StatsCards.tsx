@@ -15,9 +15,8 @@ interface StatItem {
   label: string;
   tag: string;
   icon: LucideIcon;
-  colorClass: string;
   textColorClass: string;
-  tagClass: string;
+  dotClass: string;
 }
 
 export interface StatCounts {
@@ -39,45 +38,40 @@ const STAT_ITEMS: StatItem[] = [
     label: '报价单',
     tag: 'QTN',
     icon: FileText,
-    colorClass: 'bg-blue-50 dark:bg-blue-900/20',
     textColorClass: 'text-blue-600 dark:text-blue-400',
-    tagClass: 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300',
+    dotClass: 'bg-blue-500',
   },
   {
     type: 'confirmation',
     label: '销售确认',
     tag: 'SC',
     icon: FileCheck,
-    colorClass: 'bg-green-50 dark:bg-green-900/20',
     textColorClass: 'text-green-600 dark:text-green-400',
-    tagClass: 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-300',
+    dotClass: 'bg-green-500',
   },
   {
     type: 'invoice',
     label: '财务发票',
     tag: 'INV',
     icon: Receipt,
-    colorClass: 'bg-purple-50 dark:bg-purple-900/20',
     textColorClass: 'text-purple-600 dark:text-purple-400',
-    tagClass: 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300',
+    dotClass: 'bg-purple-500',
   },
   {
     type: 'packing',
     label: '箱单发票',
     tag: 'PL',
     icon: Package,
-    colorClass: 'bg-teal-50 dark:bg-teal-900/20',
     textColorClass: 'text-teal-600 dark:text-teal-400',
-    tagClass: 'bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300',
+    dotClass: 'bg-teal-500',
   },
   {
     type: 'purchase',
     label: '采购订单',
     tag: 'PO',
     icon: ShoppingCart,
-    colorClass: 'bg-orange-50 dark:bg-orange-900/20',
     textColorClass: 'text-orange-600 dark:text-orange-400',
-    tagClass: 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300',
+    dotClass: 'bg-orange-500',
   },
 ];
 
@@ -85,27 +79,35 @@ export function StatsCards({ counts, loading = false }: StatsCardsProps) {
   const router = useRouter();
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-      {STAT_ITEMS.map(({ type, label, tag, icon: Icon, colorClass, textColorClass, tagClass }) => (
+    <div className="mb-4 flex items-stretch overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      {/* 左侧「今日」标签 */}
+      <div className="flex shrink-0 items-center border-r border-gray-100 px-3 dark:border-gray-700">
+        <span className="text-[11px] font-medium tracking-wide text-gray-400 dark:text-gray-500">
+          今日
+        </span>
+      </div>
+
+      {/* 5 个统计项 */}
+      {STAT_ITEMS.map(({ type, label, icon: Icon, textColorClass }, index) => (
         <button
           key={type}
           type="button"
           onClick={() => router.push(`/history?type=${type}&time=today`)}
-          className={`${colorClass} rounded-xl p-4 text-left hover:shadow-md transition-shadow cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 dark:focus:ring-offset-gray-900`}
+          className={`group flex flex-1 items-center gap-2 px-3 py-3 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 dark:hover:bg-gray-700/40 ${
+            index > 0 ? 'border-l border-gray-100 dark:border-gray-700' : ''
+          }`}
+          title={`查看今日${label}`}
         >
-          <div className="flex items-center gap-1.5 mb-2">
-            <Icon className={`h-4 w-4 shrink-0 ${textColorClass}`} />
-            <span className="text-sm text-gray-500 dark:text-gray-400 truncate">{label}</span>
-          </div>
-          {loading ? (
-            <div className="h-8 w-10 rounded bg-gray-200 dark:bg-gray-700 animate-pulse mb-2" />
-          ) : (
-            <div className={`text-3xl font-bold ${textColorClass} mb-2 tabular-nums`}>
-              {counts[type]}
-            </div>
-          )}
-          <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold ${tagClass}`}>
-            {tag}
+          <Icon className={`h-4 w-4 shrink-0 ${textColorClass}`} />
+          <span className="hidden truncate text-xs text-gray-500 dark:text-gray-400 sm:block">
+            {label}
+          </span>
+          <span className={`ml-auto font-bold tabular-nums text-lg leading-none ${textColorClass}`}>
+            {loading ? (
+              <span className="inline-block h-5 w-7 animate-pulse rounded bg-gray-200 align-middle dark:bg-gray-700" />
+            ) : (
+              counts[type]
+            )}
           </span>
         </button>
       ))}
