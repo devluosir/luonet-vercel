@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronRight, Menu } from 'lucide-react';
 import { LOGO_CONFIG } from '@/lib/logo-config';
+import { AppQuickTools } from './AppQuickTools';
 
 export interface BreadcrumbItem {
   label: string;
@@ -84,6 +85,9 @@ export function AppTopBar({ breadcrumbs, onMenuClick }: AppTopBarProps) {
             {currentBreadcrumb?.label || 'LC App'}
           </div>
         </nav>
+
+        {/* 右侧快捷工具（计算器 / 日期计算器）*/}
+        <AppQuickTools />
       </div>
     </header>
   );

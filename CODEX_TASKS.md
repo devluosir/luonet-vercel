@@ -4664,6 +4664,549 @@ npx tsc --noEmit
 
 ---
 
+## TASK-25：侧边栏加 Logo，用户菜单移至左下角
+
+**优先级**：🟡 体验优化
+**估时**：30 分钟
+**风险**：低，纯 UI 重构，不影响业务逻辑
+
+### 背景
+
+当前问题：
+1. Sidebar 左上角只有纯文字「LC App / MLUONET」，缺少 Logo 图标
+2. 用户头像 / 菜单在 TopBar 右上角，TopBar 因此显得拥挤
+3. 期望：Sidebar 左上角显示 Logo + 文字，用户菜单移到 Sidebar 左下角，TopBar 只保留面包屑
+
+### 涉及文件
+
+| 操作 | 文件 |
+|------|------|
+| **新建** | `src/components/layout/AppUserMenu.tsx` |
+| **修改** | `src/components/layout/AppTopBar.tsx` |
+| **修改** | `src/components/layout/AppSidebar.tsx` |
+| **修改** | `src/components/layout/AppLayout.tsx` |
+| **修改** | `src/components/layout/index.ts` |
+
+---
+
+### STEP 1：新建 `src/components/layout/AppUserMenu.tsx`
+
+将 AppTopBar 中的用户下拉菜单完整提取为独立组件，增加 `placement` prop 控制弹出方向。
+
+```tsx
+'use client';
+
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  ChevronDown, ChevronUp, Download, LogOut, Palette, Settings, User,
+} from 'lucide-react';
+import { Avatar } from '@/components/Avatar';
+import { PermissionRefreshButton } from '@/components/PermissionRefreshButton';
+import { ThemeCompactToggle } from '@/components/ThemeToggle';
+import { apiRequestWithError, API_ENDPOINTS } from '@/lib/api-config';
+import { preloadManager } from '@/utils/preloadUtils';
+
+export interface AppUserMenuProps {
+  user: { name: string; isAdmin: boolean; email?: string | null };
+  onLogout: () => void | Promise<void>;
+  /** 'top-right' → 向下弹（TopBar）；'bottom-left' → 向上弹（Sidebar 底部）*/
+  placement?: 'top-right' | 'bottom-left';
+  className?: string;
+}
+
+export function AppUserMenu({ user, onLogout, placement = 'top-right', className = '' }: AppUserMenuProps) {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [openSubmenu, setOpenSubmenu] = useState<'profile' | null>(null);
+  const [isPreloading, setIsPreloading] = useState(false);
+  const [preloadProgress, setPreloadProgress] = useState(0);
+  const [preloadStage, setPreloadStage] = useState('');
+  const [isPreloaded, setIsPreloaded] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const submenuHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const router = useRouter();
+
+  const checkPreloadStatus = useCallback(() => {
+    const status = preloadManager.getPreloadStatus();
+    setIsPreloading(status.isPreloading);
+    setPreloadProgress(status.progress);
+    setIsPreloaded(preloadManager.isPreloaded());
+  }, []);
+
+  const openProfileSubmenu = useCallback(() => {
+    if (submenuHideTimerRef.current) { clearTimeout(submenuHideTimerRef.current); submenuHideTimerRef.current = null; }
+    setOpenSubmenu('profile');
+  }, []);
+
+  const scheduleCloseProfileSubmenu = useCallback(() => {
+    if (showChangePassword) return;
+    if (submenuHideTimerRef.current) clearTimeout(submenuHideTimerRef.current);
+    submenuHideTimerRef.current = setTimeout(() => setOpenSubmenu(null), 200);
+  }, [showChangePassword]);
+
+  useEffect(() => { return () => { if (submenuHideTimerRef.current) clearTimeout(submenuHideTimerRef.current); }; }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false); setOpenSubmenu(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    checkPreloadStatus();
+    const interval = setInterval(checkPreloadStatus, 1000);
+    return () => clearInterval(interval);
+  }, [checkPreloadStatus]);
+
+  useEffect(() => {
+    const cb = (progress: number, stage?: string) => {
+      setPreloadProgress(progress);
+      if (stage) setPreloadStage(stage);
+      if (progress > 0) setIsPreloading(true);
+      if (progress >= 100) { setIsPreloading(false); setPreloadStage(''); setIsPreloaded(true); }
+    };
+    preloadManager.onProgress(cb);
+    return () => preloadManager.offProgress(cb);
+  }, []);
+
+  const handleChangePassword = async (event: FormEvent) => {
+    event.preventDefault();
+    setPasswordError(null); setPasswordSuccess(null);
+    const { currentPassword, newPassword, confirmPassword } = passwordForm;
+    if (!currentPassword || !newPassword || !confirmPassword) { setPasswordError('请完整填写所有字段'); return; }
+    if (newPassword !== confirmPassword) { setPasswordError('新密码与确认密码不一致'); return; }
+    if (newPassword.length < 6) { setPasswordError('新密码长度至少6位'); return; }
+    setPasswordLoading(true);
+    try {
+      await apiRequestWithError(API_ENDPOINTS.USERS.CHANGE_PASSWORD, {
+        method: 'PUT', body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      setPasswordSuccess('密码修改成功');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => { setShowChangePassword(false); setPasswordSuccess(null); }, 1500);
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : '修改密码失败');
+    } finally { setPasswordLoading(false); }
+  };
+
+  const handlePreload = async () => {
+    if (isPreloading) return;
+    setIsPreloading(true); setPreloadProgress(0); setPreloadStage('准备中...');
+    const cb = (progress: number, stage?: string) => { setPreloadProgress(progress); if (stage) setPreloadStage(stage); };
+    preloadManager.onProgress(cb);
+    try { await preloadManager.preloadAllResources(); setIsPreloaded(true); }
+    catch (error) { console.error('预加载失败:', error); }
+    finally { setIsPreloading(false); setPreloadStage(''); preloadManager.offProgress(cb); setShowDropdown(false); }
+  };
+
+  const isBottomLeft = placement === 'bottom-left';
+  const dropdownPos = isBottomLeft ? 'bottom-full left-0 mb-2' : 'right-0 top-full mt-2';
+  const submenuPos = isBottomLeft
+    ? 'left-full top-0 ml-1'
+    : 'right-0 top-full mt-1 sm:right-full sm:top-0 sm:mt-0 sm:-translate-x-[2px]';
+  const ChevronIcon = isBottomLeft ? ChevronUp : ChevronDown;
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setShowDropdown((v) => !v)}
+        className={`flex items-center gap-2 rounded-md transition-colors focus:outline-none hover:bg-gray-100 dark:hover:bg-gray-800/50 ${isBottomLeft ? 'w-full px-2 py-2' : 'p-1.5'}`}
+        aria-label="用户菜单"
+      >
+        <Avatar name={user.name} />
+        {isBottomLeft && (
+          <span className="min-w-0 flex-1 truncate text-left text-sm font-medium text-gray-700 dark:text-gray-200">
+            {user.name}
+          </span>
+        )}
+        <ChevronIcon className={`h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 dark:text-gray-400 ${showDropdown ? 'rotate-180' : ''}`} />
+      </button>
+
+      {showDropdown && (
+        <div
+          className={`absolute z-[9999] w-auto min-w-[11rem] rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 animate-in fade-in-0 zoom-in-95 dark:bg-[#2c2c2e] dark:ring-white/10 ${dropdownPos}`}
+          onMouseLeave={scheduleCloseProfileSubmenu}
+          onMouseEnter={() => { if (openSubmenu) openProfileSubmenu(); }}
+        >
+          <div className="relative py-1">
+            <button
+              type="button" onMouseEnter={openProfileSubmenu} onClick={openProfileSubmenu}
+              className="relative flex w-full items-center px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50"
+            >
+              <User className="mr-2 h-4 w-4" />个人信息
+              {openSubmenu === 'profile' && (
+                <span className="absolute inset-y-0 right-full w-2" onMouseEnter={openProfileSubmenu} onMouseLeave={scheduleCloseProfileSubmenu} />
+              )}
+            </button>
+
+            {openSubmenu === 'profile' && (
+              <div
+                onMouseEnter={openProfileSubmenu} onMouseLeave={scheduleCloseProfileSubmenu}
+                className={`absolute w-auto min-w-[14rem] rounded-xl bg-white p-3 shadow-xl ring-1 ring-black/5 dark:bg-[#2c2c2e] dark:ring-white/10 ${submenuPos}`}
+              >
+                <div className="space-y-2.5">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="max-w-[9.5rem] truncate text-sm font-semibold leading-tight text-gray-900 dark:text-white">{user.name}</span>
+                      <button type="button" onClick={() => { setShowChangePassword((v) => !v); setPasswordError(null); setPasswordSuccess(null); }}
+                        className="text-[11px] text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                        {showChangePassword ? '收起' : '修改密码'}
+                      </button>
+                    </div>
+                    {user.email && <div className="truncate text-xs text-gray-500 dark:text-gray-400">{user.email}</div>}
+                  </div>
+                  <div className={showChangePassword ? 'block' : 'hidden'}>
+                    <form onSubmit={handleChangePassword} className="space-y-2">
+                      {passwordError && <div className="text-[11px] text-red-600 dark:text-red-400">{passwordError}</div>}
+                      {passwordSuccess && <div className="text-[11px] text-green-600 dark:text-green-400">{passwordSuccess}</div>}
+                      {(['currentPassword', 'newPassword', 'confirmPassword'] as const).map((field, i) => (
+                        <input key={field} type="password"
+                          placeholder={['当前密码', '新密码（至少6位）', '确认新密码'][i]}
+                          value={passwordForm[field]}
+                          onChange={(e) => setPasswordForm({ ...passwordForm, [field]: e.target.value })}
+                          className="w-[12rem] rounded border border-gray-300 bg-white px-2.5 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                          autoComplete={i === 0 ? 'current-password' : 'new-password'} required />
+                      ))}
+                      <div className="flex items-center gap-2">
+                        <button type="submit" disabled={passwordLoading}
+                          className={`rounded px-2.5 py-1 text-xs text-white ${passwordLoading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                          {passwordLoading ? '提交中...' : '保存'}
+                        </button>
+                        <button type="button"
+                          onClick={() => { setShowChangePassword(false); setPasswordError(null); setPasswordSuccess(null); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }}
+                          className="rounded border border-gray-300 px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800/50">
+                          取消
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                  <div className="border-t border-gray-200 pt-1 dark:border-gray-700">
+                    <div className="mb-1.5 flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
+                      <div className="flex items-center"><Palette className="mr-1.5 h-3.5 w-3.5" /><span>主题设置</span></div>
+                      <ThemeCompactToggle />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="px-1 py-1"><PermissionRefreshButton /></div>
+
+            <div className="relative">
+              <button type="button" onClick={handlePreload} disabled={isPreloading}
+                className={`relative flex w-full items-center overflow-hidden px-4 py-2 text-sm transition-colors duration-200 ${isPreloading ? 'cursor-not-allowed text-gray-400 dark:text-gray-500' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50'}`}>
+                {isPreloading && <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 transition-all duration-300 ease-out dark:from-blue-900/10 dark:to-blue-800/20" />}
+                {isPreloading && <div className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-300 transition-all duration-300 ease-out dark:from-blue-700/40 dark:to-blue-600/50" style={{ width: `${Math.max(0, Math.min(100, preloadProgress))}%` }} />}
+                {isPreloading && <div className="absolute inset-0 border-r-2 border-blue-400 transition-all duration-300 ease-out dark:border-blue-300" style={{ width: `${Math.max(0, Math.min(100, preloadProgress))}%` }} />}
+                <div className="relative z-10 flex w-full items-center">
+                  <Download className={`mr-2 h-4 w-4 ${isPreloading ? 'animate-pulse' : ''}`} />
+                  <span className="flex-1 text-left">
+                    {isPreloading ? (<span className="flex flex-col"><span className="text-sm font-medium">预加载中 {preloadProgress}%</span>{preloadStage && <span className="truncate text-xs text-gray-500 dark:text-gray-400">{preloadStage}</span>}</span>)
+                      : isPreloaded ? '资源已预加载 (100%)' : '预加载资源'}
+                  </span>
+                </div>
+              </button>
+            </div>
+
+            {user.isAdmin && (
+              <button type="button" onClick={() => { router.push('/admin'); setShowDropdown(false); }}
+                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50">
+                <Settings className="mr-2 h-4 w-4" />管理后台
+              </button>
+            )}
+
+            <button type="button" onClick={() => { onLogout(); setShowDropdown(false); }}
+              className="flex w-full items-center px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50">
+              <LogOut className="mr-2 h-4 w-4" />退出登录
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+### STEP 2：替换 `src/components/layout/AppTopBar.tsx`
+
+移除所有用户下拉相关 state / handler / JSX，只保留汉堡菜单 + 移动端 Logo + 面包屑。
+
+```tsx
+'use client';
+
+import Image from 'next/image';
+import Link from 'next/link';
+import { ChevronRight, Menu } from 'lucide-react';
+import { LOGO_CONFIG } from '@/lib/logo-config';
+
+export interface BreadcrumbItem {
+  label: string;
+  path?: string;
+}
+
+interface AppTopBarProps {
+  breadcrumbs: BreadcrumbItem[];
+  onMenuClick?: () => void;
+  // user / onLogout 保留签名兼容性，移至 AppSidebar 底部
+  user?: { name: string; isAdmin: boolean; email?: string | null };
+  onLogout?: () => void | Promise<void>;
+}
+
+export function AppTopBar({ breadcrumbs, onMenuClick }: AppTopBarProps) {
+  const currentBreadcrumb = breadcrumbs[breadcrumbs.length - 1];
+
+  return (
+    <header className="sticky top-0 z-40 h-14 bg-white shadow-sm dark:bg-[#1c1c1e] dark:shadow-gray-800/30">
+      <div className="flex h-full items-center gap-3 px-3 sm:px-4 lg:px-6">
+        {onMenuClick && (
+          <button type="button" onClick={onMenuClick}
+            className="rounded-md p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800/50 dark:hover:text-white lg:hidden"
+            aria-label="打开导航">
+            <Menu className="h-5 w-5" />
+          </button>
+        )}
+        {/* 移动端 Logo（桌面端 Logo 在 Sidebar 头部）*/}
+        <Image src={LOGO_CONFIG.web.logo} alt="LC App Logo" width={28} height={28} priority className="shrink-0 object-contain lg:hidden" />
+
+        <nav className="min-w-0 flex-1" aria-label="当前位置">
+          <ol className="hidden min-w-0 items-center gap-1 text-sm text-gray-500 dark:text-gray-400 md:flex">
+            {breadcrumbs.map((item, index) => {
+              const isLast = index === breadcrumbs.length - 1;
+              return (
+                <li key={`${item.label}-${index}`} className="flex min-w-0 items-center gap-1">
+                  {item.path && !isLast ? (
+                    <Link href={item.path} className="truncate transition-colors hover:text-gray-900 dark:hover:text-white">{item.label}</Link>
+                  ) : (
+                    <span className={`truncate ${isLast ? 'font-medium text-gray-900 dark:text-white' : ''}`}>{item.label}</span>
+                  )}
+                  {!isLast && <ChevronRight className="h-4 w-4 shrink-0" />}
+                </li>
+              );
+            })}
+          </ol>
+          <div className="truncate text-sm font-medium text-gray-900 dark:text-white md:hidden">
+            {currentBreadcrumb?.label || 'LC App'}
+          </div>
+        </nav>
+      </div>
+    </header>
+  );
+}
+```
+
+---
+
+### STEP 3：替换 `src/components/layout/AppSidebar.tsx`
+
+头部：Logo 图片 + "LC App" 文字；底部：用户菜单区块。
+
+```tsx
+'use client';
+
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { Archive, FileCheck, FileText, LayoutDashboard, Mail, Package, Receipt, ShoppingCart, Users, X, type LucideIcon } from 'lucide-react';
+import { usePermissionStore } from '@/lib/permissions';
+import { LOGO_CONFIG } from '@/lib/logo-config';
+import { AppUserMenu } from './AppUserMenu';
+
+export interface SidebarItem {
+  id: string; label: string; path: string; icon: LucideIcon;
+  dividerBefore?: boolean; permissionKey?: string;
+}
+
+interface AppSidebarProps {
+  className?: string; onClose?: () => void;
+  user?: { name: string; isAdmin: boolean; email?: string | null };
+  onLogout?: () => void | Promise<void>;
+}
+
+export const NAV_ITEMS: SidebarItem[] = [
+  { id: 'dashboard', label: '首页', path: '/dashboard', icon: LayoutDashboard },
+  { id: 'quotation', label: '报价单', path: '/quotation', icon: FileText, dividerBefore: true, permissionKey: 'canCreateQuotation' },
+  { id: 'confirmation', label: '销售确认', path: '/quotation?tab=confirmation', icon: FileCheck, permissionKey: 'canCreateConfirmation' },
+  { id: 'packing', label: '箱单发票', path: '/packing', icon: Package, permissionKey: 'canCreatePacking' },
+  { id: 'invoice', label: '财务发票', path: '/invoice', icon: Receipt, permissionKey: 'canCreateInvoice' },
+  { id: 'purchase', label: '采购订单', path: '/purchase', icon: ShoppingCart, permissionKey: 'canCreatePurchase' },
+  { id: 'history', label: '单据历史', path: '/history', icon: Archive, dividerBefore: true, permissionKey: 'canViewHistory' },
+  { id: 'customer', label: '客户管理', path: '/customer', icon: Users, permissionKey: 'canManageCustomers' },
+  { id: 'mail', label: 'AI邮件', path: '/mail', icon: Mail, dividerBefore: true },
+];
+
+const PERMISSION_MODULE_MAP: Record<string, string> = {
+  canCreateQuotation: 'quotation', canCreateConfirmation: 'quotation', canCreatePacking: 'packing',
+  canCreateInvoice: 'invoice', canCreatePurchase: 'purchase', canViewHistory: 'history', canManageCustomers: 'customer',
+};
+
+function isItemActive(item: SidebarItem, pathname: string, tab: string | null) {
+  if (item.id === 'confirmation') return pathname.startsWith('/quotation') && tab === 'confirmation';
+  if (item.id === 'quotation') return pathname.startsWith('/quotation') && tab !== 'confirmation';
+  return pathname.startsWith(item.path.split('?')[0]);
+}
+
+export function AppSidebar({ className = '', onClose, user, onLogout }: AppSidebarProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = searchParams.get('tab');
+  const permissionUser = usePermissionStore((state) => state.user);
+  const isLoading = usePermissionStore((state) => state.isLoading);
+
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (!item.permissionKey) return true;
+    if (isLoading || !permissionUser) return true;
+    if (permissionUser.isAdmin) return true;
+    const moduleId = PERMISSION_MODULE_MAP[item.permissionKey];
+    if (!moduleId) return true;
+    return permissionUser.permissions?.some((p) => p.moduleId === moduleId && p.canAccess) ?? false;
+  });
+
+  return (
+    <aside className={`fixed left-0 top-0 z-30 flex h-screen w-[200px] flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-[#1c1c1e] ${className}`}>
+      {/* 头部：Logo + 应用名 */}
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 px-4 dark:border-gray-700">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Image src={LOGO_CONFIG.web.logo} alt="LC App" width={28} height={28} priority className="shrink-0 object-contain" />
+          <span className="truncate text-sm font-semibold text-gray-900 dark:text-white">LC App</span>
+        </div>
+        {onClose && (
+          <button type="button" onClick={onClose}
+            className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/50 dark:hover:text-gray-200 lg:hidden"
+            aria-label="关闭导航">
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* 导航列表 */}
+      <nav className="flex-1 overflow-y-auto px-3 py-3">
+        {visibleItems.map((item) => {
+          const Icon = item.icon;
+          const active = isItemActive(item, pathname, tab);
+          return (
+            <div key={item.id} className={item.dividerBefore ? 'mt-1 border-t border-gray-200 pt-1 dark:border-gray-700' : undefined}>
+              <Link href={item.path} onClick={onClose}
+                className={`flex h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors ${active ? 'bg-blue-50 font-medium text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/50'}`}>
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </Link>
+            </div>
+          );
+        })}
+      </nav>
+
+      {/* 底部：用户菜单 */}
+      {user && onLogout && (
+        <div className="shrink-0 border-t border-gray-200 px-3 py-3 dark:border-gray-700">
+          <AppUserMenu user={user} onLogout={onLogout} placement="bottom-left" />
+        </div>
+      )}
+    </aside>
+  );
+}
+```
+
+---
+
+### STEP 4：修改 `src/components/layout/AppLayout.tsx`
+
+**把 `user` / `onLogout` 透传给 `AppSidebar`，`AppTopBar` 不再需要这两个 prop。**
+
+找到：
+```tsx
+      <Suspense fallback={null}>
+        <AppSidebar className="hidden lg:flex" />
+      </Suspense>
+```
+替换为：
+```tsx
+      <Suspense fallback={null}>
+        <AppSidebar className="hidden lg:flex" user={user} onLogout={onLogout} />
+      </Suspense>
+```
+
+找到：
+```tsx
+          <Suspense fallback={null}>
+            <AppSidebar
+              className="z-50 lg:hidden"
+              onClose={() => setSidebarOpen(false)}
+            />
+          </Suspense>
+```
+替换为：
+```tsx
+          <Suspense fallback={null}>
+            <AppSidebar
+              className="z-50 lg:hidden"
+              onClose={() => setSidebarOpen(false)}
+              user={user}
+              onLogout={onLogout}
+            />
+          </Suspense>
+```
+
+找到：
+```tsx
+        <AppTopBar
+          breadcrumbs={breadcrumbs}
+          user={user}
+          onLogout={onLogout}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
+```
+替换为：
+```tsx
+        <AppTopBar
+          breadcrumbs={breadcrumbs}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
+```
+
+---
+
+### STEP 5：修改 `src/components/layout/index.ts`
+
+在末尾追加一行：
+```ts
+export { AppUserMenu, type AppUserMenuProps } from './AppUserMenu';
+```
+
+---
+
+### 验证
+
+```bash
+npx eslint src/components/layout/AppUserMenu.tsx \
+           src/components/layout/AppTopBar.tsx \
+           src/components/layout/AppSidebar.tsx \
+           src/components/layout/AppLayout.tsx
+# 期望：0 error
+
+npx tsc --noEmit 2>&1 | grep -v "e2e\|playwright"
+# 期望：0 error（只有既有 e2e 的 @playwright/test 缺包警告）
+
+# 手动验证：
+# 1. 桌面端 Sidebar 左上角：Logo 图片 + "LC App" 文字
+# 2. Sidebar 左下角：头像 + 用户名 + 向上弹出菜单（含退出、修改密码、主题、管理后台）
+# 3. TopBar 只保留面包屑，不再显示右上角头像
+# 4. 移动端：点汉堡 → 侧边抽屉出现 → 底部有用户菜单
+```
+
+---
+
 ## TASK-24 ✅：修复侧边栏「销售确认」点击后 Tab 不切换
 
 **状态**：已完成
@@ -4793,3 +5336,121 @@ TASK-21 + TASK-22 完成后，Dashboard 首屏内容层级为：
 | **API** | Document / Customer CRUD 全套 | `worker.ts`, `/api/documents`, `/api/customers` |
 | **读取** | 登录时从 D1 拉取合并到 localStorage | `d1Pull.ts`, `useD1Sync.ts` |
 | **鉴权** | Bearer token（Worker）+ NextAuth session（Next.js 代理）| `worker.ts`, `/api/admin/[...path]` |
+
+---
+
+## TASK-26 ✅：管理后台迁移到 AppLayout 框架
+
+**优先级**：🟡 中
+**状态**：已完成
+
+### 背景
+
+`/admin` 页面原本使用独立的 `AdminHeader` + `Footer` + 全屏 `min-h-screen` 外壳，与其他功能页的 AppLayout（侧边栏 + TopBar）风格不一致。
+
+### 改动文件
+
+**`src/features/admin/app/AdminPage.tsx`**
+- 顶部加 `'use client';`
+- 移除 `AdminHeader`、`Footer`、`signOut` 导入
+- 新增 `AppLayout` from `@/components/layout` 和 `useAppUser` from `@/hooks/useAppUser`
+- 组件内加 `const { user, handleLogout } = useAppUser();`，删除原 `handleLogout` 函数
+- 早返回（loading / 权限不足 / error）保持原有 `min-h-screen` 全屏样式不变
+- 主 `return` 改为：
+  ```tsx
+  <AppLayout
+    breadcrumbs={[
+      { label: '首页', path: '/dashboard' },
+      { label: '管理后台' },
+    ]}
+    user={user}
+    onLogout={handleLogout}
+  >
+    {/* 内容区 */}
+  </AppLayout>
+  ```
+
+**`src/app/admin/users/[id]/page.tsx`**
+- 同样迁移到 AppLayout
+- 面包屑：首页 → 管理后台 → 用户详情
+- 移除独立的"返回"按钮（面包屑导航已覆盖）
+- useEffect 内 `setTimeout` 改为带清理的写法（`clearTimeout`）
+
+### 验证
+
+```bash
+npx eslint src/features/admin/app/AdminPage.tsx src/app/admin/users/\[id\]/page.tsx
+# 期望：0 errors（1 warning：pre-existing any，可忽略）
+```
+
+手动验证：访问 `/admin`，确认左侧显示侧边栏、顶部面包屑为「首页 / 管理后台」、用户菜单在左下角。
+
+---
+
+## TASK-27 ✅：TopBar 加入快捷工具（计算器 / 日期计算器）
+
+**状态**：已完成
+
+### 背景
+
+原 `Footer.tsx` 中部有计算器（蓝）和日期计算器（绿）两个工具图标；Footer 已无任何页面引用，工具移至 TopBar 右侧统一呈现。
+
+### 改动文件
+
+- **新建** `src/components/layout/AppQuickTools.tsx`：自管理 showCalculator / showDateCalculator state + refs，渲染两个图标按钮及弹窗
+- **修改** `AppTopBar.tsx`：在面包屑 `<nav>` 右侧加 `<AppQuickTools />`
+- **修改** `src/components/layout/index.ts`：导出 `AppQuickTools`
+
+### 验证
+
+```bash
+npx eslint src/components/layout/AppQuickTools.tsx src/components/layout/AppTopBar.tsx
+```
+
+---
+
+## TASK-28 ✅：全面清理废弃文件 + CustomerDetailPage 迁移 AppLayout
+
+**状态**：已完成（文件删除需手动执行 git rm）
+
+### 背景
+
+随着 TASK-25～27 的推进，以下文件已无任何 import 引用，属于死代码：
+
+| 文件 | 废弃原因 |
+|------|----------|
+| `src/components/Footer.tsx` | TASK-26 后无页面引用 |
+| `src/components/Header.tsx` | 早期遗留，已被 AppLayout 体系替代 |
+| `src/components/admin/AdminHeader.tsx` | TASK-26 后无引用 |
+| `src/features/quotation/app/QuotationPageRefactored.tsx` | 内部草稿，无路由挂载 |
+
+另外 `CustomerDetailPage` 仍使用独立 `min-h-screen` 布局，已补充迁移。
+
+### 手动执行（git rm）
+
+```bash
+git rm src/components/Footer.tsx
+git rm src/components/Header.tsx
+git rm src/components/admin/AdminHeader.tsx
+git rm src/features/quotation/app/QuotationPageRefactored.tsx
+git commit -m "chore: remove unused Footer, Header, AdminHeader, QuotationPageRefactored"
+```
+
+### 代码改动（已写入）
+
+**`src/features/customer/app/CustomerDetailPage.tsx`**
+- 移除独立 header div + ArrowLeft 返回按钮
+- 改用 `AppLayout`，面包屑：首页 → 客户管理 → {customerName}
+- 使用 `useAppUser` 获取 user / handleLogout
+
+### 验证
+
+```bash
+npx eslint src/features/customer/app/CustomerDetailPage.tsx
+# 0 errors
+
+# 确认废弃文件无引用
+grep -r "Footer\|AdminHeader\|QuotationPageRefactored" src --include="*.tsx" --include="*.ts" \
+  | grep -v "Footer.tsx\|AdminHeader.tsx\|QuotationPageRefactored.tsx"
+# 期望：无输出
+```
