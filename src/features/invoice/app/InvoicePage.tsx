@@ -1,17 +1,19 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  ArrowLeft, 
   Save, 
   Clipboard,
   Settings,
-  History
+  History,
+  Download,
+  Eye,
+  FileSpreadsheet
 } from 'lucide-react';
-import { Footer } from '@/components/Footer';
-import { CustomerSection } from '../components/CustomerSection';
+import { AppLayout, type ActionButton } from '@/components/layout';
+import { useAppUser } from '@/hooks/useAppUser';
 import { ItemsTable } from '../components/ItemsTable';
 import PDFPreviewModal from '@/components/history/PDFPreviewModal';
 import { useInvoiceStore } from '../state/invoice.store';
@@ -38,19 +40,18 @@ const getCurrencyName = (currency: 'USD' | 'CNY' | 'EUR') => {
     default: return 'US DOLLARS ';
   }
 };
-import { InvoiceActions } from '../components/InvoiceActions';
 import { PaymentTermsSection } from '../components/PaymentTermsSection';
 import { InvoiceInfoCompact } from '../components/InvoiceInfoCompact';
-import { INPUT_CLASSNAMES } from '../constants/settings';
 import { getTotalAmount } from '../utils/calculations';
+import { exportInvoiceToExcel } from '../services/excel.service';
 
 /**
  * 发票主页面组件
  */
 export const InvoicePage = () => {
   const [mounted, setMounted] = useState(false);
-  const router = useRouter();
   const pathname = usePathname();
+  const { user, handleLogout } = useAppUser();
   
   const {
     data,
@@ -62,11 +63,10 @@ export const InvoicePage = () => {
     showSettings,
     showPreview,
     previewItem,
-    customUnit,
-    showUnitSuccess,
-    focusedCell,
     updateData,
     saveInvoice,
+    generatePDF,
+    previewPDF,
     toggleSettings,
     togglePreview,
     setPreviewItem,
@@ -110,30 +110,92 @@ export const InvoicePage = () => {
     }
   }, []);
 
+  const handleGeneratePDF = async () => {
+    try {
+      await generatePDF();
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('生成PDF时出错');
+    }
+  };
+
+  const handlePreviewPDF = async () => {
+    try {
+      const previewUrl = await previewPDF();
+      const previewData = {
+        id: 'preview',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        customerName: data.to || 'Unknown',
+        invoiceNo: data.invoiceNo || 'N/A',
+        totalAmount,
+        currency: data.currency,
+        data,
+        pdfUrl: previewUrl,
+      };
+
+      setPreviewItem(previewData);
+      togglePreview();
+    } catch (error) {
+      console.error('Error previewing PDF:', error);
+      alert('预览PDF时出错');
+    }
+  };
+
+  const handleExportExcel = () => {
+    try {
+      exportInvoiceToExcel(data);
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      alert('导出Excel时出错');
+    }
+  };
+
+  const bottomActions: ActionButton[] = [
+    {
+      key: 'generate',
+      label: isSaving ? 'Generating...' : isEditMode ? 'Save & Generate' : 'Generate PDF',
+      onClick: handleGeneratePDF,
+      variant: 'primary',
+      loading: isSaving,
+      disabled: isSaving,
+      icon: Download,
+    },
+    {
+      key: 'preview',
+      label: 'Preview',
+      onClick: handlePreviewPDF,
+      variant: 'secondary',
+      icon: Eye,
+    },
+    {
+      key: 'excel',
+      label: 'Excel',
+      onClick: handleExportExcel,
+      variant: 'secondary',
+      icon: FileSpreadsheet,
+    },
+  ];
+
   // 避免闪烁
   if (!mounted) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#000000] dark:text-gray-100 flex flex-col">
-      <main className="flex-1">
-        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
-          {/* 返回按钮 */}
-          <Link 
-            href={
-              pathname?.includes('/edit/') ? '/history?tab=invoice' : 
-              pathname?.includes('/copy/') ? '/history?tab=invoice' : 
-              '/dashboard'
-            } 
-            className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Link>
-
+    <AppLayout
+      breadcrumbs={[
+        { label: '首页', path: '/dashboard' },
+        { label: '财务发票' },
+        { label: isEditMode || pathname?.includes('/edit/') || pathname?.includes('/copy/') || editId ? '编辑' : '新建' },
+      ]}
+      user={user}
+      onLogout={handleLogout}
+      bottomActions={bottomActions}
+    >
+      <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
           {/* 主卡片容器 */}
-          <div className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-3xl shadow-lg dark:shadow-2xl shadow-black/5 dark:shadow-black/20 border border-black/5 dark:border-white/10 p-4 md:p-8 mt-8">
+          <div className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-3xl shadow-lg dark:shadow-2xl shadow-black/5 dark:shadow-black/20 border border-black/5 dark:border-white/10 p-4 md:p-8">
             <form onSubmit={handleSubmit}>
               {/* 标题和工具栏 */}
               <div className="flex items-center justify-between mb-6">
@@ -389,12 +451,9 @@ export const InvoicePage = () => {
                 />
               </div>
 
-              {/* 生成按钮 */}
-              <InvoiceActions />
             </form>
           </div>
-        </div>
-      </main>
+      </div>
 
       {/* PDF预览弹窗 */}
       <PDFPreviewModal
@@ -406,8 +465,6 @@ export const InvoicePage = () => {
         item={previewItem}
         itemType="invoice"
       />
-
-      <Footer />
-    </div>
+    </AppLayout>
   );
 };

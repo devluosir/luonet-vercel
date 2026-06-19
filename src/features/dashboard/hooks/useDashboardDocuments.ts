@@ -11,6 +11,29 @@ import {
 } from '@/utils/dashboardUtils';
 
 import type { PermissionMap } from '../types';
+import type { StatCounts } from '../components/StatsCards';
+
+const EMPTY_COUNTS: StatCounts = {
+  quotation: 0,
+  confirmation: 0,
+  invoice: 0,
+  packing: 0,
+  purchase: 0
+};
+
+const getTodayCounts = (documents: DocumentWithType[]): StatCounts => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStart = today.getTime();
+
+  return documents.reduce<StatCounts>((counts, doc) => {
+    const docDate = new Date((doc.createdAt || doc.updatedAt) as string).getTime();
+    if (docDate >= todayStart && doc.type in counts) {
+      counts[doc.type] += 1;
+    }
+    return counts;
+  }, { ...EMPTY_COUNTS });
+};
 
 export const useDashboardDocuments = (permissionMap: PermissionMap, mounted: boolean) => {
   const [recentDocuments, setRecentDocuments] = useState<DocumentWithType[]>([]);
@@ -24,19 +47,26 @@ export const useDashboardDocuments = (permissionMap: PermissionMap, mounted: boo
     packing: 0,
     purchase: 0
   });
+  const [todayCounts, setTodayCounts] = useState<StatCounts>(EMPTY_COUNTS);
   
   // 更新文档计数
   const updateDocumentCounts = useCallback(() => {
     const counts = getAllDocumentCounts();
     setDocumentCounts(counts);
   }, []);
+
+  const updateTodayCounts = useCallback(() => {
+    const allDocuments = loadAllDocumentsByPermissions(permissionMap);
+    setTodayCounts(getTodayCounts(allDocuments));
+  }, [permissionMap]);
   
   // 初始化文档计数
   useEffect(() => {
     if (mounted) {
       updateDocumentCounts();
+      updateTodayCounts();
     }
-  }, [mounted, updateDocumentCounts]);
+  }, [mounted, updateDocumentCounts, updateTodayCounts]);
   
   // 优化的文档加载函数
   const loadDocuments = useCallback(async (filter: TimeFilter = 'today', typeFilter: 'all' | DocumentType = 'all') => {
@@ -74,6 +104,7 @@ export const useDashboardDocuments = (permissionMap: PermissionMap, mounted: boo
       if (e.key && (e.key.includes('_history') || e.key.includes('History'))) {
         loadDocuments(timeFilter, typeFilter);
         updateDocumentCounts();
+        updateTodayCounts();
       }
     };
 
@@ -81,6 +112,7 @@ export const useDashboardDocuments = (permissionMap: PermissionMap, mounted: boo
       if (e.detail && (e.detail.key.includes('_history') || e.detail.key.includes('History'))) {
         loadDocuments(timeFilter, typeFilter);
         updateDocumentCounts();
+        updateTodayCounts();
       }
     };
 
@@ -91,7 +123,7 @@ export const useDashboardDocuments = (permissionMap: PermissionMap, mounted: boo
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener);
     };
-  }, [mounted, loadDocuments, timeFilter, typeFilter, updateDocumentCounts]);
+  }, [mounted, loadDocuments, timeFilter, typeFilter, updateDocumentCounts, updateTodayCounts]);
 
   return {
     recentDocuments,
@@ -102,6 +134,7 @@ export const useDashboardDocuments = (permissionMap: PermissionMap, mounted: boo
     showAllFilters,
     setShowAllFilters,
     documentCounts,
+    todayCounts,
     updateDocumentCounts
   };
 };

@@ -3,23 +3,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Footer } from '@/components/Footer';
+import { Download, Eye, FileSpreadsheet, Save } from 'lucide-react';
+import { AppLayout, type ActionButton } from '@/components/layout';
+import { useAppUser } from '@/hooks/useAppUser';
 import { PackingForm } from '../components/PackingForm';
 import { usePackingData } from '../hooks/usePackingData';
 import { usePackingActions } from '../hooks/usePackingActions';
-import { PackingData } from '../types';
+import type { PackingData } from '../types';
 
 // 动态导入PDFPreviewModal
 const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
 
-interface CustomWindow extends Window {
-  __PACKING_DATA__?: PackingData;
-  __EDIT_MODE__?: boolean;
-  __EDIT_ID__?: string;
-}
-
 export default function PackingPage() {
   const pathname = usePathname();
+  const { user, handleLogout } = useAppUser();
   const [showPreview, setShowPreview] = useState(false);
   const [previewItem, setPreviewItem] = useState<any>(null);
 
@@ -29,16 +26,6 @@ export default function PackingPage() {
     setData,
     editId,
     setEditId,
-    updateLineItem,
-    handleAddLine,
-    handleDeleteLine,
-    handleEnterGroupMode,
-    handleExitGroupMode,
-    handleDocumentTypeChange,
-    handleOtherFeeDoubleClick,
-    handleAddOtherFee,
-    handleDeleteOtherFee,
-    handleOtherFeeChange
   } = usePackingData();
 
   const {
@@ -57,12 +44,12 @@ export default function PackingPage() {
       const id = pathname.split('/').pop();
       setEditId(id);
     }
-  }, [pathname]);
+  }, [pathname, setEditId]);
 
   // 处理数据变更
   const handleDataChange = useCallback((newData: PackingData) => {
     setData(newData);
-  }, []);
+  }, [setData]);
 
   // 处理预览
   const handlePreviewClick = async () => {
@@ -91,8 +78,53 @@ export default function PackingPage() {
     }
   };
 
+  const isEdit = pathname?.includes('/edit/') || pathname?.includes('/copy/') || !!editId;
+  const bottomActions: ActionButton[] = [
+    {
+      key: 'save',
+      label: isSaving ? '保存中...' : '保存',
+      onClick: handleSave,
+      variant: 'secondary',
+      loading: isSaving,
+      disabled: isSaving,
+      icon: Save,
+    },
+    {
+      key: 'generate',
+      label: isGenerating ? 'Generating...' : 'Generate PDF',
+      onClick: handleGenerate,
+      variant: 'primary',
+      loading: isGenerating,
+      disabled: isGenerating,
+      icon: Download,
+    },
+    {
+      key: 'preview',
+      label: 'Preview',
+      onClick: handlePreviewClick,
+      variant: 'secondary',
+      icon: Eye,
+    },
+    {
+      key: 'excel',
+      label: 'Excel',
+      onClick: handleExportExcel,
+      variant: 'secondary',
+      icon: FileSpreadsheet,
+    },
+  ];
+
   return (
-    <>
+    <AppLayout
+      breadcrumbs={[
+        { label: '首页', path: '/dashboard' },
+        { label: '箱单发票' },
+        { label: isEdit ? '编辑' : '新建' },
+      ]}
+      user={user}
+      onLogout={handleLogout}
+      bottomActions={bottomActions}
+    >
       <PackingForm
         data={data}
         onDataChange={handleDataChange}
@@ -107,7 +139,6 @@ export default function PackingPage() {
         onPreview={handlePreviewClick}
         onExportExcel={handleExportExcel}
       />
-      <Footer />
       
       {/* PDF预览弹窗 */}
       <PDFPreviewModal
@@ -119,6 +150,6 @@ export default function PackingPage() {
         item={previewItem}
         itemType="packing"
       />
-    </>
+    </AppLayout>
   );
 }

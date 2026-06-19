@@ -3,22 +3,23 @@
 import React, { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Footer } from '@/components/Footer';
-import { HistoryHeader } from '../components/HistoryHeader';
+import { Search, X, RefreshCw, Upload, Download } from 'lucide-react';
+import { AppLayout, type ActionButton } from '@/components/layout';
+import { useAppUser } from '@/hooks/useAppUser';
 import { HistoryTabs } from '../components/HistoryTabs';
 import { useHistoryStore } from '../state/history.store';
 import { useHistoryActions } from '../hooks/useHistoryActions';
 import { 
   useHistoryMounted,
   useHistoryActiveTab,
-  useHistoryShowFilters,
   useHistoryIsDeleting,
   useHistoryShowExportModal,
   useHistoryShowImportModal,
   useHistoryShowDeleteConfirm,
   useHistoryShowPreview,
-  useHistoryDeleteConfirmId,
   useHistoryPreviewItem,
+  useHistoryFilters,
+  useHistorySelectedCount,
 } from '../state/history.selectors';
 
 // 动态导入Tab组件
@@ -54,18 +55,19 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
 
 export function HistoryPage() {
   const searchParams = useSearchParams();
+  const { user, handleLogout } = useAppUser();
   
   // 状态
   const mounted = useHistoryMounted();
   const activeTab = useHistoryActiveTab();
-  const showFilters = useHistoryShowFilters();
   const isDeleting = useHistoryIsDeleting();
   const showExportModal = useHistoryShowExportModal();
   const showImportModal = useHistoryShowImportModal();
   const showDeleteConfirm = useHistoryShowDeleteConfirm();
   const showPreview = useHistoryShowPreview();
-  const deleteConfirmId = useHistoryDeleteConfirmId();
   const previewItem = useHistoryPreviewItem();
+  const filters = useHistoryFilters();
+  const selectedCount = useHistorySelectedCount();
 
   // Actions
   const {
@@ -82,7 +84,7 @@ export function HistoryPage() {
     handlePreview,
   } = useHistoryActions();
 
-  const { setMounted, setActiveTab, setShowFilters } = useHistoryStore();
+  const { setMounted, setActiveTab, setFilters } = useHistoryStore();
 
   // 主色调映射 - 按照tab顺序：报价单、合同确认、装箱单、发票、采购单
   const tabColorMap = {
@@ -207,22 +209,57 @@ export function HistoryPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* 头部 */}
-      <HistoryHeader
-        onRefresh={handleRefresh}
-        onExport={handleExport}
-        onImport={handleImport}
-        onBatchDelete={handleBatchDelete}
-        isDeleting={isDeleting}
-      />
+  const bottomActions: ActionButton[] = [
+    { key: 'import', label: '导入', onClick: handleImport, variant: 'secondary', icon: Upload },
+    { key: 'export', label: '导出', onClick: handleExport, variant: 'secondary', icon: Download },
+    ...(selectedCount > 0 ? [{
+      key: 'delete',
+      label: isDeleting ? '删除中...' : `删除选中 (${selectedCount})`,
+      onClick: handleBatchDelete,
+      variant: 'primary' as const,
+      loading: isDeleting,
+      disabled: isDeleting,
+    }] : []),
+  ];
 
-      {/* 筛选器 */}
-      {/* <HistoryFilters
-        showFilters={showFilters}
-        onToggleFilters={() => setShowFilters(!showFilters)}
-      /> */}
+  return (
+    <AppLayout
+      breadcrumbs={[{ label: '首页', path: '/dashboard' }, { label: '单据历史' }]}
+      user={user}
+      onLogout={handleLogout}
+      bottomActions={bottomActions}
+    >
+      <div className="border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-[#1c1c1e] sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3">
+          <div className="relative max-w-md flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="搜索客户名称、单据号..."
+              value={filters.search}
+              onChange={(e) => setFilters({ search: e.target.value })}
+              className="w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-10 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
+            />
+            {filters.search && (
+              <button
+                type="button"
+                onClick={() => setFilters({ search: '' })}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="rounded-md border border-gray-300 p-2 text-gray-500 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800/50"
+            title="刷新"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
       {/* 标签页 */}
       <HistoryTabs onTabChange={handleTabChange} />
@@ -237,8 +274,6 @@ export function HistoryPage() {
       </div>
 
       {/* 页脚 */}
-      <Footer />
-
       {/* 模态框 */}
       {showExportModal && (
         <ExportModal
@@ -292,6 +327,6 @@ export function HistoryPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppLayout>
   );
 }

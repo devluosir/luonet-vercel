@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Footer } from '@/components/Footer';
-import { Header } from '@/components/Header';
+import { AppLayout } from '@/components/layout';
 import { usePermissionStore } from '@/lib/permissions';
 import { usePermissionRefresh } from '@/hooks/usePermissionRefresh';
 import { preloadManager } from '@/utils/preloadUtils';
@@ -18,6 +17,7 @@ import {
 import { DashboardModules } from '@/features/dashboard/components/DashboardModules';
 import { DashboardDocuments } from '@/features/dashboard/components/DashboardDocuments';
 import { DashboardSuccessMessage } from '@/features/dashboard/components/DashboardSuccessMessage';
+import { StatsCards } from '@/features/dashboard/components/StatsCards';
 import { useDashboardState } from '@/features/dashboard/hooks/useDashboardState';
 import { useDashboardPermissions } from '@/features/dashboard/hooks/useDashboardPermissions';
 import { useDashboardDocuments } from '@/features/dashboard/hooks/useDashboardDocuments';
@@ -58,6 +58,7 @@ export default function DashboardPage() {
     showAllFilters, 
     setShowAllFilters,
     documentCounts,
+    todayCounts,
     updateDocumentCounts 
   } = useDashboardDocuments(permissionMap, mounted);
   
@@ -141,60 +142,45 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-transparent dark:bg-gray-900/20">
-      <div className="flex-1">
-        <Header 
-          user={{
-            name: user?.username || session?.user?.username || session?.user?.name || '用户',
-            isAdmin: user?.isAdmin ?? session?.user?.isAdmin ?? false,
-            email: user?.email || session?.user?.email || null
-          }}
-          onLogout={handleLogout}
-          title="Dashboard"
-          showWelcome={true}
+    <AppLayout
+      breadcrumbs={[{ label: '首页' }]}
+      user={{
+        name: user?.username || session?.user?.username || session?.user?.name || '用户',
+        isAdmin: user?.isAdmin ?? session?.user?.isAdmin ?? false,
+        email: user?.email || session?.user?.email || null,
+      }}
+      onLogout={handleLogout}
+    >
+      <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-6">
+        <DashboardSuccessMessage 
+          show={showSuccessMessage}
+          message={successMessage}
+          onClose={() => setShowSuccessMessage(false)}
         />
 
-        {/* Dashboard内容区域 - 设置独立背景层，防止父级背景污染 */}
-        <div className="relative z-0 bg-transparent isolation isolate">
-          {/* 独立背景层 - 完全隐藏，避免任何干扰 */}
-          <div className="hidden" />
+        <StatsCards counts={todayCounts} loading={!mounted || isPermissionLoading} />
 
-          <div className="relative z-10 w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-6">
-            {/* 成功消息 */}
-            <DashboardSuccessMessage 
-              show={showSuccessMessage}
-              message={successMessage}
-              onClose={() => setShowSuccessMessage(false)}
-            />
+        <DashboardModules
+          quickCreateModules={availableQuickCreateModules}
+          toolModules={availableToolModules}
+          toolsModules={availableToolsModules}
+          documentCounts={documentCounts}
+          onModuleClick={handleModuleClick}
+          onModuleHover={handleModuleHover}
+        />
 
-            {/* 功能模块区域 */}
-            <DashboardModules
-              quickCreateModules={availableQuickCreateModules}
-              toolModules={availableToolModules}
-              toolsModules={availableToolsModules}
-              documentCounts={documentCounts}
-              onModuleClick={handleModuleClick}
-              onModuleHover={handleModuleHover}
-            />
-
-            {/* 最近文档列表 */}
-            <DashboardDocuments
-              documents={recentDocuments}
-              timeFilter={timeFilter}
-              typeFilter={typeFilter}
-              showAllFilters={showAllFilters}
-              onTimeFilterChange={setTimeFilter}
-              onTypeFilterChange={setTypeFilter}
-              onShowAllFiltersChange={setShowAllFilters}
-              permissionMap={permissionMap}
-            />
-          </div>
-        </div>
+        <DashboardDocuments
+          documents={recentDocuments}
+          timeFilter={timeFilter}
+          typeFilter={typeFilter}
+          showAllFilters={showAllFilters}
+          onTimeFilterChange={setTimeFilter}
+          onTypeFilterChange={setTypeFilter}
+          onShowAllFiltersChange={setShowAllFilters}
+          permissionMap={permissionMap}
+        />
       </div>
-
-      <Footer />
-
       {/* 调试组件已移除 */}
-    </div>
+    </AppLayout>
   );
 }

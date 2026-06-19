@@ -3,8 +3,9 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import { unstable_batchedUpdates as batch } from 'react-dom';
+import { AppLayout, type ActionButton } from '@/components/layout';
+import { useAppUser } from '@/hooks/useAppUser';
 import { useQuotationStore } from '../state/useQuotationStore';
 import { sel } from '../state/selectors';
 import { isAllowedSettingsKey, SETTINGS_ALLOWED_KEYS } from '../constants/settings-allowed-keys';
@@ -60,13 +61,13 @@ import { NotesSection } from '../components/NotesSection';
 import { SettingsPanel } from '@/components/quotation/SettingsPanel';
 import { ImportDataButton } from '@/components/quotation/ImportDataButton';
 import { PasteDialog } from '@/components/quotation/PasteDialog';
-import { Footer } from '@/components/Footer';
 import { Clipboard, History, Save, Settings, Download, Eye, FileSpreadsheet } from 'lucide-react';
 
 
 
 export default function QuotationPage() {
   const pathname = usePathname();
+  const { user, handleLogout } = useAppUser();
   const { showToast } = useToast();
   
   // 性能调试开关（开发模式）
@@ -83,9 +84,7 @@ export default function QuotationPage() {
   const data = useQuotationStore(sel.data);
   const editId = useQuotationStore(sel.editId);
   const isGenerating = useQuotationStore(sel.isGenerating);
-  const generatingProgress = useQuotationStore(sel.generatingProgress);
   const isPreviewing = useQuotationStore(sel.isPreviewing);
-  const previewProgress = useQuotationStore(sel.previewProgress);
   const showSettings = useQuotationStore(sel.showSettings);
   const showPreview = useQuotationStore(sel.showPreview);
   const isPasteDialogOpen = useQuotationStore(sel.isPasteDialogOpen);
@@ -536,6 +535,39 @@ export default function QuotationPage() {
     handleGenerate();
   };
 
+  const isEditMode = pathname?.includes('/edit/') || pathname?.includes('/copy/') || !!editId;
+  const breadcrumbs = [
+    { label: '首页', path: '/dashboard' },
+    { label: activeTab === 'quotation' ? '报价单' : '销售确认' },
+    { label: isEditMode ? '编辑' : '新建' },
+  ];
+  const bottomActions: ActionButton[] = [
+    {
+      key: 'generate',
+      label: isGenerating ? 'Generating...' : isEditMode ? 'Save & Generate' : 'Generate',
+      variant: 'primary',
+      onClick: handleGenerate,
+      loading: isGenerating,
+      icon: Download,
+    },
+    {
+      key: 'preview',
+      label: isPreviewing ? 'Previewing...' : 'Preview',
+      variant: 'secondary',
+      onClick: handlePreview,
+      loading: isPreviewing,
+      disabled: isPreviewing || isGenerating,
+      icon: Eye,
+    },
+    {
+      key: 'excel',
+      label: 'Excel',
+      variant: 'secondary',
+      onClick: handleExportExcel,
+      icon: FileSpreadsheet,
+    },
+  ];
+
 
   
   // 守卫：等待数据初始化完成
@@ -548,22 +580,13 @@ export default function QuotationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
-      <main className="flex-1">
-        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-3 sm:py-6">
-          {/* 返回按钮 */}
-          <Link 
-            href={
-              pathname?.includes('/edit/') ? `/history?tab=${activeTab}` : 
-              pathname?.includes('/copy/') ? `/history?tab=${activeTab}` : 
-              '/dashboard'
-            } 
-            className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7]"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Link>
-
+    <AppLayout
+      breadcrumbs={breadcrumbs}
+      user={user}
+      onLogout={handleLogout}
+      bottomActions={bottomActions}
+    >
+      <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-3 sm:py-6">
           {/* 标签切换 */}
           <div className="flex justify-center gap-1.5 sm:gap-3 mt-3 sm:mt-4 mb-4 sm:mb-6">
             <TabButton 
@@ -886,111 +909,9 @@ export default function QuotationPage() {
                 </div>
               </div>
 
-              {/* 操作按钮区域 */}
-              <div className="px-4 sm:px-6 py-4 border-t border-gray-100 dark:border-[#3A3A3C]">
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
-                  {/* 主要操作按钮 - 生成PDF */}
-                  <button
-                    type="button"
-                    onClick={handleGenerate}
-                    disabled={isGenerating}
-                    className={`flex items-center justify-center gap-2 px-6 py-3 rounded-2xl
-                      bg-[#007AFF] dark:bg-[#0A84FF] hover:bg-[#007AFF]/90 dark:hover:bg-[#0A84FF]/90
-                      text-white font-medium text-[15px] leading-relaxed
-                      transition-all duration-300 ease-out
-                      focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 dark:focus:ring-[#0A84FF]/30
-                      shadow-sm hover:shadow-md dark:shadow-[#0A84FF]/10
-                      disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {isGenerating ? (
-                      <>
-                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>Generating...</span>
-                      </>
-                    ) : (pathname?.startsWith('/quotation/edit/') || editId) ? (
-                      <>
-                        <Download className="w-5 h-5" />
-                        <span>Save & Generate</span>
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-5 h-5" />
-                        <span>Generate {activeTab === 'quotation' ? 'Quotation' : 'Order'}</span>
-                      </>
-                    )}
-                  </button>
-
-                  {/* 次要操作按钮组 */}
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                    {/* 预览按钮 */}
-                    <button
-                      type="button"
-                      onClick={handlePreview}
-                      disabled={isPreviewing || isGenerating}
-                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl font-medium
-                        bg-white dark:bg-[#1C1C1E]
-                        text-[#007AFF] dark:text-[#0A84FF]
-                        border border-[#007AFF]/20 dark:border-[#0A84FF]/20
-                        flex items-center justify-center gap-2
-                        hover:bg-[#007AFF]/[0.05] dark:hover:bg-[#0A84FF]/[0.05]
-                        hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30
-                        active:bg-[#007AFF]/[0.1] dark:active:bg-[#0A84FF]/[0.1]
-                        transition-all duration-200
-                        disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isPreviewing ? (
-                        <>
-                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          <span>Previewing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-4 h-4" />
-                          <span>Preview</span>
-                        </>
-                      )}
-                    </button>
-
-                    {/* Excel导出按钮 */}
-                    <button
-                      type="button"
-                      onClick={handleExportExcel}
-                      className="w-full sm:w-auto px-4 py-2.5 rounded-xl font-medium
-                        bg-white dark:bg-[#1C1C1E]
-                        text-[#007AFF] dark:text-[#0A84FF]
-                        border border-[#007AFF]/20 dark:border-[#0A84FF]/20
-                        flex items-center justify-center gap-2
-                        hover:bg-[#007AFF]/[0.05] dark:hover:bg-[#0A84FF]/[0.05]
-                        hover:border-[#007AFF]/30 dark:hover:border-[#0A84FF]/30
-                        active:bg-[#007AFF]/[0.1] dark:active:bg-[#0A84FF]/[0.1]
-                        transition-all duration-200"
-                    >
-                      <FileSpreadsheet className="w-4 h-4" />
-                      <span>Excel</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 进度条 */}
-                {(isGenerating || isPreviewing) && (
-                  <div className="mt-3 w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700">
-                    <div 
-                      className="bg-[#007AFF] dark:bg-[#0A84FF] h-1.5 rounded-full transition-all duration-300 ease-out"
-                      style={{ width: `${Math.min(100, isGenerating ? generatingProgress : previewProgress)}%` }}
-                    />
-                  </div>
-                )}
-              </div>
             </form>
           </div>
-        </div>
-      </main>
+      </div>
 
       {/* PDF预览弹窗 */}
       <PDFPreviewModal
@@ -1006,8 +927,6 @@ export default function QuotationPage() {
         onClose={() => setPasteDialogOpen(false)}
         onConfirm={handleGlobalPaste}
       />
-
-      <Footer />
-    </div>
+    </AppLayout>
   );
 }

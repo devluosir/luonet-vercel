@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { 
-  ArrowLeft, 
   Users, 
   Building, 
   UserPlus, 
@@ -12,6 +11,8 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { AppLayout } from '@/components/layout';
+import { useAppUser } from '@/hooks/useAppUser';
 import { 
   CustomerTabs, 
   CustomerList, 
@@ -71,6 +72,7 @@ class ErrorBoundary extends React.Component<
 
 function CustomerPageContent() {
   const { data: session } = useSession();
+  const { user, handleLogout } = useAppUser();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType | 'new_customers'>('customers');
   const [showModal, setShowModal] = useState(false);
@@ -284,20 +286,17 @@ function CustomerPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <AppLayout
+      breadcrumbs={[{ label: '首页', path: '/dashboard' }, { label: '客户管理' }]}
+      user={user}
+      onLogout={handleLogout}
+    >
       {/* 简化顶部导航栏 */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* 左侧：返回和标题 */}
+            {/* 左侧：标题 */}
             <div className="flex items-center space-x-4">
-              <button
-                onClick={() => router.back()}
-                className="flex items-center space-x-2 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span>返回</span>
-              </button>
               <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
                 客户管理
               </h1>
@@ -440,7 +439,7 @@ function CustomerPageContent() {
         {/* 功能开关管理（仅开发环境） */}
         <FeatureFlagManager />
       </div>
-    </div>
+    </AppLayout>
   );
 }
 

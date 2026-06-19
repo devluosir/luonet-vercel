@@ -3954,6 +3954,716 @@ git commit -m "ci: 添加 Playwright E2E job（push to main 后针对生产站�
 
 ---
 
+---
+
+## TASK-18：新建 AppLayout + AppSidebar 组件系统 ✅ 已完成
+
+**优先级**：🟡 高
+**实际耗时**：3~4 小时
+**状态**：完成。验证：`npx tsc --noEmit` 通过（layout 文件无错误）。
+
+### 实际产出
+
+新建文件（`src/components/layout/`）：
+- `AppSidebar.tsx` — 固定 200px 侧边栏，图标+文字，基于 `usePermissionStore` 过滤权限菜单项，支持桌面端常驻 + 平板 overlay
+- `AppTopBar.tsx` — 顶部栏，面包屑导航 + 用户头像 dropdown（含修改密码、主题切换、预加载、管理后台、退出）
+- `AppBottomActionBar.tsx` — 底部固定操作栏，接收 `ActionButton[]`，支持 primary/secondary/ghost 三种样式及 loading 状态
+- `AppLayout.tsx` — 组合容器，含 Suspense 包裹（修复 `useSearchParams()` 警告）
+- `MobileBottomTab.tsx` — 手机端底部 Tab 栏（5 核心入口）
+- `index.ts` — 统一导出
+
+**风险**：低（新增文件，不改动现有功能）
+
+### 背景
+
+当前所有功能页通过 Dashboard 中转导航（Hub-and-Spoke），导致切换模块至少需要 2 次点击。此任务新建固定侧边栏布局系统，供 TASK-19 迁移各页面使用。
+
+### 新建文件
+
+```
+src/components/layout/
+  AppSidebar.tsx          ← 左侧导航栏
+  AppTopBar.tsx           ← 顶部栏（面包屑 + 用户菜单）
+  AppBottomActionBar.tsx  ← 底部固定操作栏（保存/预览/导出等）
+  AppLayout.tsx           ← 组合布局容器
+  MobileBottomTab.tsx     ← 手机端底部 Tab 栏
+  index.ts                ← 统一导出
+```
+
+### AppSidebar 规格
+
+```tsx
+// 桌面端（≥1024px）：固定左侧，宽 200px，图标 + 文字，始终展开
+// 平板端（768-1023px）：宽 200px，通过汉堡菜单触发 overlay 显示
+// 手机端（<768px）：隐藏（由 MobileBottomTab 替代）
+
+interface SidebarItem {
+  id: string;
+  label: string;
+  path: string;
+  icon: LucideIcon;
+  dividerBefore?: boolean;   // 是否在此项前加分隔线
+  permissionKey?: string;    // usePermissionStore 中的 key，无则始终显示
+}
+
+const NAV_ITEMS: SidebarItem[] = [
+  { id: 'dashboard',    label: '首页',     path: '/dashboard',              icon: LayoutDashboard },
+  { id: 'quotation',    label: '报价单',   path: '/quotation',              icon: FileText,      dividerBefore: true, permissionKey: 'canCreateQuotation' },
+  { id: 'confirmation', label: '销售确认', path: '/quotation?tab=confirmation', icon: FileCheck, permissionKey: 'canCreateConfirmation' },
+  { id: 'packing',      label: '箱单发票', path: '/packing',                icon: Package,       permissionKey: 'canCreatePacking' },
+  { id: 'invoice',      label: '财务发票', path: '/invoice',                icon: Receipt,       permissionKey: 'canCreateInvoice' },
+  { id: 'purchase',     label: '采购订单', path: '/purchase',               icon: ShoppingCart,  permissionKey: 'canCreatePurchase' },
+  { id: 'history',      label: '单据历史', path: '/history',                icon: Archive,       dividerBefore: true, permissionKey: 'canViewHistory' },
+  { id: 'customer',     label: '客户管理', path: '/customer',               icon: Users,         permissionKey: 'canManageCustomers' },
+  { id: 'mail',         label: 'AI邮件',   path: '/mail',                   icon: Mail,          dividerBefore: true },
+];
+
+// 激活规则：usePathname().startsWith(item.path.split('?')[0])
+// 激活样式：bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium
+// 普通样式：text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/50
+// 分隔线：border-t border-gray-200 dark:border-gray-700 mt-1 pt-1
+// 权限过滤：从 usePermissionStore 读取 permissions，过滤无权限项
+```
+
+### AppTopBar 规格
+
+```tsx
+interface AppTopBarProps {
+  breadcrumbs: { label: string; path?: string }[];  // 最后一项无 path
+  user: { name: string; isAdmin: boolean; email?: string | null };
+  onLogout: () => void;
+  onMenuClick?: () => void;  // 平板/手机端触发侧边栏
+}
+
+// 高度 h-14，sticky top-0 z-40
+// 背景：bg-white dark:bg-[#1c1c1e] shadow-sm dark:shadow-gray-800/30
+// 左侧：
+//   - 手机/平板端：汉堡菜单按钮（Menu 图标）
+//   - Logo 图片（32px，参考现有 Header.tsx 的 LOGO_CONFIG）
+//   - 面包屑（桌面端显示完整路径，手机端只显最后一级）
+// 右侧：用户头像 dropdown（完整复用现有 Header.tsx 中的 dropdown 逻辑）
+//   包含：个人信息/修改密码、主题切换、预加载资源、管理后台（admin）、退出登录
+```
+
+### AppBottomActionBar 规格
+
+```tsx
+interface ActionButton {
+  key: string;
+  label: string;
+  onClick: () => void;
+  variant: 'primary' | 'secondary' | 'ghost';
+  disabled?: boolean;
+  loading?: boolean;
+  loadingLabel?: string;
+  icon?: LucideIcon;
+}
+
+interface AppBottomActionBarProps {
+  actions: ActionButton[];
+  leftSlot?: React.ReactNode;  // 如自动保存状态文字
+}
+
+// sticky bottom-0，z-30
+// 高度 h-14
+// 背景：bg-white dark:bg-[#1c1c1e] border-t border-gray-200 dark:border-gray-700
+// 左侧：leftSlot（如有）
+// 右侧：actions 按钮（右对齐，间距 gap-2）
+// 按钮样式：
+//   primary   → bg-blue-600 hover:bg-blue-700 text-white
+//   secondary → border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200
+//   ghost     → text-gray-500 hover:text-gray-700
+// Mobile：底部预留 MobileBottomTab 高度（pb-[48px]）
+```
+
+### AppLayout 规格
+
+```tsx
+interface AppLayoutProps {
+  breadcrumbs: { label: string; path?: string }[];
+  user: { name: string; isAdmin: boolean; email?: string | null };
+  onLogout: () => void;
+  children: React.ReactNode;
+  bottomActions?: ActionButton[];
+  bottomLeftSlot?: React.ReactNode;
+}
+
+// 整体结构：
+export function AppLayout({ breadcrumbs, user, onLogout, children, bottomActions, bottomLeftSlot }: AppLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  return (
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
+      {/* 桌面端固定侧边栏 */}
+      <AppSidebar className="hidden lg:flex" />
+      {/* 平板/手机 overlay 侧边栏 */}
+      {sidebarOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+          <AppSidebar className="fixed left-0 top-0 h-full z-50 lg:hidden" onClose={() => setSidebarOpen(false)} />
+        </>
+      )}
+      {/* 主内容区 */}
+      <div className="flex flex-col flex-1 lg:ml-[200px] min-h-screen overflow-hidden">
+        <AppTopBar breadcrumbs={breadcrumbs} user={user} onLogout={onLogout} onMenuClick={() => setSidebarOpen(true)} />
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+        {bottomActions && bottomActions.length > 0 && (
+          <AppBottomActionBar actions={bottomActions} leftSlot={bottomLeftSlot} />
+        )}
+        <MobileBottomTab />
+      </div>
+    </div>
+  );
+}
+```
+
+### MobileBottomTab 规格
+
+```tsx
+// 仅在 <768px 显示（hidden md:hidden，lg:hidden）
+// 高度 h-12，固定底部
+// 显示 5 个核心入口：首页 / 报价单 / 历史 / 客户 / 邮件
+// 激活高亮同 AppSidebar
+```
+
+### 验证
+
+```bash
+npx tsc --noEmit
+# 确认无 TS 类型错误，新文件均正确导出
+```
+
+---
+
+## TASK-19：迁移各功能页到 AppLayout ✅ 已完成
+
+**优先级**：🟡 高（依赖 TASK-18 完成）
+**实际耗时**：3~4 小时
+**状态**：完成。验证：`npx tsc --noEmit` 通过（playwright 环境缺包的既有报错与本次无关）；`npm run lint` 通过；`npm run build` 因 Google Font DNS 失败（网络环境限制，非代码问题）。
+
+### 实际产出
+
+**新建文件：**
+- `src/hooks/useAppUser.ts` — 合并 `usePermissionStore` + `useSession` 的共用用户 hook
+
+**已迁移页面（全部）：**
+- `src/features/dashboard/app/DashboardPage.tsx`
+- `src/features/quotation/app/QuotationPage.tsx`
+- `src/features/history/app/HistoryPage.tsx`
+- `src/features/invoice/app/InvoicePage.tsx`
+- `src/features/packing/app/PackingPage.tsx`
+- `src/features/purchase/app/PurchasePage.tsx`
+- `src/features/customer/app/CustomerPage.tsx`
+- `src/features/mail/app/MailPage.tsx`
+
+**各页主要改动：**
+- 删除旧 `Header` / `Footer` / 返回按钮 import 和渲染
+- 包裹 `AppLayout`，传入 `breadcrumbs` / `user` / `onLogout`
+- Quotation / History / Invoice / Packing / Purchase 的主操作按钮迁入 `bottomActions`
+- Customer / Mail 使用无 `bottomActions` 的 AppLayout
+- HistoryPage 保留内容区 subheader（搜索框 + 刷新），导入/导出/批量删除迁入 `bottomActions`
+- 修正 `AppTopBar` 与 `useAppUser` 双重 `signOut()` 问题，退出逻辑统一由 `onLogout` 回调处理
+- `PurchaseHeader`（卡片内子组件：标题 + History 跳转 + Settings）保留不动，不是页面级导航
+
+**未迁移（按要求）：**
+- `/admin` 页面保持原有布局
+
+### 背景（原始需求）
+
+将所有功能页从「Header + 内容 + Footer」模式迁移到 AppLayout，移除页面内的返回按钮和顶部操作按钮，统一由侧边栏导航 + 底部操作栏替代。
+
+### 前置说明（先做这一步）
+
+代码审查发现功能页（QuotationPage/HistoryPage 等）不持有 session，但 AppLayout 需要 `user` + `onLogout`。**先新建共用 hook**，所有页面统一调用：
+
+**新建 `src/hooks/useAppUser.ts`：**
+
+```ts
+'use client';
+
+import { useCallback } from 'react';
+import { useSession, signOut } from 'next-auth/react';
+import { usePermissionStore } from '@/lib/permissions';
+
+export function useAppUser() {
+  // 优先从 permissionStore 取（登录后最快同步），fallback 到 session
+  const permUser = usePermissionStore((state) => state.user);
+  const { data: session } = useSession();
+
+  const user = {
+    name: permUser?.username || session?.user?.name || session?.user?.username || '用户',
+    isAdmin: permUser?.isAdmin ?? session?.user?.isAdmin ?? false,
+    email: permUser?.email || session?.user?.email || null,
+  };
+
+  const handleLogout = useCallback(async () => {
+    usePermissionStore.getState().clearUser();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('userCache');
+    }
+    await signOut();
+  }, []);
+
+  return { user, handleLogout };
+}
+```
+
+### 迁移清单
+
+按此顺序执行，**每步完成后运行 `npx tsc --noEmit`**，确认通过再继续。
+
+---
+
+#### ① DashboardPage（`src/features/dashboard/app/DashboardPage.tsx`）
+
+```tsx
+// 1. 新增 import
+import { AppLayout } from '@/components/layout';
+
+// 2. 移除 import { Header } from '@/components/Header'
+//    移除 import { Footer } from '@/components/Footer'
+
+// 3. 现有的 user / handleLogout 逻辑保持不变
+//    （DashboardPage 已有完整的 useSession + usePermissionStore 处理）
+
+// 4. 将返回值改为：
+return (
+  <AppLayout
+    breadcrumbs={[{ label: '首页' }]}
+    user={{
+      name: user?.username || session?.user?.name || '用户',
+      isAdmin: user?.isAdmin ?? false,
+      email: user?.email || null,
+    }}
+    onLogout={handleLogout}
+  >
+    <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-6">
+      <DashboardSuccessMessage ... />
+      {/* TASK-20 将在此处新增 <StatsCards /> */}
+      <DashboardModules ... />
+      <DashboardDocuments ... />
+    </div>
+  </AppLayout>
+);
+
+// 5. 保留 isPermissionLoading 时的 loading spinner（在 AppLayout 之外提前返回，不变）
+```
+
+---
+
+#### ② QuotationPage（`src/features/quotation/app/QuotationPage.tsx`）
+
+QuotationPage 有两处操作按钮，处理方式不同：
+
+**卡片头部的图标按钮**（~行 601-624，Save/Excel icon）：**保留**，不移动。这些是紧贴表单的快捷入口，合理。
+
+**卡片底部的主操作区**（~行 889-978，Generate/Preview/Excel 大按钮）：**删除此整块 `<div>` 并迁移到 bottomActions**。
+
+**Back 链接**（~行 554-565）：**整行删除**，侧边栏导航替代。
+
+```tsx
+// 1. 新增 imports
+import { AppLayout, type ActionButton } from '@/components/layout';
+import { useAppUser } from '@/hooks/useAppUser';
+
+// 2. 在组件顶部添加
+const { user, handleLogout } = useAppUser();
+
+// 3. 删除：<Link href={...}>Back</Link>（约行 554-565）
+
+// 4. 删除：卡片底部操作区整块（约行 889-978）：
+//    从 {/* 操作按钮区域 */} 的 <div className="px-4 sm:px-6 py-4 border-t...">
+//    到对应的 </div>，连同进度条区域一并删除
+
+// 5. 将 generate/preview/excel 绑到 bottomActions：
+const isEditMode = pathname?.includes('/edit/') || pathname?.includes('/copy/') || !!editId;
+
+const bottomActions: ActionButton[] = [
+  {
+    key: 'generate',
+    label: isGenerating ? 'Generating...' : isEditMode ? 'Save & Generate' : `Generate ${activeTab === 'quotation' ? 'Quotation' : 'Order'}`,
+    onClick: handleGenerate,
+    variant: 'primary',
+    loading: isGenerating,
+    loadingLabel: 'Generating...',
+    icon: Download,
+  },
+  {
+    key: 'preview',
+    label: isPreviewing ? 'Previewing...' : 'Preview',
+    onClick: handlePreview,
+    variant: 'secondary',
+    loading: isPreviewing,
+    disabled: isPreviewing || isGenerating,
+    icon: Eye,
+  },
+  {
+    key: 'excel',
+    label: 'Excel',
+    onClick: handleExportExcel,
+    variant: 'secondary',
+    icon: FileSpreadsheet,
+  },
+];
+
+// 6. breadcrumbs：
+const breadcrumbs = [
+  { label: '首页', path: '/dashboard' },
+  { label: activeTab === 'quotation' ? '报价单' : '销售确认' },
+  { label: isEditMode ? '编辑' : '新建' },
+];
+
+// 7. 整体返回值改为：
+return (
+  <AppLayout
+    breadcrumbs={breadcrumbs}
+    user={user}
+    onLogout={handleLogout}
+    bottomActions={bottomActions}
+    bottomLeftSlot={
+      // 可选：显示自动保存状态
+      editId ? <span className="text-sm text-gray-400">ID: {editId}</span> : undefined
+    }
+  >
+    {/* 保留 loading spinner 提前返回，不变 */}
+    <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-3 sm:py-6">
+      {/* Tab 切换 */}
+      {/* 主卡片 - 内部不变，但卡片底部操作区已删除 */}
+    </div>
+  </AppLayout>
+);
+
+// 8. 删除 import { Footer } / import { ArrowLeft } / import Link（若仅用于返回按钮）
+//    注意：Link 还用于卡片内 History 跳转链接，检查后再决定是否保留 import
+```
+
+---
+
+#### ③ HistoryPage（`src/features/history/app/HistoryPage.tsx`）
+
+HistoryHeader 包含：**返回按钮 + 搜索框 + 刷新/导入/导出/批量删除按钮**。
+
+处理策略：
+- **返回按钮**：删除（侧边栏替代）
+- **搜索框 + 刷新**：保留在内容区顶部的精简 subheader 内
+- **导入/导出/批量删除**：迁移到 AppLayout bottomActions
+
+```tsx
+// 1. 新增 imports
+import { AppLayout, type ActionButton } from '@/components/layout';
+import { useAppUser } from '@/hooks/useAppUser';
+
+// 2. 在组件顶部添加
+const { user, handleLogout } = useAppUser();
+
+// 3. 不再使用 HistoryHeader，改用以下 subheader（直接内联到返回值中）：
+//    subheader 只保留：搜索框 + 刷新按钮
+// （HistoryHeader.tsx 文件暂不删除，后续可清理）
+
+// 4. bottomActions：
+const bottomActions: ActionButton[] = [
+  {
+    key: 'import',
+    label: '导入',
+    onClick: onImport,
+    variant: 'secondary',
+    icon: Upload,
+  },
+  {
+    key: 'export',
+    label: '导出',
+    onClick: onExport,
+    variant: 'secondary',
+    icon: Download,
+  },
+  ...(selectedCount > 0 ? [{
+    key: 'delete',
+    label: isDeleting ? '删除中...' : `删除选中 (${selectedCount})`,
+    onClick: onBatchDelete,
+    variant: 'primary' as const,
+    loading: isDeleting,
+    disabled: isDeleting,
+  }] : []),
+];
+
+// 5. 返回值结构：
+return (
+  <AppLayout
+    breadcrumbs={[{ label: '首页', path: '/dashboard' }, { label: '单据历史' }]}
+    user={user}
+    onLogout={handleLogout}
+    bottomActions={bottomActions}
+  >
+    {/* 内容区搜索 subheader（取代 HistoryHeader） */}
+    <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1c1c1e] px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+      <div className="relative flex-1 max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="搜索客户名称、单据号..."
+          value={filters.search}
+          onChange={(e) => setFilters({ search: e.target.value })}
+          className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+        />
+        {filters.search && (
+          <button onClick={() => setFilters({ search: '' })} className="absolute right-3 top-1/2 -translate-y-1/2">
+            <X className="h-4 w-4 text-gray-400" />
+          </button>
+        )}
+      </div>
+      <button onClick={onRefresh} className="p-2 rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800">
+        <RefreshCw className="h-4 w-4 text-gray-500" />
+      </button>
+    </div>
+    {/* 原有 HistoryTabs 和内容 */}
+    <HistoryTabs ... />
+    ...
+  </AppLayout>
+);
+```
+
+---
+
+#### ④ InvoicePage / PackingPage / PurchasePage
+
+三个页面都有 Footer，部分有顶部返回按钮。模式与 QuotationPage 类似：
+
+```tsx
+// 每个页面添加：
+import { AppLayout, type ActionButton } from '@/components/layout';
+import { useAppUser } from '@/hooks/useAppUser';
+const { user, handleLogout } = useAppUser();
+
+// 移除：import { Footer } / Footer 组件
+// 移除：顶部返回 Link（若有）
+// 将底部保存/生成/预览等按钮迁移到 bottomActions
+
+// Invoice breadcrumbs:
+// [{ label: '首页', path: '/dashboard' }, { label: '财务发票' }, { label: isEdit ? '编辑' : '新建' }]
+
+// Packing breadcrumbs:
+// [{ label: '首页', path: '/dashboard' }, { label: '箱单发票' }, { label: isEdit ? '编辑' : '新建' }]
+
+// Purchase breadcrumbs:
+// [{ label: '首页', path: '/dashboard' }, { label: '采购订单' }, { label: isEdit ? '编辑' : '新建' }]
+```
+
+---
+
+#### ⑤ CustomerPage / MailPage
+
+相对简单，无底部操作按钮，只需：
+- 移除 Footer / 返回按钮
+- 包裹 AppLayout（无 bottomActions）
+
+```tsx
+// CustomerPage breadcrumbs: [{ label: '首页', path: '/dashboard' }, { label: '客户管理' }]
+// MailPage breadcrumbs:     [{ label: '首页', path: '/dashboard' }, { label: 'AI邮件助手' }]
+```
+
+---
+
+### 注意事项
+
+- `DocumentLayout.tsx` 仅被 `QuotationPageRefactored.tsx` 引用（该文件不是活跃页面），**忽略，不处理**
+- Admin 页面（`/admin`）**不迁移**
+- 迁移后统一删除各页面中无用的 `import { Header }` / `import { Footer }` / `import { ArrowLeft }`
+- DashboardPage 的权限 loading spinner（`if (isPermissionLoading) return ...`）**保留在 AppLayout 外面**（提前 return）
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run build
+# 手动验证（每页）：
+# 1. 侧边栏当前页高亮正确
+# 2. 面包屑路径正确
+# 3. 底部操作按钮功能正常（保存/生成/预览/导出）
+# 4. 深色模式颜色正常
+# 5. 手机端底部 Tab 可见，不与操作栏重叠
+npm run test:e2e
+```
+
+---
+
+## TASK-20：Dashboard 今日统计卡片 ✅ 已完成
+
+**优先级**：🟢 中
+**实际耗时**：< 1 小时
+**状态**：完成。验证：`eslint` 0 error；`tsc --noEmit` 和 `npm run build` 被既有环境问题阻塞（缺 `@playwright/test` / Google Font DNS），业务代码无新错误。
+
+### 实际产出
+
+**新建文件：**
+- `src/features/dashboard/components/StatsCards.tsx` — 5 张今日统计卡片，按类型配色（蓝/绿/紫/青/橙），点击跳转 `/history?type=xxx&time=today`，loading 时显示 animate-pulse 占位
+
+**修改文件：**
+- `src/features/dashboard/hooks/useDashboardDocuments.ts` — 新增 `todayCounts`，基于有权限的全量单据 + `setHours(0,0,0,0)` 计算，不受 Dashboard 时间筛选影响，从 hook 返回值导出
+- `src/features/dashboard/app/DashboardPage.tsx` — 从 hook 取 `todayCounts`，在 `DashboardSuccessMessage` 后、`DashboardModules` 前插入 `<StatsCards counts={todayCounts} loading={!mounted || isPermissionLoading} />`
+
+### 背景
+
+Dashboard 首页增加今日各类单据数量统计卡片，让用户一眼看到工作量概览，点击跳转对应历史记录。
+
+### STEP 1：新建 StatsCards 组件
+
+**新建 `src/features/dashboard/components/StatsCards.tsx`：**
+
+```tsx
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { FileText, FileCheck, Receipt, Package, ShoppingCart } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+interface StatItem {
+  type: 'quotation' | 'confirmation' | 'invoice' | 'packing' | 'purchase';
+  label: string;
+  tag: string;
+  icon: LucideIcon;
+  colorClass: string;
+  textColorClass: string;
+  tagClass: string;
+}
+
+const STAT_ITEMS: StatItem[] = [
+  { type: 'quotation',    label: '报价单',   tag: 'QTN', icon: FileText,     colorClass: 'bg-blue-50 dark:bg-blue-900/20',    textColorClass: 'text-blue-600 dark:text-blue-400',    tagClass: 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300' },
+  { type: 'confirmation', label: '销售确认', tag: 'SC',  icon: FileCheck,    colorClass: 'bg-green-50 dark:bg-green-900/20',  textColorClass: 'text-green-600 dark:text-green-400',  tagClass: 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-300' },
+  { type: 'invoice',      label: '财务发票', tag: 'INV', icon: Receipt,      colorClass: 'bg-purple-50 dark:bg-purple-900/20', textColorClass: 'text-purple-600 dark:text-purple-400', tagClass: 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300' },
+  { type: 'packing',      label: '箱单发票', tag: 'PL',  icon: Package,      colorClass: 'bg-teal-50 dark:bg-teal-900/20',   textColorClass: 'text-teal-600 dark:text-teal-400',   tagClass: 'bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300' },
+  { type: 'purchase',     label: '采购订单', tag: 'PO',  icon: ShoppingCart, colorClass: 'bg-orange-50 dark:bg-orange-900/20', textColorClass: 'text-orange-600 dark:text-orange-400', tagClass: 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300' },
+];
+
+export interface StatCounts {
+  quotation: number;
+  confirmation: number;
+  invoice: number;
+  packing: number;
+  purchase: number;
+}
+
+interface StatsCardsProps {
+  counts: StatCounts;
+  loading?: boolean;
+}
+
+export function StatsCards({ counts, loading = false }: StatsCardsProps) {
+  const router = useRouter();
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+      {STAT_ITEMS.map(({ type, label, tag, icon: Icon, colorClass, textColorClass, tagClass }) => (
+        <button
+          key={type}
+          type="button"
+          onClick={() => router.push(`/history?type=${type}&time=today`)}
+          className={`${colorClass} rounded-xl p-4 text-left hover:shadow-md transition-shadow cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500`}
+        >
+          <div className="flex items-center gap-1.5 mb-2">
+            <Icon className={`h-4 w-4 shrink-0 ${textColorClass}`} />
+            <span className="text-sm text-gray-500 dark:text-gray-400 truncate">{label}</span>
+          </div>
+          {loading ? (
+            <div className="h-8 w-10 rounded bg-gray-200 dark:bg-gray-700 animate-pulse mb-2" />
+          ) : (
+            <div className={`text-3xl font-bold ${textColorClass} mb-2 tabular-nums`}>
+              {counts[type]}
+            </div>
+          )}
+          <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-semibold ${tagClass}`}>
+            {tag}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+### STEP 2：数据接入
+
+**先查看 `src/features/dashboard/hooks/useDashboardDocuments.ts`：**
+
+检查该 hook 的签名，判断是否支持传入固定 `timeFilter`。然后按以下方案选一：
+
+**方案 A（推荐）：hook 已接受 initialTimeFilter 参数或可扩展**
+
+在 `useDashboardDocuments` 中增加一个独立的固定 `today` 计数（不受用户切换影响）：
+在 hook 内部，额外维护 `todayCounts`，始终用 `time=today` 过滤 `recentDocuments` 计算。
+
+```ts
+// 在 useDashboardDocuments hook 内，现有 documentCounts 下方增加：
+const todayCounts = useMemo<StatCounts>(() => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayDocs = recentDocuments.filter(
+    (doc) => new Date(doc.createdAt).getTime() >= today.getTime()
+  );
+  return {
+    quotation:    todayDocs.filter(d => d.type === 'quotation').length,
+    confirmation: todayDocs.filter(d => d.type === 'confirmation').length,
+    invoice:      todayDocs.filter(d => d.type === 'invoice').length,
+    packing:      todayDocs.filter(d => d.type === 'packing').length,
+    purchase:     todayDocs.filter(d => d.type === 'purchase').length,
+  };
+}, [recentDocuments]);
+
+// hook 返回值中加入 todayCounts
+return { ..., todayCounts };
+```
+
+**方案 B（兜底）：如果 hook 改动复杂**
+
+直接在 DashboardPage 用现有 `recentDocuments`（完整列表，timeFilter 不影响拉取范围）本地计算：
+
+```tsx
+// DashboardPage.tsx 内：
+const todayCounts = useMemo<StatCounts>(() => {
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const ts = start.getTime();
+  const filter = (type: string) =>
+    recentDocuments.filter(d => d.type === type && new Date(d.createdAt).getTime() >= ts).length;
+  return { quotation: filter('quotation'), confirmation: filter('confirmation'),
+           invoice: filter('invoice'), packing: filter('packing'), purchase: filter('purchase') };
+}, [recentDocuments]);
+```
+
+### STEP 3：插入到 DashboardPage
+
+**修改 `src/features/dashboard/app/DashboardPage.tsx`：**
+
+```tsx
+// 1. 新增 import
+import { StatsCards } from '@/features/dashboard/components/StatsCards';
+
+// 2. 取得 todayCounts（见 STEP 2，从 hook 或本地计算）
+
+// 3. AppLayout 内容区，在 DashboardSuccessMessage 之后、DashboardModules 之前插入：
+<AppLayout ...>
+  <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-6">
+    <DashboardSuccessMessage ... />
+    <StatsCards counts={todayCounts} loading={!mounted || isPermissionLoading} />
+    <DashboardModules ... />
+    <DashboardDocuments ... />
+  </div>
+</AppLayout>
+```
+
+### 验证
+
+```bash
+npx tsc --noEmit
+# 手动验证：
+# 1. 5 张卡片显示，颜色与单据类型一致（蓝/绿/紫/青/橙）
+# 2. 数字显示今日数量，切换最近文档时间筛选时卡片数字不变
+# 3. 点击卡片跳转到 /history?type=xxx&time=today
+# 4. 加载中显示 animate-pulse 灰色占位块
+# 5. 深色模式颜色正常
+```
+
+---
+
 ## 里程碑：数据管线完成（TASK-09 ~ TASK-15）
 
 | 层次 | 实现 | 文件 |

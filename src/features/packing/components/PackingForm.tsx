@@ -1,18 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Download, Settings, History, Eye, FileSpreadsheet, Save } from 'lucide-react';
+import { Settings, History } from 'lucide-react';
 import { PackingFormProps } from '../types';
 import { BasicInfoSection } from './BasicInfoSection';
 import { ItemsTableSection } from './ItemsTableSection';
 import { RemarksSection } from './RemarksSection';
-import { ActionButtons } from './ActionButtons';
 import { SettingsPanel } from '../../../components/packinglist/SettingsPanel';
 
 import { calculatePackingTotals } from '../utils/calculations';
-import { useTablePrefsHydrated } from '../state/useTablePrefs';
 
 
 
@@ -22,19 +19,7 @@ const titleClassName = `text-xl font-semibold text-gray-800 dark:text-[#F5F5F7]`
 export const PackingForm: React.FC<PackingFormProps> = ({
   data,
   onDataChange,
-  isEditMode = false,
-  editId,
-  isGenerating = false,
-  isSaving = false,
-  saveMessage = '',
-  saveSuccess = false,
-  onSave = () => {},
-  onGenerate = () => {},
-  onPreview = () => {},
-  onExportExcel = () => {}
 }) => {
-  const pathname = usePathname();
-  const { setCols } = useTablePrefsHydrated();
   const [showSettings, setShowSettings] = useState(false);
 
   const [editingUnitPriceIndex, setEditingUnitPriceIndex] = useState<number | null>(null);
@@ -52,11 +37,6 @@ export const PackingForm: React.FC<PackingFormProps> = ({
   // 处理数据变更
   const handleDataChange = (newData: Partial<typeof data>) => {
     onDataChange({ ...data, ...newData });
-  };
-
-  // 处理保存
-  const handleSave = () => {
-    onSave();
   };
 
   // 处理设置面板回调
@@ -95,24 +75,8 @@ export const PackingForm: React.FC<PackingFormProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1C1C1E] flex flex-col">
-      <main className="flex-1">
-        <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
-          {/* 返回按钮 */}
-          <Link 
-            href={
-              pathname?.includes('/edit/') ? '/history?tab=packing' : 
-              pathname?.includes('/copy/') ? '/history?tab=packing' : 
-              '/dashboard'
-            } 
-            className="inline-flex items-center text-gray-600 dark:text-[#98989D] hover:text-gray-900 dark:hover:text-[#F5F5F7] transition-colors duration-200"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Link>
-
-          {/* 主卡片容器 */}
-          <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl sm:rounded-3xl shadow-lg mt-6">
+    <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
+          <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl sm:rounded-3xl shadow-lg">
             <form>
               {/* 标题和设置按钮 */}
               <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 dark:border-[#3A3A3C]">
@@ -133,37 +97,6 @@ export const PackingForm: React.FC<PackingFormProps> = ({
                   >
                     <History className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
                   </Link>
-                  <button
-                    type="button"
-                    onClick={onExportExcel}
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0"
-                    title="导出为Excel"
-                  >
-                    <FileSpreadsheet className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#3A3A3C] flex-shrink-0 relative"
-                    title={editId ? '保存修改' : '保存新记录'}
-                  >
-                    {isSaving ? (
-                      <svg className="animate-spin h-5 w-5 text-gray-600 dark:text-[#98989D]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    ) : (
-                      <Save className="w-5 h-5 text-gray-600 dark:text-[#98989D]" />
-                    )}
-                    {saveMessage && (
-                      <div className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 text-xs text-white rounded-lg whitespace-nowrap ${
-                        saveSuccess ? 'bg-green-500' : 'bg-red-500'
-                      }`}>
-                        {saveMessage}
-                      </div>
-                    )}
-                  </button>
                   <button
                     type="button"
                     onClick={() => setShowSettings(!showSettings)}
@@ -223,24 +156,8 @@ export const PackingForm: React.FC<PackingFormProps> = ({
                 />
               </div>
 
-              {/* 操作按钮区域 */}
-              <div className="px-4 sm:px-6 py-4 sm:py-6 bg-gray-50 dark:bg-[#1C1C1E] rounded-b-2xl sm:rounded-b-3xl">
-                <ActionButtons
-                  data={data}
-                  isGenerating={isGenerating}
-                  isSaving={isSaving}
-                  saveMessage={saveMessage}
-                  onGenerate={onGenerate}
-                  onPreview={onPreview}
-                  onExportExcel={onExportExcel}
-                />
-              </div>
             </form>
           </div>
-        </div>
-      </main>
-
-
     </div>
   );
 };
