@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import {
@@ -16,6 +17,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { usePermissionStore } from '@/lib/permissions';
+import { LOGO_CONFIG } from '@/lib/logo-config';
+import { AppUserMenu } from './AppUserMenu';
 
 export interface SidebarItem {
   id: string;
@@ -29,6 +32,12 @@ export interface SidebarItem {
 interface AppSidebarProps {
   className?: string;
   onClose?: () => void;
+  user?: {
+    name: string;
+    isAdmin: boolean;
+    email?: string | null;
+  };
+  onLogout?: () => void | Promise<void>;
 }
 
 export const NAV_ITEMS: SidebarItem[] = [
@@ -107,15 +116,13 @@ function isItemActive(item: SidebarItem, pathname: string, tab: string | null) {
   if (item.id === 'confirmation') {
     return pathname.startsWith('/quotation') && tab === 'confirmation';
   }
-
   if (item.id === 'quotation') {
     return pathname.startsWith('/quotation') && tab !== 'confirmation';
   }
-
   return pathname.startsWith(item.path.split('?')[0]);
 }
 
-export function AppSidebar({ className = '', onClose }: AppSidebarProps) {
+export function AppSidebar({ className = '', onClose, user, onLogout }: AppSidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tab = searchParams.get('tab');
@@ -139,10 +146,20 @@ export function AppSidebar({ className = '', onClose }: AppSidebarProps) {
     <aside
       className={`fixed left-0 top-0 z-30 flex h-screen w-[200px] flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-[#1c1c1e] ${className}`}
     >
-      <div className="flex h-14 items-center justify-between border-b border-gray-200 px-4 dark:border-gray-700">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-gray-900 dark:text-white">LC App</div>
-          <div className="truncate text-xs text-gray-500 dark:text-gray-400">MLUONET</div>
+      {/* ── 头部：Logo + 应用名 ── */}
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 px-4 dark:border-gray-700">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Image
+            src={LOGO_CONFIG.web.logo}
+            alt="LC App"
+            width={28}
+            height={28}
+            priority
+            className="shrink-0 object-contain"
+          />
+          <span className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+            LC App
+          </span>
         </div>
         {onClose && (
           <button
@@ -156,6 +173,7 @@ export function AppSidebar({ className = '', onClose }: AppSidebarProps) {
         )}
       </div>
 
+      {/* ── 导航列表 ── */}
       <nav className="flex-1 overflow-y-auto px-3 py-3">
         {visibleItems.map((item) => {
           const Icon = item.icon;
@@ -182,6 +200,13 @@ export function AppSidebar({ className = '', onClose }: AppSidebarProps) {
           );
         })}
       </nav>
+
+      {/* ── 底部：用户菜单 ── */}
+      {user && onLogout && (
+        <div className="shrink-0 border-t border-gray-200 px-3 py-3 dark:border-gray-700">
+          <AppUserMenu user={user} onLogout={onLogout} placement="bottom-left" />
+        </div>
+      )}
     </aside>
   );
 }

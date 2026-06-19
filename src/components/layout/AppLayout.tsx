@@ -32,7 +32,7 @@ export function AppLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       <Suspense fallback={null}>
-        <AppSidebar className="hidden lg:flex" />
+        <AppSidebar className="hidden lg:flex" user={user} onLogout={onLogout} />
       </Suspense>
 
       {sidebarOpen && (
@@ -46,6 +46,8 @@ export function AppLayout({
             <AppSidebar
               className="z-50 lg:hidden"
               onClose={() => setSidebarOpen(false)}
+              user={user}
+              onLogout={onLogout}
             />
           </Suspense>
         </>
@@ -54,8 +56,6 @@ export function AppLayout({
       <div className="flex min-h-screen flex-1 flex-col overflow-hidden lg:ml-[200px]">
         <AppTopBar
           breadcrumbs={breadcrumbs}
-          user={user}
-          onLogout={onLogout}
           onMenuClick={() => setSidebarOpen(true)}
         />
         <main className="flex-1 overflow-y-auto pb-12 md:pb-0">{children}</main>
