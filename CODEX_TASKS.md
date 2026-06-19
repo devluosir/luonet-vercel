@@ -3767,6 +3767,193 @@ git commit -m "test(e2e): 添加 Playwright E2E 测试套件（登录/Dashboard/
 
 ---
 
+## TASK-17：GitHub Actions E2E 集成
+
+**优先级**：🟡 中（CI 完整性）
+**估时**：15 分钟
+**风险**：极低，仅改 CI 配置文件
+
+### 背景
+
+TASK-07 添加了 `ci.yml`，覆盖单元测试 + 构建。TASK-16 添加了 Playwright E2E 测试，但尚未挂入 CI。本任务在 `ci.yml` 增加一个 `e2e` job，仅在 push 到 main 后运行（针对已部署的 Vercel 生产 URL），并在失败时上传 Playwright HTML 报告作为 artifact。
+
+**运行策略**：
+- `check` job：每次 PR + push 都跑（lint / unit test / build）
+- `e2e` job：仅 push 到 main 后跑，`needs: check`，针对 `E2E_BASE_URL` 指向的生产站点
+
+PR 上不跑 E2E，因为 Vercel preview URL 每次不同，无法静态配置；如需 PR E2E，可在另一个 issue 中用 Vercel GitHub Integration Webhook 实现。
+
+### 涉及文件
+
+```
+.github/workflows/ci.yml    ← 追加 e2e job
+```
+
+不改动其他文件。
+
+### 改动：`.github/workflows/ci.yml`
+
+在现有 `check` job 之后追加以下 `e2e` job：
+
+```yaml
+  e2e:
+    name: E2E Tests (production)
+    runs-on: ubuntu-latest
+    needs: check
+    # 仅在 push 到主分支时运行（不跑 PR），因为需要已部署的站点
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          E2E_BASE_URL: ${{ vars.E2E_BASE_URL }}
+          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+
+      - name: Upload Playwright report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 7
+```
+
+完整 `ci.yml`（替换整个文件）：
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  check:
+    name: Quality Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check selectors
+        run: npm run check:selectors
+
+      - name: Run tests
+        run: npm run test -- --ci --passWithNoTests
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXT_PUBLIC_API_BASE_URL: https://udb.luocompany.net
+          NEXT_PUBLIC_APP_URL: https://luocompany.net
+
+  e2e:
+    name: E2E Tests (production)
+    runs-on: ubuntu-latest
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          E2E_BASE_URL: ${{ vars.E2E_BASE_URL }}
+          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+
+      - name: Upload Playwright report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: playwright-report/
+          retention-days: 7
+```
+
+### GitHub 仓库配置（人工操作，Codex 无法代劳）
+
+执行前需在 GitHub 仓库设置中添加：
+
+**Settings → Secrets and variables → Actions → Variables（公开变量）**：
+- `E2E_BASE_URL` = `https://luonet-vercel.vercel.app`（或实际 Vercel 域名）
+
+**Settings → Secrets and variables → Actions → Secrets（加密）**：
+- `E2E_USERNAME` = E2E 测试账号用户名
+- `E2E_PASSWORD` = E2E 测试账号密码
+
+建议为 E2E 单独创建一个只读测试账号，不使用管理员账号。
+
+### 验证命令
+
+```bash
+# 语法检查 YAML 格式
+npx js-yaml .github/workflows/ci.yml > /dev/null && echo "YAML OK"
+
+# 本地模拟（仅确认文件结构正确）
+cat .github/workflows/ci.yml | grep -E "name:|needs:|if:"
+```
+
+### 提交
+
+```bash
+git add .github/workflows/ci.yml
+git commit -m "ci: 添加 Playwright E2E job（push to main 后针对生产站点运行）"
+```
+
+---
+
 ## 里程碑：数据管线完成（TASK-09 ~ TASK-15）
 
 | 层次 | 实现 | 文件 |
