@@ -29,6 +29,12 @@ interface InquiryStore {
     patch: Partial<CustomerQuoteStatus>
   ) => void;
   removeQuotedStatus: (recordId: string, qsId: string) => void;
+  /** 原子替换供应商列表与已报价列表（modal 保存时一次提交） */
+  replaceStatuses: (
+    recordId: string,
+    suppliers: SupplierQuoteStatus[],
+    quotedStatuses: CustomerQuoteStatus[]
+  ) => void;
 }
 
 export const useInquiryStore = create<InquiryStore>((set, get) => ({
@@ -141,6 +147,20 @@ export const useInquiryStore = create<InquiryStore>((set, get) => ({
       return {
         ...record,
         quotedStatuses: record.quotedStatuses.filter((qs) => qs.id !== qsId),
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    inquiryService.save(records);
+    set({ records });
+  },
+
+  replaceStatuses: (recordId, suppliers, quotedStatuses) => {
+    const records = get().records.map((record) => {
+      if (record.id !== recordId) return record;
+      return {
+        ...record,
+        supplierStatuses: suppliers,
+        quotedStatuses,
         updatedAt: new Date().toISOString(),
       };
     });

@@ -65,7 +65,12 @@ export function generateNextInquiryNo(date: Date, existingNos: string[]): string
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
   const prefix = `C${yy}${mm}${dd}`;
-  const todayNos = new Set(existingNos.filter((no) => no.startsWith(prefix)));
+  // 去掉 -U 后缀再入集合，使 C260621M-U 也能占住 C260621M 这个槽位
+  const todayNos = new Set(
+    existingNos
+      .filter((no) => no.startsWith(prefix))
+      .map((no) => (no.endsWith('-U') ? no.slice(0, -2) : no))
+  );
 
   for (const suffix of INQUIRY_SUFFIX_SEQUENCE) {
     const candidate = `${prefix}${suffix}`;
@@ -124,7 +129,9 @@ export function roundDateBrackets(date: string): string {
 }
 
 export function getRecordColorState(record: InquiryRecord): InquiryColorClass {
-  return record.quotedStatuses.length > 0 ? 'text-blue-600' : 'text-pink-500';
+  if (record.quotedStatuses.some((s) => s.type === 'unavailable')) return 'text-gray-400';
+  if (record.quotedStatuses.some((s) => s.type !== 'unavailable')) return 'text-blue-600';
+  return 'text-pink-500';
 }
 
 export function getSupplierStatusClass(supplier: SupplierQuoteStatus): InquiryColorClass {

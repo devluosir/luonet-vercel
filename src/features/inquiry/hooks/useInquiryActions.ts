@@ -17,14 +17,18 @@ export function useInquiryActions() {
   const removeQuotedStatus = useInquiryStore((state) => state.removeQuotedStatus);
 
   const createRecord = useCallback(
-    (input: InquiryBasicInput) => {
+    (
+      input: InquiryBasicInput,
+      supplierStatuses?: SupplierQuoteStatus[],
+      quotedStatuses?: CustomerQuoteStatus[]
+    ) => {
       addRecord({
         ...input,
-        supplierStatuses: [
+        supplierStatuses: supplierStatuses ?? [
           { id: createId(), supplierShortName: '飞罗', status: 'pending' },
           { id: createId(), supplierShortName: '昆同', status: 'pending' },
         ],
-        quotedStatuses: [],
+        quotedStatuses: quotedStatuses ?? [],
       });
     },
     [addRecord]

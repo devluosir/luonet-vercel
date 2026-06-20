@@ -1,20 +1,31 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
 import { Plus, Save, X } from 'lucide-react';
-import type { InquiryRecord, SupplierQuoteStatus, SupplierStatus } from '../types';
-import { useInquiryActions } from '../hooks/useInquiryActions';
+import type { CustomerQuoteStatus, InquiryRecord, SupplierQuoteStatus, SupplierStatus } from '../types';
 import {
+  createId,
   formatShortDate,
+  getNextQuoteVersion,
   getRecordColorState,
   normalizeShortDateInput,
+  stripDateBrackets,
 } from '../utils/inquiryUtils';
 import { SupplierStatusTag } from './SupplierStatusTag';
 import { QuotedStatusList } from './QuotedStatusList';
 
 interface InquiryQuoteStatusProps {
   record: InquiryRecord;
+  onSuppliersChange: (suppliers: SupplierQuoteStatus[]) => void;
+  onQuotedChange: (quoted: CustomerQuoteStatus[]) => void;
 }
+
+type ActiveForm =
+  | { kind: 'supplier-add' }
+  | { kind: 'supplier-edit'; id: string }
+  | { kind: 'quoted-add' }
+  | { kind: 'quoted-edit'; id: string }
+  | null;
 
 interface SupplierFormState {
   supplierShortName: string;
@@ -22,103 +33,213 @@ interface SupplierFormState {
   status: SupplierStatus;
 }
 
-const STATUS_OPTIONS: Array<{ value: SupplierStatus; label: string; hint: string }> = [
-  { value: 'pending',     label: '未报价',   hint: '粉红' },
-  { value: 'quoted',      label: '已报价',   hint: '蓝色' },
-  { value: 'need_info',   label: '需补资料', hint: '黄色' },
-  { value: 'unavailable', label: '无法报价', hint: '灰色' },
+interface QuotedFormState {
+  quoteDate: string;
+  supplierShortName: string;
+  version: string;
+}
+
+const STATUS_OPTIONS: Array<{ value: SupplierStatus; label: string }> = [
+  { value: 'pending',     label: '未报价' },
+  { value: 'quoted',      label: '已报价' },
+  { value: 'need_info',   label: '需补资料' },
+  { value: 'unavailable', label: '无法报价' },
 ];
 
-export function InquiryQuoteStatus({ record }: InquiryQuoteStatusProps) {
-  const {
-    createSupplier,
-    updateSupplier,
-    removeSupplier,
-    createQuotedStatus,
-    updateQuotedStatus,
-    removeQuotedStatus,
-  } = useInquiryActions();
-  const [isSupplierFormOpen, setIsSupplierFormOpen] = useState(false);
-  const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
+const INPUT_CLS =
+  'h-7 rounded border border-gray-200 bg-gray-50 px-2 text-xs text-gray-900 outline-none ' +
+  'focus:border-blue-400 focus:bg-white dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100';
+
+const ROW_LABEL = 'mt-1 w-12 shrink-0 text-xs text-gray-400 dark:text-gray-500';
+
+export function InquiryQuoteStatus({ record, onSuppliersChange, onQuotedChange }: InquiryQuoteStatusProps) {
+  const [activeForm, setActiveForm] = useState<ActiveForm>(null);
   const [supplierForm, setSupplierForm] = useState<SupplierFormState>({
     supplierShortName: '',
     quoteDate: '',
     status: 'pending',
   });
+  const [quotedForm, setQuotedForm] = useState<QuotedFormState>({
+    quoteDate: stripDateBrackets(formatShortDate(new Date())),
+    supplierShortName: '',
+    version: '',
+  });
 
+  // ── 派生数据 ──────────────────────────────────────────
+  const unavailableStatus = record.quotedStatuses.find((s) => s.type === 'unavailable');
+  const supplementedStatus = record.quotedStatuses.find((s) => s.type === 'supplemented');
+  const regularStatuses = record.quotedStatuses.filter(
+    (s) => s.type !== 'unavailable' && s.type !== 'supplemented'
+  );
+  const hasNeedInfoSupplier = record.supplierStatuses.some((s) => s.status === 'need_info');
+  const quotedSupplierNames = record.supplierStatuses
+    .filter((s) => s.status === 'quoted' && !!s.quoteDate)
+    .map((s) => s.supplierShortName);
+  const mainColorClass = getRecordColorState(record);
+  const isSupplierForm = activeForm?.kind === 'supplier-add' || activeForm?.kind === 'supplier-edit';
+  const isQuotedForm = activeForm?.kind === 'quoted-add' || activeForm?.kind === 'quoted-edit';
+
+  // ── 供应商 CRUD ──────────────────────────────────────
   const openAddSupplier = () => {
-    setEditingSupplierId(null);
-    setSupplierForm({
-      supplierShortName: '',
-      quoteDate: '',
-      status: 'pending',
-    });
-    setIsSupplierFormOpen(true);
+    setSupplierForm({ supplierShortName: '', quoteDate: '', status: 'pending' });
+    setActiveForm({ kind: 'supplier-add' });
   };
 
   const openEditSupplier = (supplierId: string) => {
-    const supplier = record.supplierStatuses.find((item) => item.id === supplierId);
-    if (!supplier) return;
-
-    setEditingSupplierId(supplier.id);
+    const s = record.supplierStatuses.find((item) => item.id === supplierId);
+    if (!s) return;
     setSupplierForm({
-      supplierShortName: supplier.supplierShortName,
-      quoteDate: supplier.quoteDate ?? '',
-      status: supplier.status ?? 'pending',
+      supplierShortName: s.supplierShortName,
+      quoteDate: stripDateBrackets(s.quoteDate ?? ''),
+      status: s.status ?? 'pending',
     });
-    setIsSupplierFormOpen(true);
+    setActiveForm({ kind: 'supplier-edit', id: supplierId });
   };
 
-  const closeSupplierForm = () => {
-    setEditingSupplierId(null);
-    setIsSupplierFormOpen(false);
-  };
-
-  const handleSupplierSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  // 注意：不再是 FormEvent handler，改为普通函数，由按钮 onClick / Enter 键触发
+  const submitSupplier = () => {
     const quoteDate = normalizeShortDateInput(supplierForm.quoteDate);
     const payload: Omit<SupplierQuoteStatus, 'id'> = {
       supplierShortName: supplierForm.supplierShortName.trim(),
       quoteDate: quoteDate || undefined,
-      // 状态由用户显式选择，不再根据是否有日期自动覆盖
       status: supplierForm.status,
     };
-
     if (!payload.supplierShortName) return;
-
-    if (editingSupplierId) {
-      updateSupplier(record.id, editingSupplierId, payload);
+    if (activeForm?.kind === 'supplier-edit') {
+      onSuppliersChange(
+        record.supplierStatuses.map((s) =>
+          s.id === activeForm.id ? { ...s, ...payload } : s
+        )
+      );
     } else {
-      createSupplier(record.id, payload);
+      onSuppliersChange([...record.supplierStatuses, { ...payload, id: createId() }]);
     }
-    closeSupplierForm();
+    setActiveForm(null);
   };
 
   const handleRemoveSupplier = (supplierId: string) => {
-    const supplier = record.supplierStatuses.find((s) => s.id === supplierId);
-    const label = supplier?.supplierShortName ?? '该供应商';
-    if (window.confirm(`确定删除供应商「${label}」吗？`)) {
-      removeSupplier(record.id, supplierId);
+    const s = record.supplierStatuses.find((item) => item.id === supplierId);
+    if (window.confirm(`确定删除供应商「${s?.supplierShortName ?? '该供应商'}」吗？`)) {
+      onSuppliersChange(record.supplierStatuses.filter((item) => item.id !== supplierId));
     }
   };
 
-  const mainColorClass = getRecordColorState(record);
+  // ── 已报价 CRUD ──────────────────────────────────────
+  const openAddQuoted = () => {
+    setQuotedForm({
+      quoteDate: stripDateBrackets(formatShortDate(new Date())),
+      supplierShortName: quotedSupplierNames[0] ?? '',
+      version: getNextQuoteVersion(regularStatuses),
+    });
+    setActiveForm({ kind: 'quoted-add' });
+  };
+
+  const openEditQuoted = (status: CustomerQuoteStatus) => {
+    setQuotedForm({
+      quoteDate: stripDateBrackets(status.quoteDate),
+      supplierShortName: status.supplierShortName,
+      version: status.version,
+    });
+    setActiveForm({ kind: 'quoted-edit', id: status.id });
+  };
+
+  const submitQuoted = () => {
+    const payload = {
+      quoteDate: normalizeShortDateInput(quotedForm.quoteDate),
+      supplierShortName: quotedForm.supplierShortName.trim(),
+      version: quotedForm.version.trim(),
+    };
+    if (!payload.quoteDate || !payload.supplierShortName || !payload.version) return;
+    if (activeForm?.kind === 'quoted-edit') {
+      onQuotedChange(
+        record.quotedStatuses.map((s) =>
+          s.id === activeForm.id ? { ...s, ...payload } : s
+        )
+      );
+    } else {
+      onQuotedChange([...record.quotedStatuses, { ...payload, id: createId() }]);
+    }
+    setActiveForm(null);
+  };
+
+  const handleRemoveQuoted = (qsId: string) => {
+    const qs = record.quotedStatuses.find((s) => s.id === qsId);
+    const label = qs
+      ? `${stripDateBrackets(qs.quoteDate)} ${qs.supplierShortName} ${qs.version}`
+      : '该记录';
+    if (window.confirm(`确定删除「${label}」吗？`)) {
+      onQuotedChange(record.quotedStatuses.filter((s) => s.id !== qsId));
+    }
+  };
+
+  // ── 已补充信息 toggle ─────────────────────────────────
+  const toggleSupplemented = (checked: boolean) => {
+    if (checked) {
+      const newStatus: CustomerQuoteStatus = {
+        id: createId(),
+        quoteDate: normalizeShortDateInput(stripDateBrackets(formatShortDate(new Date()))),
+        supplierShortName: '',
+        version: '',
+        type: 'supplemented',
+      };
+      onQuotedChange([...record.quotedStatuses, newStatus]);
+    } else {
+      onQuotedChange(record.quotedStatuses.filter((s) => s.type !== 'supplemented'));
+    }
+  };
+
+  const updateSupplementedDate = (raw: string) => {
+    const normalized = normalizeShortDateInput(raw);
+    if (!normalized) return;
+    onQuotedChange(
+      record.quotedStatuses.map((s) =>
+        s.type === 'supplemented' ? { ...s, quoteDate: normalized } : s
+      )
+    );
+  };
+
+  // ── 无法报价 toggle ───────────────────────────────────
+  const toggleUnavailable = (checked: boolean) => {
+    if (checked) {
+      const newStatus: CustomerQuoteStatus = {
+        id: createId(),
+        quoteDate: normalizeShortDateInput(stripDateBrackets(formatShortDate(new Date()))),
+        supplierShortName: '',
+        version: '',
+        type: 'unavailable',
+      };
+      onQuotedChange([...record.quotedStatuses, newStatus]);
+    } else {
+      onQuotedChange(record.quotedStatuses.filter((s) => s.type !== 'unavailable'));
+    }
+  };
+
+  const updateUnavailableDate = (raw: string) => {
+    const normalized = normalizeShortDateInput(raw);
+    if (!normalized) return;
+    onQuotedChange(
+      record.quotedStatuses.map((s) =>
+        s.type === 'unavailable' ? { ...s, quoteDate: normalized } : s
+      )
+    );
+  };
+
+  // ── 公共键盘处理 ─────────────────────────────────────
+  const onKeySupplier = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitSupplier(); }
+    if (e.key === 'Escape') setActiveForm(null);
+  };
+  const onKeyQuoted = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitQuoted(); }
+    if (e.key === 'Escape') setActiveForm(null);
+  };
 
   return (
-    <div className="space-y-2">
-      <div className="space-y-2">
-        {/* 供应商 + 已报价 同一行 */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* + 供应商 按钮置前，替换原来的"供应商"文字标签 */}
-          <button
-            type="button"
-            onClick={openAddSupplier}
-            className="inline-flex items-center gap-1 rounded-full border border-dashed border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-          >
-            <Plus className="h-3 w-3" />
-            供应商
-          </button>
-
+    <div className="space-y-2.5">
+      {/* ── 供应商行 ── */}
+      <div className="flex items-start gap-2">
+        <span className={ROW_LABEL}>供应商</span>
+        <div className="flex flex-wrap items-center gap-1.5">
           {record.supplierStatuses.map((supplier) => (
             <SupplierStatusTag
               key={supplier.id}
@@ -127,100 +248,204 @@ export function InquiryQuoteStatus({ record }: InquiryQuoteStatusProps) {
               onDelete={handleRemoveSupplier}
             />
           ))}
+          <button
+            type="button"
+            onClick={openAddSupplier}
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-500 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800"
+          >
+            <Plus className="h-3 w-3" />
+            供应商
+          </button>
+        </div>
+      </div>
 
-          {/* 分隔符 */}
-          <span className="select-none text-xs text-gray-400">/</span>
+      {/* 供应商编辑面板（div，非 form，避免嵌套 form 触发外层提交） */}
+      {isSupplierForm && (
+        <div className="ml-14 flex flex-wrap items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800/60">
+          <input
+            autoFocus
+            value={supplierForm.supplierShortName}
+            onChange={(e) => setSupplierForm((p) => ({ ...p, supplierShortName: e.target.value }))}
+            onKeyDown={onKeySupplier}
+            className={`${INPUT_CLS} w-20`}
+            placeholder="供应商"
+          />
+          <input
+            value={supplierForm.quoteDate}
+            disabled={supplierForm.status === 'pending'}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSupplierForm((p) => ({
+                ...p,
+                quoteDate: val,
+                status: val && p.status === 'pending' ? 'quoted' : p.status,
+              }));
+            }}
+            onKeyDown={onKeySupplier}
+            className={`${INPUT_CLS} w-16 disabled:cursor-not-allowed disabled:opacity-50`}
+            placeholder="6.20"
+          />
+          <select
+            value={supplierForm.status}
+            onChange={(e) => {
+              const next = e.target.value as SupplierStatus;
+              setSupplierForm((p) => ({
+                ...p,
+                status: next,
+                quoteDate: next === 'pending' ? '' : p.quoteDate || stripDateBrackets(formatShortDate(new Date())),
+              }));
+            }}
+            className={`${INPUT_CLS} px-1.5`}
+          >
+            {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={submitSupplier}
+            className="inline-flex h-7 items-center gap-1 rounded bg-blue-600 px-2 text-xs font-medium text-white hover:bg-blue-700"
+          >
+            <Save className="h-3 w-3" />确认
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveForm(null)}
+            className="inline-flex h-7 items-center rounded px-1.5 text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
 
+      {/* ── 已报价行 ── */}
+      <div className="flex items-start gap-2">
+        <span className={ROW_LABEL}>已报价</span>
+        <div className="flex flex-wrap items-center gap-1.5">
           <QuotedStatusList
-            statuses={record.quotedStatuses}
-            supplierNames={record.supplierStatuses
-          .filter((s) => s.status === 'quoted' && !!s.quoteDate)
-          .map((s) => s.supplierShortName)}
+            statuses={regularStatuses}
             colorClass={mainColorClass}
-            onAdd={(status) => createQuotedStatus(record.id, status)}
-            onUpdate={(statusId, patch) => updateQuotedStatus(record.id, statusId, patch)}
-            onRemove={(statusId) => removeQuotedStatus(record.id, statusId)}
+            onEditRequest={openEditQuoted}
+            onAddRequest={openAddQuoted}
+            onRemove={handleRemoveQuoted}
           />
         </div>
+      </div>
 
-        {isSupplierFormOpen && (
-          <form
-            onSubmit={handleSupplierSubmit}
-            className="flex flex-wrap items-end gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-gray-700 dark:bg-gray-800/50"
+      {/* 已报价编辑面板（div，非 form） */}
+      {isQuotedForm && (
+        <div className="ml-14 flex flex-wrap items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800/60">
+          <input
+            autoFocus
+            value={quotedForm.quoteDate}
+            onChange={(e) => setQuotedForm((p) => ({ ...p, quoteDate: e.target.value }))}
+            onKeyDown={onKeyQuoted}
+            className={`${INPUT_CLS} w-16`}
+            placeholder="6.20"
+          />
+          {quotedSupplierNames.length > 0 ? (
+            <select
+              value={quotedForm.supplierShortName}
+              onChange={(e) => setQuotedForm((p) => ({ ...p, supplierShortName: e.target.value }))}
+              className={`${INPUT_CLS} px-1.5`}
+            >
+              {quotedSupplierNames.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              value={quotedForm.supplierShortName}
+              onChange={(e) => setQuotedForm((p) => ({ ...p, supplierShortName: e.target.value }))}
+              onKeyDown={onKeyQuoted}
+              className={`${INPUT_CLS} w-20`}
+              placeholder="供应商"
+            />
+          )}
+          <input
+            value={quotedForm.version}
+            onChange={(e) => setQuotedForm((p) => ({ ...p, version: e.target.value }))}
+            onKeyDown={onKeyQuoted}
+            className={`${INPUT_CLS} w-10`}
+            placeholder="版本"
+          />
+          <button
+            type="button"
+            onClick={submitQuoted}
+            className="inline-flex h-7 items-center gap-1 rounded bg-blue-600 px-2 text-xs font-medium text-white hover:bg-blue-700"
           >
-            <label className="space-y-1">
-              <span className="block text-[11px] text-gray-500 dark:text-gray-400">供应商</span>
-              <input
-                value={supplierForm.supplierShortName}
-                onChange={(event) =>
-                  setSupplierForm((prev) => ({
-                    ...prev,
-                    supplierShortName: event.target.value,
-                  }))
+            <Save className="h-3 w-3" />确认
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveForm(null)}
+            className="inline-flex h-7 items-center rounded px-1.5 text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
+      {/* ── 已补充信息 checkbox 行（仅当有供应商标记"需补资料"时显示） ── */}
+      {hasNeedInfoSupplier && (
+        <div className="flex items-center gap-2 border-t border-gray-100 pt-2 dark:border-gray-800">
+          <input
+            type="checkbox"
+            id={`supplemented-${record.id}`}
+            checked={!!supplementedStatus}
+            onChange={(e) => toggleSupplemented(e.target.checked)}
+            className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 accent-yellow-500 dark:border-gray-600"
+          />
+          <label
+            htmlFor={`supplemented-${record.id}`}
+            className="cursor-pointer select-none text-xs text-gray-500 dark:text-gray-400"
+          >
+            已补充信息
+          </label>
+          {supplementedStatus && (
+            <input
+              value={stripDateBrackets(supplementedStatus.quoteDate)}
+              onChange={(e) => updateSupplementedDate(e.target.value)}
+              onBlur={(e) => updateSupplementedDate(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  updateSupplementedDate((e.target as HTMLInputElement).value);
                 }
-                className="h-8 w-24 rounded-md border border-gray-200 bg-white px-2 text-xs text-gray-900 outline-none focus:border-blue-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                placeholder="ABC"
-                required
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="block text-[11px] text-gray-500 dark:text-gray-400">日期</span>
-              <input
-                value={supplierForm.quoteDate}
-                disabled={supplierForm.status === 'pending'}
-                onChange={(event) => {
-                  const val = event.target.value;
-                  setSupplierForm((prev) => ({
-                    ...prev,
-                    quoteDate: val,
-                    // 填入日期且当前仍是"未报价"→ 自动切为"已报价"
-                    status: val && prev.status === 'pending' ? 'quoted' : prev.status,
-                  }));
-                }}
-                className="h-8 w-20 rounded-md border border-gray-200 bg-white px-2 text-xs text-gray-900 outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:disabled:bg-gray-800"
-                placeholder="[6.20]"
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="block text-[11px] text-gray-500 dark:text-gray-400">状态</span>
-              <select
-                value={supplierForm.status}
-                onChange={(event) => {
-                  const next = event.target.value as SupplierStatus;
-                  const today = formatShortDate(new Date());
-                  setSupplierForm((prev) => ({
-                    ...prev,
-                    status: next,
-                    quoteDate:
-                      next === 'pending'
-                        ? ''                              // 未报价 → 清空日期
-                        : prev.quoteDate || today,        // 其余三种 → 无日期时默认今天
-                  }));
-                }}
-                className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs text-gray-900 outline-none focus:border-blue-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-              >
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}（{option.hint}）
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="submit"
-              className="inline-flex h-8 items-center gap-1 rounded-md bg-blue-600 px-2.5 text-xs font-medium text-white hover:bg-blue-700"
-            >
-              <Save className="h-3 w-3" />
-              保存
-            </button>
-            <button
-              type="button"
-              onClick={closeSupplierForm}
-              className="inline-flex h-8 items-center rounded-md px-2 text-xs font-medium text-gray-500 hover:bg-white dark:text-gray-400 dark:hover:bg-gray-900"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </form>
+              }}
+              className={`${INPUT_CLS} w-16`}
+              placeholder="6.20"
+            />
+          )}
+        </div>
+      )}
+
+      {/* ── 无法报价 checkbox 行 ── */}
+      <div className="flex items-center gap-2 border-t border-gray-100 pt-2 dark:border-gray-800">
+        <input
+          type="checkbox"
+          id={`unavail-${record.id}`}
+          checked={!!unavailableStatus}
+          onChange={(e) => toggleUnavailable(e.target.checked)}
+          className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 accent-gray-500 dark:border-gray-600"
+        />
+        <label
+          htmlFor={`unavail-${record.id}`}
+          className="cursor-pointer select-none text-xs text-gray-500 dark:text-gray-400"
+        >
+          已回复客户无法报价
+        </label>
+        {unavailableStatus && (
+          <input
+            value={stripDateBrackets(unavailableStatus.quoteDate)}
+            onChange={(e) => updateUnavailableDate(e.target.value)}
+            onBlur={(e) => updateUnavailableDate(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); updateUnavailableDate((e.target as HTMLInputElement).value); }
+            }}
+            className={`${INPUT_CLS} w-16`}
+            placeholder="6.20"
+          />
         )}
       </div>
     </div>

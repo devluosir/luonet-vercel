@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { AppLayout, type ActionButton } from '@/components/layout';
 import { useAppUser } from '@/hooks/useAppUser';
-import type { InquiryBasicInput, InquiryRecord } from '../types';
+import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '../types';
 import { useInquiryActions } from '../hooks/useInquiryActions';
 import { useInquiryStore } from '../state/inquiry.store';
 import { InquiryFormModal } from '../components/InquiryFormModal';
@@ -21,10 +21,6 @@ export function InquiryPage() {
     useInquiryStore.getState().init();
   }, []);
 
-  const sortedRecords = useMemo(
-    () => [...records].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    [records]
-  );
 
   const openCreateModal = () => {
     setEditingRecord(null);
@@ -41,11 +37,15 @@ export function InquiryPage() {
     setEditingRecord(null);
   };
 
-  const handleSubmit = (values: InquiryBasicInput) => {
+  const handleSubmit = (
+    values: InquiryBasicInput,
+    suppliers: SupplierQuoteStatus[],
+    quoted: CustomerQuoteStatus[]
+  ) => {
     if (editingRecord) {
       updateRecordBasic(editingRecord.id, values);
     } else {
-      createRecord(values);
+      createRecord(values, suppliers, quoted);
     }
     closeModal();
   };
@@ -98,7 +98,7 @@ export function InquiryPage() {
         </div>
 
         <InquiryTable
-          records={sortedRecords}
+          records={records}
           onEditRecord={openEditModal}
           onDeleteRecord={handleDeleteRecord}
         />

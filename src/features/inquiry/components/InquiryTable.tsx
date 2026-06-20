@@ -1,5 +1,7 @@
 'use client';
 
+import { useMemo, useState } from 'react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import type { InquiryRecord } from '../types';
 import { InquiryRow } from './InquiryRow';
 
@@ -10,12 +12,24 @@ interface InquiryTableProps {
 }
 
 export function InquiryTable({ records, onEditRecord, onDeleteRecord }: InquiryTableProps) {
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const sorted = useMemo(
+    () =>
+      [...records].sort((a, b) =>
+        sortDir === 'desc'
+          ? b.inquiryNo.localeCompare(a.inquiryNo)
+          : a.inquiryNo.localeCompare(b.inquiryNo)
+      ),
+    [records, sortDir]
+  );
+
   if (records.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-gray-700 dark:bg-[#2C2C2E]">
         <h2 className="text-base font-semibold text-gray-900 dark:text-white">暂无询报价记录</h2>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          点击“新增询价”后，会在这里登记供应商询价和客户报价状态。
+          点击"新增询价"后，会在这里登记供应商询价和客户报价状态。
         </p>
       </div>
     );
@@ -31,7 +45,19 @@ export function InquiryTable({ records, onEditRecord, onDeleteRecord }: InquiryT
                 日期
               </th>
               <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                询价编号
+                <button
+                  type="button"
+                  onClick={() => setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
+                  className="inline-flex items-center gap-1 rounded hover:text-gray-700 dark:hover:text-gray-200"
+                  title={sortDir === 'desc' ? '当前：最新在前，点击切换' : '当前：最早在前，点击切换'}
+                >
+                  询价编号
+                  {sortDir === 'desc' ? (
+                    <ArrowDown className="h-3 w-3" />
+                  ) : (
+                    <ArrowUp className="h-3 w-3" />
+                  )}
+                </button>
               </th>
               <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 询价人
@@ -51,7 +77,7 @@ export function InquiryTable({ records, onEditRecord, onDeleteRecord }: InquiryT
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {records.map((record) => (
+            {sorted.map((record) => (
               <InquiryRow
                 key={record.id}
                 record={record}

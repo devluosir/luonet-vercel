@@ -139,6 +139,90 @@ GitHub Actions CI
 
 ---
 
+## 询报价登记功能（2026-06-20 新增）
+
+### 功能概述
+
+新增"询报价登记表"模块，用于登记向供应商询价、跟踪报价状态、记录最终报价给客户的全流程。
+
+### 文件结构
+
+```
+src/
+├── app/inquiry/page.tsx
+└── features/inquiry/
+    ├── app/InquiryPage.tsx
+    ├── components/
+    │   ├── InquiryTable.tsx
+    │   ├── InquiryRow.tsx
+    │   ├── InquiryQuoteStatus.tsx
+    │   ├── SupplierStatusTag.tsx
+    │   ├── InquiryFormModal.tsx
+    │   └── QuotedStatusList.tsx
+    ├── hooks/useInquiryActions.ts
+    ├── services/inquiry.service.ts
+    ├── state/inquiry.store.ts
+    ├── types/index.ts
+    └── utils/inquiryUtils.ts
+```
+
+### 核心逻辑
+
+**供应商状态颜色规则（`getSupplierStatusClass`，switch 优先于日期判断）：**
+
+| 状态 | 显示 | 颜色 |
+|------|------|------|
+| `pending`（默认） | 名称，无日期 | `text-pink-500` 粉红 |
+| `quoted` | 名称(日期) | `text-blue-600` 蓝色 |
+| `need_info` | 名称(日期) | `text-yellow-500` 黄色 |
+| `unavailable` | 名称(日期) | `text-gray-400` 灰色 |
+
+**日期显示规则：**
+- 存储格式：`[m.D]`，如 `[6.20]`（`formatShortDate` 生成）
+- 日期列 / 已报价区域：去掉 `[]` → `6.20`（`stripDateBrackets`）
+- 供应商标签日期：`[]` 改 `()` → `飞罗(6.20)`（`roundDateBrackets`）
+
+**状态 / 日期联动规则：**
+- `pending` → 日期输入 disabled，切换时清空日期
+- 非 pending 且日期为空 → 自动填入今天
+- 在 pending 状态下填入日期 → 自动切换为 `quoted`
+
+**询价编号生成：**
+- 格式 `C[YYmmDD][后缀]`，如 `C260620F`
+- 后缀序列：`F,G,H,J,K…Z,ZA,ZB…`（跳过 I、O）
+
+**默认供应商：** 新记录自动创建 飞罗、昆同，均附带 `id`（`createId()`）防止编辑时重复
+
+**已报价客户栏：**
+- 仅显示 status === `'quoted'` 且有日期的供应商可选
+- 版本从 `a,b,c…` 自动递增（`getNextQuoteVersion`）
+
+### UI 交互
+
+- `<tr class="group">` 整行 hover 检测
+- 编辑按钮（✏️）：询价编号后面，hover 时淡入（`opacity-0 group-hover:opacity-100`）
+- 供应商区互动按钮（`+ 供应商`、标签 × 删除、已报价 🗑 删除、`+ 已报价`）：同样 hover 淡入
+- 删除供应商 / 已报价记录：弹 `window.confirm` 确认
+- 供应商 + `/` + 已报价 同一 flex 行显示，`QuotedStatusList` 返回 `<Fragment>` 参与父级 flex
+
+### Tailwind 配置修复
+
+`tailwind.config.ts` 的 `content` 数组需包含：
+
+```ts
+"./src/features/**/*.{js,ts,jsx,tsx,mdx}",
+"./src/hooks/**/*.{js,ts,jsx,tsx,mdx}",
+"./src/utils/**/*.{js,ts,jsx,tsx,mdx}",
+```
+
+动态类名 `text-pink-500`、`text-yellow-500` 加入 `safelist`。
+
+### 数据存储
+
+localStorage key：`inquiry_records`，通过 `inquiryService` + Zustand store 管理（与其他 feature 一致）。**未接入 D1 同步**，仅本地存储。
+
+---
+
 ## 后续方案
 
 ### 选项 A：新功能（优先推荐）
@@ -179,4 +263,4 @@ Codex 执行任务前会自动读 `AGENTS.md`，所有任务规格在 `CODEX_TAS
 
 ---
 
-*最后更新：2026-06-19*
+*最后更新：2026-06-20*

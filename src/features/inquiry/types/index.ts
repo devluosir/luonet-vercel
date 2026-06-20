@@ -8,11 +8,15 @@ export interface SupplierQuoteStatus {
   status?: SupplierStatus;
 }
 
+/** 'quoted'=已报价（默认）；'unavailable'=已回复客户无法报价；'supplemented'=已补充信息给供应商 */
+export type CustomerQuoteType = 'quoted' | 'unavailable' | 'supplemented';
+
 export interface CustomerQuoteStatus {
   id: string;
   quoteDate: string;
   supplierShortName: string;
   version: string;
+  type?: CustomerQuoteType;
 }
 
 export interface InquiryRecord {
@@ -22,6 +26,7 @@ export interface InquiryRecord {
   inquirer: string;
   customerNo: string;
   description: string;
+  orderNo?: string;
   supplierStatuses: SupplierQuoteStatus[];
   quotedStatuses: CustomerQuoteStatus[];
   createdAt: string;
@@ -30,7 +35,7 @@ export interface InquiryRecord {
 
 export type InquiryBasicInput = Pick<
   InquiryRecord,
-  'inquiryDate' | 'inquiryNo' | 'inquirer' | 'customerNo' | 'description'
+  'inquiryDate' | 'inquiryNo' | 'inquirer' | 'customerNo' | 'description' | 'orderNo'
 >;
 
 export type InquiryRecordDraft = Omit<InquiryRecord, 'id' | 'createdAt' | 'updatedAt'>;

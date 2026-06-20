@@ -17,11 +17,11 @@ export function SupplierStatusTag({ supplier, onEdit, onDelete }: Props) {
     : supplier.supplierShortName;
 
   return (
-    <span className="inline-flex items-center rounded-full bg-gray-50 ring-1 ring-gray-200 dark:bg-gray-800/60 dark:ring-gray-700">
+    <span className="inline-flex items-center rounded-full bg-gray-50 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
       <button
         type="button"
         onClick={() => onEdit(supplier.id)}
-        className={`max-w-[180px] truncate px-2.5 py-1 text-xs font-medium ${colorClass}`}
+        className={`max-w-[180px] truncate rounded-l-full px-2.5 py-1 text-xs font-medium hover:opacity-70 ${colorClass}`}
         title="编辑供应商状态"
       >
         {label}
@@ -29,9 +29,9 @@ export function SupplierStatusTag({ supplier, onEdit, onDelete }: Props) {
       <button
         type="button"
         onClick={() => onDelete(supplier.id)}
-        className="border-l border-gray-200 px-1.5 py-1 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500 dark:border-gray-700"
+        className="rounded-r-full border-l border-gray-200 px-1.5 py-1 text-gray-400 hover:text-red-500 dark:border-gray-700"
         aria-label={`删除供应商 ${supplier.supplierShortName}`}
-        title="删除供应商"
+        title="删除"
       >
         <X className="h-3 w-3" />
       </button>

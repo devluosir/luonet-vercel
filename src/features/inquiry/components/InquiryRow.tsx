@@ -1,9 +1,9 @@
 'use client';
 
-import { Edit2, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import type { InquiryRecord } from '../types';
 import { getRecordColorState, stripDateBrackets } from '../utils/inquiryUtils';
-import { InquiryQuoteStatus } from './InquiryQuoteStatus';
+import { InquiryQuoteStatusDisplay } from './InquiryQuoteStatusDisplay';
 
 interface InquiryRowProps {
   record: InquiryRecord;
@@ -16,45 +16,44 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
   const mainTextClass = `${mainColorClass} font-medium`;
 
   return (
-    <tr className="group border-b border-gray-100 align-top last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/40">
-      <td className="whitespace-nowrap px-3 py-4 text-sm">
+    <tr
+      className="group cursor-pointer border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/40"
+      onClick={() => onEdit(record)}
+    >
+      <td className="whitespace-nowrap px-3 py-3 text-sm">
         <span className={mainTextClass}>{stripDateBrackets(record.inquiryDate)}</span>
       </td>
-      <td className="whitespace-nowrap px-3 py-4 text-sm">
-        <div className="inline-flex items-center gap-1">
-          <span className={mainTextClass}>{record.inquiryNo}</span>
-          <button
-            type="button"
-            onClick={() => onEdit(record)}
-            className="rounded p-1 text-gray-400 opacity-0 hover:text-blue-600 group-hover:opacity-100 dark:hover:text-blue-400"
-            aria-label={`编辑 ${record.inquiryNo}`}
-            title="编辑基本信息"
-          >
-            <Edit2 className="h-3.5 w-3.5" />
-          </button>
+      <td className="px-3 py-3 text-sm">
+        <div className="flex flex-col gap-1">
+          <span className={`whitespace-nowrap ${mainTextClass}`}>{record.inquiryNo}</span>
+          {record.orderNo && (
+            <span className="inline-flex w-fit items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-200 dark:bg-green-950/40 dark:text-green-400 dark:ring-green-800">
+              {record.orderNo}
+            </span>
+          )}
         </div>
       </td>
-      <td className="whitespace-nowrap px-3 py-4 text-sm">
+      <td className="whitespace-nowrap px-3 py-3 text-sm">
         <span className={mainTextClass}>{record.inquirer}</span>
       </td>
-      <td className="whitespace-nowrap px-3 py-4 text-sm">
+      <td className="whitespace-nowrap px-3 py-3 text-sm">
         <span className={mainTextClass}>{record.customerNo}</span>
       </td>
-      <td className="min-w-[220px] px-3 py-4 text-sm">
-        <p className={`max-w-[320px] whitespace-pre-wrap break-words ${mainTextClass}`}>
+      <td className="min-w-[180px] px-3 py-3 text-sm">
+        <p className={`max-w-[280px] whitespace-pre-wrap break-words ${mainTextClass}`}>
           {record.description}
         </p>
       </td>
-      <td className="min-w-[360px] px-3 py-4">
-        <InquiryQuoteStatus record={record} />
+      <td className="min-w-[260px] px-3 py-3">
+        <InquiryQuoteStatusDisplay record={record} />
       </td>
-      <td className="whitespace-nowrap px-3 py-4 text-right">
+      <td className="whitespace-nowrap px-3 py-3 text-right">
         <button
           type="button"
-          onClick={() => onDelete(record.id)}
-          className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+          onClick={(e) => { e.stopPropagation(); onDelete(record.id); }}
+          className="rounded-md p-1.5 text-gray-300 opacity-0 hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 dark:hover:bg-red-950/30 dark:hover:text-red-400"
           aria-label={`删除 ${record.inquiryNo}`}
-          title="删除整行"
+          title="删除"
         >
           <Trash2 className="h-4 w-4" />
         </button>
