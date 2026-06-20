@@ -48,6 +48,7 @@ export default withAuth(
       '/packing',
       '/invoice',
       '/purchase',
+      '/inquiry',
       '/history',
       '/customer',
       '/mail',
@@ -127,4 +128,4 @@ export const config = {
      */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
-}; 
+};

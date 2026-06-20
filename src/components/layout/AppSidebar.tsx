@@ -11,6 +11,7 @@ import {
   Mail,
   Package,
   Receipt,
+  Search,
   ShoppingCart,
   Users,
   X,
@@ -76,6 +77,13 @@ export const NAV_ITEMS: SidebarItem[] = [
     label: '采购订单',
     path: '/purchase',
     icon: ShoppingCart,
+    permissionKey: 'canCreatePurchase',
+  },
+  {
+    id: 'inquiry',
+    label: '询报价登记',
+    path: '/inquiry',
+    icon: Search,
     permissionKey: 'canCreatePurchase',
   },
   {

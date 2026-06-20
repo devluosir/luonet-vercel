@@ -6,6 +6,9 @@ export default {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/features/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/hooks/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/utils/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
@@ -151,6 +154,9 @@ export default {
     'text-indigo-600', 'dark:text-indigo-500',
     'text-pink-600', 'dark:text-pink-500',
     'text-fuchsia-600', 'dark:text-fuchsia-500',
+
+    // 📝 询报价登记颜色（粉红=待报价、蓝=已报价、灰=无法报价、黄=需补资料）
+    'text-pink-500', 'text-yellow-500',
 
     // 🎨 筛选器按钮颜色 - 动态生成
     {
