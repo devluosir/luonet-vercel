@@ -1,11 +1,16 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { CustomerFormData } from '../types';
+import { type FormEvent } from 'react';
+import { Contact, CustomerFormData } from '../types';
+
+type TextFieldId = Exclude<keyof CustomerFormData, 'contacts'>;
 
 interface CustomerFormProps {
   formData: CustomerFormData;
-  onInputChange: (field: keyof CustomerFormData, value: string) => void;
+  onInputChange: (
+    field: keyof CustomerFormData,
+    value: CustomerFormData[keyof CustomerFormData]
+  ) => void;
   onSubmit: (e: FormEvent) => void;
   onCancel: () => void;
   isEditing: boolean;
@@ -13,10 +18,10 @@ interface CustomerFormProps {
 }
 
 interface FormFieldProps {
-  id: keyof CustomerFormData;
+  id: TextFieldId;
   label: string;
   value: string;
-  onInputChange: (field: keyof CustomerFormData, value: string) => void;
+  onInputChange: (field: TextFieldId, value: string) => void;
   type?: string;
   placeholder?: string;
   required?: boolean;
@@ -31,13 +36,11 @@ const FIELD_CLASS =
 
 const SECTION_CLASS = 'rounded-lg border border-gray-200 p-4 dark:border-gray-700';
 
-function hasContact2Value(formData: CustomerFormData): boolean {
-  return Boolean(
-    formData.contact2Name ||
-      formData.contact2ShortName ||
-      formData.contact2Phone ||
-      formData.contact2Email
-  );
+function createContactId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `contact_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
 function FormField({
@@ -79,9 +82,27 @@ export function CustomerForm({
   entityType
 }: CustomerFormProps) {
   const isCustomer = entityType === 'customers';
-  const [isContact2Open, setIsContact2Open] = useState(
-    isCustomer && isEditing && hasContact2Value(formData)
-  );
+  const contacts = formData.contacts ?? [];
+
+  const updateContacts = (nextContacts: Contact[]) => {
+    onInputChange('contacts', nextContacts);
+  };
+
+  const addContact = () => {
+    updateContacts([...contacts, { id: createContactId(), name: '' }]);
+  };
+
+  const removeContact = (contactId: string) => {
+    updateContacts(contacts.filter((contact) => contact.id !== contactId));
+  };
+
+  const updateContact = (contactId: string, field: keyof Omit<Contact, 'id'>, value: string) => {
+    updateContacts(
+      contacts.map((contact) =>
+        contact.id === contactId ? { ...contact, [field]: value } : contact
+      )
+    );
+  };
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -153,49 +174,106 @@ export function CustomerForm({
           </fieldset>
 
           <fieldset className={SECTION_CLASS}>
-            <button
-              type="button"
-              onClick={() => setIsContact2Open((open) => !open)}
-              aria-expanded={isContact2Open}
-              aria-controls="contact2-fields"
-              className="flex w-full items-center justify-between text-left text-sm font-semibold text-gray-800 dark:text-gray-100"
-            >
-              <span>联系人2（可选）</span>
-              <span aria-hidden="true" className="text-gray-500 dark:text-gray-400">
-                {isContact2Open ? '▼' : '▶'}
-              </span>
-            </button>
-            {isContact2Open && (
-              <div id="contact2-fields" className="mt-4 grid gap-4 md:grid-cols-2">
-                <FormField
-                  id="contact2Name"
-                  label="姓名"
-                  value={formData.contact2Name ?? ''}
-                  onInputChange={onInputChange}
-                />
-                <FormField
-                  id="contact2ShortName"
-                  label="简称"
-                  value={formData.contact2ShortName ?? ''}
-                  onInputChange={onInputChange}
-                  placeholder="如：Mary"
-                />
-                <FormField
-                  id="contact2Email"
-                  label="邮箱"
-                  type="email"
-                  value={formData.contact2Email ?? ''}
-                  onInputChange={onInputChange}
-                />
-                <FormField
-                  id="contact2Phone"
-                  label="电话"
-                  type="tel"
-                  value={formData.contact2Phone ?? ''}
-                  onInputChange={onInputChange}
-                />
-              </div>
-            )}
+            <legend className="px-1 text-sm font-semibold text-gray-800 dark:text-gray-100">
+              附加联系人
+            </legend>
+            <div className="mt-3 space-y-3">
+              {contacts.map((contact, index) => (
+                <div
+                  key={contact.id}
+                  className="space-y-3 rounded-md border border-gray-200 p-3 dark:border-gray-600"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                      联系人{index + 2}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeContact(contact.id)}
+                      className="text-xs text-red-400 transition-colors hover:text-red-600"
+                    >
+                      删除
+                    </button>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label
+                        htmlFor={`contact-name-${contact.id}`}
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        姓名
+                      </label>
+                      <input
+                        type="text"
+                        id={`contact-name-${contact.id}`}
+                        value={contact.name}
+                        onChange={(e) => updateContact(contact.id, 'name', e.target.value)}
+                        className={FIELD_CLASS}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={`contact-short-${contact.id}`}
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        简称
+                      </label>
+                      <input
+                        type="text"
+                        id={`contact-short-${contact.id}`}
+                        value={contact.shortName ?? ''}
+                        onChange={(e) => updateContact(contact.id, 'shortName', e.target.value)}
+                        className={FIELD_CLASS}
+                        placeholder="如：Mary"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label
+                        htmlFor={`contact-email-${contact.id}`}
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        邮箱
+                      </label>
+                      <input
+                        type="email"
+                        id={`contact-email-${contact.id}`}
+                        value={contact.email ?? ''}
+                        onChange={(e) => updateContact(contact.id, 'email', e.target.value)}
+                        className={FIELD_CLASS}
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor={`contact-phone-${contact.id}`}
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        电话
+                      </label>
+                      <input
+                        type="tel"
+                        id={`contact-phone-${contact.id}`}
+                        value={contact.phone ?? ''}
+                        onChange={(e) => updateContact(contact.id, 'phone', e.target.value)}
+                        className={FIELD_CLASS}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addContact}
+                className="w-full rounded-md border border-dashed border-blue-300 py-2 text-sm text-blue-600 transition-colors hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/20"
+              >
+                + 添加联系人
+              </button>
+            </div>
           </fieldset>
         </>
       ) : (

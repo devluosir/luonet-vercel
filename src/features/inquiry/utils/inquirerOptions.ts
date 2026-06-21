@@ -18,7 +18,13 @@ export function getInquirerOptions(): string[] {
     if (c.contact1ShortName) {
       options.push(`${c.companyShortName}-${c.contact1ShortName}`);
     }
-    if (c.contact2ShortName) {
+    if (Array.isArray(c.contacts)) {
+      for (const contact of c.contacts) {
+        if (contact.shortName) {
+          options.push(`${c.companyShortName}-${contact.shortName}`);
+        }
+      }
+    } else if (c.contact2ShortName) {
       options.push(`${c.companyShortName}-${c.contact2ShortName}`);
     }
   }

@@ -140,10 +140,7 @@ export function saveCustomer(customer: Customer): void {
         company: customer.company,
         companyShortName: customer.companyShortName,
         contact1ShortName: customer.contact1ShortName,
-        contact2Name: customer.contact2Name,
-        contact2ShortName: customer.contact2ShortName,
-        contact2Phone: customer.contact2Phone,
-        contact2Email: customer.contact2Email,
+        contacts: customer.contacts ?? [],
       },
     });
   } catch (error) {

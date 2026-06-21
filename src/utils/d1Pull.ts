@@ -4,6 +4,8 @@
  * 仅在用户已登录时通过 /api/documents 和 /api/customers 代理调用。
  */
 
+import type { Contact } from '@/features/customer/types';
+
 type D1Doc = {
   id: string;
   type: string;
@@ -35,6 +37,19 @@ type LocalStorageItem = {
   updatedAt?: string;
   updated_at?: string;
 };
+
+type LocalCustomerItem = LocalStorageItem & {
+  contacts?: Contact[];
+  contact2Name?: unknown;
+  contact2ShortName?: unknown;
+  contact2Phone?: unknown;
+  contact2Email?: unknown;
+  [key: string]: unknown;
+};
+
+function toOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value ? value : undefined;
+}
 
 async function fetchAll<T>(
   url: string,
@@ -151,7 +166,7 @@ function docToPurchaseHistory(doc: D1Doc) {
 }
 
 function d1CustomerToLocal(c: D1Customer, _type: 'customer' | 'supplier' | 'consignee') {
-  return {
+  const result: LocalCustomerItem = {
     id: c.id,
     name: c.name,
     email: c.email || '',
@@ -161,6 +176,18 @@ function d1CustomerToLocal(c: D1Customer, _type: 'customer' | 'supplier' | 'cons
     createdAt: c.created_at,
     updatedAt: c.updated_at,
   };
+
+  if (!Array.isArray(result.contacts) && result.contact2Name) {
+    result.contacts = [{
+      id: `legacy-contact2-${c.id}`,
+      name: String(result.contact2Name),
+      shortName: toOptionalString(result.contact2ShortName),
+      phone: toOptionalString(result.contact2Phone),
+      email: toOptionalString(result.contact2Email),
+    }];
+  }
+
+  return result;
 }
 
 /**

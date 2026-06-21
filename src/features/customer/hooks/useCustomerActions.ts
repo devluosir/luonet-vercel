@@ -3,6 +3,18 @@ import { customerService } from '../services/customerService';
 import { supplierService } from '../services/supplierService';
 import { consigneeService } from '../services/consigneeService';
 
+function normalizeContacts(customerData: CustomerFormData) {
+  return customerData.contacts
+    .map((contact) => ({
+      ...contact,
+      name: contact.name.trim(),
+      shortName: contact.shortName?.trim() || undefined,
+      email: contact.email?.trim() || undefined,
+      phone: contact.phone?.trim() || undefined,
+    }))
+    .filter((contact) => contact.name);
+}
+
 export function useCustomerActions() {
   // 保存客户
   const saveCustomer = async (customerData: CustomerFormData, editingCustomer: Customer | null) => {
@@ -23,10 +35,7 @@ export function useCustomerActions() {
         company: customerData.company,
         companyShortName: customerData.companyShortName,
         contact1ShortName: customerData.contact1ShortName,
-        contact2Name: customerData.contact2Name,
-        contact2ShortName: customerData.contact2ShortName,
-        contact2Phone: customerData.contact2Phone,
-        contact2Email: customerData.contact2Email,
+        contacts: normalizeContacts(customerData),
         createdAt: editingCustomer ? editingCustomer.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

@@ -1,3 +1,11 @@
+export interface Contact {
+  id: string;
+  name: string;
+  shortName?: string;
+  email?: string;
+  phone?: string;
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -7,6 +15,7 @@ export interface Customer {
   company: string;
   companyShortName?: string;
   contact1ShortName?: string;
+  contacts?: Contact[];
   contact2Name?: string;
   contact2ShortName?: string;
   contact2Phone?: string;
@@ -45,10 +54,7 @@ export interface CustomerFormData {
   company: string;
   companyShortName?: string;
   contact1ShortName?: string;
-  contact2Name?: string;
-  contact2ShortName?: string;
-  contact2Phone?: string;
-  contact2Email?: string;
+  contacts: Contact[];
 }
 
 export type TabType = 'customers' | 'suppliers' | 'consignees';

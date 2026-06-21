@@ -5,7 +5,10 @@ interface CustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
   formData: CustomerFormData;
-  onInputChange: (field: keyof CustomerFormData, value: string) => void;
+  onInputChange: (
+    field: keyof CustomerFormData,
+    value: CustomerFormData[keyof CustomerFormData]
+  ) => void;
   onSubmit: (e: React.FormEvent) => void;
   isEditing: boolean;
   activeTab: TabType;

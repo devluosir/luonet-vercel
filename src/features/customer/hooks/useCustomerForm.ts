@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CustomerFormData, Customer, Supplier, Consignee } from '../types';
+import { Contact, CustomerFormData, Customer, Supplier, Consignee } from '../types';
 
 const EMPTY_FORM_DATA: CustomerFormData = {
   name: '',
@@ -9,11 +9,34 @@ const EMPTY_FORM_DATA: CustomerFormData = {
   company: '',
   companyShortName: '',
   contact1ShortName: '',
-  contact2Name: '',
-  contact2ShortName: '',
-  contact2Phone: '',
-  contact2Email: '',
+  contacts: [],
 };
+
+function hasLegacyContact2(customer: Partial<Customer>): boolean {
+  return Boolean(
+    customer.contact2Name ||
+      customer.contact2ShortName ||
+      customer.contact2Phone ||
+      customer.contact2Email
+  );
+}
+
+function migrateContacts(item: Customer | Supplier | Consignee): Contact[] {
+  const customerFields = item as Partial<Customer>;
+  if (Array.isArray(customerFields.contacts)) {
+    return customerFields.contacts;
+  }
+  if (!hasLegacyContact2(customerFields)) {
+    return [];
+  }
+  return [{
+    id: `legacy-contact2-${item.id}`,
+    name: customerFields.contact2Name ?? '',
+    shortName: customerFields.contact2ShortName ?? '',
+    phone: customerFields.contact2Phone ?? '',
+    email: customerFields.contact2Email ?? '',
+  }];
+}
 
 export function useCustomerForm() {
   const [formData, setFormData] = useState<CustomerFormData>(EMPTY_FORM_DATA);
@@ -34,15 +57,15 @@ export function useCustomerForm() {
       company: item.company,
       companyShortName: customerFields.companyShortName ?? '',
       contact1ShortName: customerFields.contact1ShortName ?? '',
-      contact2Name: customerFields.contact2Name ?? '',
-      contact2ShortName: customerFields.contact2ShortName ?? '',
-      contact2Phone: customerFields.contact2Phone ?? '',
-      contact2Email: customerFields.contact2Email ?? '',
+      contacts: migrateContacts(item),
     });
   };
 
   // 处理输入变化
-  const handleInputChange = (field: keyof CustomerFormData, value: string) => {
+  const handleInputChange = (
+    field: keyof CustomerFormData,
+    value: CustomerFormData[keyof CustomerFormData]
+  ) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
