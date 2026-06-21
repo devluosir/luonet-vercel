@@ -31,6 +31,8 @@ export interface InquiryRecord {
   quotedStatuses: CustomerQuoteStatus[];
   createdAt: string;
   updatedAt: string;
+  /** D1 软删除标记；'deleted' 表示已被删除，不应在 UI 中显示 */
+  status?: 'active' | 'deleted';
 }
 
 export type InquiryBasicInput = Pick<

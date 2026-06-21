@@ -100,9 +100,9 @@ export const inquiryService = {
   },
 
   mergeFromD1(d1Records: InquiryRecord[]): InquiryRecord[] {
-    // 清理 7 天前的删除记录，避免 localStorage 无限增长
+    // 清理 30 天前的删除记录，避免 localStorage 无限增长
     const rawDeleted = getLocalStorageJSON<DeletedMap>(DELETED_KEY, {});
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const deletedIds: DeletedMap = Object.fromEntries(
       Object.entries(rawDeleted).filter(([, ts]) => new Date(ts).getTime() > cutoff)
     );
@@ -112,7 +112,14 @@ export const inquiryService = {
     const localMap = new Map(local.map((record) => [record.id, record]));
 
     for (const d1Record of d1Records) {
-      // 跳过本地已删除的记录，防止 D1 把它重新带回来
+      // D1 软删除标记 → 从本地移除，并写入 deletedIds 防止被重新拉回
+      if (d1Record.status === 'deleted') {
+        localMap.delete(d1Record.id);
+        deletedIds[d1Record.id] = d1Record.updatedAt;
+        setLocalStorage(DELETED_KEY, deletedIds);
+        continue;
+      }
+      // 本地已删除的记录不允许 D1 旧版本重新覆盖
       if (deletedIds[d1Record.id]) continue;
       const localRecord = localMap.get(d1Record.id);
       if (!localRecord || isRemoteNewer(d1Record, localRecord)) {
@@ -135,7 +142,8 @@ export const inquiryService = {
       const d1Record = d1Map.get(localRecord.id);
       if (!d1Record) {
         this.syncToD1(localRecord);
-      } else if (isRemoteNewer(localRecord, d1Record)) {
+      } else if (d1Record.status !== 'deleted' && isRemoteNewer(localRecord, d1Record)) {
+        // D1 已软删除的记录不允许本地旧版本覆盖回来
         this.updateInD1(localRecord);
       }
     }

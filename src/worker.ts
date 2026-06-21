@@ -1356,9 +1356,11 @@ async function handleInquiryRequest(
       const limit = Math.min(Number(url.searchParams.get('limit')) || 500, 500);
       const offset = Number(url.searchParams.get('offset')) || 0;
 
+      // 返回所有 active 记录 + 30 天内的 deleted 记录（供其他端感知删除并同步）
       const result = await env.USERS_DB.prepare(`
         SELECT * FROM Document
         WHERE type = 'inquiry'
+          AND (status = 'active' OR updated_at >= datetime('now', '-30 days'))
         ORDER BY doc_no DESC
         LIMIT ? OFFSET ?
       `).bind(limit, offset).all<DocumentRow>();
@@ -1368,6 +1370,7 @@ async function handleInquiryRequest(
         return {
           ...data,
           id: row.id,
+          status: row.status as 'active' | 'deleted',
           inquiryNo: typeof data.inquiryNo === 'string' ? data.inquiryNo : row.doc_no,
           customerNo: typeof data.customerNo === 'string' ? data.customerNo : row.customer_name ?? '',
           createdAt: typeof data.createdAt === 'string' ? data.createdAt : row.created_at,
@@ -1437,10 +1440,12 @@ async function handleInquiryRequest(
 
     if (request.method === 'DELETE' && itemMatch) {
       const id = itemMatch[1];
+      // 软删除：保留记录 30 天供其他端感知删除并同步，之后可由定时任务清理
       await env.USERS_DB.prepare(`
-        DELETE FROM Document
+        UPDATE Document
+        SET status = 'deleted', updated_at = ?
         WHERE id = ? AND type = 'inquiry'
-      `).bind(id).run();
+      `).bind(new Date().toISOString(), id).run();
 
       return jsonResponse({ success: true });
     }
