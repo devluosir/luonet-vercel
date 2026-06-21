@@ -16,6 +16,7 @@ import {
   getDateInputValueFromInquiryNo,
   getTodayDateInputValue,
 } from '../utils/inquiryUtils';
+import { getInquirerOptions } from '../utils/inquirerOptions';
 import { useInquiryStore } from '../state/inquiry.store';
 import { InquiryQuoteStatus } from './InquiryQuoteStatus';
 
@@ -41,10 +42,7 @@ const FIELD_CLS =
 
 const LABEL_CLS = 'block text-xs font-medium text-gray-400 dark:text-gray-500';
 
-const DEFAULT_SUPPLIERS: SupplierQuoteStatus[] = [
-  { id: createId(), supplierShortName: '飞罗', status: 'pending' },
-  { id: createId(), supplierShortName: '昆同', status: 'pending' },
-];
+const INQUIRER_DATALIST_ID = 'inquirer-datalist';
 
 interface InquiryFormModalProps {
   isOpen: boolean;
@@ -73,6 +71,7 @@ export function InquiryFormModal({
   const [orderNo, setOrderNo] = useState('');
   const [isInquiryNoManual, setIsInquiryNoManual] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
+  const [inquirerOptions, setInquirerOptions] = useState<string[]>([]);
 
   // ── 状态缓冲（随"保存修改"/"新增询价"一并提交） ──────
   const [localSuppliers, setLocalSuppliers] = useState<SupplierQuoteStatus[]>([]);
@@ -116,6 +115,7 @@ export function InquiryFormModal({
       ]
     );
     setLocalQuoted(record?.quotedStatuses ?? []);
+    setInquirerOptions(getInquirerOptions());
   }, [existingNos, isOpen, mode, record]);
 
   useEffect(() => {
@@ -274,12 +274,20 @@ export function InquiryFormModal({
             <div className="space-y-1">
               <label className={LABEL_CLS}>询价人</label>
               <input
+                list={inquirerOptions.length > 0 ? INQUIRER_DATALIST_ID : undefined}
                 value={inquirer}
                 onChange={(e) => setInquirer(e.target.value)}
                 className={FIELD_CLS}
-                placeholder="LC-Roger"
+                placeholder="LC-Roger（可从客户管理选取）"
                 required
               />
+              {inquirerOptions.length > 0 && (
+                <datalist id={INQUIRER_DATALIST_ID}>
+                  {inquirerOptions.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
+              )}
             </div>
             <div className="space-y-1">
               <label className={LABEL_CLS}>客户编号</label>

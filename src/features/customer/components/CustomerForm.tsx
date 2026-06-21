@@ -17,15 +17,6 @@ export function CustomerForm({
   isEditing, 
   entityType 
 }: CustomerFormProps) {
-  const getEntityLabel = () => {
-    switch (entityType) {
-      case 'customers': return '客户';
-      case 'suppliers': return '供应商';
-      case 'consignees': return '收货人';
-      default: return '';
-    }
-  };
-
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
@@ -89,6 +80,93 @@ export function CustomerForm({
           className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
         />
       </div>
+      {entityType === 'customers' && (
+        <>
+          <div>
+            <label htmlFor="companyShortName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              公司简称
+            </label>
+            <input
+              type="text"
+              id="companyShortName"
+              value={formData.companyShortName ?? ''}
+              onChange={(e) => onInputChange('companyShortName', e.target.value)}
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="如：LC"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="contact1ShortName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              联系人1简称
+              <span className="ml-1 text-xs text-gray-400 font-normal">（对应上方「名称」）</span>
+            </label>
+            <input
+              type="text"
+              id="contact1ShortName"
+              value={formData.contact1ShortName ?? ''}
+              onChange={(e) => onInputChange('contact1ShortName', e.target.value)}
+              className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              placeholder="如：Roger"
+            />
+          </div>
+
+          <fieldset className="space-y-3 rounded-md border border-gray-200 p-3 dark:border-gray-600">
+            <legend className="px-1 text-sm font-medium text-gray-600 dark:text-gray-300">
+              联系人2（可选）
+            </legend>
+            <div>
+              <label htmlFor="contact2Name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                姓名
+              </label>
+              <input
+                type="text"
+                id="contact2Name"
+                value={formData.contact2Name ?? ''}
+                onChange={(e) => onInputChange('contact2Name', e.target.value)}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div>
+              <label htmlFor="contact2ShortName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                简称
+              </label>
+              <input
+                type="text"
+                id="contact2ShortName"
+                value={formData.contact2ShortName ?? ''}
+                onChange={(e) => onInputChange('contact2ShortName', e.target.value)}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="如：Mary"
+              />
+            </div>
+            <div>
+              <label htmlFor="contact2Phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                电话
+              </label>
+              <input
+                type="tel"
+                id="contact2Phone"
+                value={formData.contact2Phone ?? ''}
+                onChange={(e) => onInputChange('contact2Phone', e.target.value)}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            <div>
+              <label htmlFor="contact2Email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                邮箱
+              </label>
+              <input
+                type="email"
+                id="contact2Email"
+                value={formData.contact2Email ?? ''}
+                onChange={(e) => onInputChange('contact2Email', e.target.value)}
+                className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+          </fieldset>
+        </>
+      )}
       <div className="flex justify-end space-x-2">
         <button
           type="button"

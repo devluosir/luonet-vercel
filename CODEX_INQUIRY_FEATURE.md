@@ -160,6 +160,27 @@ store 的 `addRecord` 也对 `supplierStatuses` 做 `id: s.id || createId()` 兜
 
 ---
 
+## 询价人字段
+
+**字段名**：`inquirer: string`（存储值为 `公司简称-联系人简称`，如 `LC-Roger`）
+
+**UI 行为**：`InquiryFormModal` 中使用 HTML `<input list>` + `<datalist>` 实现自动补全。该字段不是强校验选择框，用户仍可自由输入不在列表中的值，以兼容临时询价人、旧数据和客户简称未维护完成的情况。
+
+**选项来源**：`src/features/inquiry/utils/inquirerOptions.ts` 的 `getInquirerOptions()` 函数。该函数不依赖 React state，也不直接调用 `localStorage`，而是通过 `src/utils/safeLocalStorage.ts` 的 `getLocalStorageJSON` 实时读取 `customer_management`。读取后按以下规则生成选项：
+
+- 客户必须配置 `companyShortName`（公司简称），否则跳过。
+- 若配置 `contact1ShortName`，生成 `companyShortName-contact1ShortName`。
+- 若配置 `contact2ShortName`，额外生成 `companyShortName-contact2ShortName`。
+- 选项会 trim、去重并排序，避免重复简称造成下拉噪音。
+
+**依赖关系**：依赖 `src/features/customer/types` 的 `Customer` 扩展字段：`companyShortName`、`contact1ShortName`、`contact2Name`、`contact2ShortName`、`contact2Phone`、`contact2Email`。其中 `contact2Name/Phone/Email` 用于客户资料完整性；询价人选项只读取 `companyShortName`、`contact1ShortName`、`contact2ShortName`。客户保存逻辑必须透传这些字段到 `customer_management`，否则询价模块无法读取。
+
+**刷新时机**：`InquiryFormModal` 每次打开时在初始化字段的 `useEffect` 中调用 `getInquirerOptions()`。因此用户在客户管理新增或修改简称后，不需要刷新页面；重新打开新增/编辑询价弹窗即可看到最新选项。
+
+**降级行为**：若当前是服务端环境、`customer_management` 为空、localStorage 解析失败，或没有任何客户同时配置公司简称与联系人简称，则 `getInquirerOptions()` 返回空数组；弹窗不渲染 `<datalist>`，输入框退化为普通自由文本输入，不阻塞新增和编辑询价。
+
+---
+
 ## 数据存储
 
 - localStorage key：`inquiry_records`

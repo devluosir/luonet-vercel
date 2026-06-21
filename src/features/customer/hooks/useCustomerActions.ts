@@ -21,6 +21,12 @@ export function useCustomerActions() {
         phone: customerData.phone,
         address: customerData.address,
         company: customerData.company,
+        companyShortName: customerData.companyShortName,
+        contact1ShortName: customerData.contact1ShortName,
+        contact2Name: customerData.contact2Name,
+        contact2ShortName: customerData.contact2ShortName,
+        contact2Phone: customerData.contact2Phone,
+        contact2Email: customerData.contact2Email,
         createdAt: editingCustomer ? editingCustomer.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

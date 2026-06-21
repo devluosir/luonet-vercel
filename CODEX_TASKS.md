@@ -5454,3 +5454,281 @@ grep -r "Footer\|AdminHeader\|QuotationPageRefactored" src --include="*.tsx" --i
   | grep -v "Footer.tsx\|AdminHeader.tsx\|QuotationPageRefactored.tsx"
 # 期望：无输出
 ```
+
+---
+
+## TASK-29：客户管理扩展联系人字段 + 询价人下拉选取
+
+**优先级**：🟠 高（功能扩展）
+**估时**：30 分钟
+**风险**：低。类型扩展向后兼容（新字段均为可选），询价人字段降级为自由输入
+
+### 背景
+
+客户管理（`src/features/customer`）现有 `Customer` 类型缺少公司简称和多联系人支持。
+询报价登记的「询价人」字段目前是自由文本，需改为从客户管理动态选取，值格式为 `公司简称-联系人简称`（如 `LC-Roger`）。
+
+客户管理 localStorage key 为 `customer_management`，存储 `Customer[]`。
+
+---
+
+### 改动 1：扩展 Customer 类型
+
+**文件**：`src/features/customer/types/index.ts`
+
+在 `Customer` 接口的 `company: string;` 行**之后**插入：
+
+```typescript
+  companyShortName?: string;   // 公司简称（用于询价人标识）
+  contact1ShortName?: string;  // 联系人1简称（对应现有 name 字段）
+  contact2Name?: string;       // 联系人2姓名
+  contact2ShortName?: string;  // 联系人2简称
+  contact2Phone?: string;      // 联系人2电话
+  contact2Email?: string;      // 联系人2邮箱
+```
+
+在 `CustomerFormData` 接口的 `company: string;` 行**之后**插入**完全相同**的六行（类型保持 `?: string`）。
+
+同时确认客户保存逻辑（`src/features/customer/hooks/useCustomerActions.ts` 的 `saveCustomer`）会把这些新字段透传进 `Customer` 对象；否则表单可输入但不会持久化，询价人下拉也无法读取。
+
+---
+
+### 改动 2：CustomerForm 组件新增字段
+
+**文件**：`src/features/customer/components/CustomerForm.tsx`
+
+在「公司」字段的 `</div>` 关闭标签之后、按钮组 `<div className="flex justify-end` 之前，插入：
+
+```tsx
+      {/* 公司简称 */}
+      <div>
+        <label htmlFor="companyShortName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          公司简称
+        </label>
+        <input
+          type="text"
+          id="companyShortName"
+          value={formData.companyShortName ?? ''}
+          onChange={(e) => onInputChange('companyShortName', e.target.value)}
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+          placeholder="如：LC"
+        />
+      </div>
+
+      {/* 联系人1简称 */}
+      <div>
+        <label htmlFor="contact1ShortName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          联系人1简称
+          <span className="ml-1 text-xs text-gray-400 font-normal">（对应上方「名称」）</span>
+        </label>
+        <input
+          type="text"
+          id="contact1ShortName"
+          value={formData.contact1ShortName ?? ''}
+          onChange={(e) => onInputChange('contact1ShortName', e.target.value)}
+          className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+          placeholder="如：Roger"
+        />
+      </div>
+
+      {/* 联系人2 */}
+      <fieldset className="border border-gray-200 dark:border-gray-600 rounded-md p-3 space-y-3">
+        <legend className="text-sm font-medium text-gray-600 dark:text-gray-300 px-1">
+          联系人2（可选）
+        </legend>
+        <div>
+          <label htmlFor="contact2Name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            姓名
+          </label>
+          <input
+            type="text"
+            id="contact2Name"
+            value={formData.contact2Name ?? ''}
+            onChange={(e) => onInputChange('contact2Name', e.target.value)}
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+        <div>
+          <label htmlFor="contact2ShortName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            简称
+          </label>
+          <input
+            type="text"
+            id="contact2ShortName"
+            value={formData.contact2ShortName ?? ''}
+            onChange={(e) => onInputChange('contact2ShortName', e.target.value)}
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+            placeholder="如：Mary"
+          />
+        </div>
+        <div>
+          <label htmlFor="contact2Phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            电话
+          </label>
+          <input
+            type="tel"
+            id="contact2Phone"
+            value={formData.contact2Phone ?? ''}
+            onChange={(e) => onInputChange('contact2Phone', e.target.value)}
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+        <div>
+          <label htmlFor="contact2Email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            邮箱
+          </label>
+          <input
+            type="email"
+            id="contact2Email"
+            value={formData.contact2Email ?? ''}
+            onChange={(e) => onInputChange('contact2Email', e.target.value)}
+            className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+          />
+        </div>
+      </fieldset>
+```
+
+---
+
+### 改动 3：更新 useCustomerForm 初始状态
+
+**文件**：`src/features/customer/hooks/useCustomerForm.ts`
+
+找到初始化 `CustomerFormData` 的对象字面量（含 `company: ''` 的那处），在 `company: '',` 之后追加：
+
+```typescript
+  companyShortName: '',
+  contact1ShortName: '',
+  contact2Name: '',
+  contact2ShortName: '',
+  contact2Phone: '',
+  contact2Email: '',
+```
+
+如果该初始值对象出现多处（reset / initialValue 等），逐一追加相同内容。
+
+---
+
+### 改动 4：新建询价人选项工具函数
+
+**新建文件**：`src/features/inquiry/utils/inquirerOptions.ts`
+
+```typescript
+import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
+import type { Customer } from '@/features/customer/types';
+
+/**
+ * 从客户管理 localStorage 实时读取询价人选项。
+ * 仅包含同时配置了「公司简称」和至少一个「联系人简称」的客户。
+ * 返回格式：公司简称-联系人简称，如 ["LC-Roger", "LC-Mary"]
+ */
+export function getInquirerOptions(): string[] {
+  if (typeof window === 'undefined') return [];
+
+  const customers = getLocalStorageJSON<Customer[]>('customer_management', []);
+  const options: string[] = [];
+
+  for (const c of customers) {
+    if (!c.companyShortName) continue;
+    if (c.contact1ShortName) {
+      options.push(`${c.companyShortName}-${c.contact1ShortName}`);
+    }
+    if (c.contact2ShortName) {
+      options.push(`${c.companyShortName}-${c.contact2ShortName}`);
+    }
+  }
+
+  return [...new Set(options)].sort();
+}
+```
+
+---
+
+### 改动 5：InquiryFormModal 询价人改为 datalist 选择
+
+**文件**：`src/features/inquiry/components/InquiryFormModal.tsx`
+
+**步骤 5a** — 在文件顶部 import 区（现有 import 列表末尾）追加：
+
+```typescript
+import { getInquirerOptions } from '../utils/inquirerOptions';
+```
+
+**步骤 5b** — 在组件内的 `useState` 声明区，在现有 state 之后追加：
+
+```typescript
+const [inquirerOptions, setInquirerOptions] = useState<string[]>([]);
+```
+
+**步骤 5c** — 在初始化基本字段的 `useEffect`（依赖 `[existingNos, isOpen, mode, record]`）里，在 `setLocalQuoted(...)` 那行之后、`}, [...]` 结束之前，插入：
+
+```typescript
+    setInquirerOptions(getInquirerOptions());
+```
+
+**步骤 5d** — 找到询价人 `<input>`：
+
+```tsx
+              <input
+                value={inquirer}
+                onChange={(e) => setInquirer(e.target.value)}
+                className={FIELD_CLS}
+                placeholder="LC-Roger"
+                required
+              />
+```
+
+替换为：
+
+```tsx
+              <input
+                list="inquirer-datalist"
+                value={inquirer}
+                onChange={(e) => setInquirer(e.target.value)}
+                className={FIELD_CLS}
+                placeholder="LC-Roger（可从客户管理选取）"
+                required
+              />
+              {inquirerOptions.length > 0 && (
+                <datalist id="inquirer-datalist">
+                  {inquirerOptions.map((opt) => (
+                    <option key={opt} value={opt} />
+                  ))}
+                </datalist>
+              )}
+```
+
+---
+
+### 验证
+
+```bash
+npx tsc --noEmit
+# 预期：无 inquiry 或 customer 相关类型错误
+
+# 功能验证步骤：
+# 1. 进入「客户管理」→ 新增客户
+#    - 公司（公司名称）：Luo Company
+#    - 公司简称：LC
+#    - 名称（联系人1）：Roger
+#    - 联系人1简称：Roger
+#    → 保存
+# 2. 进入「询报价登记」→「新增询价」
+#    - 点击「询价人」输入框，下拉出现 "LC-Roger"
+#    - 选取后值正确保存
+# 3. 客户无简称时不出现在下拉
+# 4. 联系人2有简称时产生额外选项
+# 5. 仍可手动输入不在列表中的值（datalist 不限制自由输入）
+```
+
+### 提交
+
+```bash
+git add \
+  src/features/customer/types/index.ts \
+  src/features/customer/components/CustomerForm.tsx \
+  src/features/customer/hooks/useCustomerForm.ts \
+  src/features/inquiry/utils/inquirerOptions.ts \
+  src/features/inquiry/components/InquiryFormModal.tsx
+git commit -m "feat: 客户管理新增公司简称和联系人2字段，询价人改为下拉选取（公司简称-联系人简称）"
+```

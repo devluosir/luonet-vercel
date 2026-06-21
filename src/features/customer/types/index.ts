@@ -5,6 +5,12 @@ export interface Customer {
   phone: string;
   address: string;
   company: string;
+  companyShortName?: string;
+  contact1ShortName?: string;
+  contact2Name?: string;
+  contact2ShortName?: string;
+  contact2Phone?: string;
+  contact2Email?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,6 +43,12 @@ export interface CustomerFormData {
   phone: string;
   address: string;
   company: string;
+  companyShortName?: string;
+  contact1ShortName?: string;
+  contact2Name?: string;
+  contact2ShortName?: string;
+  contact2Phone?: string;
+  contact2Email?: string;
 }
 
 export type TabType = 'customers' | 'suppliers' | 'consignees';
@@ -48,7 +60,7 @@ export interface HistoryDocument {
   createdAt?: string;
   updatedAt?: string;
   type?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // 时间轴相关类型
