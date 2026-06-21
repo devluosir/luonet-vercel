@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { Filter, Plus } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -29,6 +29,7 @@ export function InquiryPage() {
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const isModalOpenRef = useRef(false);
 
   const hasInquiryAccess = useMemo(() => {
     if (!session?.user) return false;
@@ -52,14 +53,19 @@ export function InquiryPage() {
   }, []);
 
   useEffect(() => {
-    if (!permissionChecked || !hasInquiryAccess) return;
+    isModalOpenRef.current = isModalOpen;
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    if (!permissionChecked || !hasInquiryAccess || isModalOpen) return;
 
     const POLL_INTERVAL_MS = 30_000;
     let cancelled = false;
 
     async function syncFromD1() {
+      if (isModalOpenRef.current) return;
       const d1Records = await inquiryService.pullFromD1();
-      if (cancelled) return;
+      if (cancelled || isModalOpenRef.current) return;
       inquiryService.pushLocalToD1(d1Records);
       const merged = inquiryService.mergeFromD1(d1Records);
       useInquiryStore.setState({ records: merged });
@@ -86,7 +92,7 @@ export function InquiryPage() {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [hasInquiryAccess, permissionChecked]);
+  }, [hasInquiryAccess, isModalOpen, permissionChecked]);
 
   const openCreateModal = () => {
     setEditingRecord(null);
