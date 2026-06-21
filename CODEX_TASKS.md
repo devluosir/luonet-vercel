@@ -5732,3 +5732,600 @@ git add \
   src/features/inquiry/components/InquiryFormModal.tsx
 git commit -m "feat: 客户管理新增公司简称和联系人2字段，询价人改为下拉选取（公司简称-联系人简称）"
 ```
+
+---
+
+## TASK-19：询报价权限控制 + D1 共享数据
+
+**优先级**：🔴 高（功能完整性）
+**估时**：60 分钟
+**风险**：中。Phase A 极低风险；Phase B 新增 Worker 路由和代理，不改动现有路由
+
+### 背景与问题
+
+询报价登记（`/inquiry`）目前存在三个问题：
+
+1. **侧边栏权限绑定错误**：`AppSidebar.tsx` 中 `inquiry` 条目的 `permissionKey` 误设为 `canCreatePurchase`，导致侧边栏显示/隐藏错误地联动采购单权限。
+2. **管理员无法分配权限**：`usePermissions.ts` 的 `MODULE_PERMISSIONS` 列表中没有 `inquiry`，管理员在 `/admin` 面板中看不到询报价权限项，无法为用户开启。
+3. **数据不共享**：询报价记录存在 localStorage（按设备/账号隔离），有权限的其他用户无法看到。目标是：**有 `inquiry` 权限的用户看到全部记录，与创建者无关**。
+
+### 解决方案
+
+- **Phase A（权限门控，3 个文件）**：修正侧边栏映射 + 管理员面板 + 页面守卫
+- **Phase B（共享 D1 数据，5 个文件）**：新增 Worker 路由 `/api/inquiry`（存储时 `user_id='_shared_'`，查询时不过滤 user_id） + Next.js 代理 + Service 层双写 + 页面启动时从 D1 拉取合并
+
+---
+
+### Phase A：权限门控
+
+#### A-1 修改 `src/features/admin/hooks/usePermissions.ts`
+
+在 `MODULE_PERMISSIONS` 数组中，**在 `purchase` 之后、`history` 之前**插入：
+
+```ts
+{ id: 'inquiry', name: '询报价登记', icon: '🔍' },
+```
+
+修改后数组为：
+```ts
+export const MODULE_PERMISSIONS = [
+  { id: 'quotation',  name: '报价单',    icon: '📋' },
+  { id: 'packing',   name: '装箱单',    icon: '📦' },
+  { id: 'invoice',   name: '发票',      icon: '🧾' },
+  { id: 'purchase',  name: '采购单',    icon: '🛒' },
+  { id: 'inquiry',   name: '询报价登记', icon: '🔍' },
+  { id: 'history',   name: '历史记录',  icon: '📚' },
+  { id: 'customer',  name: '客户管理',  icon: '👥' },
+  { id: 'ai-email',  name: 'AI邮件',   icon: '🤖' },
+];
+```
+
+#### A-2 修改 `src/components/layout/AppSidebar.tsx`
+
+**改动 1**：修正 `inquiry` 条目的 `permissionKey`：
+
+找到：
+```ts
+  {
+    id: 'inquiry',
+    label: '询报价登记',
+    path: '/inquiry',
+    icon: Search,
+    permissionKey: 'canCreatePurchase',
+  },
+```
+
+替换为：
+```ts
+  {
+    id: 'inquiry',
+    label: '询报价登记',
+    path: '/inquiry',
+    icon: Search,
+    permissionKey: 'canViewInquiry',
+  },
+```
+
+**改动 2**：在 `PERMISSION_MODULE_MAP` 中添加映射：
+
+找到：
+```ts
+const PERMISSION_MODULE_MAP: Record<string, string> = {
+  canCreateQuotation: 'quotation',
+  canCreateConfirmation: 'quotation',
+  canCreatePacking: 'packing',
+  canCreateInvoice: 'invoice',
+  canCreatePurchase: 'purchase',
+  canViewHistory: 'history',
+  canManageCustomers: 'customer',
+};
+```
+
+替换为：
+```ts
+const PERMISSION_MODULE_MAP: Record<string, string> = {
+  canCreateQuotation: 'quotation',
+  canCreateConfirmation: 'quotation',
+  canCreatePacking: 'packing',
+  canCreateInvoice: 'invoice',
+  canCreatePurchase: 'purchase',
+  canViewInquiry: 'inquiry',
+  canViewHistory: 'history',
+  canManageCustomers: 'customer',
+};
+```
+
+#### A-3 修改 `src/features/inquiry/app/InquiryPage.tsx`
+
+在文件顶部新增 import：
+```ts
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+```
+
+在 `InquiryPage` 组件函数内、现有 state 声明之前插入权限守卫逻辑：
+
+```tsx
+export function InquiryPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { user, handleLogout } = useAppUser();
+  // ... 其余现有 state 声明 ...
+
+  // ── 权限守卫 ──────────────────────────────────────────
+  const [permissionChecked, setPermissionChecked] = useState(false);
+  const hasInquiryAccess = useMemo(() => {
+    if (!session?.user) return false;
+    if (session.user.isAdmin) return true;
+    return (session.user.permissions ?? []).some(
+      (p: { moduleId: string; canAccess: boolean }) =>
+        p.moduleId === 'inquiry' && p.canAccess
+    );
+  }, [session]);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (status === 'unauthenticated') { router.push('/'); return; }
+    setPermissionChecked(true);
+  }, [status, router]);
+
+  // 权限检查未完成时显示 loading
+  if (!permissionChecked || status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-black">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+      </div>
+    );
+  }
+
+  // 无权限时显示 403
+  if (permissionChecked && !hasInquiryAccess) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-black">
+        <div className="rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-900">
+          <div className="mb-4 text-6xl">🚫</div>
+          <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">权限不足</h1>
+          <p className="mb-6 text-gray-600 dark:text-gray-400">您没有询报价登记的访问权限</p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700"
+          >
+            返回首页
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── 以下为原有 return JSX ────────────────────────────
+```
+
+同时在文件顶部加入：
+```ts
+import { useMemo } from 'react';  // 如果未导入
+```
+
+**Phase A 验证：**
+```bash
+npx tsc --noEmit
+# 进入管理员面板，确认"询报价登记"权限项出现在用户权限列表中
+# 为测试账号开启 inquiry 权限，确认侧边栏正确显示/隐藏
+# 直接访问 /inquiry（无权限时）确认出现 403 页面
+```
+
+**Phase A 提交：**
+```bash
+git add src/features/admin/hooks/usePermissions.ts \
+        src/components/layout/AppSidebar.tsx \
+        src/features/inquiry/app/InquiryPage.tsx
+git commit -m "feat(inquiry): 添加权限门控（管理员面板 + 侧边栏映射 + 页面守卫）"
+```
+
+---
+
+### Phase B：D1 共享数据
+
+#### 数据模型设计
+
+询报价记录复用现有 `Document` 表，约定：
+
+| Document 字段 | 询报价含义 |
+|---------------|-----------|
+| `id` | `InquiryRecord.id` |
+| `user_id` | 固定为 `'_shared_'`（表示全团队共享）|
+| `type` | 固定为 `'inquiry'` |
+| `doc_no` | `InquiryRecord.inquiryNo` |
+| `customer_name` | `InquiryRecord.customerNo` |
+| `total_amount` | 固定为 `0` |
+| `currency` | 固定为 `'CNY'` |
+| `data` | `JSON.stringify(InquiryRecord)`（完整记录） |
+
+查询时 `WHERE type = 'inquiry'`，**不过滤 user_id**，取全部记录。
+
+#### B-1 修改 `src/worker.ts`
+
+在现有路由分发区（`if (path.startsWith('/api/admin'))`… 之类的块）**之前**，插入询报价路由：
+
+```ts
+// ── 询报价路由（共享数据，不过滤 user_id）────────────────
+if (path.startsWith('/api/inquiry')) {
+  return handleInquiryRequest(request, path, env);
+}
+```
+
+在文件末尾（其他 handle 函数之后）新增：
+
+```ts
+async function handleInquiryRequest(
+  request: Request,
+  path: string,
+  env: Env
+): Promise<Response> {
+  const d1 = new D1Client(env.USERS_DB);
+
+  // GET /api/inquiry — 返回全部询报价记录
+  if (request.method === 'GET' && path === '/api/inquiry') {
+    const url = new URL(request.url);
+    const limit = Math.min(Number(url.searchParams.get('limit') || '500'), 500);
+    const offset = Number(url.searchParams.get('offset') || '0');
+
+    const result = await env.USERS_DB.prepare(
+      `SELECT * FROM Document WHERE type = 'inquiry' ORDER BY doc_no DESC LIMIT ? OFFSET ?`
+    ).bind(limit, offset).all();
+
+    const records = (result.results || []).map((row: any) => ({
+      id: row.id,
+      inquiryNo: row.doc_no,
+      customerNo: row.customer_name,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      ...(() => { try { return JSON.parse(row.data || '{}'); } catch { return {}; } })(),
+    }));
+
+    return jsonResponse({ records, total: records.length });
+  }
+
+  // POST /api/inquiry — 新增或替换
+  if (request.method === 'POST' && path === '/api/inquiry') {
+    const body = await request.json() as any;
+    const id = body.id;
+    const now = new Date().toISOString();
+    const data = JSON.stringify(body);
+
+    await env.USERS_DB.prepare(
+      `INSERT OR REPLACE INTO Document
+       (id, user_id, type, doc_no, customer_name, total_amount, currency, status, data, created_at, updated_at)
+       VALUES (?, '_shared_', 'inquiry', ?, ?, 0, 'CNY', 'active', ?, ?, ?)`
+    ).bind(
+      id,
+      body.inquiryNo ?? '',
+      body.customerNo ?? '',
+      data,
+      body.createdAt ?? now,
+      now
+    ).run();
+
+    return jsonResponse({ success: true, id });
+  }
+
+  // PUT /api/inquiry/:id — 更新
+  const putMatch = path.match(/^\/api\/inquiry\/([^/]+)$/);
+  if (request.method === 'PUT' && putMatch) {
+    const id = putMatch[1];
+    const body = await request.json() as any;
+    const now = new Date().toISOString();
+    const data = JSON.stringify(body);
+
+    await env.USERS_DB.prepare(
+      `UPDATE Document SET doc_no=?, customer_name=?, data=?, updated_at=?
+       WHERE id=? AND type='inquiry'`
+    ).bind(
+      body.inquiryNo ?? '',
+      body.customerNo ?? '',
+      data,
+      now,
+      id
+    ).run();
+
+    return jsonResponse({ success: true, id });
+  }
+
+  // DELETE /api/inquiry/:id — 删除
+  const delMatch = path.match(/^\/api\/inquiry\/([^/]+)$/);
+  if (request.method === 'DELETE' && delMatch) {
+    const id = delMatch[1];
+    await env.USERS_DB.prepare(
+      `DELETE FROM Document WHERE id=? AND type='inquiry'`
+    ).bind(id).run();
+    return jsonResponse({ success: true });
+  }
+
+  return jsonResponse({ error: 'Not Found' }, 404);
+}
+```
+
+> 注意：`jsonResponse` 是 worker.ts 中已有的辅助函数，直接复用。
+
+#### B-2 新增 `src/app/api/inquiry/[[...path]]/route.ts`
+
+```ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+const WORKER_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net';
+
+function getWorkerHeaders(): HeadersInit {
+  const token = process.env.API_TOKEN;
+  if (!token) throw new Error('API_TOKEN env var not set');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  };
+}
+
+async function proxyInquiryRequest(
+  request: NextRequest,
+  pathSegments: string[] = []
+): Promise<NextResponse> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: '未登录' }, { status: 401 });
+  }
+
+  // 检查 inquiry 权限（管理员直接通过）
+  const isAdmin = session.user.isAdmin === true;
+  const hasInquiry = isAdmin || (session.user.permissions ?? []).some(
+    (p: any) => p.moduleId === 'inquiry' && p.canAccess
+  );
+  if (!hasInquiry) {
+    return NextResponse.json({ error: '无询报价权限' }, { status: 403 });
+  }
+
+  const url = new URL(request.url);
+  const workerPath = pathSegments.length > 0
+    ? `/api/inquiry/${pathSegments.join('/')}`
+    : '/api/inquiry';
+  const workerUrl = `${WORKER_BASE}${workerPath}${url.search}`;
+
+  let body: string | undefined;
+  if (request.method !== 'GET' && request.method !== 'HEAD' && request.method !== 'DELETE') {
+    body = await request.text();
+  }
+
+  let workerResp: Response;
+  try {
+    workerResp = await fetch(workerUrl, {
+      method: request.method,
+      headers: getWorkerHeaders(),
+      body,
+    });
+  } catch (error) {
+    console.error('Inquiry proxy request failed:', error);
+    return NextResponse.json({ error: 'Worker 请求失败' }, { status: 502 });
+  }
+
+  const data = await workerResp.json();
+  return NextResponse.json(data, { status: workerResp.status });
+}
+
+type RouteParams = { params: { path?: string[] } };
+
+export async function GET(req: NextRequest, { params }: RouteParams) {
+  return proxyInquiryRequest(req, params.path || []);
+}
+export async function POST(req: NextRequest, { params }: RouteParams) {
+  return proxyInquiryRequest(req, params.path || []);
+}
+export async function PUT(req: NextRequest, { params }: RouteParams) {
+  return proxyInquiryRequest(req, params.path || []);
+}
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
+  return proxyInquiryRequest(req, params.path || []);
+}
+```
+
+#### B-3 修改 `src/features/inquiry/services/inquiry.service.ts`
+
+在现有 localStorage CRUD 之外，新增 D1 同步方法：
+
+```ts
+import { getLocalStorageJSON, setLocalStorage } from '@/utils/safeLocalStorage';
+import type { InquiryRecord } from '../types';
+
+const STORAGE_KEY = 'inquiry_records';
+const API_BASE = '/api/inquiry';
+
+export const inquiryService = {
+  // ── localStorage CRUD（原有，不变）──────────────────────
+  getAll(): InquiryRecord[] {
+    return getLocalStorageJSON<InquiryRecord[]>(STORAGE_KEY, []);
+  },
+  save(records: InquiryRecord[]): void {
+    setLocalStorage(STORAGE_KEY, records);
+  },
+  add(record: InquiryRecord): InquiryRecord[] {
+    const records = this.getAll();
+    const updated = [...records, record];
+    this.save(updated);
+    return updated;
+  },
+  update(id: string, patch: Partial<InquiryRecord>): InquiryRecord[] {
+    const records = this.getAll().map((record) =>
+      record.id === id
+        ? { ...record, ...patch, updatedAt: new Date().toISOString() }
+        : record
+    );
+    this.save(records);
+    return records;
+  },
+  remove(id: string): InquiryRecord[] {
+    const records = this.getAll().filter((record) => record.id !== id);
+    this.save(records);
+    return records;
+  },
+
+  // ── D1 同步（fire-and-forget）──────────────────────────
+  /** 拉取 D1 全量询报价记录（用于登录/页面加载后合并到 localStorage）*/
+  async pullFromD1(): Promise<InquiryRecord[]> {
+    try {
+      const res = await fetch(`${API_BASE}?limit=500`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data.records) ? data.records : [];
+    } catch {
+      return [];
+    }
+  },
+
+  /** 写入单条记录到 D1（fire-and-forget，不 await）*/
+  syncToD1(record: InquiryRecord): void {
+    void (async () => {
+      try {
+        await fetch(API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(record),
+        });
+      } catch { /* silent */ }
+    })();
+  },
+
+  /** 更新 D1 中的记录（fire-and-forget）*/
+  updateInD1(record: InquiryRecord): void {
+    void (async () => {
+      try {
+        await fetch(`${API_BASE}/${record.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(record),
+        });
+      } catch { /* silent */ }
+    })();
+  },
+
+  /** 从 D1 删除（fire-and-forget）*/
+  deleteFromD1(id: string): void {
+    void (async () => {
+      try {
+        await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+      } catch { /* silent */ }
+    })();
+  },
+
+  /** 合并 D1 记录到 localStorage（updated_at 更新的以 D1 为准）*/
+  mergeFromD1(d1Records: InquiryRecord[]): InquiryRecord[] {
+    const local = this.getAll();
+    const localMap = new Map(local.map((r) => [r.id, r]));
+
+    for (const d1 of d1Records) {
+      const loc = localMap.get(d1.id);
+      if (!loc || new Date(d1.updatedAt) > new Date(loc.updatedAt)) {
+        localMap.set(d1.id, d1);
+      }
+    }
+
+    const merged = Array.from(localMap.values()).sort(
+      (a, b) => b.inquiryNo.localeCompare(a.inquiryNo)
+    );
+    this.save(merged);
+    return merged;
+  },
+};
+```
+
+#### B-4 修改 `src/features/inquiry/state/inquiry.store.ts`
+
+在每个写操作（`addRecord`、`updateRecord`、`removeRecord`、`replaceStatuses`）完成 localStorage 写入后，追加 D1 fire-and-forget 调用。
+
+在 store 顶部 import 中追加：
+```ts
+import { inquiryService } from '../services/inquiry.service';
+```
+（如已有则跳过，但需确认用的是同一 service）
+
+**`addRecord` 修改**：在 `set({ records: updated });` 之后追加：
+```ts
+inquiryService.syncToD1(record);
+```
+
+**`updateRecord` 修改**：在 `set({ records: updated });` 之后追加：
+```ts
+const updatedRecord = updated.find((r) => r.id === id);
+if (updatedRecord) inquiryService.updateInD1(updatedRecord);
+```
+
+**`removeRecord` 修改**：在 `set({ records: updated });` 之后追加：
+```ts
+inquiryService.deleteFromD1(id);
+```
+
+**`replaceStatuses` 修改**：在 `set({ records });` 之后追加：
+```ts
+const target = records.find((r) => r.id === recordId);
+if (target) inquiryService.updateInD1(target);
+```
+
+**各供应商级别操作**（`addSupplier`、`updateSupplier`、`removeSupplier`、`addQuotedStatus`、`updateQuotedStatus`、`removeQuotedStatus`）：
+在每个操作的 `set({ records });` 之后追加：
+```ts
+const target = records.find((r) => r.id === recordId);
+if (target) inquiryService.updateInD1(target);
+```
+
+#### B-5 修改 `src/features/inquiry/app/InquiryPage.tsx`
+
+在 `useEffect(() => { useInquiryStore.getState().init(); }, []);` 之后，新增 D1 拉取 effect：
+
+```tsx
+// ── D1 拉取（页面加载后合并共享数据）─────────────────────
+useEffect(() => {
+  if (!hasInquiryAccess) return; // 权限守卫通过后才拉取
+  let cancelled = false;
+  inquiryService.pullFromD1().then((d1Records) => {
+    if (cancelled || d1Records.length === 0) return;
+    const merged = inquiryService.mergeFromD1(d1Records);
+    useInquiryStore.setState({ records: merged });
+  });
+  return () => { cancelled = true; };
+}, [hasInquiryAccess]);
+```
+
+在文件顶部新增 import（如未导入）：
+```ts
+import { inquiryService } from '../services/inquiry.service';
+```
+
+---
+
+### 验证步骤
+
+```bash
+# 1. 类型检查
+npx tsc --noEmit
+
+# 2. 部署 Worker（新增 /api/inquiry 路由）
+npx wrangler deploy
+
+# 3. 浏览器验证：
+#    a. 管理员进入 /admin → 用户权限弹窗 → 确认"询报价登记"权限项出现
+#    b. 为用户 A 开启 inquiry 权限，为用户 B 不开启
+#    c. 用户 A 登录 → 侧边栏显示"询报价登记" → 可访问 /inquiry
+#    d. 用户 B 登录 → 侧边栏隐藏"询报价登记" → 直接访问 /inquiry 显示权限不足
+#    e. 用户 A 创建一条询报价记录
+#    f. 同样有 inquiry 权限的用户 C 登录 → 进入 /inquiry → 能看到用户 A 创建的记录
+```
+
+### 提交
+
+```bash
+# Phase A 已单独提交（见上）
+
+# Phase B
+git add src/worker.ts \
+        src/app/api/inquiry/ \
+        src/features/inquiry/services/inquiry.service.ts \
+        src/features/inquiry/state/inquiry.store.ts \
+        src/features/inquiry/app/InquiryPage.tsx
+git commit -m "feat(inquiry): D1 共享数据（全员可见 + fire-and-forget 双写）"
+```

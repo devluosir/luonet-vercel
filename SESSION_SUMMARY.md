@@ -17,7 +17,7 @@
 
 ---
 
-## 本次完成的工作（TASK-01 ~ TASK-17）
+## 本次完成的工作（TASK-01 ~ TASK-19）
 
 ### 🔴 安全修复（TASK-01 ~ TASK-03）
 
@@ -77,6 +77,15 @@
 | 16 | Playwright E2E 套件（登录/Dashboard/报价单保存+D1断言/历史页） | `fa1a6a65` |
 | 17 | GitHub Actions 新增 E2E job（push to main 后针对生产站点运行） | `88507f4e` |
 
+### 🔵 询报价权限 + D1 共享数据（TASK-19，分两 commit）
+
+| Task | 内容 | 提交 |
+|------|------|------|
+| 19A | 询报价权限门控：管理员面板新增权限项，侧边栏修正 permissionKey，InquiryPage 加登录/403 守卫 | `a818075b` |
+| 19B | D1 共享数据：Worker `/api/inquiry` 路由，Next.js 代理，inquiry service/store 接入 D1 双写+拉取，schema.sql 新增 `'inquiry'` 类型 | `1df67dbf` |
+
+> ⚠️ **线上 D1 需执行迁移**：见 [D1 迁移说明](#d1-迁移-document-表-type-约束) 节。
+
 ---
 
 ## 当前系统架构
@@ -84,15 +93,23 @@
 ```
 浏览器（Next.js 前端，Vercel）
   ├── localStorage          主数据存储（实时读写）
-  ├── /api/documents        → Cloudflare Worker → D1（Document 表）
+  ├── /api/documents        → Cloudflare Worker → D1（Document 表，type ≠ inquiry）
+  ├── /api/inquiry          → Cloudflare Worker → D1（Document 表，type='inquiry', user_id='_shared_'，全团队共享）
   ├── /api/customers        → Cloudflare Worker → D1（Customer 表）
   └── /api/admin/[...path] → Cloudflare Worker → D1（Users 表，需 API_TOKEN）
 
 Cloudflare Worker（udb.luocompany.net）
   ├── Bearer token 鉴权（API_TOKEN 共享密钥）
   ├── Document CRUD（INSERT OR REPLACE，幂等）
+  ├── Inquiry CRUD（user_id='_shared_'，无用户过滤，团队共享读写）
   ├── Customer CRUD（INSERT OR REPLACE，幂等）
   └── Admin CRUD（用户管理，权限管理）
+
+权限系统
+  ├── 管理员面板（AdminPage）可为每个用户分配各模块权限
+  ├── inquiry 模块权限：moduleId='inquiry'，canAccess=true 方可进入
+  ├── isAdmin=true 的用户自动拥有所有页面访问权（InquiryPage 守卫已处理）
+  └── MODULE_PERMISSIONS 列表：quotation, packing, invoice, purchase, inquiry, history, customer, ai-email
 
 GitHub Actions CI
   ├── check job：lint + unit test + build（PR + push）
@@ -124,16 +141,22 @@ GitHub Actions CI
 
 | 文件 | 作用 |
 |------|------|
-| `src/worker.ts` | Cloudflare Worker 全部路由逻辑 |
+| `src/worker.ts` | Cloudflare Worker 全部路由逻辑（含 /api/inquiry） |
 | `src/utils/d1Sync.ts` | fire-and-forget 双写帮助函数 |
 | `src/utils/d1Pull.ts` | 登录拉取 + 合并到 localStorage |
 | `src/utils/d1Migration.ts` | 一次性批量迁移工具 |
 | `src/hooks/useD1Sync.ts` | 登录后触发拉取的 React hook |
 | `src/app/providers.tsx` | 全局注入 D1SyncInitializer |
 | `src/features/admin/components/D1MigrationPanel.tsx` | 管理员迁移 UI |
-| `CODEX_TASKS.md` | 所有 Codex 执行规格（TASK-01 ~ TASK-17） |
+| `src/app/api/inquiry/[[...path]]/route.ts` | inquiry Next.js 代理（验证 session + 权限后转发） |
+| `src/features/inquiry/services/inquiry.service.ts` | inquiry localStorage CRUD + D1 sync 方法 |
+| `src/features/inquiry/state/inquiry.store.ts` | inquiry Zustand store（写操作含 fire-and-forget D1 双写） |
+| `src/features/admin/hooks/usePermissions.ts` | MODULE_PERMISSIONS 列表（含 inquiry） |
+| `src/components/layout/AppSidebar.tsx` | 侧边栏导航（inquiry 绑定 canViewInquiry 权限） |
+| `CODEX_TASKS.md` | 所有 Codex 执行规格（TASK-01 ~ TASK-19） |
 | `AGENTS.md` | 项目规范，Codex 执行前必读 |
-| `schema.sql` | D1 建表 SQL |
+| `schema.sql` | D1 建表 SQL（type 约束已含 inquiry） |
+| `migrations/002_add_inquiry_type.sql` | ⚠️ 线上 D1 迁移脚本（需手动执行一次） |
 | `playwright.config.ts` | E2E 配置，读 `E2E_BASE_URL` 环境变量 |
 | `.github/workflows/ci.yml` | CI 流水线 |
 
@@ -143,83 +166,156 @@ GitHub Actions CI
 
 ### 功能概述
 
-新增"询报价登记表"模块，用于登记向供应商询价、跟踪报价状态、记录最终报价给客户的全流程。
+新增"询报价登记表"模块（`/inquiry`），用于登记客户询价、追踪各供应商报价进度、记录最终报给客户的版本全流程。已集成到侧边栏导航（`AppSidebar.tsx`）。
 
 ### 文件结构
 
 ```
 src/
-├── app/inquiry/page.tsx
+├── app/inquiry/page.tsx                         ← re-export
 └── features/inquiry/
-    ├── app/InquiryPage.tsx
+    ├── app/InquiryPage.tsx                      ← 页面入口
     ├── components/
-    │   ├── InquiryTable.tsx
-    │   ├── InquiryRow.tsx
-    │   ├── InquiryQuoteStatus.tsx
-    │   ├── SupplierStatusTag.tsx
-    │   ├── InquiryFormModal.tsx
-    │   └── QuotedStatusList.tsx
-    ├── hooks/useInquiryActions.ts
-    ├── services/inquiry.service.ts
-    ├── state/inquiry.store.ts
-    ├── types/index.ts
-    └── utils/inquiryUtils.ts
+    │   ├── InquiryTable.tsx                     ← 列表表格（可排序）
+    │   ├── InquiryRow.tsx                       ← 单行（点击行 = 编辑，hover 显示删除）
+    │   ├── InquiryQuoteStatusDisplay.tsx         ← 行内状态展示（只读，inline 文本）
+    │   ├── InquiryFormModal.tsx                 ← 新增/编辑弹窗
+    │   ├── InquiryQuoteStatus.tsx               ← 弹窗内供应商+已报价状态编辑器
+    │   ├── SupplierStatusTag.tsx                ← 供应商标签（点击编辑）
+    │   └── QuotedStatusList.tsx                 ← 已报价列表
+    ├── hooks/useInquiryActions.ts               ← store action 封装
+    ├── services/inquiry.service.ts              ← localStorage CRUD
+    ├── state/inquiry.store.ts                   ← Zustand store
+    ├── types/index.ts                           ← 类型定义
+    └── utils/
+        ├── inquiryUtils.ts                      ← 日期/编号/颜色工具函数
+        └── inquirerOptions.ts                   ← 从 customer_management 生成询价人选项
 ```
 
-### 核心逻辑
-
-**供应商状态颜色规则（`getSupplierStatusClass`，switch 优先于日期判断）：**
-
-| 状态 | 显示 | 颜色 |
-|------|------|------|
-| `pending`（默认） | 名称，无日期 | `text-pink-500` 粉红 |
-| `quoted` | 名称(日期) | `text-blue-600` 蓝色 |
-| `need_info` | 名称(日期) | `text-yellow-500` 黄色 |
-| `unavailable` | 名称(日期) | `text-gray-400` 灰色 |
-
-**日期显示规则：**
-- 存储格式：`[m.D]`，如 `[6.20]`（`formatShortDate` 生成）
-- 日期列 / 已报价区域：去掉 `[]` → `6.20`（`stripDateBrackets`）
-- 供应商标签日期：`[]` 改 `()` → `飞罗(6.20)`（`roundDateBrackets`）
-
-**状态 / 日期联动规则：**
-- `pending` → 日期输入 disabled，切换时清空日期
-- 非 pending 且日期为空 → 自动填入今天
-- 在 pending 状态下填入日期 → 自动切换为 `quoted`
-
-**询价编号生成：**
-- 格式 `C[YYmmDD][后缀]`，如 `C260620F`
-- 后缀序列：`F,G,H,J,K…Z,ZA,ZB…`（跳过 I、O）
-
-**默认供应商：** 新记录自动创建 飞罗、昆同，均附带 `id`（`createId()`）防止编辑时重复
-
-**已报价客户栏：**
-- 仅显示 status === `'quoted'` 且有日期的供应商可选
-- 版本从 `a,b,c…` 自动递增（`getNextQuoteVersion`）
-
-### UI 交互
-
-- `<tr class="group">` 整行 hover 检测
-- 编辑按钮（✏️）：询价编号后面，hover 时淡入（`opacity-0 group-hover:opacity-100`）
-- 供应商区互动按钮（`+ 供应商`、标签 × 删除、已报价 🗑 删除、`+ 已报价`）：同样 hover 淡入
-- 删除供应商 / 已报价记录：弹 `window.confirm` 确认
-- 供应商 + `/` + 已报价 同一 flex 行显示，`QuotedStatusList` 返回 `<Fragment>` 参与父级 flex
-
-### Tailwind 配置修复
-
-`tailwind.config.ts` 的 `content` 数组需包含：
+### 数据结构（`types/index.ts`）
 
 ```ts
-"./src/features/**/*.{js,ts,jsx,tsx,mdx}",
-"./src/hooks/**/*.{js,ts,jsx,tsx,mdx}",
-"./src/utils/**/*.{js,ts,jsx,tsx,mdx}",
+InquiryRecord {
+  id, inquiryDate, inquiryNo, inquirer, customerNo,
+  description, orderNo?,
+  supplierStatuses: SupplierQuoteStatus[],
+  quotedStatuses:   CustomerQuoteStatus[],
+  createdAt, updatedAt
+}
+
+SupplierQuoteStatus { id, supplierShortName, quoteDate?, status: 'pending'|'quoted'|'unavailable'|'need_info' }
+CustomerQuoteStatus { id, quoteDate, supplierShortName, version, type?: 'quoted'|'unavailable'|'supplemented' }
 ```
 
-动态类名 `text-pink-500`、`text-yellow-500` 加入 `safelist`。
+### 询价编号规则
 
-### 数据存储
+- 格式：`C[YYmmDD][后缀]`，如 `C260621F`
+- 后缀序列（`INQUIRY_SUFFIX_SEQUENCE`）：F G H J K … Z → ZA ZB … ZZ → ZZA …（全程跳过 I、O）
+- 首字母 F 起，因为 A-E 为客户编号前缀，避免混淆
+- 紧急单：`-U` 后缀（如 `C260621M-U`），生成编号时 `-U` 去掉后再参与槽位占用判断
+- 弹窗中修改日期 → 自动更新编号（除非用户手动编辑过编号）
 
-localStorage key：`inquiry_records`，通过 `inquiryService` + Zustand store 管理（与其他 feature 一致）。**未接入 D1 同步**，仅本地存储。
+### 颜色规则
+
+**行颜色（`getRecordColorState`，由 `quotedStatuses` 决定）：**
+
+| 条件 | 颜色 |
+|------|------|
+| 有 `type=unavailable` 的已报价记录 | `text-gray-400` 灰 |
+| 有任何其他已报价记录（quoted/supplemented） | `text-blue-600` 蓝 |
+| 无已报价记录（仅询价中） | `text-pink-500` 粉 |
+
+**供应商标签颜色（`getSupplierStatusClass`，由各自 status 决定）：**
+
+| 状态 | 颜色 |
+|------|------|
+| `pending` | `text-pink-500` 粉红（名称，无日期） |
+| `quoted` | `text-blue-600` 蓝色（名称+日期） |
+| `need_info` | `text-yellow-500` 黄色（名称+日期） |
+| `unavailable` | `text-gray-400` 灰色（名称+日期） |
+
+### 日期格式约定
+
+| 场景 | 格式 | 函数 |
+|------|------|------|
+| 存储 | `[6.20]` | `formatShortDate` |
+| 表格列 / 已报价区域显示 | `6.20` | `stripDateBrackets` |
+| 供应商标签内日期 | `(6.20)` | `roundDateBrackets` |
+| modal 日期输入框 | `6.21`（显示）/ `YYYY-MM-DD`（内部） | `ymdToDisplay` / `displayToYmd` |
+
+### 供应商状态/日期联动规则（`InquiryQuoteStatus.tsx`）
+
+- `pending` → 日期输入框 disabled，切换到 pending 时清空日期
+- 切换到非 pending 且日期为空 → 自动填入今天
+- 在 pending 状态下填入日期 → 自动切换为 `quoted`
+- "已补充信息" checkbox：仅在有供应商标记 `need_info` 时显示；勾选 = 写入 `type=supplemented` 的 CustomerQuoteStatus
+- "已回复客户无法报价" checkbox：写入 `type=unavailable` 的 CustomerQuoteStatus
+
+### Modal 关键设计
+
+- **日期步进器**：← / → 按钮 + 键盘 ↑↓ 调整日期，Enter/Blur 提交文字
+- **询价编号**：新增模式自动生成，编辑模式手动（`isInquiryNoManual` 标记）
+- **紧急复选框**：勾选 = 编号追加 `-U`，取消 = 去掉 `-U`
+- **询价人 datalist**：实时读取 `customer_management`，生成 `公司简称-联系人简称`（如 `LC-Roger`）
+- **供应商/已报价编辑面板**：`<div>` 而非 `<form>`，避免嵌套 form 触发外层提交；Enter 键确认
+- **订单编号字段**：仅编辑模式显示，用于记录询价转订单后的订单号（绿色 monospace 显示）
+- **`replaceStatuses`**：编辑模式保存时原子替换供应商列表 + 已报价列表，防止并发写入不一致
+
+### 已报价版本逻辑
+
+- 版本字段从 `a,b,c…z` 自动递增（`getNextQuoteVersion`）
+- 超过 26 条后：`aa, ab …`
+- 可选供应商下拉列表 = 供应商中 `status=quoted` 且有 `quoteDate` 的项
+
+### 数据存储（TASK-19 后）
+
+- localStorage key：`inquiry_records`
+- `inquiryService`（增删改查）+ Zustand store（`useInquiryStore`）管理
+- **已接入 D1 双写**（fire-and-forget，写操作后台同步）
+- **全团队共享**：D1 存储时固定 `user_id='_shared_'`，查询时不过滤 user_id，所有有权限的用户看同一份数据
+- 页面进入时（权限验证通过后）自动拉取 D1 全量记录，与 localStorage 合并（D1 的 `updatedAt` 更新则以 D1 为准）
+- localStorage 仍作为主写缓存，D1 为共享云端存储
+
+---
+
+## D1 迁移：Document 表 type 约束
+
+### 背景
+
+TASK-08 建表时 `Document.type` 的 CHECK 约束为：
+```sql
+CHECK(type IN ('quotation', 'confirmation', 'invoice', 'packing', 'purchase'))
+```
+
+TASK-19 新增 `'inquiry'` 类型，`schema.sql` 已更新，但 `CREATE TABLE IF NOT EXISTS` **不会修改已存在的线上表**。若不执行迁移，插入 inquiry 记录会报 `CHECK constraint failed`，Phase B 双写静默失败。
+
+### 执行步骤（本地终端，一次性）
+
+```bash
+# 1. 先核查线上约束（可选，确认问题存在）
+npx wrangler d1 execute mluonet-users \
+  --command="SELECT sql FROM sqlite_master WHERE type='table' AND name='Document'" \
+  --remote
+
+# 2. 执行迁移（重建表，保留全量数据，约 30 秒）
+npx wrangler d1 execute mluonet-users \
+  --file=./migrations/002_add_inquiry_type.sql \
+  --remote
+
+# 3. 验证新约束
+npx wrangler d1 execute mluonet-users \
+  --command="SELECT sql FROM sqlite_master WHERE type='table' AND name='Document'" \
+  --remote
+```
+
+迁移脚本（`migrations/002_add_inquiry_type.sql`）流程：
+1. 建 `Document_v2`（含 `'inquiry'` 的 CHECK，无 FOREIGN KEY）
+2. `INSERT INTO Document_v2 SELECT ... FROM Document`（COALESCE 处理旧字段空值）
+3. `DROP TABLE Document`
+4. `ALTER TABLE Document_v2 RENAME TO Document`
+5. 重建全部索引
+
+> ⚠️ 迁移过程中会有短暂数据库写锁，建议在低峰时段执行（秒级完成）。
 
 ---
 
@@ -253,9 +349,10 @@ localStorage key：`inquiry_records`，通过 `inquiryService` + Zustand store �
 
 ```
 项目：LC App（外贸工具），Next.js 14 + Cloudflare Worker + D1 + Vercel
-进度：TASK-01~17 已完成，见 CODEX_TASKS.md 和 SESSION_SUMMARY.md
-上次结束：数据管线完整（双写+迁移+登录同步），E2E + CI 已配置
+进度：TASK-01~19 已完成，见 CODEX_TASKS.md 和 SESSION_SUMMARY.md
+上次结束：询报价模块权限门控 + D1 共享数据完成（TASK-19），待执行 D1 迁移
 工作区：/Users/roger/website/luonet-vercel（已连接）
+待办：npx wrangler d1 execute mluonet-users --file=./migrations/002_add_inquiry_type.sql --remote
 下一步：[告知想做的方向]
 ```
 
@@ -263,4 +360,4 @@ Codex 执行任务前会自动读 `AGENTS.md`，所有任务规格在 `CODEX_TAS
 
 ---
 
-*最后更新：2026-06-20*
+*最后更新：2026-06-21（TASK-19 完成）*
