@@ -108,4 +108,18 @@ export const inquiryService = {
     this.save(merged);
     return merged;
   },
+
+  pushLocalToD1(d1Records: InquiryRecord[]): void {
+    const d1Map = new Map(d1Records.map((record) => [record.id, record]));
+    const local = this.getAll();
+
+    for (const localRecord of local) {
+      const d1Record = d1Map.get(localRecord.id);
+      if (!d1Record) {
+        this.syncToD1(localRecord);
+      } else if (isRemoteNewer(localRecord, d1Record)) {
+        this.updateInD1(localRecord);
+      }
+    }
+  },
 };

@@ -49,7 +49,8 @@ export function InquiryPage() {
 
     let cancelled = false;
     void inquiryService.pullFromD1().then((d1Records) => {
-      if (cancelled || d1Records.length === 0) return;
+      if (cancelled) return;
+      inquiryService.pushLocalToD1(d1Records);
       const merged = inquiryService.mergeFromD1(d1Records);
       useInquiryStore.setState({ records: merged });
     });
