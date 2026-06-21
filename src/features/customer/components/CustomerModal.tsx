@@ -32,8 +32,8 @@ export function CustomerModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4 py-6">
+      <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 dark:bg-gray-800">
         <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
           {isEditing ? `编辑${getEntityLabel()}` : `添加${getEntityLabel()}`}
         </h2>
