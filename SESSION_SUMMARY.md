@@ -77,6 +77,12 @@
 | 16 | Playwright E2E 套件（登录/Dashboard/报价单保存+D1断言/历史页） | `fa1a6a65` |
 | 17 | GitHub Actions 新增 E2E job（push to main 后针对生产站点运行） | `88507f4e` |
 
+### 🔴 询报价双向同步修复（TASK-32）
+
+| Task | 内容 | 提交 |
+|------|------|------|
+| 32 | 新增 `pushLocalToD1()`，删除 `length===0` 短路；页面加载变为：拉 D1 → 推本地存量 → 合并展示 | `70a24e7d` |
+
 ### 🟡 客户表单 UX 优化（TASK-31）
 
 | Task | 内容 | 提交 |
