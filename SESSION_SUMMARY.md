@@ -77,6 +77,12 @@
 | 16 | Playwright E2E 套件（登录/Dashboard/报价单保存+D1断言/历史页） | `fa1a6a65` |
 | 17 | GitHub Actions 新增 E2E job（push to main 后针对生产站点运行） | `88507f4e` |
 
+### 🔴 客户 D1 字段修复（TASK-33）
+
+| Task | 内容 | 提交 |
+|------|------|------|
+| 33 | `customerService.ts` data payload 补全简称/联系人字段；`d1Pull.ts` 改为 `...c.data` 全量还原 | `c1897277` |
+
 ### 🔴 询报价双向同步修复（TASK-32）
 
 | Task | 内容 | 提交 |
