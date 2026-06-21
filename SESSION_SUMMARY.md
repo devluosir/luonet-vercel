@@ -77,6 +77,12 @@
 | 16 | Playwright E2E 套件（登录/Dashboard/报价单保存+D1断言/历史页） | `fa1a6a65` |
 | 17 | GitHub Actions 新增 E2E job（push to main 后针对生产站点运行） | `88507f4e` |
 
+### 🟡 客户表单 UX 优化（TASK-31）
+
+| Task | 内容 | 提交 |
+|------|------|------|
+| 31 | CustomerForm 分区 + 双列网格 + 联系人2折叠；CustomerModal 加 `max-h-[85vh] overflow-y-auto max-w-2xl` | `0eddbec3` |
+
 ### 🔵 询报价权限 + D1 共享数据（TASK-19，分两 commit）
 
 | Task | 内容 | 提交 |
@@ -349,10 +355,9 @@ npx wrangler d1 execute mluonet-users \
 
 ```
 项目：LC App（外贸工具），Next.js 14 + Cloudflare Worker + D1 + Vercel
-进度：TASK-01~19 已完成，见 CODEX_TASKS.md 和 SESSION_SUMMARY.md
-上次结束：询报价模块权限门控 + D1 共享数据完成（TASK-19），待执行 D1 迁移
+进度：TASK-01~31 已完成（含 TASK-15-DRAFT 废弃草案），见 CODEX_TASKS.md 和 SESSION_SUMMARY.md
+上次结束：客户表单 UX 优化（TASK-31）；D1 迁移已执行（002_add_inquiry_type.sql）
 工作区：/Users/roger/website/luonet-vercel（已连接）
-待办：npx wrangler d1 execute mluonet-users --file=./migrations/002_add_inquiry_type.sql --remote
 下一步：[告知想做的方向]
 ```
 
