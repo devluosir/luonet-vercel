@@ -7029,7 +7029,7 @@ git commit -m "feat(customer): 联系人改为动态数组，兼容旧 contact2*
 
 ---
 
-## TASK-35：Worker 部署 + CI 自动化
+## TASK-35 ✅：Worker 部署 + CI 自动化
 
 ### 背景
 
@@ -7087,7 +7087,7 @@ git commit -m "ci: 新增 Cloudflare Worker 自动部署步骤"
 
 ---
 
-## TASK-36：修复询报价编辑双写竞态 + Worker PUT 改为 upsert
+## TASK-36 ✅：修复询报价编辑双写竞态 + Worker PUT 改为 upsert
 
 ### 背景与根因
 
@@ -7269,7 +7269,7 @@ npx wrangler deploy
 
 ---
 
-## TASK-37：修复询报价删除——跨端同步软删除
+## TASK-37 ✅：修复询报价删除——跨端同步软删除
 
 ### 背景
 
