@@ -6560,3 +6560,124 @@ git add src/features/customer/components/CustomerForm.tsx \
         src/features/customer/components/CustomerModal.tsx
 git commit -m "feat(customer): 表单布局优化（分区 + 双列网格 + 联系人2折叠）"
 ```
+
+---
+
+## TASK-32：修复询报价共享数据——本地记录推送 D1
+
+**优先级**：🔴 高（Bug 修复）
+**估时**：15 分钟
+**风险**：极低。只加一个推送步骤，不改任何写入逻辑
+
+### 问题根因
+
+两个 bug 叠加，导致有权限的用户看不到其他人的询报价记录：
+
+**Bug 1（`InquiryPage.tsx` 第 51 行）**
+```ts
+if (cancelled || d1Records.length === 0) return;
+```
+D1 为空时直接跳过所有同步，本地已有的数据永远推不上去。
+
+**Bug 2（缺少推送步骤）**
+页面加载只执行 `pullFromD1`，从未把本地存量记录推到 D1。
+TASK-30 上线前创建的记录只存在于创建者的 localStorage，其他用户拉取时 D1 里没有，看不到。
+
+### 修复方案
+
+**双向同步**：加载时先拉 D1，把本地比 D1 新（或 D1 里没有）的记录推上去，再合并显示。
+
+### 涉及文件
+
+| 文件 | 改动 |
+|------|------|
+| `src/features/inquiry/services/inquiry.service.ts` | 新增 `pushLocalToD1(d1Records)` 方法 |
+| `src/features/inquiry/app/InquiryPage.tsx` | 去掉 `length === 0` 判断，加推送调用 |
+
+---
+
+### 改动一：`inquiry.service.ts`
+
+在 `mergeFromD1` 方法之后、对象字面量结束的 `}` 之前，新增：
+
+```ts
+/**
+ * 把本地比 D1 新（或 D1 里没有）的记录推送到 D1（fire-and-forget）。
+ * 在 pullFromD1 之后调用，确保存量数据对所有有权限的用户可见。
+ */
+pushLocalToD1(d1Records: InquiryRecord[]): void {
+  const d1Map = new Map(d1Records.map((r) => [r.id, r]));
+  const local = this.getAll();
+  for (const localRecord of local) {
+    const d1Record = d1Map.get(localRecord.id);
+    if (!d1Record) {
+      // D1 里不存在，直接推
+      this.syncToD1(localRecord);
+    } else {
+      const localTime = new Date(localRecord.updatedAt).getTime();
+      const d1Time = new Date(d1Record.updatedAt).getTime();
+      if (Number.isFinite(localTime) && localTime > d1Time) {
+        // 本地更新，覆盖 D1
+        this.updateInD1(localRecord);
+      }
+    }
+  }
+},
+```
+
+---
+
+### 改动二：`InquiryPage.tsx`
+
+找到以下代码块（权限通过后的 D1 同步 effect）：
+
+```ts
+// 原来
+void inquiryService.pullFromD1().then((d1Records) => {
+  if (cancelled || d1Records.length === 0) return;
+  const merged = inquiryService.mergeFromD1(d1Records);
+  useInquiryStore.setState({ records: merged });
+});
+```
+
+替换为：
+
+```ts
+// 修复后
+void inquiryService.pullFromD1().then((d1Records) => {
+  if (cancelled) return;
+  // 把本地存量记录推送到 D1（D1 没有的 或 本地更新的）
+  inquiryService.pushLocalToD1(d1Records);
+  // 合并 D1 记录到本地显示（D1 更新则以 D1 为准）
+  const merged = inquiryService.mergeFromD1(d1Records);
+  useInquiryStore.setState({ records: merged });
+});
+```
+
+变更要点：
+1. 删除 `d1Records.length === 0` 的 return（D1 为空也要执行推送）
+2. 在 `mergeFromD1` 之前调用 `inquiryService.pushLocalToD1(d1Records)`
+
+---
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run lint -- --file src/features/inquiry/services/inquiry.service.ts \
+               --file src/features/inquiry/app/InquiryPage.tsx
+
+# 手动验证：
+# 1. 用户 A（有 inquiry 权限）打开 /inquiry → 看到自己的记录，本地记录自动推送到 D1
+# 2. 用户 B（有 inquiry 权限）打开 /inquiry → 能看到用户 A 的记录
+# 3. 用户 B 编辑一条记录 → 用户 A 刷新页面后也能看到修改
+# 4. 无 inquiry 权限的用户 → 显示 403，无法访问
+```
+
+### 提交
+
+```bash
+git add src/features/inquiry/services/inquiry.service.ts \
+        src/features/inquiry/app/InquiryPage.tsx
+git commit -m "fix(inquiry): 双向同步修复——页面加载时推送本地存量记录到 D1"
+```
