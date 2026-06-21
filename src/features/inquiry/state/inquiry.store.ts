@@ -37,6 +37,11 @@ interface InquiryStore {
   ) => void;
 }
 
+function syncUpdatedRecord(records: InquiryRecord[], recordId: string): void {
+  const target = records.find((record) => record.id === recordId);
+  if (target) inquiryService.updateInD1(target);
+}
+
 export const useInquiryStore = create<InquiryStore>((set, get) => ({
   records: [],
 
@@ -60,16 +65,19 @@ export const useInquiryStore = create<InquiryStore>((set, get) => ({
     };
     const updated = inquiryService.add(record);
     set({ records: updated });
+    inquiryService.syncToD1(record);
   },
 
   updateRecord: (id, patch) => {
     const updated = inquiryService.update(id, patch);
     set({ records: updated });
+    syncUpdatedRecord(updated, id);
   },
 
   removeRecord: (id) => {
     const updated = inquiryService.remove(id);
     set({ records: updated });
+    inquiryService.deleteFromD1(id);
   },
 
   addSupplier: (recordId, supplier) => {
@@ -83,6 +91,7 @@ export const useInquiryStore = create<InquiryStore>((set, get) => ({
     });
     inquiryService.save(records);
     set({ records });
+    syncUpdatedRecord(records, recordId);
   },
 
   updateSupplier: (recordId, supplierId, patch) => {
@@ -98,6 +107,7 @@ export const useInquiryStore = create<InquiryStore>((set, get) => ({
     });
     inquiryService.save(records);
     set({ records });
+    syncUpdatedRecord(records, recordId);
   },
 
   removeSupplier: (recordId, supplierId) => {
@@ -111,6 +121,7 @@ export const useInquiryStore = create<InquiryStore>((set, get) => ({
     });
     inquiryService.save(records);
     set({ records });
+    syncUpdatedRecord(records, recordId);
   },
 
   addQuotedStatus: (recordId, qs) => {
@@ -124,6 +135,7 @@ export const useInquiryStore = create<InquiryStore>((set, get) => ({
     });
     inquiryService.save(records);
     set({ records });
+    syncUpdatedRecord(records, recordId);
   },
 
   updateQuotedStatus: (recordId, qsId, patch) => {
@@ -139,6 +151,7 @@ export const useInquiryStore = create<InquiryStore>((set, get) => ({
     });
     inquiryService.save(records);
     set({ records });
+    syncUpdatedRecord(records, recordId);
   },
 
   removeQuotedStatus: (recordId, qsId) => {
@@ -152,6 +165,7 @@ export const useInquiryStore = create<InquiryStore>((set, get) => ({
     });
     inquiryService.save(records);
     set({ records });
+    syncUpdatedRecord(records, recordId);
   },
 
   replaceStatuses: (recordId, suppliers, quotedStatuses) => {
@@ -166,5 +180,6 @@ export const useInquiryStore = create<InquiryStore>((set, get) => ({
     });
     inquiryService.save(records);
     set({ records });
+    syncUpdatedRecord(records, recordId);
   },
 }));

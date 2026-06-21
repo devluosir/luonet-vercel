@@ -9,6 +9,7 @@ import { useAppUser } from '@/hooks/useAppUser';
 import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '../types';
 import { useInquiryActions } from '../hooks/useInquiryActions';
 import { useInquiryStore } from '../state/inquiry.store';
+import { inquiryService } from '../services/inquiry.service';
 import { InquiryFormModal } from '../components/InquiryFormModal';
 import { InquiryTable } from '../components/InquiryTable';
 
@@ -43,6 +44,20 @@ export function InquiryPage() {
     useInquiryStore.getState().init();
   }, []);
 
+  useEffect(() => {
+    if (!permissionChecked || !hasInquiryAccess) return;
+
+    let cancelled = false;
+    void inquiryService.pullFromD1().then((d1Records) => {
+      if (cancelled || d1Records.length === 0) return;
+      const merged = inquiryService.mergeFromD1(d1Records);
+      useInquiryStore.setState({ records: merged });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasInquiryAccess, permissionChecked]);
 
   const openCreateModal = () => {
     setEditingRecord(null);

@@ -75,6 +75,15 @@ type DocumentRow = {
   updated_at: string;
 };
 
+type InquiryRecordPayload = {
+  id?: string;
+  inquiryNo?: string;
+  customerNo?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
+};
+
 function serializeDocument(row: DocumentRow) {
   return {
     ...row,
@@ -120,6 +129,11 @@ export default {
     // 处理用户认证
     if (path === '/api/auth/d1-users' && request.method === 'POST') {
       return handleUserAuth(request, env);
+    }
+
+    // 处理询报价共享数据 API
+    if (path.startsWith('/api/inquiry')) {
+      return handleInquiryRequest(request, path, env);
     }
 
     // 处理业务单据 API
@@ -1321,6 +1335,111 @@ async function handleDeleteDocument(request: Request, env: Env): Promise<Respons
 
     if (result.meta.changes === 0) return jsonResponse({ error: '单据不存在' }, 404);
     return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleInquiryRequest(
+  request: Request,
+  path: string,
+  env: Env
+): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    if (request.method === 'GET' && path === '/api/inquiry') {
+      const url = new URL(request.url);
+      const limit = Math.min(Number(url.searchParams.get('limit')) || 500, 500);
+      const offset = Number(url.searchParams.get('offset')) || 0;
+
+      const result = await env.USERS_DB.prepare(`
+        SELECT * FROM Document
+        WHERE type = 'inquiry'
+        ORDER BY doc_no DESC
+        LIMIT ? OFFSET ?
+      `).bind(limit, offset).all<DocumentRow>();
+
+      const records = result.results.map((row) => {
+        const data = parseJsonData<InquiryRecordPayload>(row.data, {});
+        return {
+          ...data,
+          id: row.id,
+          inquiryNo: typeof data.inquiryNo === 'string' ? data.inquiryNo : row.doc_no,
+          customerNo: typeof data.customerNo === 'string' ? data.customerNo : row.customer_name ?? '',
+          createdAt: typeof data.createdAt === 'string' ? data.createdAt : row.created_at,
+          updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : row.updated_at,
+        };
+      });
+
+      return jsonResponse({ records, total: records.length });
+    }
+
+    if (request.method === 'POST' && path === '/api/inquiry') {
+      const body = await request.json() as InquiryRecordPayload;
+      const now = new Date().toISOString();
+      const id = typeof body.id === 'string' && body.id ? body.id : crypto.randomUUID();
+      const createdAt = typeof body.createdAt === 'string' && body.createdAt ? body.createdAt : now;
+      const inquiryNo = typeof body.inquiryNo === 'string' ? body.inquiryNo : '';
+      const customerNo = typeof body.customerNo === 'string' ? body.customerNo : '';
+      const data = JSON.stringify({ ...body, id, createdAt, updatedAt: now });
+
+      await env.USERS_DB.prepare(`
+        INSERT OR REPLACE INTO Document (
+          id, user_id, type, doc_no, customer_name, total_amount, currency, status, data, created_at, updated_at
+        ) VALUES (?, '_shared_', 'inquiry', ?, ?, 0, 'CNY', 'active', ?, ?, ?)
+      `).bind(
+        id,
+        inquiryNo,
+        customerNo,
+        data,
+        createdAt,
+        now
+      ).run();
+
+      return jsonResponse({ success: true, id }, 201);
+    }
+
+    const itemMatch = path.match(/^\/api\/inquiry\/([^/]+)$/);
+
+    if (request.method === 'PUT' && itemMatch) {
+      const id = itemMatch[1];
+      const body = await request.json() as InquiryRecordPayload;
+      const now = new Date().toISOString();
+      const inquiryNo = typeof body.inquiryNo === 'string' ? body.inquiryNo : '';
+      const customerNo = typeof body.customerNo === 'string' ? body.customerNo : '';
+      const data = JSON.stringify({ ...body, id, updatedAt: now });
+
+      const result = await env.USERS_DB.prepare(`
+        UPDATE Document
+        SET doc_no = ?, customer_name = ?, data = ?, updated_at = ?
+        WHERE id = ? AND type = 'inquiry'
+      `).bind(
+        inquiryNo,
+        customerNo,
+        data,
+        now,
+        id
+      ).run();
+
+      if (result.meta.changes === 0) return jsonResponse({ error: '询报价记录不存在' }, 404);
+      return jsonResponse({ success: true, id });
+    }
+
+    if (request.method === 'DELETE' && itemMatch) {
+      const id = itemMatch[1];
+      await env.USERS_DB.prepare(`
+        DELETE FROM Document
+        WHERE id = ? AND type = 'inquiry'
+      `).bind(id).run();
+
+      return jsonResponse({ success: true });
+    }
+
+    return jsonResponse({ error: 'Not Found' }, 404);
   } catch (error) {
     return jsonResponse({
       error: '服务器错误',

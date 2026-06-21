@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS quotation_history (
 CREATE TABLE IF NOT EXISTS Document (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
-  type TEXT NOT NULL CHECK(type IN ('quotation', 'confirmation', 'invoice', 'packing', 'purchase')),
+  type TEXT NOT NULL CHECK(type IN ('quotation', 'confirmation', 'invoice', 'packing', 'purchase', 'inquiry')),
   doc_no TEXT NOT NULL,
   customer_name TEXT,
   total_amount REAL,
