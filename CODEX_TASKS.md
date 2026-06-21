@@ -7319,3 +7319,97 @@ npx wrangler deploy
 1. Device A 删除一条询报价记录 → 本机立即消失
 2. Device B（同账号或有权限账号）刷新页面 → 该记录也消失
 3. Device A 刷新 → 记录仍然消失（不被 D1 拉回）
+
+---
+
+## TASK-38：询报价页面定时轮询（30 秒自动同步）
+
+### 背景
+
+当前 D1 拉取只在页面**加载时执行一次**。其他用户的新增/编辑/删除操作无法即时出现在已打开的页面上，需手动刷新才能看到。
+
+目标：每 30 秒自动重新拉取 D1，合并最新状态并更新界面，页面隐藏时暂停轮询节省请求。
+
+### 涉及文件
+
+- `src/features/inquiry/app/InquiryPage.tsx`（唯一改动）
+
+### 改动规格
+
+将现有 D1 同步 useEffect 改为以下结构：
+
+```tsx
+useEffect(() => {
+  if (!permissionChecked || !hasInquiryAccess) return;
+
+  const POLL_INTERVAL_MS = 30_000;
+
+  // 抽取同步逻辑为可复用函数
+  async function syncFromD1() {
+    const d1Records = await inquiryService.pullFromD1();
+    inquiryService.pushLocalToD1(d1Records);
+    const merged = inquiryService.mergeFromD1(d1Records);
+    useInquiryStore.setState({ records: merged });
+    setLastSyncedAt(new Date());
+  }
+
+  // 立即执行一次
+  void syncFromD1();
+
+  // 页面可见时轮询，隐藏时暂停
+  const interval = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      void syncFromD1();
+    }
+  }, POLL_INTERVAL_MS);
+
+  // 页面从隐藏变回可见时立即补一次同步
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      void syncFromD1();
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  return () => {
+    clearInterval(interval);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+}, [hasInquiryAccess, permissionChecked]);
+```
+
+同时在组件顶部添加状态：
+
+```tsx
+const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+```
+
+在页面标题区域添加同步时间显示（紧跟 `<p>` 描述文字后）：
+
+```tsx
+{lastSyncedAt && (
+  <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+    最后同步：{lastSyncedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+  </p>
+)}
+```
+
+### 验证步骤
+
+```bash
+npx tsc --noEmit
+npm run lint -- --file src/features/inquiry/app/InquiryPage.tsx
+```
+
+功能验证：
+1. 打开询报价页，等待约 30 秒，观察"最后同步"时间自动更新
+2. 在另一台设备新增一条记录 → 本页面 30 秒内自动出现（无需刷新）
+3. 切换到其他浏览器 Tab → 返回 → 立即触发一次同步
+4. DevTools Network 确认每 30 秒出现一次 GET `/api/inquiry` 请求
+
+### 提交
+
+```bash
+git add src/features/inquiry/app/InquiryPage.tsx
+git commit -m "feat(inquiry): 30 秒定时轮询 + 页面可见时立即同步"
+```
