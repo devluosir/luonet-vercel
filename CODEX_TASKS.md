@@ -6329,3 +6329,234 @@ git add src/worker.ts \
         src/features/inquiry/app/InquiryPage.tsx
 git commit -m "feat(inquiry): D1 共享数据（全员可见 + fire-and-forget 双写）"
 ```
+
+---
+
+## TASK-31：客户表单布局优化（分区 + 双列 + 联系人2折叠）
+
+**优先级**：🟡 中（体验优化）
+**估时**：30 分钟
+**风险**：低。纯 UI 重构，不改任何字段、类型定义或数据逻辑
+
+### 背景与问题
+
+当前 `CustomerForm.tsx` 把所有字段垂直堆叠，导致：
+1. 表单过长，需大量滚动
+2. 公司信息和联系人信息无视觉分区
+3. 联系人2 永远展开占用大量空间（通常不填）
+4. "名称"字段指向联系人1姓名，但紧跟在"地址"后面，语义位置混乱
+5. 供应商/收货人的表单和客户完全一样，但它们不需要简称字段
+
+### 目标设计
+
+#### 客户（entityType === 'customers'）
+
+```
+── 公司信息 ──────────────────────────────────────────
+公司全称 *（2/3 宽）    简称（1/3 宽，如：LC）
+地址（全宽）
+
+── 联系人1 ───────────────────────────────────────────
+姓名 *（1/2 宽）        简称（1/2 宽，如：Roger）
+邮箱（1/2 宽）          电话（1/2 宽）
+
+▶ 联系人2（可选，默认折叠，点击展开）
+  姓名（1/2 宽）        简称（1/2 宽，如：Mary）
+  邮箱（1/2 宽）        电话（1/2 宽）
+─────────────────────────────────────────────────────
+                              [ 取消 ]  [ 保存 ]
+```
+
+#### 供应商 / 收货人（entityType !== 'customers'）
+
+```
+公司名称 *（全宽）
+地址（全宽）
+联系人姓名 *（1/2 宽）  邮箱（1/2 宽）
+电话（全宽）
+─────────────────────────────────────────────────────
+                              [ 取消 ]  [ 保存 ]
+```
+
+### 涉及文件
+
+| 文件 | 改动说明 |
+|------|---------|
+| `src/features/customer/components/CustomerForm.tsx` | 主要重构 |
+| `src/features/customer/components/CustomerModal.tsx` | 内容区加 `overflow-y-auto max-h-[85vh]` 防小屏截断 |
+
+### 具体实现（`CustomerForm.tsx`）
+
+#### 1. 新增 showContact2 状态
+
+```tsx
+const [showContact2, setShowContact2] = useState(false);
+```
+
+初始化逻辑：编辑模式下如果 `formData.contact2Name` 或 `formData.contact2ShortName` 有值，则初始展开：
+
+```tsx
+// 初始化时检查
+useState(() => {
+  if (formData.contact2Name || formData.contact2ShortName) {
+    setShowContact2(true);
+  }
+});
+```
+
+或用 `useEffect`:
+```tsx
+useEffect(() => {
+  if (formData.contact2Name || formData.contact2ShortName) {
+    setShowContact2(true);
+  }
+}, []); // 仅挂载时
+```
+
+#### 2. 客户表单 JSX 结构
+
+```tsx
+{/* ── 公司信息 ── */}
+<div>
+  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">公司信息</p>
+  <div className="grid grid-cols-3 gap-3 mb-3">
+    <div className="col-span-2">
+      <label>公司全称 <span className="text-red-500">*</span></label>
+      <input field="company" required />
+    </div>
+    <div>
+      <label>简称</label>
+      <input field="companyShortName" placeholder="如：LC" />
+    </div>
+  </div>
+  <div>
+    <label>地址</label>
+    <input field="address" />
+  </div>
+</div>
+
+{/* ── 联系人1 ── */}
+<div>
+  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">联系人1</p>
+  <div className="grid grid-cols-2 gap-3 mb-3">
+    <div>
+      <label>姓名 <span className="text-red-500">*</span></label>
+      <input field="name" required />
+    </div>
+    <div>
+      <label>简称</label>
+      <input field="contact1ShortName" placeholder="如：Roger" />
+    </div>
+  </div>
+  <div className="grid grid-cols-2 gap-3">
+    <div>
+      <label>邮箱</label>
+      <input field="email" type="email" />
+    </div>
+    <div>
+      <label>电话</label>
+      <input field="phone" type="tel" />
+    </div>
+  </div>
+</div>
+
+{/* ── 联系人2 折叠 ── */}
+<div>
+  <button
+    type="button"
+    onClick={() => setShowContact2(v => !v)}
+    className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 py-1"
+  >
+    <span>{showContact2 ? '▼' : '▶'}</span>
+    <span>联系人2（可选）</span>
+  </button>
+  {showContact2 && (
+    <div className="mt-2 space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label>姓名</label>
+          <input field="contact2Name" />
+        </div>
+        <div>
+          <label>简称</label>
+          <input field="contact2ShortName" placeholder="如：Mary" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label>邮箱</label>
+          <input field="contact2Email" type="email" />
+        </div>
+        <div>
+          <label>电话</label>
+          <input field="contact2Phone" type="tel" />
+        </div>
+      </div>
+    </div>
+  )}
+</div>
+```
+
+#### 3. 供应商/收货人 JSX 结构
+
+```tsx
+{/* 当 entityType !== 'customers' 时 */}
+<div>
+  <label>公司名称 <span className="text-red-500">*</span></label>
+  <input field="company" required />
+</div>
+<div>
+  <label>地址</label>
+  <input field="address" />
+</div>
+<div className="grid grid-cols-2 gap-3">
+  <div>
+    <label>联系人姓名 <span className="text-red-500">*</span></label>
+    <input field="name" required />
+  </div>
+  <div>
+    <label>邮箱</label>
+    <input field="email" type="email" />
+  </div>
+</div>
+<div>
+  <label>电话</label>
+  <input field="phone" type="tel" />
+</div>
+```
+
+#### 4. `CustomerModal.tsx` 改动
+
+```tsx
+// 内容容器加 overflow-y-auto max-h-[85vh]
+<div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md
+                overflow-y-auto max-h-[85vh]">
+```
+
+### 样式规范
+
+- 分区标题：`text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2`
+- 所有 input：复用现有 className（`mt-1 block w-full border border-gray-300 ...`）
+- 按钮行：保持 `flex justify-end space-x-2` 不变
+- 暗色模式：标签用 `dark:text-gray-300`，分区标题用 `dark:text-gray-500`
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run lint -- --file src/features/customer/components/CustomerForm.tsx
+
+# 手动检查：
+# 1. 添加客户：字段分区正确，联系人2 默认折叠，展开后字段正常
+# 2. 编辑有联系人2数据的客户：联系人2 自动展开
+# 3. 添加供应商/收货人：只显示简化表单
+# 4. 暗色模式外观正常
+```
+
+### 提交
+
+```bash
+git add src/features/customer/components/CustomerForm.tsx \
+        src/features/customer/components/CustomerModal.tsx
+git commit -m "feat(customer): 表单布局优化（分区 + 双列网格 + 联系人2折叠）"
+```
