@@ -25,13 +25,13 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
           <span className={`whitespace-nowrap font-mono leading-4 ${mainTextClass}`}>
             {record.inquiryNo}
           </span>
-          {record.orderNo && (
-            <span className="inline-flex w-fit items-center rounded-full bg-green-50 px-1.5 py-0 text-[11px] font-medium leading-4 text-green-700 ring-1 ring-green-200 dark:bg-green-950/40 dark:text-green-400 dark:ring-green-800">
-              {record.orderNo}
-            </span>
-          )}
-          <span className="text-[11px] leading-3 text-gray-400 dark:text-gray-500">
-            {stripDateBrackets(record.inquiryDate)}
+          <span className="flex items-center gap-1.5 text-[11px] leading-4 text-gray-400 dark:text-gray-500">
+            <span>{stripDateBrackets(record.inquiryDate)}</span>
+            {record.orderNo && (
+              <span className="inline-flex items-center rounded-full bg-green-50 px-1.5 py-0 text-[11px] font-medium leading-4 text-green-700 ring-1 ring-green-200 dark:bg-green-950/40 dark:text-green-400 dark:ring-green-800">
+                {record.orderNo}
+              </span>
+            )}
           </span>
         </div>
       </td>
