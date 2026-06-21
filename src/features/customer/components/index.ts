@@ -4,6 +4,7 @@ export { ConsigneeList } from './ConsigneeList';
 export { CustomerForm } from './CustomerForm';
 export { CustomerToolbar } from './CustomerToolbar';
 export { CustomerTabs } from './CustomerTabs';
+export { FilterChipBar } from './FilterChipBar';
 export { CustomerModal } from './CustomerModal';
 export { CustomerTimeline } from './CustomerTimeline';
 export { FollowUpManager } from './FollowUpManager';

@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { 
   Users, 
   Building, 
   UserPlus, 
   Plus,
-  Search,
-  RefreshCw
+  RefreshCw,
+  TrendingUp
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout';
@@ -20,11 +20,51 @@ import {
   ConsigneeList, 
   CustomerModal,
   NewCustomerTracker,
-  FeatureFlagManager
+  FeatureFlagManager,
+  FilterChipBar
 } from '../components';
 import { useCustomerData, useCustomerActions, useCustomerForm, useAutoSync } from '../hooks';
 import { useAnalytics, useAutoPerformanceMonitoring } from '../hooks/useAnalytics';
 import { Customer, Supplier, Consignee, TabType } from '../types';
+import { TimelineService, FollowUpService } from '../services/timelineService';
+import type {
+  CustomerFilterType,
+  CustomerSortType,
+  CustomerViewMode,
+} from '../components/FilterChipBar';
+
+type CustomerActivityLevel = 'high' | 'medium' | 'low';
+
+function getCustomerActivityLevel(customer: Customer): CustomerActivityLevel {
+  try {
+    const timelineCount = TimelineService.getEventsByCustomer(customer.name).length;
+    const followUpCount = FollowUpService.getFollowUpsByCustomer(customer.name).length;
+    const totalActivity = timelineCount + followUpCount;
+
+    if (totalActivity >= 10) return 'high';
+    if (totalActivity >= 5) return 'medium';
+    return 'low';
+  } catch {
+    return 'low';
+  }
+}
+
+function customerNeedsFollowUp(customer: Customer): boolean {
+  try {
+    const timelineCount = TimelineService.getEventsByCustomer(customer.name).length;
+    const followUpCount = FollowUpService.getFollowUpsByCustomer(customer.name).length;
+    return timelineCount > 0 && followUpCount === 0;
+  } catch {
+    return false;
+  }
+}
+
+function isCustomerCreatedThisMonth(customer: Customer): boolean {
+  const lastMonth = new Date();
+  lastMonth.setMonth(lastMonth.getMonth() - 1);
+  const createdAt = customer.createdAt ? new Date(customer.createdAt) : null;
+  return Boolean(createdAt && createdAt >= lastMonth);
+}
 
 // 错误边界组件
 class ErrorBoundary extends React.Component<
@@ -80,6 +120,9 @@ function CustomerPageContent() {
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [editingConsignee, setEditingConsignee] = useState<Consignee | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<CustomerViewMode>('grid');
+  const [activeFilter, setActiveFilter] = useState<CustomerFilterType>('all');
+  const [sortBy, setSortBy] = useState<CustomerSortType>('date_desc');
   const [isClient, setIsClient] = useState(false);
 
   // 确保在客户端渲染
@@ -127,6 +170,14 @@ function CustomerPageContent() {
   };
 
   const stats = getRealTimeStats();
+
+  const customerFilterCounts = useMemo(() => {
+    return {
+      highCount: customers.filter((customer) => getCustomerActivityLevel(customer) === 'high').length,
+      needsFollowUpCount: customers.filter(customerNeedsFollowUp).length,
+      thisMonthCount: customers.filter(isCustomerCreatedThisMonth).length,
+    };
+  }, [customers]);
 
   // 处理添加新项目
   const handleAddNew = () => {
@@ -304,16 +355,6 @@ function CustomerPageContent() {
 
             {/* 右侧：搜索和操作 */}
             <div className="flex items-center space-x-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="搜索客户、供应商..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="w-64 pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-                />
-              </div>
               <button
                 onClick={handleRefreshData}
                 className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -341,6 +382,10 @@ function CustomerPageContent() {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">总客户数</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalCustomers}</p>
+                <p className="mt-1 flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>+{stats.growthRate}% 较上月</span>
+                </p>
               </div>
               <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
                 <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -377,6 +422,10 @@ function CustomerPageContent() {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">本月新增</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.recentCustomers}</p>
+                <p className="mt-1 flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>+{stats.growthRate}% 较上月</span>
+                </p>
               </div>
               <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center">
                 <UserPlus className="w-5 h-5 text-orange-600 dark:text-orange-400" />
@@ -389,6 +438,23 @@ function CustomerPageContent() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           {/* 标签页导航 */}
           <CustomerTabs activeTab={activeTab} onTabChange={handleTabChange} />
+
+          {activeTab === 'customers' && (
+            <FilterChipBar
+              total={customers.length}
+              activeFilter={activeFilter}
+              onFilterChange={setActiveFilter}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              highCount={customerFilterCounts.highCount}
+              needsFollowUpCount={customerFilterCounts.needsFollowUpCount}
+              thisMonthCount={customerFilterCounts.thisMonthCount}
+              searchQuery={searchQuery}
+              onSearchChange={handleSearch}
+            />
+          )}
 
           {/* 数据列表 */}
           <div className="p-6">
@@ -404,6 +470,9 @@ function CustomerPageContent() {
                 onDelete={handleDelete}
                 onViewDetail={handleViewDetail}
                 searchQuery={searchQuery}
+                viewMode={viewMode}
+                activeFilter={activeFilter}
+                sortBy={sortBy}
               />
             ) : activeTab === 'suppliers' ? (
               <SupplierList
