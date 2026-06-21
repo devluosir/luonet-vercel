@@ -77,6 +77,12 @@
 | 16 | Playwright E2E 套件（登录/Dashboard/报价单保存+D1断言/历史页） | `fa1a6a65` |
 | 17 | GitHub Actions 新增 E2E job（push to main 后针对生产站点运行） | `88507f4e` |
 
+### 🟢 客户多联系人扩展（TASK-34）
+
+| Task | 内容 | 提交 |
+|------|------|------|
+| 34 | 新增 `Contact` 类型，`contacts[]` 替代 `contact2*`；表单动态增删；旧数据自动迁移；D1 同步 + 询价人选项全部适配 | `6fccd03d` |
+
 ### 🔴 客户 D1 字段修复（TASK-33）
 
 | Task | 内容 | 提交 |
