@@ -48,18 +48,17 @@ CREATE TABLE IF NOT EXISTS quotation_history (
 
 -- 业务单据统一表
 CREATE TABLE IF NOT EXISTS Document (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL,
+  id TEXT NOT NULL PRIMARY KEY,
+  user_id TEXT NOT NULL,                         -- 询报价共享记录使用 _shared_，不加 User 外键
   type TEXT NOT NULL CHECK(type IN ('quotation', 'confirmation', 'invoice', 'packing', 'purchase', 'inquiry')),
-  doc_no TEXT NOT NULL,
-  customer_name TEXT,
-  total_amount REAL,
-  currency TEXT DEFAULT 'USD',
+  doc_no TEXT NOT NULL DEFAULT '',
+  customer_name TEXT NOT NULL DEFAULT '',
+  total_amount REAL NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'USD',
   status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'deleted')),
-  data TEXT NOT NULL,                              -- JSON 全量数据
+  data TEXT,                                      -- JSON 全量数据
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES User(id) ON DELETE CASCADE
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_doc_user_type ON Document(user_id, type);
