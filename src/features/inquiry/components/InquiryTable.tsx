@@ -39,9 +39,6 @@ export function InquiryTable({
           <thead className="bg-gray-50 dark:bg-gray-900/50">
             <tr>
               <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                日期
-              </th>
-              <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 <button
                   type="button"
                   onClick={onSortToggle}

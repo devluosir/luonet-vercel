@@ -20,27 +20,31 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
       className="group cursor-pointer border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/40"
       onClick={() => onEdit(record)}
     >
-      <td className="whitespace-nowrap px-3 py-3 text-sm">
-        <span className={mainTextClass}>{stripDateBrackets(record.inquiryDate)}</span>
-      </td>
       <td className="px-3 py-3 text-sm">
-        <div className="flex flex-col gap-1">
-          <span className={`whitespace-nowrap ${mainTextClass}`}>{record.inquiryNo}</span>
+        <div className="flex flex-col gap-0.5">
+          <span className={`whitespace-nowrap font-mono ${mainTextClass}`}>
+            {record.inquiryNo}
+          </span>
           {record.orderNo && (
             <span className="inline-flex w-fit items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-200 dark:bg-green-950/40 dark:text-green-400 dark:ring-green-800">
               {record.orderNo}
             </span>
           )}
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            {stripDateBrackets(record.inquiryDate)}
+          </span>
         </div>
       </td>
       <td className="whitespace-nowrap px-3 py-3 text-sm">
         <span className={mainTextClass}>{record.inquirer}</span>
       </td>
-      <td className="whitespace-nowrap px-3 py-3 text-sm">
-        <span className={mainTextClass}>{record.customerNo}</span>
+      <td className="px-3 py-3 text-sm">
+        <span className={`block max-w-[180px] truncate ${mainTextClass}`} title={record.customerNo}>
+          {record.customerNo}
+        </span>
       </td>
-      <td className="min-w-[180px] px-3 py-3 text-sm">
-        <p className={`max-w-[280px] whitespace-pre-wrap break-words ${mainTextClass}`}>
+      <td className="min-w-[160px] px-3 py-3 text-sm">
+        <p className={`max-w-[260px] line-clamp-2 break-words ${mainTextClass}`}>
           {record.description}
         </p>
       </td>

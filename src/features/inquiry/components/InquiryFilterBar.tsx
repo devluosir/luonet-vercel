@@ -101,6 +101,20 @@ export function InquiryFilterBar({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 sm:flex-nowrap">
+        <input
+          type="search"
+          value={filter.keyword}
+          onChange={(event) => setFilter({ ...filter, keyword: event.target.value })}
+          placeholder="搜索编号 / 客户 / 简述..."
+          className={
+            'h-7 min-w-[160px] flex-1 rounded-lg border border-gray-200 bg-white px-3 ' +
+            'text-xs text-gray-700 outline-none placeholder:text-gray-400 ' +
+            'focus:border-blue-400 focus:ring-1 focus:ring-blue-200 ' +
+            'dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-500 ' +
+            'dark:focus:border-blue-500'
+          }
+        />
+
         <select
           value={filter.customerNo}
           onChange={(event) => setFilter({ ...filter, customerNo: event.target.value })}
@@ -127,7 +141,7 @@ export function InquiryFilterBar({
           ))}
         </select>
 
-        <div className="flex flex-1 items-center justify-end gap-3 text-xs text-gray-500 dark:text-gray-400">
+        <div className="ml-auto flex items-center justify-end gap-3 text-xs text-gray-500 dark:text-gray-400">
           <span>{summary}</span>
           {activeCount > 0 && (
             <button

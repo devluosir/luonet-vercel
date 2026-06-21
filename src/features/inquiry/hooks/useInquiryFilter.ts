@@ -17,6 +17,7 @@ export interface InquiryFilterState {
   inquirer: string;
   quoteStatus: QuoteStatusFilter;
   sortDir: 'asc' | 'desc';
+  keyword: string;
 }
 
 const DEFAULT_FILTER: InquiryFilterState = {
@@ -25,6 +26,7 @@ const DEFAULT_FILTER: InquiryFilterState = {
   inquirer: '',
   quoteStatus: 'all',
   sortDir: 'desc',
+  keyword: '',
 };
 
 const DAYS_IN_MS = 24 * 60 * 60 * 1000;
@@ -70,6 +72,16 @@ export function useInquiryFilter(records: InquiryRecord[]) {
           }
         }
 
+        if (filter.keyword.trim()) {
+          const keyword = filter.keyword.trim().toLowerCase();
+          const matchesKeyword =
+            record.inquiryNo.toLowerCase().includes(keyword) ||
+            record.customerNo.toLowerCase().includes(keyword) ||
+            (record.description ?? '').toLowerCase().includes(keyword);
+
+          if (!matchesKeyword) return false;
+        }
+
         if (filter.customerNo && record.customerNo !== filter.customerNo) return false;
         if (filter.inquirer && record.inquirer !== filter.inquirer) return false;
 
@@ -99,6 +111,7 @@ export function useInquiryFilter(records: InquiryRecord[]) {
 
   const activeCount = [
     filter.timeRange !== 'all',
+    Boolean(filter.keyword.trim()),
     Boolean(filter.customerNo),
     Boolean(filter.inquirer),
     filter.quoteStatus !== 'all',
