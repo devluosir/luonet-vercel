@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import type {
   CustomerQuoteStatus,
-  InquiryBasicInput,
   InquiryRecord,
   InquiryRecordDraft,
   SupplierQuoteStatus,
@@ -13,7 +12,7 @@ interface InquiryStore {
   records: InquiryRecord[];
   init: () => void;
   addRecord: (draft: InquiryRecordDraft) => void;
-  updateRecord: (id: string, patch: Partial<InquiryBasicInput>) => void;
+  updateRecord: (id: string, patch: Partial<InquiryRecord>) => void;
   removeRecord: (id: string) => void;
   addSupplier: (recordId: string, supplier: Omit<SupplierQuoteStatus, 'id'>) => void;
   updateSupplier: (

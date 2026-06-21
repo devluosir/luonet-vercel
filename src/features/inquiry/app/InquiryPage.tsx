@@ -18,7 +18,8 @@ export function InquiryPage() {
   const router = useRouter();
   const { user, handleLogout } = useAppUser();
   const records = useInquiryStore((state) => state.records);
-  const { createRecord, updateRecordBasic, removeRecord } = useInquiryActions();
+  const { createRecord, removeRecord } = useInquiryActions();
+  const updateRecord = useInquiryStore((state) => state.updateRecord);
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
@@ -81,7 +82,11 @@ export function InquiryPage() {
     quoted: CustomerQuoteStatus[]
   ) => {
     if (editingRecord) {
-      updateRecordBasic(editingRecord.id, values);
+      updateRecord(editingRecord.id, {
+        ...values,
+        supplierStatuses: suppliers,
+        quotedStatuses: quoted,
+      });
     } else {
       createRecord(values, suppliers, quoted);
     }

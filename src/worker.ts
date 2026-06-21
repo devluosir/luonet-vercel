@@ -1413,19 +1413,25 @@ async function handleInquiryRequest(
       const customerNo = typeof body.customerNo === 'string' ? body.customerNo : '';
       const data = JSON.stringify({ ...body, id, updatedAt: now });
 
-      const result = await env.USERS_DB.prepare(`
-        UPDATE Document
-        SET doc_no = ?, customer_name = ?, data = ?, updated_at = ?
-        WHERE id = ? AND type = 'inquiry'
+      // 保留原始创建时间；若记录不在 D1 则自动新建（upsert）
+      const existingRow = await env.USERS_DB.prepare(
+        `SELECT created_at FROM Document WHERE id = ? AND type = 'inquiry'`
+      ).bind(id).first<{ created_at: string }>();
+      const createdAt = existingRow?.created_at ?? now;
+
+      await env.USERS_DB.prepare(`
+        INSERT OR REPLACE INTO Document
+          (id, user_id, type, doc_no, customer_name, total_amount, currency, status, data, created_at, updated_at)
+        VALUES (?, '_shared_', 'inquiry', ?, ?, 0, 'CNY', 'active', ?, ?, ?)
       `).bind(
+        id,
         inquiryNo,
         customerNo,
         data,
-        now,
-        id
+        createdAt,
+        now
       ).run();
 
-      if (result.meta.changes === 0) return jsonResponse({ error: '询报价记录不存在' }, 404);
       return jsonResponse({ success: true, id });
     }
 

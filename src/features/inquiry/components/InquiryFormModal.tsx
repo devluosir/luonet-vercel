@@ -17,7 +17,6 @@ import {
   getTodayDateInputValue,
 } from '../utils/inquiryUtils';
 import { getInquirerOptions } from '../utils/inquirerOptions';
-import { useInquiryStore } from '../state/inquiry.store';
 import { InquiryQuoteStatus } from './InquiryQuoteStatus';
 
 /** YYYY-MM-DD → m.D（如 6.21） */
@@ -76,8 +75,6 @@ export function InquiryFormModal({
   // ── 状态缓冲（随"保存修改"/"新增询价"一并提交） ──────
   const [localSuppliers, setLocalSuppliers] = useState<SupplierQuoteStatus[]>([]);
   const [localQuoted, setLocalQuoted] = useState<CustomerQuoteStatus[]>([]);
-
-  const replaceStatuses = useInquiryStore((state) => state.replaceStatuses);
 
   const existingNos = useMemo(
     () =>
@@ -178,9 +175,6 @@ export function InquiryFormModal({
     };
     if (!payload.inquiryNo || !payload.inquirer || !payload.customerNo) return;
 
-    if (mode === 'edit' && record) {
-      replaceStatuses(record.id, localSuppliers, localQuoted);
-    }
     onSubmit(payload, localSuppliers, localQuoted);
   };
 
