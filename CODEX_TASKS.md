@@ -3014,7 +3014,7 @@ git commit -m "feat(migration): D1 历史数据一次性迁移工具（INSERT OR
 
 ---
 
-## TASK-15：读取路径切换 D1 Primary（可选，高风险）
+## TASK-15-DRAFT：读取路径切换 D1 Primary（可选，高风险，已放弃未执行）
 
 **优先级**：🟢 低（TASK-14 完成且数据确认完整后再执行）
 **估时**：40 分钟
@@ -4664,6 +4664,138 @@ npx tsc --noEmit
 
 ---
 
+## TASK-21 ✅：修复侧边栏权限过滤
+
+**状态**：已完成
+
+### 问题
+
+`AppSidebar.tsx` 的 `visibleItems` 过滤逻辑在 `permissionUser` 为 `null`（权限尚未加载）时，`?? false` 导致所有带 `permissionKey` 的项全被过滤掉，只剩 `首页` 和 `AI邮件` 两项（无 `permissionKey`）。
+
+### 修改文件
+
+**`src/components/layout/AppSidebar.tsx`**
+
+```tsx
+// 新增 isLoading 订阅
+const isLoading = usePermissionStore((state) => state.isLoading);
+
+const visibleItems = NAV_ITEMS.filter((item) => {
+  if (!item.permissionKey) return true;
+  // 权限加载中或 user 未就绪时，显示全部项目（避免闪烁消失）
+  if (isLoading || !permissionUser) return true;
+  // 管理员看全部
+  if (permissionUser.isAdmin) return true;
+  const moduleId = PERMISSION_MODULE_MAP[item.permissionKey];
+  if (!moduleId) return true;
+  return permissionUser.permissions?.some(
+    (permission) => permission.moduleId === moduleId && permission.canAccess
+  ) ?? false;
+});
+```
+
+---
+
+## TASK-22 ✅：StatsCards 改为 slim 单行横排
+
+**状态**：已完成
+
+### 问题
+
+原 StatsCards 用 `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5` 大卡布局，在宽屏实际渲染为 2-3 列，占据视口将近一半高度（约 340px），大数字"0"信息密度极低。
+
+### 修改文件
+
+**`src/features/dashboard/components/StatsCards.tsx`**（完全重写）
+
+- 从大卡网格改为单行横排 slim bar，高度约 50px
+- 最左侧「今日」标签，5 项用竖线分隔
+- 每项：图标 + 名称（sm+可见）+ 数字（右对齐，加粗彩色）
+- 点击跳转 `/history?type=xxx&time=today` 保持不变
+- 加载中显示 animate-pulse 占位
+
+---
+
+## TASK-23 ✅：Dashboard 布局更新 CODEX_TASKS.md
+
+**状态**：已完成
+
+TASK-21 + TASK-22 完成后，Dashboard 首屏内容层级为：
+1. slim 今日统计栏（~50px，一行）
+2. 快速创建模块按钮（不变）
+3. 搜索 + 近期单据（不需要滚动即可见）
+
+无需改动 DashboardPage.tsx，布局顺序和 padding 已合理。
+
+---
+
+## 里程碑：数据管线完成（TASK-09 ~ TASK-15）
+
+| 层次 | 实现 | 文件 |
+|------|------|------|
+| **写入** | localStorage 主写 + D1 fire-and-forget | `d1Sync.ts` |
+| **迁移** | 管理员一键批量迁移历史数据 | `d1Migration.ts`, `D1MigrationPanel` |
+| **API** | Document / Customer CRUD 全套 | `worker.ts`, `/api/documents`, `/api/customers` |
+| **读取** | 登录时从 D1 拉取合并到 localStorage | `d1Pull.ts`, `useD1Sync.ts` |
+| **鉴权** | Bearer token（Worker）+ NextAuth session（Next.js 代理）| `worker.ts`, `/api/admin/[...path]` |
+
+---
+
+## TASK-24 ✅：修复侧边栏「销售确认」点击后 Tab 不切换
+
+**状态**：已完成
+
+### 根本原因
+
+`useInitQuotation.ts` 有两个 `useEffect`：
+
+1. **Mount effect**（`[]` 依赖）：读 `?tab=` → 调 `setTab` → 有 `initialized.current` 守卫，只跑一次
+2. **searchParams 监听 effect**（`[searchParams]` 依赖）：原本只做了 `window.history.replaceState`，**没有调 `setTab`**
+
+当用户从侧边栏点击「销售确认」（导航到 `/quotation?tab=confirmation`）时，App Router 不会 unmount/remount QuotationPage，只触发 `searchParams` 变化。第 1 个 effect 不重跑（守卫），第 2 个 effect 重跑但没同步 store → `activeTab` 停留在 'quotation'。
+
+### 修改文件
+
+**`src/features/quotation/hooks/useInitQuotation.ts`**
+
+```ts
+// 修改前（只更新 URL，不同步 store）：
+useEffect(() => {
+  const tab = getTabFromSearchParams(searchParams || undefined);
+  if (typeof window !== 'undefined' && tab) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState(null, '', url.toString());
+  }
+}, [searchParams]);
+
+// 修改后（先同步 store，再更新 URL）：
+useEffect(() => {
+  const tab = getTabFromSearchParams(searchParams || undefined);
+  // 同步到 store（处理侧边栏 /quotation?tab=confirmation 导航）
+  setTab(tab);
+  // 更新URL参数以持久化tab状态
+  if (typeof window !== 'undefined' && tab) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState(null, '', url.toString());
+  }
+}, [searchParams, setTab]);
+```
+
+### 验证
+
+```bash
+npx eslint src/features/quotation/hooks/useInitQuotation.ts
+# 期望：0 error（2 warnings 为既有问题，与本次无关）
+# 手动验证：
+# 1. 侧边栏点击「销售确认」→ 右侧内容切换到 Order Confirmation tab
+# 2. 侧边栏点击「报价单」→ 右侧内容切换到 Quotation tab
+# 3. 页面内点击 tab 按钮仍正常切换
+```
+
+---
+
 ## TASK-25：侧边栏加 Logo，用户菜单移至左下角
 
 **优先级**：🟡 体验优化
@@ -5207,138 +5339,6 @@ npx tsc --noEmit 2>&1 | grep -v "e2e\|playwright"
 
 ---
 
-## TASK-24 ✅：修复侧边栏「销售确认」点击后 Tab 不切换
-
-**状态**：已完成
-
-### 根本原因
-
-`useInitQuotation.ts` 有两个 `useEffect`：
-
-1. **Mount effect**（`[]` 依赖）：读 `?tab=` → 调 `setTab` → 有 `initialized.current` 守卫，只跑一次
-2. **searchParams 监听 effect**（`[searchParams]` 依赖）：原本只做了 `window.history.replaceState`，**没有调 `setTab`**
-
-当用户从侧边栏点击「销售确认」（导航到 `/quotation?tab=confirmation`）时，App Router 不会 unmount/remount QuotationPage，只触发 `searchParams` 变化。第 1 个 effect 不重跑（守卫），第 2 个 effect 重跑但没同步 store → `activeTab` 停留在 'quotation'。
-
-### 修改文件
-
-**`src/features/quotation/hooks/useInitQuotation.ts`**
-
-```ts
-// 修改前（只更新 URL，不同步 store）：
-useEffect(() => {
-  const tab = getTabFromSearchParams(searchParams || undefined);
-  if (typeof window !== 'undefined' && tab) {
-    const url = new URL(window.location.href);
-    url.searchParams.set('tab', tab);
-    window.history.replaceState(null, '', url.toString());
-  }
-}, [searchParams]);
-
-// 修改后（先同步 store，再更新 URL）：
-useEffect(() => {
-  const tab = getTabFromSearchParams(searchParams || undefined);
-  // 同步到 store（处理侧边栏 /quotation?tab=confirmation 导航）
-  setTab(tab);
-  // 更新URL参数以持久化tab状态
-  if (typeof window !== 'undefined' && tab) {
-    const url = new URL(window.location.href);
-    url.searchParams.set('tab', tab);
-    window.history.replaceState(null, '', url.toString());
-  }
-}, [searchParams, setTab]);
-```
-
-### 验证
-
-```bash
-npx eslint src/features/quotation/hooks/useInitQuotation.ts
-# 期望：0 error（2 warnings 为既有问题，与本次无关）
-# 手动验证：
-# 1. 侧边栏点击「销售确认」→ 右侧内容切换到 Order Confirmation tab
-# 2. 侧边栏点击「报价单」→ 右侧内容切换到 Quotation tab
-# 3. 页面内点击 tab 按钮仍正常切换
-```
-
----
-
-## TASK-21 ✅：修复侧边栏权限过滤
-
-**状态**：已完成
-
-### 问题
-
-`AppSidebar.tsx` 的 `visibleItems` 过滤逻辑在 `permissionUser` 为 `null`（权限尚未加载）时，`?? false` 导致所有带 `permissionKey` 的项全被过滤掉，只剩 `首页` 和 `AI邮件` 两项（无 `permissionKey`）。
-
-### 修改文件
-
-**`src/components/layout/AppSidebar.tsx`**
-
-```tsx
-// 新增 isLoading 订阅
-const isLoading = usePermissionStore((state) => state.isLoading);
-
-const visibleItems = NAV_ITEMS.filter((item) => {
-  if (!item.permissionKey) return true;
-  // 权限加载中或 user 未就绪时，显示全部项目（避免闪烁消失）
-  if (isLoading || !permissionUser) return true;
-  // 管理员看全部
-  if (permissionUser.isAdmin) return true;
-  const moduleId = PERMISSION_MODULE_MAP[item.permissionKey];
-  if (!moduleId) return true;
-  return permissionUser.permissions?.some(
-    (permission) => permission.moduleId === moduleId && permission.canAccess
-  ) ?? false;
-});
-```
-
----
-
-## TASK-22 ✅：StatsCards 改为 slim 单行横排
-
-**状态**：已完成
-
-### 问题
-
-原 StatsCards 用 `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5` 大卡布局，在宽屏实际渲染为 2-3 列，占据视口将近一半高度（约 340px），大数字"0"信息密度极低。
-
-### 修改文件
-
-**`src/features/dashboard/components/StatsCards.tsx`**（完全重写）
-
-- 从大卡网格改为单行横排 slim bar，高度约 50px
-- 最左侧「今日」标签，5 项用竖线分隔
-- 每项：图标 + 名称（sm+可见）+ 数字（右对齐，加粗彩色）
-- 点击跳转 `/history?type=xxx&time=today` 保持不变
-- 加载中显示 animate-pulse 占位
-
----
-
-## TASK-23 ✅：Dashboard 布局更新 CODEX_TASKS.md
-
-**状态**：已完成
-
-TASK-21 + TASK-22 完成后，Dashboard 首屏内容层级为：
-1. slim 今日统计栏（~50px，一行）
-2. 快速创建模块按钮（不变）
-3. 搜索 + 近期单据（不需要滚动即可见）
-
-无需改动 DashboardPage.tsx，布局顺序和 padding 已合理。
-
----
-
-## 里程碑：数据管线完成（TASK-09 ~ TASK-15）
-
-| 层次 | 实现 | 文件 |
-|------|------|------|
-| **写入** | localStorage 主写 + D1 fire-and-forget | `d1Sync.ts` |
-| **迁移** | 管理员一键批量迁移历史数据 | `d1Migration.ts`, `D1MigrationPanel` |
-| **API** | Document / Customer CRUD 全套 | `worker.ts`, `/api/documents`, `/api/customers` |
-| **读取** | 登录时从 D1 拉取合并到 localStorage | `d1Pull.ts`, `useD1Sync.ts` |
-| **鉴权** | Bearer token（Worker）+ NextAuth session（Next.js 代理）| `worker.ts`, `/api/admin/[...path]` |
-
----
-
 ## TASK-26 ✅：管理后台迁移到 AppLayout 框架
 
 **优先级**：🟡 中
@@ -5735,7 +5735,7 @@ git commit -m "feat: 客户管理新增公司简称和联系人2字段，询价�
 
 ---
 
-## TASK-19：询报价权限控制 + D1 共享数据
+## TASK-30：询报价权限控制 + D1 共享数据
 
 **优先级**：🔴 高（功能完整性）
 **估时**：60 分钟
