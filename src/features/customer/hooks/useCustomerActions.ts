@@ -32,12 +32,13 @@ export function useCustomerActions() {
       };
 
       // 检查是否会影响历史记录
-      if (editingCustomer && editingCustomer.name !== customerData.name) {
-        const usageCount = customerService.checkCustomerUsage(editingCustomer.name);
+      const editingCustomerName = editingCustomer?.name.split('\n')[0] ?? '';
+      if (editingCustomer && editingCustomerName !== customerData.name) {
+        const usageCount = customerService.checkCustomerUsage(editingCustomerName);
         
         if (usageCount > 0) {
           const confirmSave = confirm(
-            `注意：客户名称从 "${editingCustomer.name}" 更改为 "${customerData.name}"\n\n` +
+            `注意：客户名称从 "${editingCustomerName}" 更改为 "${customerData.name}"\n\n` +
             `该客户在 ${usageCount} 个历史记录中被引用。\n` +
             `历史记录中的客户名称将保持不变，只有新创建的记录会使用新的客户信息。\n\n` +
             `是否继续保存？`

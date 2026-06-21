@@ -27,7 +27,7 @@ export function useCustomerForm() {
   const setFormDataForEdit = (item: Customer | Supplier | Consignee) => {
     const customerFields = item as Partial<Customer>;
     setFormData({
-      name: item.name,
+      name: item.name.split('\n')[0],
       email: item.email,
       phone: item.phone,
       address: item.address,

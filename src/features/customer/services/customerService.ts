@@ -114,8 +114,8 @@ export function saveCustomer(customer: Customer): void {
 
     const existingCustomers = getLocalStorageJSON<Customer[]>('customer_management', []);
     
-    // 检查是否已存在同名客户，如果存在则更新
-    const existingIndex = existingCustomers.findIndex((c: Customer) => c.name === customer.name);
+    // 按 ID 更新，避免姓名和地址合并格式变化导致误判为新增
+    const existingIndex = existingCustomers.findIndex((c: Customer) => c.id === customer.id);
     
     let updatedCustomers;
     if (existingIndex >= 0) {
