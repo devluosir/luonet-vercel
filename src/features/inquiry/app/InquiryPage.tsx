@@ -23,6 +23,7 @@ export function InquiryPage() {
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const hasInquiryAccess = useMemo(() => {
     if (!session?.user) return false;
@@ -48,16 +49,37 @@ export function InquiryPage() {
   useEffect(() => {
     if (!permissionChecked || !hasInquiryAccess) return;
 
+    const POLL_INTERVAL_MS = 30_000;
     let cancelled = false;
-    void inquiryService.pullFromD1().then((d1Records) => {
+
+    async function syncFromD1() {
+      const d1Records = await inquiryService.pullFromD1();
       if (cancelled) return;
       inquiryService.pushLocalToD1(d1Records);
       const merged = inquiryService.mergeFromD1(d1Records);
       useInquiryStore.setState({ records: merged });
-    });
+      setLastSyncedAt(new Date());
+    }
+
+    void syncFromD1();
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void syncFromD1();
+      }
+    }, POLL_INTERVAL_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void syncFromD1();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [hasInquiryAccess, permissionChecked]);
 
@@ -155,6 +177,16 @@ export function InquiryPage() {
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               记录客户询价、供应商报价进度和已报客户版本。
             </p>
+            {lastSyncedAt && (
+              <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                最后同步：
+                {lastSyncedAt.toLocaleTimeString('zh-CN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+              </p>
+            )}
           </div>
           <button
             type="button"
