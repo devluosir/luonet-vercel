@@ -8,8 +8,10 @@ import { AppLayout, type ActionButton } from '@/components/layout';
 import { useAppUser } from '@/hooks/useAppUser';
 import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '../types';
 import { useInquiryActions } from '../hooks/useInquiryActions';
+import { useInquiryFilter } from '../hooks/useInquiryFilter';
 import { useInquiryStore } from '../state/inquiry.store';
 import { inquiryService } from '../services/inquiry.service';
+import { InquiryFilterBar } from '../components/InquiryFilterBar';
 import { InquiryFormModal } from '../components/InquiryFormModal';
 import { InquiryTable } from '../components/InquiryTable';
 
@@ -20,6 +22,8 @@ export function InquiryPage() {
   const records = useInquiryStore((state) => state.records);
   const { createRecord, removeRecord } = useInquiryActions();
   const updateRecord = useInquiryStore((state) => state.updateRecord);
+  const { filter, setFilter, filteredAndSorted, customers, inquirers, activeCount, reset } =
+    useInquiryFilter(records);
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
@@ -198,10 +202,31 @@ export function InquiryPage() {
           </button>
         </div>
 
+        <InquiryFilterBar
+          filter={filter}
+          setFilter={setFilter}
+          customers={customers}
+          inquirers={inquirers}
+          activeCount={activeCount}
+          filteredCount={filteredAndSorted.length}
+          totalCount={records.length}
+          onReset={reset}
+        />
+
         <InquiryTable
-          records={records}
+          records={filteredAndSorted}
+          sortDir={filter.sortDir}
+          onSortToggle={() =>
+            setFilter({ ...filter, sortDir: filter.sortDir === 'desc' ? 'asc' : 'desc' })
+          }
           onEditRecord={openEditModal}
           onDeleteRecord={handleDeleteRecord}
+          emptyMessage={activeCount > 0 ? '没有符合条件的记录' : '暂无询报价记录'}
+          emptySubMessage={
+            activeCount > 0
+              ? '尝试调整筛选条件，或点击"重置筛选"查看全部。'
+              : '点击"新增询价"后，会在这里登记供应商询价和客户报价状态。'
+          }
         />
       </div>
 
