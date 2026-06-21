@@ -7266,3 +7266,56 @@ git commit -m "fix(worker): 询报价 PUT 改为 upsert，消除 0-changes 静�
 # 部署 Worker
 npx wrangler deploy
 ```
+
+---
+
+## TASK-37：修复询报价删除——跨端同步软删除
+
+### 背景
+
+**TASK-36** 之后发现删除记录只在本机有效，其他设备刷新后记录仍然存在。
+
+根本原因：
+1. `mergeFromD1` 只会新增/更新记录，从不移除本地已有记录
+2. 旧的硬删除（D1 DELETE）让 D1 彻底失去该记录，其他端无法感知删除事件
+3. `mergeFromD1` 见到"D1 没有但本地有"的记录会保留，导致删除无法跨端传播
+
+### 修复内容（已直接实现，无需 Codex 执行）
+
+#### 1. 软删除：`src/worker.ts`
+
+- **DELETE handler**：改为 `UPDATE status = 'deleted'`（不再物理删除）
+- **GET handler**：返回 `status='active'` + 近 30 天内 `status='deleted'` 的记录（含 `status` 字段），让其他端能感知删除事件
+
+#### 2. 客户端类型：`src/features/inquiry/types/index.ts`
+
+- `InquiryRecord` 新增 `status?: 'active' | 'deleted'`
+
+#### 3. 删除防回流：`src/features/inquiry/services/inquiry.service.ts`
+
+- `remove(id)`：写入 `inquiry_deleted_ids`（id → deletedAt），防止 D1 旧版本重新拉回
+- `mergeFromD1`：
+  - 见到 `d1Record.status === 'deleted'` → 从 localMap 移除 + 写入 deletedIds（跨端删除同步）
+  - 跳过 deletedIds 中的 D1 记录（防止被旧版本覆盖）
+  - 自动清理 30 天前的 deletedIds 条目
+- `pushLocalToD1`：跳过 D1 已软删除的记录，防止本地旧版本覆盖回 D1
+
+### 提交记录
+
+```
+a7a35b50 fix(inquiry): 删除后写入 deletedIds，mergeFromD1 不再从 D1 拉回已删记录
+acb5bc0a fix(inquiry): 软删除同步至所有端（D1 status=deleted + mergeFromD1 跨端清除）
+```
+
+### 部署
+
+```bash
+rm -f .git/HEAD.lock
+npx wrangler deploy
+```
+
+### 验证
+
+1. Device A 删除一条询报价记录 → 本机立即消失
+2. Device B（同账号或有权限账号）刷新页面 → 该记录也消失
+3. Device A 刷新 → 记录仍然消失（不被 D1 拉回）
