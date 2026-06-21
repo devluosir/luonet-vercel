@@ -7026,3 +7026,61 @@ git add src/features/customer/types/index.ts \
         src/features/inquiry/utils/inquirerOptions.ts
 git commit -m "feat(customer): 联系人改为动态数组，兼容旧 contact2* 数据迁移"
 ```
+
+---
+
+## TASK-35：Worker 部署 + CI 自动化
+
+### 背景
+
+`src/worker.ts` 的 `/api/inquiry` 路由（TASK-19B）从未被部署到线上 Cloudflare Worker。
+线上 Worker 仍是旧版本，导致所有 GET/POST `/api/inquiry` 请求均返回 404：
+- `pullFromD1` 静默返回 `[]` → 无法拉取他人记录
+- `syncToD1` 静默失败 → 新增记录只存 localStorage，换设备后消失
+
+CI 中也缺少 wrangler deploy 步骤，每次修改 Worker 都要手动部署。
+
+### 目标
+
+1. 立即部署当前 Worker 到 Cloudflare
+2. CI 在每次 push main 后自动部署 Worker
+
+### 执行步骤
+
+#### Phase A：立即部署（终端手动执行）
+
+```bash
+cd /Users/roger/website/luonet-vercel
+npx wrangler deploy
+```
+
+验证：
+```bash
+# 检查 /api/inquiry 路由是否正常（需替换 token）
+curl -s -H "Authorization: Bearer <API_TOKEN>" https://udb.luocompany.net/api/inquiry | head -c 200
+```
+
+#### Phase B：CI 自动化（已由 Claude 写入 .github/workflows/ci.yml）
+
+新增 `deploy-worker` job：
+- `needs: check`（lint+build 通过后才部署）
+- 使用 `CLOUDFLARE_API_TOKEN` secret（需在 GitHub repo 的 Settings → Secrets 中添加）
+- `e2e` job 改为 `needs: [check, deploy-worker]`（Worker 部署后再跑 E2E）
+
+GitHub Secret 配置：
+- 进入 Cloudflare Dashboard → My Profile → API Tokens
+- 创建 Token，权限：`Cloudflare Workers:Edit`
+- 在 GitHub Repo → Settings → Secrets → Actions → New secret
+- Name: `CLOUDFLARE_API_TOKEN`，Value: 上面的 token
+
+### 提交
+
+```bash
+git add .github/workflows/ci.yml
+git commit -m "ci: 新增 Cloudflare Worker 自动部署步骤"
+```
+
+### 验证
+
+1. 打开询报价登记页 → 添加一条记录 → 浏览器 DevTools Network 确认 POST `/api/inquiry` 返回 201
+2. 换另一台设备/账号登录 → 刷新页面 → 能看到该记录
