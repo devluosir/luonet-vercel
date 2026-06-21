@@ -7774,15 +7774,17 @@ git commit -m "feat(inquiry): 筛选栏 — 时间/客户/询价人/报价状态
 
 ---
 
-## TASK-40：询报价表格布局优化 ✅ ✅
+## TASK-40：询报价表格布局优化 + 紧凑微调 ✅
 
 ### 背景
 
 当前表格存在以下可读性问题：
 1. "日期"列独立占位，但日期已编码于询价编号（C260619F → 6.19），浪费列宽
 2. "客户编号"不截断，超长引用号（如 `NORDLUCHS-11110/V/0110/RFQ/2026`）撑破布局
-3. "询报价状态"所有信息塞在一行（供应商+客户报价混排），列宽不足时内容截断难读
+3. "询报价状态"初版尝试拆成两行后，实际行高过高，列表密度下降
 4. 无关键字搜索，定位某条记录须靠下拉筛选
+5. 筛选区常驻占用首屏高度，上方标题区和筛选区需要进一步融合
+6. 成单后的订单编号独占一行，进一步撑高询价编号列
 
 ### 目标改动
 
@@ -7790,8 +7792,11 @@ git commit -m "feat(inquiry): 筛选栏 — 时间/客户/询价人/报价状态
 |------|------|
 | 合并日期+询价编号为一列 | 节省一列宽度 |
 | 客户编号截断+tooltip | 布局稳定，全称可悬停查看 |
-| 状态列两行显示（供应商/客户报价） | 内容不挤压，各行清晰 |
+| 状态列恢复单行，`/` 改蓝色 | 保持原有阅读习惯，同时增强供应商/客户报价分隔 |
 | FilterBar 新增关键字搜索 | 快速定位，无需逐级下拉 |
+| 筛选区改为漏斗图标展开/收起 | 默认首屏更紧凑，有筛选条件时显示数量角标 |
+| 表格行高收紧，内容简述单行截断 | 列表可视记录数更多 |
+| 订单编号与小日期同一行显示 | 成单记录不再额外撑高 |
 
 ### 涉及文件
 
@@ -7801,6 +7806,7 @@ git commit -m "feat(inquiry): 筛选栏 — 时间/客户/询价人/报价状态
 - `src/features/inquiry/components/InquiryTable.tsx`
 - `src/features/inquiry/components/InquiryRow.tsx`
 - `src/features/inquiry/components/InquiryQuoteStatusDisplay.tsx`
+- `src/features/inquiry/app/InquiryPage.tsx`
 
 ---
 
@@ -7852,9 +7858,25 @@ Boolean(filter.keyword.trim()),
 
 ### 文件2：`src/features/inquiry/components/InquiryFilterBar.tsx`
 
-Props 新增 `keyword` 参数（从 `filter.keyword` 读取，已包含在 `InquiryFilterState`，无需额外 prop，由父级传 `filter` + `setFilter` 即可）。
+最终实现：`InquiryFilterBar` 只负责筛选面板内容，不再自带外层卡片；外层卡片和展开/收起由 `InquiryPage` 管理。
 
-在第3行（客户/询价人下拉所在行）最前方插入搜索框，作为第一个元素：
+Props 增加可选 `id?: string`，用于父级漏斗按钮的 `aria-controls`：
+
+```ts
+interface InquiryFilterBarProps {
+  id?: string;
+  filter: InquiryFilterState;
+  setFilter: (filter: InquiryFilterState) => void;
+  customers: string[];
+  inquirers: string[];
+  activeCount: number;
+  filteredCount: number;
+  totalCount: number;
+  onReset: () => void;
+}
+```
+
+第3行（客户/询价人下拉所在行）最前方插入搜索框，作为第一个元素：
 
 ```tsx
 <input
@@ -7874,6 +7896,12 @@ Props 新增 `keyword` 参数（从 `filter.keyword` 读取，已包含在 `Inqu
 
 该行完整结构变为（按顺序）：搜索框 → 客户下拉 → 询价人下拉 → 右对齐的统计+重置。搜索框有 `flex-1` 自适应宽度，其余元素宽度不变。
 
+面板自身使用紧凑布局：
+
+```tsx
+<div id={id} className="border-t border-gray-100 pt-2 dark:border-gray-800">
+```
+
 ---
 
 ### 文件3：`src/features/inquiry/components/InquiryTable.tsx`
@@ -7892,30 +7920,32 @@ Props 新增 `keyword` 参数（从 `filter.keyword` 读取，已包含在 `Inqu
 
 **① 删除"日期"独立 `<td>`**，原日期列整个 td 移除。
 
-**② 修改"询价编号" `<td>`**，改为上下两行（编号 + 小号日期）：
+**② 修改"询价编号" `<td>`**，改为上下两行：第一行询价编号；第二行小号日期 + 订单编号（如有）。
 
 ```tsx
-<td className="px-3 py-3 text-sm">
-  <div className="flex flex-col gap-0.5">
-    <span className={`whitespace-nowrap font-mono ${mainTextClass}`}>{record.inquiryNo}</span>
-    {record.orderNo && (
-      <span className="inline-flex w-fit items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-200 dark:bg-green-950/40 dark:text-green-400 dark:ring-green-800">
-        {record.orderNo}
-      </span>
-    )}
-    <span className="text-xs text-gray-400 dark:text-gray-500">
-      {stripDateBrackets(record.inquiryDate)}
+<td className="px-3 py-2 text-sm">
+  <div className="flex flex-col gap-0 leading-tight">
+    <span className={`whitespace-nowrap font-mono leading-4 ${mainTextClass}`}>
+      {record.inquiryNo}
+    </span>
+    <span className="flex items-center gap-1.5 text-[11px] leading-4 text-gray-400 dark:text-gray-500">
+      <span>{stripDateBrackets(record.inquiryDate)}</span>
+      {record.orderNo && (
+        <span className="inline-flex items-center rounded-full bg-green-50 px-1.5 py-0 text-[11px] font-medium leading-4 text-green-700 ring-1 ring-green-200 dark:bg-green-950/40 dark:text-green-400 dark:ring-green-800">
+          {record.orderNo}
+        </span>
+      )}
     </span>
   </div>
 </td>
 ```
 
-注：此列原来同时显示 `inquiryNo` 和 `orderNo`，保留 `orderNo`，只是把日期也挪到此列。
+注：成单记录的 `orderNo` 不再单独占一行，放在小日期后方同一行，避免撑高行高。
 
 **③ 修改"客户编号" `<td>`**，加截断+tooltip：
 
 ```tsx
-<td className="px-3 py-3 text-sm">
+<td className="px-3 py-2 text-sm">
   <span
     className={`block max-w-[180px] truncate ${mainTextClass}`}
     title={record.customerNo}
@@ -7925,90 +7955,101 @@ Props 新增 `keyword` 参数（从 `filter.keyword` 读取，已包含在 `Inqu
 </td>
 ```
 
-**④ 修改"内容简述" `<td>`**，加 `line-clamp-2` 限制行数：
+**④ 修改"内容简述" `<td>`**，最终改为单行截断：
 
 ```tsx
-<td className="min-w-[160px] px-3 py-3 text-sm">
-  <p className={`max-w-[260px] line-clamp-2 break-words ${mainTextClass}`}>
+<td className="min-w-[160px] px-3 py-2 text-sm">
+  <p className={`max-w-[260px] truncate ${mainTextClass}`} title={record.description}>
     {record.description}
   </p>
 </td>
 ```
 
+**⑤ 表格行距收紧**：各列 `py-3` 收紧为 `py-2`，删除按钮 `p-1.5` 收紧为 `p-1`。
+
 ---
 
 ### 文件5：`src/features/inquiry/components/InquiryQuoteStatusDisplay.tsx`
 
-将单行 `<p>` 改为两行 `<div>`：第一行显示供应商状态，第二行显示客户报价（仅有数据时渲染）。
-
-完整替换为：
+初版曾将供应商/客户报价拆成两行，但实际行高过高。最终实现恢复为原来的**单行显示**，仅把供应商与客户报价之间的 `/` 改为蓝色：
 
 ```tsx
-export function InquiryQuoteStatusDisplay({ record }: Props) {
-  const rowColor = getRecordColorState(record);
+return (
+  <p className="whitespace-nowrap text-xs font-medium leading-4">
+    {record.supplierStatuses.map((supplier, index) => {
+      const colorClass = getSupplierStatusClass(supplier);
+      const label = supplier.quoteDate
+        ? `${supplier.supplierShortName}${roundDateBrackets(supplier.quoteDate)}`
+        : supplier.supplierShortName;
+      return (
+        <span key={supplier.id}>
+          <span className={colorClass}>{label}</span>
+          {index < record.supplierStatuses.length - 1 && <span className="text-gray-300">,</span>}
+        </span>
+      );
+    })}
 
-  const regularStatuses = record.quotedStatuses.filter(
-    (s) => s.type !== 'unavailable' && s.type !== 'supplemented'
-  );
-  const unavailableStatus = record.quotedStatuses.find((s) => s.type === 'unavailable');
-  const supplementedStatus = record.quotedStatuses.find((s) => s.type === 'supplemented');
-  const hasCustomerInfo =
-    regularStatuses.length > 0 || !!unavailableStatus || !!supplementedStatus;
+    <span className="px-0.5 text-blue-600 dark:text-blue-400">/</span>
 
-  return (
-    <div className="flex flex-col gap-0.5">
-      {/* 第一行：供应商状态 */}
-      <p className="text-xs font-medium leading-4">
-        {record.supplierStatuses.map((supplier, index) => {
-          const colorClass = getSupplierStatusClass(supplier);
-          const label = supplier.quoteDate
-            ? `${supplier.supplierShortName}${roundDateBrackets(supplier.quoteDate)}`
-            : supplier.supplierShortName;
-          return (
-            <span key={supplier.id}>
-              <span className={colorClass}>{label}</span>
-              {index < record.supplierStatuses.length - 1 && (
-                <span className="text-gray-300">,</span>
-              )}
-            </span>
-          );
-        })}
-      </p>
+    {regularStatuses.map((status, index) => (
+      <span key={status.id}>
+        <span className={rowColor}>
+          {stripDateBrackets(status.quoteDate)}{status.supplierShortName}{status.version}
+        </span>
+        {index < regularStatuses.length - 1 && <span className="text-gray-300">,</span>}
+      </span>
+    ))}
+  </p>
+);
+```
 
-      {/* 第二行：客户报价（有数据才渲染） */}
-      {hasCustomerInfo && (
-        <p className="text-xs font-medium leading-4">
-          {regularStatuses.map((status, index) => (
-            <span key={status.id}>
-              <span className={rowColor}>
-                {stripDateBrackets(status.quoteDate)}{status.supplierShortName}{status.version}
-              </span>
-              {index < regularStatuses.length - 1 && (
-                <span className="text-gray-300">,</span>
-              )}
-            </span>
-          ))}
+`supplementedStatus` 与 `unavailableStatus` 仍沿用原逻辑追加在同一行，逗号分隔。
 
-          {supplementedStatus && (
-            <span className="text-yellow-500">
-              {regularStatuses.length > 0 && <span className="text-gray-300">,</span>}
-              已补充({stripDateBrackets(supplementedStatus.quoteDate)})
-            </span>
-          )}
+---
 
-          {unavailableStatus && (
-            <span className="text-gray-400">
-              {(regularStatuses.length > 0 || !!supplementedStatus) && (
-                <span className="text-gray-300">,</span>
-              )}
-              无法报价({stripDateBrackets(unavailableStatus.quoteDate)})
-            </span>
-          )}
-        </p>
-      )}
-    </div>
-  );
-}
+### 文件6：`src/features/inquiry/app/InquiryPage.tsx`
+
+上方标题区、同步时间、筛选入口、新增按钮融合到同一张卡片内。
+
+新增状态：
+
+```ts
+const [isFilterOpen, setIsFilterOpen] = useState(false);
+```
+
+新增收起状态下的结果摘要：
+
+```ts
+const resultSummary =
+  filteredAndSorted.length === records.length
+    ? `共 ${records.length} 条`
+    : `共 ${filteredAndSorted.length}/${records.length} 条`;
+```
+
+新增漏斗图标按钮：
+
+```tsx
+<button
+  type="button"
+  onClick={() => setIsFilterOpen((open) => !open)}
+  aria-label={isFilterOpen ? '收起筛选' : '展开筛选'}
+  aria-expanded={isFilterOpen}
+  aria-controls="inquiry-filter-panel"
+>
+  <Filter className="h-4 w-4" />
+  {activeCount > 0 && <span>{activeCount}</span>}
+</button>
+```
+
+筛选面板改为条件渲染：
+
+```tsx
+{isFilterOpen && (
+  <InquiryFilterBar
+    id="inquiry-filter-panel"
+    ...
+  />
+)}
 ```
 
 ---
@@ -8019,6 +8060,7 @@ export function InquiryQuoteStatusDisplay({ record }: Props) {
 npx tsc --noEmit
 npm run lint -- \
   --file src/features/inquiry/hooks/useInquiryFilter.ts \
+  --file src/features/inquiry/app/InquiryPage.tsx \
   --file src/features/inquiry/components/InquiryFilterBar.tsx \
   --file src/features/inquiry/components/InquiryTable.tsx \
   --file src/features/inquiry/components/InquiryRow.tsx \
@@ -8028,10 +8070,13 @@ npm run lint -- \
 功能验证：
 1. 表格"日期"列消失，询价编号列下方出现小号日期（如 `6.19`）
 2. 长客户编号被截断，鼠标悬停显示完整值
-3. 有客户报价的行：状态列第二行出现报价信息（蓝色/灰色）
-4. FilterBar 第三行左侧出现搜索框；输入 "BRS" → 只显示 BRS 开头客户的记录
-5. 关键字算入 `activeCount`，"重置筛选"会同时清空搜索框
-6. `tsc --noEmit` 无报错
+3. 询报价状态保持单行显示，供应商状态与客户报价之间的 `/` 为蓝色
+4. FilterBar 默认收起，点击漏斗按钮后展开，再次点击收起
+5. 有筛选条件时，漏斗按钮右上角显示 `activeCount` 数字角标
+6. FilterBar 第三行左侧出现搜索框；输入 "BRS" → 只显示 BRS 相关记录
+7. 关键字算入 `activeCount`，"重置筛选"会同时清空搜索框
+8. 成单记录的订单编号显示在小日期后方，同一行展示
+9. `tsc --noEmit` 无报错
 
 ### 提交
 
@@ -8041,6 +8086,23 @@ git add \
   src/features/inquiry/components/InquiryFilterBar.tsx \
   src/features/inquiry/components/InquiryTable.tsx \
   src/features/inquiry/components/InquiryRow.tsx \
-  src/features/inquiry/components/InquiryQuoteStatusDisplay.tsx
-git commit -m "feat(inquiry): 表格布局优化 — 合并日期列/截断客户号/状态两行/关键字搜索"
+  src/features/inquiry/components/InquiryQuoteStatusDisplay.tsx \
+  src/features/inquiry/app/InquiryPage.tsx
+git commit -m "feat(inquiry): 表格布局优化与紧凑筛选"
 ```
+
+### 实际落地提交
+
+- `91653d30` `feat(inquiry): 表格布局优化 — 合并日期列/截断客户号/状态两行/关键字搜索`
+- `ad1f57dc` `feat(inquiry): 收紧询报价列表布局`
+- `0753cc7f` `v26.6.21.0.9`：筛选区改为漏斗图标展开/收起
+- `989d9204` `style(inquiry): 调整订单号显示位置`
+
+### 最终状态摘要
+
+本任务最终不是简单的"状态两行显示"，而是基于实际使用反馈做了三次收敛：
+
+1. 保留日期列合并、客户编号截断、关键字搜索这些有效改动。
+2. 撤回状态列两行方案，恢复原单行状态，只把 `/` 改为蓝色。
+3. 筛选区默认收起，用漏斗按钮展开，减少首屏占用。
+4. 表格行高整体压缩，订单编号与日期同一行显示，避免成单行额外变高。
