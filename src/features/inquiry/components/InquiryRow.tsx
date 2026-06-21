@@ -20,7 +20,7 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
       className="group cursor-pointer border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/40"
       onClick={() => onEdit(record)}
     >
-      <td className="px-3 py-2 text-sm">
+      <td className="w-[24%] px-3 py-2 text-sm md:w-[16%] lg:w-[10%]">
         <div className="flex flex-col gap-0 leading-tight">
           <span className={`whitespace-nowrap font-mono leading-4 ${mainTextClass}`}>
             {record.inquiryNo}
@@ -35,23 +35,26 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
           </span>
         </div>
       </td>
-      <td className="whitespace-nowrap px-3 py-2 text-sm">
+      <td className="hidden w-[16%] whitespace-nowrap px-3 py-2 text-sm md:table-cell lg:w-[12%]">
         <span className={mainTextClass}>{record.inquirer}</span>
       </td>
-      <td className="px-3 py-2 text-sm">
-        <span className={`block max-w-[180px] truncate ${mainTextClass}`} title={record.customerNo}>
+      <td className="hidden px-3 py-2 text-sm lg:table-cell lg:w-[24%] xl:w-[26%]">
+        <span
+          className={`line-clamp-2 max-w-none break-words leading-4 ${mainTextClass}`}
+          title={record.customerNo}
+        >
           {record.customerNo}
         </span>
       </td>
-      <td className="min-w-[160px] px-3 py-2 text-sm">
-        <p className={`max-w-[260px] truncate ${mainTextClass}`} title={record.description}>
+      <td className="w-[34%] px-3 py-2 text-sm md:w-[32%] lg:w-[22%]">
+        <p className={`max-w-none truncate ${mainTextClass}`} title={record.description}>
           {record.description}
         </p>
       </td>
-      <td className="min-w-[240px] px-3 py-2">
+      <td className="w-[34%] px-3 py-2 md:w-[30%] lg:w-[28%] xl:w-[26%]">
         <InquiryQuoteStatusDisplay record={record} />
       </td>
-      <td className="whitespace-nowrap px-3 py-2 text-right">
+      <td className="w-[8%] whitespace-nowrap px-3 py-2 text-right md:w-[6%] lg:w-[4%]">
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onDelete(record.id); }}

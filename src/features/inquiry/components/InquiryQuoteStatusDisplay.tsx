@@ -22,7 +22,7 @@ export function InquiryQuoteStatusDisplay({ record }: Props) {
   const supplementedStatus = record.quotedStatuses.find((s) => s.type === 'supplemented');
 
   return (
-    <p className="whitespace-nowrap text-xs font-medium leading-4">
+    <p className="block truncate text-xs font-medium leading-4">
       {record.supplierStatuses.map((supplier, index) => {
         const colorClass = getSupplierStatusClass(supplier);
         const label = supplier.quoteDate
