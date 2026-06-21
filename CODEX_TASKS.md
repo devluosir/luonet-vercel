@@ -7322,7 +7322,7 @@ npx wrangler deploy
 
 ---
 
-## TASK-38：询报价页面定时轮询（30 秒自动同步）
+## TASK-38：询报价页面定时轮询（30 秒自动同步）✅
 
 ### 背景
 
@@ -7412,4 +7412,362 @@ npm run lint -- --file src/features/inquiry/app/InquiryPage.tsx
 ```bash
 git add src/features/inquiry/app/InquiryPage.tsx
 git commit -m "feat(inquiry): 30 秒定时轮询 + 页面可见时立即同步"
+```
+
+---
+
+## TASK-39：询报价筛选与排序 ✅
+
+### 背景
+
+当前表格仅支持按询价编号升/降序切换，无任何筛选能力。记录增多后，用户需要快速定位特定客户、特定报价状态、特定时间段的记录。
+
+### 筛选维度
+
+| 维度 | 类型 | 选项 |
+|------|------|------|
+| 时间范围 | 4 个 Chip | 全部 / 近7天 / 近30天 / 近90天 |
+| 报价状态 | 6 个 Chip | 全部 / 等待供应商 / 未报客户 / 已报客户 / 无法报价 / 已成单 |
+| 客户编号 | Select 下拉 | 全部客户 + 动态取自当前记录集 |
+| 询价人 | Select 下拉 | 全部询价人 + 动态取自当前记录集 |
+| 排序方向 | 表头按钮 | 按询价编号 asc/desc（现有，保留移入 hook） |
+
+### 状态逻辑
+
+报价状态筛选判断如下：
+
+| Key | 判断条件 |
+|-----|---------|
+| `all` | 无过滤 |
+| `supplier_pending` | `supplierStatuses.some(s => !s.status \|\| s.status === 'pending')` |
+| `customer_pending` | `quotedStatuses.length === 0` |
+| `customer_quoted` | `quotedStatuses.some(s => s.type !== 'unavailable')` |
+| `unavailable` | `quotedStatuses.some(s => s.type === 'unavailable')` |
+| `has_order` | `!!record.orderNo` |
+
+时间范围：从 `inquiryNo` 解析日期（使用现有 `getDateInputValueFromInquiryNo`），比较 `Date.now()` 差值。
+
+### 涉及文件
+
+新增：
+- `src/features/inquiry/hooks/useInquiryFilter.ts`
+- `src/features/inquiry/components/InquiryFilterBar.tsx`
+
+修改：
+- `src/features/inquiry/components/InquiryTable.tsx`
+- `src/features/inquiry/app/InquiryPage.tsx`
+
+---
+
+### 文件1：`src/features/inquiry/hooks/useInquiryFilter.ts`（新建）
+
+```ts
+import { useMemo, useState } from 'react';
+import type { InquiryRecord } from '../types';
+import { getDateInputValueFromInquiryNo } from '../utils/inquiryUtils';
+
+export type TimeRange = 'all' | '7d' | '30d' | '90d';
+export type QuoteStatusFilter =
+  | 'all'
+  | 'supplier_pending'
+  | 'customer_pending'
+  | 'customer_quoted'
+  | 'unavailable'
+  | 'has_order';
+
+export interface InquiryFilterState {
+  timeRange: TimeRange;
+  customerNo: string;
+  inquirer: string;
+  quoteStatus: QuoteStatusFilter;
+  sortDir: 'asc' | 'desc';
+}
+
+const DEFAULT_FILTER: InquiryFilterState = {
+  timeRange: 'all',
+  customerNo: '',
+  inquirer: '',
+  quoteStatus: 'all',
+  sortDir: 'desc',
+};
+
+export function useInquiryFilter(records: InquiryRecord[]) {
+  const [filter, setFilter] = useState<InquiryFilterState>(DEFAULT_FILTER);
+
+  const customers = useMemo(
+    () => [...new Set(records.map((r) => r.customerNo))].sort(),
+    [records]
+  );
+
+  const inquirers = useMemo(
+    () => [...new Set(records.map((r) => r.inquirer))].sort(),
+    [records]
+  );
+
+  const filteredAndSorted = useMemo(() => {
+    const now = Date.now();
+    const daysMs = (d: number) => d * 24 * 60 * 60 * 1000;
+
+    return records
+      .filter((r) => {
+        // 时间范围
+        if (filter.timeRange !== 'all') {
+          const dateStr = getDateInputValueFromInquiryNo(r.inquiryNo);
+          const recTime = new Date(dateStr).getTime();
+          const days = filter.timeRange === '7d' ? 7 : filter.timeRange === '30d' ? 30 : 90;
+          if (now - recTime > daysMs(days)) return false;
+        }
+        // 客户
+        if (filter.customerNo && r.customerNo !== filter.customerNo) return false;
+        // 询价人
+        if (filter.inquirer && r.inquirer !== filter.inquirer) return false;
+        // 报价状态
+        switch (filter.quoteStatus) {
+          case 'supplier_pending':
+            return r.supplierStatuses.some((s) => !s.status || s.status === 'pending');
+          case 'customer_pending':
+            return r.quotedStatuses.length === 0;
+          case 'customer_quoted':
+            return r.quotedStatuses.some((s) => s.type !== 'unavailable');
+          case 'unavailable':
+            return r.quotedStatuses.some((s) => s.type === 'unavailable');
+          case 'has_order':
+            return !!r.orderNo;
+          default:
+            return true;
+        }
+      })
+      .sort((a, b) =>
+        filter.sortDir === 'desc'
+          ? b.inquiryNo.localeCompare(a.inquiryNo)
+          : a.inquiryNo.localeCompare(b.inquiryNo)
+      );
+  }, [records, filter]);
+
+  const activeCount = [
+    filter.timeRange !== 'all',
+    !!filter.customerNo,
+    !!filter.inquirer,
+    filter.quoteStatus !== 'all',
+  ].filter(Boolean).length;
+
+  const reset = () => setFilter(DEFAULT_FILTER);
+
+  return {
+    filter,
+    setFilter,
+    filteredAndSorted,
+    customers,
+    inquirers,
+    activeCount,
+    reset,
+  };
+}
+```
+
+---
+
+### 文件2：`src/features/inquiry/components/InquiryFilterBar.tsx`（新建）
+
+Props 接口：
+
+```ts
+interface InquiryFilterBarProps {
+  filter: InquiryFilterState;
+  setFilter: (f: InquiryFilterState) => void;
+  customers: string[];
+  inquirers: string[];
+  activeCount: number;
+  filteredCount: number;
+  totalCount: number;
+  onReset: () => void;
+}
+```
+
+UI 结构（3 行，全部收于一个 `rounded-xl border bg-white` 卡片内）：
+
+**第1行：时间范围 Chips**
+
+```
+时间  [全部]  [近7天]  [近30天]  [近90天]
+```
+
+**第2行：报价状态 Chips**
+
+```
+状态  [全部]  [等待供应商]  [未报客户]  [已报客户]  [无法报价]  [已成单]
+```
+
+- 等待供应商 Chip 对应 `supplier_pending`
+- 未报客户 → `customer_pending`
+- 已报客户 → `customer_quoted`（蓝色高亮选中时）
+- 无法报价 → `unavailable`（灰色高亮）
+- 已成单 → `has_order`（绿色高亮）
+
+**第3行：下拉 + 汇总**
+
+```
+[全部客户 ▼]  [全部询价人 ▼]        共 12/38 条  [重置筛选]
+```
+
+- 当 `filteredCount === totalCount` 时只显示 "共 N 条"；有筛选时显示 "共 N/M 条"
+- 重置按钮仅在 `activeCount > 0` 时显示
+- 所有 Chip 的 active 样式：选中时 `bg-blue-600 text-white`，未选中 `bg-white text-gray-600 border border-gray-200 hover:bg-gray-50`
+- 报价状态的特殊颜色：`customer_quoted` 选中 `bg-blue-600`；`unavailable` 选中 `bg-gray-500`；`has_order` 选中 `bg-green-600`；其余统一 `bg-blue-600`
+
+实现 helper：
+
+```ts
+function chip(
+  label: string,
+  active: boolean,
+  onClick: () => void,
+  activeColor = 'bg-blue-600 text-white'
+) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+        active
+          ? activeColor
+          : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+```
+
+Select 样式：
+
+```
+h-7 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200
+```
+
+---
+
+### 文件3：`src/features/inquiry/components/InquiryTable.tsx`（修改）
+
+**修改 Props 接口**，移除内部 `sortDir` 状态，改由外部传入：
+
+```ts
+interface InquiryTableProps {
+  records: InquiryRecord[];           // 已筛选已排序
+  sortDir: 'asc' | 'desc';
+  onSortToggle: () => void;
+  onEditRecord: (record: InquiryRecord) => void;
+  onDeleteRecord: (recordId: string) => void;
+  emptyMessage?: string;              // 默认 "暂无询报价记录"
+  emptySubMessage?: string;
+}
+```
+
+删除组件内 `const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')` 和内部 sort 逻辑（`sorted` useMemo）。
+
+表格直接遍历 `records`（已是排序后结果）：
+
+```tsx
+{records.map((record) => (
+  <InquiryRow key={record.id} record={record} onEdit={onEditRecord} onDelete={onDeleteRecord} />
+))}
+```
+
+表头排序按钮改为：
+
+```tsx
+<button type="button" onClick={onSortToggle} ...>
+  询价编号
+  {sortDir === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />}
+</button>
+```
+
+空状态使用传入的 `emptyMessage` / `emptySubMessage`，默认值：
+
+```ts
+emptyMessage = '暂无询报价记录'
+emptySubMessage = '点击"新增询价"后，会在这里登记供应商询价和客户报价状态。'
+```
+
+---
+
+### 文件4：`src/features/inquiry/app/InquiryPage.tsx`（修改）
+
+新增 import：
+
+```ts
+import { useInquiryFilter } from '../hooks/useInquiryFilter';
+import { InquiryFilterBar } from '../components/InquiryFilterBar';
+```
+
+在组件内初始化 hook（放在现有 `records`、`updateRecord` 等 hooks 之后）：
+
+```ts
+const { filter, setFilter, filteredAndSorted, customers, inquirers, activeCount, reset } =
+  useInquiryFilter(records);
+```
+
+JSX 中在 `<InquiryTable>` 前插入 `<InquiryFilterBar>`：
+
+```tsx
+<InquiryFilterBar
+  filter={filter}
+  setFilter={setFilter}
+  customers={customers}
+  inquirers={inquirers}
+  activeCount={activeCount}
+  filteredCount={filteredAndSorted.length}
+  totalCount={records.length}
+  onReset={reset}
+/>
+<InquiryTable
+  records={filteredAndSorted}
+  sortDir={filter.sortDir}
+  onSortToggle={() =>
+    setFilter({ ...filter, sortDir: filter.sortDir === 'desc' ? 'asc' : 'desc' })
+  }
+  onEditRecord={openEditModal}
+  onDeleteRecord={handleDeleteRecord}
+  emptyMessage={activeCount > 0 ? '没有符合条件的记录' : '暂无询报价记录'}
+  emptySubMessage={
+    activeCount > 0
+      ? '尝试调整筛选条件，或点击"重置筛选"查看全部。'
+      : '点击"新增询价"后，会在这里登记供应商询价和客户报价状态。'
+  }
+/>
+```
+
+---
+
+### 验证步骤
+
+```bash
+npx tsc --noEmit
+npm run lint -- \
+  --file src/features/inquiry/hooks/useInquiryFilter.ts \
+  --file src/features/inquiry/components/InquiryFilterBar.tsx \
+  --file src/features/inquiry/components/InquiryTable.tsx \
+  --file src/features/inquiry/app/InquiryPage.tsx
+```
+
+功能验证：
+1. 进入询报价页 → FilterBar 渲染在标题卡片下方、表格上方
+2. 点击"近30天" → 只显示近30天记录，共 N/M 条 正确显示
+3. 点击"已报客户" → 只显示有客户报价（蓝色行）的记录
+4. 下拉选择某客户 → 记录过滤到该客户
+5. 多个筛选叠加 → 结果正确交集（AND 逻辑）
+6. 点击"重置筛选" → 全部恢复，按钮消失
+7. 筛选后结果为0 → 显示"没有符合条件的记录"
+8. 排序按钮切换 asc/desc → 依旧正常
+
+### 提交
+
+```bash
+git add \
+  src/features/inquiry/hooks/useInquiryFilter.ts \
+  src/features/inquiry/components/InquiryFilterBar.tsx \
+  src/features/inquiry/components/InquiryTable.tsx \
+  src/features/inquiry/app/InquiryPage.tsx
+git commit -m "feat(inquiry): 筛选栏 — 时间/客户/询价人/报价状态多维筛选"
 ```
