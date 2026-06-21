@@ -7,6 +7,7 @@ import type {
 } from '../hooks/useInquiryFilter';
 
 interface InquiryFilterBarProps {
+  id?: string;
   filter: InquiryFilterState;
   setFilter: (filter: InquiryFilterState) => void;
   customers: string[];
@@ -59,6 +60,7 @@ function chip(
 }
 
 export function InquiryFilterBar({
+  id,
   filter,
   setFilter,
   customers,
@@ -74,7 +76,7 @@ export function InquiryFilterBar({
     'h-7 min-w-[128px] rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200';
 
   return (
-    <div className="border-t border-gray-100 pt-2 dark:border-gray-800">
+    <div id={id} className="border-t border-gray-100 pt-2 dark:border-gray-800">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="w-8 text-xs font-medium text-gray-400 dark:text-gray-500">时间</span>
         {timeOptions.map((option) => (

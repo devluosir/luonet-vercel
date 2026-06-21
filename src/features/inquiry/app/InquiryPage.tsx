@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Filter, Plus } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AppLayout, type ActionButton } from '@/components/layout';
@@ -27,6 +27,7 @@ export function InquiryPage() {
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const hasInquiryAccess = useMemo(() => {
@@ -138,6 +139,11 @@ export function InquiryPage() {
     []
   );
 
+  const resultSummary =
+    filteredAndSorted.length === records.length
+      ? `共 ${records.length} 条`
+      : `共 ${filteredAndSorted.length}/${records.length} 条`;
+
   if (!permissionChecked || status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-black">
@@ -176,10 +182,13 @@ export function InquiryPage() {
     >
       <div className="w-full max-w-none px-3 py-3 sm:px-5 lg:px-6">
         <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-          <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className={`${isFilterOpen ? 'mb-2' : ''} flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between`}>
             <div className="min-w-0">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <h1 className="text-lg font-semibold text-gray-900 dark:text-white">询报价登记</h1>
+                {!isFilterOpen && (
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{resultSummary}</span>
+                )}
                 {lastSyncedAt && (
                   <span className="text-xs text-gray-400 dark:text-gray-500">
                     最后同步：
@@ -195,25 +204,50 @@ export function InquiryPage() {
                 记录客户询价、供应商报价进度和已报客户版本。
               </p>
             </div>
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              <Plus className="h-4 w-4" />
-              新增询价
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen((open) => !open)}
+                className={`relative inline-flex h-8 w-8 items-center justify-center rounded-lg border text-sm transition-colors ${
+                  isFilterOpen
+                    ? 'border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400'
+                    : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                }`}
+                aria-label={isFilterOpen ? '收起筛选' : '展开筛选'}
+                aria-expanded={isFilterOpen}
+                aria-controls="inquiry-filter-panel"
+                title={isFilterOpen ? '收起筛选' : '展开筛选'}
+              >
+                <Filter className="h-4 w-4" />
+                {activeCount > 0 && (
+                  <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-4 text-white">
+                    {activeCount}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4" />
+                新增询价
+              </button>
+            </div>
           </div>
-          <InquiryFilterBar
-            filter={filter}
-            setFilter={setFilter}
-            customers={customers}
-            inquirers={inquirers}
-            activeCount={activeCount}
-            filteredCount={filteredAndSorted.length}
-            totalCount={records.length}
-            onReset={reset}
-          />
+          {isFilterOpen && (
+            <InquiryFilterBar
+              id="inquiry-filter-panel"
+              filter={filter}
+              setFilter={setFilter}
+              customers={customers}
+              inquirers={inquirers}
+              activeCount={activeCount}
+              filteredCount={filteredAndSorted.length}
+              totalCount={records.length}
+              onReset={reset}
+            />
+          )}
         </div>
 
         <InquiryTable
