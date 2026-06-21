@@ -7084,3 +7084,185 @@ git commit -m "ci: 新增 Cloudflare Worker 自动部署步骤"
 
 1. 打开询报价登记页 → 添加一条记录 → 浏览器 DevTools Network 确认 POST `/api/inquiry` 返回 201
 2. 换另一台设备/账号登录 → 刷新页面 → 能看到该记录
+
+---
+
+## TASK-36：修复询报价编辑双写竞态 + Worker PUT 改为 upsert
+
+### 背景与根因
+
+编辑询报价记录时，`InquiryFormModal.handleSubmit` 会**连续触发两次 `updateInD1`**：
+
+```
+replaceStatuses(record.id, suppliers, quoted)   // PUT 1：旧描述 + 新供应商状态
+onSubmit(payload, ...)                           // PUT 2：新描述 + 旧供应商状态（被忽略）
+```
+
+两个 PUT 几乎同时进入 Next.js proxy，proxy 内部 `await getServerSession()` 是异步的，
+PUT 2（新描述）可能先到达 D1，PUT 1（旧描述）后到，最终 D1 里残留旧值。
+
+附加问题：Worker PUT 用 `UPDATE ... WHERE id = ?`，如果记录不在 D1（如部署前创建的旧数据），
+`changes === 0` → 返回 404 → 客户端静默忽略 → 数据永远只存在 localStorage。
+
+### 修复目标
+
+1. **编辑时只触发一次 D1 写入**（合并 basic + suppliers + quotedStatuses）
+2. **Worker PUT 改为 upsert**（`INSERT OR REPLACE`），与 POST 保持一致
+
+---
+
+### Phase A：前端合并写入（3 个文件）
+
+#### 1. `src/features/inquiry/state/inquiry.store.ts`
+
+将 `updateRecord` 的 patch 类型从 `Partial<InquiryBasicInput>` 改为 `Partial<InquiryRecord>`：
+
+```ts
+// Before:
+updateRecord: (id: string, patch: Partial<InquiryBasicInput>) => void;
+
+// After:
+updateRecord: (id: string, patch: Partial<InquiryRecord>) => void;
+```
+
+实现体无需改动（已接受 `Partial<InquiryRecord>`）。
+
+#### 2. `src/features/inquiry/components/InquiryFormModal.tsx`
+
+删除 `handleSubmit` 里单独的 `replaceStatuses` 调用：
+
+```ts
+// Before:
+const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  // ...
+  if (mode === 'edit' && record) {
+    replaceStatuses(record.id, localSuppliers, localQuoted);  // ← 删除这两行
+  }
+  onSubmit(payload, localSuppliers, localQuoted);
+};
+
+// After:
+const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  // ...
+  onSubmit(payload, localSuppliers, localQuoted);
+};
+```
+
+同时删除 `replaceStatuses` 的 useInquiryStore 订阅（第 80 行）：
+```ts
+// 删除：
+const replaceStatuses = useInquiryStore((state) => state.replaceStatuses);
+```
+
+#### 3. `src/features/inquiry/app/InquiryPage.tsx`
+
+`handleSubmit` 编辑分支改为一次性写入 basic + statuses：
+
+```ts
+// Before:
+if (editingRecord) {
+  updateRecordBasic(editingRecord.id, values);
+}
+
+// After:
+if (editingRecord) {
+  updateRecord(editingRecord.id, {
+    ...values,
+    supplierStatuses: suppliers,
+    quotedStatuses: quoted,
+  });
+}
+```
+
+顶部 hooks 改为：
+```ts
+// Before:
+const { createRecord, updateRecordBasic, removeRecord } = useInquiryActions();
+
+// After：去掉 updateRecordBasic，改用 store 的 updateRecord
+const { createRecord, removeRecord } = useInquiryActions();
+const updateRecord = useInquiryStore((state) => state.updateRecord);
+```
+
+---
+
+### Phase B：Worker PUT 改为 upsert（`src/worker.ts`）
+
+找到 `handleInquiryRequest` 的 PUT 处理段（约 1408 行），将 `UPDATE` 改为 `INSERT OR REPLACE`：
+
+```ts
+// Before:
+const result = await env.USERS_DB.prepare(`
+  UPDATE Document
+  SET doc_no = ?, customer_name = ?, data = ?, updated_at = ?
+  WHERE id = ? AND type = 'inquiry'
+`).bind(
+  inquiryNo,
+  customerNo,
+  data,
+  now,
+  id
+).run();
+
+if (result.meta.changes === 0) return jsonResponse({ error: '询报价记录不存在' }, 404);
+return jsonResponse({ success: true, id });
+
+// After:
+const existingRow = await env.USERS_DB.prepare(
+  `SELECT created_at FROM Document WHERE id = ? AND type = 'inquiry'`
+).bind(id).first<{ created_at: string }>();
+
+const createdAt = existingRow?.created_at ?? now;
+
+await env.USERS_DB.prepare(`
+  INSERT OR REPLACE INTO Document
+    (id, user_id, type, doc_no, customer_name, total_amount, currency, status, data, created_at, updated_at)
+  VALUES (?, '_shared_', 'inquiry', ?, ?, 0, 'CNY', 'active', ?, ?, ?)
+`).bind(
+  id,
+  inquiryNo,
+  customerNo,
+  data,
+  createdAt,
+  now
+).run();
+
+return jsonResponse({ success: true, id });
+```
+
+> 注：先 SELECT `created_at` 是为了保留原始创建时间；若记录不存在则用 `now` 作为创建时间（等同于新建）。
+
+---
+
+### 验证步骤
+
+```bash
+npx tsc --noEmit
+npm run lint -- --file src/features/inquiry/state/inquiry.store.ts \
+               --file src/features/inquiry/components/InquiryFormModal.tsx \
+               --file src/features/inquiry/app/InquiryPage.tsx \
+               --file src/worker.ts
+```
+
+功能验证：
+1. 新增询报价 → 打开 DevTools Network → POST `/api/inquiry` 返回 201
+2. 编辑记录（修改描述 + 供应商状态）→ Network 只出现**一次** PUT → 返回 200
+3. 页面刷新 → 描述和供应商状态均为编辑后的值
+4. 换设备/账号登录 → 刷新 → 看到最新内容
+
+### 提交
+
+```bash
+# Phase A：前端
+git add src/features/inquiry/state/inquiry.store.ts \
+        src/features/inquiry/components/InquiryFormModal.tsx \
+        src/features/inquiry/app/InquiryPage.tsx
+git commit -m "fix(inquiry): 合并编辑时双写为单次原子 updateInD1"
+
+# Phase B：Worker
+git add src/worker.ts
+git commit -m "fix(worker): 询报价 PUT 改为 upsert，消除 0-changes 静默失败"
+
+# 部署 Worker
+npx wrangler deploy
+```
