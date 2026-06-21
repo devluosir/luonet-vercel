@@ -151,15 +151,13 @@ function docToPurchaseHistory(doc: D1Doc) {
 }
 
 function d1CustomerToLocal(c: D1Customer, _type: 'customer' | 'supplier' | 'consignee') {
-  const company = typeof c.data.company === 'string' ? c.data.company : '';
-
   return {
     id: c.id,
     name: c.name,
     email: c.email || '',
     phone: c.phone || '',
     address: c.address || '',
-    company,
+    ...c.data,
     createdAt: c.created_at,
     updatedAt: c.updated_at,
   };

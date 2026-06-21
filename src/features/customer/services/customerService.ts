@@ -136,7 +136,15 @@ export function saveCustomer(customer: Customer): void {
       email: customer.email || undefined,
       phone: customer.phone || undefined,
       address: customer.address || undefined,
-      data: { company: customer.company },
+      data: {
+        company: customer.company,
+        companyShortName: customer.companyShortName,
+        contact1ShortName: customer.contact1ShortName,
+        contact2Name: customer.contact2Name,
+        contact2ShortName: customer.contact2ShortName,
+        contact2Phone: customer.contact2Phone,
+        contact2Email: customer.contact2Email,
+      },
     });
   } catch (error) {
     console.error('保存客户数据失败:', error);
