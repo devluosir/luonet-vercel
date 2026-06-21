@@ -47,7 +47,7 @@ function chip(
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+      className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
         active
           ? activeColor
           : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
@@ -71,12 +71,12 @@ export function InquiryFilterBar({
   const summary =
     filteredCount === totalCount ? `共 ${totalCount} 条` : `共 ${filteredCount}/${totalCount} 条`;
   const selectClass =
-    'h-7 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200';
+    'h-7 min-w-[128px] rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200';
 
   return (
-    <div className="mb-4 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="w-10 text-xs font-medium text-gray-400 dark:text-gray-500">时间</span>
+    <div className="border-t border-gray-100 pt-2 dark:border-gray-800">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="w-8 text-xs font-medium text-gray-400 dark:text-gray-500">时间</span>
         {timeOptions.map((option) => (
           <div key={option.value} className="contents">
             {chip(option.label, filter.timeRange === option.value, () =>
@@ -86,8 +86,8 @@ export function InquiryFilterBar({
         ))}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="w-10 text-xs font-medium text-gray-400 dark:text-gray-500">状态</span>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <span className="w-8 text-xs font-medium text-gray-400 dark:text-gray-500">状态</span>
         {statusOptions.map((option) => (
           <div key={option.value} className="contents">
             {chip(
@@ -100,7 +100,7 @@ export function InquiryFilterBar({
         ))}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2 sm:flex-nowrap">
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:flex-nowrap">
         <input
           type="search"
           value={filter.keyword}
@@ -141,13 +141,13 @@ export function InquiryFilterBar({
           ))}
         </select>
 
-        <div className="ml-auto flex items-center justify-end gap-3 text-xs text-gray-500 dark:text-gray-400">
+        <div className="ml-auto flex items-center justify-end gap-2 text-xs text-gray-500 dark:text-gray-400">
           <span>{summary}</span>
           {activeCount > 0 && (
             <button
               type="button"
               onClick={onReset}
-              className="rounded-lg border border-gray-200 px-2 py-1 font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+              className="rounded-lg border border-gray-200 px-2 py-0.5 font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
             >
               重置筛选
             </button>

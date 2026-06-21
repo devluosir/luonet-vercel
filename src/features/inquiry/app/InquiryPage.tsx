@@ -174,44 +174,47 @@ export function InquiryPage() {
       onLogout={handleLogout}
       bottomActions={bottomActions}
     >
-      <div className="w-full max-w-none px-3 py-4 sm:px-5 lg:px-6">
-        <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E] sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">询报价登记</h1>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              记录客户询价、供应商报价进度和已报客户版本。
-            </p>
-            {lastSyncedAt && (
-              <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                最后同步：
-                {lastSyncedAt.toLocaleTimeString('zh-CN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                })}
+      <div className="w-full max-w-none px-3 py-3 sm:px-5 lg:px-6">
+        <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
+          <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h1 className="text-lg font-semibold text-gray-900 dark:text-white">询报价登记</h1>
+                {lastSyncedAt && (
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                    最后同步：
+                    {lastSyncedAt.toLocaleTimeString('zh-CN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    })}
+                  </span>
+                )}
+              </div>
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                记录客户询价、供应商报价进度和已报客户版本。
               </p>
-            )}
+            </div>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4" />
+              新增询价
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4" />
-            新增询价
-          </button>
+          <InquiryFilterBar
+            filter={filter}
+            setFilter={setFilter}
+            customers={customers}
+            inquirers={inquirers}
+            activeCount={activeCount}
+            filteredCount={filteredAndSorted.length}
+            totalCount={records.length}
+            onReset={reset}
+          />
         </div>
-
-        <InquiryFilterBar
-          filter={filter}
-          setFilter={setFilter}
-          customers={customers}
-          inquirers={inquirers}
-          activeCount={activeCount}
-          filteredCount={filteredAndSorted.length}
-          totalCount={records.length}
-          onReset={reset}
-        />
 
         <InquiryTable
           records={filteredAndSorted}
