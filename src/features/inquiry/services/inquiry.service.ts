@@ -2,7 +2,10 @@ import { getLocalStorageJSON, setLocalStorage } from '@/utils/safeLocalStorage';
 import type { InquiryRecord } from '../types';
 
 const STORAGE_KEY = 'inquiry_records';
+const DELETED_KEY = 'inquiry_deleted_ids';  // id → deletedAt ISO string
 const API_BASE = '/api/inquiry';
+
+type DeletedMap = Record<string, string>;
 
 function isRemoteNewer(remote: InquiryRecord, local: InquiryRecord): boolean {
   const remoteTime = new Date(remote.updatedAt).getTime();
@@ -37,6 +40,11 @@ export const inquiryService = {
   },
 
   remove(id: string): InquiryRecord[] {
+    // 记录删除 ID，防止 mergeFromD1 将其从 D1 重新拉回
+    const deleted = getLocalStorageJSON<DeletedMap>(DELETED_KEY, {});
+    deleted[id] = new Date().toISOString();
+    setLocalStorage(DELETED_KEY, deleted);
+
     const records = this.getAll().filter((record) => record.id !== id);
     this.save(records);
     return records;
@@ -92,10 +100,20 @@ export const inquiryService = {
   },
 
   mergeFromD1(d1Records: InquiryRecord[]): InquiryRecord[] {
+    // 清理 7 天前的删除记录，避免 localStorage 无限增长
+    const rawDeleted = getLocalStorageJSON<DeletedMap>(DELETED_KEY, {});
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const deletedIds: DeletedMap = Object.fromEntries(
+      Object.entries(rawDeleted).filter(([, ts]) => new Date(ts).getTime() > cutoff)
+    );
+    setLocalStorage(DELETED_KEY, deletedIds);
+
     const local = this.getAll();
     const localMap = new Map(local.map((record) => [record.id, record]));
 
     for (const d1Record of d1Records) {
+      // 跳过本地已删除的记录，防止 D1 把它重新带回来
+      if (deletedIds[d1Record.id]) continue;
       const localRecord = localMap.get(d1Record.id);
       if (!localRecord || isRemoteNewer(d1Record, localRecord)) {
         localMap.set(d1Record.id, d1Record);
