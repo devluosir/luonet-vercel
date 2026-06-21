@@ -7328,7 +7328,7 @@ npx wrangler deploy
 
 当前 D1 拉取只在页面**加载时执行一次**。其他用户的新增/编辑/删除操作无法即时出现在已打开的页面上，需手动刷新才能看到。
 
-目标：每 30 秒自动重新拉取 D1，合并最新状态并更新界面，页面隐藏时暂停轮询节省请求。
+目标：每 30 秒自动重新拉取 D1，合并最新状态并更新界面，页面隐藏时暂停轮询节省请求。新增/编辑弹窗打开期间必须暂停同步，避免 30 秒轮询覆盖正在录入的本地表单状态。
 
 ### 涉及文件
 
@@ -7340,13 +7340,16 @@ npx wrangler deploy
 
 ```tsx
 useEffect(() => {
-  if (!permissionChecked || !hasInquiryAccess) return;
+  if (!permissionChecked || !hasInquiryAccess || isModalOpen) return;
 
   const POLL_INTERVAL_MS = 30_000;
+  let cancelled = false;
 
   // 抽取同步逻辑为可复用函数
   async function syncFromD1() {
+    if (isModalOpenRef.current) return;
     const d1Records = await inquiryService.pullFromD1();
+    if (cancelled || isModalOpenRef.current) return;
     inquiryService.pushLocalToD1(d1Records);
     const merged = inquiryService.mergeFromD1(d1Records);
     useInquiryStore.setState({ records: merged });
@@ -7372,16 +7375,26 @@ useEffect(() => {
   document.addEventListener('visibilitychange', handleVisibilityChange);
 
   return () => {
+    cancelled = true;
     clearInterval(interval);
     document.removeEventListener('visibilitychange', handleVisibilityChange);
   };
-}, [hasInquiryAccess, permissionChecked]);
+}, [hasInquiryAccess, isModalOpen, permissionChecked]);
 ```
 
 同时在组件顶部添加状态：
 
 ```tsx
 const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+const isModalOpenRef = useRef(false);
+```
+
+弹窗状态同步到 ref，用于拦截已经发出但尚未返回的 D1 请求：
+
+```tsx
+useEffect(() => {
+  isModalOpenRef.current = isModalOpen;
+}, [isModalOpen]);
 ```
 
 在页面标题区域添加同步时间显示（紧跟 `<p>` 描述文字后）：
@@ -7406,6 +7419,8 @@ npm run lint -- --file src/features/inquiry/app/InquiryPage.tsx
 2. 在另一台设备新增一条记录 → 本页面 30 秒内自动出现（无需刷新）
 3. 切换到其他浏览器 Tab → 返回 → 立即触发一次同步
 4. DevTools Network 确认每 30 秒出现一次 GET `/api/inquiry` 请求
+5. 打开"新增询价"或"编辑询价"弹窗后，30 秒轮询暂停，不覆盖正在录入的内容
+6. 弹窗关闭后，自动同步恢复
 
 ### 提交
 
@@ -7413,6 +7428,10 @@ npm run lint -- --file src/features/inquiry/app/InquiryPage.tsx
 git add src/features/inquiry/app/InquiryPage.tsx
 git commit -m "feat(inquiry): 30 秒定时轮询 + 页面可见时立即同步"
 ```
+
+### 后续保护提交
+
+- `663d6cab` `fix(inquiry): 编辑弹窗打开时暂停自动同步`
 
 ---
 
@@ -7785,6 +7804,7 @@ git commit -m "feat(inquiry): 筛选栏 — 时间/客户/询价人/报价状态
 4. 无关键字搜索，定位某条记录须靠下拉筛选
 5. 筛选区常驻占用首屏高度，上方标题区和筛选区需要进一步融合
 6. 成单后的订单编号独占一行，进一步撑高询价编号列
+7. 不同屏幕下列宽分配不合理：大屏客户编号显示不足，中屏/小屏仍占用关键宽度
 
 ### 目标改动
 
@@ -7797,6 +7817,7 @@ git commit -m "feat(inquiry): 筛选栏 — 时间/客户/询价人/报价状态
 | 筛选区改为漏斗图标展开/收起 | 默认首屏更紧凑，有筛选条件时显示数量角标 |
 | 表格行高收紧，内容简述单行截断 | 列表可视记录数更多 |
 | 订单编号与小日期同一行显示 | 成单记录不再额外撑高 |
+| 响应式列显示与列宽 | 大屏显示更宽客户编号；中屏隐藏客户编号；小屏隐藏询价人和客户编号 |
 
 ### 涉及文件
 
@@ -7914,6 +7935,39 @@ interface InquiryFilterBarProps {
 
 表格列顺序变为：询价编号（含日期） / 询价人 / 客户编号 / 内容简述 / 询报价状态 / 操作。
 
+最终使用 `table-fixed` 和响应式宽度，避免内容把列撑破：
+
+```tsx
+<table className="min-w-full table-fixed divide-y divide-gray-100 dark:divide-gray-800">
+```
+
+列显示规则：
+
+| 屏幕 | 显示列 | 说明 |
+|------|--------|------|
+| 小屏 `< md` | 询价编号 / 内容简述 / 询报价状态 / 操作 | 隐藏询价人、客户编号 |
+| 中屏 `md ~ lg` | 询价编号 / 询价人 / 内容简述 / 询报价状态 / 操作 | 隐藏客户编号 |
+| 大屏 `>= lg` | 全部列 | 客户编号列加宽，可显示两行 |
+
+关键列宽：
+
+```tsx
+// 询价编号
+className="w-[24%] ... md:w-[16%] lg:w-[10%]"
+
+// 询价人：小屏隐藏，中屏显示
+className="hidden w-[16%] ... md:table-cell lg:w-[12%]"
+
+// 客户编号：中小屏隐藏，大屏显示
+className="hidden ... lg:table-cell lg:w-[24%] xl:w-[26%]"
+
+// 内容简述
+className="w-[34%] ... md:w-[32%] lg:w-[22%]"
+
+// 询报价状态
+className="w-[34%] ... md:w-[30%] lg:w-[28%] xl:w-[26%]"
+```
+
 ---
 
 ### 文件4：`src/features/inquiry/components/InquiryRow.tsx`
@@ -7923,7 +7977,7 @@ interface InquiryFilterBarProps {
 **② 修改"询价编号" `<td>`**，改为上下两行：第一行询价编号；第二行小号日期 + 订单编号（如有）。
 
 ```tsx
-<td className="px-3 py-2 text-sm">
+<td className="w-[24%] px-3 py-2 text-sm md:w-[16%] lg:w-[10%]">
   <div className="flex flex-col gap-0 leading-tight">
     <span className={`whitespace-nowrap font-mono leading-4 ${mainTextClass}`}>
       {record.inquiryNo}
@@ -7942,12 +7996,20 @@ interface InquiryFilterBarProps {
 
 注：成单记录的 `orderNo` 不再单独占一行，放在小日期后方同一行，避免撑高行高。
 
-**③ 修改"客户编号" `<td>`**，加截断+tooltip：
+询价人列按屏幕显示：
 
 ```tsx
-<td className="px-3 py-2 text-sm">
+<td className="hidden w-[16%] whitespace-nowrap px-3 py-2 text-sm md:table-cell lg:w-[12%]">
+  <span className={mainTextClass}>{record.inquirer}</span>
+</td>
+```
+
+**③ 修改"客户编号" `<td>`**，中小屏隐藏，大屏显示且允许两行：
+
+```tsx
+<td className="hidden px-3 py-2 text-sm lg:table-cell lg:w-[24%] xl:w-[26%]">
   <span
-    className={`block max-w-[180px] truncate ${mainTextClass}`}
+    className={`line-clamp-2 max-w-none break-words leading-4 ${mainTextClass}`}
     title={record.customerNo}
   >
     {record.customerNo}
@@ -7958,14 +8020,22 @@ interface InquiryFilterBarProps {
 **④ 修改"内容简述" `<td>`**，最终改为单行截断：
 
 ```tsx
-<td className="min-w-[160px] px-3 py-2 text-sm">
-  <p className={`max-w-[260px] truncate ${mainTextClass}`} title={record.description}>
+<td className="w-[34%] px-3 py-2 text-sm md:w-[32%] lg:w-[22%]">
+  <p className={`max-w-none truncate ${mainTextClass}`} title={record.description}>
     {record.description}
   </p>
 </td>
 ```
 
 **⑤ 表格行距收紧**：各列 `py-3` 收紧为 `py-2`，删除按钮 `p-1.5` 收紧为 `p-1`。
+
+**⑥ 状态列按断点分配宽度**：
+
+```tsx
+<td className="w-[34%] px-3 py-2 md:w-[30%] lg:w-[28%] xl:w-[26%]">
+  <InquiryQuoteStatusDisplay record={record} />
+</td>
+```
 
 ---
 
@@ -7975,7 +8045,7 @@ interface InquiryFilterBarProps {
 
 ```tsx
 return (
-  <p className="whitespace-nowrap text-xs font-medium leading-4">
+  <p className="block truncate text-xs font-medium leading-4">
     {record.supplierStatuses.map((supplier, index) => {
       const colorClass = getSupplierStatusClass(supplier);
       const label = supplier.quoteDate
@@ -8076,7 +8146,10 @@ npm run lint -- \
 6. FilterBar 第三行左侧出现搜索框；输入 "BRS" → 只显示 BRS 相关记录
 7. 关键字算入 `activeCount`，"重置筛选"会同时清空搜索框
 8. 成单记录的订单编号显示在小日期后方，同一行展示
-9. `tsc --noEmit` 无报错
+9. 大屏客户编号列显示且更宽，可展示两行内容
+10. 中屏客户编号列隐藏，内容简述/询报价状态获得更多宽度
+11. 小屏询价人、客户编号列隐藏，保留关键业务列
+12. `tsc --noEmit` 无报错
 
 ### 提交
 
@@ -8097,12 +8170,14 @@ git commit -m "feat(inquiry): 表格布局优化与紧凑筛选"
 - `ad1f57dc` `feat(inquiry): 收紧询报价列表布局`
 - `0753cc7f` `v26.6.21.0.9`：筛选区改为漏斗图标展开/收起
 - `989d9204` `style(inquiry): 调整订单号显示位置`
+- `7f18ee08` `style(inquiry): 优化表格响应式列宽`
 
 ### 最终状态摘要
 
-本任务最终不是简单的"状态两行显示"，而是基于实际使用反馈做了三次收敛：
+本任务最终不是简单的"状态两行显示"，而是基于实际使用反馈做了多次收敛：
 
 1. 保留日期列合并、客户编号截断、关键字搜索这些有效改动。
 2. 撤回状态列两行方案，恢复原单行状态，只把 `/` 改为蓝色。
 3. 筛选区默认收起，用漏斗按钮展开，减少首屏占用。
 4. 表格行高整体压缩，订单编号与日期同一行显示，避免成单行额外变高。
+5. 表格列按屏幕宽度响应式隐藏/显示：小屏隐藏询价人与客户编号，中屏隐藏客户编号，大屏显示更宽客户编号。
