@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { AppLayout, type ActionButton } from '@/components/layout';
 import { useAppUser } from '@/hooks/useAppUser';
 import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '../types';
@@ -11,11 +13,31 @@ import { InquiryFormModal } from '../components/InquiryFormModal';
 import { InquiryTable } from '../components/InquiryTable';
 
 export function InquiryPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const { user, handleLogout } = useAppUser();
   const records = useInquiryStore((state) => state.records);
   const { createRecord, updateRecordBasic, removeRecord } = useInquiryActions();
+  const [permissionChecked, setPermissionChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
+
+  const hasInquiryAccess = useMemo(() => {
+    if (!session?.user) return false;
+    if (session.user.isAdmin) return true;
+    return (session.user.permissions ?? []).some(
+      (permission) => permission.moduleId === 'inquiry' && permission.canAccess
+    );
+  }, [session]);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (status === 'unauthenticated') {
+      router.push('/');
+      return;
+    }
+    setPermissionChecked(true);
+  }, [status, router]);
 
   useEffect(() => {
     useInquiryStore.getState().init();
@@ -68,6 +90,32 @@ export function InquiryPage() {
     ],
     []
   );
+
+  if (!permissionChecked || status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-black">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+      </div>
+    );
+  }
+
+  if (!hasInquiryAccess) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-black">
+        <div className="rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-900">
+          <div className="mb-4 text-6xl text-red-600 dark:text-red-400">🚫</div>
+          <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">权限不足</h1>
+          <p className="mb-6 text-gray-600 dark:text-gray-400">您没有询报价登记的访问权限</p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="rounded-lg bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700"
+          >
+            返回首页
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AppLayout

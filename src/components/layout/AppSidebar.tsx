@@ -84,7 +84,7 @@ export const NAV_ITEMS: SidebarItem[] = [
     label: '询报价登记',
     path: '/inquiry',
     icon: Search,
-    permissionKey: 'canCreatePurchase',
+    permissionKey: 'canViewInquiry',
   },
   {
     id: 'history',
@@ -116,6 +116,7 @@ const PERMISSION_MODULE_MAP: Record<string, string> = {
   canCreatePacking: 'packing',
   canCreateInvoice: 'invoice',
   canCreatePurchase: 'purchase',
+  canViewInquiry: 'inquiry',
   canViewHistory: 'history',
   canManageCustomers: 'customer',
 };

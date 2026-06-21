@@ -7,6 +7,7 @@ export const MODULE_PERMISSIONS = [
   { id: 'packing', name: '装箱单', icon: '📦' },
   { id: 'invoice', name: '发票', icon: '🧾' },
   { id: 'purchase', name: '采购单', icon: '🛒' },
+  { id: 'inquiry', name: '询报价登记', icon: '🔍' },
   { id: 'history', name: '历史记录', icon: '📚' },
   { id: 'customer', name: '客户管理', icon: '👥' },
   { id: 'ai-email', name: 'AI邮件', icon: '🤖' }
