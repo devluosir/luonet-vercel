@@ -6681,3 +6681,348 @@ git add src/features/inquiry/services/inquiry.service.ts \
         src/features/inquiry/app/InquiryPage.tsx
 git commit -m "fix(inquiry): 双向同步修复——页面加载时推送本地存量记录到 D1"
 ```
+
+---
+
+## TASK-33：修复客户数据 D1 字段丢失（简称/联系人2 不同步）
+
+**优先级**：🔴 高（Bug 修复，影响多设备同步）
+**估时**：15 分钟
+**风险**：极低。只改两处字段映射，不动任何类型或 UI
+
+### 根因
+
+**Bug A — `customerService.ts` 双写 payload 不完整**
+
+`saveCustomer` 调用 `d1SyncCustomer` 时 `data` 只包含 `company`：
+```ts
+// 当前（错误）
+data: { company: customer.company },
+```
+
+导致 `companyShortName`、`contact1ShortName`、`contact2Name/ShortName/Phone/Email`
+全部只存在 localStorage，永远不会写入 D1。
+
+**Bug B — `d1Pull.ts` `d1CustomerToLocal` 恢复字段不完整**
+
+```ts
+// 当前（错误）
+const company = typeof c.data.company === 'string' ? c.data.company : '';
+return {
+  id: c.id, name: c.name, email: c.email || '',
+  phone: c.phone || '', address: c.address || '',
+  company,              // ← 只还原 company，其余字段全丢
+  createdAt: c.created_at, updatedAt: c.updated_at,
+};
+```
+
+换设备登录时，D1 拉取的客户数据被 `d1CustomerToLocal` 截断，简称和联系人2信息丢失。
+
+---
+
+### 涉及文件
+
+| 文件 | 改动说明 |
+|------|---------|
+| `src/features/customer/services/customerService.ts` | `saveCustomer` 中 `data` payload 补全所有字段 |
+| `src/utils/d1Pull.ts` | `d1CustomerToLocal` 改为 spread `c.data`，还原全部字段 |
+
+---
+
+### 改动一：`customerService.ts`
+
+找到 `saveCustomer` 函数中的 `d1SyncCustomer` 调用，将 `data` 字段从：
+```ts
+data: { company: customer.company },
+```
+改为：
+```ts
+data: {
+  company: customer.company,
+  companyShortName: customer.companyShortName,
+  contact1ShortName: customer.contact1ShortName,
+  contact2Name: customer.contact2Name,
+  contact2ShortName: customer.contact2ShortName,
+  contact2Phone: customer.contact2Phone,
+  contact2Email: customer.contact2Email,
+},
+```
+
+---
+
+### 改动二：`d1Pull.ts`
+
+找到 `d1CustomerToLocal` 函数，替换整个函数体：
+
+```ts
+// 修复前
+function d1CustomerToLocal(c: D1Customer, _type: 'customer' | 'supplier' | 'consignee') {
+  const company = typeof c.data.company === 'string' ? c.data.company : '';
+  return {
+    id: c.id,
+    name: c.name,
+    email: c.email || '',
+    phone: c.phone || '',
+    address: c.address || '',
+    company,
+    createdAt: c.created_at,
+    updatedAt: c.updated_at,
+  };
+}
+
+// 修复后
+function d1CustomerToLocal(c: D1Customer, _type: 'customer' | 'supplier' | 'consignee') {
+  return {
+    id: c.id,
+    name: c.name,
+    email: c.email || '',
+    phone: c.phone || '',
+    address: c.address || '',
+    // 展开 data JSON 中存储的全部字段
+    // （company、companyShortName、contact1ShortName、contact2*、未来的 contacts[] 等）
+    ...c.data,
+    // D1 表的时间戳列优先（比 data JSON 里的更可靠）
+    createdAt: c.created_at,
+    updatedAt: c.updated_at,
+  };
+}
+```
+
+---
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run lint -- --file src/features/customer/services/customerService.ts \
+               --file src/utils/d1Pull.ts
+
+# 手动验证（需要两台设备或两个浏览器）：
+# 1. 设备 A：编辑一个客户，填入公司简称、联系人1简称、联系人2信息 → 保存
+# 2. 设备 B（同账号登录）：进入客户管理 → 该客户的简称和联系人2信息应完整显示
+```
+
+### 提交
+
+```bash
+git add src/features/customer/services/customerService.ts \
+        src/utils/d1Pull.ts
+git commit -m "fix(customer): D1 双写补全简称/联系人字段，d1Pull 还原全部 data 字段"
+```
+
+---
+
+## TASK-34：客户联系人改为动态多人数组
+
+**优先级**：🟡 中（新功能，TASK-33 完成后再执行）
+**估时**：60 分钟
+**风险**：中。需修改类型 + 表单 UI + 双写 + 拉取 + 询价人选项，需充分测试
+
+### 背景
+
+当前联系人2硬编码（`contact2Name/ShortName/Phone/Email`），无法添加第3个联系人。
+目标：支持任意数量的附加联系人，存储为 `contacts: Contact[]` 数组。
+
+联系人1（主联系人）保持原有字段（`name` / `email` / `phone` / `contact1ShortName`），
+D1 `Customer` 表的 `name/email/phone` 列继续存联系人1信息，兼容旧数据。
+
+### 新类型设计
+
+#### `src/features/customer/types/index.ts`
+
+新增 `Contact` 接口：
+```ts
+export interface Contact {
+  id: string;         // nanoid 或 crypto.randomUUID()
+  name: string;       // 姓名（必填）
+  shortName?: string; // 简称（可选）
+  email?: string;
+  phone?: string;
+}
+```
+
+更新 `Customer`：
+```ts
+export interface Customer {
+  id: string;
+  name: string;             // 联系人1全名（对应 D1 name 列）
+  email: string;            // 联系人1邮箱
+  phone: string;            // 联系人1电话
+  address: string;
+  company: string;
+  companyShortName?: string;
+  contact1ShortName?: string;
+  contacts?: Contact[];     // 新增：附加联系人（联系人2、3、4…）
+  // 以下字段保留用于旧数据迁移（不再写入新记录）
+  contact2Name?: string;
+  contact2ShortName?: string;
+  contact2Phone?: string;
+  contact2Email?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+更新 `CustomerFormData`：
+```ts
+export interface CustomerFormData {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  company: string;
+  companyShortName?: string;
+  contact1ShortName?: string;
+  contacts: Contact[];   // 替代 contact2* 字段
+}
+```
+
+---
+
+### 各文件改动要点
+
+#### `src/features/customer/hooks/useCustomerForm.ts`
+
+- `initialFormData` 的 `contacts` 默认为 `[]`，删除 `contact2*` 字段
+- `setFormDataForEdit` 从 editingCustomer 读取时：
+  - 若有 `contacts[]` → 直接使用
+  - 若无 `contacts[]` 但有旧 `contact2Name` → 迁移为 `contacts[{ id, name: contact2Name, shortName: contact2ShortName, phone: contact2Phone, email: contact2Email }]`
+
+#### `src/features/customer/hooks/useCustomerActions.ts`
+
+`saveCustomer` 构建 `newCustomer` 时：
+```ts
+const newCustomer: Customer = {
+  // ... 现有字段
+  contacts: customerData.contacts,   // 替代 contact2*
+  // 不再写 contact2Name/contact2ShortName/contact2Phone/contact2Email
+};
+```
+
+#### `src/features/customer/services/customerService.ts`
+
+`d1SyncCustomer` 的 `data` payload：
+```ts
+data: {
+  company: customer.company,
+  companyShortName: customer.companyShortName,
+  contact1ShortName: customer.contact1ShortName,
+  contacts: customer.contacts ?? [],
+  // 不再写 contact2* 字段
+},
+```
+
+#### `src/features/customer/components/CustomerForm.tsx`
+
+替换"联系人2（可选）"固定 fieldset，改为动态列表：
+
+```tsx
+{/* 附加联系人（动态，仅客户）*/}
+{entityType === 'customers' && (
+  <div className="space-y-3">
+    {contacts.map((contact, index) => (
+      <div key={contact.id} className="rounded-md border border-gray-200 dark:border-gray-600 p-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+            联系人{index + 2}
+          </span>
+          <button type="button" onClick={() => removeContact(contact.id)}
+            className="text-xs text-red-400 hover:text-red-600">删除</button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label>姓名</label><input value={contact.name} onChange={...} /></div>
+          <div><label>简称</label><input value={contact.shortName ?? ''} onChange={...} /></div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label>邮箱</label><input type="email" value={contact.email ?? ''} onChange={...} /></div>
+          <div><label>电话</label><input type="tel" value={contact.phone ?? ''} onChange={...} /></div>
+        </div>
+      </div>
+    ))}
+    <button type="button" onClick={addContact}
+      className="w-full py-2 text-sm text-blue-600 border border-dashed border-blue-300 rounded-md hover:bg-blue-50">
+      + 添加联系人
+    </button>
+  </div>
+)}
+```
+
+联系人 state 在 `CustomerForm.tsx` 内部管理（`useState<Contact[]>`），
+通过新增 prop `onContactsChange: (contacts: Contact[]) => void` 向上传递变更。
+
+`CustomerModal.tsx` 增加 `onContactsChange` prop 透传。
+`CustomerPage.tsx` / `useCustomerForm.ts` 在 `formData` 里维护 `contacts`。
+
+#### `src/utils/d1Pull.ts`
+
+`d1CustomerToLocal` 已在 TASK-33 修复（spread `c.data`），新增迁移逻辑：
+
+```ts
+// 在 spread c.data 之后，对旧数据做 contact2* → contacts[] 迁移
+const result = { id: c.id, name: c.name, email: c.email || '', ...c.data, createdAt: c.created_at, updatedAt: c.updated_at };
+
+// 旧数据迁移：contact2* → contacts[]
+if (!result.contacts && result.contact2Name) {
+  result.contacts = [{
+    id: crypto.randomUUID(),
+    name: result.contact2Name as string,
+    shortName: result.contact2ShortName as string | undefined,
+    phone: result.contact2Phone as string | undefined,
+    email: result.contact2Email as string | undefined,
+  }];
+}
+return result;
+```
+
+#### `src/features/inquiry/utils/inquirerOptions.ts`
+
+同时支持旧格式和新格式：
+```ts
+for (const c of customers) {
+  if (!c.companyShortName) continue;
+  // 联系人1
+  if (c.contact1ShortName) options.push(`${c.companyShortName}-${c.contact1ShortName}`);
+  // 新格式：contacts[]
+  for (const contact of c.contacts ?? []) {
+    if (contact.shortName) options.push(`${c.companyShortName}-${contact.shortName}`);
+  }
+  // 旧格式兼容（没有 contacts[] 才读 contact2ShortName）
+  if (!c.contacts && c.contact2ShortName) {
+    options.push(`${c.companyShortName}-${c.contact2ShortName}`);
+  }
+}
+```
+
+---
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run lint -- --file src/features/customer/types/index.ts \
+               --file src/features/customer/hooks/useCustomerForm.ts \
+               --file src/features/customer/hooks/useCustomerActions.ts \
+               --file src/features/customer/services/customerService.ts \
+               --file src/features/customer/components/CustomerForm.tsx \
+               --file src/utils/d1Pull.ts \
+               --file src/features/inquiry/utils/inquirerOptions.ts
+
+# 手动验证：
+# 1. 添加新客户 → 填写公司简称 → 添加3个联系人 → 保存 → 数据显示正确
+# 2. 编辑有旧 contact2* 数据的客户 → 自动迁移为 contacts[0] 显示
+# 3. 询报价模块"询价人"下拉 → 所有联系人简称均出现
+# 4. 换设备登录 → 联系人数据完整同步
+```
+
+### 提交
+
+```bash
+git add src/features/customer/types/index.ts \
+        src/features/customer/hooks/useCustomerForm.ts \
+        src/features/customer/hooks/useCustomerActions.ts \
+        src/features/customer/services/customerService.ts \
+        src/features/customer/components/CustomerForm.tsx \
+        src/utils/d1Pull.ts \
+        src/features/inquiry/utils/inquirerOptions.ts
+git commit -m "feat(customer): 联系人改为动态数组，兼容旧 contact2* 数据迁移"
+```
