@@ -1060,6 +1060,38 @@ html.dark.classic-theme .dashboard-module-button:hover .icon-container {
   border-color: rgba(255, 255, 255, 0.25) !important;
 }
 
+/* ── 询报价登记表格列宽（响应式）──────────────────────── */
+/* 小屏 (< md): 询价编号 22% | 内容简述 20% | 状态 50% | 删除 8% */
+.inq-col-no     { width: 22%; }
+.inq-col-desc   { width: 20%; }
+.inq-col-status { width: 50%; }
+.inq-col-del    { width: 8%; }
+
+/* 中屏 (md-lg): 询价编号 15% | 询价人 13% | 内容简述 23% | 状态 42% | 删除 7% */
+@media (min-width: 768px) {
+  .inq-col-no     { width: 15%; }
+  .inq-col-desc   { width: 23%; }
+  .inq-col-status { width: 42%; }
+  .inq-col-del    { width: 7%; }
+  .inq-col-inquirer { width: 13%; }
+}
+
+/* 大屏 (lg+): 加入客户编号列 */
+@media (min-width: 1024px) {
+  .inq-col-no       { width: 10%; }
+  .inq-col-inquirer { width: 12%; }
+  .inq-col-custno   { width: 24%; }
+  .inq-col-desc     { width: 22%; }
+  .inq-col-status   { width: 28%; }
+  .inq-col-del      { width: 4%; }
+}
+
+@media (min-width: 1280px) {
+  .inq-col-custno   { width: 26%; }
+  .inq-col-status   { width: 26%; }
+}
+/* ─────────────────────────────────────────────────────── */
+
 /* 全局样式 */
 html, body {
   background-color: var(--bg-primary);

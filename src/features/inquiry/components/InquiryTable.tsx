@@ -38,7 +38,7 @@ export function InquiryTable({
         <table className="min-w-full table-fixed divide-y divide-gray-100 dark:divide-gray-800">
           <thead className="bg-gray-50 dark:bg-gray-900/50">
             <tr>
-              <th className="w-[22%] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:w-[15%] lg:w-[10%]">
+              <th className="inq-col-no px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 <button
                   type="button"
                   onClick={onSortToggle}
@@ -53,19 +53,19 @@ export function InquiryTable({
                   )}
                 </button>
               </th>
-              <th className="hidden w-[13%] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:table-cell lg:w-[12%]">
+              <th className="inq-col-inquirer hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:table-cell">
                 询价人
               </th>
-              <th className="hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 lg:table-cell lg:w-[24%] xl:w-[26%]">
+              <th className="inq-col-custno hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 lg:table-cell">
                 客户编号
               </th>
-              <th className="w-[20%] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:w-[23%] lg:w-[22%]">
+              <th className="inq-col-desc px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 内容简述
               </th>
-              <th className="w-[50%] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:w-[42%] lg:w-[28%] xl:w-[26%]">
+              <th className="inq-col-status px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 询报价状态
               </th>
-              <th className="w-[8%] px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:w-[7%] lg:w-[4%]" aria-label="操作">
+              <th className="inq-col-del px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 操作
               </th>
             </tr>
