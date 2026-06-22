@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useRef, useState, useEffect } from 'react';
-import { Filter, Plus } from 'lucide-react';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { Download, Filter, Plus, Upload } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AppLayout, type ActionButton } from '@/components/layout';
@@ -29,7 +29,9 @@ export function InquiryPage() {
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const isModalOpenRef = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const hasInquiryAccess = useMemo(() => {
     if (!session?.user) return false;
@@ -132,17 +134,103 @@ export function InquiryPage() {
     }
   };
 
+  // ── 导出 ─────────────────────────────────────────────
+  const handleExport = useCallback(() => {
+    const all = inquiryService.getAll();
+    const json = JSON.stringify(all, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `inquiry_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  // ── 导入 ─────────────────────────────────────────────
+  const handleImportClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setIsImporting(true);
+      try {
+        const text = await file.text();
+        const imported = JSON.parse(text) as unknown;
+
+        if (!Array.isArray(imported)) {
+          alert('格式错误：文件应为询报价记录数组');
+          return;
+        }
+
+        const existing = inquiryService.getAll();
+        const map = new Map(existing.map((r) => [r.id, r]));
+
+        let added = 0;
+        let updated = 0;
+
+        for (const item of imported) {
+          if (!item || typeof item !== 'object') continue;
+          const rec = item as Partial<InquiryRecord>;
+          if (!rec.id || !rec.inquiryNo) continue;
+
+          const local = map.get(rec.id);
+          if (!local) {
+            map.set(rec.id, rec as InquiryRecord);
+            inquiryService.syncToD1(rec as InquiryRecord);
+            added++;
+          } else {
+            const localTime = new Date(local.updatedAt).getTime();
+            const importedTime = new Date(rec.updatedAt ?? '').getTime();
+            if (Number.isFinite(importedTime) && importedTime > localTime) {
+              map.set(rec.id, rec as InquiryRecord);
+              inquiryService.updateInD1(rec as InquiryRecord);
+              updated++;
+            }
+          }
+        }
+
+        const merged = Array.from(map.values()).sort((a, b) =>
+          b.inquiryNo.localeCompare(a.inquiryNo)
+        );
+        inquiryService.save(merged);
+        useInquiryStore.setState({ records: merged });
+
+        alert(`导入完成：新增 ${added} 条，更新 ${updated} 条`);
+      } catch {
+        alert('导入失败：文件格式错误，请检查是否为有效的 JSON 文件');
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    },
+    []
+  );
+
   const bottomActions = useMemo<ActionButton[]>(
     () => [
       {
-        key: 'new-inquiry',
-        label: '新增询价',
-        onClick: openCreateModal,
-        variant: 'primary',
-        icon: Plus,
+        key: 'import',
+        label: '导入',
+        onClick: handleImportClick,
+        variant: 'secondary',
+        icon: Upload,
+        loading: isImporting,
+        loadingLabel: '导入中…',
+      },
+      {
+        key: 'export',
+        label: '导出',
+        onClick: handleExport,
+        variant: 'secondary',
+        icon: Download,
       },
     ],
-    []
+    [handleExport, handleImportClick, isImporting]
   );
 
   const resultSummary =
@@ -186,6 +274,15 @@ export function InquiryPage() {
       onLogout={handleLogout}
       bottomActions={bottomActions}
     >
+      {/* 隐藏的文件选择框（用于导入） */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       <div className="w-full max-w-none px-3 py-3 sm:px-5 lg:px-6">
         <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-2.5 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
           <div className="flex items-center gap-2">

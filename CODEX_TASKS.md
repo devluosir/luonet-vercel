@@ -9600,3 +9600,55 @@ git commit -m "fix(inquiry): 编辑模式下禁止自动覆盖询价编号 — u
 - `src/features/inquiry/components/InquiryFormModal.tsx`：自动生成询价编号的 `useEffect` 增加 `mode === 'edit'` 守卫，编辑模式下不再自动生成/覆盖询价编号。
 - 依赖数组补充 `mode`，保持 React effect 依赖完整。
 - `npx tsc --noEmit` + `npm run build` 均通过。
+
+---
+
+## TASK-47 ✅：询报价页面筛选优化 + 导入/导出功能
+
+### 背景
+
+1. 筛选区域过于厚重；「已报价」筛选器混入「无法报价」记录。
+2. 缺少数据导入/导出能力，无法备份或跨设备迁移询报价数据。
+
+### 改动一：筛选 UI 重构（内联展开）
+
+**`src/features/inquiry/app/InquiryPage.tsx`**
+- 去掉副标题「记录客户询价、供应商报价进度和已报客户版本。」
+- 筛选按钮点击后，筛选控件**向左内联展开**（与标题同行，无需额外行），关闭时恢复标题 + 同步时间 + 条数。
+- 移除底部浮动的冗余「新增询价」按钮，底部栏改为「导入 / 导出」。
+
+**`src/features/inquiry/components/InquiryFilterBar.tsx`**（重写为紧凑内联版）
+- 时间筛选：`7D / 1M / 3M / 1Y`（点击已选项取消，无「全部」按钮）。
+- 状态筛选：`未报价 / 已报价 / 无法报价 / 已成单`（移除「需信息」「等待供应商」「全部」）。
+- 保留搜索框 + 询价人下拉，移除客户筛选下拉。
+- 有激活筛选时显示「重置」按钮。
+
+**`src/features/inquiry/hooks/useInquiryFilter.ts`**
+- `TimeRange` 新增 `'1y'`，对应 365 天。
+- 修复 `customer_quoted` 筛选逻辑：之前用 `some(type !== 'unavailable')`，遇到同时有普通报价条目和 `unavailable` 条目的记录会同时命中两个筛选器。新逻辑：`已报价` = 有至少一个 `type` 为空或 `'quoted'` 的条目 **且** 没有任何 `unavailable` 条目。
+
+### 改动二：导入 / 导出
+
+**`src/features/inquiry/app/InquiryPage.tsx`**
+
+**导出**：
+- 将 `inquiryService.getAll()` 全量记录序列化为 JSON，触发浏览器下载（文件名 `inquiry_YYYY-MM-DD.json`）。
+
+**导入**：
+- 隐藏 `<input type="file" accept=".json">` + `useRef` 触发。
+- 解析 JSON，逐条与本地合并：本地无此 ID → 新增并 `syncToD1`；本地有但导入版本更新 → 覆盖并 `updateInD1`；否则跳过。
+- 合并后写入 `inquiryService.save()` 并刷新 store，最后 `alert` 提示新增/更新数量。
+- 导入失败（非 JSON 或格式错误）弹出错误提示。
+
+### 验证
+
+```bash
+npx tsc --noEmit
+```
+
+人工验证：
+1. 筛选按钮展开 → 内联显示筛选控件，无额外行。
+2. 时间筛选「7D」点击激活，再次点击取消（回到全部）。
+3. 「已报价」筛选不再混入「无法报价」记录。
+4. 底部栏「导出」→ 下载 JSON 文件，内容为所有询报价记录。
+5. 「导入」→ 选择刚导出的 JSON → 提示「新增 0 条，更新 0 条」（重复导入幂等）。
