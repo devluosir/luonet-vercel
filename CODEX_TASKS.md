@@ -9524,3 +9524,79 @@ npm run build
 3. 登录用户 B，历史页不应显示用户 A 的本地记录。
 4. 用户 B 新增/删除单据，不应影响用户 A 的 D1 数据。
 5. 同账号跨设备新增、删除仍可通过历史页刷新/回前台同步。
+
+---
+
+## TASK-46：修复询报价编辑模式下询价编号和日期被当天数据覆盖 ✅ 已完成
+
+**优先级**：🟡 高（数据正确性）
+**估时**：5 分钟
+**风险**：极低，仅改一行守卫条件
+
+### 背景
+
+在询报价登记中，打开某条已有记录进行编辑（例如填写"已报价"记录），保存后发现：
+
+- **询价编号**变成了今天日期生成的新编号（如原来是 `C260615F`，变成了 `C260622G`）
+- 再次打开该记录，**询价日期**也跟着变成今天
+
+**根本原因**：`InquiryFormModal.tsx` 中两个 `useEffect` 在首次渲染时产生竞态：
+
+1. **Effect 1**（deps: `existingNos, isOpen, mode, record`）：将 `inquiryNo` 设为 `record.inquiryNo`（原始编号），将 `isInquiryNoManual` 设为 `true`。
+2. **Effect 2**（deps: `dateInput, existingNos, isInquiryNoManual, isOpen, isUrgent`）：在**同一渲染周期**内执行，读到的是 stale 状态（`isInquiryNoManual = false`、`dateInput = 今天`），因此跳过 early return，调用 `generateNextInquiryNo(今天日期, ...)` 生成新编号，**覆盖**了 Effect 1 刚写入的原始编号。
+
+React 批量 setState 时，Effect 2 最后写入，优先级更高，原始编号丢失。
+
+### 涉及文件
+
+- `src/features/inquiry/components/InquiryFormModal.tsx`
+
+### 改动
+
+**定位**（约第 118–122 行）：
+
+```typescript
+useEffect(() => {
+  if (!isOpen || isInquiryNoManual) return;
+  const base = generateNextInquiryNo(dateInputToDate(dateInput), existingNos);
+  setInquiryNo(isUrgent ? `${base}-U` : base);
+}, [dateInput, existingNos, isInquiryNoManual, isOpen, isUrgent]);
+```
+
+**改为**（增加 `mode === 'edit'` 守卫，同时在 deps 中补充 `mode`）：
+
+```typescript
+useEffect(() => {
+  if (!isOpen || isInquiryNoManual || mode === 'edit') return;
+  const base = generateNextInquiryNo(dateInputToDate(dateInput), existingNos);
+  setInquiryNo(isUrgent ? `${base}-U` : base);
+}, [dateInput, existingNos, isInquiryNoManual, isOpen, isUrgent, mode]);
+```
+
+**说明**：
+- 编辑模式（`mode === 'edit'`）下，询价编号始终由用户手动控制，不自动生成。
+- 新增模式（`mode === 'create'`）行为不变：修改日期时自动更新编号。
+- 这也修复了日期的二次污染：`inquiryNo` 保持原值 → 下次打开时 `getDateInputValueFromInquiryNo` 解析出正确日期 → `inquiryDate` 也正确。
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+人工验证：
+1. 打开一条已有询价记录进行编辑（如添加"已报价"记录）。
+2. 点击"保存修改"后，检查该记录的询价编号和询价日期均未变化。
+3. 新增询价模式下，修改日期后编号应仍自动同步。
+
+```bash
+git add src/features/inquiry/components/InquiryFormModal.tsx
+git commit -m "fix(inquiry): 编辑模式下禁止自动覆盖询价编号 — useEffect 竞态导致 inquiryNo 被今日编号替换 (TASK-46)"
+```
+
+### 实际落地
+
+- `src/features/inquiry/components/InquiryFormModal.tsx`：自动生成询价编号的 `useEffect` 增加 `mode === 'edit'` 守卫，编辑模式下不再自动生成/覆盖询价编号。
+- 依赖数组补充 `mode`，保持 React effect 依赖完整。
+- `npx tsc --noEmit` + `npm run build` 均通过。

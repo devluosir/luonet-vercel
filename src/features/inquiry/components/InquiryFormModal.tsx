@@ -116,10 +116,10 @@ export function InquiryFormModal({
   }, [existingNos, isOpen, mode, record]);
 
   useEffect(() => {
-    if (!isOpen || isInquiryNoManual) return;
+    if (!isOpen || isInquiryNoManual || mode === 'edit') return;
     const base = generateNextInquiryNo(dateInputToDate(dateInput), existingNos);
     setInquiryNo(isUrgent ? `${base}-U` : base);
-  }, [dateInput, existingNos, isInquiryNoManual, isOpen, isUrgent]);
+  }, [dateInput, existingNos, isInquiryNoManual, isOpen, isUrgent, mode]);
 
   // 无论新增还是编辑，都构造 localRecord 用于状态编辑区
   const localRecord = useMemo((): InquiryRecord => {
