@@ -205,18 +205,22 @@ function mergeIntoStorage<T extends LocalStorageItem>(
   incoming: T[],
   d1Ok: boolean,
   pendingIds: Set<string>,
+  deletedIds: Set<string>,
 ): void {
   // D1 请求失败时不动 localStorage，避免误删本地数据
   if (!d1Ok) return;
 
   const raw = localStorage.getItem(storageKey);
   const existing: T[] = raw ? JSON.parse(raw) : [];
-  const incomingIds = new Set(incoming.map((item) => item.id));
+  const activeIncoming = incoming.filter((item) => !deletedIds.has(item.id));
+  const incomingIds = new Set(activeIncoming.map((item) => item.id));
 
-  // D1 为权威来源，先全部放入 map
-  const map = new Map<string, T>(incoming.map((item) => [item.id, item]));
+  // D1 为权威来源，先放入远端 active 记录；本机已删除 id 优先过滤，避免远端删除延迟时被拉回。
+  const map = new Map<string, T>(activeIncoming.map((item) => [item.id, item]));
 
   for (const item of existing) {
+    if (deletedIds.has(item.id)) continue;
+
     if (incomingIds.has(item.id)) continue; // D1 已有，以 D1 版本为准
 
     if (pendingIds.has(item.id)) {
@@ -364,10 +368,11 @@ export async function pullAllFromD1(): Promise<void> {
       [...quotRes.data, ...confRes.data].map(docToQuotationHistory),
       quotRes.ok && confRes.ok,
       pendingIds,
+      deletedIds,
     );
-    mergeIntoStorage('invoice_history', invRes.data.map(docToInvoiceHistory), invRes.ok, pendingIds);
-    mergeIntoStorage('packing_history', packRes.data.map(docToPackingHistory), packRes.ok, pendingIds);
-    mergeIntoStorage('purchase_history', purchRes.data.map(docToPurchaseHistory), purchRes.ok, pendingIds);
+    mergeIntoStorage('invoice_history', invRes.data.map(docToInvoiceHistory), invRes.ok, pendingIds, deletedIds);
+    mergeIntoStorage('packing_history', packRes.data.map(docToPackingHistory), packRes.ok, pendingIds, deletedIds);
+    mergeIntoStorage('purchase_history', purchRes.data.map(docToPurchaseHistory), purchRes.ok, pendingIds, deletedIds);
 
     const [custRes, suppRes, consRes] = await Promise.all([
       fetchAll<D1Customer>('/api/customers?type=customer', 'customers'),
@@ -375,9 +380,10 @@ export async function pullAllFromD1(): Promise<void> {
       fetchAll<D1Customer>('/api/customers?type=consignee', 'customers'),
     ]);
 
-    mergeIntoStorage('customer_management', custRes.data.map((c) => d1CustomerToLocal(c, 'customer')), custRes.ok, pendingIds);
-    mergeIntoStorage('supplier_management', suppRes.data.map((c) => d1CustomerToLocal(c, 'supplier')), suppRes.ok, pendingIds);
-    mergeIntoStorage('consignee_management', consRes.data.map((c) => d1CustomerToLocal(c, 'consignee')), consRes.ok, pendingIds);
+    const noDeletedCustomerIds = new Set<string>();
+    mergeIntoStorage('customer_management', custRes.data.map((c) => d1CustomerToLocal(c, 'customer')), custRes.ok, pendingIds, noDeletedCustomerIds);
+    mergeIntoStorage('supplier_management', suppRes.data.map((c) => d1CustomerToLocal(c, 'supplier')), suppRes.ok, pendingIds, noDeletedCustomerIds);
+    mergeIntoStorage('consignee_management', consRes.data.map((c) => d1CustomerToLocal(c, 'consignee')), consRes.ok, pendingIds, noDeletedCustomerIds);
 
     const remaining = getPendingIds().size;
     console.log(`[d1Pull] 同步完成${remaining > 0 ? `，${remaining} 条待提交（网络不可达）` : ''}`);
