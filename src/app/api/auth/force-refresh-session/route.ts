@@ -95,23 +95,10 @@ export async function POST(request: NextRequest) {
       console.error('权限刷新API: 获取权限数据失败:', error);
     }
 
-    // 如果没有获取到权限，使用默认权限
+    // 后端返回了空权限时，直接使用空数组（用户确实没有任何权限）
+    // 注意：不添加默认权限，空权限 = 无权访问任何受保护模块
     if (permissions.length === 0) {
-      console.log('权限刷新API: 使用默认权限');
-      if (isAdmin) {
-        permissions = [
-          { id: 'default-quotation', moduleId: 'quotation', canAccess: true },
-          { id: 'default-packing', moduleId: 'packing', canAccess: true },
-          { id: 'default-invoice', moduleId: 'invoice', canAccess: true },
-          { id: 'default-purchase', moduleId: 'purchase', canAccess: true },
-          { id: 'default-history', moduleId: 'history', canAccess: true }
-        ];
-      } else {
-        permissions = [
-          { id: 'default-quotation', moduleId: 'quotation', canAccess: true },
-          { id: 'default-history', moduleId: 'history', canAccess: true }
-        ];
-      }
+      console.log('权限刷新API: 用户无已分配权限，返回空权限列表');
     }
 
     // ✅ 检查权限是否有变化

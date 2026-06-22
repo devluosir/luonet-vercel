@@ -140,8 +140,8 @@ export function AppSidebar({ className = '', onClose, user, onLogout }: AppSideb
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (!item.permissionKey) return true;
-    // 权限加载中或 user 未就绪时，显示全部项目（避免闪烁消失）
-    if (isLoading || !permissionUser) return true;
+    // 权限尚未就绪时：fail closed，不展示受权限保护的菜单项
+    if (isLoading || !permissionUser) return false;
     // 管理员看全部
     if (permissionUser.isAdmin) return true;
     const moduleId = PERMISSION_MODULE_MAP[item.permissionKey];

@@ -8181,3 +8181,366 @@ git commit -m "feat(inquiry): 表格布局优化与紧凑筛选"
 3. 筛选区默认收起，用漏斗按钮展开，减少首屏占用。
 4. 表格行高整体压缩，订单编号与日期同一行显示，避免成单行额外变高。
 5. 表格列按屏幕宽度响应式隐藏/显示：小屏隐藏询价人与客户编号，中屏隐藏客户编号，大屏显示更宽客户编号。
+
+---
+
+## TASK-41：修复权限架构——普通用户登录后拥有全部权限的 Bug ✅ 已完成
+
+**优先级**：🔴 紧急（安全）
+**估时**：30 分钟
+**风险**：中（涉及认证核心流程，改完须全量手动验证登录→权限显示）
+
+### 背景与根因
+
+当前表现：普通用户登录后，在点击"刷新权限"之前，侧边栏显示所有菜单项（即拥有所有权限）。点击刷新后才显示正确的受限菜单。
+
+根因分析（三个 Bug，需全部修复）：
+
+**Bug 1（根本原因）：`usePermissionInit.ts` 中 `initRef` 阻断了 session 初始化**
+
+`initRef.current` 在 `status === 'loading'` 阶段被设为 `true`（目的是防止重复调用 `initializeUserFromStorage`），但顶部的守卫 `if (initRef.current) return` 在随后的 `status === 'authenticated'` 阶段同样触发提前退出，导致 `setUserFromSession(session.user)` **永远不会被调用**。
+
+结果：Zustand store 的 `permissionUser` 永远是 `null`（除非 localStorage 有缓存）。
+
+**Bug 2（直接表现原因）：`AppSidebar.tsx` "fail open" 设计**
+
+```tsx
+if (isLoading || !permissionUser) return true; // 显示全部项目
+```
+
+`permissionUser === null` → 所有需要权限的菜单项全部展示。
+
+**Bug 3（次要）：API 路由中错误的默认权限 fallback**
+
+`force-refresh-session/route.ts` 和 `get-latest-permissions/route.ts` 在后端没有返回权限时，都硬编码了 fallback，给普通用户赋予 quotation + history 默认权限。空权限就该是空权限，不应自动赋权。
+
+**为什么"刷新权限"后正常**：refresh 流程把正确权限写入 `localStorage.userCache` 后 reload。reload 后 `initRef.current` 重置为 `false`，loading 阶段 `initializeUserFromStorage()` 读到正确缓存并写入 store，侧边栏才显示正确。
+
+---
+
+### 改动 1：`src/hooks/usePermissionInit.ts`
+
+**核心逻辑**：把"防止重复做 storage init"和"防止重复做 session init"分开，用两个独立 ref，彻底解开互相阻断的问题。
+
+将整个文件替换为以下内容：
+
+```typescript
+import { useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react';
+import { usePermissionStore } from '@/lib/permissions';
+import { logPermission } from '@/utils/permissionLogger';
+
+// 模块级：防止并发初始化
+let globalInitInProgress = false;
+
+export const usePermissionInit = () => {
+  const { data: session, status } = useSession();
+  const { setUserFromSession, initializeUserFromStorage, clearUser } = usePermissionStore();
+
+  // storage init 独立 ref：只防止 loading 阶段重复调用 initializeUserFromStorage
+  const storageInitDone = useRef(false);
+  // session hash ref：防止对同一 session 数据重复调用 setUserFromSession
+  const lastSessionHash = useRef('');
+
+  useEffect(() => {
+    const run = async () => {
+      // 正在初始化时跳过（防并发）
+      if (globalInitInProgress) return;
+
+      if (status === 'loading') {
+        // loading 阶段：只尝试一次从缓存恢复
+        if (!storageInitDone.current) {
+          storageInitDone.current = true;
+          try {
+            const initialized = initializeUserFromStorage();
+            if (initialized && process.env.NODE_ENV === 'development') {
+              logPermission('loading 阶段：从本地缓存初始化权限成功');
+            }
+          } catch (err) {
+            console.error('从缓存初始化失败:', err);
+          }
+        }
+        return;
+      }
+
+      if (status === 'unauthenticated') {
+        clearUser();
+        return;
+      }
+
+      // authenticated 阶段：从真实 session 初始化（不受 storageInitDone 影响）
+      if (!session?.user) return;
+
+      const currentHash = JSON.stringify({
+        id: session.user.id,
+        username: session.user.username,
+        permissions: session.user.permissions ?? [],
+      });
+
+      // 同一 session 内容不重复处理
+      if (lastSessionHash.current === currentHash) return;
+
+      globalInitInProgress = true;
+      try {
+        lastSessionHash.current = currentHash;
+        setUserFromSession(session.user);
+        if (process.env.NODE_ENV === 'development') {
+          logPermission('authenticated 阶段：从 session 初始化权限完成');
+        }
+      } catch (err) {
+        console.error('session 权限初始化失败:', err);
+      } finally {
+        globalInitInProgress = false;
+      }
+    };
+
+    run();
+  }, [session, status]);
+};
+```
+
+---
+
+### 改动 2：`src/components/layout/AppSidebar.tsx`
+
+将 `visibleItems` 过滤逻辑中 "权限加载中或 user 未就绪时显示全部" 改为 **fail closed**（不展示需要权限的项目）。
+
+找到：
+```tsx
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (!item.permissionKey) return true;
+    // 权限加载中或 user 未就绪时，显示全部项目（避免闪烁消失）
+    if (isLoading || !permissionUser) return true;
+    // 管理员看全部
+    if (permissionUser.isAdmin) return true;
+    const moduleId = PERMISSION_MODULE_MAP[item.permissionKey];
+    if (!moduleId) return true;
+    return permissionUser.permissions?.some(
+      (permission) => permission.moduleId === moduleId && permission.canAccess
+    ) ?? false;
+  });
+```
+
+替换为：
+```tsx
+  const visibleItems = NAV_ITEMS.filter((item) => {
+    if (!item.permissionKey) return true;
+    // 权限尚未就绪时：fail closed，不展示受权限保护的菜单项
+    if (isLoading || !permissionUser) return false;
+    // 管理员看全部
+    if (permissionUser.isAdmin) return true;
+    const moduleId = PERMISSION_MODULE_MAP[item.permissionKey];
+    if (!moduleId) return true;
+    return permissionUser.permissions?.some(
+      (permission) => permission.moduleId === moduleId && permission.canAccess
+    ) ?? false;
+  });
+```
+
+---
+
+### 改动 3：`src/app/api/auth/force-refresh-session/route.ts`
+
+删除"没有权限时使用默认权限"的 fallback 逻辑（第 98–115 行）。
+
+找到并删除整个 if 块：
+```typescript
+    // 如果没有获取到权限，使用默认权限
+    if (permissions.length === 0) {
+      console.log('权限刷新API: 使用默认权限');
+      if (isAdmin) {
+        permissions = [
+          { id: 'default-quotation', moduleId: 'quotation', canAccess: true },
+          { id: 'default-packing', moduleId: 'packing', canAccess: true },
+          { id: 'default-invoice', moduleId: 'invoice', canAccess: true },
+          { id: 'default-purchase', moduleId: 'purchase', canAccess: true },
+          { id: 'default-history', moduleId: 'history', canAccess: true }
+        ];
+      } else {
+        permissions = [
+          { id: 'default-quotation', moduleId: 'quotation', canAccess: true },
+          { id: 'default-history', moduleId: 'history', canAccess: true }
+        ];
+      }
+    }
+```
+
+替换为（如果后端无法返回权限，直接返回 500，不默认赋权）：
+```typescript
+    // 后端返回了空权限时，直接使用空数组（用户确实没有任何权限）
+    // 注意：不添加默认权限，空权限 = 无权访问任何受保护模块
+    if (permissions.length === 0) {
+      console.log('权限刷新API: 用户无已分配权限，返回空权限列表');
+    }
+```
+
+---
+
+### 改动 4：`src/app/api/auth/get-latest-permissions/route.ts`
+
+同样删除 fallback 默认权限逻辑（第 114–140 行）：
+
+找到并替换（保留 return 语句结构）：
+
+找到：
+```typescript
+    // 如果没有从session获取到权限，使用默认权限
+    if (permissions.length === 0) {
+      // 为管理员用户提供默认权限
+      if (isAdmin) {
+        permissions = [
+          { id: 'default-quotation', moduleId: 'quotation', canAccess: true },
+          { id: 'default-packing', moduleId: 'packing', canAccess: true },
+          { id: 'default-invoice', moduleId: 'invoice', canAccess: true },
+          { id: 'default-purchase', moduleId: 'purchase', canAccess: true },
+          { id: 'default-history', moduleId: 'history', canAccess: true }
+        ];
+      } else {
+        // 为普通用户提供基本权限
+        permissions = [
+          { id: 'default-quotation', moduleId: 'quotation', canAccess: true },
+          { id: 'default-history', moduleId: 'history', canAccess: true }
+        ];
+      }
+    }
+
+    // 确保至少有一些基本权限，避免权限检查失败
+    if (permissions.length === 0) {
+      permissions = [
+        { id: 'fallback-quotation', moduleId: 'quotation', canAccess: true },
+        { id: 'fallback-history', moduleId: 'history', canAccess: true }
+      ];
+    }
+```
+
+替换为：
+```typescript
+    // 空权限 = 用户确实没有任何权限，不添加默认值
+    if (permissions.length === 0) {
+      console.log('权限API: 用户无已分配权限，返回空权限列表');
+    }
+```
+
+---
+
+### 改动 5：`src/lib/permissions.ts` — `setUserFromSession` 中移除 localStorage 缓存恢复逻辑
+
+`setUserFromSession` 中有一段在 `sessionPermissions.length === 0` 时从 localStorage 恢复旧权限的代码，这会导致新登录的用户被错误地赋予旧缓存中的权限。JWT session 是权威来源，不应被 localStorage 覆盖。
+
+找到（在 `setUserFromSession` 函数内，`if (permissionsChanged && process.env.NODE_ENV === 'development')` 块里）：
+```typescript
+      // ✅ 优化：如果session中没有权限数据，尝试从缓存恢复
+      if (sessionPermissions.length === 0 && typeof window !== 'undefined') {
+        try {
+          const userCache = localStorage.getItem('userCache');
+          if (userCache) {
+            const cacheData = JSON.parse(userCache);
+            const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
+            
+            if (isRecent && cacheData.permissions && Array.isArray(cacheData.permissions)) {
+              // 使用缓存数据更新用户信息
+              user.permissions = cacheData.permissions;
+              
+              logPermission('Session无权限数据，从缓存恢复权限', {
+                permissionsCount: cacheData.permissions.length
+              });
+            }
+          }
+        } catch (error) {
+          logPermissionError('从缓存恢复权限失败', error);
+        }
+      }
+```
+
+直接删除这段代码（连同上方的 `if (permissionsChanged && process.env.NODE_ENV === 'development')` 块中对应的内容）。
+
+具体操作：找到整个 `if (permissionsChanged && process.env.NODE_ENV === 'development')` 块：
+
+```typescript
+    // ✅ 优化：只有在权限数据真正变化时才输出详细日志
+    if (permissionsChanged && process.env.NODE_ENV === 'development') {
+      logPermission('检测到权限数据不一致，强制更新', {
+        sessionPermissionsCount: sessionPermissions.length,
+        storePermissionsCount: currentPermissions.length,
+        userId: sessionUser.id
+      });
+
+      // ✅ 优化：如果session中没有权限数据，尝试从缓存恢复
+      if (sessionPermissions.length === 0 && typeof window !== 'undefined') {
+        try {
+          const userCache = localStorage.getItem('userCache');
+          if (userCache) {
+            const cacheData = JSON.parse(userCache);
+            const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
+            
+            if (isRecent && cacheData.permissions && Array.isArray(cacheData.permissions)) {
+              // 使用缓存数据更新用户信息
+              user.permissions = cacheData.permissions;
+              
+              logPermission('Session无权限数据，从缓存恢复权限', {
+                permissionsCount: cacheData.permissions.length
+              });
+            }
+          }
+        } catch (error) {
+          logPermissionError('从缓存恢复权限失败', error);
+        }
+      }
+    }
+```
+
+替换为（仅保留日志，删除缓存恢复逻辑）：
+```typescript
+    // session 是权威来源，不从 localStorage 覆盖权限
+    if (permissionsChanged && process.env.NODE_ENV === 'development') {
+      logPermission('检测到权限数据变化，更新 store', {
+        sessionPermissionsCount: sessionPermissions.length,
+        storePermissionsCount: currentPermissions.length,
+        userId: sessionUser.id
+      });
+    }
+```
+
+---
+
+### 验证步骤（Codex 执行后，人工验证）
+
+```bash
+# 1. 构建检查
+npm run build
+
+# 2. 类型检查
+npx tsc --noEmit
+```
+
+人工验证流程（须在浏览器中执行）：
+
+1. **清除所有 localStorage**（DevTools → Application → Storage → Clear all）
+2. 以普通用户（非管理员）登录
+3. 登录后**立即**检查侧边栏——只应显示该用户被授权的模块，**不应显示全部**
+4. 刷新页面，确认侧边栏菜单仍然正确
+5. 以管理员登录，确认可以看到全部菜单
+6. 在管理员面板修改某用户权限后，让该用户点击"刷新权限"，确认菜单变化正确
+
+### 提交
+
+```bash
+git add \
+  src/hooks/usePermissionInit.ts \
+  src/components/layout/AppSidebar.tsx \
+  src/app/api/auth/force-refresh-session/route.ts \
+  src/app/api/auth/get-latest-permissions/route.ts \
+  src/lib/permissions.ts
+git commit -m "fix(auth): 修复普通用户登录后拥有全部权限的 Bug
+
+- usePermissionInit: 拆分 storageInitDone/sessionHash 双 ref，
+  彻底解开 loading 阶段 initRef 阻断 session 初始化的问题
+- AppSidebar: fail closed — permissionUser 未就绪时不展示受保护菜单
+- force-refresh-session + get-latest-permissions: 删除错误的默认权限 fallback
+- setUserFromSession: 删除 localStorage 缓存覆盖 session 权限的逻辑"
+```
+
+### 实际落地
+
+- 共改动 6 个文件：`usePermissionInit.ts`、`AppSidebar.tsx`、`permissions.ts`、`force-refresh-session/route.ts`、`get-latest-permissions/route.ts`、`update-session-permissions/route.ts`（同类旧路径补丁）
+- `npx tsc --noEmit` + `npm run build` 均通过（存在项目既有 lint warnings，非本次引入）

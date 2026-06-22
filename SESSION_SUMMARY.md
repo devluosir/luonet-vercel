@@ -110,6 +110,12 @@
 
 > ⚠️ **线上 D1 需执行迁移**：见 [D1 迁移说明](#d1-迁移-document-表-type-约束) 节。
 
+### 🔴 权限架构安全修复（TASK-41）
+
+| Task | 内容 | 状态 |
+|------|------|------|
+| 41 | 修复普通用户登录后拥有全部权限的 Bug：双 ref 解耦初始化、AppSidebar fail closed、删除 API 默认赋权 fallback、删除 localStorage 覆盖 session 权限逻辑 | 待提交 |
+
 ---
 
 ## 当前系统架构
@@ -129,11 +135,14 @@ Cloudflare Worker（udb.luocompany.net）
   ├── Customer CRUD（INSERT OR REPLACE，幂等）
   └── Admin CRUD（用户管理，权限管理）
 
-权限系统
+权限系统（TASK-41 修复后）
   ├── 管理员面板（AdminPage）可为每个用户分配各模块权限
   ├── inquiry 模块权限：moduleId='inquiry'，canAccess=true 方可进入
   ├── isAdmin=true 的用户自动拥有所有页面访问权（InquiryPage 守卫已处理）
-  └── MODULE_PERMISSIONS 列表：quotation, packing, invoice, purchase, inquiry, history, customer, ai-email
+  ├── MODULE_PERMISSIONS 列表：quotation, packing, invoice, purchase, inquiry, history, customer, ai-email
+  ├── usePermissionInit：storageInitDone + lastSessionHash 双 ref，loading 阶段不再阻断 authenticated 阶段的 session 初始化
+  ├── AppSidebar：fail closed — permissionUser 未就绪时不展示受保护菜单（旧设计是 fail open，导致登录后短暂拥有全部权限）
+  └── 所有权限 API 路由：空权限返回 []，不再 fallback 赋默认权限
 
 GitHub Actions CI
   ├── check job：lint + unit test + build（PR + push）

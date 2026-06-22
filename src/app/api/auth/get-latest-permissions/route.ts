@@ -107,36 +107,13 @@ export async function POST(_request: NextRequest) {
           isAdmin = !!session.user.isAdmin;
         }
       } catch (sessionError) {
-        // 无法从session获取权限，使用默认权限
+        // 无法从 session 获取权限，保持空权限
       }
     }
     
-    // 如果没有从session获取到权限，使用默认权限
+    // 空权限 = 用户确实没有任何权限，不添加默认值
     if (permissions.length === 0) {
-      // 为管理员用户提供默认权限
-      if (isAdmin) {
-        permissions = [
-          { id: 'default-quotation', moduleId: 'quotation', canAccess: true },
-          { id: 'default-packing', moduleId: 'packing', canAccess: true },
-          { id: 'default-invoice', moduleId: 'invoice', canAccess: true },
-          { id: 'default-purchase', moduleId: 'purchase', canAccess: true },
-          { id: 'default-history', moduleId: 'history', canAccess: true }
-        ];
-      } else {
-        // 为普通用户提供基本权限
-        permissions = [
-          { id: 'default-quotation', moduleId: 'quotation', canAccess: true },
-          { id: 'default-history', moduleId: 'history', canAccess: true }
-        ];
-      }
-    }
-
-    // 确保至少有一些基本权限，避免权限检查失败
-    if (permissions.length === 0) {
-      permissions = [
-        { id: 'fallback-quotation', moduleId: 'quotation', canAccess: true },
-        { id: 'fallback-history', moduleId: 'history', canAccess: true }
-      ];
+      console.log('权限API: 用户无已分配权限，返回空权限列表');
     }
 
 

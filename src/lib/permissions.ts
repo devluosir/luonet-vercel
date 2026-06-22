@@ -122,35 +122,13 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       JSON.stringify(sessionPermissions.map((p: any) => ({ moduleId: p.moduleId, canAccess: p.canAccess }))) !== 
       JSON.stringify(currentPermissions.map((p: any) => ({ moduleId: p.moduleId, canAccess: p.canAccess })));
 
-    // ✅ 优化：只有在权限数据真正变化时才输出详细日志
+    // session 是权威来源，不从 localStorage 覆盖权限
     if (permissionsChanged && process.env.NODE_ENV === 'development') {
-      logPermission('检测到权限数据不一致，强制更新', {
+      logPermission('检测到权限数据变化，更新 store', {
         sessionPermissionsCount: sessionPermissions.length,
         storePermissionsCount: currentPermissions.length,
         userId: sessionUser.id
       });
-
-      // ✅ 优化：如果session中没有权限数据，尝试从缓存恢复
-      if (sessionPermissions.length === 0 && typeof window !== 'undefined') {
-        try {
-          const userCache = localStorage.getItem('userCache');
-          if (userCache) {
-            const cacheData = JSON.parse(userCache);
-            const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
-            
-            if (isRecent && cacheData.permissions && Array.isArray(cacheData.permissions)) {
-              // 使用缓存数据更新用户信息
-              user.permissions = cacheData.permissions;
-              
-              logPermission('Session无权限数据，从缓存恢复权限', {
-                permissionsCount: cacheData.permissions.length
-              });
-            }
-          }
-        } catch (error) {
-          logPermissionError('从缓存恢复权限失败', error);
-        }
-      }
     }
 
     // ✅ 优化：只有在用户数据真正变化时才更新Store
