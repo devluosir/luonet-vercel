@@ -423,14 +423,22 @@ Codex 执行任务前会自动读 `AGENTS.md`，所有任务规格在 `CODEX_TAS
 
 | 文件 | 职责 |
 |------|------|
-| `src/utils/d1Sync.ts` | 写入队列、flushPendingQueue、getPendingIds |
-| `src/utils/d1Pull.ts` | 拉取、flush、mergeIntoStorage（D1 权威） |
-| `src/features/history/app/HistoryPage.tsx` | handleSyncRefresh、挂载时触发 pull |
+| `src/utils/d1Sync.ts` | 写入队列、flushPendingQueue、getPendingIds、删除 ID 追踪 |
+| `src/utils/d1Pull.ts` | pushLocalDocsToD1、拉取、flush、mergeIntoStorage（D1 权威） |
+| `src/features/history/app/HistoryPage.tsx` | 挂载/visibilitychange 触发同步、handleSyncRefresh |
 | `src/features/packing/services/packingHistoryService.ts` | 装箱单 create/update/delete 的 d1Sync |
 | `src/features/invoice/services/invoice.service.ts` | 发票 update 路径的 d1Sync |
 | `src/utils/quotationHistory.ts` | 报价/确认书 create/update/delete（原有） |
 | `src/utils/purchaseHistory.ts` | 采购单 create/update/delete（原有） |
 
+### TASK-44 新增内容
+
+| 机制 | 说明 |
+|------|------|
+| `pushLocalDocsToD1` | pull 前检查本地各类型，将 D1 缺失的记录补推上去（参照登记表 pushLocalToD1） |
+| 删除 ID 追踪 | `d1_deleted_doc_ids`：本机/远端删除的 ID 存入此表，push 时跳过，防止复活 |
+| visibilitychange 触发 | 页面挂载 + 标签回到前台时立即同步，无固定轮询 |
+
 ---
 
-*最后更新：2026-06-22（TASK-41/42/43 + 同步补丁完成）*
+*最后更新：2026-06-22（TASK-41/42/43/44 完成）*

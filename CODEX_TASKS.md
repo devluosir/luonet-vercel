@@ -9147,7 +9147,7 @@ git commit -m "fix(sync): 写入队列+重试机制，D1权威merge，刷新按�
 
 ---
 
-## TASK-44：单据跨设备同步重构 — 双向同步 + 轮询（参照登记表模式）
+## TASK-44：单据跨设备同步重构 — 双向同步 + 轮询（参照登记表模式）✅ 已完成
 
 **优先级**：🔴 紧急
 **估时**：60 分钟
@@ -9448,3 +9448,10 @@ git add \
   CODEX_TASKS.md
 git commit -m "feat(sync): 单据双向同步重构 — pushLocalToD1 + 删除ID追踪 + 30s轮询 (TASK-44)"
 ```
+
+### 实际落地
+
+- `src/utils/d1Sync.ts`：新增 `recordDeletedDocId` / `getDeletedDocIds`，删除时自动记录 ID；`d1SyncDocument('delete', ...)` 调用时同步入 `d1_deleted_doc_ids`
+- `src/utils/d1Pull.ts`：新增 `pushLocalDocsToD1(deletedIds)`，在每次 pull 前检查本地各类型历史，将 D1 缺失且不在待同步队列/已删除集合的记录推送到 D1；`mergeIntoStorage` 在移除远端已删记录时调用 `recordDeletedDocId`
+- `src/features/history/app/HistoryPage.tsx`：改为 visibilitychange 触发同步（打开页面 + 标签回到前台立即同步，无轮询间隔），替代原 30s setInterval 方案
+- `npx tsc --noEmit` + `npm run build` 均通过

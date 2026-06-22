@@ -1231,10 +1231,12 @@ async function handleCreateDocument(request: Request, env: Env): Promise<Respons
     const id = body.id || crypto.randomUUID();
     const dataText = typeof data === 'string' ? data : JSON.stringify(data);
 
+    const now = new Date().toISOString();
     await env.USERS_DB.prepare(`
       INSERT OR REPLACE INTO Document (
-        id, user_id, type, doc_no, customer_name, total_amount, currency, status, data
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, user_id, type, doc_no, customer_name, total_amount, currency, status, data,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       userId,
@@ -1244,7 +1246,9 @@ async function handleCreateDocument(request: Request, env: Env): Promise<Respons
       body.total_amount ?? null,
       body.currency || 'USD',
       body.status || 'active',
-      dataText
+      dataText,
+      body.created_at || now,
+      now
     ).run();
 
     const created = await env.USERS_DB.prepare(`
