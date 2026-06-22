@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { Download, Filter, Plus, Upload } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -14,6 +15,67 @@ import { inquiryService } from '../services/inquiry.service';
 import { InquiryFilterBar } from '../components/InquiryFilterBar';
 import { InquiryFormModal } from '../components/InquiryFormModal';
 import { InquiryTable } from '../components/InquiryTable';
+
+// ── Excel 辅助 ────────────────────────────────────────
+const SUPPLIER_STATUS_LABEL: Record<string, string> = {
+  pending: '待报价',
+  quoted: '已报价',
+  need_info: '需补资料',
+  unavailable: '无法报价',
+};
+
+function recordToRow(r: InquiryRecord) {
+  const supplierText = r.supplierStatuses
+    .map((s) => `${s.supplierShortName}${s.quoteDate ? `(${s.quoteDate})` : ''}:${SUPPLIER_STATUS_LABEL[s.status ?? 'pending'] ?? s.status}`)
+    .join('; ');
+  const quotedText = r.quotedStatuses
+    .filter((s) => !s.type || s.type === 'quoted')
+    .map((s) => `${s.quoteDate} ${s.supplierShortName} ${s.version}`.trim())
+    .join('; ');
+  const unavailable = r.quotedStatuses.some((s) => s.type === 'unavailable') ? '是' : '';
+  return {
+    'ID': r.id,
+    '询价编号': r.inquiryNo,
+    '询价日期': r.inquiryDate,
+    '询价人': r.inquirer,
+    '客户编号': r.customerNo,
+    '内容简述': r.description ?? '',
+    '订单编号': r.orderNo ?? '',
+    '供应商报价': supplierText,
+    '已报客户': quotedText,
+    '无法报价': unavailable,
+    '创建时间': r.createdAt,
+    '更新时间': r.updatedAt,
+    // 结构化数据列（导入时解析，可在 Excel 中隐藏）
+    '_供应商JSON': JSON.stringify(r.supplierStatuses),
+    '_报价JSON': JSON.stringify(r.quotedStatuses),
+  };
+}
+
+function rowToRecord(row: Record<string, unknown>): InquiryRecord | null {
+  const id = String(row['ID'] ?? '').trim();
+  const inquiryNo = String(row['询价编号'] ?? '').trim();
+  if (!id || !inquiryNo) return null;
+
+  let supplierStatuses: SupplierQuoteStatus[] = [];
+  let quotedStatuses: CustomerQuoteStatus[] = [];
+  try { supplierStatuses = JSON.parse(String(row['_供应商JSON'] ?? '[]')); } catch { /* keep empty */ }
+  try { quotedStatuses = JSON.parse(String(row['_报价JSON'] ?? '[]')); } catch { /* keep empty */ }
+
+  return {
+    id,
+    inquiryNo,
+    inquiryDate: String(row['询价日期'] ?? ''),
+    inquirer: String(row['询价人'] ?? ''),
+    customerNo: String(row['客户编号'] ?? ''),
+    description: String(row['内容简述'] ?? ''),
+    orderNo: String(row['订单编号'] ?? '') || undefined,
+    supplierStatuses,
+    quotedStatuses,
+    createdAt: String(row['创建时间'] ?? new Date().toISOString()),
+    updatedAt: String(row['更新时间'] ?? new Date().toISOString()),
+  };
+}
 
 export function InquiryPage() {
   const { data: session, status } = useSession();
@@ -134,23 +196,73 @@ export function InquiryPage() {
     }
   };
 
-  // ── 导出 ─────────────────────────────────────────────
+  // ── 导出（Excel） ────────────────────────────────────
   const handleExport = useCallback(() => {
     const all = inquiryService.getAll();
-    const json = JSON.stringify(all, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `inquiry_${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const rows = all.map(recordToRow);
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // 列宽
+    ws['!cols'] = [
+      { wch: 14 }, // ID
+      { wch: 14 }, // 询价编号
+      { wch: 10 }, // 询价日期
+      { wch: 12 }, // 询价人
+      { wch: 12 }, // 客户编号
+      { wch: 24 }, // 内容简述
+      { wch: 12 }, // 订单编号
+      { wch: 28 }, // 供应商报价
+      { wch: 28 }, // 已报客户
+      { wch: 8  }, // 无法报价
+      { wch: 22 }, // 创建时间
+      { wch: 22 }, // 更新时间
+      { wch: 6  }, // _供应商JSON（窄，可隐藏）
+      { wch: 6  }, // _报价JSON（窄，可隐藏）
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '询报价登记');
+    XLSX.writeFile(wb, `inquiry_${new Date().toISOString().slice(0, 10)}.xlsx`);
   }, []);
 
-  // ── 导入 ─────────────────────────────────────────────
+  // ── 导入（Excel / JSON） ──────────────────────────────
   const handleImportClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
+
+  const mergeRecords = useCallback(
+    (incoming: InquiryRecord[]) => {
+      const existing = inquiryService.getAll();
+      const map = new Map(existing.map((r) => [r.id, r]));
+      let added = 0;
+      let updated = 0;
+
+      for (const rec of incoming) {
+        const local = map.get(rec.id);
+        if (!local) {
+          map.set(rec.id, rec);
+          inquiryService.syncToD1(rec);
+          added++;
+        } else {
+          const localTime = new Date(local.updatedAt).getTime();
+          const importedTime = new Date(rec.updatedAt).getTime();
+          if (Number.isFinite(importedTime) && importedTime > localTime) {
+            map.set(rec.id, rec);
+            inquiryService.updateInD1(rec);
+            updated++;
+          }
+        }
+      }
+
+      const merged = Array.from(map.values()).sort((a, b) =>
+        b.inquiryNo.localeCompare(a.inquiryNo)
+      );
+      inquiryService.save(merged);
+      useInquiryStore.setState({ records: merged });
+      alert(`导入完成：新增 ${added} 条，更新 ${updated} 条`);
+    },
+    []
+  );
 
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,56 +271,37 @@ export function InquiryPage() {
 
       setIsImporting(true);
       try {
-        const text = await file.text();
-        const imported = JSON.parse(text) as unknown;
+        const ext = file.name.split('.').pop()?.toLowerCase();
 
-        if (!Array.isArray(imported)) {
-          alert('格式错误：文件应为询报价记录数组');
-          return;
-        }
-
-        const existing = inquiryService.getAll();
-        const map = new Map(existing.map((r) => [r.id, r]));
-
-        let added = 0;
-        let updated = 0;
-
-        for (const item of imported) {
-          if (!item || typeof item !== 'object') continue;
-          const rec = item as Partial<InquiryRecord>;
-          if (!rec.id || !rec.inquiryNo) continue;
-
-          const local = map.get(rec.id);
-          if (!local) {
-            map.set(rec.id, rec as InquiryRecord);
-            inquiryService.syncToD1(rec as InquiryRecord);
-            added++;
-          } else {
-            const localTime = new Date(local.updatedAt).getTime();
-            const importedTime = new Date(rec.updatedAt ?? '').getTime();
-            if (Number.isFinite(importedTime) && importedTime > localTime) {
-              map.set(rec.id, rec as InquiryRecord);
-              inquiryService.updateInD1(rec as InquiryRecord);
-              updated++;
-            }
+        if (ext === 'xlsx' || ext === 'xls') {
+          // Excel 导入
+          const buf = await file.arrayBuffer();
+          const wb = XLSX.read(buf, { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws);
+          const records = rows.map(rowToRecord).filter((r): r is InquiryRecord => r !== null);
+          mergeRecords(records);
+        } else {
+          // JSON 导入
+          const text = await file.text();
+          const imported = JSON.parse(text) as unknown;
+          if (!Array.isArray(imported)) {
+            alert('格式错误：JSON 文件应为记录数组');
+            return;
           }
+          const records = (imported as Partial<InquiryRecord>[])
+            .filter((r) => r?.id && r?.inquiryNo)
+            .map((r) => r as InquiryRecord);
+          mergeRecords(records);
         }
-
-        const merged = Array.from(map.values()).sort((a, b) =>
-          b.inquiryNo.localeCompare(a.inquiryNo)
-        );
-        inquiryService.save(merged);
-        useInquiryStore.setState({ records: merged });
-
-        alert(`导入完成：新增 ${added} 条，更新 ${updated} 条`);
       } catch {
-        alert('导入失败：文件格式错误，请检查是否为有效的 JSON 文件');
+        alert('导入失败：请检查文件格式（支持 .xlsx / .json）');
       } finally {
         setIsImporting(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     },
-    []
+    [mergeRecords]
   );
 
   const bottomActions = useMemo<ActionButton[]>(
@@ -278,7 +371,7 @@ export function InquiryPage() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".json"
+        accept=".xlsx,.xls,.json"
         className="hidden"
         onChange={handleFileChange}
       />
