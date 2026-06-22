@@ -516,4 +516,24 @@ useEffect(() => {
 
 ---
 
-*最后更新：2026-06-22（TASK-41~47 完成）*
+## TASK-48：「询价已关闭」状态 + 表单紧凑化 + 历史数据导入（2026-2）
+
+### 新增 closed 状态
+
+`CustomerQuoteType` 新增 `'closed'`。`InquiryQuoteStatus` 在「无法报价」checkbox 右侧并排增加「询价已关闭」checkbox，各自带日期输入。`InquiryQuoteStatusDisplay` 卡片展示灰色 `询价关闭(m.d)`。`getRecordColorState` 将 `closed` 归入灰色；`useInquiryFilter` 中 `unavailable` 筛选包含 `closed`，`customer_quoted` 排除 `closed`。
+
+### 编辑弹窗紧凑化 + 交互优化
+
+`InquiryFormModal` 顶部身份条改为 `< 日期 > · 询价编号 · 询价人 [□紧急]`，「询价人」字段从独立行移入，表单减少一行高度，datalist 自动补全保留。
+
+**询价人选项**：datalist 选项来源合并为客户管理联系人 ∪ 现有询价记录中已出现的询价人，去重排序后展示。
+
+**日期只读（编辑模式）**：编辑模式下日期已在新建时确认，去掉左右箭头和输入交互，改为纯文本展示；新建模式保持原有箭头 + 键盘调整。
+
+### 历史数据解析（2026-2）
+
+python-docx 解析 `协同-1询价登记表(2026-2).docx`，输出 `inquiry_import_2026-2.json`（401 条，4.1～6.22），含供应商状态、已报客户版本、无法报价标记，可直接从询报价页面「导入」。
+
+---
+
+*最后更新：2026-06-22（TASK-41~48 完成）*

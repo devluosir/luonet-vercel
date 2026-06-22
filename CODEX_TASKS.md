@@ -9652,3 +9652,60 @@ npx tsc --noEmit
 3. 「已报价」筛选不再混入「无法报价」记录。
 4. 底部栏「导出」→ 下载 JSON 文件，内容为所有询报价记录。
 5. 「导入」→ 选择刚导出的 JSON → 提示「新增 0 条，更新 0 条」（重复导入幂等）。
+
+---
+
+## TASK-48 ✅：「询价已关闭」状态 + 表单紧凑化 + 历史数据导入（2026-2）
+
+### 背景
+
+1. 询价被客户通知关闭（非无法报价，而是客户主动终止），需要单独标记。
+2. 编辑弹窗字段较多，「询价人」单独占一行显得冗余。
+3. 2026 年第二季度询价记录（4月～6月，共 401 条）需从 docx 导入。
+
+### 改动一：「询价已关闭」状态
+
+**`src/features/inquiry/types/index.ts`**
+- `CustomerQuoteType` 新增 `'closed'`：`'quoted' | 'unavailable' | 'supplemented' | 'closed'`。
+
+**`src/features/inquiry/components/InquiryQuoteStatus.tsx`**
+- `regularStatuses` 排除 `closed` 类型（与 `unavailable`、`supplemented` 同级）。
+- 派生 `closedStatus`，新增 `toggleClosed` / `updateClosedDate`，与「已回复客户无法报价」并排放在同一 `border-t` 区域内（`flex-wrap` 行）。
+
+**`src/features/inquiry/components/InquiryQuoteStatusDisplay.tsx`**（列表卡片展示）
+- `regularStatuses` 同步排除 `closed`。
+- 新增 `closedStatus` 展示：灰色 `询价关闭(m.d)` 文字，与「无法报价」同样的视觉层级。
+
+**`src/features/inquiry/utils/inquiryUtils.ts`**
+- `getRecordColorState` 修正：`closed` 和 `unavailable` 一起归入灰色（`text-gray-400`）；同时修正第二条件从 `type !== 'unavailable'` 改为显式白名单 `!type || type === 'quoted' || type === 'supplemented'`，避免 `closed`/`supplemented` 等新类型意外触发蓝色。
+
+**`src/features/inquiry/hooks/useInquiryFilter.ts`**
+- `unavailable` 筛选：`type === 'unavailable' || type === 'closed'`（两者均出现在「无法报价」过滤桶）。
+- `customer_quoted` 筛选：同步排除 `closed`（与 `unavailable` 对称）。
+
+### 改动二：编辑弹窗紧凑化 + 交互优化
+
+**`src/features/inquiry/components/InquiryFormModal.tsx`**
+- 「询价人」字段从独立行移入顶部身份条，布局变为：`< 日期 > · 询价编号 · 询价人 [□紧急]`。
+- 询价编号固定宽度 `w-24`，询价人 `flex-1` 填满剩余空间，保留 datalist 自动补全。
+- 移除了单独的「询价人」label + input 字段行，表单减少一行高度。
+- **询价人选项来源扩展**：datalist 由原来仅读客户管理联系人，改为同时合并现有询价记录中出现过的询价人（`existingRecords.map(r => r.inquirer)`），去重排序，确保无论客户管理是否配置都能选到历史使用过的询价人。deps 数组补充 `existingRecords`。
+- **编辑模式日期只读**：编辑时日期在新建时已确认，去掉左右箭头和可编辑 input，改为 `<span>` 纯文本展示；新建模式保留完整的箭头 + 键盘（↑↓/Enter）调整交互。
+
+### 改动三：历史数据解析导入（2026-2）
+
+- 使用 python-docx 解析 `协同-1询价登记表(2026-2).docx`（6 列表格，417 行，401 条有效数据，日期范围 4.1～6.22）。
+- 处理边界情况：缺少 `/` 分隔符（自动插入）、`庾总(无库存)` 标记为 unavailable、`同C260415L/` 前缀剥除、`报价万成`（无日期前缀）赋 `[0.0]`、双询价编号取第一个（如 `C260507Q C260508F FL2665`）。
+- 输出 `inquiry_import_2026-2.json`（401 条），统计：有订单号 26 条，已报客户 341 条，无法报价 76 条，待报价 60 条。
+
+### 验证
+
+```bash
+npx tsc --noEmit
+```
+
+人工验证：
+1. 编辑弹窗顶部一行显示日期 · 编号 · 询价人 · 紧急。
+2. 询价已关闭 checkbox 出现在「已回复客户无法报价」右侧，勾选后列表卡片显示灰色「询价关闭(日期)」。
+3. 「无法报价」筛选器能命中已关闭记录；「已报价」筛选器不命中已关闭记录。
+4. 导入 `inquiry_import_2026-2.json` → 401 条新增。

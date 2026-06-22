@@ -112,8 +112,12 @@ export function InquiryFormModal({
       ]
     );
     setLocalQuoted(record?.quotedStatuses ?? []);
-    setInquirerOptions(getInquirerOptions());
-  }, [existingNos, isOpen, mode, record]);
+    const fromCustomers = getInquirerOptions();
+    const fromRecords = Array.from(
+      new Set(existingRecords.map((r) => r.inquirer).filter(Boolean))
+    ).sort();
+    setInquirerOptions(Array.from(new Set([...fromCustomers, ...fromRecords])).sort());
+  }, [existingNos, existingRecords, isOpen, mode, record]);
 
   useEffect(() => {
     if (!isOpen || isInquiryNoManual || mode === 'edit') return;
@@ -202,28 +206,36 @@ export function InquiryFormModal({
 
           {/* ── 身份信息条：日期 · 询价编号 · 询价人 · 紧急 ── */}
           <div className="mb-4 flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2.5 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
-            {/* 日期 */}
-            <button type="button" onClick={() => adjustDate(-1)} tabIndex={-1}
-              className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <input
-              type="text"
-              value={dateDisplayText}
-              onChange={(e) => setDateDisplayText(e.target.value)}
-              onBlur={commitDateText}
-              onKeyDown={(e) => {
-                if (e.key === 'ArrowUp') { e.preventDefault(); adjustDate(1); }
-                if (e.key === 'ArrowDown') { e.preventDefault(); adjustDate(-1); }
-                if (e.key === 'Enter') { e.preventDefault(); commitDateText(); }
-              }}
-              className="w-10 bg-transparent text-center text-sm font-semibold text-gray-700 outline-none dark:text-gray-200"
-              placeholder="6.21"
-            />
-            <button type="button" onClick={() => adjustDate(1)} tabIndex={-1}
-              className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-              <ChevronRight className="h-4 w-4" />
-            </button>
+            {/* 日期：新建可调，编辑只读 */}
+            {mode === 'create' ? (
+              <>
+                <button type="button" onClick={() => adjustDate(-1)} tabIndex={-1}
+                  className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <input
+                  type="text"
+                  value={dateDisplayText}
+                  onChange={(e) => setDateDisplayText(e.target.value)}
+                  onBlur={commitDateText}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowUp') { e.preventDefault(); adjustDate(1); }
+                    if (e.key === 'ArrowDown') { e.preventDefault(); adjustDate(-1); }
+                    if (e.key === 'Enter') { e.preventDefault(); commitDateText(); }
+                  }}
+                  className="w-10 bg-transparent text-center text-sm font-semibold text-gray-700 outline-none dark:text-gray-200"
+                  placeholder="6.21"
+                />
+                <button type="button" onClick={() => adjustDate(1)} tabIndex={-1}
+                  className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
+            ) : (
+              <span className="w-10 text-center text-sm font-semibold text-gray-700 dark:text-gray-200">
+                {dateDisplayText}
+              </span>
+            )}
 
             <span className="select-none text-gray-200 dark:text-gray-700">·</span>
 
