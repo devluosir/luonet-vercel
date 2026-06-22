@@ -67,9 +67,10 @@ export function InquiryQuoteStatus({ record, onSuppliersChange, onQuotedChange }
 
   // ── 派生数据 ──────────────────────────────────────────
   const unavailableStatus = record.quotedStatuses.find((s) => s.type === 'unavailable');
+  const closedStatus = record.quotedStatuses.find((s) => s.type === 'closed');
   const supplementedStatus = record.quotedStatuses.find((s) => s.type === 'supplemented');
   const regularStatuses = record.quotedStatuses.filter(
-    (s) => s.type !== 'unavailable' && s.type !== 'supplemented'
+    (s) => s.type !== 'unavailable' && s.type !== 'supplemented' && s.type !== 'closed'
   );
   const hasNeedInfoSupplier = record.supplierStatuses.some((s) => s.status === 'need_info');
   const quotedSupplierNames = record.supplierStatuses
@@ -194,6 +195,32 @@ export function InquiryQuoteStatus({ record, onSuppliersChange, onQuotedChange }
     onQuotedChange(
       record.quotedStatuses.map((s) =>
         s.type === 'supplemented' ? { ...s, quoteDate: normalized } : s
+      )
+    );
+  };
+
+  // ── 询价已关闭 toggle ─────────────────────────────────
+  const toggleClosed = (checked: boolean) => {
+    if (checked) {
+      const newStatus: CustomerQuoteStatus = {
+        id: createId(),
+        quoteDate: normalizeShortDateInput(stripDateBrackets(formatShortDate(new Date()))),
+        supplierShortName: '',
+        version: '',
+        type: 'closed',
+      };
+      onQuotedChange([...record.quotedStatuses, newStatus]);
+    } else {
+      onQuotedChange(record.quotedStatuses.filter((s) => s.type !== 'closed'));
+    }
+  };
+
+  const updateClosedDate = (raw: string) => {
+    const normalized = normalizeShortDateInput(raw);
+    if (!normalized) return;
+    onQuotedChange(
+      record.quotedStatuses.map((s) =>
+        s.type === 'closed' ? { ...s, quoteDate: normalized } : s
       )
     );
   };
@@ -420,33 +447,65 @@ export function InquiryQuoteStatus({ record, onSuppliersChange, onQuotedChange }
         </div>
       )}
 
-      {/* ── 无法报价 checkbox 行 ── */}
-      <div className="flex items-center gap-2 border-t border-gray-100 pt-2 dark:border-gray-800">
-        <input
-          type="checkbox"
-          id={`unavail-${record.id}`}
-          checked={!!unavailableStatus}
-          onChange={(e) => toggleUnavailable(e.target.checked)}
-          className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 accent-gray-500 dark:border-gray-600"
-        />
-        <label
-          htmlFor={`unavail-${record.id}`}
-          className="cursor-pointer select-none text-xs text-gray-500 dark:text-gray-400"
-        >
-          已回复客户无法报价
-        </label>
-        {unavailableStatus && (
+      {/* ── 无法报价 / 询价已关闭 checkbox 行 ── */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-gray-100 pt-2 dark:border-gray-800">
+        {/* 无法报价 */}
+        <div className="flex items-center gap-2">
           <input
-            value={stripDateBrackets(unavailableStatus.quoteDate)}
-            onChange={(e) => updateUnavailableDate(e.target.value)}
-            onBlur={(e) => updateUnavailableDate(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') { e.preventDefault(); updateUnavailableDate((e.target as HTMLInputElement).value); }
-            }}
-            className={`${INPUT_CLS} w-16`}
-            placeholder="6.20"
+            type="checkbox"
+            id={`unavail-${record.id}`}
+            checked={!!unavailableStatus}
+            onChange={(e) => toggleUnavailable(e.target.checked)}
+            className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 accent-gray-500 dark:border-gray-600"
           />
-        )}
+          <label
+            htmlFor={`unavail-${record.id}`}
+            className="cursor-pointer select-none text-xs text-gray-500 dark:text-gray-400"
+          >
+            已回复客户无法报价
+          </label>
+          {unavailableStatus && (
+            <input
+              value={stripDateBrackets(unavailableStatus.quoteDate)}
+              onChange={(e) => updateUnavailableDate(e.target.value)}
+              onBlur={(e) => updateUnavailableDate(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); updateUnavailableDate((e.target as HTMLInputElement).value); }
+              }}
+              className={`${INPUT_CLS} w-16`}
+              placeholder="6.20"
+            />
+          )}
+        </div>
+
+        {/* 询价已关闭 */}
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id={`closed-${record.id}`}
+            checked={!!closedStatus}
+            onChange={(e) => toggleClosed(e.target.checked)}
+            className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 accent-gray-500 dark:border-gray-600"
+          />
+          <label
+            htmlFor={`closed-${record.id}`}
+            className="cursor-pointer select-none text-xs text-gray-500 dark:text-gray-400"
+          >
+            询价已关闭
+          </label>
+          {closedStatus && (
+            <input
+              value={stripDateBrackets(closedStatus.quoteDate)}
+              onChange={(e) => updateClosedDate(e.target.value)}
+              onBlur={(e) => updateClosedDate(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); updateClosedDate((e.target as HTMLInputElement).value); }
+              }}
+              className={`${INPUT_CLS} w-16`}
+              placeholder="6.20"
+            />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -8,8 +8,8 @@ export interface SupplierQuoteStatus {
   status?: SupplierStatus;
 }
 
-/** 'quoted'=已报价（默认）；'unavailable'=已回复客户无法报价；'supplemented'=已补充信息给供应商 */
-export type CustomerQuoteType = 'quoted' | 'unavailable' | 'supplemented';
+/** 'quoted'=已报价（默认）；'unavailable'=已回复客户无法报价；'supplemented'=已补充信息给供应商；'closed'=询价已关闭 */
+export type CustomerQuoteType = 'quoted' | 'unavailable' | 'supplemented' | 'closed';
 
 export interface CustomerQuoteStatus {
   id: string;
