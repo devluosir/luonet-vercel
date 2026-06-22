@@ -20,7 +20,7 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
       className="group cursor-pointer border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/40"
       onClick={() => onEdit(record)}
     >
-      <td className="w-[24%] px-3 py-2 text-sm md:w-[16%] lg:w-[10%]">
+      <td className="w-[22%] px-3 py-2 text-sm md:w-[15%] lg:w-[10%]">
         <div className="flex flex-col gap-0 leading-tight">
           <span className={`whitespace-nowrap font-mono leading-4 ${mainTextClass}`}>
             {record.inquiryNo}
@@ -35,7 +35,7 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
           </span>
         </div>
       </td>
-      <td className="hidden w-[16%] whitespace-nowrap px-3 py-2 text-sm md:table-cell lg:w-[12%]">
+      <td className="hidden w-[13%] whitespace-nowrap px-3 py-2 text-sm md:table-cell lg:w-[12%]">
         <span className={mainTextClass}>{record.inquirer}</span>
       </td>
       <td className="hidden px-3 py-2 text-sm lg:table-cell lg:w-[24%] xl:w-[26%]">
@@ -46,7 +46,7 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
           {record.customerNo}
         </span>
       </td>
-      <td className="w-[34%] px-3 py-2 text-sm md:w-[32%] lg:w-[22%]">
+      <td className="w-[28%] px-3 py-2 text-sm md:w-[27%] lg:w-[22%]">
         {/* 大屏：客户编号列可见，内容简述只显示 description */}
         <p className={`hidden lg:block max-w-none truncate ${mainTextClass}`} title={record.description}>
           {record.description}
@@ -56,10 +56,10 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
           {record.description?.trim() || record.customerNo}
         </p>
       </td>
-      <td className="w-[34%] px-3 py-2 md:w-[30%] lg:w-[28%] xl:w-[26%]">
+      <td className="w-[42%] px-3 py-2 md:w-[38%] lg:w-[28%] xl:w-[26%]">
         <InquiryQuoteStatusDisplay record={record} />
       </td>
-      <td className="w-[8%] whitespace-nowrap px-3 py-2 text-right md:w-[6%] lg:w-[4%]">
+      <td className="w-[8%] whitespace-nowrap px-3 py-2 text-right md:w-[7%] lg:w-[4%]">
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onDelete(record.id); }}
