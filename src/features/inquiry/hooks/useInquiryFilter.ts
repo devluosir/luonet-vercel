@@ -95,7 +95,10 @@ export function useInquiryFilter(records: InquiryRecord[]) {
           case 'customer_pending':
             return record.quotedStatuses.length === 0;
           case 'customer_quoted':
-            return record.quotedStatuses.some((status) => status.type !== 'unavailable');
+            return (
+              !record.quotedStatuses.some((s) => s.type === 'unavailable') &&
+              record.quotedStatuses.some((s) => !s.type || s.type === 'quoted')
+            );
           case 'unavailable':
             return record.quotedStatuses.some((status) => status.type === 'unavailable');
           case 'has_order':
