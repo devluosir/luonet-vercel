@@ -10188,3 +10188,346 @@ rg -n "window\.confirm|window\.alert|\bconfirm\(" src/features/customer -S
 - TypeScript 检查通过。
 - 客户模块内已无 `window.confirm` / `window.alert` / 裸 `confirm(...)`。
 - 尚未完成带登录态的浏览器手测，后续发布前建议在 `/customer` 与 `/customer/detail?id=...` 各走一遍添加、删除、编辑和详情页保存流程。
+
+---
+
+## TASK-51：修复 pdfHelpers.ts 静态 import 28MB embedded-resources
+
+**背景**
+
+`src/lib/embedded-resources.ts` 是构建时自动生成的 **28MB 文件**（两个 11MB 中文字体 + 印章图片的 base64）。  
+`src/utils/pdfHelpers.ts` 第 6 行对其做了**静态 top-level import**，导致该 28MB 依赖被打包进所有引用 `pdfHelpers` 的页面 chunk，影响的路由包括：`/quotation`、`/packing`、`/invoice`、`/purchase`、`/history`。  
+用户打开任何单据页面，浏览器都必须先下载并解析这 28MB，严重拖慢首屏可交互时间。
+
+**目标**：将 `pdfHelpers.ts` 中对 `embeddedResources` 的引用改为**函数内部动态 import**，使其仅在真正生成 PDF 时才按需加载。
+
+---
+
+### 改动一：`src/utils/pdfHelpers.ts`
+
+1. **删除**文件顶部的静态 import（第 6 行）：
+   ```ts
+   // 删除这行
+   import { embeddedResources } from '@/lib/embedded-resources';
+   ```
+
+2. 找到所有使用 `embeddedResources` 的函数（约在 449、451、520、522 行，涉及印章获取逻辑），将这些函数改为 `async`，并在函数体内部动态 import：
+   ```ts
+   // 示例：原来的同步函数
+   export function getStampBase64(stamp: 'shanghai' | 'hongkong'): string {
+     if (stamp === 'shanghai') return embeddedResources.shanghaiStamp;
+     return embeddedResources.hongkongStamp;
+   }
+
+   // 改为 async + 动态 import
+   export async function getStampBase64(stamp: 'shanghai' | 'hongkong'): Promise<string> {
+     const { embeddedResources } = await import('@/lib/embedded-resources');
+     if (stamp === 'shanghai') return embeddedResources.shanghaiStamp;
+     return embeddedResources.hongkongStamp;
+   }
+   ```
+
+3. 对文件内**所有**直接读取 `embeddedResources.*` 的代码（不局限于上述两个函数，全文搜索确认无遗漏）均做同样处理。
+
+---
+
+### 改动二：修复所有调用方
+
+`pdfHelpers.ts` 中受影响的函数签名从同步变为异步后，所有调用方需对应加 `await`：
+
+- 搜索 `src/` 下所有 `import.*pdfHelpers` 或调用上述函数的位置
+- 对每处调用加 `await`，确保调用方函数也是 `async`
+- 重点检查：`PDFPreviewComponent.tsx`、`PDFPreviewModal.tsx`、各 PDF 生成器
+
+---
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+# 确认 pdfHelpers.ts 顶部无 embeddedResources 静态 import
+grep -n "^import.*embedded-resources" src/utils/pdfHelpers.ts  # 应无输出
+npm run build
+```
+
+**验收标准**：TypeScript 无错误，构建成功，各 PDF 生成功能正常（报价单、箱单、发票、采购单均能生成）。
+
+---
+
+## TASK-52：ClientInitializer 移除 preloadImages / 字体预热延迟至 idle
+
+**背景**
+
+`src/components/ClientInitializer.tsx` 在 layout.tsx 根布局挂载，页面加载后 **300ms** 就触发以下动态 import 链：
+
+```
+ClientInitializer（300ms）
+  → import imageLoader.ts
+    → imageLoader 内部 import('@/lib/embedded-resources')  ← 下载 28MB
+  → import globalFontRegistry.ts
+    → loadFontDataOnce()  ← 下载中文字体
+```
+
+这些操作与首屏渲染争抢网络和 CPU，且完全不必要——图片和字体只在用户点击"生成 PDF"时才需要。
+
+**目标**：移除 `preloadImages()` 调用；字体预热推迟到浏览器真正空闲时再执行。
+
+---
+
+### 改动：`src/components/ClientInitializer.tsx`
+
+```ts
+// 修改前（约第 28-38 行）
+const { preloadFonts } = await import('../utils/fontLoader');
+const { preloadImages } = await import('../utils/imageLoader');
+const { initializeGlobalFonts } = await import('../utils/globalFontRegistry');
+
+if (!cancelled) {
+  await initializeGlobalFonts();
+}
+
+if (!cancelled) {
+  await preloadImages();  // ← 删除这两行
+}
+
+// 修改后
+const { initializeGlobalFonts } = await import('../utils/globalFontRegistry');
+
+// 字体预热推迟到浏览器空闲（不阻塞渲染，timeout 8000ms 兜底）
+if (!cancelled) {
+  const runFontWarmup = () => {
+    initializeGlobalFonts().catch(err => {
+      console.warn('[ClientInitializer] 字体预热失败:', err);
+    });
+  };
+
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => void })
+      .requestIdleCallback(runFontWarmup, { timeout: 8000 });
+  } else {
+    setTimeout(runFontWarmup, 5000);
+  }
+}
+```
+
+同时删除 `preloadFonts` 相关 import（如未在其他地方使用）。
+
+---
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+# 确认 ClientInitializer 内无 preloadImages 调用
+grep -n "preloadImages" src/components/ClientInitializer.tsx  # 应无输出
+```
+
+**验收标准**：构建成功；打开应用后 Network 面板中，`embedded-resources` chunk 不再在页面加载后 300ms 内出现（仅在点击生成 PDF 时才出现）。
+
+---
+
+## TASK-53：主要路由改为 dynamic import（ssr: false）
+
+**背景**
+
+除 `customer/page.tsx` 外，所有路由 page.tsx 均为静态 import，导致每个路由 chunk 包含所有子组件（含 2000+ 行的 ItemsTableEnhanced 等重型组件），增大初始 JS 解析量，延迟首次可交互时间。
+
+**目标**：对 6 个主要路由改为 `next/dynamic` + `ssr: false`，参照 customer/page.tsx 的已有实现。
+
+---
+
+### 改动：以下文件均按同一模式修改
+
+需修改的文件：
+- `src/app/quotation/page.tsx`
+- `src/app/packing/page.tsx`
+- `src/app/invoice/page.tsx`
+- `src/app/purchase/page.tsx`
+- `src/app/history/page.tsx`
+- `src/app/inquiry/page.tsx`
+- `src/app/admin/page.tsx`
+
+**统一改法**（以 packing 为例，其他同理）：
+
+```tsx
+'use client';
+
+import dynamic from 'next/dynamic';
+
+const PackingPage = dynamic(
+  () => import('@/features/packing').then(mod => ({ default: mod.PackingPage })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+          <span className="text-gray-600 dark:text-gray-400">加载中...</span>
+        </div>
+      </div>
+    ),
+  }
+);
+
+export default function PackingPageWrapper() {
+  return <PackingPage />;
+}
+```
+
+注意：
+- `quotation/page.tsx` 当前直接 `export { default } from '...'`，改为上述包裹形式
+- `admin/page.tsx` loading 文案用"加载管理面板..."
+- `inquiry/page.tsx` loading 文案用"加载询报价登记..."
+- dashboard 页面**不改**（它不含重型 PDF 依赖，且需要快速展示）
+
+---
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：构建成功，各路由页面正常加载，loading 旋转动画正常显示。
+
+---
+
+## TASK-54：middleware.ts 清理生产环境 console.log
+
+**背景**
+
+`src/middleware.ts` 中多处 `console.log('[中间件]...')` 在生产环境每次请求都执行，Vercel Edge Runtime 中有轻微性能影响。
+
+---
+
+### 改动：`src/middleware.ts`
+
+将所有 `console.log` 用 `if (process.env.NODE_ENV === 'development')` 包裹：
+
+```ts
+// 修改前
+console.log('[中间件] 没有token，拒绝访问:', pathname);
+
+// 修改后
+if (process.env.NODE_ENV === 'development') {
+  console.log('[中间件] 没有token，拒绝访问:', pathname);
+}
+```
+
+文件内共 4 处 `console.log`，全部处理。
+
+---
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+grep -n "console\.log" src/middleware.ts  # 每处都应被 NODE_ENV 判断包裹
+```
+
+---
+
+## TASK-55：next.config.mjs 配置清理
+
+**背景**
+
+当前 `next.config.mjs` 中存在三处对 Vercel 部署有害或多余的配置：
+
+1. `output: 'standalone'`：Vercel 自动处理部署产物，`standalone` 模式会产生额外文件并可能与 Vercel 的构建流程冲突
+2. 手动 `splitChunks` 配置：Next.js 14 已内置最优分包策略，手动覆盖可能破坏默认优化（当前配置将所有 node_modules 打成一个 `vendors` chunk，反而可能变大）
+3. `generateEtags: false`：关闭 ETag 会导致浏览器无法利用 304 缓存响应，增加不必要的重复下载
+
+---
+
+### 改动：`next.config.mjs`
+
+**删除以下三项**：
+
+```js
+// 删除
+output: 'standalone',
+
+// 删除
+generateEtags: false,
+
+// 删除 webpack splitChunks 手动配置（约 85-110 行的 splitChunks 和 file-loader 规则）
+// 保留 dev 环境的 watchOptions 配置即可
+```
+
+webpack 函数修改后保留形式：
+
+```js
+webpack: (config, { dev }) => {
+  if (dev) {
+    config.watchOptions = {
+      poll: 1000,
+      aggregateTimeout: 300,
+    };
+  }
+  return config;
+},
+```
+
+---
+
+### 验证命令
+
+```bash
+npm run build
+# 确认构建无警告，Vercel Preview 部署正常
+```
+
+---
+
+## TASK-56：登录页移除 localStorage 绕过 session 跳转逻辑
+
+**背景**
+
+`src/app/page.tsx`（登录页）有一段 useEffect：当 `status === 'unauthenticated'` 时，检查 localStorage 中是否有 24 小时内的用户数据，若有则直接 `router.push('/dashboard')`。
+
+这是错误逻辑：session 真正过期后，用户应该重新登录，而不是被 localStorage 的过期数据推入 dashboard，导致在 dashboard 遇到未认证状态再被重定向回来（额外的重定向往返），且存在安全隐患。
+
+---
+
+### 改动：`src/app/page.tsx`
+
+找到以下 useEffect 并**整体删除**（仅删除 `status === 'unauthenticated'` 分支中检查 localStorage 的部分，保留 `status === 'authenticated'` 时的跳转）：
+
+```ts
+// 删除这段（大约在 useEffect 内 status === 'unauthenticated' 分支）
+if (status === 'unauthenticated' && typeof window !== 'undefined') {
+  try {
+    const userInfo = localStorage.getItem('userInfo');
+    const latestPermissions = localStorage.getItem('latestPermissions');
+    const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
+    
+    if (userInfo && latestPermissions && permissionsTimestamp) {
+      const userData = JSON.parse(userInfo);
+      const isRecent = (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000;
+      
+      if (userData.username && isRecent) {
+        router.push('/dashboard');
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn('检查本地用户信息失败:', error);
+  }
+}
+```
+
+保留 `status === 'authenticated'` 时跳转 dashboard 的逻辑，不动其他部分。
+
+---
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+# 确认登录页无 localStorage 跳转逻辑
+grep -n "latestPermissions\|permissionsTimestamp\|userInfo" src/app/page.tsx  # 应无输出
+```
+
+**验收标准**：session 过期后访问根路径，停留在登录页等待用户输入，不再自动跳转。
