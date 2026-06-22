@@ -24,12 +24,8 @@ const nextConfig = {
     WORKER_URL: process.env.WORKER_URL,
     API_TOKEN: process.env.API_TOKEN
   },
-  // Vercel 优化配置
-  output: 'standalone',
   compress: true,
   poweredByHeader: false,
-  generateEtags: false,
-  // 优化构建配置
   swcMinify: true,
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
@@ -114,77 +110,15 @@ const nextConfig = {
       },
     ]
   },
-  // 优化webpack配置
-  webpack: (config, { dev, isServer }) => {
-    // 优化开发环境
+  // webpack：仅开发环境 watch 优化，生产由 Next.js 14 默认分包
+  webpack: (config, { dev }) => {
     if (dev) {
       config.watchOptions = {
         poll: 1000,
         aggregateTimeout: 300,
-      }
+      };
     }
-    
-    // 优化生产环境
-    if (!dev && !isServer) {
-      // 更激进的代码分割
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          // 第三方库
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-            priority: 10,
-          },
-          // PDF相关代码单独分割
-          pdf: {
-            test: /[\\/](jspdf|jspdf-autotable)[\\/]/,
-            name: 'pdf-vendor',
-            chunks: 'all',
-            priority: 20,
-          },
-          // 大型组件
-          components: {
-            test: /[\\/]components[\\/]/,
-            name: 'components',
-            chunks: 'all',
-            priority: 5,
-          },
-          // 工具函数
-          utils: {
-            test: /[\\/]utils[\\/]/,
-            name: 'utils',
-            chunks: 'all',
-            priority: 5,
-          },
-        },
-      }
-      
-      // 优化字体加载
-      config.module.rules.push({
-        test: /\.(woff|woff2|eot|ttf|otf)$/,
-        use: {
-          loader: 'file-loader',
-          options: {
-            name: '[name].[hash].[ext]',
-            outputPath: 'fonts/',
-            publicPath: '/_next/static/fonts/',
-          },
-        },
-      })
-    }
-    
-    return config
-  },
-  // 移动端优化
-  async rewrites() {
-    return [
-      {
-        source: '/fonts/:path*',
-        destination: '/fonts/:path*',
-      },
-    ]
+    return config;
   },
 };
 
