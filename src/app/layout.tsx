@@ -1,11 +1,8 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import ClientInitializer from '@/components/ClientInitializer';
 
-
-const inter = Inter({ subsets: ['latin'] });
 
 // 强制动态渲染，确保 cookie 读取正确
 export const dynamic = 'force-dynamic';
@@ -52,7 +49,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.className} min-h-screen`} suppressHydrationWarning>
+      <body className="min-h-screen" suppressHydrationWarning>
         <Providers>
           <ClientInitializer />
           {children}

@@ -8544,3 +8544,192 @@ git commit -m "fix(auth): 修复普通用户登录后拥有全部权限的 Bug
 
 - 共改动 6 个文件：`usePermissionInit.ts`、`AppSidebar.tsx`、`permissions.ts`、`force-refresh-session/route.ts`、`get-latest-permissions/route.ts`、`update-session-permissions/route.ts`（同类旧路径补丁）
 - `npx tsc --noEmit` + `npm run build` 均通过（存在项目既有 lint warnings，非本次引入）
+
+---
+
+## TASK-42：移除外网依赖——Google 字体 + 无效 Analytics 请求 ✅ 已完成
+
+**优先级**：🟡 优化
+**估时**：15 分钟
+**风险**：极低，仅改字体和埋点逻辑，不影响业务功能
+
+### 背景
+
+本站在国内使用，需要移除或替换所有需要访问外网的资源，避免影响响应速度和开发体验。
+
+经排查，发现两个实际问题：
+
+**问题 1：`next/font/google` 引入 Inter 字体**
+- 本地开发（`npm run dev`）启动时，Next.js 会向 `fonts.googleapis.com` 请求字体文件，国内直接超时
+- Tailwind 已配置 `fontFamily.sans: ['Arial', 'Helvetica', 'sans-serif']`，Inter 对 UI 没有实际作用，删掉即可
+- 注：生产环境（Vercel 构建）字体在构建阶段自托管，线上用户不受影响，但 Inter 对中文工具无价值
+
+**问题 2：`analytics.ts` 每 30 秒发出失败的外网请求**
+- `AnalyticsManager` 有一个 30 秒定时器，周期性调用 `sendToAnalyticsService()`
+- 该函数在生产环境尝试：① 调用 `window.gtag()`（GA 脚本从未加载，永远 no-op）；② `fetch('/api/analytics')`（该路由不存在，返回 404）
+- 每次 flush 都产生一次 404 请求，被 catch 吃掉，但浪费网络和 localStorage 空间
+
+---
+
+### 改动 1：`src/app/layout.tsx` — 移除 Google Fonts
+
+**完整替换整个文件**（改动：删除 Inter 引入，body 改用 Tailwind 系统字体）：
+
+```tsx
+import type { Metadata } from 'next';
+import './globals.css';
+import { Providers } from './providers';
+import ClientInitializer from '@/components/ClientInitializer';
+
+// 强制动态渲染，确保 cookie 读取正确
+export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Luo & Company - 管理系统',
+  description: 'Luo & Company 提供专业的报价单、销售确认单和发票管理系统，帮助企业管理业务流程，提高工作效率。',
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="zh-CN" className="h-full" suppressHydrationWarning>
+      <head>
+        {/* 预置脚本：在水合前确保 class 一致，避免闪烁与不一致 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var themeConfig = localStorage.getItem('themeConfig');
+                if (themeConfig) {
+                  var config = JSON.parse(themeConfig);
+                  if (config.mode === 'dark') {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                  if (config.buttonTheme === 'classic') {
+                    document.documentElement.classList.add('classic-theme');
+                  } else {
+                    document.documentElement.classList.remove('classic-theme');
+                  }
+                }
+              } catch (e) {
+                console.error('主题预置脚本错误:', e);
+              }
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-screen" suppressHydrationWarning>
+        <Providers>
+          <ClientInitializer />
+          {children}
+        </Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+---
+
+### 改动 2：`src/features/customer/services/analytics.ts` — 移除无效外部请求
+
+找到 `sendToAnalyticsService` 方法，将其内容完全替换（保留方法签名，清空实现）：
+
+找到：
+```typescript
+  // 发送到分析服务
+  private sendToAnalyticsService(data: any): void {
+    // 示例：发送到 Google Analytics
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'customer_management_analytics', {
+        custom_parameters: data
+      });
+    }
+
+    // 示例：发送到自定义API
+    fetch('/api/analytics', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    }).catch(error => {
+      console.error('Failed to send analytics data:', error);
+    });
+  }
+```
+
+替换为：
+```typescript
+  // 发送到分析服务（暂未配置外部分析服务，数据仅保存到本地）
+  private sendToAnalyticsService(_data: any): void {
+    // 内部工具，暂不集成外部分析服务
+    // 如需接入，在此处实现（注意：Google Analytics 在国内不可用）
+  }
+```
+
+---
+
+### 改动 3（可选）：`tailwind.config.ts` — 完善中文字体栈
+
+当前配置 `font-sans: ['Arial', 'Helvetica', 'sans-serif']`，`sans-serif` 通用族会自动使用系统中文字体（macOS: PingFang SC, Windows: Microsoft YaHei），已能正常显示。如希望显式指定中文字体顺序，可替换为：
+
+找到：
+```ts
+      fontFamily: {
+        sans: ['Arial', 'Helvetica', 'sans-serif'],
+      },
+```
+
+替换为：
+```ts
+      fontFamily: {
+        sans: [
+          'PingFang SC',
+          'Microsoft YaHei',
+          'Noto Sans SC',
+          'Arial',
+          'Helvetica',
+          'sans-serif',
+        ],
+      },
+```
+
+> 此改动为可选项，不改也不影响显示效果。
+
+---
+
+### 验证
+
+```bash
+# 构建和类型检查
+npm run build
+npx tsc --noEmit
+
+# 本地开发验证（国内网络）：
+npm run dev
+# 预期：启动时不再有 fonts.googleapis.com 相关报错或超时
+# 预期：浏览器 Network 面板中无 /api/analytics 404 请求
+```
+
+### 提交
+
+```bash
+git add \
+  src/app/layout.tsx \
+  src/features/customer/services/analytics.ts \
+  tailwind.config.ts   # 仅如果执行了改动3
+git commit -m "perf: 移除外网依赖 — Google Fonts 改系统字体，清除无效 Analytics 请求 (TASK-42)"
+```
+
+### 实际落地
+
+- `src/app/layout.tsx`：移除 `next/font/google` Inter 引入，body 改用系统字体
+- `src/features/customer/services/analytics.ts`：清空 `sendToAnalyticsService`，停止 gtag 调用和 `/api/analytics` 404 请求
+- `tailwind.config.ts`：未改（中文字体栈可选，保持现状）
+- `npx tsc --noEmit` + `npm run build` 均通过

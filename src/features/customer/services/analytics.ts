@@ -242,25 +242,10 @@ export class AnalyticsManager {
     this.saveToLocalStorage(data);
   }
 
-  // 发送到分析服务
-  private sendToAnalyticsService(data: any): void {
-    // 示例：发送到 Google Analytics
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'customer_management_analytics', {
-        custom_parameters: data
-      });
-    }
-
-    // 示例：发送到自定义API
-    fetch('/api/analytics', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
-    }).catch(error => {
-      console.error('Failed to send analytics data:', error);
-    });
+  // 发送到分析服务（暂未配置外部分析服务，数据仅保存到本地）
+  private sendToAnalyticsService(_data: any): void {
+    // 内部工具，暂不集成外部分析服务
+    // 如需接入，在此处实现（注意：Google Analytics 在国内不可用）
   }
 
   // 保存到本地存储
