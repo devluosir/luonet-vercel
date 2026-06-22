@@ -43,6 +43,39 @@ interface PendingOp {
 }
 
 const QUEUE_KEY = 'd1_pending_syncs';
+const DELETED_DOC_IDS_KEY = 'd1_deleted_doc_ids';
+
+/** 记录本机已删除的文档 id，防止 pushLocalToD1 将其重新推上 D1 */
+export function recordDeletedDocId(id: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const map: Record<string, string> = JSON.parse(localStorage.getItem(DELETED_DOC_IDS_KEY) || '{}');
+    map[id] = new Date().toISOString();
+
+    // 清理 30 天前的条目
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    for (const [key, value] of Object.entries(map)) {
+      if (new Date(value).getTime() < cutoff) {
+        delete map[key];
+      }
+    }
+
+    localStorage.setItem(DELETED_DOC_IDS_KEY, JSON.stringify(map));
+  } catch {
+    // ignore
+  }
+}
+
+/** 返回本机已删除的文档 id 集合 */
+export function getDeletedDocIds(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const map: Record<string, string> = JSON.parse(localStorage.getItem(DELETED_DOC_IDS_KEY) || '{}');
+    return new Set(Object.keys(map));
+  } catch {
+    return new Set();
+  }
+}
 
 function loadQueue(): PendingOp[] {
   try {
@@ -142,6 +175,9 @@ export function d1SyncDocument(
   payload: D1DocumentPayload
 ): void {
   if (typeof window === 'undefined') return;
+  if (action === 'delete') {
+    recordDeletedDocId(payload.id);
+  }
   const op: PendingOp = {
     opId: `${payload.id}-${action}-${Date.now()}`,
     kind: 'document',

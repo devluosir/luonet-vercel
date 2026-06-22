@@ -9144,3 +9144,307 @@ git commit -m "fix(sync): 写入队列+重试机制，D1权威merge，刷新按�
 ```
 
 **验证**：`npx tsc --noEmit` 通过
+
+---
+
+## TASK-44：单据跨设备同步重构 — 双向同步 + 轮询（参照登记表模式）
+
+**优先级**：🔴 紧急
+**估时**：60 分钟
+**风险**：中（涉及多个写路径，需完整测试各单据类型）
+
+### 根本原因
+
+当前单据同步是**单向 pull**，登记表同步是**双向 push+pull + 30s 轮询**。
+
+| 特性 | 登记表 ✅ | 单据 ❌ |
+|------|-----------|---------|
+| 创建时写 D1 | fire-and-forget | fire-and-forget + 队列 |
+| 写失败补救 | `pushLocalToD1` 轮询时补推 | 仅 flush 队列（不轮询）|
+| D1→本地同步 | 30s 轮询 + `mergeFromD1` | 仅历史页挂载/刷新按钮 |
+| 删除保护 | `inquiry_deleted_ids` | 无 |
+
+结果：设备 A 创建单据 → `d1SyncDocument` 可能失败 → 队列不自动刷 → 设备 B pull 时 D1 空 → 看不到数据。
+
+### 改造方案
+
+参照 `src/features/inquiry/services/inquiry.service.ts` + `InquiryPage.tsx` 模式，为单据实现：
+1. `pushLocalToD1`（本地有 D1 没有的 → 推上去）
+2. 删除 ID 追踪（防止已删记录被重新推上去）
+3. 历史页 30s 轮询（与登记表保持一致）
+
+---
+
+### 改动 1：`src/utils/d1Sync.ts` — 增加删除 ID 记录
+
+在 `QUEUE_KEY` 常量之后添加：
+
+```typescript
+const DELETED_DOC_IDS_KEY = 'd1_deleted_doc_ids';
+
+/** 记录本机已删除的文档 id，防止 pushLocalToD1 将其重新推上 D1 */
+export function recordDeletedDocId(id: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const map: Record<string, string> = JSON.parse(localStorage.getItem(DELETED_DOC_IDS_KEY) || '{}');
+    map[id] = new Date().toISOString();
+    // 清理 30 天前的条目
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    for (const [k, v] of Object.entries(map)) {
+      if (new Date(v).getTime() < cutoff) delete map[k];
+    }
+    localStorage.setItem(DELETED_DOC_IDS_KEY, JSON.stringify(map));
+  } catch { /* ignore */ }
+}
+
+/** 返回本机已删除的文档 id 集合 */
+export function getDeletedDocIds(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const map: Record<string, string> = JSON.parse(localStorage.getItem(DELETED_DOC_IDS_KEY) || '{}');
+    return new Set(Object.keys(map));
+  } catch { return new Set(); }
+}
+```
+
+在 `d1SyncDocument` 函数体中，找到 `action === 'delete'` 的入队处，添加一行：
+
+```typescript
+  if (action === 'delete') {
+    recordDeletedDocId(payload.id);  // ← 新增
+  }
+  enqueue(op);
+  fireAndForget(op);
+```
+
+---
+
+### 改动 2：`src/utils/d1Pull.ts` — 增加 pushLocalToD1 + mergeIntoStorage 记录远端删除
+
+在文件顶部 import 之后，添加 `recordDeletedDocId` 和 `getDeletedDocIds` 的导入：
+
+```typescript
+import { flushPendingQueue, getPendingIds, recordDeletedDocId, getDeletedDocIds } from '@/utils/d1Sync';
+```
+
+在 `mergeIntoStorage` 函数中，当记录被判定为"远端已删除"时，记录其 ID（在 `// 不在队列且 D1 没有 → 视为已在其他设备删除，不保留` 注释处）：
+
+```typescript
+    // 不在队列且 D1 没有 → 视为已在其他设备删除，不保留
+    recordDeletedDocId(item.id);   // ← 新增：防止下次 push 时重新推上去
+```
+
+在 `pullAllFromD1` 函数中，在 `const pendingIds = getPendingIds();` 之后，fetch 之前，添加 `pushLocalToD1` 调用：
+
+```typescript
+    const pendingIds = getPendingIds();
+    const deletedIds = getDeletedDocIds();
+
+    // ── 先推：本地有但 D1 可能没有的记录 ──────────────────────────
+    // 注意：只推能转换为 D1DocumentPayload 的类型；客户不在此处理
+    await pushLocalDocsToD1(deletedIds);
+    // ─────────────────────────────────────────────────────────────
+
+    const [quotRes, confRes, invRes, packRes, purchRes] = await Promise.all([...
+```
+
+在 `mergeIntoStorage` 函数**之前**（即 `function mergeIntoStorage` 之前），添加 `pushLocalDocsToD1` 函数：
+
+```typescript
+/**
+ * 将本地各类型单据历史中 D1 尚未收录的记录推送到 D1。
+ * 参照 inquiryService.pushLocalToD1 模式。
+ * 只推 d1 尚未有（不在 d1Ids 内）、且本机未删除的记录。
+ */
+async function pushLocalDocsToD1(deletedIds: Set<string>): Promise<void> {
+  if (typeof window === 'undefined') return;
+  const pending = getPendingIds();
+
+  // 读取各 key 的本地数据
+  const quotLocal: Array<Record<string, unknown>> = JSON.parse(localStorage.getItem('quotation_history') || '[]');
+  const invLocal: Array<Record<string, unknown>> = JSON.parse(localStorage.getItem('invoice_history') || '[]');
+  const packLocal: Array<Record<string, unknown>> = JSON.parse(localStorage.getItem('packing_history') || '[]');
+  const purchLocal: Array<Record<string, unknown>> = JSON.parse(localStorage.getItem('purchase_history') || '[]');
+
+  // 并行拉取当前 D1 id 列表（只需 id，用 limit 小的查询）
+  // 注意：这里 await 是为了拿到 D1 现有 id，再决定哪些需要推
+  // 直接复用已知的 d1Ids（由调用方传入会更优，但 pushLocalDocsToD1 此处独立执行，需自行查询）
+  const [qRes, cRes, iRes, pkRes, puRes] = await Promise.all([
+    fetchAll<{ id: string }>('/api/documents?type=quotation', 'documents'),
+    fetchAll<{ id: string }>('/api/documents?type=confirmation', 'documents'),
+    fetchAll<{ id: string }>('/api/documents?type=invoice', 'documents'),
+    fetchAll<{ id: string }>('/api/documents?type=packing', 'documents'),
+    fetchAll<{ id: string }>('/api/documents?type=purchase', 'documents'),
+  ]);
+
+  const quotD1Ids = new Set([...qRes.data, ...cRes.data].map((d) => (d as any).id as string));
+  const invD1Ids = new Set(iRes.data.map((d) => (d as any).id as string));
+  const packD1Ids = new Set(pkRes.data.map((d) => (d as any).id as string));
+  const purchD1Ids = new Set(puRes.data.map((d) => (d as any).id as string));
+
+  const shouldPush = (id: string, d1Ids: Set<string>) =>
+    !d1Ids.has(id) && !pending.has(id) && !deletedIds.has(id);
+
+  for (const item of quotLocal) {
+    const id = item.id as string;
+    if (shouldPush(id, quotD1Ids)) {
+      d1SyncDocument('create', {
+        id,
+        type: (item.type as string || 'quotation') as import('@/utils/d1Sync').D1DocType,
+        doc_no: (item.quotationNo as string) || '',
+        customer_name: item.customerName as string,
+        total_amount: item.totalAmount as number,
+        currency: (item.currency as string) || 'USD',
+        data: item.data,
+      });
+    }
+  }
+
+  for (const item of invLocal) {
+    const id = item.id as string;
+    if (shouldPush(id, invD1Ids)) {
+      d1SyncDocument('create', {
+        id,
+        type: 'invoice',
+        doc_no: (item.invoiceNo as string) || '',
+        customer_name: item.customerName as string,
+        total_amount: item.totalAmount as number,
+        currency: (item.currency as string) || 'USD',
+        data: item,  // 全量存储供 docToInvoiceHistory 提取 data.data
+      });
+    }
+  }
+
+  for (const item of packLocal) {
+    const id = item.id as string;
+    if (shouldPush(id, packD1Ids)) {
+      d1SyncDocument('create', {
+        id,
+        type: 'packing',
+        doc_no: (item.invoiceNo as string) || '',
+        customer_name: item.consigneeName as string,
+        total_amount: item.totalAmount as number,
+        currency: (item.currency as string) || 'USD',
+        data: item.data,
+      });
+    }
+  }
+
+  for (const item of purchLocal) {
+    const id = item.id as string;
+    if (shouldPush(id, purchD1Ids)) {
+      d1SyncDocument('create', {
+        id,
+        type: 'purchase',
+        doc_no: (item.orderNo as string) || '',
+        customer_name: item.supplierName as string,
+        total_amount: item.totalAmount as number,
+        currency: (item.currency as string) || 'USD',
+        data: item.data,
+      });
+    }
+  }
+}
+```
+
+注意：`pushLocalDocsToD1` 内部调用了 `d1SyncDocument`，需要在文件顶部从 `d1Sync` 导入：
+
+```typescript
+import { flushPendingQueue, getPendingIds, recordDeletedDocId, getDeletedDocIds, d1SyncDocument } from '@/utils/d1Sync';
+```
+
+同时由于 `pushLocalDocsToD1` 内部也调用了 `fetchAll`，而 `fetchAll` 本来只在 `pullAllFromD1` 中使用，无需修改，因为 `pushLocalDocsToD1` 与 `mergeIntoStorage` 在同一文件中，`fetchAll` 可直接调用（同文件私有函数）。
+
+---
+
+### 改动 3：`src/features/history/app/HistoryPage.tsx` — 30s 轮询（参照登记表）
+
+找到 `handleSyncRefresh` 的 `useCallback`，在其下方的 mount useEffect 中，在现有 `pullAllFromD1()` 之后，增加 30s 轮询：
+
+**将 mount useEffect 替换为：**
+
+```typescript
+  useEffect(() => {
+    setMounted(true);
+    let cancelled = false;
+
+    async function syncFromD1() {
+      if (cancelled) return;
+      await pullAllFromD1();
+      if (cancelled) return;
+      handleRefresh();
+      ['quotation_history', 'packing_history', 'invoice_history', 'purchase_history'].forEach(key => {
+        window.dispatchEvent(new CustomEvent('customStorageChange', { detail: { key } }));
+      });
+    }
+
+    void syncFromD1();
+
+    const POLL_INTERVAL_MS = 30_000;
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void syncFromD1();
+      }
+    }, POLL_INTERVAL_MS);
+
+    // 监听 localStorage 变化
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key && (
+        event.key.includes('quotation_history') ||
+        event.key.includes('packing_history') ||
+        event.key.includes('invoice_history') ||
+        event.key.includes('purchase_history')
+      )) {
+        handleRefresh();
+      }
+    };
+
+    const handleCustomStorageChange = (event: CustomEvent) => {
+      if (event.detail?.key && (
+        event.detail.key.includes('quotation_history') ||
+        event.detail.key.includes('packing_history') ||
+        event.detail.key.includes('invoice_history') ||
+        event.detail.key.includes('purchase_history')
+      )) {
+        handleRefresh();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('customStorageChange', handleCustomStorageChange as EventListener);
+
+    return () => {
+      cancelled = true;
+      setMounted(false);
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener);
+    };
+  }, [setMounted, handleRefresh]);
+```
+
+---
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+人工验证（两端同账号）：
+
+1. 设备 A 新建合同确认书 → 立刻到历史页（触发 flush + push） → 等 5s → 设备 B 历史页自动刷新（30s 轮询）或手动点刷新 → 能看到该条目
+2. 设备 A 删除记录 → 设备 B 等待下次轮询 → 消失
+3. 刷新按钮仍然正常工作（`handleSyncRefresh`）
+
+### 提交
+
+```bash
+git add \
+  src/utils/d1Sync.ts \
+  src/utils/d1Pull.ts \
+  src/features/history/app/HistoryPage.tsx \
+  CODEX_TASKS.md
+git commit -m "feat(sync): 单据双向同步重构 — pushLocalToD1 + 删除ID追踪 + 30s轮询 (TASK-44)"
+```

@@ -130,19 +130,25 @@ export function HistoryPage() {
 
   useEffect(() => {
     setMounted(true);
+    let cancelled = false;
 
-    // 页面挂载时从 D1 拉取最新数据（跨设备同步）
-    pullAllFromD1()
-      .then(() => {
-        handleRefresh();
-        // 触发自定义事件通知所有 key 已更新
-        ['quotation_history', 'packing_history', 'invoice_history', 'purchase_history'].forEach(key => {
-          window.dispatchEvent(new CustomEvent('customStorageChange', { detail: { key } }));
-        });
-      })
-      .catch(() => {
-        // 拉取失败时静默，继续显示本地数据
+    async function syncFromD1() {
+      if (cancelled) return;
+      await pullAllFromD1();
+      if (cancelled) return;
+      handleRefresh();
+      ['quotation_history', 'packing_history', 'invoice_history', 'purchase_history'].forEach(key => {
+        window.dispatchEvent(new CustomEvent('customStorageChange', { detail: { key } }));
       });
+    }
+
+    void syncFromD1();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void syncFromD1();
+      }
+    };
     
     // 监听localStorage变化，自动刷新数据
     const handleStorageChange = (event: StorageEvent) => {
@@ -171,12 +177,15 @@ export function HistoryPage() {
     };
 
     // 添加事件监听器
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('customStorageChange', handleCustomStorageChange as EventListener);
     
     // 组件卸载时的清理函数
     return () => {
+      cancelled = true;
       setMounted(false);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('customStorageChange', handleCustomStorageChange as EventListener);
     };
