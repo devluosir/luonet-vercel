@@ -200,15 +200,11 @@ export function InquiryFormModal({
 
         <form onSubmit={handleSubmit} className="px-6 py-5">
 
-          {/* ── 身份信息条：日期 · 询价编号 · 紧急 ── */}
+          {/* ── 身份信息条：日期 · 询价编号 · 询价人 · 紧急 ── */}
           <div className="mb-4 flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2.5 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
             {/* 日期 */}
-            <button
-              type="button"
-              onClick={() => adjustDate(-1)}
-              tabIndex={-1}
-              className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
+            <button type="button" onClick={() => adjustDate(-1)} tabIndex={-1}
+              className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <ChevronLeft className="h-4 w-4" />
             </button>
             <input
@@ -224,12 +220,8 @@ export function InquiryFormModal({
               className="w-10 bg-transparent text-center text-sm font-semibold text-gray-700 outline-none dark:text-gray-200"
               placeholder="6.21"
             />
-            <button
-              type="button"
-              onClick={() => adjustDate(1)}
-              tabIndex={-1}
-              className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
+            <button type="button" onClick={() => adjustDate(1)} tabIndex={-1}
+              className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <ChevronRight className="h-4 w-4" />
             </button>
 
@@ -239,10 +231,29 @@ export function InquiryFormModal({
             <input
               value={inquiryNo}
               onChange={(e) => { setInquiryNo(e.target.value); setIsInquiryNoManual(true); }}
-              className="min-w-0 flex-1 bg-transparent font-mono text-sm font-semibold text-gray-800 outline-none dark:text-gray-100"
+              className="w-24 shrink-0 bg-transparent font-mono text-sm font-semibold text-gray-800 outline-none dark:text-gray-100"
               placeholder="C260621F"
               required
             />
+
+            <span className="select-none text-gray-200 dark:text-gray-700">·</span>
+
+            {/* 询价人 */}
+            <input
+              list={inquirerOptions.length > 0 ? INQUIRER_DATALIST_ID : undefined}
+              value={inquirer}
+              onChange={(e) => setInquirer(e.target.value)}
+              className="min-w-0 flex-1 bg-transparent text-sm font-medium text-gray-800 outline-none placeholder:text-gray-300 dark:text-gray-100 dark:placeholder:text-gray-600"
+              placeholder="询价人"
+              required
+            />
+            {inquirerOptions.length > 0 && (
+              <datalist id={INQUIRER_DATALIST_ID}>
+                {inquirerOptions.map((option) => (
+                  <option key={option} value={option} />
+                ))}
+              </datalist>
+            )}
 
             {/* 紧急 */}
             <label className="flex shrink-0 cursor-pointer items-center gap-1 pl-1">
@@ -256,33 +267,8 @@ export function InquiryFormModal({
             </label>
           </div>
 
-          {/* 新增模式提示 */}
-          {mode === 'create' && (
-            <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
-              编号可自动生成，修改日期会同步更新编号
-            </p>
-          )}
-
-          {/* ── 基本信息字段（各自一行） ── */}
+          {/* ── 基本信息字段 ── */}
           <div className="mb-4 space-y-3">
-            <div className="space-y-1">
-              <label className={LABEL_CLS}>询价人</label>
-              <input
-                list={inquirerOptions.length > 0 ? INQUIRER_DATALIST_ID : undefined}
-                value={inquirer}
-                onChange={(e) => setInquirer(e.target.value)}
-                className={FIELD_CLS}
-                placeholder="LC-Roger（可从客户管理选取）"
-                required
-              />
-              {inquirerOptions.length > 0 && (
-                <datalist id={INQUIRER_DATALIST_ID}>
-                  {inquirerOptions.map((option) => (
-                    <option key={option} value={option} />
-                  ))}
-                </datalist>
-              )}
-            </div>
             <div className="space-y-1">
               <label className={LABEL_CLS}>客户编号</label>
               <input
