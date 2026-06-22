@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { InquiryRecord } from '../types';
 import { getDateInputValueFromInquiryNo } from '../utils/inquiryUtils';
 
-export type TimeRange = 'all' | '7d' | '30d' | '90d';
+export type TimeRange = 'all' | '7d' | '30d' | '90d' | '1y';
 export type QuoteStatusFilter =
   | 'all'
   | 'supplier_pending'
@@ -39,6 +39,8 @@ function getTimeRangeDays(timeRange: TimeRange): number {
       return 30;
     case '90d':
       return 90;
+    case '1y':
+      return 365;
     default:
       return 0;
   }

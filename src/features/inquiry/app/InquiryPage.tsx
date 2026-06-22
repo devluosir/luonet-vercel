@@ -22,7 +22,7 @@ export function InquiryPage() {
   const records = useInquiryStore((state) => state.records);
   const { createRecord, removeRecord } = useInquiryActions();
   const updateRecord = useInquiryStore((state) => state.updateRecord);
-  const { filter, setFilter, filteredAndSorted, customers, inquirers, activeCount, reset } =
+  const { filter, setFilter, filteredAndSorted, inquirers, activeCount, reset } =
     useInquiryFilter(records);
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -187,14 +187,23 @@ export function InquiryPage() {
       bottomActions={bottomActions}
     >
       <div className="w-full max-w-none px-3 py-3 sm:px-5 lg:px-6">
-        <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-          <div className={`${isFilterOpen ? 'mb-2' : ''} flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between`}>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h1 className="text-lg font-semibold text-gray-900 dark:text-white">询报价登记</h1>
-                {!isFilterOpen && (
-                  <span className="text-xs text-gray-400 dark:text-gray-500">{resultSummary}</span>
-                )}
+        <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-2.5 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
+          <div className="flex items-center gap-2">
+            {/* Left: title (collapsed) or filter controls (expanded) */}
+            {isFilterOpen ? (
+              <InquiryFilterBar
+                id="inquiry-filter-panel"
+                filter={filter}
+                setFilter={setFilter}
+                inquirers={inquirers}
+                activeCount={activeCount}
+                onReset={reset}
+              />
+            ) : (
+              <div className="flex min-w-0 flex-1 items-baseline gap-2.5">
+                <h1 className="shrink-0 text-base font-semibold text-gray-900 dark:text-white">
+                  询报价登记
+                </h1>
                 {lastSyncedAt && (
                   <span className="text-xs text-gray-400 dark:text-gray-500">
                     最后同步：
@@ -205,11 +214,11 @@ export function InquiryPage() {
                     })}
                   </span>
                 )}
+                <span className="text-xs text-gray-400 dark:text-gray-500">{resultSummary}</span>
               </div>
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                记录客户询价、供应商报价进度和已报客户版本。
-              </p>
-            </div>
+            )}
+
+            {/* Right: always visible */}
             <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
@@ -241,19 +250,6 @@ export function InquiryPage() {
               </button>
             </div>
           </div>
-          {isFilterOpen && (
-            <InquiryFilterBar
-              id="inquiry-filter-panel"
-              filter={filter}
-              setFilter={setFilter}
-              customers={customers}
-              inquirers={inquirers}
-              activeCount={activeCount}
-              filteredCount={filteredAndSorted.length}
-              totalCount={records.length}
-              onReset={reset}
-            />
-          )}
         </div>
 
         <InquiryTable
