@@ -16,9 +16,10 @@ export function InquiryQuoteStatusDisplay({ record }: Props) {
   const rowColor = getRecordColorState(record);
 
   const regularStatuses = record.quotedStatuses.filter(
-    (s) => s.type !== 'unavailable' && s.type !== 'supplemented'
+    (s) => s.type !== 'unavailable' && s.type !== 'supplemented' && s.type !== 'closed'
   );
   const unavailableStatus = record.quotedStatuses.find((s) => s.type === 'unavailable');
+  const closedStatus = record.quotedStatuses.find((s) => s.type === 'closed');
   const supplementedStatus = record.quotedStatuses.find((s) => s.type === 'supplemented');
 
   return (
@@ -60,6 +61,15 @@ export function InquiryQuoteStatusDisplay({ record }: Props) {
             <span className="text-gray-300">,</span>
           )}
           无法报价({stripDateBrackets(unavailableStatus.quoteDate)})
+        </span>
+      )}
+
+      {closedStatus && (
+        <span className="text-gray-400">
+          {(regularStatuses.length > 0 || Boolean(supplementedStatus) || Boolean(unavailableStatus)) && (
+            <span className="text-gray-300">,</span>
+          )}
+          询价关闭({stripDateBrackets(closedStatus.quoteDate)})
         </span>
       )}
     </p>
