@@ -86,29 +86,33 @@ export default withAuth(
 
         // 3. 没有token的情况 - 拒绝所有其他访问
         if (!token) {
-          console.log('[中间件] 没有token，拒绝访问:', pathname);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[中间件] 没有token，拒绝访问:', pathname);
+          }
           return false;
         }
 
         // 4. 检查token是否包含必要的用户信息（简化检查）
         if (!token.username) {
-          console.log('[中间件] token中没有用户名，拒绝访问:', pathname);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[中间件] token中没有用户名，拒绝访问:', pathname);
+          }
           return false;
         }
 
         // 5. 管理员路径检查
         if (ADMIN_PATHS.some(path => pathname.startsWith(path))) {
           if (token.isAdmin === true) {
-            console.log('[中间件] 管理员访问管理路径:', pathname);
             return true;
           } else {
-            console.log('[中间件] 非管理员访问管理路径被拒绝:', pathname);
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[中间件] 非管理员访问管理路径被拒绝:', pathname);
+            }
             return false;
           }
         }
 
-        // 6. 对于所有其他路径，只要有token就允许访问（移除模块权限检查）
-        console.log('[中间件] 允许访问路径:', pathname);
+        // 6. 对于所有其他路径，只要有token就允许访问
         return true;
       },
     },

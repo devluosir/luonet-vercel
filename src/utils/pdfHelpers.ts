@@ -3,7 +3,6 @@
 
 import { PDFGeneratorData } from '@/types/pdf';
 import jsPDF from 'jspdf';
-import { embeddedResources } from '@/lib/embedded-resources';
 
 export interface ImageLoader {
   (src: string): Promise<HTMLImageElement>;
@@ -444,6 +443,7 @@ export const compressImage = async (base64Image: string, maxWidth: number = 200,
 
 // 简化的图片优化方案 - 通过调整尺寸和质量来减少文件大小
 export const getOptimizedStampImageSimple = async (stampType: string): Promise<string> => {
+  const { embeddedResources } = await import('@/lib/embedded-resources');
   let base64Image = '';
   if (stampType === 'shanghai') {
     base64Image = embeddedResources.shanghaiStamp;
@@ -516,10 +516,12 @@ export const getOptimizedStampImage = async (stampType: string): Promise<string>
   } catch (error) {
     console.error('Failed to optimize stamp image:', error);
     // 返回原始图片作为后备
-    if (stampType === 'shanghai') {
-      return embeddedResources.shanghaiStamp;
-    } else if (stampType === 'hongkong') {
-      return embeddedResources.hongkongStamp;
+    try {
+      const { embeddedResources } = await import('@/lib/embedded-resources');
+      if (stampType === 'shanghai') return embeddedResources.shanghaiStamp;
+      if (stampType === 'hongkong') return embeddedResources.hongkongStamp;
+    } catch {
+      // ignore
     }
     return '';
   }

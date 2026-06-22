@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { UserOptions, RowInput, CellInput } from 'jspdf-autotable';
-import { embeddedResources } from '@/lib/embedded-resources';
+
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { safeSetCnFont } from '@/utils/pdf/ensureFont';
 import { validateFontRegistration } from '@/utils/pdfFontUtils';
@@ -217,7 +217,7 @@ export async function generatePackingListPDF(
     if (data.templateConfig.headerType !== 'none') {
       try {
         // 根据headerType选择对应的表头图片
-        const headerImageBase64 = getHeaderImage(data.templateConfig.headerType);
+        const headerImageBase64 = await getHeaderImage(data.templateConfig.headerType);
 
         if (headerImageBase64) {
           const headerFormat = getHeaderImageFormat(data.templateConfig.headerType);
@@ -336,13 +336,13 @@ export async function generatePackingListPDF(
 }
 
 // 获取表头图片
-function getHeaderImage(headerType: 'none' | 'bilingual' | 'english'): string {
+async function getHeaderImage(headerType: 'none' | 'bilingual' | 'english'): Promise<string> {
+  if (headerType === 'none') return '';
+  const { embeddedResources } = await import('@/lib/embedded-resources');
   switch (headerType) {
     case 'bilingual':
-      // 使用双语表头图片
       return embeddedResources.headerImage;
     case 'english':
-      // 使用英文表头图片
       return embeddedResources.headerEnglish;
     default:
       return '';
