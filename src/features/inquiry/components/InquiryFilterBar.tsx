@@ -23,7 +23,6 @@ const timeOptions: Array<{ label: string; value: TimeRange }> = [
 ];
 
 const statusOptions: Array<{ label: string; value: QuoteStatusFilter; activeColor?: string }> = [
-  { label: '需信息', value: 'supplier_pending' },
   { label: '未报价', value: 'customer_pending' },
   { label: '已报价', value: 'customer_quoted', activeColor: 'bg-blue-600 text-white' },
   { label: '无法报价', value: 'unavailable', activeColor: 'bg-gray-500 text-white' },
