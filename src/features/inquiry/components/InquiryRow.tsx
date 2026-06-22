@@ -46,7 +46,7 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
           {record.customerNo}
         </span>
       </td>
-      <td className="w-[28%] px-3 py-2 text-sm md:w-[27%] lg:w-[22%]">
+      <td className="w-[20%] px-3 py-2 text-sm md:w-[23%] lg:w-[22%]">
         {/* 大屏：客户编号列可见，内容简述只显示 description */}
         <p className={`hidden lg:block max-w-none truncate ${mainTextClass}`} title={record.description}>
           {record.description}
@@ -56,7 +56,7 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
           {record.description?.trim() || record.customerNo}
         </p>
       </td>
-      <td className="w-[42%] px-3 py-2 md:w-[38%] lg:w-[28%] xl:w-[26%]">
+      <td className="w-[50%] px-3 py-2 md:w-[42%] lg:w-[28%] xl:w-[26%]">
         <InquiryQuoteStatusDisplay record={record} />
       </td>
       <td className="w-[8%] whitespace-nowrap px-3 py-2 text-right md:w-[7%] lg:w-[4%]">

@@ -59,13 +59,13 @@ export function InquiryTable({
               <th className="hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 lg:table-cell lg:w-[24%] xl:w-[26%]">
                 客户编号
               </th>
-              <th className="w-[28%] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:w-[27%] lg:w-[22%]">
+              <th className="w-[20%] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:w-[23%] lg:w-[22%]">
                 内容简述
               </th>
-              <th className="w-[42%] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:w-[38%] lg:w-[28%] xl:w-[26%]">
+              <th className="w-[50%] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:w-[42%] lg:w-[28%] xl:w-[26%]">
                 询报价状态
               </th>
-              <th className="w-[8%] px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:w-[7%] lg:w-[4%]">
+              <th className="w-[8%] px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:w-[7%] lg:w-[4%]" aria-label="操作">
                 操作
               </th>
             </tr>
