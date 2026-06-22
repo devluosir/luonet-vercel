@@ -441,4 +441,59 @@ Codex 执行任务前会自动读 `AGENTS.md`，所有任务规格在 `CODEX_TAS
 
 ---
 
-*最后更新：2026-06-22（TASK-41/42/43/44 完成）*
+---
+
+## TASK-45：单据写入 500 错误修复（Worker INSERT 缺少 created_at/updated_at）
+
+### 根本原因
+
+Migration 002（`002_add_inquiry_type.sql`）重建了 `Document` 表，新表的 `created_at` / `updated_at` 字段为 `NOT NULL` 但无 `DEFAULT`。Worker 原有 `handleCreateDocument` INSERT 语句未提供这两列，导致所有单据写入均被 SQLite 拒绝（HTTP 500）。这是跨设备同步完全失效的根本原因——D1 从未收到任何文档。
+
+### 修复内容
+
+**`src/worker.ts` → `handleCreateDocument`**：INSERT 扩展为 11 列，补充 `created_at`（优先取 `body.created_at`，保留原始创建时间）和 `updated_at`（始终取当前时间）。
+
+**`src/app/api/documents/[[...path]]/route.ts`（代理路由加固）**：`workerResp.json()` 加 try-catch，Worker 返回非 JSON 时返回 502 + 错误详情，不再抛出未处理异常。
+
+**`src/utils/d1Sync.ts`（诊断日志）**：`executeOp` 成功时打印 `[d1Sync] ✓`，失败时打印 HTTP 状态和响应体。
+
+**`src/utils/d1Pull.ts`（时序修复 + 诊断日志）**：`pushLocalDocsToD1` 调用后增加第二次 `await flushPendingQueue()`，确保补推的 fire-and-forget 请求在主 pull 前全部完成；新增 D1 各类型记录数日志。
+
+### 部署说明（待用户手动执行）
+
+`src/worker.ts` 需手动提交并部署：
+
+```bash
+cd /Users/roger/website/luonet-vercel
+git add src/worker.ts
+git commit -m "fix(worker): INSERT Document 补充 created_at/updated_at (TASK-45)"
+npx wrangler deploy
+```
+
+其余文件（route.ts、d1Sync.ts、d1Pull.ts）随 Vercel git push 自动部署。
+
+---
+
+## TASK-46：修复询报价编辑模式下询价编号/日期被覆盖
+
+### 根本原因
+
+`InquiryFormModal.tsx` 中两个 `useEffect` 同一渲染周期内竞态：Effect 1 设置 `inquiryNo = record.inquiryNo`（原始编号）并将 `isInquiryNoManual` 置 `true`；Effect 2 在同一周期内读到 stale 状态（`isInquiryNoManual = false`、`dateInput = 今天`），生成今天日期的新编号并作为最后一次 setState 写入，覆盖 Effect 1 的结果。下次再打开同一记录，`getDateInputValueFromInquiryNo` 从被污染的 `inquiryNo` 解析出今天日期，`inquiryDate` 也跟着错误。
+
+### 修复内容
+
+**`src/features/inquiry/components/InquiryFormModal.tsx`** — Effect 2 加 `mode === 'edit'` 守卫，同时将 `mode` 加入 deps：
+
+```typescript
+useEffect(() => {
+  if (!isOpen || isInquiryNoManual || mode === 'edit') return;
+  const base = generateNextInquiryNo(dateInputToDate(dateInput), existingNos);
+  setInquiryNo(isUrgent ? `${base}-U` : base);
+}, [dateInput, existingNos, isInquiryNoManual, isOpen, isUrgent, mode]);
+```
+
+编辑模式下询价编号不再自动生成；新增模式修改日期时仍自动同步编号，行为不变。已通过 `npx tsc --noEmit` + `npm run build` 验证并提交。
+
+---
+
+*最后更新：2026-06-22（TASK-41~46 完成）*
