@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Clock, Plus, AlertTriangle, CheckCircle, Calendar } from 'lucide-react';
 import { useCustomerFollowUp } from '../hooks/useCustomerFollowUp';
 import type { CustomerFollowUp, FollowUpType, FollowUpStatus, FollowUpPriority } from '../types';
@@ -19,6 +19,7 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
     priority: 'medium' as FollowUpPriority,
     type: 'follow_up' as FollowUpType
   });
+  const customerAliases = useMemo(() => [customerName], [customerName]);
 
   const {
     followUps,
@@ -29,7 +30,7 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
     updateFollowUp,
     deleteFollowUp,
     completeFollowUp
-  } = useCustomerFollowUp(customerId);
+  } = useCustomerFollowUp(customerId, customerAliases);
 
   // 格式化日期
   const formatDate = (dateString: string) => {

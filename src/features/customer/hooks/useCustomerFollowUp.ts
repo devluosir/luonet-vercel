@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { FollowUpService } from '../services/timelineService';
 import type { CustomerFollowUp, FollowUpType, FollowUpStatus, FollowUpPriority } from '../types';
 
-export function useCustomerFollowUp(customerId?: string) {
+const EMPTY_ALIASES: string[] = [];
+
+export function useCustomerFollowUp(customerId?: string, customerAliases: string[] = EMPTY_ALIASES) {
   const [followUps, setFollowUps] = useState<CustomerFollowUp[]>([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
@@ -10,6 +12,10 @@ export function useCustomerFollowUp(customerId?: string) {
     priority: [] as FollowUpPriority[],
     searchText: ''
   });
+  const customerKeys = useMemo(
+    () => [customerId, ...customerAliases].filter((key): key is string => Boolean(key)),
+    [customerAliases, customerId]
+  );
 
   // 加载跟进记录
   const loadFollowUps = useCallback(async () => {
@@ -17,14 +23,14 @@ export function useCustomerFollowUp(customerId?: string) {
     
     setLoading(true);
     try {
-      const customerFollowUps = FollowUpService.getFollowUpsByCustomer(customerId);
+      const customerFollowUps = FollowUpService.getFollowUpsByCustomerIds(customerKeys);
       setFollowUps(customerFollowUps);
     } catch (error) {
       console.error('加载跟进记录失败:', error);
     } finally {
       setLoading(false);
     }
-  }, [customerId]);
+  }, [customerId, customerKeys]);
 
   // 添加跟进记录
   const addFollowUp = useCallback(async (followUpData: Omit<CustomerFollowUp, 'id' | 'createdAt' | 'updatedAt'>) => {

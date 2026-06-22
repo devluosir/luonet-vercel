@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { 
   Users, 
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAppUser } from '@/hooks/useAppUser';
 import { 
   CustomerTabs, 
@@ -34,29 +35,28 @@ import type {
 } from '../components/FilterChipBar';
 
 type CustomerActivityLevel = 'high' | 'medium' | 'low';
+type ConfirmState = {
+  open: boolean;
+  title: string;
+  description: string;
+  variant: 'danger' | 'default';
+  resolve: (ok: boolean) => void;
+} | null;
 
-function getCustomerActivityLevel(customer: Customer): CustomerActivityLevel {
-  try {
-    const timelineCount = TimelineService.getEventsByCustomer(customer.name).length;
-    const followUpCount = FollowUpService.getFollowUpsByCustomer(customer.name).length;
-    const totalActivity = timelineCount + followUpCount;
-
-    if (totalActivity >= 10) return 'high';
-    if (totalActivity >= 5) return 'medium';
-    return 'low';
-  } catch {
-    return 'low';
-  }
+function getCustomerCount(counts: Map<string, number>, customer: Customer) {
+  return counts.get(customer.id) ?? counts.get(customer.name) ?? 0;
 }
 
-function customerNeedsFollowUp(customer: Customer): boolean {
-  try {
-    const timelineCount = TimelineService.getEventsByCustomer(customer.name).length;
-    const followUpCount = FollowUpService.getFollowUpsByCustomer(customer.name).length;
-    return timelineCount > 0 && followUpCount === 0;
-  } catch {
-    return false;
-  }
+function getCustomerActivityLevel(timelineCount: number, followUpCount: number): CustomerActivityLevel {
+  const totalActivity = timelineCount + followUpCount;
+
+  if (totalActivity >= 10) return 'high';
+  if (totalActivity >= 5) return 'medium';
+  return 'low';
+}
+
+function customerNeedsFollowUp(timelineCount: number, followUpCount: number): boolean {
+  return timelineCount > 0 && followUpCount === 0;
 }
 
 function isCustomerCreatedThisMonth(customer: Customer): boolean {
@@ -124,6 +124,7 @@ function CustomerPageContent() {
   const [activeFilter, setActiveFilter] = useState<CustomerFilterType>('all');
   const [sortBy, setSortBy] = useState<CustomerSortType>('date_desc');
   const [isClient, setIsClient] = useState(false);
+  const [confirmState, setConfirmState] = useState<ConfirmState>(null);
 
   // 确保在客户端渲染
   useEffect(() => {
@@ -132,7 +133,22 @@ function CustomerPageContent() {
 
   // 使用自定义hooks - 只在客户端使用
   const { customers, suppliers, consignees, isLoading, refreshData } = useCustomerData();
-  const { saveCustomer, saveSupplier, saveConsignee, deleteCustomer, deleteSupplier, deleteConsignee } = useCustomerActions();
+  const showConfirm = useCallback((opts: {
+    title: string;
+    description: string;
+    variant?: 'danger' | 'default';
+  }): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setConfirmState({
+        open: true,
+        title: opts.title,
+        description: opts.description,
+        variant: opts.variant ?? 'default',
+        resolve,
+      });
+    });
+  }, []);
+  const { saveCustomer, saveSupplier, saveConsignee, deleteCustomer, deleteSupplier, deleteConsignee } = useCustomerActions(showConfirm);
   const { formData, resetForm, setFormDataForEdit, handleInputChange, validateForm } = useCustomerForm();
   
   // 启用自动同步 - 只在客户端启用
@@ -140,6 +156,7 @@ function CustomerPageContent() {
 
   // 启用埋点和性能监控 - 只在客户端启用
   const analytics = useAnalytics();
+  const { trackSearch } = analytics;
   useAutoPerformanceMonitoring();
 
   // 页面加载性能监控
@@ -170,14 +187,24 @@ function CustomerPageContent() {
   };
 
   const stats = getRealTimeStats();
+  const timelineCounts = useMemo(() => TimelineService.getCountsByCustomer(), []);
+  const followUpCounts = useMemo(() => FollowUpService.getCountsByCustomer(), []);
 
   const customerFilterCounts = useMemo(() => {
     return {
-      highCount: customers.filter((customer) => getCustomerActivityLevel(customer) === 'high').length,
-      needsFollowUpCount: customers.filter(customerNeedsFollowUp).length,
+      highCount: customers.filter((customer) => {
+        const timelineCount = getCustomerCount(timelineCounts, customer);
+        const followUpCount = getCustomerCount(followUpCounts, customer);
+        return getCustomerActivityLevel(timelineCount, followUpCount) === 'high';
+      }).length,
+      needsFollowUpCount: customers.filter((customer) => {
+        const timelineCount = getCustomerCount(timelineCounts, customer);
+        const followUpCount = getCustomerCount(followUpCounts, customer);
+        return customerNeedsFollowUp(timelineCount, followUpCount);
+      }).length,
       thisMonthCount: customers.filter(isCustomerCreatedThisMonth).length,
     };
-  }, [customers]);
+  }, [customers, followUpCounts, timelineCounts]);
 
   // 处理添加新项目
   const handleAddNew = () => {
@@ -237,7 +264,7 @@ function CustomerPageContent() {
   // 处理查看详情
   const handleViewDetail = (customer: Customer) => {
     const customerName = customer.name.split('\n')[0] || customer.name;
-    router.push(`/customer/detail?id=${encodeURIComponent(customer.name)}&name=${encodeURIComponent(customerName)}`);
+    router.push(`/customer/detail?id=${encodeURIComponent(customer.id)}&name=${encodeURIComponent(customerName)}`);
     analytics.trackViewCustomerDetail(customer.id, customerName);
   };
 
@@ -279,18 +306,25 @@ function CustomerPageContent() {
     setEditingConsignee(null);
   };
 
-  // 处理搜索
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-
-    const filteredCustomers = customers.filter(customer => {
-      if (!query) return true;
-      const searchLower = query.toLowerCase();
-      return customer.name.toLowerCase().includes(searchLower);
+  const handleConfirmCancel = useCallback(() => {
+    setConfirmState((state) => {
+      state?.resolve(false);
+      return null;
     });
+  }, []);
 
-    analytics.trackSearch(query, filteredCustomers.length);
-  };
+  const handleConfirmAccept = useCallback(() => {
+    setConfirmState((state) => {
+      state?.resolve(true);
+      return null;
+    });
+  }, []);
+
+  // 处理搜索
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    trackSearch(query, customers.length);
+  }, [customers.length, trackSearch]);
 
   // 处理标签页切换
   const handleTabChange = (tab: TabType | 'new_customers') => {
@@ -508,6 +542,16 @@ function CustomerPageContent() {
         {/* 功能开关管理（仅开发环境） */}
         <FeatureFlagManager />
       </div>
+
+      <ConfirmDialog
+        open={Boolean(confirmState?.open)}
+        title={confirmState?.title ?? ''}
+        description={confirmState?.description ?? ''}
+        variant={confirmState?.variant ?? 'default'}
+        confirmLabel={confirmState?.variant === 'danger' ? '删除' : '确认'}
+        onConfirm={handleConfirmAccept}
+        onCancel={handleConfirmCancel}
+      />
     </AppLayout>
   );
 }

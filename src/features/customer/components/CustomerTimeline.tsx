@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Calendar, FileText, Package, Receipt, ShoppingCart, Plus, Filter, Search } from 'lucide-react';
 import { useCustomerTimeline } from '../hooks/useCustomerTimeline';
 import { CustomEventForm } from './CustomEventForm';
@@ -39,6 +39,7 @@ const statusColors = {
 export function CustomerTimeline({ customerId, customerName }: CustomerTimelineProps) {
   const [showFilters, setShowFilters] = useState(false);
   const [showCustomEventForm, setShowCustomEventForm] = useState(false);
+  const customerAliases = useMemo(() => [customerName], [customerName]);
   
   const {
     events,
@@ -47,7 +48,7 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
     setFilters,
     syncHistory,
     addCustomEvent
-  } = useCustomerTimeline(customerId);
+  } = useCustomerTimeline(customerId, customerAliases);
 
   // 格式化日期
   const formatDate = (dateString: string) => {

@@ -107,6 +107,11 @@ export function getAllCustomers(): Customer[] {
   }
 }
 
+export function getCustomerById(id: string): Customer | null {
+  const allCustomers = getAllCustomers();
+  return allCustomers.find((customer) => customer.id === id) ?? null;
+}
+
 // 保存客户数据
 export function saveCustomer(customer: Customer): void {
   try {
@@ -198,6 +203,7 @@ export const customerService = {
   extractCustomersFromHistory,
   loadSavedCustomers,
   getAllCustomers,
+  getCustomerById,
   saveCustomer,
   deleteCustomer,
   checkCustomerUsage

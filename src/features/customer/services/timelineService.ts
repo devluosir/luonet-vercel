@@ -45,6 +45,26 @@ export class TimelineService {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
+  static getEventsByCustomerIds(customerIds: string[]): CustomerTimelineEvent[] {
+    const idSet = new Set(customerIds.filter(Boolean));
+    const allEvents = this.getAllEvents();
+
+    return allEvents
+      .filter(event => idSet.has(event.customerId))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
+  static getCountsByCustomer(): Map<string, number> {
+    const allEvents = this.getAllEvents();
+    const counts = new Map<string, number>();
+
+    for (const event of allEvents) {
+      counts.set(event.customerId, (counts.get(event.customerId) ?? 0) + 1);
+    }
+
+    return counts;
+  }
+
   // 添加时间轴事件
   static addEvent(event: Omit<CustomerTimelineEvent, 'id' | 'createdAt' | 'updatedAt'>): CustomerTimelineEvent {
     const allEvents = this.getAllEvents();
@@ -103,6 +123,26 @@ export class FollowUpService {
     return allFollowUps
       .filter(followUp => followUp.customerId === customerId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  static getFollowUpsByCustomerIds(customerIds: string[]): CustomerFollowUp[] {
+    const idSet = new Set(customerIds.filter(Boolean));
+    const allFollowUps = this.getAllFollowUps();
+
+    return allFollowUps
+      .filter(followUp => idSet.has(followUp.customerId))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  static getCountsByCustomer(): Map<string, number> {
+    const allFollowUps = this.getAllFollowUps();
+    const counts = new Map<string, number>();
+
+    for (const followUp of allFollowUps) {
+      counts.set(followUp.customerId, (counts.get(followUp.customerId) ?? 0) + 1);
+    }
+
+    return counts;
   }
 
   // 添加跟进记录

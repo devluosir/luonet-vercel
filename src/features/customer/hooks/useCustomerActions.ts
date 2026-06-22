@@ -3,6 +3,12 @@ import { customerService } from '../services/customerService';
 import { supplierService } from '../services/supplierService';
 import { consigneeService } from '../services/consigneeService';
 
+type ShowConfirm = (opts: {
+  title: string;
+  description: string;
+  variant?: 'danger' | 'default';
+}) => Promise<boolean>;
+
 function normalizeContacts(customerData: CustomerFormData) {
   return customerData.contacts
     .map((contact) => ({
@@ -15,7 +21,7 @@ function normalizeContacts(customerData: CustomerFormData) {
     .filter((contact) => contact.name);
 }
 
-export function useCustomerActions() {
+export function useCustomerActions(showConfirm: ShowConfirm) {
   // 保存客户
   const saveCustomer = async (customerData: CustomerFormData, editingCustomer: Customer | null) => {
     try {
@@ -46,12 +52,14 @@ export function useCustomerActions() {
         const usageCount = customerService.checkCustomerUsage(editingCustomerName);
         
         if (usageCount > 0) {
-          const confirmSave = confirm(
-            `注意：客户名称从 "${editingCustomerName}" 更改为 "${customerData.name}"\n\n` +
-            `该客户在 ${usageCount} 个历史记录中被引用。\n` +
-            `历史记录中的客户名称将保持不变，只有新创建的记录会使用新的客户信息。\n\n` +
-            `是否继续保存？`
-          );
+          const confirmSave = await showConfirm({
+            title: '确认修改客户名称',
+            description:
+              `注意：客户名称从 "${editingCustomerName}" 更改为 "${customerData.name}"\n\n` +
+              `该客户在 ${usageCount} 个历史记录中被引用。\n` +
+              `历史记录中的客户名称将保持不变，只有新创建的记录会使用新的客户信息。\n\n` +
+              `是否继续保存？`,
+          });
           
           if (!confirmSave) {
             return false;
@@ -63,7 +71,6 @@ export function useCustomerActions() {
       return true;
     } catch (error) {
       console.error('保存客户失败:', error);
-      alert('保存失败，请重试');
       return false;
     }
   };
@@ -87,12 +94,14 @@ export function useCustomerActions() {
         const usageCount = supplierService.checkSupplierUsage(editingSupplier.name);
         
         if (usageCount > 0) {
-          const confirmSave = confirm(
-            `注意：供应商名称从 "${editingSupplier.name}" 更改为 "${supplierData.name}"\n\n` +
-            `该供应商在 ${usageCount} 个历史记录中被引用。\n` +
-            `历史记录中的供应商名称将保持不变，只有新创建的记录会使用新的供应商信息。\n\n` +
-            `是否继续保存？`
-          );
+          const confirmSave = await showConfirm({
+            title: '确认修改供应商名称',
+            description:
+              `注意：供应商名称从 "${editingSupplier.name}" 更改为 "${supplierData.name}"\n\n` +
+              `该供应商在 ${usageCount} 个历史记录中被引用。\n` +
+              `历史记录中的供应商名称将保持不变，只有新创建的记录会使用新的供应商信息。\n\n` +
+              `是否继续保存？`,
+          });
           
           if (!confirmSave) {
             return false;
@@ -104,7 +113,6 @@ export function useCustomerActions() {
       return true;
     } catch (error) {
       console.error('保存供应商失败:', error);
-      alert('保存失败，请重试');
       return false;
     }
   };
@@ -128,12 +136,14 @@ export function useCustomerActions() {
         const usageCount = consigneeService.checkConsigneeUsage(editingConsignee.name);
         
         if (usageCount > 0) {
-          const confirmSave = confirm(
-            `注意：收货人名称从 "${editingConsignee.name}" 更改为 "${consigneeData.name}"\n\n` +
-            `该收货人在 ${usageCount} 个历史记录中被引用。\n` +
-            `历史记录中的收货人名称将保持不变，只有新创建的记录会使用新的收货人信息。\n\n` +
-            `是否继续保存？`
-          );
+          const confirmSave = await showConfirm({
+            title: '确认修改收货人名称',
+            description:
+              `注意：收货人名称从 "${editingConsignee.name}" 更改为 "${consigneeData.name}"\n\n` +
+              `该收货人在 ${usageCount} 个历史记录中被引用。\n` +
+              `历史记录中的收货人名称将保持不变，只有新创建的记录会使用新的收货人信息。\n\n` +
+              `是否继续保存？`,
+          });
           
           if (!confirmSave) {
             return false;
@@ -145,7 +155,6 @@ export function useCustomerActions() {
       return true;
     } catch (error) {
       console.error('保存收货人失败:', error);
-      alert('保存失败，请重试');
       return false;
     }
   };
@@ -155,20 +164,28 @@ export function useCustomerActions() {
     const usageCount = customerService.checkCustomerUsage(customer.name);
     
     if (usageCount > 0) {
-      const confirmDelete = confirm(
-        `警告：该客户 "${customer.name}" 在 ${usageCount} 个历史记录中被引用。\n\n` +
-        `删除客户信息将：\n` +
-        `• 从客户管理列表中移除\n` +
-        `• 不会影响历史记录中的客户信息\n` +
-        `• 历史记录仍然可以正常查看\n\n` +
-        `确定要删除这个客户吗？`
-      );
+      const confirmDelete = await showConfirm({
+        title: '确认删除客户',
+        description:
+          `警告：该客户 "${customer.name}" 在 ${usageCount} 个历史记录中被引用。\n\n` +
+          `删除客户信息将：\n` +
+          `• 从客户管理列表中移除\n` +
+          `• 不会影响历史记录中的客户信息\n` +
+          `• 历史记录仍然可以正常查看\n\n` +
+          `确定要删除这个客户吗？`,
+        variant: 'danger',
+      });
       
       if (!confirmDelete) {
         return false;
       }
     } else {
-      if (!confirm(`确定要删除客户 "${customer.name}" 吗？`)) {
+      const confirmDelete = await showConfirm({
+        title: '确认删除客户',
+        description: `确定要删除客户 "${customer.name}" 吗？`,
+        variant: 'danger',
+      });
+      if (!confirmDelete) {
         return false;
       }
     }
@@ -178,7 +195,6 @@ export function useCustomerActions() {
       return true;
     } catch (error) {
       console.error('删除客户失败:', error);
-      alert('删除失败，请重试');
       return false;
     }
   };
@@ -188,20 +204,28 @@ export function useCustomerActions() {
     const usageCount = supplierService.checkSupplierUsage(supplier.name);
     
     if (usageCount > 0) {
-      const confirmDelete = confirm(
-        `警告：该供应商 "${supplier.name}" 在 ${usageCount} 个历史记录中被引用。\n\n` +
-        `删除供应商信息将：\n` +
-        `• 从供应商管理列表中移除\n` +
-        `• 不会影响历史记录中的供应商信息\n` +
-        `• 历史记录仍然可以正常查看\n\n` +
-        `确定要删除这个供应商吗？`
-      );
+      const confirmDelete = await showConfirm({
+        title: '确认删除供应商',
+        description:
+          `警告：该供应商 "${supplier.name}" 在 ${usageCount} 个历史记录中被引用。\n\n` +
+          `删除供应商信息将：\n` +
+          `• 从供应商管理列表中移除\n` +
+          `• 不会影响历史记录中的供应商信息\n` +
+          `• 历史记录仍然可以正常查看\n\n` +
+          `确定要删除这个供应商吗？`,
+        variant: 'danger',
+      });
       
       if (!confirmDelete) {
         return false;
       }
     } else {
-      if (!confirm(`确定要删除供应商 "${supplier.name}" 吗？`)) {
+      const confirmDelete = await showConfirm({
+        title: '确认删除供应商',
+        description: `确定要删除供应商 "${supplier.name}" 吗？`,
+        variant: 'danger',
+      });
+      if (!confirmDelete) {
         return false;
       }
     }
@@ -211,7 +235,6 @@ export function useCustomerActions() {
       return true;
     } catch (error) {
       console.error('删除供应商失败:', error);
-      alert('删除失败，请重试');
       return false;
     }
   };
@@ -221,20 +244,28 @@ export function useCustomerActions() {
     const usageCount = consigneeService.checkConsigneeUsage(consignee.name);
     
     if (usageCount > 0) {
-      const confirmDelete = confirm(
-        `警告：该收货人 "${consignee.name}" 在 ${usageCount} 个历史记录中被引用。\n\n` +
-        `删除收货人信息将：\n` +
-        `• 从收货人管理列表中移除\n` +
-        `• 不会影响历史记录中的收货人信息\n` +
-        `• 历史记录仍然可以正常查看\n\n` +
-        `确定要删除这个收货人吗？`
-      );
+      const confirmDelete = await showConfirm({
+        title: '确认删除收货人',
+        description:
+          `警告：该收货人 "${consignee.name}" 在 ${usageCount} 个历史记录中被引用。\n\n` +
+          `删除收货人信息将：\n` +
+          `• 从收货人管理列表中移除\n` +
+          `• 不会影响历史记录中的收货人信息\n` +
+          `• 历史记录仍然可以正常查看\n\n` +
+          `确定要删除这个收货人吗？`,
+        variant: 'danger',
+      });
       
       if (!confirmDelete) {
         return false;
       }
     } else {
-      if (!confirm(`确定要删除收货人 "${consignee.name}" 吗？`)) {
+      const confirmDelete = await showConfirm({
+        title: '确认删除收货人',
+        description: `确定要删除收货人 "${consignee.name}" 吗？`,
+        variant: 'danger',
+      });
+      if (!confirmDelete) {
         return false;
       }
     }
@@ -244,7 +275,6 @@ export function useCustomerActions() {
       return true;
     } catch (error) {
       console.error('删除收货人失败:', error);
-      alert('删除失败，请重试');
       return false;
     }
   };

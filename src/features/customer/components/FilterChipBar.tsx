@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Grid3X3, List, Search } from 'lucide-react';
 
 export type CustomerFilterType = 'all' | 'high' | 'needs_followup' | 'this_month';
@@ -56,12 +57,25 @@ export function FilterChipBar({
   searchQuery,
   onSearchChange,
 }: FilterChipBarProps) {
+  const [localQuery, setLocalQuery] = useState(searchQuery);
   const counts = {
     total,
     highCount,
     needsFollowUpCount,
     thisMonthCount,
   };
+
+  useEffect(() => {
+    setLocalQuery(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      onSearchChange(localQuery);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [localQuery, onSearchChange]);
 
   return (
     <div className="border-b border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
@@ -71,8 +85,8 @@ export function FilterChipBar({
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              value={searchQuery}
-              onChange={(event) => onSearchChange(event.target.value)}
+              value={localQuery}
+              onChange={(event) => setLocalQuery(event.target.value)}
               placeholder="搜索客户、电话、邮箱..."
               className="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:focus:border-blue-400"
             />

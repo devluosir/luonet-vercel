@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   AlertCircle,
   Calendar,
@@ -55,24 +56,6 @@ const activityOrder: Record<ActivityLevel, number> = {
   low: 2,
 };
 
-function getTimelineCount(customerName: string) {
-  try {
-    const events = TimelineService.getEventsByCustomer(customerName);
-    return events.length;
-  } catch {
-    return 0;
-  }
-}
-
-function getFollowUpCount(customerName: string) {
-  try {
-    const followUps = FollowUpService.getFollowUpsByCustomer(customerName);
-    return followUps.length;
-  } catch {
-    return 0;
-  }
-}
-
 function formatDate(dateString?: string) {
   if (!dateString) return '-';
   const date = new Date(dateString);
@@ -105,9 +88,11 @@ function getCustomerInfo(customer: Customer): CustomerInfo {
   return { title, contactInfo };
 }
 
-function getCustomerActivity(customer: Customer) {
-  const timelineCount = getTimelineCount(customer.name);
-  const followUpCount = getFollowUpCount(customer.name);
+function getCachedCount(counts: Map<string, number>, customer: Customer) {
+  return counts.get(customer.id) ?? counts.get(customer.name) ?? 0;
+}
+
+function getCustomerActivity(timelineCount: number, followUpCount: number) {
   const totalActivity = timelineCount + followUpCount;
 
   if (totalActivity >= 10) {
@@ -134,9 +119,7 @@ function getCustomerActivity(customer: Customer) {
   };
 }
 
-function needsFollowUp(customer: Customer) {
-  const followUpCount = getFollowUpCount(customer.name);
-  const timelineCount = getTimelineCount(customer.name);
+function needsFollowUp(timelineCount: number, followUpCount: number) {
   return timelineCount > 0 && followUpCount === 0;
 }
 
@@ -201,42 +184,53 @@ export function CustomerList({
   activeFilter = 'all',
   sortBy = 'date_desc',
 }: CustomerListProps) {
-  const filteredCustomers = customers.filter((customer) => {
-    if (!searchQuery) return true;
+  const timelineCounts = useMemo(() => TimelineService.getCountsByCustomer(), []);
+  const followUpCounts = useMemo(() => FollowUpService.getCountsByCustomer(), []);
 
-    const { title, contactInfo } = getCustomerInfo(customer);
-    const searchLower = searchQuery.toLowerCase();
+  const sortedCustomers = useMemo(() => {
+    const filteredCustomers = customers.filter((customer) => {
+      if (!searchQuery) return true;
 
-    return (
-      title.toLowerCase().includes(searchLower) ||
-      (customer.company || '').toLowerCase().includes(searchLower) ||
-      contactInfo.phone.toLowerCase().includes(searchLower) ||
-      contactInfo.email.toLowerCase().includes(searchLower) ||
-      contactInfo.address.toLowerCase().includes(searchLower)
-    );
-  });
+      const { title, contactInfo } = getCustomerInfo(customer);
+      const searchLower = searchQuery.toLowerCase();
 
-  const displayCustomers = filteredCustomers.filter((customer) => {
-    if (activeFilter === 'all') return true;
-    const activity = getCustomerActivity(customer);
-    if (activeFilter === 'high') return activity.level === 'high';
-    if (activeFilter === 'needs_followup') return needsFollowUp(customer);
-    if (activeFilter === 'this_month') return isThisMonth(customer);
-    return true;
-  });
-
-  const sortedCustomers = [...displayCustomers].sort((a, b) => {
-    if (sortBy === 'name') {
-      return getCustomerInfo(a).title.localeCompare(getCustomerInfo(b).title, 'zh-CN');
-    }
-    if (sortBy === 'activity') {
       return (
-        activityOrder[getCustomerActivity(a).level] -
-        activityOrder[getCustomerActivity(b).level]
+        title.toLowerCase().includes(searchLower) ||
+        (customer.company || '').toLowerCase().includes(searchLower) ||
+        contactInfo.phone.toLowerCase().includes(searchLower) ||
+        contactInfo.email.toLowerCase().includes(searchLower) ||
+        contactInfo.address.toLowerCase().includes(searchLower)
       );
-    }
-    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-  });
+    });
+
+    const displayCustomers = filteredCustomers.filter((customer) => {
+      if (activeFilter === 'all') return true;
+      const timelineCount = getCachedCount(timelineCounts, customer);
+      const followUpCount = getCachedCount(followUpCounts, customer);
+      const activity = getCustomerActivity(timelineCount, followUpCount);
+      if (activeFilter === 'high') return activity.level === 'high';
+      if (activeFilter === 'needs_followup') return needsFollowUp(timelineCount, followUpCount);
+      if (activeFilter === 'this_month') return isThisMonth(customer);
+      return true;
+    });
+
+    return [...displayCustomers].sort((a, b) => {
+      if (sortBy === 'name') {
+        return getCustomerInfo(a).title.localeCompare(getCustomerInfo(b).title, 'zh-CN');
+      }
+      if (sortBy === 'activity') {
+        const aTimelineCount = getCachedCount(timelineCounts, a);
+        const aFollowUpCount = getCachedCount(followUpCounts, a);
+        const bTimelineCount = getCachedCount(timelineCounts, b);
+        const bFollowUpCount = getCachedCount(followUpCounts, b);
+        return (
+          activityOrder[getCustomerActivity(aTimelineCount, aFollowUpCount).level] -
+          activityOrder[getCustomerActivity(bTimelineCount, bFollowUpCount).level]
+        );
+      }
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+  }, [activeFilter, customers, followUpCounts, searchQuery, sortBy, timelineCounts]);
 
   if (customers.length === 0) {
     return (
@@ -275,7 +269,9 @@ export function CustomerList({
           <tbody>
             {sortedCustomers.map((customer) => {
               const { title, contactInfo } = getCustomerInfo(customer);
-              const activity = getCustomerActivity(customer);
+              const timelineCount = getCachedCount(timelineCounts, customer);
+              const followUpCount = getCachedCount(followUpCounts, customer);
+              const activity = getCustomerActivity(timelineCount, followUpCount);
 
               return (
                 <tr
@@ -357,10 +353,10 @@ export function CustomerList({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {sortedCustomers.map((customer) => {
           const { title, contactInfo } = getCustomerInfo(customer);
-          const timelineCount = getTimelineCount(customer.name);
-          const followUpCount = getFollowUpCount(customer.name);
-          const activity = getCustomerActivity(customer);
-          const needsFollowUpFlag = needsFollowUp(customer);
+          const timelineCount = getCachedCount(timelineCounts, customer);
+          const followUpCount = getCachedCount(followUpCounts, customer);
+          const activity = getCustomerActivity(timelineCount, followUpCount);
+          const needsFollowUpFlag = needsFollowUp(timelineCount, followUpCount);
 
           return (
             <div

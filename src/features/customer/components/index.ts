@@ -6,6 +6,7 @@ export { CustomerToolbar } from './CustomerToolbar';
 export { CustomerTabs } from './CustomerTabs';
 export { FilterChipBar } from './FilterChipBar';
 export { CustomerModal } from './CustomerModal';
+export { CustomerInfoCard } from './CustomerInfoCard';
 export { CustomerTimeline } from './CustomerTimeline';
 export { FollowUpManager } from './FollowUpManager';
 export { NewCustomerTracker } from './NewCustomerTracker';

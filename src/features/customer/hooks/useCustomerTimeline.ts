@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { TimelineService } from '../services/timelineService';
 import { syncAllHistoryToTimeline } from '../services/autoTimelineService';
 import type { CustomerTimelineEvent, TimelineEventType, TimelineEventStatus } from '../types';
 
-export function useCustomerTimeline(customerId?: string) {
+const EMPTY_ALIASES: string[] = [];
+
+export function useCustomerTimeline(customerId?: string, customerAliases: string[] = EMPTY_ALIASES) {
   const [events, setEvents] = useState<CustomerTimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
@@ -11,6 +13,10 @@ export function useCustomerTimeline(customerId?: string) {
     status: [] as TimelineEventStatus[],
     searchText: ''
   });
+  const customerKeys = useMemo(
+    () => [customerId, ...customerAliases].filter((key): key is string => Boolean(key)),
+    [customerAliases, customerId]
+  );
 
   // 加载时间轴事件
   const loadEvents = useCallback(async () => {
@@ -18,14 +24,14 @@ export function useCustomerTimeline(customerId?: string) {
     
     setLoading(true);
     try {
-      const customerEvents = TimelineService.getEventsByCustomer(customerId);
+      const customerEvents = TimelineService.getEventsByCustomerIds(customerKeys);
       setEvents(customerEvents);
     } catch (error) {
       console.error('加载时间轴事件失败:', error);
     } finally {
       setLoading(false);
     }
-  }, [customerId]);
+  }, [customerId, customerKeys]);
 
   // 同步历史记录
   const syncHistory = useCallback(async () => {

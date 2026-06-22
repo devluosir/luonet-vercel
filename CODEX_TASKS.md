@@ -9714,3 +9714,477 @@ npx tsc --noEmit
 2. 询价已关闭 checkbox 出现在「已回复客户无法报价」右侧，勾选后列表卡片显示灰色「询价关闭(日期)」。
 3. 「无法报价」筛选器能命中已关闭记录；「已报价」筛选器不命中已关闭记录。
 4. 导入 `inquiry_import_2026-2.json` → 401 条新增。
+
+---
+
+## TASK-49 ✅：彻底修复询报价登记中小屏列宽溢出
+
+### 背景
+
+中屏、小屏下询报价登记列表仍出现列宽异常：
+
+- 状态列被推到卡片右侧之外，只能看到右边缘的少量彩色文字。
+- 小屏下「内容简述」占位正常，但「询报价状态 / 操作」实际落在横向溢出区域。
+- 之前只处理 Tailwind 任意百分比类和 `colgroup`，但问题仍存在。
+
+### 真实根因
+
+问题不是单一的 Tailwind 百分比类未编译，而是三个因素叠加：
+
+1. **表格使用 `min-w-full table-fixed`**
+   `min-width: 100%` 只保证表格至少等于容器宽度；当单元格内容的不可换行最小宽度更大时，浏览器仍会把整张表撑宽。
+   因此即使已经加了 `colgroup`，表格仍可能横向溢出。
+
+2. **状态列是一整串不可换行文本**
+   `InquiryQuoteStatusDisplay` 使用单行状态串，供应商状态 + `/` + 已报价/无法报价/已关闭状态会形成很长的不可换行内容。
+   该内容会反向影响 table layout 的最小内容宽度。
+
+3. **行内单元格缺少 `overflow-hidden / min-w-0 / max-w-full` 约束**
+   编号、询价人、内容简述、状态、操作列内部都没有完整的收缩边界，中小屏下容易把列撑开。
+
+截图中看到的“状态列只剩右侧彩色碎片”，实际是表格整体变宽后，状态列落在横向滚动区域右边，当前视口只看到它的边缘。
+
+### 涉及文件
+
+- `src/features/inquiry/components/InquiryTable.tsx`
+- `src/features/inquiry/components/InquiryRow.tsx`
+- `src/features/inquiry/components/InquiryQuoteStatusDisplay.tsx`
+
+### 最终修复
+
+#### 1. `InquiryTable.tsx`：固定表格宽度，保留 colgroup
+
+将表格从：
+
+```tsx
+<table className="min-w-full table-fixed divide-y divide-gray-100 dark:divide-gray-800">
+```
+
+改为：
+
+```tsx
+<table className="w-full table-fixed divide-y divide-gray-100 dark:divide-gray-800">
+```
+
+说明：
+
+- `w-full` 让 table 的实际宽度固定为容器宽度。
+- `table-fixed + colgroup` 才能稳定按断点列宽分配。
+- `min-w-full` 会允许内容继续撑宽，是这次中小屏异常的核心触发点。
+
+断点列宽继续使用 `colgroup`：
+
+| 断点 | 可见列 | 列宽 |
+|------|--------|------|
+| `< md` | 询价编号 / 内容简述 / 询报价状态 / 操作 | 22% / 18% / 52% / 8% |
+| `md ~ lg` | 询价编号 / 询价人 / 内容简述 / 询报价状态 / 操作 | 15% / 13% / 22% / 43% / 7% |
+| `lg+` | 询价编号 / 询价人 / 客户编号 / 内容简述 / 询报价状态 / 操作 | 10% / 12% / 24% / 22% / 28% / 4% |
+
+同时给所有表头加 `overflow-hidden`，长表头使用 `truncate`；小屏/删除列不显示「操作」文字，避免占掉 8% 列宽。
+
+#### 2. `InquiryRow.tsx`：所有单元格增加收缩边界
+
+关键处理：
+
+- 各 `<td>` 增加 `overflow-hidden`。
+- 编号、询价人、内容简述使用 `block truncate`。
+- flex 容器增加 `min-w-0`，避免内部 flex item 拒绝收缩。
+- 客户编号由 `max-w-none` 改为 `max-w-full`。
+- 状态列 `<td>` 增加 `overflow-hidden px-2 md:px-3`。
+- 操作列小屏压缩为 `px-1`，避免 8% 列宽被 padding 吃掉。
+
+#### 3. `InquiryQuoteStatusDisplay.tsx`：状态串限制在状态列内
+
+状态展示保留单行紧凑风格，但增加完整宽度约束：
+
+```tsx
+<p className="m-0 block w-full max-w-full truncate whitespace-nowrap text-xs font-medium leading-4" title={statusTitle}>
+```
+
+同时生成完整 `statusTitle`：
+
+- 供应商状态
+- 已报价状态
+- 已补充
+- 无法报价
+- 询价关闭
+
+这样列表中显示为单行省略号，不再撑宽表格；鼠标悬浮仍可看到完整状态文本。
+
+### 已确认清理
+
+以下旧方案/残留不再出现在询报价表格链路中：
+
+```bash
+rg -n "inq-col|w-\\[[0-9]+%\\]|min-w-full table-fixed" src/features/inquiry src/app/globals.css -S
+```
+
+预期：无匹配。
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run build
+git diff --check
+```
+
+结果：
+
+- `npx tsc --noEmit` 通过。
+- `npm run build` 通过，仅有项目既有 lint warnings。
+- `git diff --check` 通过。
+- 本地浏览器访问 `/inquiry` 时因当前会话未登录，被中间件重定向到登录页；未能直接完成带真实数据的窄屏截图验证。
+
+### 实际落地
+
+- `InquiryTable.tsx`：`min-w-full` 改为 `w-full`，表头补充溢出约束，小屏隐藏删除列表头文字。
+- `InquiryRow.tsx`：所有参与列宽计算的单元格补齐 `overflow-hidden / truncate / min-w-0 / max-w-full`。
+- `InquiryQuoteStatusDisplay.tsx`：状态串限制在列内单行省略，并补充完整 `title`。
+
+---
+
+## TASK-50 ✅：客户管理页面全面优化
+
+> 工作目录：`/Users/roger/website/luonet-vercel`
+> 技术栈：Next.js 14 App Router · TypeScript 5 strict · Tailwind CSS 3 · localStorage primary · Cloudflare D1 backup
+
+---
+
+### 页面结构 ASCII 图
+
+```
+/customer  (CustomerPage.tsx)
+┌─────────────────────────────────────────────────────────────────┐
+│ AppLayout                                                        │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Header Bar                                               │   │
+│  │  [客户管理]            [🔄刷新]  [+ 添加]               │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐                   │
+│  │ 总客户  │ │ 供应商  │ │ 收货人  │ │ 本月新增│  Stats Cards      │
+│  │   12   │ │   5    │ │   3    │ │   2    │                   │
+│  └────────┘ └────────┘ └────────┘ └────────┘                   │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ CustomerTabs                                             │   │
+│  │  [客户▼] [供应商] [收货人] [新增追踪]                    │   │
+│  │──────────────────────────────────────────────────────────│   │
+│  │ FilterChipBar (客户 tab 专用)                            │   │
+│  │  [全部 12] [高活跃 3] [需跟进 5] [本月 2]               │   │
+│  │  排序: [最近创建▼]  视图: [⊞][☰]  [🔍搜索...]          │   │
+│  │──────────────────────────────────────────────────────────│   │
+│  │ 内容区域 p-6                                             │   │
+│  │  Grid模式: 卡片网格(头像+名称+联系+活跃度+操作按钮)     │   │
+│  │  List模式: 表格(客户名|联系方式|活跃度|创建时间|操作)   │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  CustomerModal (showModal=true 时覆盖)                          │
+│  max-h-[85vh] overflow-y-auto max-w-2xl                         │
+│  CustomerForm: 公司名/简称/联系人/邮件/电话/地址/联系人数组      │
+└─────────────────────────────────────────────────────────────────┘
+
+/customer/detail?id=X&name=Y  (CustomerDetailPage.tsx)
+┌─────────────────────────────────────────────────────────────────┐
+│ AppLayout  面包屑: 首页 > 客户管理 > [客户名]                    │
+│  Tab Nav: [📅 时间轴]  [🕐 跟进记录]                            │
+│  CustomerTimeline (报价/订单/自定义事件时间轴)                    │
+│  FollowUpManager  (待处理/完成跟进 + 新增表单)                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 数据流泳道图
+
+```
+  用户操作      CustomerPage       useCustomerData    customerService    localStorage      D1 Cloud
+     │               │                   │                  │                 │               │
+     │  打开页面      │                   │                  │                 │               │
+     │──────────────►│ useEffect ────────►│                  │                 │               │
+     │               │                   │── getAllCustomers►│                 │               │
+     │               │                   │                  │── getItem ──────►│               │
+     │               │                   │◄── Customer[] ───│◄── JSON.parse ──│               │
+     │◄── 渲染列表 ──│◄── setState ──────│                  │                 │               │
+     │               │                   │                  │                 │               │
+     │  点击添加      │                   │                  │                 │               │
+     │──────────────►│ setShowModal=true  │                  │                 │               │
+     │  填写提交      │                   │                  │                 │               │
+     │──────────────►│ validateForm()     │                  │                 │               │
+     │               │── saveCustomer() ─────────────────────►── setItem ──────►               │
+     │               │── refreshData() ──►│                  │                 │               │
+     │               │    (useAutoSync后台静默同步)           │                 │──────────────►│
+     │               │                   │                  │                 │               │
+     │  点击查看详情  │                   │                  │                 │               │
+     │──────────────►│ router.push(/customer/detail?id=X)    │                 │               │
+```
+
+---
+
+### 现存问题
+
+1. `window.confirm()` 用于删除/重命名确认 — UX 差，无自定义样式
+2. 活跃度在 CustomerList 每个卡片分别读 localStorage（O(n×2) IO）
+3. CustomerPage.handleSearch 与 CustomerList 内部过滤双层冗余
+4. 详情页 URL 用 customer.name 而非 ID，改名后链接失效
+5. 详情页 (/customer/detail) 无客户基本信息展示区域
+6. D1 同步状态完全不可见，静默失败
+7. useCustomerData 和 CustomerPage 各有一层冗余 isClient state
+
+---
+
+### TASK-50-A：自定义删除确认对话框（替换 window.confirm）
+
+**优先级：高**
+
+**目标：** 用 React Modal 替换所有 `window.confirm()` 调用。
+
+**新建文件：** `src/components/ui/ConfirmDialog.tsx`
+
+```tsx
+interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  description: string;   // whitespace-pre-line 显示换行
+  confirmLabel?: string; // 默认"确认"
+  variant?: 'danger' | 'default';  // danger=红色按钮
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+```
+
+样式要求：
+- 遮罩 `fixed inset-0 bg-black/50 flex items-center justify-center z-50`
+- 卡片 `bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl`
+- danger 确认按钮：`bg-red-600 hover:bg-red-700 text-white`
+- 支持 Escape 键取消
+- 支持点击遮罩取消
+
+**修改：** `src/features/customer/app/CustomerPage.tsx`
+
+在 CustomerPageContent 中增加 confirm 状态：
+```tsx
+const [confirmState, setConfirmState] = useState<{
+  open: boolean;
+  title: string;
+  description: string;
+  variant: 'danger' | 'default';
+  resolve: (ok: boolean) => void;
+} | null>(null);
+
+// 提供 showConfirm 工具函数
+const showConfirm = useCallback((opts: {
+  title: string;
+  description: string;
+  variant?: 'danger' | 'default';
+}): Promise<boolean> => {
+  return new Promise((resolve) => {
+    setConfirmState({ open: true, ...opts, variant: opts.variant ?? 'default', resolve });
+  });
+}, []);
+```
+
+将 `showConfirm` 作为参数传给 `useCustomerActions(showConfirm)`。
+
+**修改：** `src/features/customer/hooks/useCustomerActions.ts`
+
+函数签名改为：
+```ts
+export function useCustomerActions(
+  showConfirm: (opts: { title: string; description: string; variant?: 'danger' | 'default' }) => Promise<boolean>
+)
+```
+
+将所有 `confirm(...)` 替换为 `await showConfirm(...)` 调用，`alert(...)` 替换为 toast 或 console.error（暂时保留 alert 可接受）。
+
+**验收：** `grep -r "window.confirm\|window.alert" src/features/customer` 无结果。
+
+---
+
+### TASK-50-B：活跃度批量计算缓存
+
+**优先级：中**
+
+**目标：** 消除 CustomerList 渲染时 O(n) 次 localStorage 读取。
+
+**修改：** `src/features/customer/services/timelineService.ts`
+
+新增方法：
+```ts
+// TimelineService
+static getCountsByCustomer(): Map<string, number> {
+  const all = this.getAllEvents();
+  const map = new Map<string, number>();
+  for (const e of all) map.set(e.customerId, (map.get(e.customerId) ?? 0) + 1);
+  return map;
+}
+
+// FollowUpService
+static getCountsByCustomer(): Map<string, number> {
+  const all = this.getAllFollowUps();
+  const map = new Map<string, number>();
+  for (const f of all) map.set(f.customerId, (map.get(f.customerId) ?? 0) + 1);
+  return map;
+}
+```
+
+**修改：** `src/features/customer/components/CustomerList.tsx`
+
+```tsx
+// 组件顶层一次性计算
+const timelineCounts = useMemo(() => TimelineService.getCountsByCustomer(), []);
+const followUpCounts = useMemo(() => FollowUpService.getCountsByCustomer(), []);
+
+// 将 counts 传入 getCustomerActivity
+function getCustomerActivity(customer: Customer, tlCount: number, fuCount: number) { ... }
+```
+
+**验收：** 渲染 50 个客户卡片，localStorage.getItem 只被调用 2 次（用 Performance Timeline 验证）。
+
+---
+
+### TASK-50-C：搜索逻辑去重 + 防抖
+
+**优先级：中**
+
+**修改：** `src/features/customer/app/CustomerPage.tsx`
+
+```tsx
+// handleSearch 只做 analytics，不过滤数据
+const handleSearch = (query: string) => {
+  setSearchQuery(query);
+  analytics.trackSearch(query, customers.length);
+};
+```
+
+**修改：** `src/features/customer/components/FilterChipBar.tsx`
+
+search input 改用防抖：
+```tsx
+import { useState, useEffect } from 'react';
+
+const [localQuery, setLocalQuery] = useState(searchQuery);
+useEffect(() => {
+  const timer = setTimeout(() => onSearchChange(localQuery), 300);
+  return () => clearTimeout(timer);
+}, [localQuery, onSearchChange]);
+
+// input 绑定 localQuery，不绑定 searchQuery
+<input value={localQuery} onChange={e => setLocalQuery(e.target.value)} ... />
+```
+
+**验收：** 连续输入 5 个字符只触发 1 次过滤重渲染（300ms 后）。
+
+---
+
+### TASK-50-D：详情页 URL 改用客户 ID
+
+**优先级：低（功能正确性）**
+
+**修改：** `src/features/customer/app/CustomerPage.tsx`
+
+```tsx
+const handleViewDetail = (customer: Customer) => {
+  const displayName = customer.name.split('\n')[0] || customer.name;
+  router.push(`/customer/detail?id=${encodeURIComponent(customer.id)}&name=${encodeURIComponent(displayName)}`);
+};
+```
+
+**修改：** `src/features/customer/services/customerService.ts`
+
+新增：
+```ts
+export const customerService = {
+  ...existing methods,
+  getCustomerById(id: string): Customer | null {
+    const all = this.getAllCustomers();
+    return all.find(c => c.id === id) ?? null;
+  }
+};
+```
+
+**修改：** `src/features/customer/app/CustomerDetailPage.tsx`
+
+用 `customerService.getCustomerById(id)` 而非仅靠 URL 的 name 参数。
+
+**验收：** 客户改名后，原有详情页 URL（携带旧名字）依然能加载正确客户信息。
+
+---
+
+### TASK-50-E：详情页增加基本信息卡片
+
+**优先级：高（功能缺口）**
+
+**新建：** `src/features/customer/components/CustomerInfoCard.tsx`
+
+显示内容：
+```
+┌──────────────────────────────────────────────────────────┐
+│  [头像]  公司名称（company 或 name首行）      [✏️ 编辑]  │
+│          简称：companyShortName                           │
+│  📧 email   📞 phone   📍 address                        │
+│  联系人：联系人1(简称) · 联系人2(简称)                   │
+└──────────────────────────────────────────────────────────┘
+```
+
+Props：
+```tsx
+interface CustomerInfoCardProps {
+  customer: Customer;
+  onEdit: () => void;
+}
+```
+
+样式：`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6`
+
+**修改：** `src/features/customer/app/CustomerDetailPage.tsx`
+
+- 顶部（tab nav 上方）渲染 `<CustomerInfoCard>`
+- 增加 `showEditModal` state
+- 复用 `CustomerModal` + `CustomerForm` + `useCustomerForm` + `useCustomerActions`
+- 编辑保存后刷新 customer 数据
+
+**验收：** 详情页顶部正确显示客户所有字段；编辑保存后立即更新不需刷新页面。
+
+---
+
+### 不要改动
+
+- `CustomerForm.tsx` 分区双列网格（TASK-31 完成）
+- `CustomerModal` 的 `max-h-[85vh] overflow-y-auto max-w-2xl`
+- `Contact[]` 动态增删逻辑（TASK-34 完成）
+- localStorage 键名：`customer_management`、`customer_timeline_events`、`customer_followups`
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+grep -r "window\.confirm\|window\.alert" src/features/customer  # 应无结果
+```
+
+### 实际落地
+
+- 新增 `src/components/ui/ConfirmDialog.tsx`：统一确认弹窗，支持 danger/default、Escape 取消、点击遮罩取消。
+- `src/features/customer/hooks/useCustomerActions.ts`：所有 `confirm(...)` 已替换为 `await showConfirm(...)`；保存/删除失败的 `alert` 改为 `console.error`。
+- `src/features/customer/app/CustomerPage.tsx`：增加 `showConfirm` 状态流，删除/重命名确认改走 React 弹窗；详情页跳转改为 `id=${customer.id}`，`name` 仅用于显示。
+- `src/features/customer/services/timelineService.ts`：新增 `getCountsByCustomer()`，并补充 `getEventsByCustomerIds()` / `getFollowUpsByCustomerIds()`，用于 ID 化后的旧数据兼容。
+- `src/features/customer/components/CustomerList.tsx`：活跃度、需跟进、活跃排序改为使用批量 Map 统计；兼容旧数据中以客户名作为 key 的时间轴/跟进记录。
+- `src/features/customer/components/FilterChipBar.tsx`：搜索框增加 300ms 防抖，输入过程中不立即触发父级过滤。
+- `src/features/customer/app/CustomerDetailPage.tsx`：详情页按客户 ID 回读客户资料，旧链接按客户名兜底；顶部增加基本信息卡片；编辑保存后重新读取客户数据并即时刷新。
+- 新增 `src/features/customer/components/CustomerInfoCard.tsx`：展示客户基础资料、联系方式、地址、联系人和编辑入口。
+- `src/features/customer/hooks/useCustomerTimeline.ts`、`useCustomerFollowUp.ts`、`CustomerTimeline.tsx`、`FollowUpManager.tsx`：主 key 使用客户 ID，同时用客户名作为旧数据兼容别名。
+
+### 验证结果
+
+```bash
+npx tsc --noEmit
+rg -n "window\.confirm|window\.alert|\bconfirm\(" src/features/customer -S
+```
+
+结果：
+
+- TypeScript 检查通过。
+- 客户模块内已无 `window.confirm` / `window.alert` / 裸 `confirm(...)`。
+- 尚未完成带登录态的浏览器手测，后续发布前建议在 `/customer` 与 `/customer/detail?id=...` 各走一遍添加、删除、编辑和详情页保存流程。
