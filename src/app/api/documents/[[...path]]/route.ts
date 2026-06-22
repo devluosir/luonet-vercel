@@ -51,11 +51,27 @@ async function proxyDocumentRequest(request: NextRequest, pathSegments: string[]
       body,
     });
   } catch (error) {
-    console.error('Document proxy request failed:', error);
+    console.error('[documents proxy] fetch failed:', error);
     return NextResponse.json({ error: 'Worker 请求失败' }, { status: 502 });
   }
 
-  const data = await workerResp.json();
+  // 安全解析响应体：Worker 偶尔会返回非 JSON（Cloudflare 错误页面）
+  let data: unknown;
+  try {
+    data = await workerResp.json();
+  } catch {
+    const raw = await workerResp.text().catch(() => '');
+    console.error(`[documents proxy] Worker non-JSON response (${workerResp.status}):`, raw.slice(0, 500));
+    return NextResponse.json(
+      { error: 'Worker响应格式错误', status: workerResp.status, detail: raw.slice(0, 200) },
+      { status: 502 },
+    );
+  }
+
+  if (!workerResp.ok) {
+    console.error(`[documents proxy] Worker error ${workerResp.status}:`, JSON.stringify(data));
+  }
+
   return NextResponse.json(data, { status: workerResp.status });
 }
 

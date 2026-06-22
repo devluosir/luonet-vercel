@@ -131,6 +131,13 @@ async function pushLocalDocsToD1(deletedIds: Set<string>): Promise<void> {
   const shouldPush = (id: string, d1Ids: Set<string>, d1Ok: boolean) =>
     d1Ok && Boolean(id) && !d1Ids.has(id) && !pending.has(id) && !deletedIds.has(id);
 
+  console.log(
+    `[d1Push] 本地记录: quotation+conf=${quotLocal.length} invoice=${invLocal.length}` +
+    ` packing=${packLocal.length} purchase=${purchLocal.length}` +
+    ` | D1已有: quot+conf=${quotD1Ids.size} invoice=${invD1Ids.size}` +
+    ` packing=${packD1Ids.size} purchase=${purchD1Ids.size}`,
+  );
+
   for (const item of quotLocal) {
     const id = getString(item.id);
     if (!shouldPush(id, quotD1Ids, qRes.ok && cRes.ok)) continue;
@@ -333,7 +340,9 @@ export async function pullAllFromD1(): Promise<void> {
 
     // 先推：本地有但 D1 可能没有的记录，防止本地有效记录被下一步 pull 误删
     await pushLocalDocsToD1(deletedIds);
-    // pushLocalDocsToD1 会将补推记录加入队列，merge 前重新读取以保护它们
+    // pushLocalDocsToD1 内部调用 d1SyncDocument（fire-and-forget + 入队）
+    // 再次 flush 确保刚入队的补推请求在 pull 前全部完成
+    await flushPendingQueue();
     pendingIds = getPendingIds();
 
     const [quotRes, confRes, invRes, packRes, purchRes] = await Promise.all([
@@ -343,6 +352,12 @@ export async function pullAllFromD1(): Promise<void> {
       fetchAll<D1Doc>('/api/documents?type=packing', 'documents'),
       fetchAll<D1Doc>('/api/documents?type=purchase', 'documents'),
     ]);
+
+    console.log(
+      `[d1Pull] D1数据: quotation=${quotRes.data.length} confirmation=${confRes.data.length}` +
+      ` invoice=${invRes.data.length} packing=${packRes.data.length} purchase=${purchRes.data.length}` +
+      ` (ok=${quotRes.ok})`,
+    );
 
     mergeIntoStorage(
       'quotation_history',

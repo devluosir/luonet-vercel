@@ -131,12 +131,14 @@ async function executeOp(op: PendingOp): Promise<boolean> {
       });
     }
     if (!resp.ok) {
-      console.warn(`[d1Sync] ${op.kind} ${op.action} ${op.payload.id} → HTTP ${resp.status}`);
+      const errText = await resp.text().catch(() => '');
+      console.warn(`[d1Sync] ✗ ${op.kind} ${op.action} ${op.payload.id} → HTTP ${resp.status}`, errText);
       return false;
     }
+    console.log(`[d1Sync] ✓ ${op.kind} ${op.action} ${op.payload.id}`);
     return true;
   } catch (err) {
-    console.warn(`[d1Sync] ${op.kind} ${op.action} ${op.payload.id} → 网络错误:`, err);
+    console.warn(`[d1Sync] ✗ ${op.kind} ${op.action} ${op.payload.id} → 网络错误:`, err);
     return false;
   }
 }
