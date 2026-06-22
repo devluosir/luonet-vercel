@@ -4,9 +4,6 @@ import { Providers } from './providers';
 import ClientInitializer from '@/components/ClientInitializer';
 
 
-// 强制动态渲染，确保 cookie 读取正确
-export const dynamic = 'force-dynamic';
-
 export const metadata: Metadata = {
   title: 'Luo & Company - 管理系统',
   description: 'Luo & Company 提供专业的报价单、销售确认单和发票管理系统，帮助企业管理业务流程，提高工作效率。',

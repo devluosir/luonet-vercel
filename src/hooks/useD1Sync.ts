@@ -19,12 +19,13 @@ export function useD1Sync(): void {
     if (syncedUserId === userId) return;
     syncedUserId = userId;
 
+    // 延迟 4 秒，避免与首屏渲染及其他初始化请求争抢网络
     const timer = setTimeout(() => {
       prepareD1DocumentSyncForUser(userId);
       pullAllFromD1().catch(() => {
         // 静默：D1 拉取失败不影响 localStorage 主流程。
       });
-    }, 1000);
+    }, 4000);
 
     return () => clearTimeout(timer);
   }, [session?.user?.id, session?.user?.name, session?.user?.username, status]);

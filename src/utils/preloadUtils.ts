@@ -304,29 +304,9 @@ export class PreloadManager {
   }
 
   // 预加载表单页面
+  // fetch 整页 HTML 对 Next.js 路由无益且增加服务器负担，已停用
   private async preloadFormPages(): Promise<void> {
-    console.log('预加载表单页面...');
-    
-    // 根据权限动态确定需要预加载的页面
-    const formPages = this.getFormPagesByPermissions();
-    
-    if (formPages.length === 0) {
-      console.log('没有表单页面权限，跳过表单页面预加载');
-      return;
-    }
-
-    console.log(`预加载表单页面: ${formPages.join(', ')}`);
-
-    const pagePromises = formPages.map(async (path) => {
-      try {
-        // 使用多种方式预加载页面
-        await this.preloadPageWithMultipleMethods(path);
-      } catch (error) {
-        console.warn(`页面预加载失败: ${path}`, error);
-      }
-    });
-
-    await Promise.all(pagePromises);
+    return;
   }
 
   // ✅ 优化：根据权限获取表单页面（添加缓存）

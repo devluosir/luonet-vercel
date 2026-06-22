@@ -7,7 +7,6 @@ import { AppLayout } from '@/components/layout';
 import { usePermissionStore } from '@/lib/permissions';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
 import { usePermissionRefresh } from '@/hooks/usePermissionRefresh';
-import { preloadManager } from '@/utils/preloadUtils';
 import { 
   QUICK_CREATE_MODULES, 
   TOOL_MODULES, 
@@ -69,15 +68,6 @@ export default function DashboardPage() {
   // 初始化逻辑
   useEffect(() => {
     setMounted(true);
-    
-    // 延迟预加载，避免阻塞初始渲染
-    setTimeout(() => {
-      if (!preloadManager.isPreloaded()) {
-        preloadManager.preloadAllResources().catch(error => {
-          console.error('自动预加载失败:', error);
-        });
-      }
-    }, 1000);
   }, []);
 
   // 优化的模块点击处理
