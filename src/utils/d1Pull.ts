@@ -22,6 +22,7 @@ type D1Doc = {
   customer_name: string | null;
   total_amount: number | null;
   currency: string;
+  status: string;
   data: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -116,11 +117,11 @@ async function pushLocalDocsToD1(deletedIds: Set<string>): Promise<void> {
   const purchLocal = readLocalArray('purchase_history');
 
   const [qRes, cRes, iRes, pkRes, puRes] = await Promise.all([
-    fetchAll<{ id: string }>('/api/documents?type=quotation', 'documents'),
-    fetchAll<{ id: string }>('/api/documents?type=confirmation', 'documents'),
-    fetchAll<{ id: string }>('/api/documents?type=invoice', 'documents'),
-    fetchAll<{ id: string }>('/api/documents?type=packing', 'documents'),
-    fetchAll<{ id: string }>('/api/documents?type=purchase', 'documents'),
+    fetchAll<{ id: string }>('/api/documents?type=quotation&status=all', 'documents'),
+    fetchAll<{ id: string }>('/api/documents?type=confirmation&status=all', 'documents'),
+    fetchAll<{ id: string }>('/api/documents?type=invoice&status=all', 'documents'),
+    fetchAll<{ id: string }>('/api/documents?type=packing&status=all', 'documents'),
+    fetchAll<{ id: string }>('/api/documents?type=purchase&status=all', 'documents'),
   ]);
 
   const quotD1Ids = new Set([...qRes.data, ...cRes.data].map((doc) => doc.id));
@@ -350,11 +351,28 @@ export async function pullAllFromD1(): Promise<void> {
     pendingIds = getPendingIds();
 
     const [quotRes, confRes, invRes, packRes, purchRes] = await Promise.all([
-      fetchAll<D1Doc>('/api/documents?type=quotation', 'documents'),
-      fetchAll<D1Doc>('/api/documents?type=confirmation', 'documents'),
-      fetchAll<D1Doc>('/api/documents?type=invoice', 'documents'),
-      fetchAll<D1Doc>('/api/documents?type=packing', 'documents'),
-      fetchAll<D1Doc>('/api/documents?type=purchase', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=quotation&status=all', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=confirmation&status=all', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=invoice&status=all', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=packing&status=all', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=purchase&status=all', 'documents'),
+    ]);
+
+    const remoteDeletedIds = new Set(
+      [
+        ...quotRes.data,
+        ...confRes.data,
+        ...invRes.data,
+        ...packRes.data,
+        ...purchRes.data,
+      ]
+        .filter((doc) => doc.status === 'deleted')
+        .map((doc) => doc.id),
+    );
+    remoteDeletedIds.forEach(recordDeletedDocId);
+    const effectiveDeletedIds = new Set([
+      ...Array.from(deletedIds),
+      ...Array.from(remoteDeletedIds),
     ]);
 
     console.log(
@@ -368,11 +386,11 @@ export async function pullAllFromD1(): Promise<void> {
       [...quotRes.data, ...confRes.data].map(docToQuotationHistory),
       quotRes.ok && confRes.ok,
       pendingIds,
-      deletedIds,
+      effectiveDeletedIds,
     );
-    mergeIntoStorage('invoice_history', invRes.data.map(docToInvoiceHistory), invRes.ok, pendingIds, deletedIds);
-    mergeIntoStorage('packing_history', packRes.data.map(docToPackingHistory), packRes.ok, pendingIds, deletedIds);
-    mergeIntoStorage('purchase_history', purchRes.data.map(docToPurchaseHistory), purchRes.ok, pendingIds, deletedIds);
+    mergeIntoStorage('invoice_history', invRes.data.map(docToInvoiceHistory), invRes.ok, pendingIds, effectiveDeletedIds);
+    mergeIntoStorage('packing_history', packRes.data.map(docToPackingHistory), packRes.ok, pendingIds, effectiveDeletedIds);
+    mergeIntoStorage('purchase_history', purchRes.data.map(docToPurchaseHistory), purchRes.ok, pendingIds, effectiveDeletedIds);
 
     const [custRes, suppRes, consRes] = await Promise.all([
       fetchAll<D1Customer>('/api/customers?type=customer', 'customers'),
