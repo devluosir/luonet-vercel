@@ -20,7 +20,7 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
       className="group cursor-pointer border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/40"
       onClick={() => onEdit(record)}
     >
-      <td className="inq-col-no px-3 py-2 text-sm">
+      <td className="px-3 py-2 text-sm">
         <div className="flex flex-col gap-0 leading-tight">
           <span className={`whitespace-nowrap font-mono leading-4 ${mainTextClass}`}>
             {record.inquiryNo}
@@ -35,10 +35,10 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
           </span>
         </div>
       </td>
-      <td className="inq-col-inquirer hidden whitespace-nowrap px-3 py-2 text-sm md:table-cell">
+      <td className="hidden whitespace-nowrap px-3 py-2 text-sm md:table-cell">
         <span className={mainTextClass}>{record.inquirer}</span>
       </td>
-      <td className="inq-col-custno hidden px-3 py-2 text-sm lg:table-cell">
+      <td className="hidden px-3 py-2 text-sm lg:table-cell">
         <span
           className={`line-clamp-2 max-w-none break-words leading-4 ${mainTextClass}`}
           title={record.customerNo}
@@ -46,7 +46,7 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
           {record.customerNo}
         </span>
       </td>
-      <td className="inq-col-desc px-3 py-2 text-sm">
+      <td className="px-3 py-2 text-sm">
         {/* 大屏：客户编号列可见，内容简述只显示 description */}
         <p className={`hidden lg:block max-w-none truncate ${mainTextClass}`} title={record.description}>
           {record.description}
@@ -56,10 +56,10 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
           {record.description?.trim() || record.customerNo}
         </p>
       </td>
-      <td className="inq-col-status px-3 py-2">
+      <td className="px-3 py-2">
         <InquiryQuoteStatusDisplay record={record} />
       </td>
-      <td className="inq-col-del whitespace-nowrap px-3 py-2 text-right">
+      <td className="whitespace-nowrap px-3 py-2 text-right">
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onDelete(record.id); }}

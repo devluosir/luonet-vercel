@@ -1,8 +1,26 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import type { InquiryRecord } from '../types';
 import { InquiryRow } from './InquiryRow';
+
+function useBreakpoint() {
+  const [bp, setBp] = useState<'sm' | 'md' | 'lg'>('lg');
+
+  useEffect(() => {
+    const update = () => {
+      const width = window.innerWidth;
+      setBp(width >= 1024 ? 'lg' : width >= 768 ? 'md' : 'sm');
+    };
+
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  return bp;
+}
 
 interface InquiryTableProps {
   records: InquiryRecord[];
@@ -23,6 +41,20 @@ export function InquiryTable({
   emptyMessage = '暂无询报价记录',
   emptySubMessage = '点击"新增询价"后，会在这里登记供应商询价和客户报价状态。',
 }: InquiryTableProps) {
+  const bp = useBreakpoint();
+  const colgroup = (
+    <colgroup>
+      <col style={{ width: bp === 'lg' ? '10%' : bp === 'md' ? '15%' : '22%' }} />
+      {bp !== 'sm' && (
+        <col style={{ width: bp === 'lg' ? '12%' : '13%' }} />
+      )}
+      {bp === 'lg' && <col style={{ width: '24%' }} />}
+      <col style={{ width: bp === 'lg' ? '22%' : bp === 'md' ? '22%' : '18%' }} />
+      <col style={{ width: bp === 'lg' ? '28%' : bp === 'md' ? '43%' : '52%' }} />
+      <col style={{ width: bp === 'lg' ? '4%' : bp === 'md' ? '7%' : '8%' }} />
+    </colgroup>
+  );
+
   if (records.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-gray-700 dark:bg-[#2C2C2E]">
@@ -36,9 +68,10 @@ export function InquiryTable({
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <div className="overflow-x-auto">
         <table className="min-w-full table-fixed divide-y divide-gray-100 dark:divide-gray-800">
+          {colgroup}
           <thead className="bg-gray-50 dark:bg-gray-900/50">
             <tr>
-              <th className="inq-col-no px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 <button
                   type="button"
                   onClick={onSortToggle}
@@ -53,19 +86,19 @@ export function InquiryTable({
                   )}
                 </button>
               </th>
-              <th className="inq-col-inquirer hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:table-cell">
+              <th className="hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:table-cell">
                 询价人
               </th>
-              <th className="inq-col-custno hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 lg:table-cell">
+              <th className="hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 lg:table-cell">
                 客户编号
               </th>
-              <th className="inq-col-desc px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 内容简述
               </th>
-              <th className="inq-col-status px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 询报价状态
               </th>
-              <th className="inq-col-del px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 操作
               </th>
             </tr>
