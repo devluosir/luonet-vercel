@@ -1,6 +1,7 @@
 import { PackingData, PackingHistory } from '../types';
 import { getLocalStorageJSON } from '../../../utils/safeLocalStorage';
 import { calculateTotalAmount } from '../utils/calculations';
+import { d1SyncDocument } from '@/utils/d1Sync';
 
 const STORAGE_KEY = 'packing_history';
 
@@ -42,6 +43,16 @@ export const savePackingHistory = (data: PackingData, existingId?: string): Pack
         };
         history[index] = updatedHistory;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        // D1 双写（fire-and-forget）
+        d1SyncDocument('update', {
+          id: existingId,
+          type: 'packing',
+          doc_no: data.invoiceNo || '',
+          customer_name: data.consignee.name,
+          total_amount: totalAmount,
+          currency: data.currency,
+          data,
+        });
         return updatedHistory;
       }
     }
@@ -73,6 +84,19 @@ export const savePackingHistory = (data: PackingData, existingId?: string): Pack
         });
         
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
+        // D1 双写（fire-and-forget）
+        const updated = updatedHistory.find(item => item.id === existingPacking.id);
+        if (updated) {
+          d1SyncDocument('update', {
+            id: updated.id,
+            type: 'packing',
+            doc_no: data.invoiceNo || '',
+            customer_name: data.consignee.name,
+            total_amount: totalAmount,
+            currency: data.currency,
+            data,
+          });
+        }
         return updatedHistory.find(item => item.id === existingPacking.id) || null;
       }
     }
@@ -93,6 +117,16 @@ export const savePackingHistory = (data: PackingData, existingId?: string): Pack
 
     history.unshift(newHistory);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    // D1 双写（fire-and-forget）
+    d1SyncDocument('create', {
+      id: newHistory.id,
+      type: 'packing',
+      doc_no: data.invoiceNo || '',
+      customer_name: data.consignee.name,
+      total_amount: totalAmount,
+      currency: data.currency,
+      data,
+    });
     return newHistory;
   } catch (error) {
     console.error('Error saving packing history:', error);
@@ -133,6 +167,8 @@ export const deletePackingHistory = (id: string): boolean => {
     const history = getPackingHistory();
     const filteredHistory = history.filter(item => item.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredHistory));
+    // D1 删除（fire-and-forget）
+    d1SyncDocument('delete', { id, type: 'packing', doc_no: '', data: null });
     return true;
   } catch (error) {
     console.error('Error deleting packing history:', error);

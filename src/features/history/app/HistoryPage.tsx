@@ -21,6 +21,7 @@ import {
   useHistoryFilters,
   useHistorySelectedCount,
 } from '../state/history.selectors';
+import { pullAllFromD1 } from '@/utils/d1Pull';
 
 // 动态导入Tab组件
 const QuotationHistoryTab = dynamic(() => import('@/app/history/tabs/QuotationHistoryTab'), {
@@ -108,6 +109,19 @@ export function HistoryPage() {
 
   useEffect(() => {
     setMounted(true);
+
+    // 页面挂载时从 D1 拉取最新数据（跨设备同步）
+    pullAllFromD1()
+      .then(() => {
+        handleRefresh();
+        // 触发自定义事件通知所有 key 已更新
+        ['quotation_history', 'packing_history', 'invoice_history', 'purchase_history'].forEach(key => {
+          window.dispatchEvent(new CustomEvent('customStorageChange', { detail: { key } }));
+        });
+      })
+      .catch(() => {
+        // 拉取失败时静默，继续显示本地数据
+      });
     
     // 监听localStorage变化，自动刷新数据
     const handleStorageChange = (event: StorageEvent) => {

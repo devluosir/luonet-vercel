@@ -1,6 +1,7 @@
 /**
  * 从 D1 API 拉取数据并合并到 localStorage。
- * 合并规则：D1 更新时间 > localStorage → 覆盖；否则保留本地。
+ * 合并规则：D1 为权威来源；D1 请求成功后，本地缺失的远端记录会补入，
+ * 远端已删除的本地旧记录会移除，2 分钟内新建的本地记录临时保留。
  * 仅在用户已登录时通过 /api/documents 和 /api/customers 代理调用。
  */
 
@@ -54,14 +55,16 @@ function toOptionalString(value: unknown): string | undefined {
 async function fetchAll<T>(
   url: string,
   key: string,
-): Promise<T[]> {
+): Promise<{ data: T[]; ok: boolean }> {
   const results: T[] = [];
   let offset = 0;
   const limit = 500;
+  let ok = false;
 
   while (true) {
     const resp = await fetch(`${url}&limit=${limit}&offset=${offset}`);
     if (!resp.ok) break;
+    ok = true;
 
     const json = await resp.json();
     const items: T[] = json[key] ?? [];
@@ -71,27 +74,34 @@ async function fetchAll<T>(
     offset += limit;
   }
 
-  return results;
+  return { data: results, ok };
 }
 
 function mergeIntoStorage<T extends LocalStorageItem>(
   storageKey: string,
   incoming: T[],
+  d1Ok: boolean,
 ): void {
+  // D1 请求失败时不动 localStorage，避免误删本地数据
+  if (!d1Ok) return;
+
   const raw = localStorage.getItem(storageKey);
   const existing: T[] = raw ? JSON.parse(raw) : [];
-  const map = new Map<string, T>(existing.map((item) => [item.id, item]));
+  const incomingIds = new Set(incoming.map((item) => item.id));
+  const now = Date.now();
+  const TWO_MINUTES = 2 * 60 * 1000;
 
-  for (const item of incoming) {
-    const local = map.get(item.id);
-    if (!local) {
-      map.set(item.id, item);
-    } else {
-      const localTime = new Date(local.updatedAt ?? local.updated_at ?? 0).getTime();
-      const remoteTime = new Date(item.updatedAt ?? item.updated_at ?? 0).getTime();
-      if (remoteTime > localTime) {
+  // D1 记录为权威来源，先全部放入 map
+  const map = new Map<string, T>(incoming.map((item) => [item.id, item]));
+
+  // 保留本地有、D1 没有、但 2 分钟内刚创建的记录（double-write 可能还未到达 D1）
+  for (const item of existing) {
+    if (!incomingIds.has(item.id)) {
+      const createdAt = new Date(item.createdAt ?? item.created_at ?? 0).getTime();
+      if (now - createdAt < TWO_MINUTES) {
         map.set(item.id, item);
       }
+      // 超过 2 分钟且 D1 没有 → 视为已在其他设备删除，不保留
     }
   }
 
@@ -198,7 +208,7 @@ export async function pullAllFromD1(): Promise<void> {
   if (typeof window === 'undefined') return;
 
   try {
-    const [quotations, confirmations, invoices, packings, purchases] = await Promise.all([
+    const [quotRes, confRes, invRes, packRes, purchRes] = await Promise.all([
       fetchAll<D1Doc>('/api/documents?type=quotation', 'documents'),
       fetchAll<D1Doc>('/api/documents?type=confirmation', 'documents'),
       fetchAll<D1Doc>('/api/documents?type=invoice', 'documents'),
@@ -208,21 +218,22 @@ export async function pullAllFromD1(): Promise<void> {
 
     mergeIntoStorage(
       'quotation_history',
-      [...quotations, ...confirmations].map(docToQuotationHistory),
+      [...quotRes.data, ...confRes.data].map(docToQuotationHistory),
+      quotRes.ok && confRes.ok,
     );
-    mergeIntoStorage('invoice_history', invoices.map(docToInvoiceHistory));
-    mergeIntoStorage('packing_history', packings.map(docToPackingHistory));
-    mergeIntoStorage('purchase_history', purchases.map(docToPurchaseHistory));
+    mergeIntoStorage('invoice_history', invRes.data.map(docToInvoiceHistory), invRes.ok);
+    mergeIntoStorage('packing_history', packRes.data.map(docToPackingHistory), packRes.ok);
+    mergeIntoStorage('purchase_history', purchRes.data.map(docToPurchaseHistory), purchRes.ok);
 
-    const [customers, suppliers, consignees] = await Promise.all([
+    const [custRes, suppRes, consRes] = await Promise.all([
       fetchAll<D1Customer>('/api/customers?type=customer', 'customers'),
       fetchAll<D1Customer>('/api/customers?type=supplier', 'customers'),
       fetchAll<D1Customer>('/api/customers?type=consignee', 'customers'),
     ]);
 
-    mergeIntoStorage('customer_management', customers.map((c) => d1CustomerToLocal(c, 'customer')));
-    mergeIntoStorage('supplier_management', suppliers.map((c) => d1CustomerToLocal(c, 'supplier')));
-    mergeIntoStorage('consignee_management', consignees.map((c) => d1CustomerToLocal(c, 'consignee')));
+    mergeIntoStorage('customer_management', custRes.data.map((c) => d1CustomerToLocal(c, 'customer')), custRes.ok);
+    mergeIntoStorage('supplier_management', suppRes.data.map((c) => d1CustomerToLocal(c, 'supplier')), suppRes.ok);
+    mergeIntoStorage('consignee_management', consRes.data.map((c) => d1CustomerToLocal(c, 'consignee')), consRes.ok);
 
     console.log('[d1Pull] 同步完成');
   } catch (err) {

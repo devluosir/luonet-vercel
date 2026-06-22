@@ -2,6 +2,7 @@ import { InvoiceData, InvoiceHistoryItem } from '../types';
 import { getTotalAmount, calculatePaymentDate, numberToWords } from '../utils/calculations';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { addInvoiceHistory, getInvoiceHistory, saveInvoiceHistory } from '@/utils/invoiceHistory';
+import { d1SyncDocument } from '@/utils/d1Sync';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -39,6 +40,19 @@ export class InvoiceService {
         
         const saved = saveInvoiceHistory(updatedHistory);
         if (saved) {
+          // D1 双写（fire-and-forget）
+          const updatedItem = updatedHistory.find(item => item.id === editId);
+          if (updatedItem) {
+            d1SyncDocument('update', {
+              id: editId,
+              type: 'invoice',
+              doc_no: data.invoiceNo,
+              customer_name: data.to,
+              total_amount: totalAmount,
+              currency: data.currency,
+              data: updatedItem,
+            });
+          }
           return { success: true, message: '保存成功' };
         } else {
           return { success: false, message: '保存失败' };
@@ -66,6 +80,16 @@ export class InvoiceService {
           
           const saved = saveInvoiceHistory(updatedHistory);
           if (saved) {
+            // D1 双写（fire-and-forget）
+            d1SyncDocument('update', {
+              id: existingInvoice.id,
+              type: 'invoice',
+              doc_no: data.invoiceNo,
+              customer_name: data.to,
+              total_amount: totalAmount,
+              currency: data.currency,
+              data: { ...existingInvoice, data, updatedAt: new Date().toISOString() },
+            });
             return { 
               success: true, 
               message: '保存成功',

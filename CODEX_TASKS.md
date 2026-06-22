@@ -8733,3 +8733,345 @@ git commit -m "perf: 移除外网依赖 — Google Fonts 改系统字体，清�
 - `src/features/customer/services/analytics.ts`：清空 `sendToAnalyticsService`，停止 gtag 调用和 `/api/analytics` 404 请求
 - `tailwind.config.ts`：未改（中文字体栈可选，保持现状）
 - `npx tsc --noEmit` + `npm run build` 均通过
+
+---
+
+## TASK-43：单据历史跨设备同步修复 ✅ 已完成
+
+**优先级**：🔴 紧急（核心功能缺失）
+**估时**：45 分钟
+**风险**：中（涉及数据合并逻辑，改完须全量测试各单据类型的增删改）
+
+### 背景与根因
+
+各用户的单据记录（报价/发票/装箱/采购）应在同用户多端之间增删改同步，但目前存在以下缺口：
+
+**同步缺口矩阵：**
+
+| 操作 | 报价/确认 | 发票 | 装箱单 | 采购单 |
+|------|-----------|------|--------|--------|
+| 新建 | ✅ | ✅ | ❌ 漏 | ✅ |
+| 修改 | ✅ | ❌ 漏 | ❌ 漏 | ✅ |
+| 删除 | ✅ | ✅ | ❌ 漏 | ✅ |
+
+**根因 1：装箱单 feature 用的是 `packingHistoryService.ts`（无 d1Sync），不是 `utils/packingHistory.ts`（有 d1Sync）**
+
+**根因 2：发票 update 路径绕过了 d1Sync**
+`invoice.service.ts` 的编辑路径直接调用 `saveInvoiceHistory()`（只写 localStorage），没有触发 `d1SyncDocument('update', ...)`
+
+**根因 3：`mergeIntoStorage` 只做 add/update，从不移除记录**
+设备 A 删除某条单据 → D1 里没了，但设备 B 的 localStorage 永远保留该记录
+
+**根因 4：History 页不触发 D1 拉取**
+页面只读 localStorage，设备 A 的改动必须等设备 B 重新登录才可见
+
+---
+
+### 改动 1：`src/utils/d1Pull.ts` — 修复 mergeIntoStorage 使删除可传播
+
+**核心思路：** 
+- `fetchAll` 区分"获取成功返回 0 条"和"请求失败"，用 `ok` 标记
+- `mergeIntoStorage` 在 D1 拉取成功后，移除本地有、D1 没有的记录（表示已在另一端删除）
+- 例外：本地记录在 2 分钟内刚创建的保留（为 D1 double-write 传播留窗口）
+
+找到 `fetchAll` 函数，将整个函数替换为：
+
+```typescript
+async function fetchAll<T>(
+  url: string,
+  key: string,
+): Promise<{ data: T[]; ok: boolean }> {
+  const results: T[] = [];
+  let offset = 0;
+  const limit = 500;
+  let ok = false;
+
+  while (true) {
+    const resp = await fetch(`${url}&limit=${limit}&offset=${offset}`);
+    if (!resp.ok) break;
+    ok = true;
+    const json = await resp.json();
+    const items: T[] = json[key] ?? [];
+    results.push(...items);
+    if (items.length < limit) break;
+    offset += limit;
+  }
+
+  return { data: results, ok };
+}
+```
+
+找到 `mergeIntoStorage` 函数，将整个函数替换为：
+
+```typescript
+function mergeIntoStorage<T extends LocalStorageItem>(
+  storageKey: string,
+  incoming: T[],
+  d1Ok: boolean,
+): void {
+  // D1 请求失败时不动 localStorage，避免误删本地数据
+  if (!d1Ok) return;
+
+  const raw = localStorage.getItem(storageKey);
+  const existing: T[] = raw ? JSON.parse(raw) : [];
+
+  const incomingIds = new Set(incoming.map((item) => item.id));
+  const now = Date.now();
+  const TWO_MINUTES = 2 * 60 * 1000;
+
+  // D1 记录为权威来源，先全部放入 map
+  const map = new Map<string, T>(incoming.map((item) => [item.id, item]));
+
+  // 保留本地有、D1 没有、但 2 分钟内刚创建的记录（double-write 可能还未到达 D1）
+  for (const item of existing) {
+    if (!incomingIds.has(item.id)) {
+      const createdAt = new Date(item.createdAt ?? item.created_at ?? 0).getTime();
+      if (now - createdAt < TWO_MINUTES) {
+        map.set(item.id, item);
+      }
+      // 超过 2 分钟且 D1 没有 → 视为已在其他设备删除，不保留
+    }
+  }
+
+  const merged = Array.from(map.values()).sort((a, b) => {
+    const ta = new Date(a.createdAt ?? a.created_at ?? 0).getTime();
+    const tb = new Date(b.createdAt ?? b.created_at ?? 0).getTime();
+    return tb - ta;
+  });
+
+  localStorage.setItem(storageKey, JSON.stringify(merged));
+}
+```
+
+找到 `pullAllFromD1` 函数中 `const [quotations, confirmations, invoices, packings, purchases] = await Promise.all([` 这段，将整个 Promise.all 和后续 mergeIntoStorage 调用替换为：
+
+```typescript
+    const [quotRes, confRes, invRes, packRes, purchRes] = await Promise.all([
+      fetchAll<D1Doc>('/api/documents?type=quotation', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=confirmation', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=invoice', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=packing', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=purchase', 'documents'),
+    ]);
+
+    mergeIntoStorage(
+      'quotation_history',
+      [...quotRes.data, ...confRes.data].map(docToQuotationHistory),
+      quotRes.ok && confRes.ok,
+    );
+    mergeIntoStorage('invoice_history', invRes.data.map(docToInvoiceHistory), invRes.ok);
+    mergeIntoStorage('packing_history', packRes.data.map(docToPackingHistory), packRes.ok);
+    mergeIntoStorage('purchase_history', purchRes.data.map(docToPurchaseHistory), purchRes.ok);
+```
+
+同样将 customers/suppliers/consignees 的 Promise.all 替换（只需更新变量名，逻辑一致）：
+
+```typescript
+    const [custRes, suppRes, consRes] = await Promise.all([
+      fetchAll<D1Customer>('/api/customers?type=customer', 'customers'),
+      fetchAll<D1Customer>('/api/customers?type=supplier', 'customers'),
+      fetchAll<D1Customer>('/api/customers?type=consignee', 'customers'),
+    ]);
+
+    mergeIntoStorage('customer_management', custRes.data.map((c) => d1CustomerToLocal(c, 'customer')), custRes.ok);
+    mergeIntoStorage('supplier_management', suppRes.data.map((c) => d1CustomerToLocal(c, 'supplier')), suppRes.ok);
+    mergeIntoStorage('consignee_management', consRes.data.map((c) => d1CustomerToLocal(c, 'consignee')), consRes.ok);
+```
+
+---
+
+### 改动 2：`src/features/packing/services/packingHistoryService.ts` — 补全三个 d1Sync 缺口
+
+在文件顶部导入区（`import { PackingData, PackingHistory } from '../types';` 之后）添加：
+
+```typescript
+import { d1SyncDocument } from '@/utils/d1Sync';
+```
+
+找到 `savePackingHistory` 函数，在更新现有记录的 `localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));` 之后（existingId 分支）添加 d1Sync：
+
+```typescript
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
+        // D1 双写（fire-and-forget）
+        d1SyncDocument('update', {
+          id: existingId,
+          type: 'packing',
+          doc_no: data.invoiceNo || '',
+          customer_name: data.consignee.name,
+          total_amount: totalAmount,
+          currency: data.currency,
+          data,
+        });
+        return updatedHistory;
+```
+
+找到同函数中通过 invoiceNo 更新的 `localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));`（existingPacking 分支），同样在之后添加：
+
+```typescript
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
+        // D1 双写（fire-and-forget）
+        const updated = updatedHistory.find(item => item.id === existingPacking.id);
+        if (updated) {
+          d1SyncDocument('update', {
+            id: updated.id,
+            type: 'packing',
+            doc_no: data.invoiceNo || '',
+            customer_name: data.consignee.name,
+            total_amount: totalAmount,
+            currency: data.currency,
+            data,
+          });
+        }
+        return updatedHistory.find(item => item.id === existingPacking.id) || null;
+```
+
+找到创建新记录的 `history.unshift(newHistory); localStorage.setItem(STORAGE_KEY, JSON.stringify(history));`，在其后添加：
+
+```typescript
+    history.unshift(newHistory);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    // D1 双写（fire-and-forget）
+    d1SyncDocument('create', {
+      id: newHistory.id,
+      type: 'packing',
+      doc_no: data.invoiceNo || '',
+      customer_name: data.consignee.name,
+      total_amount: totalAmount,
+      currency: data.currency,
+      data,
+    });
+    return newHistory;
+```
+
+找到 `deletePackingHistory` 函数，在 `localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredHistory));` 之后添加：
+
+```typescript
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredHistory));
+    // D1 删除（fire-and-forget）
+    d1SyncDocument('delete', { id, type: 'packing', doc_no: '', data: null });
+    return true;
+```
+
+---
+
+### 改动 3：`src/features/invoice/services/invoice.service.ts` — 补全 update 路径的 d1Sync
+
+在文件顶部导入区添加：
+
+```typescript
+import { d1SyncDocument } from '@/utils/d1Sync';
+```
+
+找到 `isEditMode && editId` 分支，`const saved = saveInvoiceHistory(updatedHistory);` 之后：
+
+```typescript
+        const saved = saveInvoiceHistory(updatedHistory);
+        if (saved) {
+          // D1 双写（fire-and-forget）
+          const updatedItem = updatedHistory.find(item => item.id === editId);
+          if (updatedItem) {
+            d1SyncDocument('update', {
+              id: editId,
+              type: 'invoice',
+              doc_no: data.invoiceNo,
+              customer_name: data.to,
+              total_amount: totalAmount,
+              currency: data.currency,
+              data: updatedItem,
+            });
+          }
+          return { success: true, message: '保存成功' };
+        }
+```
+
+找到 `existingInvoice` 分支（相同发票号更新），`const saved = saveInvoiceHistory(updatedHistory);` 之后：
+
+```typescript
+          const saved = saveInvoiceHistory(updatedHistory);
+          if (saved) {
+            // D1 双写（fire-and-forget）
+            d1SyncDocument('update', {
+              id: existingInvoice.id,
+              type: 'invoice',
+              doc_no: data.invoiceNo,
+              customer_name: data.to,
+              total_amount: totalAmount,
+              currency: data.currency,
+              data: { ...existingInvoice, data, updatedAt: new Date().toISOString() },
+            });
+            return { 
+              success: true, 
+              message: '保存成功',
+              newEditId: existingInvoice.id
+            };
+          }
+```
+
+---
+
+### 改动 4：`src/features/history/app/HistoryPage.tsx` — 页面挂载时拉取 D1
+
+在文件顶部导入区添加：
+
+```typescript
+import { pullAllFromD1 } from '@/utils/d1Pull';
+```
+
+找到 `useEffect(() => { setMounted(true);` 这个 effect，在 `setMounted(true);` 之后添加 D1 拉取：
+
+```typescript
+  useEffect(() => {
+    setMounted(true);
+    
+    // 页面挂载时从 D1 拉取最新数据（跨设备同步）
+    pullAllFromD1()
+      .then(() => {
+        handleRefresh();
+        // 触发自定义事件通知所有 key 已更新
+        ['quotation_history', 'packing_history', 'invoice_history', 'purchase_history'].forEach(key => {
+          window.dispatchEvent(new CustomEvent('customStorageChange', { detail: { key } }));
+        });
+      })
+      .catch(() => {
+        // 拉取失败时静默，继续显示本地数据
+      });
+
+    // 监听localStorage变化，自动刷新数据
+```
+
+---
+
+### 验证
+
+```bash
+npm run build
+npx tsc --noEmit
+```
+
+人工验证（两个浏览器/设备，同账号登录）：
+
+1. **删除同步**：设备 A 删除一条报价单 → 设备 B 打开历史页 → 该条目不出现
+2. **新建同步**：设备 A 新建一张采购单 → 设备 B 打开历史页 → 能看到该条目
+3. **装箱单 create**：设备 A 保存装箱单 → 设备 B 历史页可见
+4. **装箱单 delete**：设备 A 删装箱单 → 设备 B 历史页消失
+5. **发票 update**：设备 A 编辑发票金额 → 设备 B 历史页显示新金额
+
+### 提交
+
+```bash
+git add \
+  src/utils/d1Pull.ts \
+  src/features/packing/services/packingHistoryService.ts \
+  src/features/invoice/services/invoice.service.ts \
+  src/features/history/app/HistoryPage.tsx \
+  CODEX_TASKS.md
+git commit -m "feat(sync): 修复单据历史跨设备同步 — 补全装箱/发票 d1Sync，删除可传播，历史页触发 D1 拉取 (TASK-43)"
+```
+
+### 实际落地
+
+- `src/utils/d1Pull.ts`：`fetchAll` 返回 `{ data, ok }`；`mergeIntoStorage` 增加 `d1Ok` 参数，D1 成功时移除本地超 2 分钟且 D1 没有的记录
+- `src/features/packing/services/packingHistoryService.ts`：补齐 create/update（existingId 和 invoiceNo 两条路径）/delete 三处 d1SyncDocument 调用
+- `src/features/invoice/services/invoice.service.ts`：补齐 editId 更新和 existingInvoice 覆盖更新两条路径的 d1SyncDocument('update', ...)
+- `src/features/history/app/HistoryPage.tsx`：挂载时调 `pullAllFromD1()`，拉完后 handleRefresh
+- `npx tsc --noEmit` + `npm run build` 均通过
