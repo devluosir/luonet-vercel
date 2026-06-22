@@ -791,9 +791,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       value: editingQtyIndex === index ? editingQtyAmount : String(item.quantity),
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
         const v = e.target.value;
-        if (/^\d*$/.test(v)) {
+        if (/^\d*\.?\d*$/.test(v)) {
           setEditingQtyAmount(v);
-          handleItemChange(index, 'quantity', v === '' ? 0 : parseInt(v, 10));
+          handleItemChange(index, 'quantity', v === '' ? 0 : parseFloat(v));
         }
       },
       onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
@@ -809,12 +809,22 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     };
   };
 
+  // 单价展示：不足2位小数补齐到2位，超出2位如实显示
+  const formatUnitPrice = (price: number): string => {
+    const s = String(price);
+    const dotIdx = s.indexOf('.');
+    if (dotIdx === -1 || s.length - dotIdx - 1 <= 2) {
+      return price.toFixed(2);
+    }
+    return s;
+  };
+
   const priceInputProps = (index: number) => {
     const item = data.items?.[index];
     if (!item) return { value: '', onChange: () => {}, onFocus: () => {}, onBlur: () => {} };
-    
+
     return {
-      value: editingPriceIndex === index ? editingPriceAmount : item.unitPrice.toFixed(2),
+      value: editingPriceIndex === index ? editingPriceAmount : formatUnitPrice(item.unitPrice),
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
         const v = e.target.value;
         if (/^\d*\.?\d*$/.test(v)) {
@@ -933,7 +943,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
                     <input
                       type="text"
-                      inputMode="numeric"
+                      inputMode="decimal"
                       {...qtyInputProps(index)}
                       onDoubleClick={() => handleDoubleClick(index, 'quantity')}
                       className={`w-full px-3 py-2 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
@@ -1207,7 +1217,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                           <td className="w-24 px-2 py-2">
                             <input
                               type="text"
-                              inputMode="numeric"
+                              inputMode="decimal"
                               {...qtyInputProps(index)}
                               onDoubleClick={() => handleDoubleClick(index, 'quantity')}
                               className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
