@@ -392,4 +392,45 @@ Codex 执行任务前会自动读 `AGENTS.md`，所有任务规格在 `CODEX_TAS
 
 ---
 
-*最后更新：2026-06-22（TASK-41/42/43 完成）*
+---
+
+## 同步机制说明（TASK-43 最终架构）
+
+### 写入路径（localStorage → D1）
+
+各单据保存时调 `d1SyncDocument(action, payload)`（`src/utils/d1Sync.ts`），内部：
+1. 立即写入本地待提交队列 `d1_pending_syncs`（localStorage）
+2. 异步发起 POST/PUT/DELETE → `/api/documents`（Next.js 代理，注入 user_id + Bearer token）
+3. 成功则从队列移除；失败则留队，等下次 `flushPendingQueue()` 重试
+
+### 读取路径（D1 → localStorage，历史页刷新时）
+
+`pullAllFromD1()`（`src/utils/d1Pull.ts`）流程：
+1. `flushPendingQueue()` — 重试所有未成功写入，确保 D1 有最新数据
+2. 取当前仍未成功的 `pendingIds`
+3. 并行拉取全部类型（quotation/invoice/packing/purchase + customer/supplier/consignee）
+4. `mergeIntoStorage` — D1 为权威：D1 有则以 D1 为准；D1 无且不在 pendingIds 则视为其他设备已删；仍在 pendingIds 则保留本地等下次重试
+
+### 触发时机
+
+| 时机 | 触发来源 |
+|------|----------|
+| 登录成功 | `usePermissionInit` 内 `pullAllFromD1()` |
+| 进入历史页 | `HistoryPage` 挂载 useEffect |
+| 点击刷新按钮 | `handleSyncRefresh`（先 pull 再 refreshKey++，带旋转动画） |
+
+### 涉及文件
+
+| 文件 | 职责 |
+|------|------|
+| `src/utils/d1Sync.ts` | 写入队列、flushPendingQueue、getPendingIds |
+| `src/utils/d1Pull.ts` | 拉取、flush、mergeIntoStorage（D1 权威） |
+| `src/features/history/app/HistoryPage.tsx` | handleSyncRefresh、挂载时触发 pull |
+| `src/features/packing/services/packingHistoryService.ts` | 装箱单 create/update/delete 的 d1Sync |
+| `src/features/invoice/services/invoice.service.ts` | 发票 update 路径的 d1Sync |
+| `src/utils/quotationHistory.ts` | 报价/确认书 create/update/delete（原有） |
+| `src/utils/purchaseHistory.ts` | 采购单 create/update/delete（原有） |
+
+---
+
+*最后更新：2026-06-22（TASK-41/42/43 + 同步补丁完成）*

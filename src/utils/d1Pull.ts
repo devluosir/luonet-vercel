@@ -6,6 +6,7 @@
  */
 
 import type { Contact } from '@/features/customer/types';
+import { flushPendingQueue, getPendingIds } from '@/utils/d1Sync';
 
 type D1Doc = {
   id: string;
@@ -81,6 +82,7 @@ function mergeIntoStorage<T extends LocalStorageItem>(
   storageKey: string,
   incoming: T[],
   d1Ok: boolean,
+  pendingIds: Set<string>,
 ): void {
   // D1 请求失败时不动 localStorage，避免误删本地数据
   if (!d1Ok) return;
@@ -88,21 +90,18 @@ function mergeIntoStorage<T extends LocalStorageItem>(
   const raw = localStorage.getItem(storageKey);
   const existing: T[] = raw ? JSON.parse(raw) : [];
   const incomingIds = new Set(incoming.map((item) => item.id));
-  const now = Date.now();
-  const TWO_MINUTES = 2 * 60 * 1000;
 
-  // D1 记录为权威来源，先全部放入 map
+  // D1 为权威来源，先全部放入 map
   const map = new Map<string, T>(incoming.map((item) => [item.id, item]));
 
-  // 保留本地有、D1 没有、但 2 分钟内刚创建的记录（double-write 可能还未到达 D1）
   for (const item of existing) {
-    if (!incomingIds.has(item.id)) {
-      const createdAt = new Date(item.createdAt ?? item.created_at ?? 0).getTime();
-      if (now - createdAt < TWO_MINUTES) {
-        map.set(item.id, item);
-      }
-      // 超过 2 分钟且 D1 没有 → 视为已在其他设备删除，不保留
+    if (incomingIds.has(item.id)) continue; // D1 已有，以 D1 版本为准
+
+    if (pendingIds.has(item.id)) {
+      // 仍在待提交队列（本轮 flush 失败）→ 保留本地，等下次重试
+      map.set(item.id, item);
     }
+    // 不在队列且 D1 没有 → 视为已在其他设备删除，不保留
   }
 
   const merged = Array.from(map.values()).sort((a, b) => {
@@ -208,6 +207,12 @@ export async function pullAllFromD1(): Promise<void> {
   if (typeof window === 'undefined') return;
 
   try {
+    // 先刷新待提交队列，确保本机改动已写入 D1
+    await flushPendingQueue();
+
+    // 取当前仍未成功提交的 id（flush 后仍失败的），merge 时保护它们
+    const pendingIds = getPendingIds();
+
     const [quotRes, confRes, invRes, packRes, purchRes] = await Promise.all([
       fetchAll<D1Doc>('/api/documents?type=quotation', 'documents'),
       fetchAll<D1Doc>('/api/documents?type=confirmation', 'documents'),
@@ -220,10 +225,11 @@ export async function pullAllFromD1(): Promise<void> {
       'quotation_history',
       [...quotRes.data, ...confRes.data].map(docToQuotationHistory),
       quotRes.ok && confRes.ok,
+      pendingIds,
     );
-    mergeIntoStorage('invoice_history', invRes.data.map(docToInvoiceHistory), invRes.ok);
-    mergeIntoStorage('packing_history', packRes.data.map(docToPackingHistory), packRes.ok);
-    mergeIntoStorage('purchase_history', purchRes.data.map(docToPurchaseHistory), purchRes.ok);
+    mergeIntoStorage('invoice_history', invRes.data.map(docToInvoiceHistory), invRes.ok, pendingIds);
+    mergeIntoStorage('packing_history', packRes.data.map(docToPackingHistory), packRes.ok, pendingIds);
+    mergeIntoStorage('purchase_history', purchRes.data.map(docToPurchaseHistory), purchRes.ok, pendingIds);
 
     const [custRes, suppRes, consRes] = await Promise.all([
       fetchAll<D1Customer>('/api/customers?type=customer', 'customers'),
@@ -231,11 +237,12 @@ export async function pullAllFromD1(): Promise<void> {
       fetchAll<D1Customer>('/api/customers?type=consignee', 'customers'),
     ]);
 
-    mergeIntoStorage('customer_management', custRes.data.map((c) => d1CustomerToLocal(c, 'customer')), custRes.ok);
-    mergeIntoStorage('supplier_management', suppRes.data.map((c) => d1CustomerToLocal(c, 'supplier')), suppRes.ok);
-    mergeIntoStorage('consignee_management', consRes.data.map((c) => d1CustomerToLocal(c, 'consignee')), consRes.ok);
+    mergeIntoStorage('customer_management', custRes.data.map((c) => d1CustomerToLocal(c, 'customer')), custRes.ok, pendingIds);
+    mergeIntoStorage('supplier_management', suppRes.data.map((c) => d1CustomerToLocal(c, 'supplier')), suppRes.ok, pendingIds);
+    mergeIntoStorage('consignee_management', consRes.data.map((c) => d1CustomerToLocal(c, 'consignee')), consRes.ok, pendingIds);
 
-    console.log('[d1Pull] 同步完成');
+    const remaining = getPendingIds().size;
+    console.log(`[d1Pull] 同步完成${remaining > 0 ? `，${remaining} 条待提交（网络不可达）` : ''}`);
   } catch (err) {
     console.warn('[d1Pull] 同步失败（不影响现有功能）:', err);
   }

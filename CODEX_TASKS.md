@@ -9068,10 +9068,79 @@ git add \
 git commit -m "feat(sync): 修复单据历史跨设备同步 — 补全装箱/发票 d1Sync，删除可传播，历史页触发 D1 拉取 (TASK-43)"
 ```
 
-### 实际落地
+### 实际落地（第一轮）
 
 - `src/utils/d1Pull.ts`：`fetchAll` 返回 `{ data, ok }`；`mergeIntoStorage` 增加 `d1Ok` 参数，D1 成功时移除本地超 2 分钟且 D1 没有的记录
 - `src/features/packing/services/packingHistoryService.ts`：补齐 create/update（existingId 和 invoiceNo 两条路径）/delete 三处 d1SyncDocument 调用
 - `src/features/invoice/services/invoice.service.ts`：补齐 editId 更新和 existingInvoice 覆盖更新两条路径的 d1SyncDocument('update', ...)
 - `src/features/history/app/HistoryPage.tsx`：挂载时调 `pullAllFromD1()`，拉完后 handleRefresh
 - `npx tsc --noEmit` + `npm run build` 均通过
+
+---
+
+### 补丁（2026-06-22）：写入队列 + 刷新按钮触发同步
+
+**问题 1**：历史页内刷新按钮只重读 localStorage（increments refreshKey），不触发 D1 拉取，所以其他设备的新增数据在点刷新后看不到。
+
+**问题 2**：`d1SyncDocument` 是 fire-and-forget，失败完全静默。若写入失败，D1 没有该记录，下次 merge 时本机数据被误删（"D1 没有 = 其他设备已删"的逻辑错误）。
+
+**修复方案**：
+
+#### `src/utils/d1Sync.ts` — 写入队列机制
+
+完全重写，核心新增：
+
+```typescript
+const QUEUE_KEY = 'd1_pending_syncs';
+
+// 操作发起时立即入队（localStorage d1_pending_syncs）
+// 成功后出队；失败时保留，等待 flushPendingQueue() 重试
+
+export async function flushPendingQueue(): Promise<void>
+export function getPendingIds(): Set<string>
+```
+
+`d1SyncDocument` / `d1SyncCustomer` 改为：先入队 → 异步发起请求 → 成功出队 / 失败留队。每条操作有唯一 opId（`${id}-${action}-${timestamp}`），同记录同动作去重。
+
+#### `src/utils/d1Pull.ts` — 先刷队列再拉取，D1 权威 merge 加队列保护
+
+`pullAllFromD1` 流程：
+1. `await flushPendingQueue()` — 重试所有未成功写入
+2. `getPendingIds()` — 取仍未成功的 id（网络断开才会有）
+3. 并行拉取所有类型数据
+4. `mergeIntoStorage` 签名增加 `pendingIds` 参数：
+   - D1 有的：以 D1 为准 ✓
+   - D1 没有 + 不在 pendingIds：视为其他设备已删 → 移除
+   - D1 没有 + 在 pendingIds：写入未到达 D1 → 保留本地
+
+#### `src/features/history/app/HistoryPage.tsx` — 刷新按钮触发完整同步
+
+新增 `handleSyncRefresh`（替换刷新按钮的 onClick）：
+
+```typescript
+const handleSyncRefresh = useCallback(async () => {
+  if (isSyncing.current) return;
+  isSyncing.current = true;
+  setSyncing(true);
+  try {
+    await pullAllFromD1();
+    handleRefresh();
+    ['quotation_history', 'packing_history', 'invoice_history', 'purchase_history'].forEach(key => {
+      window.dispatchEvent(new CustomEvent('customStorageChange', { detail: { key } }));
+    });
+  } finally {
+    isSyncing.current = false;
+    setSyncing(false);
+  }
+}, [handleRefresh]);
+```
+
+刷新按钮加旋转动画（`animate-spin`）+ disabled 防重复点击。
+
+**提交**：
+```bash
+git add src/utils/d1Sync.ts src/utils/d1Pull.ts src/features/history/app/HistoryPage.tsx
+git commit -m "fix(sync): 写入队列+重试机制，D1权威merge，刷新按钮触发同步拉取 (TASK-43补丁)"
+```
+
+**验证**：`npx tsc --noEmit` 通过

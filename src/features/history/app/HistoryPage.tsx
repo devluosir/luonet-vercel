@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Search, X, RefreshCw, Upload, Download } from 'lucide-react';
@@ -86,6 +86,27 @@ export function HistoryPage() {
   } = useHistoryActions();
 
   const { setMounted, setActiveTab, setFilters } = useHistoryStore();
+
+  // 手动同步刷新：先从 D1 拉取，再刷新 localStorage 视图
+  const isSyncing = useRef(false);
+  const [syncing, setSyncing] = useState(false);
+  const handleSyncRefresh = useCallback(async () => {
+    if (isSyncing.current) return;
+    isSyncing.current = true;
+    setSyncing(true);
+    try {
+      await pullAllFromD1();
+      handleRefresh();
+      ['quotation_history', 'packing_history', 'invoice_history', 'purchase_history'].forEach(key => {
+        window.dispatchEvent(new CustomEvent('customStorageChange', { detail: { key } }));
+      });
+    } catch {
+      // 静默失败
+    } finally {
+      isSyncing.current = false;
+      setSyncing(false);
+    }
+  }, [handleRefresh]);
 
   // 主色调映射 - 按照tab顺序：报价单、合同确认、装箱单、发票、采购单
   const tabColorMap = {
@@ -266,11 +287,12 @@ export function HistoryPage() {
           </div>
           <button
             type="button"
-            onClick={handleRefresh}
-            className="rounded-md border border-gray-300 p-2 text-gray-500 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800/50"
-            title="刷新"
+            onClick={handleSyncRefresh}
+            disabled={syncing}
+            className="rounded-md border border-gray-300 p-2 text-gray-500 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:hover:bg-gray-800/50"
+            title="同步刷新"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
