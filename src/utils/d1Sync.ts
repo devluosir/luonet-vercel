@@ -44,6 +44,54 @@ interface PendingOp {
 
 const QUEUE_KEY = 'd1_pending_syncs';
 const DELETED_DOC_IDS_KEY = 'd1_deleted_doc_ids';
+const ACTIVE_USER_KEY = 'd1_active_user_id';
+const DOCUMENT_HISTORY_KEYS = [
+  'quotation_history',
+  'invoice_history',
+  'packing_history',
+  'purchase_history',
+];
+
+function notifyDocumentHistoryCleared(): void {
+  DOCUMENT_HISTORY_KEYS.forEach((key) => {
+    window.dispatchEvent(new CustomEvent('customStorageChange', { detail: { key } }));
+  });
+}
+
+/** 当前浏览器本地单据历史归属的用户 id。用于防止同浏览器换账号后串记录。 */
+export function getD1ActiveUserId(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(ACTIVE_USER_KEY);
+}
+
+/** 清空本地单据同步状态。退出登录或检测到换用户时调用。 */
+export function clearD1DocumentLocalState(clearActiveUser = true): void {
+  if (typeof window === 'undefined') return;
+
+  DOCUMENT_HISTORY_KEYS.forEach((key) => localStorage.removeItem(key));
+  localStorage.removeItem(QUEUE_KEY);
+  localStorage.removeItem(DELETED_DOC_IDS_KEY);
+  if (clearActiveUser) {
+    localStorage.removeItem(ACTIVE_USER_KEY);
+  }
+  notifyDocumentHistoryCleared();
+}
+
+/**
+ * 绑定本地单据缓存到当前登录用户。
+ * 如果同一浏览器切换了用户，必须先清空旧用户的本地历史和待同步队列，
+ * 否则旧用户 localStorage 记录会被 pushLocalToD1 推到新用户账号下。
+ */
+export function prepareD1DocumentSyncForUser(userId: string): void {
+  if (typeof window === 'undefined' || !userId) return;
+
+  const activeUserId = getD1ActiveUserId();
+  if (activeUserId && activeUserId !== userId) {
+    clearD1DocumentLocalState(false);
+  }
+
+  localStorage.setItem(ACTIVE_USER_KEY, userId);
+}
 
 /** 记录本机已删除的文档 id，防止 pushLocalToD1 将其重新推上 D1 */
 export function recordDeletedDocId(id: string): void {

@@ -9455,3 +9455,72 @@ git commit -m "feat(sync): 单据双向同步重构 — pushLocalToD1 + 删除ID
 - `src/utils/d1Pull.ts`：新增 `pushLocalDocsToD1(deletedIds)`，在每次 pull 前检查本地各类型历史，将 D1 缺失且不在待同步队列/已删除集合的记录推送到 D1；`mergeIntoStorage` 在移除远端已删记录时调用 `recordDeletedDocId`
 - `src/features/history/app/HistoryPage.tsx`：改为 visibilitychange 触发同步（打开页面 + 标签回到前台立即同步，无轮询间隔），替代原 30s setInterval 方案
 - `npx tsc --noEmit` + `npm run build` 均通过
+
+---
+
+## TASK-45：同浏览器多用户单据历史隔离 ✅ 已完成
+
+### 背景
+
+同一个浏览器中，如果用户 A 退出后用户 B 登录，单据历史 localStorage key 仍是全局 key：
+
+- `quotation_history`
+- `invoice_history`
+- `packing_history`
+- `purchase_history`
+- `d1_pending_syncs`
+- `d1_deleted_doc_ids`
+
+这会导致两个严重问题：
+
+1. 用户 B 可能在页面上看到用户 A 的本地历史记录。
+2. `pushLocalToD1` 会把旧用户 localStorage 中的记录补推到当前登录用户的 D1 账号下，造成跨用户串数据。
+
+### 改动
+
+**文件：`src/utils/d1Sync.ts`**
+
+- 新增 `d1_active_user_id`，记录当前浏览器本地单据缓存归属用户。
+- 新增 `prepareD1DocumentSyncForUser(userId)`：
+  - 当前用户与本地归属用户一致：保留缓存并同步。
+  - 当前用户与本地归属用户不同：清空单据历史、待同步队列、删除 ID，再绑定新用户。
+- 新增 `clearD1DocumentLocalState()`：
+  - 清理四类单据历史。
+  - 清理 `d1_pending_syncs`。
+  - 清理 `d1_deleted_doc_ids`。
+  - 清理 `d1_active_user_id`。
+  - 派发 `customStorageChange`，刷新历史页/首页数据。
+
+**文件：`src/hooks/useD1Sync.ts`**
+
+- 移除单一 `syncDone` 逻辑，改为按用户 ID 同步。
+- 登录状态为 authenticated 后，先调用 `prepareD1DocumentSyncForUser(userId)`，再执行 `pullAllFromD1()`。
+- 同一浏览器会话中切换账号后会重新同步新用户数据。
+
+**文件：`src/hooks/useAppUser.ts`**
+
+- 退出登录时清理单据本地历史和 D1 同步状态，避免下一个登录用户继承旧用户缓存。
+
+**文件：`src/features/dashboard/app/DashboardPage.tsx`**
+
+- Dashboard 自定义退出逻辑同样调用 `clearD1DocumentLocalState()`。
+
+**文件：`src/utils/d1Pull.ts`**
+
+- `pushLocalDocsToD1` 增加保护：只有本地缓存已绑定当前用户后才允许补推，避免未知归属缓存被上传。
+- 保留 TASK-44 后续修复：查询 D1 时使用 `status=all`，跨设备传播 deleted 状态，防止旧设备把已删除记录复活。
+
+### 验证
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+人工验证：
+
+1. 同一浏览器登录用户 A，确认历史页有 A 的记录。
+2. 退出用户 A。
+3. 登录用户 B，历史页不应显示用户 A 的本地记录。
+4. 用户 B 新增/删除单据，不应影响用户 A 的 D1 数据。
+5. 同账号跨设备新增、删除仍可通过历史页刷新/回前台同步。

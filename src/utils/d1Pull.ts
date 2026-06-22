@@ -9,6 +9,7 @@ import type { Contact } from '@/features/customer/types';
 import {
   d1SyncDocument,
   flushPendingQueue,
+  getD1ActiveUserId,
   getDeletedDocIds,
   getPendingIds,
   recordDeletedDocId,
@@ -109,6 +110,7 @@ function getNumber(value: unknown): number {
  */
 async function pushLocalDocsToD1(deletedIds: Set<string>): Promise<void> {
   if (typeof window === 'undefined') return;
+  if (!getD1ActiveUserId()) return;
   const pending = getPendingIds();
 
   const quotLocal = readLocalArray('quotation_history');

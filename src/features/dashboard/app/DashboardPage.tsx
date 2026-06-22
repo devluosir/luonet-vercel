@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { AppLayout } from '@/components/layout';
 import { usePermissionStore } from '@/lib/permissions';
+import { clearD1DocumentLocalState } from '@/utils/d1Sync';
 import { usePermissionRefresh } from '@/hooks/usePermissionRefresh';
 import { preloadManager } from '@/utils/preloadUtils';
 import { 
@@ -114,6 +115,7 @@ export default function DashboardPage() {
     usePermissionStore.getState().clearUser();
     if (typeof window !== 'undefined') {
       localStorage.removeItem('userCache');
+      clearD1DocumentLocalState();
     }
     
     await signOut();

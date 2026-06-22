@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { usePermissionStore } from '@/lib/permissions';
+import { clearD1DocumentLocalState } from '@/utils/d1Sync';
 
 export function useAppUser() {
   const permUser = usePermissionStore((state) => state.user);
@@ -16,7 +17,10 @@ export function useAppUser() {
 
   const handleLogout = useCallback(async () => {
     usePermissionStore.getState().clearUser();
-    if (typeof window !== 'undefined') localStorage.removeItem('userCache');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('userCache');
+      clearD1DocumentLocalState();
+    }
     await signOut();
   }, []);
 
