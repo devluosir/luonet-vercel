@@ -47,8 +47,13 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
         </span>
       </td>
       <td className="w-[34%] px-3 py-2 text-sm md:w-[32%] lg:w-[22%]">
-        <p className={`max-w-none truncate ${mainTextClass}`} title={record.description}>
+        {/* 大屏：客户编号列可见，内容简述只显示 description */}
+        <p className={`hidden lg:block max-w-none truncate ${mainTextClass}`} title={record.description}>
           {record.description}
+        </p>
+        {/* 中小屏：客户编号列隐藏，description 为空时回退显示客户编号 */}
+        <p className={`lg:hidden max-w-none truncate ${mainTextClass}`} title={record.description?.trim() || record.customerNo}>
+          {record.description?.trim() || record.customerNo}
         </p>
       </td>
       <td className="w-[34%] px-3 py-2 md:w-[30%] lg:w-[28%] xl:w-[26%]">

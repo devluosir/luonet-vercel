@@ -204,79 +204,82 @@ export function InquiryFormModal({
 
         <form onSubmit={handleSubmit} className="px-6 py-5">
 
-          {/* ── 身份信息条：日期 · 询价编号 · 询价人 · 紧急 ── */}
-          <div className="mb-4 flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2.5 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
-            {/* 日期：新建可调，编辑只读 */}
-            {mode === 'create' ? (
-              <>
-                <button type="button" onClick={() => adjustDate(-1)} tabIndex={-1}
-                  className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <input
-                  type="text"
-                  value={dateDisplayText}
-                  onChange={(e) => setDateDisplayText(e.target.value)}
-                  onBlur={commitDateText}
-                  onKeyDown={(e) => {
-                    if (e.key === 'ArrowUp') { e.preventDefault(); adjustDate(1); }
-                    if (e.key === 'ArrowDown') { e.preventDefault(); adjustDate(-1); }
-                    if (e.key === 'Enter') { e.preventDefault(); commitDateText(); }
-                  }}
-                  className="w-10 bg-transparent text-center text-sm font-semibold text-gray-700 outline-none dark:text-gray-200"
-                  placeholder="6.21"
-                />
-                <button type="button" onClick={() => adjustDate(1)} tabIndex={-1}
-                  className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </>
-            ) : (
-              <span className="w-10 text-center text-sm font-semibold text-gray-700 dark:text-gray-200">
-                {dateDisplayText}
-              </span>
-            )}
+          {/* ── 身份信息条：两行卡片 ── */}
+          <div className="mb-4 space-y-2 rounded-xl bg-gray-50 px-3 py-2.5 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
+            {/* 第一行：日期 · 询价编号 · 紧急 */}
+            <div className="flex items-center gap-2">
+              {/* 日期：新建可调，编辑只读 */}
+              {mode === 'create' ? (
+                <>
+                  <button type="button" onClick={() => adjustDate(-1)} tabIndex={-1}
+                    className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <input
+                    type="text"
+                    value={dateDisplayText}
+                    onChange={(e) => setDateDisplayText(e.target.value)}
+                    onBlur={commitDateText}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowUp') { e.preventDefault(); adjustDate(1); }
+                      if (e.key === 'ArrowDown') { e.preventDefault(); adjustDate(-1); }
+                      if (e.key === 'Enter') { e.preventDefault(); commitDateText(); }
+                    }}
+                    className="w-10 bg-transparent text-center text-sm font-semibold text-gray-700 outline-none dark:text-gray-200"
+                    placeholder="6.21"
+                  />
+                  <button type="button" onClick={() => adjustDate(1)} tabIndex={-1}
+                    className="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
+              ) : (
+                <span className="w-10 text-center text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  {dateDisplayText}
+                </span>
+              )}
 
-            <span className="select-none text-gray-200 dark:text-gray-700">·</span>
+              <span className="select-none text-gray-200 dark:text-gray-700">·</span>
 
-            {/* 询价编号 */}
-            <input
-              value={inquiryNo}
-              onChange={(e) => { setInquiryNo(e.target.value); setIsInquiryNoManual(true); }}
-              className="w-24 shrink-0 bg-transparent font-mono text-sm font-semibold text-gray-800 outline-none dark:text-gray-100"
-              placeholder="C260621F"
-              required
-            />
-
-            <span className="select-none text-gray-200 dark:text-gray-700">·</span>
-
-            {/* 询价人 */}
-            <input
-              list={inquirerOptions.length > 0 ? INQUIRER_DATALIST_ID : undefined}
-              value={inquirer}
-              onChange={(e) => setInquirer(e.target.value)}
-              className="min-w-0 flex-1 bg-transparent text-sm font-medium text-gray-800 outline-none placeholder:text-gray-300 dark:text-gray-100 dark:placeholder:text-gray-600"
-              placeholder="询价人"
-              required
-            />
-            {inquirerOptions.length > 0 && (
-              <datalist id={INQUIRER_DATALIST_ID}>
-                {inquirerOptions.map((option) => (
-                  <option key={option} value={option} />
-                ))}
-              </datalist>
-            )}
-
-            {/* 紧急 */}
-            <label className="flex shrink-0 cursor-pointer items-center gap-1 pl-1">
+              {/* 询价编号 */}
               <input
-                type="checkbox"
-                checked={isUrgent}
-                onChange={(e) => toggleUrgent(e.target.checked)}
-                className="h-3.5 w-3.5 cursor-pointer rounded accent-red-500"
+                value={inquiryNo}
+                onChange={(e) => { setInquiryNo(e.target.value); setIsInquiryNoManual(true); }}
+                className="min-w-0 flex-1 bg-transparent font-mono text-sm font-semibold text-gray-800 outline-none dark:text-gray-100"
+                placeholder="C260621F"
+                required
               />
-              <span className="text-xs font-medium text-red-500">紧急</span>
-            </label>
+
+              {/* 紧急 */}
+              <label className="flex shrink-0 cursor-pointer items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={isUrgent}
+                  onChange={(e) => toggleUrgent(e.target.checked)}
+                  className="h-3.5 w-3.5 cursor-pointer rounded accent-red-500"
+                />
+                <span className="text-xs font-medium text-red-500">紧急</span>
+              </label>
+            </div>
+
+            {/* 第二行：询价人（全宽，带分隔线） */}
+            <div className="flex items-center border-t border-gray-100 pt-1.5 dark:border-gray-700">
+              <input
+                list={inquirerOptions.length > 0 ? INQUIRER_DATALIST_ID : undefined}
+                value={inquirer}
+                onChange={(e) => setInquirer(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm font-medium text-gray-800 outline-none placeholder:text-gray-300 dark:text-gray-100 dark:placeholder:text-gray-600"
+                placeholder="询价人"
+                required
+              />
+              {inquirerOptions.length > 0 && (
+                <datalist id={INQUIRER_DATALIST_ID}>
+                  {inquirerOptions.map((option) => (
+                    <option key={option} value={option} />
+                  ))}
+                </datalist>
+              )}
+            </div>
           </div>
 
           {/* ── 基本信息字段 ── */}
