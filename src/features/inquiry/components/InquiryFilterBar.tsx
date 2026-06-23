@@ -124,16 +124,6 @@ export function InquiryFilterBar({
   return (
     <div id={id} className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
 
-      {/* 隐藏的 input，由 showPicker() 控制 */}
-      <input
-        ref={monthInputRef}
-        type="month"
-        max={todayMonth()}
-        onChange={(e) => { if (e.target.value) setMonth(e.target.value); }}
-        tabIndex={-1}
-        aria-hidden="true"
-        className="absolute left-0 top-0 h-px w-px opacity-0 pointer-events-none"
-      />
 
       {/* ── 时间：语义 chip + 月导航器 ── */}
       <Chip
@@ -159,19 +149,30 @@ export function InquiryFilterBar({
           ‹
         </button>
 
-        {/* 月份标签 / 选月入口 */}
-        <button
-          type="button"
-          onClick={openPicker}
-          className={`min-w-[3.25rem] border-x border-gray-100 px-2 py-0.5 text-center font-medium transition-colors dark:border-gray-700 ${
-            isCustomMonth
-              ? 'text-blue-600 dark:text-blue-400'
-              : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
-          }`}
-          title={isCustomMonth ? '点击更换月份' : '选择特定月份'}
-        >
-          {isCustomMonth ? fmtMonth(navMonth) : '选月'}
-        </button>
+        {/* 月份标签 / 选月入口 — input 紧贴按钮底部，picker 弹出位置正确 */}
+        <div className="relative border-x border-gray-100 dark:border-gray-700">
+          <button
+            type="button"
+            onClick={openPicker}
+            className={`min-w-[3.25rem] px-2 py-0.5 text-center font-medium transition-colors ${
+              isCustomMonth
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
+            }`}
+            title={isCustomMonth ? '点击更换月份' : '选择特定月份'}
+          >
+            {isCustomMonth ? fmtMonth(navMonth) : '选月'}
+          </button>
+          <input
+            ref={monthInputRef}
+            type="month"
+            max={todayMonth()}
+            onChange={(e) => { if (e.target.value) setMonth(e.target.value); }}
+            tabIndex={-1}
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-0 left-0 h-px w-px opacity-0"
+          />
+        </div>
 
         {/* 下一月 */}
         <button
