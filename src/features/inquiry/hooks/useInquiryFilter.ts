@@ -59,34 +59,39 @@ export function useInquiryFilter(records: InquiryRecord[]) {
     [records]
   );
 
-  const filteredAndSorted = useMemo(() => {
+  /** 去掉状态筛选后的中间结果，用于计算各状态角标数字 */
+  const baseFiltered = useMemo(() => {
     const now = Date.now();
 
-    return records
+    return records.filter((record) => {
+      if (filter.timeRange !== 'all') {
+        const dateStr = getDateInputValueFromInquiryNo(record.inquiryNo);
+        const recordTime = new Date(dateStr).getTime();
+        const days = getTimeRangeDays(filter.timeRange);
+        if (Number.isFinite(recordTime) && now - recordTime > days * DAYS_IN_MS) {
+          return false;
+        }
+      }
+
+      if (filter.keyword.trim()) {
+        const keyword = filter.keyword.trim().toLowerCase();
+        const matchesKeyword =
+          record.inquiryNo.toLowerCase().includes(keyword) ||
+          record.customerNo.toLowerCase().includes(keyword) ||
+          (record.description ?? '').toLowerCase().includes(keyword);
+        if (!matchesKeyword) return false;
+      }
+
+      if (filter.customerNo && record.customerNo !== filter.customerNo) return false;
+      if (filter.inquirer && record.inquirer !== filter.inquirer) return false;
+
+      return true;
+    });
+  }, [filter.timeRange, filter.keyword, filter.customerNo, filter.inquirer, records]);
+
+  const filteredAndSorted = useMemo(() => {
+    return baseFiltered
       .filter((record) => {
-        if (filter.timeRange !== 'all') {
-          const dateStr = getDateInputValueFromInquiryNo(record.inquiryNo);
-          const recordTime = new Date(dateStr).getTime();
-          const days = getTimeRangeDays(filter.timeRange);
-
-          if (Number.isFinite(recordTime) && now - recordTime > days * DAYS_IN_MS) {
-            return false;
-          }
-        }
-
-        if (filter.keyword.trim()) {
-          const keyword = filter.keyword.trim().toLowerCase();
-          const matchesKeyword =
-            record.inquiryNo.toLowerCase().includes(keyword) ||
-            record.customerNo.toLowerCase().includes(keyword) ||
-            (record.description ?? '').toLowerCase().includes(keyword);
-
-          if (!matchesKeyword) return false;
-        }
-
-        if (filter.customerNo && record.customerNo !== filter.customerNo) return false;
-        if (filter.inquirer && record.inquirer !== filter.inquirer) return false;
-
         switch (filter.quoteStatus) {
           case 'supplier_pending':
             return record.supplierStatuses.some(
@@ -115,7 +120,7 @@ export function useInquiryFilter(records: InquiryRecord[]) {
           ? b.inquiryNo.localeCompare(a.inquiryNo)
           : a.inquiryNo.localeCompare(b.inquiryNo)
       );
-  }, [filter, records]);
+  }, [baseFiltered, filter.quoteStatus, filter.sortDir]);
 
   const activeCount = [
     filter.timeRange !== 'all',
@@ -131,6 +136,7 @@ export function useInquiryFilter(records: InquiryRecord[]) {
     filter,
     setFilter,
     filteredAndSorted,
+    baseFiltered,
     customers,
     inquirers,
     activeCount,

@@ -544,4 +544,68 @@ python-docx 解析 `协同-1询价登记表(2026-2).docx`，输出 `inquiry_impo
 
 ---
 
-*最后更新：2026-06-22（TASK-41~48 完成）*
+## 2026-06-23 改动记录
+
+### 询报价筛选状态数字标（Badge）
+
+**需求**：筛选栏中「未报价/已报价/无法报价/已成单」四个 chip 被选中时，右上角显示该状态的记录数量，颜色与状态对应。
+
+**颜色规则**：
+
+| 状态 | Chip 激活色 | 数字标色 |
+|------|------------|---------|
+| 未报价 | `bg-pink-500` | `bg-pink-500` |
+| 已报价 | `bg-blue-600` | `bg-blue-600` |
+| 无法报价 | `bg-yellow-500` | `bg-yellow-500` |
+| 已成单 | `bg-green-600` | `bg-green-600` |
+
+**数字来源**：全量 `records`（不受时间/关键字等其他筛选项影响），通过 `countByStatus()` 函数按各状态逻辑统计。
+
+**改动文件**：
+
+| 文件 | 改动 |
+|------|------|
+| `src/features/inquiry/components/InquiryFilterBar.tsx` | 新增 `InquiryRecord[]` prop、`countByStatus()` 函数；`Chip` 新增 `badge`/`badgeColor` prop；`statusOptions` 各项配置对应颜色；未报价 chip 激活色由蓝改为粉红 |
+| `src/features/inquiry/app/InquiryPage.tsx` | `<InquiryFilterBar>` 传入 `records={records}` |
+
+---
+
+### 首页「今日」统计按权限过滤
+
+**需求**：首页 `StatsCards`（今日·报价单/销售确认/财务发票/箱单发票/采购订单）仅对有对应模块权限的用户显示相关项，无权限的项直接不渲染。
+
+**逻辑**：利用 `PermissionMap.documentTypePermissions[type]` 过滤 `STAT_ITEMS`，若全部项均无权限则整个 bar 返回 `null`。
+
+**改动文件**：
+
+| 文件 | 改动 |
+|------|------|
+| `src/features/dashboard/components/StatsCards.tsx` | 新增 `permissionMap?: PermissionMap` prop；`visibleItems` 按 `documentTypePermissions` 过滤；全部无权限时 `return null` |
+| `src/features/dashboard/app/DashboardPage.tsx` | `<StatsCards>` 传入 `permissionMap={permissionMap}` |
+
+---
+
+### 采购订单页面 textarea 向上跳动修复
+
+**根本原因**：`PurchaseForm` 中四个 textarea 使用了 `rows={4}` / `rows={2}` HTML 属性，同时又使用 `useAutoResizeTextareas` Hook。Hook 执行时先将 `style.height = 'auto'`（此时 scrollHeight 以**内容高度**为准，不是 rows 属性高度），再将高度设为 `scrollHeight`。当内容只有 1 行时，textarea 从 `rows={4}` 的 ~104px 骤缩至 ~44px，导致下方内容向上跳动。
+
+**修复方案**：删除四个 textarea 的 `rows` 属性，改用 Tailwind `min-h-` CSS 类保证最小高度：
+
+| textarea | 原 rows | 新最小高度 |
+|----------|---------|-----------|
+| `projectSpecificationRef`（项目规格） | `rows={4}` | `min-h-[96px]` |
+| `paymentTermsRef`（付款条件） | `rows={2}` | `min-h-[64px]` |
+| `deliveryInfoRef`（关于交货） | `rows={4}` | `min-h-[96px]` |
+| `orderNumbersRef`（客户订单号码） | `rows={4}` | `min-h-[96px]` |
+
+这样 textarea 只会随内容**增高**，不会因 Hook 执行而收缩，跳动消失。
+
+**改动文件**：
+
+| 文件 | 改动 |
+|------|------|
+| `src/features/purchase/components/PurchaseForm.tsx` | 四个 textarea 删除 `rows` 属性，className 追加对应 `min-h-` 类 |
+
+---
+
+*最后更新：2026-06-23（筛选数字标、今日统计权限过滤、采购订单跳动修复）*

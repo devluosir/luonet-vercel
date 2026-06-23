@@ -84,7 +84,7 @@ export function InquiryPage() {
   const records = useInquiryStore((state) => state.records);
   const { createRecord, removeRecord } = useInquiryActions();
   const updateRecord = useInquiryStore((state) => state.updateRecord);
-  const { filter, setFilter, filteredAndSorted, inquirers, activeCount, reset } =
+  const { filter, setFilter, filteredAndSorted, baseFiltered, inquirers, activeCount, reset } =
     useInquiryFilter(records);
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -392,7 +392,7 @@ export function InquiryPage() {
                 inquirers={inquirers}
                 activeCount={activeCount}
                 onReset={reset}
-                records={records}
+                records={baseFiltered}
               />
             ) : (
               <div className="flex min-w-0 flex-1 items-baseline gap-2.5">
