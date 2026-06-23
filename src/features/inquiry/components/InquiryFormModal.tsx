@@ -261,35 +261,22 @@ export function InquiryFormModal({
               </label>
             </div>
 
-            {/* 第二行：询价人（全宽，带分隔线） */}
+            {/* 第二行：询价人（可手动录入，历史名字作为 datalist 建议） */}
             <div className="flex items-center border-t border-gray-100 pt-1.5 dark:border-gray-700">
-              {inquirerOptions.length > 0 ? (
-                /* 有历史询价人时用 select，支持手机原生选择器 */
-                <select
-                  value={inquirer}
-                  onChange={(e) => setInquirer(e.target.value)}
-                  required
-                  className="min-w-0 flex-1 appearance-none bg-transparent text-sm font-medium text-gray-800 outline-none dark:text-gray-100"
-                >
-                  <option value="" disabled>询价人…</option>
-                  {/* 编辑时当前值不在列表中，临时加入 */}
-                  {inquirer && !inquirerOptions.includes(inquirer) && (
-                    <option value={inquirer}>{inquirer}</option>
-                  )}
-                  {inquirerOptions.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              ) : (
-                /* 无历史数据时退回文本输入 */
-                <input
-                  value={inquirer}
-                  onChange={(e) => setInquirer(e.target.value)}
-                  className="min-w-0 flex-1 bg-transparent text-sm font-medium text-gray-800 outline-none placeholder:text-gray-300 dark:text-gray-100 dark:placeholder:text-gray-600"
-                  placeholder="询价人"
-                  required
-                />
-              )}
+              <input
+                list="inquirer-suggestions"
+                value={inquirer}
+                onChange={(e) => setInquirer(e.target.value)}
+                className="min-w-0 flex-1 bg-transparent text-sm font-medium text-gray-800 outline-none placeholder:text-gray-300 dark:text-gray-100 dark:placeholder:text-gray-600"
+                placeholder="询价人"
+                required
+                autoComplete="off"
+              />
+              <datalist id="inquirer-suggestions">
+                {inquirerOptions.map((opt) => (
+                  <option key={opt} value={opt} />
+                ))}
+              </datalist>
             </div>
           </div>
 
