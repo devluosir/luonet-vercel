@@ -1,5 +1,6 @@
 'use client';
 
+import type { InquiryRecord } from '../types';
 import type {
   InquiryFilterState,
   QuoteStatusFilter,
@@ -13,6 +14,27 @@ interface InquiryFilterBarProps {
   inquirers: string[];
   activeCount: number;
   onReset: () => void;
+  records: InquiryRecord[];
+}
+
+function countByStatus(records: InquiryRecord[], status: QuoteStatusFilter): number {
+  return records.filter((r) => {
+    switch (status) {
+      case 'customer_pending':
+        return r.quotedStatuses.length === 0;
+      case 'customer_quoted':
+        return (
+          !r.quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed') &&
+          r.quotedStatuses.some((s) => !s.type || s.type === 'quoted')
+        );
+      case 'unavailable':
+        return r.quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed');
+      case 'has_order':
+        return Boolean(r.orderNo?.trim());
+      default:
+        return false;
+    }
+  }).length;
 }
 
 const timeOptions: Array<{ label: string; value: TimeRange }> = [
@@ -22,11 +44,16 @@ const timeOptions: Array<{ label: string; value: TimeRange }> = [
   { label: '1Y', value: '1y' },
 ];
 
-const statusOptions: Array<{ label: string; value: QuoteStatusFilter; activeColor?: string }> = [
-  { label: '未报价', value: 'customer_pending' },
-  { label: '已报价', value: 'customer_quoted', activeColor: 'bg-blue-600 text-white' },
-  { label: '无法报价', value: 'unavailable', activeColor: 'bg-gray-500 text-white' },
-  { label: '已成单', value: 'has_order', activeColor: 'bg-green-600 text-white' },
+const statusOptions: Array<{
+  label: string;
+  value: QuoteStatusFilter;
+  activeColor?: string;
+  badgeColor: string;
+}> = [
+  { label: '未报价', value: 'customer_pending', activeColor: 'bg-pink-500 text-white', badgeColor: 'bg-pink-500' },
+  { label: '已报价', value: 'customer_quoted', activeColor: 'bg-blue-600 text-white', badgeColor: 'bg-blue-600' },
+  { label: '无法报价', value: 'unavailable', activeColor: 'bg-yellow-500 text-white', badgeColor: 'bg-yellow-500' },
+  { label: '已成单', value: 'has_order', activeColor: 'bg-green-600 text-white', badgeColor: 'bg-green-600' },
 ];
 
 function Chip({
@@ -34,23 +61,34 @@ function Chip({
   active,
   onClick,
   activeColor = 'bg-blue-600 text-white',
+  badge,
+  badgeColor = 'bg-blue-600',
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
   activeColor?: string;
+  badge?: number;
+  badgeColor?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
+      className={`relative rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
         active
           ? activeColor
           : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
       }`}
     >
       {label}
+      {active && badge !== undefined && (
+        <span
+          className={`absolute -right-1.5 -top-1.5 min-w-4 rounded-full px-1 text-[10px] font-semibold leading-4 text-white ${badgeColor}`}
+        >
+          {badge}
+        </span>
+      )}
     </button>
   );
 }
@@ -62,6 +100,7 @@ export function InquiryFilterBar({
   inquirers,
   activeCount,
   onReset,
+  records,
 }: InquiryFilterBarProps) {
   const divider = (
     <span className="select-none text-gray-200 dark:text-gray-700">·</span>
@@ -96,6 +135,8 @@ export function InquiryFilterBar({
           label={opt.label}
           active={filter.quoteStatus === opt.value}
           activeColor={opt.activeColor}
+          badge={countByStatus(records, opt.value)}
+          badgeColor={opt.badgeColor}
           onClick={() =>
             setFilter({
               ...filter,
