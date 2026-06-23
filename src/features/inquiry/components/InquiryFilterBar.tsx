@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef } from 'react';
-import { CalendarDays } from 'lucide-react';
 import type { InquiryRecord } from '../types';
 import type {
   InquiryFilterState,
@@ -19,6 +18,7 @@ interface InquiryFilterBarProps {
   records: InquiryRecord[];
 }
 
+// ── 状态角标计数 ───────────────────────────────────────────
 function countByStatus(records: InquiryRecord[], status: QuoteStatusFilter): number {
   return records.filter((r) => {
     switch (status) {
@@ -39,28 +39,26 @@ function countByStatus(records: InquiryRecord[], status: QuoteStatusFilter): num
   }).length;
 }
 
-/** YYYY-MM → 简短显示；同年只显示 "M月" */
-function formatMonthLabel(value: string): string {
-  const parts = value.split('-');
-  if (parts.length !== 2) return value;
-  const year = Number(parts[0]);
-  const month = Number(parts[1]);
-  return year === new Date().getFullYear() ? `${month}月` : `${year}年${month}月`;
-}
-
-/** 今天的 YYYY-MM，用于 max 限制 */
+// ── 日期工具 ──────────────────────────────────────────────
 function todayMonth(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-const timeChips: Array<{ label: string; value: TimeRange }> = [
-  { label: '近3月', value: '3months' },
-  { label: '本月',  value: 'this_month' },
-  { label: '上月',  value: 'last_month' },
-  { label: '全部',  value: 'all' },
-];
+/** YYYY-MM → 显示文字；同年只显示 M月 */
+function fmtMonth(value: string): string {
+  const [y, m] = value.split('-').map(Number);
+  return y === new Date().getFullYear() ? `${m}月` : `${y}年${m}月`;
+}
 
+/** YYYY-MM + delta 个月 → 新的 YYYY-MM */
+function shiftMonth(base: string, delta: number): string {
+  const [y, m] = base.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// ── 常量 ─────────────────────────────────────────────────
 const statusOptions: Array<{
   label: string;
   value: QuoteStatusFilter;
@@ -73,20 +71,12 @@ const statusOptions: Array<{
   { label: '已成单',   value: 'has_order',         activeColor: 'bg-green-600 text-white',  badgeColor: 'bg-green-600' },
 ];
 
+// ── 子组件 ────────────────────────────────────────────────
 function Chip({
-  label,
-  active,
-  onClick,
-  activeColor = 'bg-blue-600 text-white',
-  badge,
-  badgeColor = 'bg-blue-600',
+  label, active, onClick, activeColor = 'bg-blue-600 text-white', badge, badgeColor = 'bg-blue-600',
 }: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  activeColor?: string;
-  badge?: number;
-  badgeColor?: string;
+  label: string; active: boolean; onClick: () => void;
+  activeColor?: string; badge?: number; badgeColor?: string;
 }) {
   return (
     <button
@@ -100,9 +90,7 @@ function Chip({
     >
       {label}
       {active && badge !== undefined && (
-        <span
-          className={`absolute -right-1.5 -top-1.5 min-w-4 rounded-full px-1 text-[10px] font-semibold leading-4 text-white ${badgeColor}`}
-        >
+        <span className={`absolute -right-1.5 -top-1.5 min-w-4 rounded-full px-1 text-[10px] font-semibold leading-4 text-white ${badgeColor}`}>
           {badge}
         </span>
       )}
@@ -110,111 +98,96 @@ function Chip({
   );
 }
 
+// ── 主组件 ────────────────────────────────────────────────
 export function InquiryFilterBar({
-  id,
-  filter,
-  setFilter,
-  inquirers,
-  activeCount,
-  onReset,
-  records,
+  id, filter, setFilter, inquirers, activeCount, onReset, records,
 }: InquiryFilterBarProps) {
-  // 用 showPicker() 唤起原生月份选择器，避免 sr-only 导致的 label/click 无效问题
   const monthInputRef = useRef<HTMLInputElement>(null);
 
-  const openMonthPicker = (e: React.MouseEvent) => {
+  const isCustomMonth = filter.timeRange.startsWith('month:');
+  // 导航器的"基准月"：month模式下取选中月，其他模式取当前月
+  const navMonth = isCustomMonth ? filter.timeRange.slice(6) : todayMonth();
+  const canGoNext = navMonth < todayMonth(); // 到当前月就不能再往后了
+
+  // 唤起原生月份选择器
+  const openPicker = (e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    try {
-      monthInputRef.current?.showPicker();
-    } catch {
-      // showPicker 不支持的旧浏览器：尝试 focus 触发
-      monthInputRef.current?.focus();
-    }
+    try { monthInputRef.current?.showPicker(); }
+    catch { monthInputRef.current?.focus(); }
   };
 
-  const isCustomMonth =
-    typeof filter.timeRange === 'string' && filter.timeRange.startsWith('month:');
-  const customMonthValue = isCustomMonth ? filter.timeRange.slice(6) : '';
+  const setMonth = (ym: string) =>
+    setFilter({ ...filter, timeRange: `month:${ym}` as TimeRange });
 
-  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value; // YYYY-MM
-    if (val) setFilter({ ...filter, timeRange: `month:${val}` as TimeRange });
-  };
-
-  const clearCustomMonth = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setFilter({ ...filter, timeRange: '3months' });
-  };
-
-  const divider = (
-    <span className="select-none text-gray-200 dark:text-gray-700">·</span>
-  );
+  const divider = <span className="select-none text-gray-200 dark:text-gray-700">·</span>;
 
   return (
     <div id={id} className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
 
-      {/* 隐藏的 month input，始终挂载，供 showPicker() 调用 */}
+      {/* 隐藏的 input，由 showPicker() 控制 */}
       <input
         ref={monthInputRef}
         type="month"
         max={todayMonth()}
-        onChange={handleMonthChange}
+        onChange={(e) => { if (e.target.value) setMonth(e.target.value); }}
         tabIndex={-1}
         aria-hidden="true"
         className="absolute left-0 top-0 h-px w-px opacity-0 pointer-events-none"
       />
 
-      {/* ── 时间 chips ── */}
-      {timeChips.map((opt) => (
-        <Chip
-          key={opt.value}
-          label={opt.label}
-          active={filter.timeRange === opt.value}
-          onClick={() =>
-            setFilter({
-              ...filter,
-              timeRange: filter.timeRange === opt.value ? '3months' : opt.value,
-            })
-          }
-        />
-      ))}
+      {/* ── 时间：语义 chip + 月导航器 ── */}
+      <Chip
+        label="近3月"
+        active={filter.timeRange === '3months'}
+        onClick={() => setFilter({ ...filter, timeRange: '3months' })}
+      />
+      <Chip
+        label="全部"
+        active={filter.timeRange === 'all'}
+        onClick={() => setFilter({ ...filter, timeRange: 'all' })}
+      />
 
-      {/* 选月 */}
-      {isCustomMonth ? (
-        /* 已选某月 → 蓝色 chip，点击换月，× 清除 */
-        <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-medium text-white">
-          <button
-            type="button"
-            onClick={openMonthPicker}
-            className="inline-flex items-center gap-1"
-            title="点击更换月份"
-          >
-            <CalendarDays className="h-3 w-3 shrink-0" />
-            {formatMonthLabel(customMonthValue)}
-          </button>
-          <button
-            type="button"
-            onClick={clearCustomMonth}
-            className="ml-0.5 opacity-70 hover:opacity-100"
-            aria-label="清除月份筛选"
-          >
-            ×
-          </button>
-        </span>
-      ) : (
-        /* 未选月份 → 灰色 chip，点击打开选择器 */
+      {/* 月份导航器：← [选月/M月] → */}
+      <div className="inline-flex items-center overflow-hidden rounded-full border border-gray-200 bg-white text-xs dark:border-gray-700 dark:bg-gray-800">
+        {/* 上一月 */}
         <button
           type="button"
-          onClick={openMonthPicker}
-          className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
-          title="选择特定月份"
+          onClick={() => setMonth(shiftMonth(navMonth, -1))}
+          className="px-2 py-0.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+          aria-label="上一个月"
         >
-          <CalendarDays className="h-3 w-3 shrink-0" />
-          选月
+          ‹
         </button>
-      )}
+
+        {/* 月份标签 / 选月入口 */}
+        <button
+          type="button"
+          onClick={openPicker}
+          className={`min-w-[3.25rem] border-x border-gray-100 px-2 py-0.5 text-center font-medium transition-colors dark:border-gray-700 ${
+            isCustomMonth
+              ? 'text-blue-600 dark:text-blue-400'
+              : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
+          }`}
+          title={isCustomMonth ? '点击更换月份' : '选择特定月份'}
+        >
+          {isCustomMonth ? fmtMonth(navMonth) : '选月'}
+        </button>
+
+        {/* 下一月 */}
+        <button
+          type="button"
+          onClick={canGoNext ? () => setMonth(shiftMonth(navMonth, 1)) : undefined}
+          disabled={!canGoNext}
+          className={`px-2 py-0.5 transition-colors ${
+            canGoNext
+              ? 'text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200'
+              : 'cursor-not-allowed text-gray-200 dark:text-gray-700'
+          }`}
+          aria-label="下一个月"
+        >
+          ›
+        </button>
+      </div>
 
       {divider}
 
@@ -228,10 +201,7 @@ export function InquiryFilterBar({
           badge={countByStatus(records, opt.value)}
           badgeColor={opt.badgeColor}
           onClick={() =>
-            setFilter({
-              ...filter,
-              quoteStatus: filter.quoteStatus === opt.value ? 'all' : opt.value,
-            })
+            setFilter({ ...filter, quoteStatus: filter.quoteStatus === opt.value ? 'all' : opt.value })
           }
         />
       ))}
@@ -261,9 +231,7 @@ export function InquiryFilterBar({
       >
         <option value="">询价人</option>
         {inquirers.map((name) => (
-          <option key={name} value={name}>
-            {name}
-          </option>
+          <option key={name} value={name}>{name}</option>
         ))}
       </select>
 
