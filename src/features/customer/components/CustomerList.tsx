@@ -1,48 +1,8 @@
 import { useMemo } from 'react';
-import {
-  AlertCircle,
-  Calendar,
-  Clock,
-  Edit,
-  Eye,
-  Mail,
-  MapPin,
-  Phone,
-  Search,
-  Trash2,
-  Users,
-} from 'lucide-react';
-import { Customer } from '../types';
-import { TimelineService, FollowUpService } from '../services/timelineService';
-import type {
-  CustomerFilterType,
-  CustomerSortType,
-  CustomerViewMode,
-} from './FilterChipBar';
+import { Edit, Eye, Search, Trash2, Users } from 'lucide-react';
+import type { Customer, Supplier, Consignee } from '../types';
 
-type ActivityLevel = 'high' | 'medium' | 'low';
-
-interface CustomerListProps {
-  customers: Customer[];
-  onEdit: (customer: Customer) => void;
-  onDelete: (customer: Customer) => void;
-  onViewDetail?: (customer: Customer) => void;
-  searchQuery?: string;
-  viewMode?: CustomerViewMode;
-  activeFilter?: CustomerFilterType;
-  sortBy?: CustomerSortType;
-}
-
-interface CustomerInfo {
-  title: string;
-  contactInfo: {
-    phone: string;
-    email: string;
-    address: string;
-  };
-}
-
-const avatarColors = [
+const AVATAR_COLORS = [
   'bg-blue-500',
   'bg-green-500',
   'bg-purple-500',
@@ -50,410 +10,177 @@ const avatarColors = [
   'bg-pink-500',
 ];
 
-const activityOrder: Record<ActivityLevel, number> = {
-  high: 0,
-  medium: 1,
-  low: 2,
-};
-
-function formatDate(dateString?: string) {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('zh-CN', {
-    month: 'short',
-    day: 'numeric',
-  });
+function avatarColor(title: string) {
+  return AVATAR_COLORS[(title.charCodeAt(0) || 0) % AVATAR_COLORS.length];
 }
 
-function getCustomerInfo(customer: Customer): CustomerInfo {
-  const lines = customer.name.split('\n');
-  const title = lines[0] || customer.name;
-  const contactInfo = {
-    phone: customer.phone || '',
-    email: customer.email || '',
-    address: customer.address || '',
-  };
-
-  lines.forEach((line) => {
-    const trimmed = line.trim();
-    if (!contactInfo.email && trimmed.includes('@')) {
-      contactInfo.email = trimmed;
-    } else if (!contactInfo.phone && (trimmed.includes('+') || /\d{3,}/.test(trimmed))) {
-      contactInfo.phone = trimmed;
-    } else if (!contactInfo.address && trimmed && trimmed !== title) {
-      contactInfo.address = trimmed;
-    }
-  });
-
-  return { title, contactInfo };
+function fmtDate(iso?: string) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' });
 }
 
-function getCachedCount(counts: Map<string, number>, customer: Customer) {
-  return counts.get(customer.id) ?? counts.get(customer.name) ?? 0;
-}
-
-function getCustomerActivity(timelineCount: number, followUpCount: number) {
-  const totalActivity = timelineCount + followUpCount;
-
-  if (totalActivity >= 10) {
-    return {
-      level: 'high' as const,
-      label: '高活跃',
-      color: 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300',
-      borderColor: 'border-l-green-500',
-    };
-  }
-  if (totalActivity >= 5) {
-    return {
-      level: 'medium' as const,
-      label: '中活跃',
-      color: 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300',
-      borderColor: 'border-l-yellow-400',
-    };
-  }
-  return {
-    level: 'low' as const,
-    label: '低活跃',
-    color: 'bg-gray-50 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
-    borderColor: 'border-l-gray-300 dark:border-l-gray-600',
-  };
-}
-
-function needsFollowUp(timelineCount: number, followUpCount: number) {
-  return timelineCount > 0 && followUpCount === 0;
-}
-
-function isThisMonth(customer: Customer) {
-  const lastMonth = new Date();
-  lastMonth.setMonth(lastMonth.getMonth() - 1);
-  const createdAt = customer.createdAt ? new Date(customer.createdAt) : null;
-  return Boolean(createdAt && createdAt >= lastMonth);
-}
-
-function getAvatarColor(title: string) {
-  const charCode = title.charCodeAt(0) || 0;
-  return avatarColors[charCode % avatarColors.length];
-}
-
-function CustomerAvatar({ title }: { title: string }) {
+function SkeletonRow() {
   return (
-    <div
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${getAvatarColor(title)}`}
-    >
-      {title.charAt(0).toUpperCase() || '客'}
+    <div className="flex items-center gap-3 px-4 py-3 animate-pulse">
+      <div className="h-9 w-9 shrink-0 rounded-full bg-gray-200 dark:bg-gray-700" />
+      <div className="flex-1 space-y-1.5">
+        <div className="h-3.5 w-32 rounded bg-gray-200 dark:bg-gray-700" />
+        <div className="h-3 w-20 rounded bg-gray-100 dark:bg-gray-800" />
+      </div>
+      <div className="hidden h-3 w-32 rounded bg-gray-100 dark:bg-gray-800 sm:block" />
+      <div className="hidden h-3 w-20 rounded bg-gray-100 dark:bg-gray-800 md:block" />
+      <div className="flex gap-0.5">
+        <div className="h-7 w-7 rounded bg-gray-100 dark:bg-gray-800" />
+        <div className="h-7 w-7 rounded bg-gray-100 dark:bg-gray-800" />
+        <div className="h-7 w-7 rounded bg-gray-100 dark:bg-gray-800" />
+      </div>
     </div>
   );
 }
 
-function ActionButton({
-  label,
-  color,
-  onClick,
-  icon: Icon,
-}: {
-  label: string;
-  color: 'blue' | 'gray' | 'red';
-  onClick: () => void;
-  icon: typeof Eye;
-}) {
-  const colorClassName = {
-    blue: 'text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/40',
-    gray: 'text-gray-600 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-300 dark:hover:bg-gray-700',
-    red: 'text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/40',
-  }[color];
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${colorClassName}`}
-    >
-      <Icon className="h-3.5 w-3.5" />
-      {label}
-    </button>
-  );
+interface CustomerListProps {
+  customers: Customer[];
+  loading: boolean;
+  searchQuery: string;
+  onEdit: (customer: Customer | Supplier | Consignee) => void;
+  onDelete: (customer: Customer | Supplier | Consignee) => void;
+  onViewDetail: (customer: Customer) => void;
 }
 
 export function CustomerList({
   customers,
+  loading,
+  searchQuery,
   onEdit,
   onDelete,
   onViewDetail,
-  searchQuery = '',
-  viewMode = 'grid',
-  activeFilter = 'all',
-  sortBy = 'date_desc',
 }: CustomerListProps) {
-  const timelineCounts = useMemo(() => TimelineService.getCountsByCustomer(), []);
-  const followUpCounts = useMemo(() => FollowUpService.getCountsByCustomer(), []);
-
-  const sortedCustomers = useMemo(() => {
-    const filteredCustomers = customers.filter((customer) => {
-      if (!searchQuery) return true;
-
-      const { title, contactInfo } = getCustomerInfo(customer);
-      const searchLower = searchQuery.toLowerCase();
-
+  const filtered = useMemo(() => {
+    if (!searchQuery.trim()) return customers;
+    const q = searchQuery.toLowerCase();
+    return customers.filter((c) => {
+      const title = c.name.split('\n')[0] || c.name;
       return (
-        title.toLowerCase().includes(searchLower) ||
-        (customer.company || '').toLowerCase().includes(searchLower) ||
-        contactInfo.phone.toLowerCase().includes(searchLower) ||
-        contactInfo.email.toLowerCase().includes(searchLower) ||
-        contactInfo.address.toLowerCase().includes(searchLower)
+        title.toLowerCase().includes(q) ||
+        (c.company || '').toLowerCase().includes(q) ||
+        (c.phone || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q)
       );
     });
+  }, [customers, searchQuery]);
 
-    const displayCustomers = filteredCustomers.filter((customer) => {
-      if (activeFilter === 'all') return true;
-      const timelineCount = getCachedCount(timelineCounts, customer);
-      const followUpCount = getCachedCount(followUpCounts, customer);
-      const activity = getCustomerActivity(timelineCount, followUpCount);
-      if (activeFilter === 'high') return activity.level === 'high';
-      if (activeFilter === 'needs_followup') return needsFollowUp(timelineCount, followUpCount);
-      if (activeFilter === 'this_month') return isThisMonth(customer);
-      return true;
-    });
-
-    return [...displayCustomers].sort((a, b) => {
-      if (sortBy === 'name') {
-        return getCustomerInfo(a).title.localeCompare(getCustomerInfo(b).title, 'zh-CN');
-      }
-      if (sortBy === 'activity') {
-        const aTimelineCount = getCachedCount(timelineCounts, a);
-        const aFollowUpCount = getCachedCount(followUpCounts, a);
-        const bTimelineCount = getCachedCount(timelineCounts, b);
-        const bFollowUpCount = getCachedCount(followUpCounts, b);
-        return (
-          activityOrder[getCustomerActivity(aTimelineCount, aFollowUpCount).level] -
-          activityOrder[getCustomerActivity(bTimelineCount, bFollowUpCount).level]
-        );
-      }
-      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-    });
-  }, [activeFilter, customers, followUpCounts, searchQuery, sortBy, timelineCounts]);
+  if (loading) {
+    return (
+      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+        {Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)}
+      </div>
+    );
+  }
 
   if (customers.length === 0) {
     return (
-      <div className="py-14 text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
-          <Users className="h-8 w-8 text-gray-400" />
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+          <Users className="h-7 w-7 text-gray-400" />
         </div>
-        <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">暂无客户数据</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">开始添加您的第一个客户</p>
+        <p className="text-sm font-medium text-gray-900 dark:text-white">暂无客户</p>
+        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">点击右上角&ldquo;新增客户&rdquo;添加第一个客户</p>
       </div>
     );
   }
 
-  if (sortedCustomers.length === 0) {
+  if (filtered.length === 0) {
     return (
-      <div className="py-10 text-center">
-        <Search className="mx-auto mb-2 h-8 w-8 text-gray-400" />
-        <p className="text-sm text-gray-600 dark:text-gray-400">未找到匹配的客户</p>
-      </div>
-    );
-  }
-
-  if (viewMode === 'list') {
-    return (
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
-              <th className="pb-3 pr-4 font-semibold">客户名称</th>
-              <th className="pb-3 pr-4 font-semibold">联系方式</th>
-              <th className="pb-3 pr-4 font-semibold">活跃度</th>
-              <th className="pb-3 pr-4 font-semibold">创建时间</th>
-              <th className="pb-3 font-semibold">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedCustomers.map((customer) => {
-              const { title, contactInfo } = getCustomerInfo(customer);
-              const timelineCount = getCachedCount(timelineCounts, customer);
-              const followUpCount = getCachedCount(followUpCounts, customer);
-              const activity = getCustomerActivity(timelineCount, followUpCount);
-
-              return (
-                <tr
-                  key={customer.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/40"
-                >
-                  <td className="py-3 pr-4">
-                    <div className="flex items-center gap-2">
-                      <CustomerAvatar title={title} />
-                      <button
-                        type="button"
-                        onClick={() => onViewDetail?.(customer)}
-                        className="max-w-[220px] truncate text-left font-medium text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
-                      >
-                        {title}
-                      </button>
-                    </div>
-                  </td>
-                  <td className="py-3 pr-4 text-gray-600 dark:text-gray-300">
-                    <div className="space-y-1">
-                      {contactInfo.phone ? (
-                        <div className="flex items-center gap-1.5">
-                          <Phone className="h-3.5 w-3.5 text-gray-400" />
-                          <span>{contactInfo.phone}</span>
-                        </div>
-                      ) : contactInfo.email ? (
-                        <div className="flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-gray-400" />
-                          <span>{contactInfo.email}</span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-3 pr-4">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${activity.color}`}>
-                      {activity.label}
-                    </span>
-                  </td>
-                  <td className="py-3 pr-4 text-gray-500 dark:text-gray-400">
-                    {formatDate(customer.createdAt)}
-                  </td>
-                  <td className="py-3">
-                    <div className="flex gap-1">
-                      {onViewDetail && (
-                        <ActionButton
-                          icon={Eye}
-                          label="查看"
-                          onClick={() => onViewDetail(customer)}
-                          color="blue"
-                        />
-                      )}
-                      <ActionButton icon={Edit} label="编辑" onClick={() => onEdit(customer)} color="gray" />
-                      <ActionButton icon={Trash2} label="删除" onClick={() => onDelete(customer)} color="red" />
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Search className="mb-2 h-8 w-8 text-gray-300 dark:text-gray-600" />
+        <p className="text-sm text-gray-500 dark:text-gray-400">未找到匹配的客户</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">客户列表</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            共 {sortedCustomers.length} 个客户
-            {searchQuery && `（搜索：${searchQuery}）`}
-          </p>
-        </div>
+    <div>
+      {/* 列标题 */}
+      <div className="hidden items-center gap-3 border-b border-gray-100 bg-gray-50/80 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/40 sm:flex">
+        <div className="w-9 shrink-0" />
+        <span className="flex-1 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">名称</span>
+        <span className="hidden w-40 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 sm:block">联系方式</span>
+        <span className="hidden w-24 shrink-0 text-right text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 md:block">创建时间</span>
+        <div className="w-[88px] shrink-0" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {sortedCustomers.map((customer) => {
-          const { title, contactInfo } = getCustomerInfo(customer);
-          const timelineCount = getCachedCount(timelineCounts, customer);
-          const followUpCount = getCachedCount(followUpCounts, customer);
-          const activity = getCustomerActivity(timelineCount, followUpCount);
-          const needsFollowUpFlag = needsFollowUp(timelineCount, followUpCount);
+      {/* 行列表 */}
+      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+        {filtered.map((customer) => {
+          const title = customer.name.split('\n')[0] || customer.name;
+          const initial = title.charAt(0).toUpperCase() || '客';
+          const contact = customer.phone || customer.email || '—';
 
           return (
             <div
               key={customer.id}
-              className={`overflow-hidden rounded-lg border border-l-4 border-gray-200 bg-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 ${activity.borderColor}`}
+              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/40"
             >
-              <div className="p-4">
-                <div className="mb-3 flex items-start gap-3">
-                  <CustomerAvatar title={title} />
-                  <div className="min-w-0 flex-1">
-                    <button
-                      type="button"
-                      onClick={() => onViewDetail?.(customer)}
-                      className="block max-w-full truncate text-left text-base font-semibold text-gray-900 transition-colors hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
-                    >
-                      {title}
-                    </button>
-                    {customer.company && (
-                      <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
-                        {customer.company}
-                      </p>
-                    )}
-                  </div>
-                  {needsFollowUpFlag && (
-                    <AlertCircle className="mt-1 h-4 w-4 shrink-0 text-red-500" />
-                  )}
-                </div>
-
-                <div className="mb-3 min-h-[48px] space-y-1">
-                  {contactInfo.phone && (
-                    <div className="flex items-center text-xs text-gray-600 dark:text-gray-300">
-                      <Phone className="mr-1.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
-                      <span className="truncate">{contactInfo.phone}</span>
-                    </div>
-                  )}
-                  {contactInfo.email && (
-                    <div className="flex items-center text-xs text-gray-600 dark:text-gray-300">
-                      <Mail className="mr-1.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
-                      <span className="truncate">{contactInfo.email}</span>
-                    </div>
-                  )}
-                  {contactInfo.address && (
-                    <div className="flex items-center text-xs text-gray-600 dark:text-gray-300">
-                      <MapPin className="mr-1.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
-                      <span className="truncate">{contactInfo.address}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
-                    <div className="flex items-center">
-                      <Calendar className="mr-1 h-3.5 w-3.5 text-gray-400" />
-                      <span>{timelineCount}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="mr-1 h-3.5 w-3.5 text-gray-400" />
-                      <span>{followUpCount}</span>
-                    </div>
-                  </div>
-
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${activity.color}`}>
-                    {activity.label}
-                  </span>
-                </div>
-
-                <div className="mt-3 border-t border-gray-100 pt-3 dark:border-gray-700">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    创建于 {formatDate(customer.createdAt)}
-                  </p>
-                </div>
+              {/* 头像 */}
+              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColor(title)}`}>
+                {initial}
               </div>
 
-              <div className="flex items-center justify-end gap-1 border-t border-gray-100 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900/40">
-                {onViewDetail && (
-                  <ActionButton
-                    icon={Eye}
-                    label="查看"
-                    onClick={() => onViewDetail(customer)}
-                    color="blue"
-                  />
+              {/* 名称 + 公司 */}
+              <div className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => onViewDetail(customer)}
+                  className="block w-full truncate text-left text-sm font-medium text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
+                >
+                  {title}
+                </button>
+                {customer.company && (
+                  <p className="truncate text-xs text-gray-400 dark:text-gray-500">{customer.company}</p>
                 )}
-                <ActionButton icon={Edit} label="编辑" onClick={() => onEdit(customer)} color="gray" />
-                <ActionButton icon={Trash2} label="删除" onClick={() => onDelete(customer)} color="red" />
+              </div>
+
+              {/* 联系方式 */}
+              <div className="hidden w-40 shrink-0 truncate text-xs text-gray-400 dark:text-gray-500 sm:block">
+                {contact}
+              </div>
+
+              {/* 创建时间 */}
+              <div className="hidden w-24 shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 md:block">
+                {fmtDate(customer.createdAt)}
+              </div>
+
+              {/* 操作 */}
+              <div className="flex shrink-0 items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => onViewDetail(customer)}
+                  title="查看详情"
+                  className="rounded-md p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onEdit(customer)}
+                  title="编辑"
+                  className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(customer)}
+                  title="删除"
+                  className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
             </div>
           );
         })}
       </div>
-
-      {searchQuery && sortedCustomers.length > 0 && (
-        <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-950/30">
-          <p className="text-sm text-blue-800 dark:text-blue-300">
-            显示 {sortedCustomers.length} 个匹配 “<strong>{searchQuery}</strong>” 的客户
-          </p>
-        </div>
-      )}
     </div>
   );
 }
