@@ -44,7 +44,7 @@ export function UserList({ users, loading, onCreateUser, onEditUser }: UserListP
     return (
       <div className={`${container} flex flex-col items-center justify-center py-16 text-center`}>
         <p className="text-sm font-medium text-gray-900 dark:text-white">暂无用户</p>
-        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">点击"添加用户"创建第一个账户</p>
+        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">点击&ldquo;添加用户&rdquo;创建第一个账户</p>
         <button
           onClick={onCreateUser}
           className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
