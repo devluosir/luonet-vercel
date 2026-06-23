@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { InquiryRecord } from '../types';
 import type {
   InquiryFilterState,
@@ -18,23 +18,19 @@ interface InquiryFilterBarProps {
   records: InquiryRecord[];
 }
 
-// ── 状态角标计数 ───────────────────────────────────────────
+// ── 状态角标计数 ──────────────────────────────────────────
 function countByStatus(records: InquiryRecord[], status: QuoteStatusFilter): number {
   return records.filter((r) => {
     switch (status) {
-      case 'customer_pending':
-        return r.quotedStatuses.length === 0;
+      case 'customer_pending':  return r.quotedStatuses.length === 0;
       case 'customer_quoted':
         return (
           !r.quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed') &&
-          r.quotedStatuses.some((s) => !s.type || s.type === 'quoted')
+           r.quotedStatuses.some((s) => !s.type || s.type === 'quoted')
         );
-      case 'unavailable':
-        return r.quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed');
-      case 'has_order':
-        return Boolean(r.orderNo?.trim());
-      default:
-        return false;
+      case 'unavailable': return r.quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed');
+      case 'has_order':   return Boolean(r.orderNo?.trim());
+      default:            return false;
     }
   }).length;
 }
@@ -45,25 +41,104 @@ function todayMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-/** YYYY-MM → 显示文字；同年只显示 M月 */
 function fmtMonth(value: string): string {
   const [y, m] = value.split('-').map(Number);
   return y === new Date().getFullYear() ? `${m}月` : `${y}年${m}月`;
 }
 
-/** YYYY-MM + delta 个月 → 新的 YYYY-MM */
 function shiftMonth(base: string, delta: number): string {
   const [y, m] = base.split('-').map(Number);
   const d = new Date(y, m - 1 + delta, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// ── 自定义月份选择浮层（兼容 Safari） ────────────────────
+function MonthPickerPopover({
+  value,
+  onSelect,
+  onClose,
+  anchorRef,
+}: {
+  value: string;
+  onSelect: (ym: string) => void;
+  onClose: () => void;
+  anchorRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const today = todayMonth();
+  const curYear = new Date().getFullYear();
+  const [viewYear, setViewYear] = useState(() =>
+    value ? Number(value.split('-')[0]) : curYear
+  );
+
+  // 点击浮层外部关闭
+  useEffect(() => {
+    const handle = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (ref.current?.contains(t) || anchorRef.current?.contains(t)) return;
+      onClose();
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [onClose, anchorRef]);
+
+  return (
+    <div
+      ref={ref}
+      className="absolute left-1/2 top-full z-50 mt-1.5 w-44 -translate-x-1/2 rounded-xl border border-gray-200 bg-white p-2.5 shadow-xl dark:border-gray-700 dark:bg-[#2C2C2E]"
+    >
+      {/* 年份导航 */}
+      <div className="mb-2 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setViewYear((y) => y - 1)}
+          className="rounded px-1.5 py-0.5 text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+        >‹</button>
+        <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{viewYear}年</span>
+        <button
+          type="button"
+          onClick={() => setViewYear((y) => y + 1)}
+          disabled={viewYear >= curYear}
+          className={`rounded px-1.5 py-0.5 text-sm ${
+            viewYear >= curYear
+              ? 'cursor-not-allowed text-gray-200 dark:text-gray-700'
+              : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >›</button>
+      </div>
+
+      {/* 月份格子 4×3 */}
+      <div className="grid grid-cols-4 gap-1">
+        {Array.from({ length: 12 }, (_, i) => {
+          const ym = `${viewYear}-${String(i + 1).padStart(2, '0')}`;
+          const isSelected = ym === value;
+          const isFuture = ym > today;
+          return (
+            <button
+              key={ym}
+              type="button"
+              disabled={isFuture}
+              onClick={() => { onSelect(ym); onClose(); }}
+              className={`rounded-lg py-1.5 text-xs font-medium transition-colors ${
+                isSelected
+                  ? 'bg-blue-600 text-white'
+                  : isFuture
+                  ? 'cursor-not-allowed text-gray-200 dark:text-gray-700'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+              }`}
+            >
+              {i + 1}月
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── 常量 ─────────────────────────────────────────────────
 const statusOptions: Array<{
-  label: string;
-  value: QuoteStatusFilter;
-  activeColor: string;
-  badgeColor: string;
+  label: string; value: QuoteStatusFilter; activeColor: string; badgeColor: string;
 }> = [
   { label: '未报价',   value: 'customer_pending', activeColor: 'bg-pink-500 text-white',   badgeColor: 'bg-pink-500' },
   { label: '已报价',   value: 'customer_quoted',  activeColor: 'bg-blue-600 text-white',   badgeColor: 'bg-blue-600' },
@@ -71,9 +146,11 @@ const statusOptions: Array<{
   { label: '已成单',   value: 'has_order',         activeColor: 'bg-green-600 text-white',  badgeColor: 'bg-green-600' },
 ];
 
-// ── 子组件 ────────────────────────────────────────────────
+// ── Chip ─────────────────────────────────────────────────
 function Chip({
-  label, active, onClick, activeColor = 'bg-blue-600 text-white', badge, badgeColor = 'bg-blue-600',
+  label, active, onClick,
+  activeColor = 'bg-blue-600 text-white',
+  badge, badgeColor = 'bg-blue-600',
 }: {
   label: string; active: boolean; onClick: () => void;
   activeColor?: string; badge?: number; badgeColor?: string;
@@ -102,19 +179,12 @@ function Chip({
 export function InquiryFilterBar({
   id, filter, setFilter, inquirers, activeCount, onReset, records,
 }: InquiryFilterBarProps) {
-  const monthInputRef = useRef<HTMLInputElement>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const navRef = useRef<HTMLDivElement>(null);
 
   const isCustomMonth = filter.timeRange.startsWith('month:');
-  // 导航器的"基准月"：month模式下取选中月，其他模式取当前月
   const navMonth = isCustomMonth ? filter.timeRange.slice(6) : todayMonth();
-  const canGoNext = navMonth < todayMonth(); // 到当前月就不能再往后了
-
-  // 唤起原生月份选择器
-  const openPicker = (e: React.MouseEvent) => {
-    e.preventDefault();
-    try { monthInputRef.current?.showPicker(); }
-    catch { monthInputRef.current?.focus(); }
-  };
+  const canGoNext = navMonth < todayMonth();
 
   const setMonth = (ym: string) =>
     setFilter({ ...filter, timeRange: `month:${ym}` as TimeRange });
@@ -124,37 +194,34 @@ export function InquiryFilterBar({
   return (
     <div id={id} className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
 
-
-      {/* ── 时间：语义 chip + 月导航器 ── */}
+      {/* ── 时间：语义 chip ── */}
       <Chip
         label="近3月"
         active={filter.timeRange === '3months'}
-        onClick={() => setFilter({ ...filter, timeRange: '3months' })}
+        onClick={() => { setFilter({ ...filter, timeRange: '3months' }); setIsPickerOpen(false); }}
       />
       <Chip
         label="全部"
         active={filter.timeRange === 'all'}
-        onClick={() => setFilter({ ...filter, timeRange: 'all' })}
+        onClick={() => { setFilter({ ...filter, timeRange: 'all' }); setIsPickerOpen(false); }}
       />
 
-      {/* 月份导航器：← [选月/M月] → */}
-      <div className="inline-flex items-center overflow-hidden rounded-full border border-gray-200 bg-white text-xs dark:border-gray-700 dark:bg-gray-800">
-        {/* 上一月 */}
-        <button
-          type="button"
-          onClick={() => setMonth(shiftMonth(navMonth, -1))}
-          className="px-2 py-0.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-          aria-label="上一个月"
-        >
-          ‹
-        </button>
-
-        {/* 月份标签 / 选月入口 — input 紧贴按钮底部，picker 弹出位置正确 */}
-        <div className="relative border-x border-gray-100 dark:border-gray-700">
+      {/* ── 月份导航器：‹ [选月/M月] › ── */}
+      <div ref={navRef} className="relative inline-flex items-center overflow-visible">
+        <div className="inline-flex items-center overflow-hidden rounded-full border border-gray-200 bg-white text-xs dark:border-gray-700 dark:bg-gray-800">
+          {/* 上一月 */}
           <button
             type="button"
-            onClick={openPicker}
-            className={`min-w-[3.25rem] px-2 py-0.5 text-center font-medium transition-colors ${
+            onClick={() => { setMonth(shiftMonth(navMonth, -1)); setIsPickerOpen(false); }}
+            className="px-2 py-0.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            aria-label="上一个月"
+          >‹</button>
+
+          {/* 月份标签，点击开关自定义选择器 */}
+          <button
+            type="button"
+            onClick={() => setIsPickerOpen((o) => !o)}
+            className={`min-w-[3.25rem] border-x border-gray-100 px-2 py-0.5 text-center font-medium transition-colors dark:border-gray-700 ${
               isCustomMonth
                 ? 'text-blue-600 dark:text-blue-400'
                 : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
@@ -163,31 +230,30 @@ export function InquiryFilterBar({
           >
             {isCustomMonth ? fmtMonth(navMonth) : '选月'}
           </button>
-          <input
-            ref={monthInputRef}
-            type="month"
-            max={todayMonth()}
-            onChange={(e) => { if (e.target.value) setMonth(e.target.value); }}
-            tabIndex={-1}
-            aria-hidden="true"
-            className="pointer-events-none absolute bottom-0 left-0 h-px w-px opacity-0"
-          />
+
+          {/* 下一月 */}
+          <button
+            type="button"
+            onClick={canGoNext ? () => { setMonth(shiftMonth(navMonth, 1)); setIsPickerOpen(false); } : undefined}
+            disabled={!canGoNext}
+            className={`px-2 py-0.5 transition-colors ${
+              canGoNext
+                ? 'text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200'
+                : 'cursor-not-allowed text-gray-200 dark:text-gray-700'
+            }`}
+            aria-label="下一个月"
+          >›</button>
         </div>
 
-        {/* 下一月 */}
-        <button
-          type="button"
-          onClick={canGoNext ? () => setMonth(shiftMonth(navMonth, 1)) : undefined}
-          disabled={!canGoNext}
-          className={`px-2 py-0.5 transition-colors ${
-            canGoNext
-              ? 'text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200'
-              : 'cursor-not-allowed text-gray-200 dark:text-gray-700'
-          }`}
-          aria-label="下一个月"
-        >
-          ›
-        </button>
+        {/* 自定义月份浮层 */}
+        {isPickerOpen && (
+          <MonthPickerPopover
+            value={isCustomMonth ? navMonth : ''}
+            onSelect={(ym) => setMonth(ym)}
+            onClose={() => setIsPickerOpen(false)}
+            anchorRef={navRef}
+          />
+        )}
       </div>
 
       {divider}
