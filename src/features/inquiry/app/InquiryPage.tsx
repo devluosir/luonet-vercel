@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { Download, Filter, Plus, Upload } from 'lucide-react';
+import { Download, Filter, Plus, Trash2, Upload } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AppLayout, type ActionButton } from '@/components/layout';
@@ -92,6 +92,7 @@ export function InquiryPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const isModalOpenRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -192,9 +193,42 @@ export function InquiryPage() {
     closeModal();
   };
 
+  // 筛选条件变化时清空选中
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filter]);
+
+  const handleToggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleToggleSelectAll = useCallback((allIds: string[]) => {
+    setSelectedIds((prev) => {
+      const allSelected = allIds.every((id) => prev.has(id));
+      return allSelected ? new Set() : new Set(allIds);
+    });
+  }, []);
+
+  const handleBatchDelete = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    if (!window.confirm(`确定删除选中的 ${selectedIds.size} 条记录吗？此操作不可撤销。`)) return;
+    Array.from(selectedIds).forEach((id) => removeRecord(id));
+    setSelectedIds(new Set());
+  }, [selectedIds, removeRecord]);
+
   const handleDeleteRecord = (recordId: string) => {
     if (window.confirm('确定删除这条询报价记录吗？')) {
       removeRecord(recordId);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(recordId);
+        return next;
+      });
     }
   };
 
@@ -415,34 +449,59 @@ export function InquiryPage() {
 
             {/* Right: always visible */}
             <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsFilterOpen((open) => !open)}
-                className={`relative inline-flex h-8 w-8 items-center justify-center rounded-lg border text-sm transition-colors ${
-                  isFilterOpen
-                    ? 'border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400'
-                    : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                }`}
-                aria-label={isFilterOpen ? '收起筛选' : '展开筛选'}
-                aria-expanded={isFilterOpen}
-                aria-controls="inquiry-filter-panel"
-                title={isFilterOpen ? '收起筛选' : '展开筛选'}
-              >
-                <Filter className="h-4 w-4" />
-                {activeCount > 0 && (
-                  <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-4 text-white">
-                    {activeCount}
+              {isAdmin && selectedIds.size > 0 ? (
+                <>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    已选 <span className="font-semibold text-gray-700 dark:text-gray-200">{selectedIds.size}</span> 条
                   </span>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={openCreateModal}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                <Plus className="h-4 w-4" />
-                新增询价
-              </button>
+                  <button
+                    type="button"
+                    onClick={handleBatchDelete}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    删除选中
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIds(new Set())}
+                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                  >
+                    取消
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen((open) => !open)}
+                    className={`relative inline-flex h-8 w-8 items-center justify-center rounded-lg border text-sm transition-colors ${
+                      isFilterOpen
+                        ? 'border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400'
+                        : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                    }`}
+                    aria-label={isFilterOpen ? '收起筛选' : '展开筛选'}
+                    aria-expanded={isFilterOpen}
+                    aria-controls="inquiry-filter-panel"
+                    title={isFilterOpen ? '收起筛选' : '展开筛选'}
+                  >
+                    <Filter className="h-4 w-4" />
+                    {activeCount > 0 && (
+                      <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-4 text-white">
+                        {activeCount}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openCreateModal}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                    新增询价
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -461,6 +520,10 @@ export function InquiryPage() {
               ? '尝试调整筛选条件，或点击"重置筛选"查看全部。'
               : '点击"新增询价"后，会在这里登记供应商询价和客户报价状态。'
           }
+          isAdmin={isAdmin}
+          selectedIds={selectedIds}
+          onToggleSelect={handleToggleSelect}
+          onToggleSelectAll={handleToggleSelectAll}
         />
       </div>
 

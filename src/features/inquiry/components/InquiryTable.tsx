@@ -30,6 +30,10 @@ interface InquiryTableProps {
   onDeleteRecord: (recordId: string) => void;
   emptyMessage?: string;
   emptySubMessage?: string;
+  isAdmin?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onToggleSelectAll?: (allIds: string[]) => void;
 }
 
 export function InquiryTable({
@@ -40,18 +44,37 @@ export function InquiryTable({
   onDeleteRecord,
   emptyMessage = '暂无询报价记录',
   emptySubMessage = '点击"新增询价"后，会在这里登记供应商询价和客户报价状态。',
+  isAdmin = false,
+  selectedIds = new Set(),
+  onToggleSelect,
+  onToggleSelectAll,
 }: InquiryTableProps) {
   const bp = useBreakpoint();
 
-  // 直接在 th 上设置 style width，不使用 colgroup（规避 hidden 列占槽导致 col 错位）
-  const W = {
-    no:       bp === 'lg' ? '10%' : bp === 'md' ? '15%' : '22%',
-    inquirer: bp === 'lg' ? '12%' : '13%',
-    custno:   '24%',
-    desc:     bp === 'lg' ? '22%' : bp === 'md' ? '22%' : '18%',
-    status:   bp === 'lg' ? '28%' : bp === 'md' ? '43%' : '52%',
-    del:      bp === 'lg' ? '4%'  : bp === 'md' ? '7%'  : '8%',
-  };
+  const allIds = records.map((r) => r.id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+  const someSelected = allIds.some((id) => selectedIds.has(id)) && !allSelected;
+
+  // 列宽：有 checkbox 列时从询价编号列各借 3%
+  const W = isAdmin
+    ? {
+        check:    '3%',
+        no:       bp === 'lg' ? '9%'  : bp === 'md' ? '13%' : '19%',
+        inquirer: bp === 'lg' ? '11%' : '12%',
+        custno:   '22%',
+        desc:     bp === 'lg' ? '21%' : bp === 'md' ? '21%' : '18%',
+        status:   bp === 'lg' ? '30%' : bp === 'md' ? '45%' : '52%',
+        del:      bp === 'lg' ? '4%'  : bp === 'md' ? '7%'  : '8%',
+      }
+    : {
+        check:    '0%',
+        no:       bp === 'lg' ? '10%' : bp === 'md' ? '15%' : '22%',
+        inquirer: bp === 'lg' ? '12%' : '13%',
+        custno:   '24%',
+        desc:     bp === 'lg' ? '22%' : bp === 'md' ? '22%' : '18%',
+        status:   bp === 'lg' ? '28%' : bp === 'md' ? '43%' : '52%',
+        del:      bp === 'lg' ? '4%'  : bp === 'md' ? '7%'  : '8%',
+      };
 
   if (records.length === 0) {
     return (
@@ -68,6 +91,21 @@ export function InquiryTable({
         <table className="w-full table-fixed divide-y divide-gray-100 dark:divide-gray-800">
           <thead className="bg-gray-50 dark:bg-gray-900/50">
             <tr>
+              {/* 全选 checkbox */}
+              {isAdmin && (
+                <th style={{ width: W.check }} className="px-2 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                    onChange={() => onToggleSelectAll?.(allIds)}
+                    className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 accent-blue-600 dark:border-gray-600"
+                    aria-label="全选"
+                    title={allSelected ? '取消全选' : '全选当前页'}
+                  />
+                </th>
+              )}
+
               <th style={{ width: W.no }} className="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:px-3">
                 <button
                   type="button"
@@ -107,6 +145,9 @@ export function InquiryTable({
                 record={record}
                 onEdit={onEditRecord}
                 onDelete={onDeleteRecord}
+                isAdmin={isAdmin}
+                selected={selectedIds.has(record.id)}
+                onToggleSelect={onToggleSelect}
               />
             ))}
           </tbody>

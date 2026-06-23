@@ -9,17 +9,47 @@ interface InquiryRowProps {
   record: InquiryRecord;
   onEdit: (record: InquiryRecord) => void;
   onDelete: (recordId: string) => void;
+  isAdmin?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
+export function InquiryRow({
+  record,
+  onEdit,
+  onDelete,
+  isAdmin = false,
+  selected = false,
+  onToggleSelect,
+}: InquiryRowProps) {
   const mainColorClass = getRecordColorState(record);
   const mainTextClass = `${mainColorClass} font-medium`;
 
   return (
     <tr
-      className="group cursor-pointer border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/40"
+      className={`group cursor-pointer border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${
+        selected
+          ? 'bg-blue-50 dark:bg-blue-950/20'
+          : 'hover:bg-gray-50/70 dark:hover:bg-gray-800/40'
+      }`}
       onClick={() => onEdit(record)}
     >
+      {/* 管理员批量选择 checkbox */}
+      {isAdmin && (
+        <td
+          className="w-8 px-2 py-2 text-center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect?.(record.id)}
+            className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 accent-blue-600 dark:border-gray-600"
+            aria-label={`选择 ${record.inquiryNo}`}
+          />
+        </td>
+      )}
+
       <td className="overflow-hidden px-2 py-2 text-sm md:px-3">
         <div className="flex min-w-0 flex-col gap-0 leading-tight">
           <span className={`block truncate font-mono leading-4 ${mainTextClass}`}>
@@ -47,11 +77,9 @@ export function InquiryRow({ record, onEdit, onDelete }: InquiryRowProps) {
         </span>
       </td>
       <td className="overflow-hidden px-2 py-2 text-sm md:px-3">
-        {/* 大屏：客户编号列可见，内容简述只显示 description */}
         <p className={`hidden max-w-full truncate lg:block ${mainTextClass}`} title={record.description}>
           {record.description}
         </p>
-        {/* 中小屏：客户编号列隐藏，description 为空时回退显示客户编号 */}
         <p className={`max-w-full truncate lg:hidden ${mainTextClass}`} title={record.description?.trim() || record.customerNo}>
           {record.description?.trim() || record.customerNo}
         </p>
