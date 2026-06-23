@@ -103,6 +103,8 @@ export function InquiryPage() {
     );
   }, [session]);
 
+  const isAdmin = session?.user?.isAdmin ?? false;
+
   useEffect(() => {
     if (status === 'loading') return;
     if (status === 'unauthenticated') {
@@ -304,8 +306,9 @@ export function InquiryPage() {
     [mergeRecords]
   );
 
-  const bottomActions = useMemo<ActionButton[]>(
-    () => [
+  const bottomActions = useMemo<ActionButton[]>(() => {
+    if (!isAdmin) return [];
+    return [
       {
         key: 'import',
         label: '导入',
@@ -322,9 +325,8 @@ export function InquiryPage() {
         variant: 'secondary',
         icon: Download,
       },
-    ],
-    [handleExport, handleImportClick, isImporting]
-  );
+    ];
+  }, [handleExport, handleImportClick, isAdmin, isImporting]);
 
   const resultSummary =
     filteredAndSorted.length === records.length
@@ -367,14 +369,16 @@ export function InquiryPage() {
       onLogout={handleLogout}
       bottomActions={bottomActions}
     >
-      {/* 隐藏的文件选择框（用于导入） */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".xlsx,.xls,.json"
-        className="hidden"
-        onChange={handleFileChange}
-      />
+      {/* 隐藏的文件选择框（仅管理员导入用） */}
+      {isAdmin && (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls,.json"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      )}
 
       <div className="w-full max-w-none px-3 py-3 sm:px-5 lg:px-6">
         <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-2.5 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
