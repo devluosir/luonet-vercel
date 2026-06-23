@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { Download, Filter, Plus, Trash2, Upload } from 'lucide-react';
+import { Check, Download, Filter, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AppLayout, type ActionButton } from '@/components/layout';
@@ -92,6 +92,7 @@ export function InquiryPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const isModalOpenRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -340,9 +341,23 @@ export function InquiryPage() {
     [mergeRecords]
   );
 
+  const toggleEditMode = useCallback(() => {
+    setIsEditMode((prev) => {
+      if (prev) setSelectedIds(new Set()); // 退出时清空选择
+      return !prev;
+    });
+  }, []);
+
   const bottomActions = useMemo<ActionButton[]>(() => {
     if (!isAdmin) return [];
     return [
+      {
+        key: 'edit',
+        label: isEditMode ? '完成' : '编辑',
+        onClick: toggleEditMode,
+        variant: isEditMode ? 'primary' : 'secondary',
+        icon: isEditMode ? Check : Pencil,
+      },
       {
         key: 'import',
         label: '导入',
@@ -360,7 +375,7 @@ export function InquiryPage() {
         icon: Download,
       },
     ];
-  }, [handleExport, handleImportClick, isAdmin, isImporting]);
+  }, [handleExport, handleImportClick, isAdmin, isEditMode, isImporting, toggleEditMode]);
 
   const resultSummary =
     filteredAndSorted.length === records.length
@@ -449,7 +464,8 @@ export function InquiryPage() {
 
             {/* Right: always visible */}
             <div className="flex shrink-0 items-center gap-2">
-              {isAdmin && selectedIds.size > 0 ? (
+              {isAdmin && isEditMode && selectedIds.size > 0 ? (
+                /* 编辑模式 + 有选中：显示批量操作 */
                 <>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     已选 <span className="font-semibold text-gray-700 dark:text-gray-200">{selectedIds.size}</span> 条
@@ -467,10 +483,11 @@ export function InquiryPage() {
                     onClick={() => setSelectedIds(new Set())}
                     className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                   >
-                    取消
+                    取消选择
                   </button>
                 </>
               ) : (
+                /* 常规：筛选 + 新增 */
                 <>
                   <button
                     type="button"
@@ -520,7 +537,7 @@ export function InquiryPage() {
               ? '尝试调整筛选条件，或点击"重置筛选"查看全部。'
               : '点击"新增询价"后，会在这里登记供应商询价和客户报价状态。'
           }
-          isAdmin={isAdmin}
+          isAdmin={isAdmin && isEditMode}
           selectedIds={selectedIds}
           onToggleSelect={handleToggleSelect}
           onToggleSelectAll={handleToggleSelectAll}
