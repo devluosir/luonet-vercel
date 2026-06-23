@@ -2,7 +2,13 @@ import { useMemo, useState } from 'react';
 import type { InquiryRecord } from '../types';
 import { getDateInputValueFromInquiryNo } from '../utils/inquiryUtils';
 
-export type TimeRange = 'all' | '7d' | '30d' | '90d' | '1y';
+export type TimeRange =
+  | 'all'          // 全部
+  | 'this_month'   // 本月
+  | 'last_month'   // 上月
+  | '3months'      // 近3月（默认）
+  | `month:${string}`; // 指定月份，格式 month:YYYY-MM
+
 export type QuoteStatusFilter =
   | 'all'
   | 'supplier_pending'
@@ -21,7 +27,7 @@ export interface InquiryFilterState {
 }
 
 const DEFAULT_FILTER: InquiryFilterState = {
-  timeRange: 'all',
+  timeRange: '3months', // 默认显示近3个月
   customerNo: '',
   inquirer: '',
   quoteStatus: 'all',
@@ -29,57 +35,77 @@ const DEFAULT_FILTER: InquiryFilterState = {
   keyword: '',
 };
 
-const DAYS_IN_MS = 24 * 60 * 60 * 1000;
+/** 判断记录是否落在指定时间范围内（月维度比较） */
+function matchesTimeRange(record: InquiryRecord, timeRange: TimeRange, now: Date): boolean {
+  if (timeRange === 'all') return true;
 
-function getTimeRangeDays(timeRange: TimeRange): number {
-  switch (timeRange) {
-    case '7d':
-      return 7;
-    case '30d':
-      return 30;
-    case '90d':
-      return 90;
-    case '1y':
-      return 365;
-    default:
-      return 0;
+  const dateStr = getDateInputValueFromInquiryNo(record.inquiryNo);
+  const recordDate = new Date(dateStr);
+  if (!Number.isFinite(recordDate.getTime())) return true;
+
+  const rYear = recordDate.getFullYear();
+  const rMonth = recordDate.getMonth(); // 0-indexed
+  const nowYear = now.getFullYear();
+  const nowMonth = now.getMonth();
+
+  if (timeRange === 'this_month') {
+    return rYear === nowYear && rMonth === nowMonth;
   }
+
+  if (timeRange === 'last_month') {
+    const lm = nowMonth === 0 ? 11 : nowMonth - 1;
+    const ly = nowMonth === 0 ? nowYear - 1 : nowYear;
+    return rYear === ly && rMonth === lm;
+  }
+
+  if (timeRange === '3months') {
+    // 当前月 + 前两个月，例如 6月 → 4/5/6月
+    let sm = nowMonth - 2;
+    let sy = nowYear;
+    if (sm < 0) { sm += 12; sy -= 1; }
+    return recordDate >= new Date(sy, sm, 1);
+  }
+
+  // month:YYYY-MM
+  if (timeRange.startsWith('month:')) {
+    const parts = timeRange.slice(6).split('-');
+    if (parts.length === 2) {
+      const ty = Number(parts[0]);
+      const tm = Number(parts[1]) - 1;
+      return rYear === ty && rMonth === tm;
+    }
+  }
+
+  return true;
 }
 
 export function useInquiryFilter(records: InquiryRecord[]) {
   const [filter, setFilter] = useState<InquiryFilterState>(DEFAULT_FILTER);
 
   const customers = useMemo(
-    () => Array.from(new Set(records.map((record) => record.customerNo).filter(Boolean))).sort(),
+    () => Array.from(new Set(records.map((r) => r.customerNo).filter(Boolean))).sort(),
     [records]
   );
 
   const inquirers = useMemo(
-    () => Array.from(new Set(records.map((record) => record.inquirer).filter(Boolean))).sort(),
+    () => Array.from(new Set(records.map((r) => r.inquirer).filter(Boolean))).sort(),
     [records]
   );
 
-  /** 去掉状态筛选后的中间结果，用于计算各状态角标数字 */
+  /** 应用除状态外所有筛选条件 — 用于计算各状态角标数字 */
   const baseFiltered = useMemo(() => {
-    const now = Date.now();
+    const now = new Date();
 
     return records.filter((record) => {
-      if (filter.timeRange !== 'all') {
-        const dateStr = getDateInputValueFromInquiryNo(record.inquiryNo);
-        const recordTime = new Date(dateStr).getTime();
-        const days = getTimeRangeDays(filter.timeRange);
-        if (Number.isFinite(recordTime) && now - recordTime > days * DAYS_IN_MS) {
-          return false;
-        }
-      }
+      if (!matchesTimeRange(record, filter.timeRange, now)) return false;
 
       if (filter.keyword.trim()) {
-        const keyword = filter.keyword.trim().toLowerCase();
-        const matchesKeyword =
-          record.inquiryNo.toLowerCase().includes(keyword) ||
-          record.customerNo.toLowerCase().includes(keyword) ||
-          (record.description ?? '').toLowerCase().includes(keyword);
-        if (!matchesKeyword) return false;
+        const kw = filter.keyword.trim().toLowerCase();
+        const hit =
+          record.inquiryNo.toLowerCase().includes(kw) ||
+          record.customerNo.toLowerCase().includes(kw) ||
+          (record.description ?? '').toLowerCase().includes(kw);
+        if (!hit) return false;
       }
 
       if (filter.customerNo && record.customerNo !== filter.customerNo) return false;
@@ -95,7 +121,7 @@ export function useInquiryFilter(records: InquiryRecord[]) {
         switch (filter.quoteStatus) {
           case 'supplier_pending':
             return record.supplierStatuses.some(
-              (supplier) => !supplier.status || supplier.status === 'pending'
+              (s) => !s.status || s.status === 'pending'
             );
           case 'customer_pending':
             return record.quotedStatuses.length === 0;
@@ -122,8 +148,9 @@ export function useInquiryFilter(records: InquiryRecord[]) {
       );
   }, [baseFiltered, filter.quoteStatus, filter.sortDir]);
 
+  // '3months' 是默认值，不计入 activeCount
   const activeCount = [
-    filter.timeRange !== 'all',
+    filter.timeRange !== '3months',
     Boolean(filter.keyword.trim()),
     Boolean(filter.customerNo),
     Boolean(filter.inquirer),
