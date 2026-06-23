@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { Check, Download, Filter, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { Download, Filter, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AppLayout, type ActionButton } from '@/components/layout';
@@ -92,6 +92,7 @@ export function InquiryPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const isModalOpenRef = useRef(false);
@@ -343,7 +344,7 @@ export function InquiryPage() {
 
   const toggleEditMode = useCallback(() => {
     setIsEditMode((prev) => {
-      if (prev) setSelectedIds(new Set()); // 退出时清空选择
+      if (prev) setSelectedIds(new Set());
       return !prev;
     });
   }, []);
@@ -352,30 +353,14 @@ export function InquiryPage() {
     if (!isAdmin) return [];
     return [
       {
-        key: 'edit',
-        label: isEditMode ? '完成' : '编辑',
-        onClick: toggleEditMode,
-        variant: isEditMode ? 'primary' : 'secondary',
-        icon: isEditMode ? Check : Pencil,
-      },
-      {
-        key: 'import',
-        label: '导入',
-        onClick: handleImportClick,
-        variant: 'secondary',
-        icon: Upload,
-        loading: isImporting,
-        loadingLabel: '导入中…',
-      },
-      {
-        key: 'export',
-        label: '导出',
-        onClick: handleExport,
-        variant: 'secondary',
-        icon: Download,
+        key: 'admin-menu',
+        label: '批量编辑',
+        onClick: () => setIsAdminMenuOpen((prev) => !prev),
+        variant: isAdminMenuOpen || isEditMode ? 'primary' : 'secondary',
+        icon: Pencil,
       },
     ];
-  }, [handleExport, handleImportClick, isAdmin, isEditMode, isImporting, toggleEditMode]);
+  }, [isAdmin, isAdminMenuOpen, isEditMode]);
 
   const resultSummary =
     filteredAndSorted.length === records.length
@@ -462,63 +447,36 @@ export function InquiryPage() {
               </div>
             )}
 
-            {/* Right: always visible */}
+            {/* Right: 筛选 + 新增询价（始终显示） */}
             <div className="flex shrink-0 items-center gap-2">
-              {isAdmin && isEditMode && selectedIds.size > 0 ? (
-                /* 编辑模式 + 有选中：显示批量操作 */
-                <>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    已选 <span className="font-semibold text-gray-700 dark:text-gray-200">{selectedIds.size}</span> 条
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen((open) => !open)}
+                className={`relative inline-flex h-8 w-8 items-center justify-center rounded-lg border text-sm transition-colors ${
+                  isFilterOpen
+                    ? 'border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400'
+                    : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                }`}
+                aria-label={isFilterOpen ? '收起筛选' : '展开筛选'}
+                aria-expanded={isFilterOpen}
+                aria-controls="inquiry-filter-panel"
+                title={isFilterOpen ? '收起筛选' : '展开筛选'}
+              >
+                <Filter className="h-4 w-4" />
+                {activeCount > 0 && (
+                  <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-4 text-white">
+                    {activeCount}
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleBatchDelete}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    删除选中
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedIds(new Set())}
-                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
-                  >
-                    取消选择
-                  </button>
-                </>
-              ) : (
-                /* 常规：筛选 + 新增 */
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setIsFilterOpen((open) => !open)}
-                    className={`relative inline-flex h-8 w-8 items-center justify-center rounded-lg border text-sm transition-colors ${
-                      isFilterOpen
-                        ? 'border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400'
-                        : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                    }`}
-                    aria-label={isFilterOpen ? '收起筛选' : '展开筛选'}
-                    aria-expanded={isFilterOpen}
-                    aria-controls="inquiry-filter-panel"
-                    title={isFilterOpen ? '收起筛选' : '展开筛选'}
-                  >
-                    <Filter className="h-4 w-4" />
-                    {activeCount > 0 && (
-                      <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-4 text-white">
-                        {activeCount}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={openCreateModal}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-                  >
-                    <Plus className="h-4 w-4" />
-                    新增询价
-                  </button>
-                </>
-              )}
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4" />
+                新增询价
+              </button>
             </div>
           </div>
         </div>
@@ -543,6 +501,81 @@ export function InquiryPage() {
           onToggleSelectAll={handleToggleSelectAll}
         />
       </div>
+
+      {/* ── 管理员批量编辑菜单 ── */}
+      {isAdmin && isAdminMenuOpen && (
+        <>
+          {/* 点击遮罩关闭 */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setIsAdminMenuOpen(false)}
+          />
+          {/* 菜单面板，悬浮在底部 bar 上方 */}
+          <div className="fixed bottom-20 right-4 z-50 min-w-[10rem] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-[#2C2C2E]">
+
+            {/* 导入 */}
+            <button
+              type="button"
+              onClick={() => { handleImportClick(); setIsAdminMenuOpen(false); }}
+              disabled={isImporting}
+              className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700/50 disabled:opacity-50"
+            >
+              <Upload className="h-4 w-4 shrink-0 text-gray-400" />
+              {isImporting ? '导入中…' : '导入'}
+            </button>
+
+            {/* 导出 */}
+            <button
+              type="button"
+              onClick={() => { handleExport(); setIsAdminMenuOpen(false); }}
+              className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700/50"
+            >
+              <Download className="h-4 w-4 shrink-0 text-gray-400" />
+              导出
+            </button>
+
+            <div className="border-t border-gray-100 dark:border-gray-700" />
+
+            {/* 批量选择 开关 */}
+            <button
+              type="button"
+              onClick={toggleEditMode}
+              className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                isEditMode
+                  ? 'font-medium text-blue-600 dark:text-blue-400'
+                  : 'text-gray-700 dark:text-gray-200'
+              }`}
+            >
+              <Pencil className="h-4 w-4 shrink-0 text-gray-400" />
+              {isEditMode ? '退出批量选择' : '批量选择'}
+            </button>
+
+            {/* 删除选中（有选中时才显示） */}
+            {isEditMode && selectedIds.size > 0 && (
+              <button
+                type="button"
+                onClick={() => { handleBatchDelete(); setIsAdminMenuOpen(false); }}
+                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+              >
+                <Trash2 className="h-4 w-4 shrink-0" />
+                删除选中（{selectedIds.size}）
+              </button>
+            )}
+
+            {/* 取消选择（编辑模式且有选中时显示） */}
+            {isEditMode && selectedIds.size > 0 && (
+              <button
+                type="button"
+                onClick={() => { setSelectedIds(new Set()); setIsAdminMenuOpen(false); }}
+                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-700/50"
+              >
+                <X className="h-4 w-4 shrink-0 text-gray-400" />
+                取消选择
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
       <InquiryFormModal
         isOpen={isModalOpen}
