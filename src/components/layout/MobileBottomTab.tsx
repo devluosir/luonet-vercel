@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Archive, FileText, LayoutDashboard, Mail, Users, type LucideIcon } from 'lucide-react';
+import { Archive, ClipboardList, FileText, LayoutDashboard, Mail, type LucideIcon } from 'lucide-react';
 
 interface MobileTabItem {
   id: string;
@@ -14,8 +14,8 @@ interface MobileTabItem {
 const MOBILE_TABS: MobileTabItem[] = [
   { id: 'dashboard', label: '首页', path: '/dashboard', icon: LayoutDashboard },
   { id: 'quotation', label: '报价单', path: '/quotation', icon: FileText },
+  { id: 'inquiry', label: '登记表', path: '/inquiry', icon: ClipboardList },
   { id: 'history', label: '历史', path: '/history', icon: Archive },
-  { id: 'customer', label: '客户', path: '/customer', icon: Users },
   { id: 'mail', label: '邮件', path: '/mail', icon: Mail },
 ];
 
