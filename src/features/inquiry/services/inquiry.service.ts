@@ -51,14 +51,33 @@ export const inquiryService = {
   },
 
   async pullFromD1(): Promise<InquiryRecord[]> {
+    const PAGE_SIZE = 2000;
+    const all: InquiryRecord[] = [];
+    let offset = 0;
+
     try {
-      const res = await fetch(`${API_BASE}?limit=500`, { cache: 'no-store' });
-      if (!res.ok) return [];
-      const data = await res.json() as { records?: InquiryRecord[] };
-      return Array.isArray(data.records) ? data.records : [];
+      while (true) {
+        const res = await fetch(
+          `${API_BASE}?limit=${PAGE_SIZE}&offset=${offset}`,
+          { cache: 'no-store' }
+        );
+        if (!res.ok) break;
+
+        const data = await res.json() as { records?: InquiryRecord[]; total?: number };
+        const page = Array.isArray(data.records) ? data.records : [];
+        all.push(...page);
+
+        // 若本页不足一页，或已达到服务端报告的总数，则结束
+        if (page.length < PAGE_SIZE) break;
+        if (typeof data.total === 'number' && all.length >= data.total) break;
+
+        offset += PAGE_SIZE;
+      }
     } catch {
-      return [];
+      // 网络失败时返回已拉到的部分，不清空
     }
+
+    return all;
   },
 
   syncToD1(record: InquiryRecord): void {

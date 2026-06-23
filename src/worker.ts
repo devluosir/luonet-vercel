@@ -1357,8 +1357,16 @@ async function handleInquiryRequest(
 
     if (request.method === 'GET' && path === '/api/inquiry') {
       const url = new URL(request.url);
-      const limit = Math.min(Number(url.searchParams.get('limit')) || 500, 500);
+      const limit = Math.min(Number(url.searchParams.get('limit')) || 2000, 2000);
       const offset = Number(url.searchParams.get('offset')) || 0;
+
+      // 先查总数，供客户端判断是否需要继续分页
+      const countRow = await env.USERS_DB.prepare(`
+        SELECT COUNT(*) as cnt FROM Document
+        WHERE type = 'inquiry'
+          AND (status = 'active' OR updated_at >= datetime('now', '-30 days'))
+      `).bind().first<{ cnt: number }>();
+      const totalCount = countRow?.cnt ?? 0;
 
       // 返回所有 active 记录 + 30 天内的 deleted 记录（供其他端感知删除并同步）
       const result = await env.USERS_DB.prepare(`
@@ -1382,7 +1390,7 @@ async function handleInquiryRequest(
         };
       });
 
-      return jsonResponse({ records, total: records.length });
+      return jsonResponse({ records, total: totalCount });
     }
 
     if (request.method === 'POST' && path === '/api/inquiry') {
