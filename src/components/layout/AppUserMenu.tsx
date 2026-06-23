@@ -30,6 +30,8 @@ export interface AppUserMenuProps {
    *   'bottom-left' → 左下角触发，向上弹（Sidebar 默认）
    */
   placement?: 'top-right' | 'bottom-left';
+  /** 紧凑模式：侧边栏收缩时只显示头像，隐藏用户名和 chevron */
+  compact?: boolean;
   className?: string;
 }
 
@@ -37,6 +39,7 @@ export function AppUserMenu({
   user,
   onLogout,
   placement = 'top-right',
+  compact = false,
   className = '',
 }: AppUserMenuProps) {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -193,21 +196,23 @@ export function AppUserMenu({
         type="button"
         onClick={() => setShowDropdown((v) => !v)}
         className={`flex items-center gap-2 rounded-md transition-colors focus:outline-none hover:bg-gray-100 dark:hover:bg-gray-800/50 ${
-          isBottomLeft ? 'w-full px-2 py-2' : 'p-1.5'
+          isBottomLeft ? (compact ? 'justify-center px-1 py-1.5 w-full' : 'w-full px-2 py-2') : 'p-1.5'
         }`}
         aria-label="用户菜单"
       >
         <Avatar name={user.name} />
-        {isBottomLeft && (
+        {isBottomLeft && !compact && (
           <span className="min-w-0 flex-1 truncate text-left text-sm font-medium text-gray-700 dark:text-gray-200">
             {user.name}
           </span>
         )}
-        <ChevronIcon
-          className={`h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 dark:text-gray-400 ${
-            showDropdown ? 'rotate-180' : ''
-          }`}
-        />
+        {!compact && (
+          <ChevronIcon
+            className={`h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 dark:text-gray-400 ${
+              showDropdown ? 'rotate-180' : ''
+            }`}
+          />
+        )}
       </button>
 
       {/* 下拉面板 */}
