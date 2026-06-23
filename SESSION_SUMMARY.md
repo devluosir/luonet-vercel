@@ -609,3 +609,101 @@ python-docx 解析 `协同-1询价登记表(2026-2).docx`，输出 `inquiry_impo
 ---
 
 *最后更新：2026-06-23（筛选数字标、今日统计权限过滤、采购订单跳动修复）*
+
+---
+
+## 2026-06-23 改动记录（第二批）
+
+### 询报价时间筛选重设计
+
+**需求**：将 7D / 1M / 3M / 1Y 替换为月粒度选项，默认显示近 3 个月。
+
+**TimeRange 类型**：`'all' | 'this_month' | 'last_month' | '3months' | \`month:${string}\``
+
+**默认值**：`'3months'`（activeCount 计算以 3months 为基准，不计入活跃计数）
+
+**UI 设计**：两个语义 chip（近3月 / 全部）+ 月份导航器 `‹ 选月/M月 ›`
+
+- `‹` 按钮：向前移一个月（进入自定义月模式）
+- 中间按钮：toggle 弹出 `MonthPickerPopover`
+- `›` 按钮：向后移一个月；当导航到当月时禁用
+- `MonthPickerPopover`：纯 React 自定义弹窗（4×3 月份格 + 年份 ‹/› 导航），因 Safari 不支持 `<input type="month">`
+
+**Safari 修复**：Safari 将 `type="month"` 降级为纯文本，`showPicker()` 也无效。完全替换为自定义 React popover，`document.addEventListener('mousedown')` 检测外部点击关闭。
+
+**改动文件**：
+
+| 文件 | 改动 |
+|------|------|
+| `src/features/inquiry/hooks/useInquiryFilter.ts` | TimeRange 类型定义、`matchesTimeRange()` 函数、默认 3months、activeCount 计算 |
+| `src/features/inquiry/components/InquiryFilterBar.tsx` | 移除 7D/1M/3M/1Y chip；新增 MonthPickerPopover 组件；近3月/全部 chip + ‹选月› 导航器 |
+
+---
+
+### 询价人支持手动录入
+
+**需求**：新增询价表单中，询价人改为可手动输入（不强制选已有值）。
+
+**方案**：将条件渲染的 `<select>` / `<input>` 统一改为 `<input list="inquirer-suggestions">` + `<datalist>`，有历史数据时提供下拉建议，无数据时纯文本输入。
+
+**改动文件**：`src/features/inquiry/components/InquiryFormModal.tsx`
+
+---
+
+### 询报价批量编辑浮动菜单
+
+**需求**：将管理员的导入、导出、批量选择、删除选中、取消选择整合为一个「批量编辑」浮动菜单。
+
+**实现**：
+
+- `bottomActions` 中仅保留一个「批量编辑」按钮（图标 Pencil），激活时变 primary 色
+- 点击展开固定定位浮层（`fixed bottom-20 right-4 z-50`），背景蒙层关闭菜单
+- 菜单项根据状态动态显示：导入 / 导出 / 批量选择（切换 isEditMode）/ 删除选中（有选中时） / 取消选择（有选中时）
+
+**改动文件**：`src/features/inquiry/app/InquiryPage.tsx`
+
+---
+
+### 用户管理页面全面重设计
+
+**目标**：移除过度设计，统一风格，简化状态流。
+
+**移除**：D1MigrationPanel（过渡期工具已无用）、UserStats、mounted/permissionChecked 双重状态、多个小型单职责组件。
+
+**新组件设计**：
+
+| 文件 | 改动摘要 |
+|------|---------|
+| `src/features/admin/app/AdminPage.tsx` | 单一 `ready` 状态替代双重 mount 检查；内联统计（共N位·N位启用·N位管理员）；error inline banner |
+| `src/features/admin/components/UserCard.tsx` | 行布局：头像+状态点 / 名称+角色徽章+邮箱 / 权限数 / 最后登录 / ChevronRight；全行可点击 |
+| `src/features/admin/components/UserList.tsx` | 列标题行（sm+）；SkeletonRow 骨架屏；内联空态 |
+| `src/features/admin/components/UserDetailModal.tsx` | 内联 Toggle 组件；账户设置（管理员/账户状态）+ 模块权限 grid；max-h-[90dvh] 可滚动；固定底部操作栏 |
+| `src/components/admin/CreateUserModal.tsx` | 去掉渐变蓝紫头；border-b header + X 按钮；统一圆角/边框风格 |
+
+**ESLint 修复**：`UserList.tsx` 中中文引号 `"` 改为 `&ldquo;` / `&rdquo;`
+
+---
+
+### 客户管理页面全面重设计
+
+**目标**：去掉过度工程化设计，统一为管理页风格的紧凑行布局。
+
+**移除**：ErrorBoundary class、4 个统计卡片、useAnalytics/useAutoPerformanceMonitoring、FeatureFlagManager（开发调试面板）、NewCustomerTracker（使用 alert()、功能未完成）、FilterChipBar（活跃度过滤依赖不可靠 localStorage 数据）、网格卡片视图、活跃度标签系统、双重 isClient 检查。
+
+**新结构**：
+
+| 文件 | 改动摘要 |
+|------|---------|
+| `src/features/customer/app/CustomerPage.tsx` | 对齐 AdminPage 模式；3 个 tab（客户/供应商/收货人）内联带数量徽章；切 tab 自动清空搜索；页头统计一行文字 |
+| `src/features/customer/components/CustomerList.tsx` | 行布局：彩色头像 / 名称+公司 / 联系方式 / 创建时间 / 查看+编辑+删除；骨架屏；本地搜索过滤 |
+| `src/features/customer/components/SupplierList.tsx` | 同行布局（绿色系头像）；搜索过滤；骨架屏 |
+| `src/features/customer/components/ConsigneeList.tsx` | 同行布局（紫色系头像）；搜索过滤（含地址）；骨架屏 |
+| `src/features/customer/components/CustomerModal.tsx` | 加 border-b header + X 按钮；max-h-[90dvh] 可滚动；与 CreateUserModal 风格一致 |
+
+**tab 颜色区分**：客户蓝色系 / 供应商绿色系 / 收货人紫色系，头像颜色与 tab 对应。
+
+**类型检查**：`tsc --noEmit` 零错误通过。
+
+---
+
+*最后更新：2026-06-23（时间筛选重设计、询价人手动录入、批量编辑菜单、用户管理重设计、客户管理重设计）*
