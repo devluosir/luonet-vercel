@@ -157,8 +157,7 @@ export default function PurchaseForm() {
               </div>
               <textarea
                 ref={projectSpecificationRef}
-                className={`${inputClass} resize-none overflow-hidden`}
-                rows={4}
+                className={`${inputClass} resize-none overflow-hidden min-h-[96px]`}
                 value={data.projectSpecification}
                 onChange={e => updateData({ projectSpecification: e.target.value })}
                 placeholder="项目规格描述（可多行输入）"
@@ -170,8 +169,7 @@ export default function PurchaseForm() {
               <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">2. 付款条件</h3>
               <textarea
                 ref={paymentTermsRef}
-                className={`${inputClass} resize-none overflow-hidden`}
-                rows={2}
+                className={`${inputClass} resize-none overflow-hidden min-h-[64px]`}
                 value={data.paymentTerms}
                 onChange={e => updateData({ paymentTerms: e.target.value })}
                 placeholder="交货后30天"
@@ -227,8 +225,7 @@ export default function PurchaseForm() {
               <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">4. 关于交货</h3>
               <textarea
                 ref={deliveryInfoRef}
-                className={`${inputClass} resize-none overflow-hidden`}
-                rows={4}
+                className={`${inputClass} resize-none overflow-hidden min-h-[96px]`}
                 placeholder="收货人信息（可多行输入）"
                 value={data.deliveryInfo || '收货人信息如下：'}
                 onChange={e => updateData({ deliveryInfo: e.target.value })}
@@ -243,8 +240,7 @@ export default function PurchaseForm() {
               </p>
               <textarea
                 ref={orderNumbersRef}
-                className={`${inputClass} resize-none overflow-hidden`}
-                rows={4}
+                className={`${inputClass} resize-none overflow-hidden min-h-[96px]`}
                 placeholder="客户订单号码（可多行输入）"
                 value={data.orderNumbers}
                 onChange={e => updateData({ orderNumbers: e.target.value })}
