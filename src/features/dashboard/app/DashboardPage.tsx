@@ -150,7 +150,7 @@ export default function DashboardPage() {
           onClose={() => setShowSuccessMessage(false)}
         />
 
-        <StatsCards counts={todayCounts} loading={!mounted || isPermissionLoading} />
+        <StatsCards counts={todayCounts} loading={!mounted || isPermissionLoading} permissionMap={permissionMap} />
 
         <DashboardModules
           quickCreateModules={availableQuickCreateModules}

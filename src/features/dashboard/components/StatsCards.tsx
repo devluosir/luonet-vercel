@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   type LucideIcon,
 } from 'lucide-react';
+import type { PermissionMap } from '../types';
 
 interface StatItem {
   type: 'quotation' | 'confirmation' | 'invoice' | 'packing' | 'purchase';
@@ -30,6 +31,7 @@ export interface StatCounts {
 interface StatsCardsProps {
   counts: StatCounts;
   loading?: boolean;
+  permissionMap?: PermissionMap;
 }
 
 const STAT_ITEMS: StatItem[] = [
@@ -75,8 +77,15 @@ const STAT_ITEMS: StatItem[] = [
   },
 ];
 
-export function StatsCards({ counts, loading = false }: StatsCardsProps) {
+export function StatsCards({ counts, loading = false, permissionMap }: StatsCardsProps) {
   const router = useRouter();
+
+  const visibleItems = STAT_ITEMS.filter(({ type }) => {
+    if (!permissionMap) return true;
+    return permissionMap.documentTypePermissions[type] ?? false;
+  });
+
+  if (visibleItems.length === 0) return null;
 
   return (
     <div className="mb-4 flex items-stretch overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -87,8 +96,7 @@ export function StatsCards({ counts, loading = false }: StatsCardsProps) {
         </span>
       </div>
 
-      {/* 5 个统计项 */}
-      {STAT_ITEMS.map(({ type, label, icon: Icon, textColorClass }, index) => (
+      {visibleItems.map(({ type, label, icon: Icon, textColorClass }, index) => (
         <button
           key={type}
           type="button"
