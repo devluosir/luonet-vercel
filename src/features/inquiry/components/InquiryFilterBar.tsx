@@ -30,7 +30,13 @@ function countByStatus(records: InquiryRecord[], status: QuoteStatusFilter): num
            r.quotedStatuses.some((s) => !s.type || s.type === 'quoted')
         );
       case 'unavailable': return r.quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed');
-      case 'has_order':   return Boolean(r.orderNo?.trim());
+      case 'has_order':
+        return (
+          Boolean(r.orderNo?.trim()) &&
+          (r.orderSubStatus === undefined || r.orderSubStatus === 'suspended')
+        );
+      case 'cancelled':   return r.orderSubStatus === 'cancelled';
+      case 'followup':    return r.orderSubStatus === 'followup';
       default:            return false;
     }
   }).length;
@@ -145,6 +151,8 @@ const statusOptions: Array<{
   { label: '已报价',   value: 'customer_quoted',  activeColor: 'bg-blue-600 text-white',   badgeColor: 'bg-blue-600' },
   { label: '无法报价', value: 'unavailable',       activeColor: 'bg-yellow-500 text-white', badgeColor: 'bg-yellow-500' },
   { label: '已成单',   value: 'has_order',         activeColor: 'bg-green-600 text-white',  badgeColor: 'bg-green-600' },
+  { label: '已辙销',   value: 'cancelled',         activeColor: 'bg-red-600 text-white',    badgeColor: 'bg-red-600' },
+  { label: '善后',     value: 'followup',          activeColor: 'bg-orange-500 text-white', badgeColor: 'bg-orange-500' },
 ];
 
 // ── Chip ─────────────────────────────────────────────────

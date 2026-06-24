@@ -1,6 +1,9 @@
 /** 供应商报价状态 */
 export type SupplierStatus = 'pending' | 'quoted' | 'unavailable' | 'need_info';
 
+/** 订单附加标记：辙销C / 悬挂P / 善后S */
+export type OrderSubStatus = 'cancelled' | 'suspended' | 'followup';
+
 export interface SupplierQuoteStatus {
   id: string;
   supplierShortName: string;
@@ -27,6 +30,8 @@ export interface InquiryRecord {
   customerNo: string;
   description: string;
   orderNo?: string;
+  /** 辙销C / 悬挂P / 善后S — 仅在有订单编号时有意义 */
+  orderSubStatus?: OrderSubStatus;
   supplierStatuses: SupplierQuoteStatus[];
   quotedStatuses: CustomerQuoteStatus[];
   createdAt: string;
@@ -37,7 +42,7 @@ export interface InquiryRecord {
 
 export type InquiryBasicInput = Pick<
   InquiryRecord,
-  'inquiryDate' | 'inquiryNo' | 'inquirer' | 'customerNo' | 'description' | 'orderNo'
+  'inquiryDate' | 'inquiryNo' | 'inquirer' | 'customerNo' | 'description' | 'orderNo' | 'orderSubStatus'
 >;
 
 export type InquiryRecordDraft = Omit<InquiryRecord, 'id' | 'createdAt' | 'updatedAt'>;

@@ -6,6 +6,7 @@ import type {
   CustomerQuoteStatus,
   InquiryBasicInput,
   InquiryRecord,
+  OrderSubStatus,
   SupplierQuoteStatus,
 } from '../types';
 import {
@@ -67,6 +68,7 @@ export function InquiryFormModal({
   const [customerNo, setCustomerNo] = useState('');
   const [description, setDescription] = useState('');
   const [orderNo, setOrderNo] = useState('');
+  const [orderSubStatus, setOrderSubStatus] = useState<OrderSubStatus | undefined>(undefined);
   const [isInquiryNoManual, setIsInquiryNoManual] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
   const [inquirerOptions, setInquirerOptions] = useState<string[]>([]);
@@ -101,6 +103,7 @@ export function InquiryFormModal({
     setCustomerNo(record?.customerNo ?? '');
     setDescription(record?.description ?? '');
     setOrderNo(record?.orderNo ?? '');
+    setOrderSubStatus(record?.orderSubStatus);
     setIsInquiryNoManual(mode === 'edit');
     setIsUrgent(urgent);
     // 新增模式：初始化两个默认供应商；编辑模式：从记录读取
@@ -175,6 +178,7 @@ export function InquiryFormModal({
       customerNo: customerNo.trim(),
       description: description.trim(),
       orderNo: orderNo.trim() || undefined,
+      orderSubStatus: orderNo.trim() ? orderSubStatus : undefined,
     };
     if (!payload.inquiryNo || !payload.inquirer || !payload.customerNo) return;
 
@@ -314,23 +318,48 @@ export function InquiryFormModal({
               onQuotedChange={setLocalQuoted}
             />
 
-            {/* 订单编号：仅编辑模式显示 */}
+            {/* 订单编号 + 标记：仅编辑模式显示 */}
             {mode === 'edit' && (
-              <div className="mt-4 flex items-center gap-2 border-t border-gray-100 pt-3 dark:border-gray-700">
-                <span className="shrink-0 text-xs font-medium text-gray-400 dark:text-gray-500">
-                  订单编号
-                </span>
-                <input
-                  value={orderNo}
-                  onChange={(e) => setOrderNo(e.target.value)}
-                  className={
-                    'min-w-0 flex-1 rounded-lg border border-transparent bg-white px-2.5 py-1.5 font-mono text-sm ' +
-                    'text-green-700 outline-none placeholder:text-gray-300 ' +
-                    'focus:border-green-300 focus:ring-1 focus:ring-green-200 ' +
-                    'dark:bg-gray-900 dark:text-green-400 dark:placeholder:text-gray-600 dark:focus:border-green-700'
-                  }
-                  placeholder="FL2601（询价确认为订单后填写）"
-                />
+              <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 text-xs font-medium text-gray-400 dark:text-gray-500">
+                    订单编号
+                  </span>
+                  <input
+                    value={orderNo}
+                    onChange={(e) => setOrderNo(e.target.value)}
+                    className={
+                      'min-w-0 flex-1 rounded-lg border border-transparent bg-white px-2.5 py-1.5 font-mono text-sm ' +
+                      'text-green-700 outline-none placeholder:text-gray-300 ' +
+                      'focus:border-green-300 focus:ring-1 focus:ring-green-200 ' +
+                      'dark:bg-gray-900 dark:text-green-400 dark:placeholder:text-gray-600 dark:focus:border-green-700'
+                    }
+                    placeholder="FL2601（询价确认为订单后填写）"
+                  />
+                </div>
+                {/* 辙销C / 悬挂P / 善后S — 互斥单选，再次点击取消 */}
+                <div className="mt-2 flex items-center gap-1.5">
+                  {(
+                    [
+                      { val: 'cancelled', label: '辙销C' },
+                      { val: 'suspended', label: '悬挂P' },
+                      { val: 'followup',  label: '善后S' },
+                    ] as const
+                  ).map(({ val, label }) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setOrderSubStatus((prev) => (prev === val ? undefined : val))}
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
+                        orderSubStatus === val
+                          ? 'bg-red-500 text-white'
+                          : 'border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500 dark:border-gray-700 dark:hover:border-red-700 dark:hover:text-red-400'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

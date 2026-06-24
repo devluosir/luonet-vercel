@@ -62,6 +62,11 @@ export function InquiryRow({
                 {record.orderNo}
               </span>
             )}
+            {record.orderNo && record.orderSubStatus && (
+              <span className="shrink-0 text-[11px] font-bold text-red-500">
+                {record.orderSubStatus === 'cancelled' ? 'C' : record.orderSubStatus === 'suspended' ? 'P' : 'S'}
+              </span>
+            )}
           </span>
         </div>
       </td>

@@ -15,7 +15,9 @@ export type QuoteStatusFilter =
   | 'customer_pending'
   | 'customer_quoted'
   | 'unavailable'
-  | 'has_order';
+  | 'has_order'
+  | 'cancelled'   // 辙销C
+  | 'followup';   // 善后S
 
 export interface InquiryFilterState {
   timeRange: TimeRange;
@@ -136,7 +138,14 @@ export function useInquiryFilter(records: InquiryRecord[]) {
               (s) => s.type === 'unavailable' || s.type === 'closed'
             );
           case 'has_order':
-            return Boolean(record.orderNo?.trim());
+            return (
+              Boolean(record.orderNo?.trim()) &&
+              (record.orderSubStatus === undefined || record.orderSubStatus === 'suspended')
+            );
+          case 'cancelled':
+            return record.orderSubStatus === 'cancelled';
+          case 'followup':
+            return record.orderSubStatus === 'followup';
           default:
             return true;
         }
