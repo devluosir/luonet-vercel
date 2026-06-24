@@ -4,6 +4,12 @@ import { useRef, useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { stripDateBrackets, normalizeShortDateInput } from '@/features/inquiry/utils/inquiryUtils';
+import {
+  type OrderTableBreakpoint,
+  showAdminCols,
+  showCustomerCol,
+  showLgCols,
+} from '../utils/orderTableLayout';
 
 // ── 行背景颜色 ────────────────────────────────────────────────────────────────
 
@@ -449,11 +455,15 @@ function OrderNoBadge({ record }: { record: InquiryRecord }) {
 
 interface OrderRowProps {
   record: InquiryRecord;
+  bp: OrderTableBreakpoint;
   isAdmin: boolean;
   onUpdate: (patch: Partial<InquiryRecord>) => void;
 }
 
-export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
+export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
+  const customerCol = showCustomerCol(bp);
+  const lgCols = showLgCols(bp);
+  const adminCols = showAdminCols(bp, isAdmin);
   const [activeField, setActiveField] = useState<EditField>(null);
   const activate = (f: EditField) => setActiveField(f);
   const cancel = () => setActiveField(null);
@@ -493,40 +503,44 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
         />
       </td>
 
-      {/* 客户（询价人） */}
-      <td className="hidden max-w-0 overflow-hidden px-2 py-2 text-xs text-gray-700 dark:text-gray-300 md:table-cell">
-        <span className="block min-w-0 truncate" title={record.inquirer}>{record.inquirer}</span>
-      </td>
+      {customerCol && (
+        <td className="max-w-0 overflow-hidden px-2 py-2 text-xs text-gray-700 dark:text-gray-300">
+          <span className="block min-w-0 truncate" title={record.inquirer}>{record.inquirer}</span>
+        </td>
+      )}
 
       {/* 内容简述 */}
       <td className="max-w-0 overflow-hidden px-1.5 py-2 sm:px-2">
         <p className="truncate text-xs text-gray-700 dark:text-gray-300" title={record.description}>{record.description}</p>
-        <p className="truncate text-[10px] text-gray-400 dark:text-gray-500 md:hidden" title={record.inquirer}>{record.inquirer}</p>
+        {bp === 'sm' && (
+          <p className="truncate text-[10px] text-gray-400 dark:text-gray-500" title={record.inquirer}>{record.inquirer}</p>
+        )}
       </td>
 
-      {/* 确认日 */}
-      <td className="hidden max-w-0 overflow-hidden whitespace-nowrap px-2 py-2 lg:table-cell">
-        <DatePickerCell field="confirmDate" activeField={activeField}
-          value={record.orderConfirmDate ? stripDateBrackets(record.orderConfirmDate) : undefined}
-          onActivate={activate}
-          onSave={(val) => { setActiveField(null); onUpdate({ orderConfirmDate: val ? normalizeShortDateInput(val) : undefined }); }}
-          onCancel={cancel}
-        />
-      </td>
-
-      {/* 客户订单号 */}
-      <td className="hidden max-w-0 overflow-hidden px-2 py-2 lg:table-cell">
-        <div className="min-w-0">
-          <EditableCell field="customerNo" activeField={activeField}
-            value={record.orderCustomerNo}
-            fallback={customerNoFallback}
-            placeholder="—"
-            onActivate={activate}
-            onSave={saveCustomerNo}
-            onCancel={cancel}
-          />
-        </div>
-      </td>
+      {lgCols && (
+        <>
+          <td className="max-w-0 overflow-hidden whitespace-nowrap px-2 py-2">
+            <DatePickerCell field="confirmDate" activeField={activeField}
+              value={record.orderConfirmDate ? stripDateBrackets(record.orderConfirmDate) : undefined}
+              onActivate={activate}
+              onSave={(val) => { setActiveField(null); onUpdate({ orderConfirmDate: val ? normalizeShortDateInput(val) : undefined }); }}
+              onCancel={cancel}
+            />
+          </td>
+          <td className="max-w-0 overflow-hidden px-2 py-2">
+            <div className="min-w-0">
+              <EditableCell field="customerNo" activeField={activeField}
+                value={record.orderCustomerNo}
+                fallback={customerNoFallback}
+                placeholder="—"
+                onActivate={activate}
+                onSave={saveCustomerNo}
+                onCancel={cancel}
+              />
+            </div>
+          </td>
+        </>
+      )}
 
       {/* 执行情况 */}
       <td className="max-w-0 overflow-hidden px-1.5 py-2 sm:px-2">
@@ -541,40 +555,37 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
         </div>
       </td>
 
-      {/* ── 管理员专属列 ── */}
-      {isAdmin && (
-        <td className="hidden max-w-0 overflow-hidden px-2 py-2 xl:table-cell">
-          <div className="min-w-0">
-            <AmountCell field="amount" activeField={activeField}
-              value={record.orderAmount}
+      {adminCols && (
+        <>
+          <td className="max-w-0 overflow-hidden px-2 py-2">
+            <div className="min-w-0">
+              <AmountCell field="amount" activeField={activeField}
+                value={record.orderAmount}
+                onActivate={activate}
+                onSave={(val) => { setActiveField(null); onUpdate({ orderAmount: val }); }}
+                onCancel={cancel}
+              />
+            </div>
+          </td>
+          <td className="max-w-0 overflow-hidden whitespace-nowrap px-2 py-2">
+            <MonthPickerCell field="paymentDate" activeField={activeField}
+              value={record.orderPaymentDate}
               onActivate={activate}
-              onSave={(val) => { setActiveField(null); onUpdate({ orderAmount: val }); }}
+              onSave={(val) => { setActiveField(null); onUpdate({ orderPaymentDate: val }); }}
               onCancel={cancel}
             />
-          </div>
-        </td>
-      )}
-      {isAdmin && (
-        <td className="hidden max-w-0 overflow-hidden whitespace-nowrap px-2 py-2 xl:table-cell">
-          <MonthPickerCell field="paymentDate" activeField={activeField}
-            value={record.orderPaymentDate}
-            onActivate={activate}
-            onSave={(val) => { setActiveField(null); onUpdate({ orderPaymentDate: val }); }}
-            onCancel={cancel}
-          />
-        </td>
-      )}
-      {isAdmin && (
-        <td className="hidden max-w-0 overflow-hidden px-2 py-2 xl:table-cell">
-          <div className="min-w-0">
-            <AmountCell field="receivedAmount" activeField={activeField}
-              value={record.orderReceivedAmount}
-              onActivate={activate}
-              onSave={(val) => { setActiveField(null); onUpdate({ orderReceivedAmount: val }); }}
-              onCancel={cancel}
-            />
-          </div>
-        </td>
+          </td>
+          <td className="max-w-0 overflow-hidden px-2 py-2">
+            <div className="min-w-0">
+              <AmountCell field="receivedAmount" activeField={activeField}
+                value={record.orderReceivedAmount}
+                onActivate={activate}
+                onSave={(val) => { setActiveField(null); onUpdate({ orderReceivedAmount: val }); }}
+                onCancel={cancel}
+              />
+            </div>
+          </td>
+        </>
       )}
     </tr>
   );
