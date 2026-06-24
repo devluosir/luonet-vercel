@@ -5,15 +5,6 @@ import { CalendarDays } from 'lucide-react';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { stripDateBrackets, normalizeShortDateInput } from '@/features/inquiry/utils/inquiryUtils';
 
-// ── 辅助：触发原生选择器 ──────────────────────────────────────────────────────
-
-function triggerPicker(ref: React.RefObject<HTMLInputElement | null>) {
-  const el = ref.current as (HTMLInputElement & { showPicker?: () => void }) | null;
-  if (!el) return;
-  if (el.showPicker) el.showPicker();
-  else el.click();
-}
-
 // ── 行背景颜色 ────────────────────────────────────────────────────────────────
 
 function getRowBgClass(record: InquiryRecord): string {
@@ -147,34 +138,32 @@ function DatePickerCell({ field, activeField, value, onActivate, onSave, onCance
   }
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex min-w-0 items-center gap-0.5">
       <span role="button" tabIndex={0}
         onClick={() => onActivate(field)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onActivate(field); }}
-        className={`cursor-text rounded px-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/5
+        className={`shrink-0 cursor-text rounded px-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/5
           ${displayStr ? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
       >
         {displayStr ?? 'm.D'}
       </span>
-      {/* 隐藏的日期 input，由日历图标触发 */}
-      <input ref={dateRef} type="date" tabIndex={-1}
-        className="sr-only"
-        onChange={(e) => {
-          const v = fromISO(e.target.value);
-          if (v) onSave(v);
-        }}
-      />
-      <button type="button" title="选择日期"
-        onClick={() => {
-          if (dateRef.current) {
-            dateRef.current.value = displayStr ? toISO(displayStr) : '';
-          }
-          triggerPicker(dateRef);
-        }}
-        className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400"
-      >
-        <CalendarDays className="h-3 w-3" />
-      </button>
+      <span className="relative inline-flex h-4 w-4 shrink-0">
+        <input
+          ref={dateRef}
+          type="date"
+          className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+          aria-label="选择日期"
+          onClick={(e) => {
+            const el = e.currentTarget;
+            el.value = displayStr ? toISO(displayStr) : '';
+          }}
+          onChange={(e) => {
+            const v = fromISO(e.target.value);
+            if (v) onSave(v);
+          }}
+        />
+        <CalendarDays className="pointer-events-none h-3 w-3 text-gray-300 dark:text-gray-600" />
+      </span>
     </div>
   );
 }
@@ -227,33 +216,32 @@ function MonthPickerCell({ field, activeField, value, onActivate, onSave, onCanc
   }
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex min-w-0 items-center gap-0.5">
       <span role="button" tabIndex={0}
         onClick={() => onActivate(field)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onActivate(field); }}
-        className={`cursor-text rounded px-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/5
+        className={`shrink-0 cursor-text rounded px-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/5
           ${displayStr ? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
       >
         {displayStr ?? 'm'}
       </span>
-      <input ref={monthRef} type="month" tabIndex={-1}
-        className="sr-only"
-        onChange={(e) => {
-          const v = fromMonthISO(e.target.value);
-          if (v) onSave(v);
-        }}
-      />
-      <button type="button" title="选择月份"
-        onClick={() => {
-          if (monthRef.current) {
-            monthRef.current.value = displayStr ? toMonthISO(displayStr) : '';
-          }
-          triggerPicker(monthRef);
-        }}
-        className="text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400"
-      >
-        <CalendarDays className="h-3 w-3" />
-      </button>
+      <span className="relative inline-flex h-4 w-4 shrink-0">
+        <input
+          ref={monthRef}
+          type="month"
+          className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+          aria-label="选择月份"
+          onClick={(e) => {
+            const el = e.currentTarget;
+            el.value = displayStr ? toMonthISO(displayStr) : '';
+          }}
+          onChange={(e) => {
+            const v = fromMonthISO(e.target.value);
+            if (v) onSave(v);
+          }}
+        />
+        <CalendarDays className="pointer-events-none h-3 w-3 text-gray-300 dark:text-gray-600" />
+      </span>
     </div>
   );
 }
@@ -488,15 +476,15 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
     <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getRowBgClass(record)}`}>
 
       {/* 订单编号 + 询价编号 */}
-      <td className="max-w-0 overflow-hidden px-3 py-2">
-        <div className="flex min-w-0 flex-col gap-0.5">
+      <td className="max-w-0 overflow-hidden px-2 py-2 sm:px-3">
+        <div className="flex min-w-0 flex-col gap-0.5" title={`${record.orderNo ?? ''} ${record.inquiryNo}`}>
           <OrderNoBadge record={record} />
           <span className="block truncate font-mono text-[10px] text-gray-400 dark:text-gray-500">{record.inquiryNo}</span>
         </div>
       </td>
 
       {/* 交货 */}
-      <td className="max-w-0 overflow-hidden whitespace-nowrap px-2 py-2">
+      <td className="max-w-0 overflow-hidden whitespace-nowrap px-1.5 py-2 sm:px-2">
         <DatePickerCell field="deliveryDate" activeField={activeField}
           value={record.orderDeliveryDate ? stripDateBrackets(record.orderDeliveryDate) : undefined}
           onActivate={activate}
@@ -511,7 +499,7 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
       </td>
 
       {/* 内容简述 */}
-      <td className="max-w-0 overflow-hidden px-2 py-2">
+      <td className="max-w-0 overflow-hidden px-1.5 py-2 sm:px-2">
         <p className="truncate text-xs text-gray-700 dark:text-gray-300" title={record.description}>{record.description}</p>
         <p className="truncate text-[10px] text-gray-400 dark:text-gray-500 md:hidden" title={record.inquirer}>{record.inquirer}</p>
       </td>
@@ -541,7 +529,7 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
       </td>
 
       {/* 执行情况 */}
-      <td className="max-w-0 overflow-hidden px-2 py-2">
+      <td className="max-w-0 overflow-hidden px-1.5 py-2 sm:px-2">
         <div className="min-w-0">
           <DeliveryStatusCell
             activeField={activeField}

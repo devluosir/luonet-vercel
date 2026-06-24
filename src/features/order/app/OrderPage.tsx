@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
+import { MonthRangeNav } from '@/components/MonthRangeNav';
 import { useAppUser } from '@/hooks/useAppUser';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { inquiryService } from '@/features/inquiry/services/inquiry.service';
@@ -78,71 +78,6 @@ function Chip({ label, active, activeColor = 'bg-blue-600 text-white', badge, on
         </span>
       )}
     </button>
-  );
-}
-
-// ── 月份选择器 ────────────────────────────────────────────────────────────────
-
-function MonthNav({
-  range,
-  onChange,
-}: {
-  range: TimeRange;
-  onChange: (r: TimeRange) => void;
-}) {
-  const isMonthMode = range.startsWith('month:');
-  const now = new Date();
-
-  const currentMonthKey = (): `month:${string}` => {
-    if (isMonthMode) return range as `month:${string}`;
-    return `month:${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  };
-
-  const stepMonth = (delta: number) => {
-    const key = currentMonthKey().replace('month:', '');
-    const [y, m] = key.split('-').map(Number) as [number, number];
-    const d = new Date(y, m - 1 + delta, 1);
-    onChange(`month:${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-  };
-
-  const monthLabel = () => {
-    const key = currentMonthKey().replace('month:', '');
-    const [y, m] = key.split('-').map(Number) as [number, number];
-    return `${y}/${m}`;
-  };
-
-  if (!isMonthMode) {
-    return (
-      <button
-        type="button"
-        onClick={() => onChange(currentMonthKey())}
-        className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-500 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
-      >
-        选月
-      </button>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-600 px-1 py-0.5 text-xs font-semibold text-white">
-      <button
-        type="button"
-        onClick={() => stepMonth(-1)}
-        className="rounded-full p-0.5 hover:bg-white/20"
-        aria-label="上月"
-      >
-        <ChevronLeft className="h-3 w-3" />
-      </button>
-      <button
-        type="button"
-        onClick={() => stepMonth(1)}
-        className="rounded-full p-0.5 hover:bg-white/20"
-        aria-label="下月"
-      >
-        <ChevronRight className="h-3 w-3" />
-      </button>
-      <span className="mx-0.5">{monthLabel()}</span>
-    </span>
   );
 }
 
@@ -304,10 +239,10 @@ export function OrderPage() {
     >
       <div className="w-full px-3 py-3 sm:px-5 lg:px-6">
         {/* 筛选面板 */}
-        <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-          <div className="flex flex-col gap-2">
+        <div className="mb-3 overflow-visible rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
+          <div className="flex flex-col gap-2 overflow-visible">
             {/* 时间行 */}
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5 overflow-visible">
               <Chip
                 label="近3月"
                 active={timeRange === '3months'}
@@ -320,9 +255,10 @@ export function OrderPage() {
                 badge={timeRange === 'all' ? filteredRecords.length : undefined}
                 onClick={() => setTimeRange('all')}
               />
-              <MonthNav
+              <MonthRangeNav
                 range={timeRange}
                 onChange={(r) => setTimeRange(r)}
+                badge={timeRange.startsWith('month:') ? filteredRecords.length : undefined}
               />
 
               <span className="select-none text-gray-200 dark:text-gray-700">·</span>

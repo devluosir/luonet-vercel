@@ -25,63 +25,65 @@ function useBreakpoint(): Breakpoint {
   return bp;
 }
 
-/** 各断点列宽（百分比，合计 100%）：table-fixed + th/col width */
+/** 各断点列宽（百分比，合计 100%） */
 function getColWidths(bp: Breakpoint, isAdmin: boolean) {
   if (bp === 'sm') {
+    // 4 列：编号需可读，简述为主信息列
     return {
-      orderNo: '18%',
-      delivery: '10%',
+      orderNo: '26%',
+      delivery: '12%',
       customer: '0%',
-      desc: '40%',
+      desc: '36%',
       confirm: '0%',
       customerNo: '0%',
-      status: '32%',
+      status: '26%',
       amount: '0%',
       payment: '0%',
       received: '0%',
     };
   }
   if (bp === 'md') {
+    // 5 列
     return {
       orderNo: '14%',
       delivery: '7%',
-      customer: '13%',
-      desc: '32%',
+      customer: '12%',
+      desc: '28%',
       confirm: '0%',
       customerNo: '0%',
-      status: '32%',
+      status: '29%',
       amount: '0%',
       payment: '0%',
       received: '0%',
     };
   }
   if (bp === 'lg' || (bp === 'xl' && !isAdmin)) {
-    // 7 列：简述与客户订单号为主信息列，执行情况仅展示短文本
+    // 7 列
     return {
       orderNo: '10%',
       delivery: '5%',
       customer: '9%',
-      desc: '26%',
+      desc: '24%',
       confirm: '5%',
-      customerNo: '23%',
-      status: '17%',
+      customerNo: '24%',
+      status: '20%',
       amount: '0%',
       payment: '0%',
       received: '0%',
     };
   }
-  // xl + 管理员：10 列，金额三列右对齐成组
+  // xl + 管理员：10 列
   return {
     orderNo: '10%',
     delivery: '4%',
     customer: '8%',
     desc: '16%',
     confirm: '4%',
-    customerNo: '19%',
+    customerNo: '18%',
     status: '12%',
     amount: '10%',
     payment: '5%',
-    received: '12%',
+    received: '11%',
   };
 }
 
@@ -105,11 +107,11 @@ export function OrderTable({ records, isAdmin, sortField, sortDir, onSortToggle,
   const bp = useBreakpoint();
   const W = getColWidths(bp, isAdmin);
 
-  const thSort = (field: SortField, label: string) => (
+  const thSort = (field: SortField, label: string, shortLabel?: string) => (
     <button type="button" onClick={() => onSortToggle(field)}
-      className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+      className="inline-flex max-w-full items-center gap-0.5 whitespace-nowrap text-[11px] font-semibold text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
     >
-      {label}
+      <span className="truncate">{bp === 'sm' && shortLabel ? shortLabel : label}</span>
       <SortIcon field={field} sortField={sortField} sortDir={sortDir} />
     </button>
   );
@@ -143,10 +145,10 @@ export function OrderTable({ records, isAdmin, sortField, sortDir, onSortToggle,
         </colgroup>
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-800">
-            <th style={{ width: W.orderNo }} className="overflow-hidden px-3 py-2 text-left">
-              {thSort('orderNo', '订单编号')}
+            <th style={{ width: W.orderNo }} className="overflow-hidden px-2 py-2 text-left sm:px-3">
+              {thSort('orderNo', '订单编号', '编号')}
             </th>
-            <th style={{ width: W.delivery }} className="overflow-hidden px-2 py-2 text-left">
+            <th style={{ width: W.delivery }} className="overflow-hidden px-1.5 py-2 text-left sm:px-2">
               {thSort('deliveryDate', '交货')}
             </th>
             <th style={{ width: W.customer }} className="hidden overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 md:table-cell">
@@ -161,8 +163,10 @@ export function OrderTable({ records, isAdmin, sortField, sortDir, onSortToggle,
             <th style={{ width: W.customerNo }} className="hidden overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 lg:table-cell">
               <span className="whitespace-nowrap">客户订单号</span>
             </th>
-            <th style={{ width: W.status }} className="overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-              <span className="block truncate">执行情况</span>
+            <th style={{ width: W.status }} className="overflow-hidden px-1.5 py-2 text-left sm:px-2">
+              <span className="block truncate text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+                {bp === 'sm' ? '执行' : '执行情况'}
+              </span>
             </th>
             {isAdmin && (
               <th style={{ width: W.amount }} className="hidden overflow-hidden px-2 py-2 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 xl:table-cell">
