@@ -59,20 +59,20 @@ export function InquiryTable({
   const W = isAdmin
     ? {
         check:    '3%',
-        no:       bp === 'lg' ? '9%'  : bp === 'md' ? '13%' : '27%',
+        no:       bp === 'lg' ? '9%'  : bp === 'md' ? '13%' : '25%',
         inquirer: bp === 'lg' ? '11%' : '12%',
         custno:   '22%',
-        desc:     bp === 'lg' ? '21%' : bp === 'md' ? '21%' : '25%',
-        status:   bp === 'lg' ? '30%' : bp === 'md' ? '45%' : '37%',
+        desc:     bp === 'lg' ? '21%' : bp === 'md' ? '21%' : '33%',
+        status:   bp === 'lg' ? '30%' : bp === 'md' ? '45%' : '31%',
         del:      bp === 'lg' ? '4%'  : bp === 'md' ? '7%'  : '8%',
       }
     : {
         check:    '0%',
-        no:       bp === 'lg' ? '10%' : bp === 'md' ? '15%' : '28%',
+        no:       bp === 'lg' ? '10%' : bp === 'md' ? '15%' : '26%',
         inquirer: bp === 'lg' ? '12%' : '13%',
         custno:   '24%',
-        desc:     bp === 'lg' ? '22%' : bp === 'md' ? '22%' : '26%',
-        status:   bp === 'lg' ? '28%' : bp === 'md' ? '43%' : '38%',
+        desc:     bp === 'lg' ? '22%' : bp === 'md' ? '22%' : '33%',
+        status:   bp === 'lg' ? '28%' : bp === 'md' ? '43%' : '33%',
         del:      bp === 'lg' ? '4%'  : bp === 'md' ? '7%'  : '8%',
       };
 
