@@ -19,40 +19,40 @@ interface CityDef {
 }
 
 const ALL_CITIES: CityDef[] = [
-  { id: 'shenzhen',      name: '深圳',     country: '中国',   flag: '🇨🇳', timezone: 'Asia/Shanghai' },
-  { id: 'shanghai',      name: '上海',     country: '中国',   flag: '🇨🇳', timezone: 'Asia/Shanghai' },
-  { id: 'beijing',       name: '北京',     country: '中国',   flag: '🇨🇳', timezone: 'Asia/Shanghai' },
-  { id: 'hongkong',      name: '香港',     country: '中国',   flag: '🇭🇰', timezone: 'Asia/Hong_Kong' },
-  { id: 'losangeles',    name: '洛杉矶',   country: '美国',   flag: '🇺🇸', timezone: 'America/Los_Angeles' },
-  { id: 'newyork',       name: '纽约',     country: '美国',   flag: '🇺🇸', timezone: 'America/New_York' },
-  { id: 'chicago',       name: '芝加哥',   country: '美国',   flag: '🇺🇸', timezone: 'America/Chicago' },
-  { id: 'toronto',       name: '多伦多',   country: '加拿大', flag: '🇨🇦', timezone: 'America/Toronto' },
-  { id: 'saopaulo',      name: '圣保罗',   country: '巴西',   flag: '🇧🇷', timezone: 'America/Sao_Paulo' },
-  { id: 'mexicocity',    name: '墨西哥城', country: '墨西哥', flag: '🇲🇽', timezone: 'America/Mexico_City' },
-  { id: 'london',        name: '伦敦',     country: '英国',   flag: '🇬🇧', timezone: 'Europe/London' },
-  { id: 'manchester',    name: '曼彻斯特', country: '英国',   flag: '🇬🇧', timezone: 'Europe/London' },
-  { id: 'paris',         name: '巴黎',     country: '法国',   flag: '🇫🇷', timezone: 'Europe/Paris' },
-  { id: 'berlin',        name: '柏林',     country: '德国',   flag: '🇩🇪', timezone: 'Europe/Berlin' },
-  { id: 'amsterdam',     name: '阿姆斯特丹',country: '荷兰',  flag: '🇳🇱', timezone: 'Europe/Amsterdam' },
-  { id: 'rome',          name: '罗马',     country: '意大利', flag: '🇮🇹', timezone: 'Europe/Rome' },
-  { id: 'madrid',        name: '马德里',   country: '西班牙', flag: '🇪🇸', timezone: 'Europe/Madrid' },
-  { id: 'moscow',        name: '莫斯科',   country: '俄罗斯', flag: '🇷🇺', timezone: 'Europe/Moscow' },
-  { id: 'istanbul',      name: '伊斯坦布尔',country: '土耳其',flag: '🇹🇷', timezone: 'Europe/Istanbul' },
-  { id: 'dubai',         name: '迪拜',     country: '阿联酋', flag: '🇦🇪', timezone: 'Asia/Dubai' },
-  { id: 'riyadh',        name: '利雅得',   country: '沙特',   flag: '🇸🇦', timezone: 'Asia/Riyadh' },
-  { id: 'cairo',         name: '开罗',     country: '埃及',   flag: '🇪🇬', timezone: 'Africa/Cairo' },
-  { id: 'johannesburg',  name: '约翰内斯堡',country: '南非',  flag: '🇿🇦', timezone: 'Africa/Johannesburg' },
-  { id: 'newdelhi',      name: '新德里',   country: '印度',   flag: '🇮🇳', timezone: 'Asia/Kolkata' },
-  { id: 'mumbai',        name: '孟买',     country: '印度',   flag: '🇮🇳', timezone: 'Asia/Kolkata' },
-  { id: 'bangkok',       name: '曼谷',     country: '泰国',   flag: '🇹🇭', timezone: 'Asia/Bangkok' },
-  { id: 'singapore',     name: '新加坡',   country: '新加坡', flag: '🇸🇬', timezone: 'Asia/Singapore' },
-  { id: 'jakarta',       name: '雅加达',   country: '印尼',   flag: '🇮🇩', timezone: 'Asia/Jakarta' },
-  { id: 'kualalumpur',   name: '吉隆坡',   country: '马来西亚',flag: '🇲🇾',timezone: 'Asia/Kuala_Lumpur' },
-  { id: 'tokyo',         name: '东京',     country: '日本',   flag: '🇯🇵', timezone: 'Asia/Tokyo' },
-  { id: 'seoul',         name: '首尔',     country: '韩国',   flag: '🇰🇷', timezone: 'Asia/Seoul' },
-  { id: 'sydney',        name: '悉尼',     country: '澳大利亚',flag: '🇦🇺',timezone: 'Australia/Sydney' },
-  { id: 'melbourne',     name: '墨尔本',   country: '澳大利亚',flag: '🇦🇺',timezone: 'Australia/Melbourne' },
-  { id: 'auckland',      name: '奥克兰',   country: '新西兰', flag: '🇳🇿', timezone: 'Pacific/Auckland' },
+  { id: 'shenzhen',      name: '深圳',      country: '中国',    flag: '🇨🇳', timezone: 'Asia/Shanghai' },
+  { id: 'shanghai',      name: '上海',      country: '中国',    flag: '🇨🇳', timezone: 'Asia/Shanghai' },
+  { id: 'beijing',       name: '北京',      country: '中国',    flag: '🇨🇳', timezone: 'Asia/Shanghai' },
+  { id: 'hongkong',      name: '香港',      country: '中国',    flag: '🇭🇰', timezone: 'Asia/Hong_Kong' },
+  { id: 'losangeles',    name: '洛杉矶',    country: '美国',    flag: '🇺🇸', timezone: 'America/Los_Angeles' },
+  { id: 'newyork',       name: '纽约',      country: '美国',    flag: '🇺🇸', timezone: 'America/New_York' },
+  { id: 'chicago',       name: '芝加哥',    country: '美国',    flag: '🇺🇸', timezone: 'America/Chicago' },
+  { id: 'toronto',       name: '多伦多',    country: '加拿大',  flag: '🇨🇦', timezone: 'America/Toronto' },
+  { id: 'saopaulo',      name: '圣保罗',    country: '巴西',    flag: '🇧🇷', timezone: 'America/Sao_Paulo' },
+  { id: 'mexicocity',    name: '墨西哥城',  country: '墨西哥',  flag: '🇲🇽', timezone: 'America/Mexico_City' },
+  { id: 'london',        name: '伦敦',      country: '英国',    flag: '🇬🇧', timezone: 'Europe/London' },
+  { id: 'manchester',    name: '曼彻斯特',  country: '英国',    flag: '🇬🇧', timezone: 'Europe/London' },
+  { id: 'paris',         name: '巴黎',      country: '法国',    flag: '🇫🇷', timezone: 'Europe/Paris' },
+  { id: 'berlin',        name: '柏林',      country: '德国',    flag: '🇩🇪', timezone: 'Europe/Berlin' },
+  { id: 'amsterdam',     name: '阿姆斯特丹',country: '荷兰',    flag: '🇳🇱', timezone: 'Europe/Amsterdam' },
+  { id: 'rome',          name: '罗马',      country: '意大利',  flag: '🇮🇹', timezone: 'Europe/Rome' },
+  { id: 'madrid',        name: '马德里',    country: '西班牙',  flag: '🇪🇸', timezone: 'Europe/Madrid' },
+  { id: 'moscow',        name: '莫斯科',    country: '俄罗斯',  flag: '🇷🇺', timezone: 'Europe/Moscow' },
+  { id: 'istanbul',      name: '伊斯坦布尔',country: '土耳其',  flag: '🇹🇷', timezone: 'Europe/Istanbul' },
+  { id: 'dubai',         name: '迪拜',      country: '阿联酋',  flag: '🇦🇪', timezone: 'Asia/Dubai' },
+  { id: 'riyadh',        name: '利雅得',    country: '沙特',    flag: '🇸🇦', timezone: 'Asia/Riyadh' },
+  { id: 'cairo',         name: '开罗',      country: '埃及',    flag: '🇪🇬', timezone: 'Africa/Cairo' },
+  { id: 'johannesburg',  name: '约翰内斯堡',country: '南非',    flag: '🇿🇦', timezone: 'Africa/Johannesburg' },
+  { id: 'newdelhi',      name: '新德里',    country: '印度',    flag: '🇮🇳', timezone: 'Asia/Kolkata' },
+  { id: 'mumbai',        name: '孟买',      country: '印度',    flag: '🇮🇳', timezone: 'Asia/Kolkata' },
+  { id: 'bangkok',       name: '曼谷',      country: '泰国',    flag: '🇹🇭', timezone: 'Asia/Bangkok' },
+  { id: 'singapore',     name: '新加坡',    country: '新加坡',  flag: '🇸🇬', timezone: 'Asia/Singapore' },
+  { id: 'jakarta',       name: '雅加达',    country: '印尼',    flag: '🇮🇩', timezone: 'Asia/Jakarta' },
+  { id: 'kualalumpur',   name: '吉隆坡',    country: '马来西亚',flag: '🇲🇾', timezone: 'Asia/Kuala_Lumpur' },
+  { id: 'tokyo',         name: '东京',      country: '日本',    flag: '🇯🇵', timezone: 'Asia/Tokyo' },
+  { id: 'seoul',         name: '首尔',      country: '韩国',    flag: '🇰🇷', timezone: 'Asia/Seoul' },
+  { id: 'sydney',        name: '悉尼',      country: '澳大利亚',flag: '🇦🇺', timezone: 'Australia/Sydney' },
+  { id: 'melbourne',     name: '墨尔本',    country: '澳大利亚',flag: '🇦🇺', timezone: 'Australia/Melbourne' },
+  { id: 'auckland',      name: '奥克兰',    country: '新西兰',  flag: '🇳🇿', timezone: 'Pacific/Auckland' },
 ];
 
 const HOME_CITY_ID = 'shenzhen';
@@ -61,6 +61,18 @@ const DEFAULT_CITY_IDS = [
   'shenzhen', 'losangeles', 'newyork', 'london',
   'berlin', 'sydney', 'dubai', 'manchester', 'newdelhi',
 ];
+
+// ── 共享时间色带渐变 ───────────────────────────────────────────────────────────
+// 灰(休息) 0–8 | 琥珀(边缘) 8–9 | 蓝(工作) 9–17 | 琥珀(边缘) 17–19 | 灰(休息) 19–24
+
+const pct = (h: number) => `${((h / 24) * 100).toFixed(4)}%`;
+const TIMELINE_GRADIENT = `linear-gradient(to right,
+  #e5e7eb 0%,         #e5e7eb ${pct(8)},
+  #fde68a ${pct(8)},  #fde68a ${pct(9)},
+  #bfdbfe ${pct(9)},  #bfdbfe ${pct(17)},
+  #fde68a ${pct(17)}, #fde68a ${pct(19)},
+  #e5e7eb ${pct(19)}, #e5e7eb 100%
+)`;
 
 // ── 时区工具函数 ───────────────────────────────────────────────────────────────
 
@@ -113,10 +125,8 @@ function getWeekdayCN(utcMs: number, timezone: string): string {
   return `周${map[day] ?? '?'}`;
 }
 
-/** 将首页城市当天 00:00 对应的 UTC 毫秒（Asia/Shanghai = UTC+8，无夏令时）*/
 function getHomeDayStartUtcMs(referenceUtcMs: number): number {
   const tp = getTimeParts(referenceUtcMs, HOME_TIMEZONE);
-  // 在 Asia/Shanghai 构造当天 00:00:00+08:00
   const iso = `${tp.year}-${String(tp.month).padStart(2, '0')}-${String(tp.day).padStart(2, '0')}T00:00:00+08:00`;
   return new Date(iso).getTime();
 }
@@ -128,6 +138,63 @@ function getUtcMsForHomeHour(sliderHour: number, referenceUtcMs: number): number
 function getHomeCurrentHour(utcMs: number): number {
   const tp = getTimeParts(utcMs, HOME_TIMEZONE);
   return tp.hour + tp.minute / 60 + tp.second / 3600;
+}
+
+// ── 工作状态 ───────────────────────────────────────────────────────────────────
+
+type WorkStatus = { label: string; dot: string; badge: string };
+
+function getWorkStatus(hour: number, minute: number): WorkStatus {
+  const h = hour + minute / 60;
+  if (h >= 9 && h < 17) return {
+    label: '工作中',
+    dot: 'bg-blue-500',
+    badge: 'text-blue-700 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300',
+  };
+  if ((h >= 8 && h < 9) || (h >= 17 && h < 19)) return {
+    label: '边缘',
+    dot: 'bg-amber-400',
+    badge: 'text-amber-700 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-300',
+  };
+  return {
+    label: '休息',
+    dot: 'bg-gray-400',
+    badge: 'text-gray-500 bg-gray-100 dark:bg-gray-700/80 dark:text-gray-400',
+  };
+}
+
+// ── 城市迷你时间线 ──────────────────────────────────────────────────────────────
+
+function CityMiniTimeline({ hour, minute }: { hour: number; minute: number }) {
+  const markerPct = `${((hour + minute / 60) / 24 * 100).toFixed(3)}%`;
+  return (
+    <div className="mt-2.5 select-none">
+      {/* 小时刻度 */}
+      <div className="flex justify-between text-[9px] leading-none text-gray-300 dark:text-gray-600 mb-1 px-px">
+        <span>0</span>
+        <span>6</span>
+        <span>12</span>
+        <span>18</span>
+        <span></span>
+      </div>
+      {/* 渐变色带 + 当前时间标记 */}
+      <div
+        className="relative h-2 rounded-full overflow-visible"
+        style={{ background: TIMELINE_GRADIENT }}
+      >
+        {/* 竖线标记 */}
+        <div
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-px h-5 bg-gray-600 dark:bg-gray-200 opacity-75 rounded-full shadow-sm pointer-events-none"
+          style={{ left: markerPct }}
+        />
+        {/* 圆点标记 */}
+        <div
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-600 dark:border-gray-300 shadow pointer-events-none"
+          style={{ left: markerPct }}
+        />
+      </div>
+    </div>
+  );
 }
 
 // ── 子组件：城市行 ────────────────────────────────────────────────────────────
@@ -149,79 +216,82 @@ function CityRow({
   city: CityRowData;
   onRemove: (id: string) => void;
 }) {
-  const { hour } = city;
-
-  // 工作时间段背景色
-  let rowBg = '';
-  if (hour >= 9 && hour < 17)
-    rowBg = 'bg-blue-50/60 dark:bg-blue-900/10';
-  else if ((hour >= 8 && hour < 9) || (hour >= 17 && hour < 19))
-    rowBg = 'bg-amber-50/60 dark:bg-amber-900/10';
+  const status = getWorkStatus(city.hour, city.minute);
 
   return (
-    <div
-      className={`flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm transition-colors ${rowBg}`}
-    >
-      {/* 国旗 + 城市名 */}
-      <div className="flex items-center gap-2.5 w-36 sm:w-44 shrink-0">
-        <span className="text-xl sm:text-2xl leading-none">{city.flag}</span>
-        <div className="min-w-0">
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="font-medium text-sm text-gray-900 dark:text-white truncate">
-              {city.name}
-            </span>
-            {city.isHome && (
-              <span className="text-[10px] text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded-full shrink-0">
-                我的城市
-              </span>
-            )}
-          </div>
-          <div className="text-xs text-gray-400">{city.country}</div>
-        </div>
-      </div>
+    <div className="px-3 sm:px-4 pt-3 pb-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm transition-colors">
+      {/* 主信息行 */}
+      <div className="flex items-center gap-2.5 sm:gap-3">
 
-      {/* 日期信息 */}
-      <div className="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
-        <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
-          {city.dateStr}
-        </span>
-        {city.dayDiff !== 0 && (
-          <span
-            className={`text-xs px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${
+        {/* 国旗 + 城市 */}
+        <div className="flex items-center gap-2 w-28 sm:w-36 shrink-0">
+          <span className="text-xl leading-none">{city.flag}</span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1">
+              <span className="font-medium text-sm text-gray-900 dark:text-white truncate leading-tight">
+                {city.name}
+              </span>
+              {city.isHome && (
+                <span className="text-[9px] text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-1 py-0.5 rounded-full shrink-0 leading-none">
+                  本地
+                </span>
+              )}
+            </div>
+            <div className="text-[10px] text-gray-400 leading-tight mt-0.5">{city.country}</div>
+          </div>
+        </div>
+
+        {/* 日期 + 标签（桌面） */}
+        <div className="hidden sm:flex flex-1 items-center gap-1.5 min-w-0 flex-wrap">
+          <span className="text-xs text-gray-400 truncate">{city.dateStr}</span>
+          {city.dayDiff !== 0 && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${
               city.dayDiff > 0
                 ? 'text-green-600 bg-green-50 dark:bg-green-900/20'
                 : 'text-orange-500 bg-orange-50 dark:bg-orange-900/20'
-            }`}
-          >
-            {city.dayDiff > 0 ? `+${city.dayDiff}天` : `${city.dayDiff}天`}
-          </span>
-        )}
-        {city.isDST && (
-          <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold text-violet-600 bg-violet-50 dark:bg-violet-900/20 shrink-0">
-            夏令
-          </span>
-        )}
-      </div>
+            }`}>
+              {city.dayDiff > 0 ? `+${city.dayDiff}天` : `${city.dayDiff}天`}
+            </span>
+          )}
+          {city.isDST && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold text-violet-600 bg-violet-50 dark:bg-violet-900/20 shrink-0">
+              夏令
+            </span>
+          )}
+        </div>
 
-      {/* 时间 */}
-      <div className="text-right shrink-0">
-        <span className="text-2xl sm:text-3xl font-mono font-bold text-gray-900 dark:text-white tabular-nums tracking-tight">
-          {city.timeStr}
+        {/* 弹性间距（移动端） */}
+        <div className="flex-1 sm:hidden" />
+
+        {/* 状态徽章 */}
+        <span className={`flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${status.badge}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${status.dot} opacity-80`} />
+          {status.label}
         </span>
+
+        {/* 时间 */}
+        <div className="text-right shrink-0">
+          <span className="text-2xl sm:text-3xl font-mono font-bold text-gray-900 dark:text-white tabular-nums tracking-tight">
+            {city.timeStr}
+          </span>
+        </div>
+
+        {/* 删除按钮 */}
+        {city.isHome ? (
+          <div className="w-7 shrink-0" />
+        ) : (
+          <button
+            onClick={() => onRemove(city.id)}
+            className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full text-gray-300 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            aria-label={`删除 ${city.name}`}
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
-      {/* 删除按钮 */}
-      {city.isHome ? (
-        <div className="w-7 shrink-0" />
-      ) : (
-        <button
-          onClick={() => onRemove(city.id)}
-          className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full text-gray-300 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          aria-label={`删除 ${city.name}`}
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      )}
+      {/* 迷你时间线 */}
+      <CityMiniTimeline hour={city.hour} minute={city.minute} />
     </div>
   );
 }
@@ -233,16 +303,14 @@ export function ClockPage() {
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
 
-  // 城市列表
   const [cityIds, setCityIds] = useState<string[]>(DEFAULT_CITY_IDS);
   const [showAddCity, setShowAddCity] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 时间控制
   const [isRealtime, setIsRealtime] = useState(true);
   const [currentUtcMs, setCurrentUtcMs] = useState<number>(0);
   const [sliderHour, setSliderHour] = useState<number>(0);
-  const nowRefMs = useRef<number>(Date.now()); // 实时参考点，始终是真实当前时间
+  const nowRefMs = useRef<number>(Date.now());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -253,7 +321,6 @@ export function ClockPage() {
     setSliderHour(getHomeCurrentHour(now));
   }, []);
 
-  // 实时更新
   useEffect(() => {
     if (!mounted) return;
     timerRef.current = setInterval(() => {
@@ -294,7 +361,6 @@ export function ClockPage() {
     setSearchQuery('');
   }, [cityIds]);
 
-  // 计算每个城市的显示数据
   const cityData = useMemo((): CityRowData[] => {
     if (!currentUtcMs) return [];
     const homeTp = getTimeParts(currentUtcMs, HOME_TIMEZONE);
@@ -325,7 +391,6 @@ export function ClockPage() {
     });
   }, [cityIds, currentUtcMs]);
 
-  // 可添加的城市（过滤已添加的 + 搜索）
   const availableCities = useMemo(() => {
     const q = searchQuery.trim();
     return ALL_CITIES.filter(c => {
@@ -334,18 +399,6 @@ export function ClockPage() {
       return c.name.includes(q) || c.country.includes(q);
     });
   }, [cityIds, searchQuery]);
-
-  // 滑块轨道渐变（基于家城市工作时间）
-  const trackGradient = useMemo(() => {
-    const pct = (h: number) => `${((h / 24) * 100).toFixed(4)}%`;
-    return `linear-gradient(to right,
-      #e5e7eb 0%,          #e5e7eb ${pct(8)},
-      #fde68a ${pct(8)},   #fde68a ${pct(9)},
-      #bfdbfe ${pct(9)},   #bfdbfe ${pct(17)},
-      #fde68a ${pct(17)},  #fde68a ${pct(19)},
-      #e5e7eb ${pct(19)},  #e5e7eb 100%
-    )`;
-  }, []);
 
   const handleLogout = useCallback(async () => {
     usePermissionStore.getState().clearUser();
@@ -392,18 +445,18 @@ export function ClockPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 pt-4 pb-5 mb-4 shadow-sm">
 
           {/* 图例 */}
-          <div className="flex items-center gap-3 sm:gap-5 mb-4 text-xs text-gray-500 flex-wrap">
+          <div className="flex items-center gap-3 sm:gap-5 mb-4 text-xs text-gray-400 flex-wrap">
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm bg-blue-200 dark:bg-blue-800" />
-              <span>工作时间 09–17</span>
+              <div className="w-3 h-2.5 rounded-sm bg-blue-200 dark:bg-blue-700" />
+              <span>工作 09–17</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm bg-amber-200 dark:bg-amber-700" />
-              <span>边缘时间 08–09 / 17–19</span>
+              <div className="w-3 h-2.5 rounded-sm bg-amber-200 dark:bg-amber-600" />
+              <span>边缘 08–09 / 17–19</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm bg-gray-200 dark:bg-gray-600" />
-              <span>休息时间</span>
+              <div className="w-3 h-2.5 rounded-sm bg-gray-200 dark:bg-gray-600" />
+              <span>休息</span>
             </div>
           </div>
 
@@ -412,8 +465,10 @@ export function ClockPage() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
                 <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                <span className="font-medium text-gray-800 dark:text-gray-200">{homeCity.flag} {homeCity.name}</span>
-                <span className="hidden sm:inline">· {homeCity.dateStr}</span>
+                <span className="font-medium text-gray-800 dark:text-gray-200">
+                  {homeCity.flag} {homeCity.name}
+                </span>
+                <span className="hidden sm:inline text-gray-400">· {homeCity.dateStr}</span>
               </div>
               <button
                 onClick={handleResetRealtime}
@@ -439,13 +494,13 @@ export function ClockPage() {
 
             {/* 轨道 + 拇指 */}
             <div className="relative h-10 flex items-center">
-              {/* 彩色轨道 */}
+              {/* 彩色轨道（复用共享渐变） */}
               <div
                 className="absolute left-0 right-0 h-4 rounded-full"
-                style={{ background: trackGradient, top: '50%', transform: 'translateY(-50%)' }}
+                style={{ background: TIMELINE_GRADIENT, top: '50%', transform: 'translateY(-50%)' }}
               />
 
-              {/* 透明 range input（处理交互） */}
+              {/* 透明 range input */}
               <input
                 type="range"
                 min={0}
@@ -454,12 +509,7 @@ export function ClockPage() {
                 value={sliderHour}
                 onChange={e => handleSliderChange(parseFloat(e.target.value))}
                 className="absolute inset-0 w-full h-full cursor-pointer"
-                style={{
-                  opacity: 0,
-                  zIndex: 10,
-                  WebkitAppearance: 'none',
-                  appearance: 'none',
-                }}
+                style={{ opacity: 0, zIndex: 10, WebkitAppearance: 'none', appearance: 'none' }}
               />
 
               {/* 自定义拇指 */}
@@ -473,9 +523,7 @@ export function ClockPage() {
                 }}
               >
                 {/* 时间气泡 */}
-                <div
-                  className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-700 text-white text-xs font-mono font-semibold px-2 py-0.5 rounded-md whitespace-nowrap shadow"
-                >
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-700 text-white text-xs font-mono font-semibold px-2 py-0.5 rounded-md whitespace-nowrap shadow">
                   {String(Math.floor(sliderHour)).padStart(2, '0')}:{String(Math.round((sliderHour % 1) * 60)).padStart(2, '0')}
                   <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700" />
                 </div>
