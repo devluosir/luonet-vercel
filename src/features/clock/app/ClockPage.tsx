@@ -55,17 +55,15 @@ const ALL_CITIES: CityDef[] = [
   { id: 'auckland',      name: '奥克兰',    country: '新西兰',   flag: '🇳🇿', timezone: 'Pacific/Auckland' },
 ];
 
-// ① 本地城市改为上海
 const HOME_CITY_ID = 'shanghai';
 const HOME_TIMEZONE = 'Asia/Shanghai';
 
-// ② 默认城市列表
 const DEFAULT_CITY_IDS = [
   'shanghai', 'newyork', 'losangeles', 'london',
   'berlin', 'sydney', 'dubai', 'newdelhi',
 ];
 
-// ── 色带渐变（休息灰/边缘琥珀/工作蓝） ───────────────────────────────────────
+// ── 色带渐变 ───────────────────────────────────────────────────────────────────
 
 const pct = (h: number) => `${((h / 24) * 100).toFixed(4)}%`;
 const TIMELINE_GRADIENT = `linear-gradient(to right,
@@ -76,7 +74,7 @@ const TIMELINE_GRADIENT = `linear-gradient(to right,
   #e5e7eb ${pct(19)}, #e5e7eb 100%
 )`;
 
-// ── 时区工具函数 ───────────────────────────────────────────────────────────────
+// ── 时区工具 ───────────────────────────────────────────────────────────────────
 
 function getTimeParts(utcMs: number, timezone: string) {
   const date = new Date(utcMs);
@@ -119,21 +117,6 @@ function getWeekdayCN(utcMs: number, timezone: string): string {
   return `周${map[day] ?? '?'}`;
 }
 
-function getHomeDayStartUtcMs(referenceUtcMs: number): number {
-  const tp = getTimeParts(referenceUtcMs, HOME_TIMEZONE);
-  const iso = `${tp.year}-${String(tp.month).padStart(2, '0')}-${String(tp.day).padStart(2, '0')}T00:00:00+08:00`;
-  return new Date(iso).getTime();
-}
-
-function getUtcMsForHomeHour(sliderHour: number, referenceUtcMs: number): number {
-  return getHomeDayStartUtcMs(referenceUtcMs) + sliderHour * 3_600_000;
-}
-
-function getHomeCurrentHour(utcMs: number): number {
-  const tp = getTimeParts(utcMs, HOME_TIMEZONE);
-  return tp.hour + tp.minute / 60 + tp.second / 3600;
-}
-
 // ── 工作状态 ───────────────────────────────────────────────────────────────────
 
 type WorkStatus = { label: string; dot: string; badge: string };
@@ -157,16 +140,17 @@ function getWorkStatus(hour: number, minute: number): WorkStatus {
   };
 }
 
-// ── ③ 可拖动迷你时间线 ────────────────────────────────────────────────────────
+// ── 可拖动时间条（国旗拖柄 + 时间气泡） ──────────────────────────────────────
 
 interface MiniTimelineProps {
   hour: number;
   minute: number;
-  /** 拖动时回调 fraction ∈ [0,1]，对应当地 0–24h */
+  flag: string;
+  timeStr: string;
   onDrag: (fraction: number) => void;
 }
 
-function CityMiniTimeline({ hour, minute, onDrag }: MiniTimelineProps) {
+function CityMiniTimeline({ hour, minute, flag, timeStr, onDrag }: MiniTimelineProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const markerPct = `${((hour + minute / 60) / 24 * 100).toFixed(3)}%`;
@@ -178,17 +162,21 @@ function CityMiniTimeline({ hour, minute, onDrag }: MiniTimelineProps) {
     return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
   };
 
-  return (
-    <div className="mt-2.5 select-none">
-      {/* 小时刻度 */}
-      <div className="flex justify-between text-[9px] text-gray-300 dark:text-gray-600 mb-1 px-px leading-none">
-        <span>0</span><span>6</span><span>12</span><span>18</span><span></span>
-      </div>
+  // 刻度标签：绝对定位，确保 0 和 24 不超出容器
+  const ticks = [
+    { h: 0,  align: 'left' as const },
+    { h: 6,  align: 'center' as const },
+    { h: 12, align: 'center' as const },
+    { h: 18, align: 'center' as const },
+    { h: 24, align: 'right' as const },
+  ];
 
-      {/* 可交互轨道 */}
+  return (
+    <div className="mt-2 select-none">
+      {/* 轨道 + 国旗拖柄 */}
       <div
         ref={trackRef}
-        className="relative h-3 rounded-full cursor-pointer touch-none"
+        className="relative h-2.5 rounded-full cursor-pointer touch-none"
         style={{ background: TIMELINE_GRADIENT }}
         onPointerDown={e => {
           dragging.current = true;
@@ -204,16 +192,37 @@ function CityMiniTimeline({ hour, minute, onDrag }: MiniTimelineProps) {
         onPointerUp={() => { dragging.current = false; }}
         onPointerCancel={() => { dragging.current = false; }}
       >
-        {/* 竖线 */}
+        {/* 国旗 + 时间气泡（整体绝对定位） */}
         <div
-          className="absolute top-1/2 w-0.5 h-5 -translate-x-1/2 -translate-y-1/2 bg-gray-700 dark:bg-white opacity-60 rounded-full pointer-events-none"
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none flex flex-col items-center"
           style={{ left: markerPct }}
-        />
-        {/* 圆形拖柄 */}
-        <div
-          className="absolute top-1/2 w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white dark:bg-gray-800 border-2 border-blue-500 shadow-sm pointer-events-none"
-          style={{ left: markerPct }}
-        />
+        >
+          {/* 时间气泡 */}
+          <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-gray-800 dark:bg-gray-600 text-white text-[10px] font-mono font-medium px-1.5 py-0.5 rounded whitespace-nowrap shadow leading-tight">
+            {timeStr}
+          </div>
+          {/* 竖线 */}
+          <div className="absolute top-1/2 -translate-y-1/2 w-px h-4 bg-gray-600 dark:bg-gray-300 opacity-40 rounded-full" />
+          {/* 国旗图标 */}
+          <span className="text-base leading-none drop-shadow-sm">{flag}</span>
+        </div>
+      </div>
+
+      {/* 刻度标签行（绝对定位，确保完整显示） */}
+      <div className="relative h-3 mt-0.5">
+        {ticks.map(({ h, align }) => (
+          <span
+            key={h}
+            className="absolute text-[9px] text-gray-300 dark:text-gray-600 leading-none top-0"
+            style={{
+              left: align === 'left' ? '0' : align === 'right' ? 'auto' : `${h / 24 * 100}%`,
+              right: align === 'right' ? '0' : 'auto',
+              transform: align === 'center' ? 'translateX(-50%)' : 'none',
+            }}
+          >
+            {h}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -243,35 +252,35 @@ function CityRow({
   const status = getWorkStatus(city.hour, city.minute);
 
   return (
-    <div className="px-4 pt-3.5 pb-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+    <div className="px-4 pt-2.5 pb-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
 
       {/* 主信息行 */}
       <div className="flex items-center gap-3">
 
         {/* 国旗 + 城市名 */}
-        <div className="flex items-center gap-2.5 w-32 sm:w-40 shrink-0">
-          <span className="text-2xl leading-none shrink-0">{city.flag}</span>
+        <div className="flex items-center gap-2 w-28 sm:w-36 shrink-0">
+          <span className="text-xl leading-none shrink-0">{city.flag}</span>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="font-semibold text-sm text-gray-900 dark:text-white truncate leading-snug">
+              <span className="font-medium text-sm text-gray-900 dark:text-white truncate leading-snug">
                 {city.name}
               </span>
               {city.isHome && (
-                <span className="text-[9px] text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded-full shrink-0 font-medium">
+                <span className="text-[9px] text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-1 py-px rounded-full shrink-0 font-medium leading-none">
                   本地
                 </span>
               )}
             </div>
-            <div className="text-[11px] text-gray-400 mt-0.5 leading-none">{city.country}</div>
+            <div className="text-[10px] text-gray-400 leading-none mt-0.5">{city.country}</div>
           </div>
         </div>
 
         {/* 日期 + 徽章（桌面） */}
-        <div className="hidden sm:flex flex-col flex-1 gap-1 min-w-0">
-          <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{city.dateStr}</span>
+        <div className="hidden sm:flex flex-col flex-1 gap-0.5 min-w-0">
+          <span className="text-xs text-gray-500 dark:text-gray-400 truncate leading-snug">{city.dateStr}</span>
           <div className="flex items-center gap-1">
             {city.dayDiff !== 0 && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ${
+              <span className={`text-[10px] px-1.5 py-px rounded-full font-medium shrink-0 leading-tight ${
                 city.dayDiff > 0
                   ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20'
                   : 'text-orange-500 bg-orange-50 dark:bg-orange-900/20'
@@ -280,47 +289,48 @@ function CityRow({
               </span>
             )}
             {city.isDST && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold text-violet-600 bg-violet-50 dark:bg-violet-900/20 shrink-0">
+              <span className="text-[10px] px-1.5 py-px rounded-full font-medium text-violet-600 bg-violet-50 dark:bg-violet-900/20 shrink-0 leading-tight">
                 夏令
               </span>
             )}
           </div>
         </div>
 
-        {/* 弹性间距（移动端） */}
         <div className="flex-1 sm:hidden" />
 
         {/* 工作状态 */}
-        <span className={`flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${status.badge}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-          <span className="hidden xs:inline">{status.label}</span>
+        <span className={`flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${status.badge}`}>
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${status.dot}`} />
+          {status.label}
         </span>
 
-        {/* 时间大字 */}
-        <div className="shrink-0 text-right min-w-[72px] sm:min-w-[88px]">
-          <span className="text-2xl sm:text-[28px] font-mono font-bold tabular-nums tracking-tight text-gray-900 dark:text-white leading-none">
+        {/* 时间字 */}
+        <div className="shrink-0 text-right min-w-[64px]">
+          <span className="text-lg font-semibold font-mono tabular-nums tracking-tight text-gray-900 dark:text-white leading-none">
             {city.timeStr}
           </span>
         </div>
 
         {/* 删除按钮 */}
         {city.isHome ? (
-          <div className="w-7 shrink-0" />
+          <div className="w-6 shrink-0" />
         ) : (
           <button
             onClick={() => onRemove(city.id)}
-            className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full text-gray-300 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            className="w-6 h-6 shrink-0 flex items-center justify-center rounded-full text-gray-300 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             aria-label={`删除 ${city.name}`}
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3 h-3" />
           </button>
         )}
       </div>
 
-      {/* ③ 每行都有可拖动的迷你时间线 */}
+      {/* 可拖动时间条 */}
       <CityMiniTimeline
         hour={city.hour}
         minute={city.minute}
+        flag={city.flag}
+        timeStr={city.timeStr}
         onDrag={onSliderDrag}
       />
     </div>
@@ -340,7 +350,6 @@ export function ClockPage() {
 
   const [isRealtime, setIsRealtime] = useState(true);
   const [currentUtcMs, setCurrentUtcMs] = useState<number>(0);
-  const [sliderHour, setSliderHour] = useState<number>(0);
   const nowRefMs = useRef<number>(Date.now());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -349,7 +358,6 @@ export function ClockPage() {
     const now = Date.now();
     nowRefMs.current = now;
     setCurrentUtcMs(now);
-    setSliderHour(getHomeCurrentHour(now));
   }, []);
 
   useEffect(() => {
@@ -357,39 +365,23 @@ export function ClockPage() {
     timerRef.current = setInterval(() => {
       const now = Date.now();
       nowRefMs.current = now;
-      if (isRealtime) {
-        setCurrentUtcMs(now);
-        setSliderHour(getHomeCurrentHour(now));
-      }
+      if (isRealtime) setCurrentUtcMs(now);
     }, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [mounted, isRealtime]);
 
-  // 顶部主滑块拖动（基于上海时区）
-  const handleSliderChange = useCallback((hour: number) => {
-    setIsRealtime(false);
-    setSliderHour(hour);
-    setCurrentUtcMs(getUtcMsForHomeHour(hour, nowRefMs.current));
-  }, []);
-
-  // ③ 任意城市行拖动 — 根据该城市当地时间反推 UTC
-  const handleCitySliderDrag = useCallback((cityId: string, fraction: number, cityHour: number, cityMinute: number) => {
+  // 任意城市时间条拖动 — 根据该城市当地时间反推 UTC
+  const handleCitySliderDrag = useCallback((fraction: number, cityHour: number, cityMinute: number) => {
     setIsRealtime(false);
     const desiredHour = fraction * 24;
     const currentHour = cityHour + cityMinute / 60;
     const deltaMs = (desiredHour - currentHour) * 3_600_000;
-    const newUtcMs = currentUtcMs + deltaMs;
-    setCurrentUtcMs(newUtcMs);
-    // 同步更新顶部滑块位置（上海时间）
-    const homeTp = getTimeParts(newUtcMs, HOME_TIMEZONE);
-    setSliderHour(homeTp.hour + homeTp.minute / 60);
-  }, [currentUtcMs]);
+    setCurrentUtcMs(prev => prev + deltaMs);
+  }, []);
 
   const handleResetRealtime = useCallback(() => {
     setIsRealtime(true);
-    const now = nowRefMs.current;
-    setCurrentUtcMs(now);
-    setSliderHour(getHomeCurrentHour(now));
+    setCurrentUtcMs(nowRefMs.current);
   }, []);
 
   const removeCity = useCallback((id: string) => {
@@ -452,8 +444,6 @@ export function ClockPage() {
 
   if (!mounted || status === 'unauthenticated') return null;
 
-  const thumbPct = (sliderHour / 24) * 100;
-
   return (
     <AppLayout
       breadcrumbs={[{ label: '首页', path: '/dashboard' }, { label: '世界时钟' }]}
@@ -466,8 +456,8 @@ export function ClockPage() {
     >
       <div className="w-full px-3 sm:px-6 py-6">
 
-        {/* ── ② 页头：标题 + 实时按钮同行 ── */}
-        <div className="flex items-start justify-between gap-3 mb-5">
+        {/* 页头 */}
+        <div className="flex items-start justify-between gap-3 mb-4">
           <div>
             <div className="flex items-center gap-2 mb-0.5">
               <Clock className="h-5 w-5 text-blue-600 shrink-0" />
@@ -476,7 +466,7 @@ export function ClockPage() {
             <p className="text-sm text-gray-400">拖动任意城市时间条，全局同步联动</p>
           </div>
 
-          {/* ② 实时按钮 */}
+          {/* 实时按钮 */}
           <button
             onClick={handleResetRealtime}
             className={`shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
@@ -492,81 +482,15 @@ export function ClockPage() {
           </button>
         </div>
 
-        {/* ── 主时间轴卡片 ── */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 pt-4 pb-5 mb-4 shadow-sm">
-
-          {/* 图例 */}
-          <div className="flex items-center gap-3 text-[11px] text-gray-400 mb-3">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-2 rounded-sm bg-blue-200 dark:bg-blue-700/80" />
-              <span>工作 09–17</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-2 rounded-sm bg-amber-200 dark:bg-amber-600/80" />
-              <span>边缘 08–09 / 17–19</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-2 rounded-sm bg-gray-200 dark:bg-gray-600" />
-              <span>休息</span>
-            </div>
-          </div>
-
-          {/* 顶部主滑块 */}
-          <div className="relative select-none">
-            {/* 刻度 */}
-            <div className="flex justify-between text-[10px] text-gray-400 mb-1.5 px-0.5">
-              {[0, 3, 6, 9, 12, 15, 18, 21, 24].map(h => (
-                <span key={h}>{h < 24 ? h : ''}</span>
-              ))}
-            </div>
-
-            {/* 轨道 + 拇指 */}
-            <div className="relative h-10 flex items-center">
-              <div
-                className="absolute left-0 right-0 h-4 rounded-full"
-                style={{ background: TIMELINE_GRADIENT, top: '50%', transform: 'translateY(-50%)' }}
-              />
-              <input
-                type="range"
-                min={0} max={24} step={0.25}
-                value={sliderHour}
-                onChange={e => handleSliderChange(parseFloat(e.target.value))}
-                className="absolute inset-0 w-full h-full cursor-pointer"
-                style={{ opacity: 0, zIndex: 10, WebkitAppearance: 'none', appearance: 'none' }}
-              />
-              {/* 自定义拇指 */}
-              <div
-                className="absolute pointer-events-none"
-                style={{
-                  left: `clamp(0px, calc(${thumbPct.toFixed(3)}% - 14px), calc(100% - 28px))`,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  zIndex: 5,
-                }}
-              >
-                {/* 时间气泡 */}
-                <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-600 text-white text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md whitespace-nowrap shadow">
-                  {String(Math.floor(sliderHour)).padStart(2, '0')}:{String(Math.round((sliderHour % 1) * 60)).padStart(2, '0')}
-                  <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-600" />
-                </div>
-                {/* 圆形拇指 */}
-                <div className="w-7 h-7 bg-white dark:bg-gray-800 border-2 border-blue-500 rounded-full shadow-md flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── 城市列表 ── */}
-        <div className="space-y-2.5">
+        {/* 城市列表 */}
+        <div className="space-y-2">
           {cityData.map(city => (
             <CityRow
               key={city.id}
               city={city}
               onRemove={removeCity}
               onSliderDrag={(fraction) =>
-                handleCitySliderDrag(city.id, fraction, city.hour, city.minute)
+                handleCitySliderDrag(fraction, city.hour, city.minute)
               }
             />
           ))}
@@ -574,7 +498,7 @@ export function ClockPage() {
           {/* 添加城市 */}
           <button
             onClick={() => setShowAddCity(true)}
-            className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 hover:border-blue-300 hover:text-blue-500 dark:hover:border-blue-700 dark:hover:text-blue-400 transition-colors"
+            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 text-gray-400 hover:border-blue-300 hover:text-blue-500 dark:hover:border-blue-700 dark:hover:text-blue-400 transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span className="text-sm">添加城市</span>
@@ -582,7 +506,7 @@ export function ClockPage() {
         </div>
       </div>
 
-      {/* ── 添加城市弹窗 ── */}
+      {/* 添加城市弹窗 */}
       {showAddCity && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm"
