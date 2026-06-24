@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Clock, Plus, X, MapPin } from 'lucide-react';
+import { Clock, Plus, X } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { usePermissionStore } from '@/lib/permissions';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
@@ -464,7 +464,7 @@ export function ClockPage() {
       }}
       onLogout={handleLogout}
     >
-      <div className="w-full max-w-2xl mx-auto px-3 sm:px-4 py-6">
+      <div className="w-full px-3 sm:px-6 py-6">
 
         {/* ── ② 页头：标题 + 实时按钮同行 ── */}
         <div className="flex items-start justify-between gap-3 mb-5">
@@ -495,26 +495,19 @@ export function ClockPage() {
         {/* ── 主时间轴卡片 ── */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 pt-4 pb-5 mb-4 shadow-sm">
 
-          {/* 图例 + 基准说明 */}
-          <div className="flex items-center justify-between mb-3 flex-wrap gap-y-2">
-            <div className="flex items-center gap-3 text-[11px] text-gray-400">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-2 rounded-sm bg-blue-200 dark:bg-blue-700/80" />
-                <span>工作 09–17</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-2 rounded-sm bg-amber-200 dark:bg-amber-600/80" />
-                <span>边缘 08–09 / 17–19</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-2 rounded-sm bg-gray-200 dark:bg-gray-600" />
-                <span>休息</span>
-              </div>
+          {/* 图例 */}
+          <div className="flex items-center gap-3 text-[11px] text-gray-400 mb-3">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-2 rounded-sm bg-blue-200 dark:bg-blue-700/80" />
+              <span>工作 09–17</span>
             </div>
-            {/* 基准标签 */}
-            <div className="flex items-center gap-1 text-[11px] text-gray-400">
-              <MapPin className="w-3 h-3 text-blue-400" />
-              <span>上海时间基准</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-2 rounded-sm bg-amber-200 dark:bg-amber-600/80" />
+              <span>边缘 08–09 / 17–19</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-2 rounded-sm bg-gray-200 dark:bg-gray-600" />
+              <span>休息</span>
             </div>
           </div>
 
