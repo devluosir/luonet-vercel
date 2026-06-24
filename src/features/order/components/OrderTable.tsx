@@ -1,15 +1,20 @@
 'use client';
 
+import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { OrderRow } from './OrderRow';
 
 interface OrderTableProps {
   records: InquiryRecord[];
   isAdmin: boolean;
+  sortDir: 'asc' | 'desc' | null;
+  onSortToggle: () => void;
   onUpdate: (id: string, patch: Partial<InquiryRecord>) => void;
 }
 
-export function OrderTable({ records, isAdmin, onUpdate }: OrderTableProps) {
+export function OrderTable({ records, isAdmin, sortDir, onSortToggle, onUpdate }: OrderTableProps) {
+  const SortIcon = sortDir === 'asc' ? ChevronUp : sortDir === 'desc' ? ChevronDown : ChevronsUpDown;
+
   if (records.length === 0) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
@@ -26,8 +31,16 @@ export function OrderTable({ records, isAdmin, onUpdate }: OrderTableProps) {
       <table className="min-w-full table-fixed">
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-800">
-            <th className="whitespace-nowrap px-3 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-              订单编号
+            {/* 订单编号 — 可点击排序 */}
+            <th className="whitespace-nowrap px-3 py-2 text-left">
+              <button
+                type="button"
+                onClick={onSortToggle}
+                className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+              >
+                订单编号
+                <SortIcon className="h-3 w-3" />
+              </button>
             </th>
             <th className="w-14 px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
               交货
@@ -44,11 +57,11 @@ export function OrderTable({ records, isAdmin, onUpdate }: OrderTableProps) {
             <th className="hidden min-w-[80px] px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 lg:table-cell">
               客户订单号
             </th>
-            <th className="min-w-[100px] px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+            <th className="min-w-[110px] px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
               执行情况
             </th>
             {isAdmin && (
-              <th className="hidden w-20 px-2 py-2 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 xl:table-cell">
+              <th className="hidden w-24 px-2 py-2 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 xl:table-cell">
                 金额
               </th>
             )}
@@ -58,7 +71,7 @@ export function OrderTable({ records, isAdmin, onUpdate }: OrderTableProps) {
               </th>
             )}
             {isAdmin && (
-              <th className="hidden w-20 px-2 py-2 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 xl:table-cell">
+              <th className="hidden w-24 px-2 py-2 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 xl:table-cell">
                 到账金额
               </th>
             )}

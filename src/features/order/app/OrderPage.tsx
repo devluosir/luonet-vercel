@@ -159,6 +159,7 @@ export function OrderPage() {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('3months');
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>('all');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const isModalOpenRef = useRef(false);
 
@@ -233,13 +234,18 @@ export function OrderPage() {
     [timeFiltered]
   );
 
-  // 最终展示记录
+  // 最终展示记录（按订单编号排序）
   const filteredRecords = useMemo(
     () =>
       timeFiltered
         .filter((r) => matchesOrderStatus(r, orderStatusFilter))
-        .sort((a, b) => b.inquiryNo.localeCompare(a.inquiryNo)),
-    [timeFiltered, orderStatusFilter]
+        .sort((a, b) => {
+          const aNo = a.orderNo ?? '';
+          const bNo = b.orderNo ?? '';
+          const cmp = aNo.localeCompare(bNo);
+          return sortDir === 'desc' ? -cmp : cmp;
+        }),
+    [timeFiltered, orderStatusFilter, sortDir]
   );
 
   if (status === 'loading' || !user) return null;
@@ -329,6 +335,8 @@ export function OrderPage() {
         <OrderTable
           records={filteredRecords}
           isAdmin={user.isAdmin}
+          sortDir={sortDir}
+          onSortToggle={() => setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
           onUpdate={(id, patch) => updateRecord(id, patch)}
         />
       </div>

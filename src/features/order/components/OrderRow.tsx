@@ -4,6 +4,19 @@ import { useRef, useState } from 'react';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { stripDateBrackets, normalizeShortDateInput } from '@/features/inquiry/utils/inquiryUtils';
 
+// ── 行背景颜色（根据交货执行情况） ───────────────────────────────────────────
+
+function getRowBgClass(record: InquiryRecord): string {
+  const s = record.orderDeliveryStatus ?? '';
+  if (s === '备货')
+    return 'bg-red-50 hover:bg-red-100/60 dark:bg-red-950/25 dark:hover:bg-red-950/40';
+  if (s === '交货')
+    return 'bg-blue-50 hover:bg-blue-100/60 dark:bg-blue-950/25 dark:hover:bg-blue-950/40';
+  if (s.startsWith('发票'))
+    return 'bg-gray-100 hover:bg-gray-200/60 dark:bg-gray-800/60 dark:hover:bg-gray-800/80';
+  return 'hover:bg-gray-50/70 dark:hover:bg-gray-800/30';
+}
+
 // ── 行内可编辑字段类型 ────────────────────────────────────────────────────────
 
 type EditField =
@@ -16,15 +29,15 @@ type EditField =
   | 'receivedAmount'
   | null;
 
-// ── EditableCell ─────────────────────────────────────────────────────────────
+// ── 通用 EditableCell ─────────────────────────────────────────────────────────
 
 interface EditableCellProps {
   field: Exclude<EditField, null>;
   activeField: EditField;
-  value: string | number | undefined;
-  fallback?: string;             // 灰色占位文字（如客户订单号 fallback 到 customerNo）
-  placeholder?: string;          // input placeholder
-  type?: 'text' | 'number';
+  value: string | undefined;
+  /** 当 value 为空时的 fallback 显示文本（正常黑色，代表继承自他处） */
+  fallback?: string;
+  placeholder?: string;
   align?: 'left' | 'right';
   onActivate: (f: EditField) => void;
   onSave: (raw: string) => void;
@@ -37,25 +50,21 @@ function EditableCell({
   value,
   fallback,
   placeholder = '—',
-  type = 'text',
   align = 'left',
   onActivate,
   onSave,
   onCancel,
 }: EditableCellProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const editing = activeField === field;
-  const displayStr = value !== undefined && value !== null && String(value).trim() !== ''
-    ? String(value)
-    : null;
+  const displayStr = value?.trim() ?? null;
+  const effective = displayStr ?? fallback ?? null; // 实际展示内容
 
   if (editing) {
     return (
       <input
-        ref={inputRef}
         autoFocus
-        type={type}
-        defaultValue={displayStr ?? ''}
+        type="text"
+        defaultValue={displayStr ?? fallback ?? ''}
         placeholder={placeholder}
         onBlur={(e) => onSave(e.target.value)}
         onKeyDown={(e) => {
@@ -77,19 +86,129 @@ function EditableCell({
       onClick={() => onActivate(field)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onActivate(field); }}
       className={`block min-h-[1.25rem] cursor-text rounded px-0.5 text-xs
-        hover:bg-gray-50 dark:hover:bg-gray-800/50
+        hover:bg-black/5 dark:hover:bg-white/5
         ${align === 'right' ? 'text-right' : 'text-left'}
-        ${displayStr ? 'text-gray-800 dark:text-gray-100' : ''}`}
+        ${effective ? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
     >
-      {displayStr ?? (fallback
-        ? <span className="text-gray-300 dark:text-gray-600">{fallback}</span>
-        : <span className="text-gray-200 dark:text-gray-700">{placeholder}</span>
-      )}
+      {effective ?? placeholder}
     </span>
   );
 }
 
-// ── OrderSubStatus 徽标（与 InquiryRow 保持一致）────────────────────────────
+// ── 执行情况专用单元格（含预设按钮） ─────────────────────────────────────────
+
+const STATUS_PRESETS = [
+  { label: '备货', value: '备货', immediate: true },
+  { label: '交货', value: '交货', immediate: true },
+  { label: '发票', value: '发票', immediate: false }, // 需要追加日期
+] as const;
+
+interface DeliveryStatusCellProps {
+  activeField: EditField;
+  value: string | undefined;
+  onActivate: () => void;
+  onSave: (val: string | undefined) => void;
+  onCancel: () => void;
+}
+
+function DeliveryStatusCell({
+  activeField,
+  value,
+  onActivate,
+  onSave,
+  onCancel,
+}: DeliveryStatusCellProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const editing = activeField === 'deliveryStatus';
+  const displayStr = value?.trim() ?? null;
+
+  if (editing) {
+    const commit = (raw: string) => {
+      onSave(raw.trim() || undefined);
+    };
+
+    return (
+      <div className="flex flex-col gap-1">
+        <input
+          ref={inputRef}
+          autoFocus
+          type="text"
+          defaultValue={displayStr ?? ''}
+          placeholder="自由输入或选预设"
+          onBlur={(e) => commit(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+            if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+          }}
+          className="w-full rounded border border-blue-300 bg-white px-1.5 py-0.5 text-xs outline-none
+            focus:ring-1 focus:ring-blue-200
+            dark:border-blue-600 dark:bg-gray-900 dark:text-gray-100"
+        />
+        {/* 预设芯片 */}
+        <div className="flex gap-1">
+          {STATUS_PRESETS.map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault(); // 阻止 input blur
+                if (p.immediate) {
+                  // 备货/交货：直接保存，关闭编辑
+                  onSave(p.value);
+                } else {
+                  // 发票：填入前缀，焦点回 input 让用户追加日期
+                  if (inputRef.current) {
+                    inputRef.current.value = p.value;
+                    inputRef.current.focus();
+                    // 光标移到末尾
+                    const len = p.value.length;
+                    inputRef.current.setSelectionRange(len, len);
+                  }
+                }
+              }}
+              className="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] font-semibold
+                text-gray-500 transition-colors hover:border-gray-400 hover:text-gray-700
+                dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:text-gray-200"
+            >
+              {p.label}
+            </button>
+          ))}
+          {/* 清除 */}
+          {displayStr && (
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onSave(undefined);
+              }}
+              className="ml-auto rounded-full border border-red-200 px-2 py-0.5 text-[10px] font-semibold
+                text-red-400 hover:border-red-400 hover:text-red-600
+                dark:border-red-800 dark:text-red-500 dark:hover:border-red-600"
+            >
+              清除
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      onClick={onActivate}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onActivate(); }}
+      className={`block min-h-[1.25rem] cursor-text rounded px-0.5 text-xs
+        hover:bg-black/5 dark:hover:bg-white/5
+        ${displayStr ? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
+    >
+      {displayStr ?? '执行情况'}
+    </span>
+  );
+}
+
+// ── OrderSubStatus 徽标 ───────────────────────────────────────────────────────
 
 function OrderNoBadge({ record }: { record: InquiryRecord }) {
   const { orderNo, orderSubStatus } = record;
@@ -125,7 +244,6 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
   const activate = (f: EditField) => setActiveField(f);
   const cancel = () => setActiveField(null);
 
-  /** 保存：空字符串 → undefined，去除首尾空格 */
   const save = (field: string, raw: string) => {
     setActiveField(null);
     const trimmed = raw.trim();
@@ -140,26 +258,19 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
       case 'customerNo':
         onUpdate({ orderCustomerNo: trimmed || undefined });
         break;
-      case 'deliveryStatus':
-        onUpdate({ orderDeliveryStatus: trimmed || undefined });
+      case 'amount':
+        onUpdate({ orderAmount: trimmed || undefined });
         break;
-      case 'amount': {
-        const n = Number(trimmed);
-        onUpdate({ orderAmount: trimmed && !isNaN(n) ? n : undefined });
-        break;
-      }
       case 'paymentDate':
         onUpdate({ orderPaymentDate: trimmed || undefined });
         break;
-      case 'receivedAmount': {
-        const n = Number(trimmed);
-        onUpdate({ orderReceivedAmount: trimmed && !isNaN(n) ? n : undefined });
+      case 'receivedAmount':
+        onUpdate({ orderReceivedAmount: trimmed || undefined });
         break;
-      }
     }
   };
 
-  const cellProps = (field: Exclude<EditField, null>) => ({
+  const cellProps = (field: Exclude<EditField, 'deliveryStatus' | null>) => ({
     field,
     activeField,
     onActivate: activate,
@@ -168,7 +279,7 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
   });
 
   return (
-    <tr className="group border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/30">
+    <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getRowBgClass(record)}`}>
 
       {/* 订单编号 + 询价编号 */}
       <td className="whitespace-nowrap px-3 py-2">
@@ -181,7 +292,7 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
       </td>
 
       {/* 交货 */}
-      <td className="w-16 px-2 py-2">
+      <td className="w-14 px-2 py-2">
         <EditableCell
           {...cellProps('deliveryDate')}
           value={record.orderDeliveryDate ? stripDateBrackets(record.orderDeliveryDate) : undefined}
@@ -199,14 +310,13 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
         <p className="truncate text-xs text-gray-700 dark:text-gray-300" title={record.description}>
           {record.description}
         </p>
-        {/* 移动端补充显示询价人 */}
         <p className="truncate text-[10px] text-gray-400 dark:text-gray-500 md:hidden">
           {record.inquirer}
         </p>
       </td>
 
       {/* 确认日 */}
-      <td className="hidden w-16 px-2 py-2 lg:table-cell">
+      <td className="hidden w-14 px-2 py-2 lg:table-cell">
         <EditableCell
           {...cellProps('confirmDate')}
           value={record.orderConfirmDate ? stripDateBrackets(record.orderConfirmDate) : undefined}
@@ -214,34 +324,38 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
         />
       </td>
 
-      {/* 客户订单号 */}
+      {/* 客户订单号：fallback 显示 customerNo（正常黑色，非占位灰） */}
       <td className="hidden min-w-[80px] px-2 py-2 lg:table-cell">
         <EditableCell
           {...cellProps('customerNo')}
           value={record.orderCustomerNo}
           fallback={record.customerNo}
-          placeholder={record.customerNo}
+          placeholder="—"
         />
       </td>
 
-      {/* 交货执行情况 */}
-      <td className="min-w-[100px] px-2 py-2">
-        <EditableCell
-          {...cellProps('deliveryStatus')}
+      {/* 交货执行情况（带预设按钮） */}
+      <td className="min-w-[110px] px-2 py-2">
+        <DeliveryStatusCell
+          activeField={activeField}
           value={record.orderDeliveryStatus}
-          placeholder="执行情况"
+          onActivate={() => setActiveField('deliveryStatus')}
+          onSave={(val) => {
+            setActiveField(null);
+            onUpdate({ orderDeliveryStatus: val });
+          }}
+          onCancel={cancel}
         />
       </td>
 
       {/* ── 管理员专属列 ── */}
       {isAdmin && (
-        <td className="hidden w-20 px-2 py-2 xl:table-cell">
+        <td className="hidden w-24 px-2 py-2 xl:table-cell">
           <EditableCell
             {...cellProps('amount')}
             value={record.orderAmount}
-            type="number"
             align="right"
-            placeholder="0"
+            placeholder="¥/$ 金额"
           />
         </td>
       )}
@@ -255,13 +369,12 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
         </td>
       )}
       {isAdmin && (
-        <td className="hidden w-20 px-2 py-2 xl:table-cell">
+        <td className="hidden w-24 px-2 py-2 xl:table-cell">
           <EditableCell
             {...cellProps('receivedAmount')}
             value={record.orderReceivedAmount}
-            type="number"
             align="right"
-            placeholder="0"
+            placeholder="¥/$ 金额"
           />
         </td>
       )}
