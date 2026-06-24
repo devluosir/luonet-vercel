@@ -110,7 +110,7 @@ export function InquiryTable({
                 <button
                   type="button"
                   onClick={onSortToggle}
-                  className="inline-flex max-w-full items-center gap-1 rounded hover:text-gray-700 dark:hover:text-gray-200"
+                  className="inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded hover:text-gray-700 dark:hover:text-gray-200"
                   title={sortDir === 'desc' ? '当前：最新在前，点击切换' : '当前：最早在前，点击切换'}
                 >
                   <span className="truncate">询价编号</span>
@@ -122,16 +122,16 @@ export function InquiryTable({
                 </button>
               </th>
               <th style={{ width: W.inquirer }} className="hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:table-cell">
-                询价人
+                <span className="whitespace-nowrap">询价人</span>
               </th>
               <th style={{ width: W.custno }} className="hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 lg:table-cell">
-                客户编号
+                <span className="whitespace-nowrap">客户编号</span>
               </th>
               <th style={{ width: W.desc }} className="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:px-3">
-                内容简述
+                <span className="whitespace-nowrap">内容简述</span>
               </th>
               <th style={{ width: W.status }} className="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:px-3">
-                <span className="block truncate">询报价状态</span>
+                <span className="block whitespace-nowrap truncate">询报价状态</span>
               </th>
               <th style={{ width: W.del }} className="px-1 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:px-3">
                 <span className="hidden md:inline">操作</span>

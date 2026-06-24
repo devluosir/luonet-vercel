@@ -429,21 +429,16 @@ export function InquiryPage() {
                 records={baseFiltered}
               />
             ) : (
-              <div className="flex min-w-0 flex-1 items-baseline gap-2.5">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
                 <h1 className="shrink-0 text-base font-semibold text-gray-900 dark:text-white">
                   询报价登记
                 </h1>
+                <span className="whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">{resultSummary}</span>
                 {lastSyncedAt && (
-                  <span className="text-xs text-gray-400 dark:text-gray-500">
-                    最后同步：
-                    {lastSyncedAt.toLocaleTimeString('zh-CN', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit',
-                    })}
+                  <span className="hidden whitespace-nowrap text-xs text-gray-400 dark:text-gray-500 sm:inline">
+                    同步 {lastSyncedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </span>
                 )}
-                <span className="text-xs text-gray-400 dark:text-gray-500">{resultSummary}</span>
               </div>
             )}
 
@@ -472,10 +467,11 @@ export function InquiryPage() {
               <button
                 type="button"
                 onClick={openCreateModal}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
               >
-                <Plus className="h-4 w-4" />
-                新增询价
+                <Plus className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">新增询价</span>
+                <span className="sm:hidden">新增</span>
               </button>
             </div>
           </div>
