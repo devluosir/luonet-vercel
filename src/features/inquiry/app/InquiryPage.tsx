@@ -415,34 +415,20 @@ export function InquiryPage() {
       )}
 
       <div className="w-full max-w-none px-3 py-3 sm:px-5 lg:px-6">
-        <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-2.5 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-          <div className="flex items-center gap-2">
-            {/* Left: title (collapsed) or filter controls (expanded) */}
-            {isFilterOpen ? (
-              <InquiryFilterBar
-                id="inquiry-filter-panel"
-                filter={filter}
-                setFilter={setFilter}
-                inquirers={inquirers}
-                activeCount={activeCount}
-                onReset={reset}
-                records={baseFiltered}
-              />
-            ) : (
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                <h1 className="shrink-0 text-base font-semibold text-gray-900 dark:text-white">
-                  询报价登记
-                </h1>
-                <span className="whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">{resultSummary}</span>
-                {lastSyncedAt && (
-                  <span className="hidden whitespace-nowrap text-xs text-gray-400 dark:text-gray-500 sm:inline">
-                    同步 {lastSyncedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Right: 筛选 + 新增询价（始终显示） */}
+        <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
+          {/* 标题行：始终固定可见 */}
+          <div className="flex items-center gap-2 py-2.5">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <h1 className="shrink-0 text-base font-semibold text-gray-900 dark:text-white">
+                询报价登记
+              </h1>
+              <span className="whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">{resultSummary}</span>
+              {lastSyncedAt && (
+                <span className="hidden whitespace-nowrap text-xs text-gray-400 dark:text-gray-500 sm:inline">
+                  同步 {lastSyncedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+              )}
+            </div>
             <div className="flex shrink-0 items-center gap-2">
               <button
                 type="button"
@@ -475,6 +461,19 @@ export function InquiryPage() {
               </button>
             </div>
           </div>
+
+          {/* 筛选面板：展开后显示在标题行下方 */}
+          {isFilterOpen && (
+            <InquiryFilterBar
+              id="inquiry-filter-panel"
+              filter={filter}
+              setFilter={setFilter}
+              inquirers={inquirers}
+              activeCount={activeCount}
+              onReset={reset}
+              records={baseFiltered}
+            />
+          )}
         </div>
 
         <InquiryTable

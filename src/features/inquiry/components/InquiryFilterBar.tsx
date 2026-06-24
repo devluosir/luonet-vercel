@@ -192,126 +192,117 @@ export function InquiryFilterBar({
   const divider = <span className="select-none text-gray-200 dark:text-gray-700">·</span>;
 
   return (
-    <div id={id} className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+    <div id={id} className="flex flex-col gap-2.5 border-t border-gray-100 py-3 dark:border-gray-700/50">
 
-      {/* ── 时间：语义 chip ── */}
-      <Chip
-        label="近3月"
-        active={filter.timeRange === '3months'}
-        onClick={() => { setFilter({ ...filter, timeRange: '3months' }); setIsPickerOpen(false); }}
-      />
-      <Chip
-        label="全部"
-        active={filter.timeRange === 'all'}
-        onClick={() => { setFilter({ ...filter, timeRange: 'all' }); setIsPickerOpen(false); }}
-      />
+      {/* ── 第一行：时间范围 + 状态筛选芯片 ── */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Chip
+          label="近3月"
+          active={filter.timeRange === '3months'}
+          onClick={() => { setFilter({ ...filter, timeRange: '3months' }); setIsPickerOpen(false); }}
+        />
+        <Chip
+          label="全部"
+          active={filter.timeRange === 'all'}
+          onClick={() => { setFilter({ ...filter, timeRange: 'all' }); setIsPickerOpen(false); }}
+        />
 
-      {/* ── 月份导航器：‹ [选月/M月] › ── */}
-      <div ref={navRef} className="relative inline-flex items-center overflow-visible">
-        <div className="inline-flex items-center overflow-hidden rounded-full border border-gray-200 bg-white text-xs dark:border-gray-700 dark:bg-gray-800">
-          {/* 上一月 */}
-          <button
-            type="button"
-            onClick={() => { setMonth(shiftMonth(navMonth, -1)); setIsPickerOpen(false); }}
-            className="px-2 py-0.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-            aria-label="上一个月"
-          >‹</button>
-
-          {/* 月份标签，点击开关自定义选择器 */}
-          <button
-            type="button"
-            onClick={() => setIsPickerOpen((o) => !o)}
-            className={`min-w-[3.25rem] border-x border-gray-100 px-2 py-0.5 text-center font-medium transition-colors dark:border-gray-700 ${
-              isCustomMonth
-                ? 'text-blue-600 dark:text-blue-400'
-                : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
-            }`}
-            title={isCustomMonth ? '点击更换月份' : '选择特定月份'}
-          >
-            {isCustomMonth ? fmtMonth(navMonth) : '选月'}
-          </button>
-
-          {/* 下一月 */}
-          <button
-            type="button"
-            onClick={canGoNext ? () => { setMonth(shiftMonth(navMonth, 1)); setIsPickerOpen(false); } : undefined}
-            disabled={!canGoNext}
-            className={`px-2 py-0.5 transition-colors ${
-              canGoNext
-                ? 'text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200'
-                : 'cursor-not-allowed text-gray-200 dark:text-gray-700'
-            }`}
-            aria-label="下一个月"
-          >›</button>
+        {/* 月份导航器：‹ [选月/M月] › */}
+        <div ref={navRef} className="relative inline-flex items-center overflow-visible">
+          <div className="inline-flex items-center overflow-hidden rounded-full border border-gray-200 bg-white text-xs dark:border-gray-700 dark:bg-gray-800">
+            <button
+              type="button"
+              onClick={() => { setMonth(shiftMonth(navMonth, -1)); setIsPickerOpen(false); }}
+              className="px-2 py-0.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+              aria-label="上一个月"
+            >‹</button>
+            <button
+              type="button"
+              onClick={() => setIsPickerOpen((o) => !o)}
+              className={`min-w-[3.25rem] border-x border-gray-100 px-2 py-0.5 text-center font-medium transition-colors dark:border-gray-700 ${
+                isCustomMonth
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
+              }`}
+              title={isCustomMonth ? '点击更换月份' : '选择特定月份'}
+            >
+              {isCustomMonth ? fmtMonth(navMonth) : '选月'}
+            </button>
+            <button
+              type="button"
+              onClick={canGoNext ? () => { setMonth(shiftMonth(navMonth, 1)); setIsPickerOpen(false); } : undefined}
+              disabled={!canGoNext}
+              className={`px-2 py-0.5 transition-colors ${
+                canGoNext
+                  ? 'text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200'
+                  : 'cursor-not-allowed text-gray-200 dark:text-gray-700'
+              }`}
+              aria-label="下一个月"
+            >›</button>
+          </div>
+          {isPickerOpen && (
+            <MonthPickerPopover
+              value={isCustomMonth ? navMonth : ''}
+              onSelect={(ym) => setMonth(ym)}
+              onClose={() => setIsPickerOpen(false)}
+              anchorRef={navRef}
+            />
+          )}
         </div>
 
-        {/* 自定义月份浮层 */}
-        {isPickerOpen && (
-          <MonthPickerPopover
-            value={isCustomMonth ? navMonth : ''}
-            onSelect={(ym) => setMonth(ym)}
-            onClose={() => setIsPickerOpen(false)}
-            anchorRef={navRef}
+        {divider}
+
+        {/* 报价状态 chips */}
+        {statusOptions.map((opt) => (
+          <Chip
+            key={opt.value}
+            label={opt.label}
+            active={filter.quoteStatus === opt.value}
+            activeColor={opt.activeColor}
+            badge={countByStatus(records, opt.value)}
+            badgeColor={opt.badgeColor}
+            onClick={() =>
+              setFilter({ ...filter, quoteStatus: filter.quoteStatus === opt.value ? 'all' : opt.value })
+            }
           />
-        )}
+        ))}
       </div>
 
-      {divider}
-
-      {/* ── 报价状态 chips ── */}
-      {statusOptions.map((opt) => (
-        <Chip
-          key={opt.value}
-          label={opt.label}
-          active={filter.quoteStatus === opt.value}
-          activeColor={opt.activeColor}
-          badge={countByStatus(records, opt.value)}
-          badgeColor={opt.badgeColor}
-          onClick={() =>
-            setFilter({ ...filter, quoteStatus: filter.quoteStatus === opt.value ? 'all' : opt.value })
+      {/* ── 第二行：搜索 + 询价人 + 重置 ── */}
+      <div className="flex items-center gap-1.5">
+        <input
+          type="search"
+          value={filter.keyword}
+          onChange={(e) => setFilter({ ...filter, keyword: e.target.value })}
+          placeholder="搜索..."
+          className={
+            'h-7 min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2 ' +
+            'text-xs text-gray-700 outline-none placeholder:text-gray-400 ' +
+            'focus:border-blue-400 focus:ring-1 focus:ring-blue-200 ' +
+            'dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-500 ' +
+            'dark:focus:border-blue-500'
           }
         />
-      ))}
-
-      {divider}
-
-      {/* ── 关键词搜索 ── */}
-      <input
-        type="search"
-        value={filter.keyword}
-        onChange={(e) => setFilter({ ...filter, keyword: e.target.value })}
-        placeholder="搜索..."
-        className={
-          'h-7 w-28 min-w-0 rounded-lg border border-gray-200 bg-white px-2 ' +
-          'text-xs text-gray-700 outline-none placeholder:text-gray-400 ' +
-          'focus:border-blue-400 focus:ring-1 focus:ring-blue-200 ' +
-          'dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-500 ' +
-          'dark:focus:border-blue-500'
-        }
-      />
-
-      {/* ── 询价人 ── */}
-      <select
-        value={filter.inquirer}
-        onChange={(e) => setFilter({ ...filter, inquirer: e.target.value })}
-        className="h-7 rounded-lg border border-gray-200 bg-white px-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-      >
-        <option value="">询价人</option>
-        {inquirers.map((name) => (
-          <option key={name} value={name}>{name}</option>
-        ))}
-      </select>
-
-      {/* ── 重置 ── */}
-      {activeCount > 0 && (
-        <button
-          type="button"
-          onClick={onReset}
-          className="rounded-lg border border-gray-200 px-2 py-0.5 text-xs font-medium text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+        <select
+          value={filter.inquirer}
+          onChange={(e) => setFilter({ ...filter, inquirer: e.target.value })}
+          className="h-7 rounded-lg border border-gray-200 bg-white px-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
         >
-          重置
-        </button>
-      )}
+          <option value="">询价人</option>
+          {inquirers.map((name) => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+        {activeCount > 0 && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="h-7 rounded-lg border border-gray-200 px-2.5 text-xs font-medium text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+          >
+            重置
+          </button>
+        )}
+      </div>
     </div>
   );
 }
