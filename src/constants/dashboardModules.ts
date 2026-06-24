@@ -6,6 +6,7 @@ import {
   Mail,
   Clock,
   CalendarDays,
+  Banknote,
   Archive,
   Users,
 } from 'lucide-react';
@@ -63,6 +64,12 @@ export const TOOL_MODULES = [
     name: '全球假日',
     path: '/holidays',
     icon: CalendarDays,
+  },
+  {
+    id: 'rmb',
+    name: '人民币大写',
+    path: '/rmb',
+    icon: Banknote,
   },
 ];
 
