@@ -463,7 +463,7 @@ export function ClockPage() {
               <Clock className="h-5 w-5 text-blue-600 shrink-0" />
               <h1 className="text-lg font-semibold text-gray-900 dark:text-white">世界时钟</h1>
             </div>
-            <p className="text-sm text-gray-400">拖动任意城市时间条，全局同步联动</p>
+            <p className="text-sm text-gray-400">拖动或点击任意城市时间条，全局同步联动</p>
           </div>
 
           {/* 实时按钮 */}

@@ -175,38 +175,6 @@ function HolidayRow({ holiday, diff }: { holiday: Holiday; diff: number }) {
   );
 }
 
-// ── SubChips ──────────────────────────────────────────────────────────────────
-
-interface SubChipsProps {
-  chips: { key: string; label: string; emoji?: string }[];
-  active: string;
-  onChange: (key: string) => void;
-  activeColor: string;
-}
-
-function SubChips({ chips, active, onChange, activeColor }: SubChipsProps) {
-  return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      {chips.map(chip => {
-        const isActive = chip.key === active;
-        return (
-          <button
-            key={chip.key}
-            onClick={() => onChange(chip.key)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-              isActive
-                ? `${activeColor} border-transparent text-white`
-                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'
-            }`}
-          >
-            {chip.emoji && <span className="text-sm leading-none">{chip.emoji}</span>}
-            {chip.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 // ── 主页面 ────────────────────────────────────────────────────────────────────
 
@@ -305,46 +273,58 @@ export function HolidaysPage() {
     >
       <div className="w-full px-3 sm:px-6 py-6">
 
-        {/* 页头：标题左 + 分类 Tab 右 */}
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <Globe className="h-5 w-5 text-blue-600 shrink-0" />
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">全球节假日</h1>
+        {/* 页头 */}
+        <div className="mb-4">
+          {/* 标题行 */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Globe className="h-4 w-4 text-blue-600 shrink-0" />
+              <h1 className="text-base font-semibold text-gray-900 dark:text-white truncate">全球节假日</h1>
+              <span className="text-xs text-gray-400 shrink-0">共 {totalHolidays} 个</span>
             </div>
-            <p className="text-sm text-gray-400">
-              全球假日一览，共 {totalHolidays} 个假日
-            </p>
           </div>
 
-          {/* 一级分类 Tabs */}
-          <div className="flex items-center gap-0.5 shrink-0 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+          {/* 一级分类 Tabs（全宽横排，各 flex-1） */}
+          <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
             {CAT_TABS.map(tab => (
               <button
                 key={tab.key}
                 onClick={() => handleCatChange(tab.key)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                className={`flex-1 flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   catFilter === tab.key
                     ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
                 }`}
               >
-                {tab.dot && <span className={`w-1.5 h-1.5 rounded-full ${tab.dot}`} />}
-                {tab.label}
+                {tab.dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${tab.dot}`} />}
+                <span className="truncate">{tab.label}</span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* 二级筛选芯片 */}
+        {/* 二级筛选芯片（单行横向滚动） */}
         {subChipsConfig.show && (
-          <div className="mb-4 overflow-x-auto pb-1">
-            <SubChips
-              chips={subChipsConfig.chips}
-              active={subFilter}
-              onChange={setSubFilter}
-              activeColor={subChipsConfig.activeColor}
-            />
+          <div className="mb-4 -mx-3 sm:-mx-6 px-3 sm:px-6 overflow-x-auto">
+            <div className="flex items-center gap-1.5 flex-nowrap pb-1 min-w-max">
+              {subChipsConfig.chips.map(chip => {
+                const isActive = chip.key === subFilter;
+                return (
+                  <button
+                    key={chip.key}
+                    onClick={() => setSubFilter(chip.key)}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors whitespace-nowrap ${
+                      isActive
+                        ? `${subChipsConfig.activeColor} border-transparent text-white`
+                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+                    }`}
+                  >
+                    {chip.emoji && <span className="text-sm leading-none">{chip.emoji}</span>}
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
