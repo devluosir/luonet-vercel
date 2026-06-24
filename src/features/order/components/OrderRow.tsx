@@ -34,7 +34,8 @@ type EditField =
 interface EditableCellProps {
   field: Exclude<EditField, null>;
   activeField: EditField;
-  value: string | undefined;
+  /** 接受 string | number | undefined，兼容旧数据中存储为 number 的字段 */
+  value: string | number | undefined;
   /** 当 value 为空时的 fallback 显示文本（正常黑色，代表继承自他处） */
   fallback?: string;
   placeholder?: string;
@@ -56,7 +57,9 @@ function EditableCell({
   onCancel,
 }: EditableCellProps) {
   const editing = activeField === field;
-  const displayStr = value?.trim() ?? null;
+  // 安全转换：旧数据可能为 number，统一转 string 再 trim
+  const strValue = value !== undefined && value !== null ? String(value) : undefined;
+  const displayStr = strValue?.trim() || null;
   const effective = displayStr ?? fallback ?? null; // 实际展示内容
 
   if (editing) {
@@ -64,7 +67,7 @@ function EditableCell({
       <input
         autoFocus
         type="text"
-        defaultValue={displayStr ?? fallback ?? ''}
+        defaultValue={strValue ?? fallback ?? ''}
         placeholder={placeholder}
         onBlur={(e) => onSave(e.target.value)}
         onKeyDown={(e) => {
@@ -120,7 +123,7 @@ function DeliveryStatusCell({
 }: DeliveryStatusCellProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const editing = activeField === 'deliveryStatus';
-  const displayStr = value?.trim() ?? null;
+  const displayStr = value != null ? String(value).trim() || null : null;
 
   if (editing) {
     const commit = (raw: string) => {
