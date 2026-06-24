@@ -1,10 +1,87 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { OrderRow } from './OrderRow';
 
 export type SortField = 'orderNo' | 'deliveryDate';
+
+type Breakpoint = 'sm' | 'md' | 'lg' | 'xl';
+
+function useBreakpoint(): Breakpoint {
+  const [bp, setBp] = useState<Breakpoint>('lg');
+
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      setBp(w >= 1280 ? 'xl' : w >= 1024 ? 'lg' : w >= 768 ? 'md' : 'sm');
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  return bp;
+}
+
+/** 各断点列宽（百分比），与 InquiryTable 同策略：table-fixed + th width */
+function getColWidths(bp: Breakpoint, isAdmin: boolean) {
+  if (bp === 'sm') {
+    return {
+      orderNo: '20%',
+      delivery: '10%',
+      customer: '0%',
+      desc: '38%',
+      confirm: '0%',
+      customerNo: '0%',
+      status: '32%',
+      amount: '0%',
+      payment: '0%',
+      received: '0%',
+    };
+  }
+  if (bp === 'md') {
+    return {
+      orderNo: '16%',
+      delivery: '8%',
+      customer: '14%',
+      desc: '33%',
+      confirm: '0%',
+      customerNo: '0%',
+      status: '33%',
+      amount: '0%',
+      payment: '0%',
+      received: '0%',
+    };
+  }
+  if (bp === 'lg' || (bp === 'xl' && !isAdmin)) {
+    return {
+      orderNo: '11%',
+      delivery: '6%',
+      customer: '9%',
+      desc: '20%',
+      confirm: '6%',
+      customerNo: '17%',
+      status: '31%',
+      amount: '0%',
+      payment: '0%',
+      received: '0%',
+    };
+  }
+  return {
+    orderNo: '10%',
+    delivery: '5%',
+    customer: '8%',
+    desc: '16%',
+    confirm: '5%',
+    customerNo: '15%',
+    status: '12%',
+    amount: '10%',
+    payment: '5%',
+    received: '9%',
+  };
+}
 
 interface OrderTableProps {
   records: InquiryRecord[];
@@ -23,6 +100,9 @@ function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: 
 }
 
 export function OrderTable({ records, isAdmin, sortField, sortDir, onSortToggle, onUpdate }: OrderTableProps) {
+  const bp = useBreakpoint();
+  const W = getColWidths(bp, isAdmin);
+
   const thSort = (field: SortField, label: string) => (
     <button type="button" onClick={() => onSortToggle(field)}
       className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
@@ -44,44 +124,45 @@ export function OrderTable({ records, isAdmin, sortField, sortDir, onSortToggle,
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-      <table className="min-w-full table-fixed">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
+      <div className="overflow-x-auto">
+      <table className="w-full table-fixed">
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-800">
-            <th className="w-28 whitespace-nowrap px-3 py-2 text-left">
+            <th style={{ width: W.orderNo }} className="overflow-hidden px-3 py-2 text-left">
               {thSort('orderNo', '订单编号')}
             </th>
-            <th className="w-[4.5rem] px-2 py-2 text-left">
+            <th style={{ width: W.delivery }} className="overflow-hidden px-2 py-2 text-left">
               {thSort('deliveryDate', '交货')}
             </th>
-            <th className="hidden w-20 px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 md:table-cell">
-              客户
+            <th style={{ width: W.customer }} className="hidden overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 md:table-cell">
+              <span className="whitespace-nowrap">客户</span>
             </th>
-            <th className="px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-              内容简述
+            <th style={{ width: W.desc }} className="overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+              <span className="whitespace-nowrap">内容简述</span>
             </th>
-            <th className="hidden w-[4.5rem] px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 lg:table-cell">
-              确认日
+            <th style={{ width: W.confirm }} className="hidden overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 lg:table-cell">
+              <span className="whitespace-nowrap">确认日</span>
             </th>
-            <th className="hidden w-24 px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 lg:table-cell">
-              客户订单号
+            <th style={{ width: W.customerNo }} className="hidden overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 lg:table-cell">
+              <span className="whitespace-nowrap">客户订单号</span>
             </th>
-            <th className="min-w-[110px] px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-              执行情况
+            <th style={{ width: W.status }} className="overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+              <span className="block truncate">执行情况</span>
             </th>
             {isAdmin && (
-              <th className="hidden w-28 px-2 py-2 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 xl:table-cell">
-                金额
+              <th style={{ width: W.amount }} className="hidden overflow-hidden px-2 py-2 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 xl:table-cell">
+                <span className="whitespace-nowrap">金额</span>
               </th>
             )}
             {isAdmin && (
-              <th className="hidden w-16 px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 xl:table-cell">
-                回款
+              <th style={{ width: W.payment }} className="hidden overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500 xl:table-cell">
+                <span className="whitespace-nowrap">回款</span>
               </th>
             )}
             {isAdmin && (
-              <th className="hidden w-28 px-2 py-2 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 xl:table-cell">
-                到账金额
+              <th style={{ width: W.received }} className="hidden overflow-hidden px-2 py-2 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500 xl:table-cell">
+                <span className="whitespace-nowrap">到账金额</span>
               </th>
             )}
           </tr>
@@ -94,6 +175,7 @@ export function OrderTable({ records, isAdmin, sortField, sortDir, onSortToggle,
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

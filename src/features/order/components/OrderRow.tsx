@@ -82,7 +82,8 @@ function EditableCell({
     <span role="button" tabIndex={0}
       onClick={() => onActivate(field)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onActivate(field); }}
-      className={`block min-h-[1.25rem] cursor-text rounded px-0.5 text-xs
+      title={effective ?? undefined}
+      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-xs
         hover:bg-black/5 dark:hover:bg-white/5
         ${effective ? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
     >
@@ -339,7 +340,8 @@ function AmountCell({ field, activeField, value, onActivate, onSave, onCancel }:
     <span role="button" tabIndex={0}
       onClick={handleActivate}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleActivate(); }}
-      className={`block min-h-[1.25rem] cursor-text rounded px-0.5 text-right text-xs
+      title={display ?? undefined}
+      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-right text-xs
         hover:bg-black/5 dark:hover:bg-white/5
         ${display ? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
     >
@@ -425,7 +427,8 @@ function DeliveryStatusCell({ activeField, value, onActivate, onSave, onCancel }
     <span role="button" tabIndex={0}
       onClick={onActivate}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onActivate(); }}
-      className={`block min-h-[1.25rem] cursor-text rounded px-0.5 text-xs
+      title={displayStr ?? undefined}
+      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-xs
         hover:bg-black/5 dark:hover:bg-white/5
         ${displayStr ? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
     >
@@ -445,11 +448,11 @@ function OrderNoBadge({ record }: { record: InquiryRecord }) {
     : orderSubStatus === 'followup' ? 'S'
     : null;
   return (
-    <span className={`inline-flex items-center gap-0.5 rounded-full bg-green-50 px-1.5 py-0 text-[11px] font-medium leading-5 text-green-700 ring-1 dark:bg-green-950/40 dark:text-green-400 ${
+    <span className={`inline-flex max-w-full min-w-0 items-center gap-0.5 truncate rounded-full bg-green-50 px-1.5 py-0 text-[11px] font-medium leading-5 text-green-700 ring-1 dark:bg-green-950/40 dark:text-green-400 ${
       letter ? 'ring-red-300 dark:ring-red-700' : 'ring-green-200 dark:ring-green-800'
     }`}>
-      {orderNo}
-      {letter && <span className="font-bold text-red-500">{letter}</span>}
+      <span className="truncate">{orderNo}</span>
+      {letter && <span className="shrink-0 font-bold text-red-500">{letter}</span>}
     </span>
   );
 }
@@ -484,16 +487,16 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
   return (
     <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getRowBgClass(record)}`}>
 
-      {/* 订单编号 + 询价编号（固定宽） */}
-      <td className="w-28 whitespace-nowrap px-3 py-2">
-        <div className="flex flex-col gap-0.5">
+      {/* 订单编号 + 询价编号 */}
+      <td className="overflow-hidden px-3 py-2">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <OrderNoBadge record={record} />
-          <span className="font-mono text-[10px] text-gray-400 dark:text-gray-500">{record.inquiryNo}</span>
+          <span className="block truncate font-mono text-[10px] text-gray-400 dark:text-gray-500">{record.inquiryNo}</span>
         </div>
       </td>
 
-      {/* 交货（固定宽，日期选择器） */}
-      <td className="w-[4.5rem] px-2 py-2">
+      {/* 交货 */}
+      <td className="overflow-hidden whitespace-nowrap px-2 py-2">
         <DatePickerCell field="deliveryDate" activeField={activeField}
           value={record.orderDeliveryDate ? stripDateBrackets(record.orderDeliveryDate) : undefined}
           onActivate={activate}
@@ -503,18 +506,18 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
       </td>
 
       {/* 客户（询价人） */}
-      <td className="hidden w-20 px-2 py-2 text-xs text-gray-700 dark:text-gray-300 md:table-cell">
-        <span className="block truncate">{record.inquirer}</span>
+      <td className="hidden overflow-hidden px-2 py-2 text-xs text-gray-700 dark:text-gray-300 md:table-cell">
+        <span className="block min-w-0 truncate" title={record.inquirer}>{record.inquirer}</span>
       </td>
 
       {/* 内容简述 */}
-      <td className="max-w-[150px] overflow-hidden px-2 py-2">
+      <td className="overflow-hidden px-2 py-2">
         <p className="truncate text-xs text-gray-700 dark:text-gray-300" title={record.description}>{record.description}</p>
-        <p className="truncate text-[10px] text-gray-400 dark:text-gray-500 md:hidden">{record.inquirer}</p>
+        <p className="truncate text-[10px] text-gray-400 dark:text-gray-500 md:hidden" title={record.inquirer}>{record.inquirer}</p>
       </td>
 
-      {/* 确认日（固定宽，日期选择器） */}
-      <td className="hidden w-[4.5rem] px-2 py-2 lg:table-cell">
+      {/* 确认日 */}
+      <td className="hidden overflow-hidden whitespace-nowrap px-2 py-2 lg:table-cell">
         <DatePickerCell field="confirmDate" activeField={activeField}
           value={record.orderConfirmDate ? stripDateBrackets(record.orderConfirmDate) : undefined}
           onActivate={activate}
@@ -523,42 +526,48 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
         />
       </td>
 
-      {/* 客户订单号（fallback → customerNo，但 RFQ→PO） */}
-      <td className="hidden w-24 px-2 py-2 lg:table-cell">
-        <EditableCell field="customerNo" activeField={activeField}
-          value={record.orderCustomerNo}
-          fallback={customerNoFallback}
-          placeholder="—"
-          onActivate={activate}
-          onSave={saveCustomerNo}
-          onCancel={cancel}
-        />
+      {/* 客户订单号 */}
+      <td className="hidden overflow-hidden px-2 py-2 lg:table-cell">
+        <div className="min-w-0">
+          <EditableCell field="customerNo" activeField={activeField}
+            value={record.orderCustomerNo}
+            fallback={customerNoFallback}
+            placeholder="—"
+            onActivate={activate}
+            onSave={saveCustomerNo}
+            onCancel={cancel}
+          />
+        </div>
       </td>
 
-      {/* 执行情况（带预设按钮） */}
-      <td className="min-w-[110px] px-2 py-2">
-        <DeliveryStatusCell
-          activeField={activeField}
-          value={record.orderDeliveryStatus}
-          onActivate={() => setActiveField('deliveryStatus')}
-          onSave={saveDeliveryStatus}
-          onCancel={cancel}
-        />
+      {/* 执行情况 */}
+      <td className="overflow-hidden px-2 py-2">
+        <div className="min-w-0">
+          <DeliveryStatusCell
+            activeField={activeField}
+            value={record.orderDeliveryStatus}
+            onActivate={() => setActiveField('deliveryStatus')}
+            onSave={saveDeliveryStatus}
+            onCancel={cancel}
+          />
+        </div>
       </td>
 
       {/* ── 管理员专属列 ── */}
       {isAdmin && (
-        <td className="hidden w-28 px-2 py-2 xl:table-cell">
-          <AmountCell field="amount" activeField={activeField}
-            value={record.orderAmount}
-            onActivate={activate}
-            onSave={(val) => { setActiveField(null); onUpdate({ orderAmount: val }); }}
-            onCancel={cancel}
-          />
+        <td className="hidden overflow-hidden px-2 py-2 xl:table-cell">
+          <div className="min-w-0">
+            <AmountCell field="amount" activeField={activeField}
+              value={record.orderAmount}
+              onActivate={activate}
+              onSave={(val) => { setActiveField(null); onUpdate({ orderAmount: val }); }}
+              onCancel={cancel}
+            />
+          </div>
         </td>
       )}
       {isAdmin && (
-        <td className="hidden w-16 px-2 py-2 xl:table-cell">
+        <td className="hidden overflow-hidden whitespace-nowrap px-2 py-2 xl:table-cell">
           <MonthPickerCell field="paymentDate" activeField={activeField}
             value={record.orderPaymentDate}
             onActivate={activate}
@@ -568,13 +577,15 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
         </td>
       )}
       {isAdmin && (
-        <td className="hidden w-28 px-2 py-2 xl:table-cell">
-          <AmountCell field="receivedAmount" activeField={activeField}
-            value={record.orderReceivedAmount}
-            onActivate={activate}
-            onSave={(val) => { setActiveField(null); onUpdate({ orderReceivedAmount: val }); }}
-            onCancel={cancel}
-          />
+        <td className="hidden overflow-hidden px-2 py-2 xl:table-cell">
+          <div className="min-w-0">
+            <AmountCell field="receivedAmount" activeField={activeField}
+              value={record.orderReceivedAmount}
+              onActivate={activate}
+              onSave={(val) => { setActiveField(null); onUpdate({ orderReceivedAmount: val }); }}
+              onCancel={cancel}
+            />
+          </div>
         </td>
       )}
     </tr>
