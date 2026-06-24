@@ -9,7 +9,7 @@ import { useAppUser } from '@/hooks/useAppUser';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { inquiryService } from '@/features/inquiry/services/inquiry.service';
 import type { InquiryRecord, OrderSubStatus } from '@/features/inquiry/types';
-import { OrderTable } from '../components/OrderTable';
+import { OrderTable, type SortField } from '../components/OrderTable';
 
 // ── 时间范围类型 ──────────────────────────────────────────────────────────────
 
@@ -159,6 +159,8 @@ export function OrderPage() {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('3months');
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>('all');
+  // 默认按交货日期降序排列
+  const [sortField, setSortField] = useState<SortField>('deliveryDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const isModalOpenRef = useRef(false);
@@ -171,7 +173,21 @@ export function OrderPage() {
   }, [status, router]);
 
   useEffect(() => {
-    useInquiryStore.getState().init();
+    const store = useInquiryStore.getState();
+    store.init();
+    // 自动迁移：customerNo 含 RFQ 且未设置 orderCustomerNo 的订单记录，自动将 RFQ→PO 存为 orderCustomerNo
+    store.records.forEach((r) => {
+      if (
+        r.status !== 'deleted' &&
+        r.orderNo?.trim() &&
+        r.customerNo.includes('RFQ') &&
+        !r.orderCustomerNo
+      ) {
+        store.updateRecord(r.id, {
+          orderCustomerNo: r.customerNo.replace(/RFQ/g, 'PO'),
+        });
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -234,18 +250,36 @@ export function OrderPage() {
     [timeFiltered]
   );
 
-  // 最终展示记录（按订单编号排序）
+  /** "m.D" 或 "[m.D]" → 数字排序键，无值返回 0（排末尾） */
+  const parseDeliveryDate = (s: string | undefined): number => {
+    if (!s) return 0;
+    const clean = s.replace(/[\[\]]/g, '');
+    const [mStr, dStr] = clean.split('.');
+    const m = parseInt(mStr ?? '0');
+    const d = parseInt(dStr ?? '0');
+    return m ? m * 100 + (d || 0) : 0;
+  };
+
+  // 最终展示记录
   const filteredRecords = useMemo(
     () =>
       timeFiltered
         .filter((r) => matchesOrderStatus(r, orderStatusFilter))
         .sort((a, b) => {
-          const aNo = a.orderNo ?? '';
-          const bNo = b.orderNo ?? '';
-          const cmp = aNo.localeCompare(bNo);
+          if (sortField === 'deliveryDate') {
+            const aD = parseDeliveryDate(a.orderDeliveryDate);
+            const bD = parseDeliveryDate(b.orderDeliveryDate);
+            // 无交货日期的排最后
+            if (aD === 0 && bD === 0) return 0;
+            if (aD === 0) return 1;
+            if (bD === 0) return -1;
+            return sortDir === 'desc' ? bD - aD : aD - bD;
+          }
+          // orderNo
+          const cmp = (a.orderNo ?? '').localeCompare(b.orderNo ?? '');
           return sortDir === 'desc' ? -cmp : cmp;
         }),
-    [timeFiltered, orderStatusFilter, sortDir]
+    [timeFiltered, orderStatusFilter, sortField, sortDir]
   );
 
   if (status === 'loading' || !user) return null;
@@ -335,8 +369,16 @@ export function OrderPage() {
         <OrderTable
           records={filteredRecords}
           isAdmin={user.isAdmin}
+          sortField={sortField}
           sortDir={sortDir}
-          onSortToggle={() => setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
+          onSortToggle={(field) => {
+            if (field === sortField) {
+              setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'));
+            } else {
+              setSortField(field);
+              setSortDir('desc');
+            }
+          }}
           onUpdate={(id, patch) => updateRecord(id, patch)}
         />
       </div>
