@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Globe, ChevronDown, Info } from 'lucide-react';
@@ -116,7 +116,6 @@ function DaysBadge({ diff, days }: { diff: number; days: number }) {
 function HolidayRow({ holiday, diff }: { holiday: Holiday; diff: number }) {
   const days = holiday.days ?? 1;
   const isOngoing = diff <= 0 && diff > -days;
-  const isPast = diff < 0 && !isOngoing;
   const startMD = formatDateMD(holiday.dateStart);
   const endMD = holiday.dateEnd ? formatDateMD(holiday.dateEnd) : null;
   const weekday = formatWeekday(holiday.dateStart);
@@ -125,7 +124,6 @@ function HolidayRow({ holiday, diff }: { holiday: Holiday; diff: number }) {
 
   return (
     <div className={`flex items-start gap-3 py-3.5 px-4 border-b border-gray-50 dark:border-gray-700/40 last:border-0 transition-colors ${
-      isPast ? 'opacity-35' :
       isOngoing ? 'bg-emerald-50/50 dark:bg-emerald-900/10' :
       diff >= 0 && diff <= 7 ? 'bg-amber-50/40 dark:bg-amber-900/10' : ''
     }`}>
@@ -134,31 +132,31 @@ function HolidayRow({ holiday, diff }: { holiday: Holiday; diff: number }) {
       <div className="shrink-0 w-14 pt-0.5">
         {endMD ? (
           <>
-            <div className={`text-sm font-bold font-mono leading-none ${isPast ? 'text-gray-300 dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}>{startMD}–</div>
-            <div className={`text-sm font-bold font-mono leading-none mt-0.5 ${isPast ? 'text-gray-300 dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}>{endMD}</div>
+            <div className="text-sm font-bold font-mono leading-none text-gray-900 dark:text-white">{startMD}–</div>
+            <div className="text-sm font-bold font-mono leading-none mt-0.5 text-gray-900 dark:text-white">{endMD}</div>
             <div className="text-[10px] text-gray-400 mt-1">{weekday}</div>
             <div className="text-[10px] text-gray-400">共 {days} 天</div>
           </>
         ) : (
           <>
-            <div className={`text-sm font-bold font-mono leading-none ${isPast ? 'text-gray-300 dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}>{startMD}</div>
+            <div className="text-sm font-bold font-mono leading-none text-gray-900 dark:text-white">{startMD}</div>
             <div className="text-[10px] text-gray-400 mt-1">{weekday}</div>
           </>
         )}
       </div>
 
       {/* 分类彩点 */}
-      <div className={`shrink-0 w-2 h-2 rounded-full mt-1.5 ${dot} ${isPast ? 'opacity-30' : ''}`} />
+      <div className={`shrink-0 w-2 h-2 rounded-full mt-1.5 ${dot}`} />
 
       {/* 名称区域 */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           {holiday.emoji && <span className="text-base leading-none">{holiday.emoji}</span>}
-          <span className={`text-sm font-semibold leading-snug ${isPast ? 'text-gray-300 dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}>
+          <span className="text-sm font-semibold leading-snug text-gray-900 dark:text-white">
             {holiday.nameCN}
           </span>
         </div>
-        <div className={`text-xs mt-0.5 ${isPast ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400'}`}>
+        <div className="text-xs mt-0.5 text-gray-400">
           {holiday.nameEN}
         </div>
       </div>
@@ -196,6 +194,7 @@ export function HolidaysPage() {
   const [subFilter, setSubFilter] = useState<string>('all');
 
   const today = useMemo(() => todayStr(), []);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -256,6 +255,26 @@ export function HolidaysPage() {
     }
     return Array.from(groups.entries()).map(([key, items]) => ({ key, items }));
   }, [catFilter, subFilter]);
+
+  // 当月或最近有假日的月份 key，用于自动滚动
+  const scrollTargetKey = useMemo(() => {
+    const todayMk = today.slice(0, 7);
+    // 优先找当月或之后第一个含未来/进行中假日的月份
+    const target = grouped.find(g =>
+      g.key >= todayMk && g.items.some(({ diff, holiday }) => diff >= 0 || (diff < 0 && diff > -(holiday.days ?? 1)))
+    );
+    return target?.key ?? grouped.find(g => g.key >= todayMk)?.key ?? null;
+  }, [grouped, today]);
+
+  // 挂载后自动滚动到目标月份
+  useEffect(() => {
+    if (!mounted || !scrollTargetKey) return;
+    const timer = setTimeout(() => {
+      const el = listRef.current?.querySelector(`[data-month="${scrollTargetKey}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [mounted, scrollTargetKey]);
 
   if (!mounted || status === 'unauthenticated') return null;
 
@@ -335,9 +354,9 @@ export function HolidaysPage() {
             <p className="text-sm">没有符合条件的假日</p>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div ref={listRef} className="space-y-5">
             {grouped.map(({ key, items }) => (
-              <div key={key} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+              <div key={key} data-month={key} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 {/* 月份标题 */}
                 <div className="flex items-center px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                   <span className="text-base font-bold text-gray-800 dark:text-gray-200">
