@@ -337,8 +337,8 @@ export function InquiryFormModal({
                     placeholder="FL2601（询价确认为订单后填写）"
                   />
                 </div>
-                {/* 辙销C / 悬挂P / 善后S — 互斥单选，再次点击取消 */}
-                <div className="mt-2 flex items-center gap-1.5">
+                {/* 辙销C / 悬挂P / 善后S — 仅在有订单编号时显示，互斥单选，再次点击取消 */}
+                {orderNo.trim() && <div className="mt-2 flex items-center gap-1.5">
                   {(
                     [
                       { val: 'cancelled', label: '辙销C' },
@@ -359,7 +359,7 @@ export function InquiryFormModal({
                       {label}
                     </button>
                   ))}
-                </div>
+                </div>}
               </div>
             )}
           </div>

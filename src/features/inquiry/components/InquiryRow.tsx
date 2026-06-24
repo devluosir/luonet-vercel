@@ -58,13 +58,13 @@ export function InquiryRow({
           <span className="flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-gray-400 dark:text-gray-500">
             <span className="shrink-0">{stripDateBrackets(record.inquiryDate)}</span>
             {record.orderNo && (
-              <span className="inline-flex min-w-0 items-center truncate rounded-full bg-green-50 px-1.5 py-0 text-[11px] font-medium leading-4 text-green-700 ring-1 ring-green-200 dark:bg-green-950/40 dark:text-green-400 dark:ring-green-800">
+              <span className={`inline-flex min-w-0 items-center gap-0.5 truncate rounded-full bg-green-50 px-1.5 py-0 text-[11px] font-medium leading-4 text-green-700 ring-1 dark:bg-green-950/40 dark:text-green-400 ${record.orderSubStatus ? 'ring-red-300 dark:ring-red-700' : 'ring-green-200 dark:ring-green-800'}`}>
                 {record.orderNo}
-              </span>
-            )}
-            {record.orderNo && record.orderSubStatus && (
-              <span className="shrink-0 text-[11px] font-bold text-red-500">
-                {record.orderSubStatus === 'cancelled' ? 'C' : record.orderSubStatus === 'suspended' ? 'P' : 'S'}
+                {record.orderSubStatus && (
+                  <span className="font-bold text-red-500">
+                    {record.orderSubStatus === 'cancelled' ? 'C' : record.orderSubStatus === 'suspended' ? 'P' : 'S'}
+                  </span>
+                )}
               </span>
             )}
           </span>
