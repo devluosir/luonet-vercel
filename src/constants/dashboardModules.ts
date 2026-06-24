@@ -4,9 +4,6 @@ import {
   Package,
   ShoppingCart,
   Mail,
-  Clock,
-  CalendarDays,
-  Banknote,
   Archive,
   Users,
 } from 'lucide-react';
@@ -52,24 +49,6 @@ export const TOOL_MODULES = [
     name: 'AI邮件助手',
     path: '/mail',
     icon: Mail,
-  },
-  {
-    id: 'clock',
-    name: '世界时钟',
-    path: '/clock',
-    icon: Clock,
-  },
-  {
-    id: 'holidays',
-    name: '全球假日',
-    path: '/holidays',
-    icon: CalendarDays,
-  },
-  {
-    id: 'rmb',
-    name: '人民币大写',
-    path: '/rmb',
-    icon: Banknote,
   },
 ];
 

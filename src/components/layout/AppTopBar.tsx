@@ -1,5 +1,6 @@
 'use client';
 
+import { type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronRight, Menu } from 'lucide-react';
@@ -22,9 +23,10 @@ interface AppTopBarProps {
     email?: string | null;
   };
   onLogout?: () => void | Promise<void>;
+  topBarSlot?: ReactNode;
 }
 
-export function AppTopBar({ breadcrumbs, onMenuClick }: AppTopBarProps) {
+export function AppTopBar({ breadcrumbs, onMenuClick, topBarSlot }: AppTopBarProps) {
   const currentBreadcrumb = breadcrumbs[breadcrumbs.length - 1];
 
   return (
@@ -80,11 +82,23 @@ export function AppTopBar({ breadcrumbs, onMenuClick }: AppTopBarProps) {
               );
             })}
           </ol>
-          {/* 移动端只显示当前页名 */}
-          <div className="truncate text-sm font-medium text-gray-900 dark:text-white md:hidden">
-            {currentBreadcrumb?.label || 'LC App'}
+          {/* 移动端：当前页名 + 可选插槽 */}
+          <div className="flex items-center gap-1.5 md:hidden">
+            <span className="truncate text-sm font-medium text-gray-900 dark:text-white">
+              {currentBreadcrumb?.label || 'LC App'}
+            </span>
+            {topBarSlot && (
+              <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500">{topBarSlot}</span>
+            )}
           </div>
         </nav>
+
+        {/* 页面级额外信息插槽（如同步时间）*/}
+        {topBarSlot && (
+          <div className="hidden shrink-0 text-xs text-gray-400 dark:text-gray-500 md:block">
+            {topBarSlot}
+          </div>
+        )}
 
         {/* 右侧快捷工具（计算器 / 日期计算器）*/}
         <AppQuickTools />

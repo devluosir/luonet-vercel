@@ -16,6 +16,7 @@ interface InquiryFilterBarProps {
   activeCount: number;
   onReset: () => void;
   records: InquiryRecord[];
+  filteredCount?: number;
 }
 
 // ── 状态角标计数 ──────────────────────────────────────────
@@ -177,7 +178,7 @@ function Chip({
 
 // ── 主组件 ────────────────────────────────────────────────
 export function InquiryFilterBar({
-  id, filter, setFilter, inquirers, activeCount, onReset, records,
+  id, filter, setFilter, inquirers, activeCount, onReset, records, filteredCount,
 }: InquiryFilterBarProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
@@ -192,7 +193,7 @@ export function InquiryFilterBar({
   const divider = <span className="select-none text-gray-200 dark:text-gray-700">·</span>;
 
   return (
-    <div id={id} className="flex flex-col gap-2.5 border-t border-gray-100 py-3 dark:border-gray-700/50">
+    <div id={id} className="flex flex-col gap-2.5 py-2">
 
       {/* ── 第一行：时间范围 + 状态筛选芯片 ── */}
       <div className="flex flex-wrap items-center gap-1.5">
@@ -200,11 +201,15 @@ export function InquiryFilterBar({
           label="近3月"
           active={filter.timeRange === '3months'}
           onClick={() => { setFilter({ ...filter, timeRange: '3months' }); setIsPickerOpen(false); }}
+          badge={filteredCount}
+          badgeColor="bg-blue-800"
         />
         <Chip
           label="全部"
           active={filter.timeRange === 'all'}
           onClick={() => { setFilter({ ...filter, timeRange: 'all' }); setIsPickerOpen(false); }}
+          badge={filteredCount}
+          badgeColor="bg-blue-800"
         />
 
         {/* 月份导航器：‹ [选月/M月] › */}
@@ -240,6 +245,11 @@ export function InquiryFilterBar({
               aria-label="下一个月"
             >›</button>
           </div>
+          {isCustomMonth && filteredCount !== undefined && (
+            <span className="pointer-events-none absolute -right-1.5 -top-1.5 z-10 min-w-4 rounded-full bg-blue-800 px-1 text-[10px] font-semibold leading-4 text-white">
+              {filteredCount}
+            </span>
+          )}
           {isPickerOpen && (
             <MonthPickerPopover
               value={isCustomMonth ? navMonth : ''}

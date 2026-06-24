@@ -28,6 +28,7 @@ interface AppLayoutProps {
   children: ReactNode;
   bottomActions?: ActionButton[];
   bottomLeftSlot?: ReactNode;
+  topBarSlot?: ReactNode;
 }
 
 export function AppLayout({
@@ -37,6 +38,7 @@ export function AppLayout({
   children,
   bottomActions,
   bottomLeftSlot,
+  topBarSlot,
 }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -95,6 +97,7 @@ export function AppLayout({
         <AppTopBar
           breadcrumbs={breadcrumbs}
           onMenuClick={() => setSidebarOpen(true)}
+          topBarSlot={topBarSlot}
         />
         <main className="flex-1 overflow-y-auto pb-12 md:pb-0">{children}</main>
         {bottomActions && bottomActions.length > 0 && (

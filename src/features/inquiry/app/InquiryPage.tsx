@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { Download, Filter, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
+import { Download, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AppLayout, type ActionButton } from '@/components/layout';
@@ -89,7 +89,6 @@ export function InquiryPage() {
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
@@ -362,10 +361,6 @@ export function InquiryPage() {
     ];
   }, [isAdmin, isAdminMenuOpen, isEditMode]);
 
-  const resultSummary =
-    filteredAndSorted.length === records.length
-      ? `共 ${records.length} 条`
-      : `共 ${filteredAndSorted.length}/${records.length} 条`;
 
   if (!permissionChecked || status === 'loading') {
     return (
@@ -402,6 +397,11 @@ export function InquiryPage() {
       user={user}
       onLogout={handleLogout}
       bottomActions={bottomActions}
+      topBarSlot={lastSyncedAt ? (
+        <span>
+          同步 {lastSyncedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+        </span>
+      ) : undefined}
     >
       {/* 隐藏的文件选择框（仅管理员导入用） */}
       {isAdmin && (
@@ -415,65 +415,30 @@ export function InquiryPage() {
       )}
 
       <div className="w-full max-w-none px-3 py-3 sm:px-5 lg:px-6">
-        <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-          {/* 标题行：始终固定可见 */}
-          <div className="flex items-center gap-2 py-2.5">
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <h1 className="shrink-0 text-base font-semibold text-gray-900 dark:text-white">
-                询报价登记
-              </h1>
-              <span className="whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">{resultSummary}</span>
-              {lastSyncedAt && (
-                <span className="hidden whitespace-nowrap text-xs text-gray-400 dark:text-gray-500 sm:inline">
-                  同步 {lastSyncedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                </span>
-              )}
+        <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <InquiryFilterBar
+                id="inquiry-filter-panel"
+                filter={filter}
+                setFilter={setFilter}
+                inquirers={inquirers}
+                activeCount={activeCount}
+                onReset={reset}
+                records={baseFiltered}
+                filteredCount={filteredAndSorted.length}
+              />
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsFilterOpen((open) => !open)}
-                className={`relative inline-flex h-8 w-8 items-center justify-center rounded-lg border text-sm transition-colors ${
-                  isFilterOpen
-                    ? 'border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400'
-                    : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-                }`}
-                aria-label={isFilterOpen ? '收起筛选' : '展开筛选'}
-                aria-expanded={isFilterOpen}
-                aria-controls="inquiry-filter-panel"
-                title={isFilterOpen ? '收起筛选' : '展开筛选'}
-              >
-                <Filter className="h-4 w-4" />
-                {activeCount > 0 && (
-                  <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-4 text-white">
-                    {activeCount}
-                  </span>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={openCreateModal}
-                className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                <Plus className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">新增询价</span>
-                <span className="sm:hidden">新增</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="mt-1 inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">新增询价</span>
+              <span className="sm:hidden">新增</span>
+            </button>
           </div>
-
-          {/* 筛选面板：展开后显示在标题行下方 */}
-          {isFilterOpen && (
-            <InquiryFilterBar
-              id="inquiry-filter-panel"
-              filter={filter}
-              setFilter={setFilter}
-              inquirers={inquirers}
-              activeCount={activeCount}
-              onReset={reset}
-              records={baseFiltered}
-            />
-          )}
         </div>
 
         <InquiryTable
