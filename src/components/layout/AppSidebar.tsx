@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  ClipboardCheck,
   FileCheck,
   FileText,
   LayoutDashboard,
@@ -68,8 +69,9 @@ export const NAV_ITEMS: SidebarItem[] = [
   { id: 'packing',      label: '箱单发票',  path: '/packing',                 icon: Package,   permissionKey: 'canCreatePacking' },
   { id: 'invoice',      label: '财务发票',  path: '/invoice',                 icon: Receipt,   permissionKey: 'canCreateInvoice' },
   { id: 'purchase',     label: '采购订单',  path: '/purchase',                icon: ShoppingCart, permissionKey: 'canCreatePurchase' },
-  { id: 'inquiry',      label: '询报价登记', path: '/inquiry',                icon: Search,    permissionKey: 'canViewInquiry' },
-  { id: 'history',      label: '单据历史',  path: '/history',                 icon: Archive,   permissionKey: 'canViewHistory' },
+  { id: 'inquiry',      label: '询报价登记', path: '/inquiry',                icon: Search,           permissionKey: 'canViewInquiry' },
+  { id: 'order',        label: '订单状态表', path: '/order',                  icon: ClipboardCheck,   permissionKey: 'canViewInquiry' },
+  { id: 'history',      label: '单据历史',  path: '/history',                 icon: Archive,          permissionKey: 'canViewHistory' },
   { id: 'customer',     label: '客户管理',  path: '/customer',                icon: Users,     permissionKey: 'canManageCustomers' },
   { id: 'mail',         label: 'AI 邮件',  path: '/mail',                    icon: Mail },
   { id: 'clock',        label: '世界时钟', path: '/clock',                   icon: Clock },
@@ -92,17 +94,17 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: 'registration',
     label: '登记表',
-    items: NAV_ITEMS.slice(6, 7), // 询报价登记
+    items: NAV_ITEMS.slice(6, 8), // 询报价登记、订单状态表
   },
   {
     id: 'management',
     label: '管理',
-    items: NAV_ITEMS.slice(7, 9), // 单据历史、客户管理
+    items: NAV_ITEMS.slice(8, 10), // 单据历史、客户管理
   },
   {
     id: 'tools',
     label: '工具',
-    items: NAV_ITEMS.slice(9),    // AI 邮件、世界时钟
+    items: NAV_ITEMS.slice(10),    // AI 邮件、世界时钟…
   },
 ];
 

@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-06-25
+
+### Added
+
+#### 工具模块
+- **RMB大写转换**（`/rmb`）：人民币大写转换工具，支持中文银行大写和英文金额（SAY USD … ONLY）两种格式；5个快捷预设金额；附带规则说明折叠面板
+- **世界时钟**（`/clock`）：8个默认城市（含上海），实时时间，旗帜 Emoji 可拖拽时间轴同步所有城市时区，顶部实时刷新按钮
+- **全球假日**（`/holidays`）：三类假日 Tab（中国法定 / 全球 / 宗教），移动端优化，过去假日不置灰，自动滚动到今天
+
+#### 询报价登记优化
+- **筛选面板常驻**：移除筛选展开/收起 Toggle，FilterBar 始终可见，标题行去掉，减少操作层级
+- **时间芯片角标**：近3月/全部/选月 选中时显示当前过滤条数（深蓝色角标）
+- **同步时间上移**：最后同步时间移至顶部导航栏（`topBarSlot` 插槽），桌面端显示在面包屑右侧，移动端显示在页标题旁
+- **"共xx条"移除**：以时间芯片角标替代，页面更简洁
+- **订单标记（C/P/S）**：询报价记录可标记辙销C / 悬挂P / 善后S；主表格订单编号徽标内显示红色粗体字母 + 红色边框；对应筛选芯片「已辙销」「善后」（悬挂仍归入「已成单」）
+- **移动端列宽调整**：询价编号 26%、内容简述 33%、状态 33%、删除 8%
+
+#### AppLayout / AppTopBar
+- 新增 `topBarSlot?: ReactNode` 插槽，任意页面可在顶部导航栏注入额外内容（如同步时间）
+
+#### 左侧导航
+- 新增 RMB大写（`/rmb`，Banknote 图标）
+- 首页大磁贴：移除世界时钟、全球假日、人民币大写三个入口，避免重复
+
+### Changed
+- `QuoteStatusFilter` 类型新增 `'cancelled'` 和 `'followup'`
+- `InquiryRecord.orderSubStatus?: OrderSubStatus` 新字段（可选，无需 D1 迁移）
+- `InquiryBasicInput` 扩展包含 `orderSubStatus`
+- `InquiryFilterBar` 筛选芯片：移除 `border-t` 分隔线，与新布局对齐
+
+### Planned（设计完成，待实现）
+- **订单状态表**（`/order`）：设计文档见 `docs/features/order/ORDER_STATUS_TABLE.md`
+
+---
+
 ## [1.1.0] - 2025-01-08
 
 ### Added

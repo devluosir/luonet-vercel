@@ -32,6 +32,24 @@ export interface InquiryRecord {
   orderNo?: string;
   /** 辙销C / 悬挂P / 善后S — 仅在有订单编号时有意义 */
   orderSubStatus?: OrderSubStatus;
+
+  // ── 订单状态表追踪字段（仅在有 orderNo 时使用，无需 D1 迁移）──────────
+  /** 交货日期，[m.D] 格式，如 [7.15] */
+  orderDeliveryDate?: string;
+  /** 确认日，[m.D] 格式 */
+  orderConfirmDate?: string;
+  /** 客户方订单号；为空时界面 fallback 显示 customerNo */
+  orderCustomerNo?: string;
+  /** 交货执行情况，自由文本 */
+  orderDeliveryStatus?: string;
+  /** 订单金额（管理员可见） */
+  orderAmount?: number;
+  /** 回款月份，m 或 m.D 格式（管理员可见） */
+  orderPaymentDate?: string;
+  /** 到账金额（管理员可见） */
+  orderReceivedAmount?: number;
+  // ─────────────────────────────────────────────────────────────────────
+
   supplierStatuses: SupplierQuoteStatus[];
   quotedStatuses: CustomerQuoteStatus[];
   createdAt: string;
