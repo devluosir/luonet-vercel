@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Globe, ChevronLeft, ChevronRight, ChevronDown, Info } from 'lucide-react';
+import { Globe, ChevronDown, Info } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { usePermissionStore } from '@/lib/permissions';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
@@ -35,12 +35,6 @@ function getShortMonthName(key: string): string {
 function getFullMonthYear(key: string): string {
   const [y, m] = key.split('-');
   return `${y}年${parseInt(m)}月`;
-}
-
-function formatMonth(key: string): string {
-  const [y, m] = key.split('-');
-  const names = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
-  return `${y}年 ${names[parseInt(m) - 1]}`;
 }
 
 function formatDateMD(dateStr: string): string {
@@ -114,7 +108,7 @@ function DaysBadge({ diff, days }: { diff: number; days: number }) {
   if (diff > 0 && diff <= 7) return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{diff}天后</span>;
   if (diff > 7 && diff <= 30) return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">{diff}天后</span>;
   if (diff > 30) return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500">{diff}天后</span>;
-  return null; // 已过去的不显示
+  return null;
 }
 
 // ── HolidayRow ────────────────────────────────────────────────────────────────
@@ -181,13 +175,13 @@ function HolidayRow({ holiday, diff }: { holiday: Holiday; diff: number }) {
   );
 }
 
-// ── SubChips（二级筛选器芯片） ────────────────────────────────────────────────
+// ── SubChips ──────────────────────────────────────────────────────────────────
 
 interface SubChipsProps {
   chips: { key: string; label: string; emoji?: string }[];
   active: string;
   onChange: (key: string) => void;
-  activeColor: string; // Tailwind active bg class
+  activeColor: string;
 }
 
 function SubChips({ chips, active, onChange, activeColor }: SubChipsProps) {
@@ -217,7 +211,6 @@ function SubChips({ chips, active, onChange, activeColor }: SubChipsProps) {
 // ── 主页面 ────────────────────────────────────────────────────────────────────
 
 type CategoryFilter = 'all' | HolidayCategory;
-type ViewRange = '30' | '90' | 'year';
 
 const CAT_TABS: { key: CategoryFilter; label: string; dot?: string }[] = [
   { key: 'all',           label: '全部' },
@@ -231,15 +224,10 @@ export function HolidaysPage() {
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
 
-  // 一级：分类 tab
   const [catFilter, setCatFilter] = useState<CategoryFilter>('all');
-  // 二级：地区（全部/国际）或 教派（宗教）
   const [subFilter, setSubFilter] = useState<string>('all');
 
-  // 视图范围
-  const [viewRange, setViewRange] = useState<ViewRange>('90');
   const today = useMemo(() => todayStr(), []);
-  const [navMonthKey, setNavMonthKey] = useState<string>(() => today.slice(0, 7));
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -256,13 +244,11 @@ export function HolidaysPage() {
     if (mounted && status === 'unauthenticated') router.push('/');
   }, [status, mounted, router]);
 
-  // 切换一级分类时重置二级
   const handleCatChange = useCallback((cat: CategoryFilter) => {
     setCatFilter(cat);
     setSubFilter('all');
   }, []);
 
-  // 二级 chips 数据 & 激活色
   const subChipsConfig = useMemo(() => {
     if (catFilter === 'religious') {
       return { chips: RELIGION_CHIPS, activeColor: 'bg-amber-400', show: true };
@@ -273,45 +259,22 @@ export function HolidaysPage() {
     return { chips: [], activeColor: '', show: false };
   }, [catFilter]);
 
-  // 过滤 + 分组
+  // 过滤 + 分组（全年，不限日期范围）
   const grouped = useMemo(() => {
-    let minDate: string;
-    let maxDate: string;
-
-    if (viewRange === '30') {
-      minDate = today;
-      const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() + 30);
-      maxDate = d.toISOString().slice(0, 10);
-    } else if (viewRange === '90') {
-      minDate = today;
-      const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() + 90);
-      maxDate = d.toISOString().slice(0, 10);
-    } else {
-      minDate = navMonthKey + '-01';
-      const [y, m] = navMonthKey.split('-').map(Number);
-      maxDate = `${navMonthKey}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
-    }
-
     const filtered = HOLIDAYS_2026.filter(h => {
-      // 一级过滤
       if (catFilter === 'china' && h.category !== 'china') return false;
       if (catFilter === 'international' && h.category !== 'international') return false;
       if (catFilter === 'religious' && h.category !== 'religious') return false;
 
-      // 二级过滤（仅 all/international → 地区；religious → 教派）
       if (subFilter !== 'all') {
         if (catFilter === 'religious') {
           if (h.religion !== subFilter) return false;
         } else {
-          // all 或 international：只对 international 条目做地区筛选
           if (h.category === 'international' && getRegion(h.id) !== subFilter) return false;
-          // all 模式下，选了某地区→ china/religious 仍保留
         }
       }
 
-      // 日期范围
-      const endDate = h.dateEnd ?? h.dateStart;
-      return endDate >= minDate && h.dateStart <= maxDate;
+      return true;
     });
 
     filtered.sort((a, b) => a.dateStart.localeCompare(b.dateStart));
@@ -324,20 +287,7 @@ export function HolidaysPage() {
       groups.get(key)!.push({ holiday: h, diff });
     }
     return Array.from(groups.entries()).map(([key, items]) => ({ key, items }));
-  }, [catFilter, subFilter, viewRange, navMonthKey, today]);
-
-  // 月份导航
-  const prevMonth = useCallback(() => {
-    const [y, m] = navMonthKey.split('-').map(Number);
-    const d = new Date(y, m - 2, 1);
-    setNavMonthKey(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-  }, [navMonthKey]);
-  const nextMonth = useCallback(() => {
-    const [y, m] = navMonthKey.split('-').map(Number);
-    const d = new Date(y, m, 1);
-    setNavMonthKey(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-  }, [navMonthKey]);
-  const goToCurrentMonth = useCallback(() => setNavMonthKey(today.slice(0, 7)), [today]);
+  }, [catFilter, subFilter]);
 
   if (!mounted || status === 'unauthenticated') return null;
 
@@ -353,19 +303,21 @@ export function HolidaysPage() {
       }}
       onLogout={handleLogout}
     >
-      <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 py-6">
+      <div className="w-full px-3 sm:px-6 py-6">
 
-        {/* ── 页头：标题左 + 分类 Tab 右 ── */}
+        {/* 页头：标题左 + 分类 Tab 右 */}
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <div className="flex items-center gap-2 mb-0.5">
               <Globe className="h-5 w-5 text-blue-600 shrink-0" />
               <h1 className="text-lg font-semibold text-gray-900 dark:text-white">全球节假日</h1>
             </div>
-            <p className="text-sm text-gray-400">全球假日一览，懂客户的节，暖客户的心</p>
+            <p className="text-sm text-gray-400">
+              全球假日一览，共 {totalHolidays} 个假日
+            </p>
           </div>
 
-          {/* 一级分类 Tabs（右上角） */}
+          {/* 一级分类 Tabs */}
           <div className="flex items-center gap-0.5 shrink-0 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
             {CAT_TABS.map(tab => (
               <button
@@ -384,7 +336,7 @@ export function HolidaysPage() {
           </div>
         </div>
 
-        {/* ── 二级筛选芯片 ── */}
+        {/* 二级筛选芯片 */}
         {subChipsConfig.show && (
           <div className="mb-4 overflow-x-auto pb-1">
             <SubChips
@@ -396,50 +348,11 @@ export function HolidaysPage() {
           </div>
         )}
 
-        {/* ── 视图范围控制 ── */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 gap-0.5">
-            {([
-              { key: '30',   label: '30天' },
-              { key: '90',   label: '3个月' },
-              { key: 'year', label: '按月浏览' },
-            ] as { key: ViewRange; label: string }[]).map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setViewRange(key)}
-                className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
-                  viewRange === key
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {viewRange === 'year' ? (
-            <div className="flex items-center gap-1">
-              <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button onClick={goToCurrentMonth} className="text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-blue-600 transition-colors px-1 min-w-[80px] text-center">
-                {formatMonth(navMonthKey)}
-              </button>
-              <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <span className="text-xs text-gray-400">{totalHolidays} 个假日</span>
-          )}
-        </div>
-
-        {/* ── 假日列表 ── */}
+        {/* 假日列表 */}
         {grouped.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <Globe className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">该时间段内没有假日</p>
+            <p className="text-sm">没有符合条件的假日</p>
           </div>
         ) : (
           <div className="space-y-5">
