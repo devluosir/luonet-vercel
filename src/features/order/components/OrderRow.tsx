@@ -488,7 +488,7 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
     <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getRowBgClass(record)}`}>
 
       {/* 订单编号 + 询价编号 */}
-      <td className="overflow-hidden px-3 py-2">
+      <td className="max-w-0 overflow-hidden px-3 py-2">
         <div className="flex min-w-0 flex-col gap-0.5">
           <OrderNoBadge record={record} />
           <span className="block truncate font-mono text-[10px] text-gray-400 dark:text-gray-500">{record.inquiryNo}</span>
@@ -496,7 +496,7 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
       </td>
 
       {/* 交货 */}
-      <td className="overflow-hidden whitespace-nowrap px-2 py-2">
+      <td className="max-w-0 overflow-hidden whitespace-nowrap px-2 py-2">
         <DatePickerCell field="deliveryDate" activeField={activeField}
           value={record.orderDeliveryDate ? stripDateBrackets(record.orderDeliveryDate) : undefined}
           onActivate={activate}
@@ -506,18 +506,18 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
       </td>
 
       {/* 客户（询价人） */}
-      <td className="hidden overflow-hidden px-2 py-2 text-xs text-gray-700 dark:text-gray-300 md:table-cell">
+      <td className="hidden max-w-0 overflow-hidden px-2 py-2 text-xs text-gray-700 dark:text-gray-300 md:table-cell">
         <span className="block min-w-0 truncate" title={record.inquirer}>{record.inquirer}</span>
       </td>
 
       {/* 内容简述 */}
-      <td className="overflow-hidden px-2 py-2">
+      <td className="max-w-0 overflow-hidden px-2 py-2">
         <p className="truncate text-xs text-gray-700 dark:text-gray-300" title={record.description}>{record.description}</p>
         <p className="truncate text-[10px] text-gray-400 dark:text-gray-500 md:hidden" title={record.inquirer}>{record.inquirer}</p>
       </td>
 
       {/* 确认日 */}
-      <td className="hidden overflow-hidden whitespace-nowrap px-2 py-2 lg:table-cell">
+      <td className="hidden max-w-0 overflow-hidden whitespace-nowrap px-2 py-2 lg:table-cell">
         <DatePickerCell field="confirmDate" activeField={activeField}
           value={record.orderConfirmDate ? stripDateBrackets(record.orderConfirmDate) : undefined}
           onActivate={activate}
@@ -527,7 +527,7 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
       </td>
 
       {/* 客户订单号 */}
-      <td className="hidden overflow-hidden px-2 py-2 lg:table-cell">
+      <td className="hidden max-w-0 overflow-hidden px-2 py-2 lg:table-cell">
         <div className="min-w-0">
           <EditableCell field="customerNo" activeField={activeField}
             value={record.orderCustomerNo}
@@ -541,7 +541,7 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
       </td>
 
       {/* 执行情况 */}
-      <td className="overflow-hidden px-2 py-2">
+      <td className="max-w-0 overflow-hidden px-2 py-2">
         <div className="min-w-0">
           <DeliveryStatusCell
             activeField={activeField}
@@ -555,7 +555,7 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
 
       {/* ── 管理员专属列 ── */}
       {isAdmin && (
-        <td className="hidden overflow-hidden px-2 py-2 xl:table-cell">
+        <td className="hidden max-w-0 overflow-hidden px-2 py-2 xl:table-cell">
           <div className="min-w-0">
             <AmountCell field="amount" activeField={activeField}
               value={record.orderAmount}
@@ -567,7 +567,7 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
         </td>
       )}
       {isAdmin && (
-        <td className="hidden overflow-hidden whitespace-nowrap px-2 py-2 xl:table-cell">
+        <td className="hidden max-w-0 overflow-hidden whitespace-nowrap px-2 py-2 xl:table-cell">
           <MonthPickerCell field="paymentDate" activeField={activeField}
             value={record.orderPaymentDate}
             onActivate={activate}
@@ -577,7 +577,7 @@ export function OrderRow({ record, isAdmin, onUpdate }: OrderRowProps) {
         </td>
       )}
       {isAdmin && (
-        <td className="hidden overflow-hidden px-2 py-2 xl:table-cell">
+        <td className="hidden max-w-0 overflow-hidden px-2 py-2 xl:table-cell">
           <div className="min-w-0">
             <AmountCell field="receivedAmount" activeField={activeField}
               value={record.orderReceivedAmount}

@@ -25,14 +25,14 @@ function useBreakpoint(): Breakpoint {
   return bp;
 }
 
-/** 各断点列宽（百分比），与 InquiryTable 同策略：table-fixed + th width */
+/** 各断点列宽（百分比，合计 100%）：table-fixed + th/col width */
 function getColWidths(bp: Breakpoint, isAdmin: boolean) {
   if (bp === 'sm') {
     return {
-      orderNo: '20%',
+      orderNo: '18%',
       delivery: '10%',
       customer: '0%',
-      desc: '38%',
+      desc: '40%',
       confirm: '0%',
       customerNo: '0%',
       status: '32%',
@@ -43,43 +43,45 @@ function getColWidths(bp: Breakpoint, isAdmin: boolean) {
   }
   if (bp === 'md') {
     return {
-      orderNo: '16%',
-      delivery: '8%',
-      customer: '14%',
-      desc: '33%',
+      orderNo: '14%',
+      delivery: '7%',
+      customer: '13%',
+      desc: '32%',
       confirm: '0%',
       customerNo: '0%',
-      status: '33%',
+      status: '32%',
       amount: '0%',
       payment: '0%',
       received: '0%',
     };
   }
   if (bp === 'lg' || (bp === 'xl' && !isAdmin)) {
+    // 7 列：简述与客户订单号为主信息列，执行情况仅展示短文本
     return {
-      orderNo: '11%',
-      delivery: '6%',
+      orderNo: '10%',
+      delivery: '5%',
       customer: '9%',
-      desc: '20%',
-      confirm: '6%',
-      customerNo: '17%',
-      status: '31%',
+      desc: '26%',
+      confirm: '5%',
+      customerNo: '23%',
+      status: '17%',
       amount: '0%',
       payment: '0%',
       received: '0%',
     };
   }
+  // xl + 管理员：10 列，金额三列右对齐成组
   return {
     orderNo: '10%',
-    delivery: '5%',
+    delivery: '4%',
     customer: '8%',
     desc: '16%',
-    confirm: '5%',
-    customerNo: '15%',
+    confirm: '4%',
+    customerNo: '19%',
     status: '12%',
     amount: '10%',
     payment: '5%',
-    received: '9%',
+    received: '12%',
   };
 }
 
@@ -127,6 +129,18 @@ export function OrderTable({ records, isAdmin, sortField, sortDir, onSortToggle,
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <div className="overflow-x-auto">
       <table className="w-full table-fixed">
+        <colgroup>
+          <col style={{ width: W.orderNo }} />
+          <col style={{ width: W.delivery }} />
+          <col style={{ width: W.customer }} />
+          <col style={{ width: W.desc }} />
+          <col style={{ width: W.confirm }} />
+          <col style={{ width: W.customerNo }} />
+          <col style={{ width: W.status }} />
+          {isAdmin && <col style={{ width: W.amount }} />}
+          {isAdmin && <col style={{ width: W.payment }} />}
+          {isAdmin && <col style={{ width: W.received }} />}
+        </colgroup>
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-800">
             <th style={{ width: W.orderNo }} className="overflow-hidden px-3 py-2 text-left">
