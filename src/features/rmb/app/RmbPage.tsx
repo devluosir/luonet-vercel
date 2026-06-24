@@ -150,7 +150,7 @@ const EXAMPLES = [
 // ── 主页面 ────────────────────────────────────────────────────────────────────
 
 export function RmbPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const { user, handleLogout } = useAppUser();
 
@@ -365,20 +365,19 @@ export function RmbPage() {
               <div className="space-y-2 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                 <p>
                   <span className="font-medium text-gray-600 dark:text-gray-300">一、</span>
-                  金额到"元"为止的，元后写"整"字；有角或分时，角分后不写整。
+                  {'金额到「元」为止的，元后写「整」字；有角或分时，角分后不写整。'}
                 </p>
                 <p>
                   <span className="font-medium text-gray-600 dark:text-gray-300">二、</span>
-                  中文大写前应标明"人民币"字样，大写金额应紧接"人民币"填写，不得留有空白。
+                  {'中文大写前应标明「人民币」字样，大写金额应紧接「人民币」填写，不得留有空白。'}
                 </p>
                 <p>
                   <span className="font-medium text-gray-600 dark:text-gray-300">三、</span>
-                  数字中间有"0"时大写写"零"字；连续多个"0"，中文大写中间只写一个"零"。
+                  {'数字中间有「0」时大写写「零」字；连续多个「0」，中文大写中间只写一个「零」。'}
                 </p>
                 <p>
                   <span className="font-medium text-gray-600 dark:text-gray-300">四、</span>
-                  角位是"0"而分位不是"0"时，元后面要写"零"字。
-                  例如：￥325.04 → 人民币叁佰贰拾伍元零肆分。
+                  {'角位是「0」而分位不是「0」时，元后面要写「零」字。例如：￥325.04 → 人民币叁佰贰拾伍元零肆分。'}
                 </p>
               </div>
             </div>
