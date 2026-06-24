@@ -1,11 +1,13 @@
-import { 
-  FileText, 
-  Receipt, 
-  Package, 
-  ShoppingCart, 
-  Mail, 
-  Archive, 
-  Users, 
+import {
+  FileText,
+  Receipt,
+  Package,
+  ShoppingCart,
+  Mail,
+  Clock,
+  CalendarDays,
+  Archive,
+  Users,
 } from 'lucide-react';
 
 // 快速创建单据的模块
@@ -44,12 +46,24 @@ export const QUICK_CREATE_MODULES = [
 
 // 工具模块
 export const TOOL_MODULES = [
-  { 
-    id: 'ai-email', 
-    name: 'AI邮件助手', 
+  {
+    id: 'ai-email',
+    name: 'AI邮件助手',
     path: '/mail',
-    icon: Mail
-  }
+    icon: Mail,
+  },
+  {
+    id: 'clock',
+    name: '世界时钟',
+    path: '/clock',
+    icon: Clock,
+  },
+  {
+    id: 'holidays',
+    name: '全球假日',
+    path: '/holidays',
+    icon: CalendarDays,
+  },
 ];
 
 // 管理中心功能模块
