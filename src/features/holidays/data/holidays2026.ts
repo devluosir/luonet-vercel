@@ -1,4 +1,5 @@
 export type HolidayCategory = 'china' | 'international' | 'religious';
+export type HolidayReligion = 'islam' | 'jewish' | 'buddhism' | 'hinduism';
 
 export interface Holiday {
   id: string;
@@ -13,6 +14,8 @@ export interface Holiday {
   category: HolidayCategory;
   /** 国旗或宗教符号 emoji */
   emoji?: string;
+  /** 宗教类型（仅 category=religious 时使用） */
+  religion?: HolidayReligion;
 }
 
 export const HOLIDAYS_2026: Holiday[] = [
@@ -30,7 +33,7 @@ export const HOLIDAYS_2026: Holiday[] = [
   { id: 'do-duarte',           dateStart: '2026-01-26',                       nameCN: '杜阿尔特日(多米尼加)', nameEN: 'Duarte Day (Dominican Republic)',            category: 'international' },
 
   // ── 二月 ──────────────────────────────────────────────────────────────────
-  { id: 'my-thaipusam',        dateStart: '2026-02-01',                       nameCN: '大宝森节',           nameEN: 'Thaipusam',                                   category: 'religious', emoji: '🇲🇾' },
+  { id: 'my-thaipusam',        dateStart: '2026-02-01',                       nameCN: '大宝森节',           nameEN: 'Thaipusam',                                   category: 'religious', emoji: '🇲🇾', religion: 'hinduism' },
   { id: 'mx-constitution',     dateStart: '2026-02-02',                       nameCN: '墨西哥宪法纪念日',   nameEN: 'Constitution Day (Mexico)',                    category: 'international', emoji: '🇲🇽' },
   { id: 'jp-foundation',       dateStart: '2026-02-11',                       nameCN: '日本建国纪念日',     nameEN: 'National Foundation Day (Japan)',              category: 'international', emoji: '🇯🇵' },
   { id: 'int-valentine',       dateStart: '2026-02-14',                       nameCN: '情人节',             nameEN: "Valentine's Day",                             category: 'international' },
@@ -40,26 +43,26 @@ export const HOLIDAYS_2026: Holiday[] = [
   { id: 'kr-seollal',          dateStart: '2026-02-16', dateEnd: '2026-02-18', days: 3, nameCN: '韩国春节(元旦)', nameEN: 'Korean New Year (Seollal)',              category: 'international', emoji: '🇰🇷' },
   { id: 'br-carnaval',         dateStart: '2026-02-16', dateEnd: '2026-02-17', days: 2, nameCN: '巴西狂欢节', nameEN: 'Brazilian Carnaval',                        category: 'international', emoji: '🇧🇷' },
   { id: 'ca-family',           dateStart: '2026-02-16',                       nameCN: '加拿大家庭日',       nameEN: 'Family Day (Canada)',                          category: 'international', emoji: '🇨🇦' },
-  { id: 'rel-ramadan',         dateStart: '2026-02-18',                       nameCN: '斋月开始',           nameEN: 'Ramadan Begins',                              category: 'religious', emoji: '☪️' },
+  { id: 'rel-ramadan',         dateStart: '2026-02-18',                       nameCN: '斋月开始',           nameEN: 'Ramadan Begins',                              category: 'religious', emoji: '☪️', religion: 'islam' },
   { id: 'sa-founding',         dateStart: '2026-02-22',                       nameCN: '沙特建国纪念日',     nameEN: 'Saudi Founding Day',                          category: 'international', emoji: '🇸🇦' },
   { id: 'jp-emperor',          dateStart: '2026-02-23',                       nameCN: '天皇诞辰(日本)',     nameEN: "Emperor's Birthday (Japan)",                  category: 'international', emoji: '🇯🇵' },
   { id: 'do-independence',     dateStart: '2026-02-27',                       nameCN: '多米尼加独立日',     nameEN: 'Dominican Republic Independence Day',          category: 'international' },
 
   // ── 三月 ──────────────────────────────────────────────────────────────────
   { id: 'kr-independence',     dateStart: '2026-03-01',                       nameCN: '韩国三一节',         nameEN: 'Independence Movement Day (Korea)',            category: 'international', emoji: '🇰🇷' },
-  { id: 'in-holi',             dateStart: '2026-03-03',                       nameCN: '胡里节(洒红节)',     nameEN: 'Holi (India)',                                category: 'religious', emoji: '🇮🇳' },
-  { id: 'rel-purim',           dateStart: '2026-03-03',                       nameCN: '普珥节',             nameEN: 'Purim',                                       category: 'religious', emoji: '✡️' },
+  { id: 'in-holi',             dateStart: '2026-03-03',                       nameCN: '胡里节(洒红节)',     nameEN: 'Holi (India)',                                category: 'religious', emoji: '🇮🇳', religion: 'hinduism' },
+  { id: 'rel-purim',           dateStart: '2026-03-03',                       nameCN: '普珥节',             nameEN: 'Purim',                                       category: 'religious', emoji: '✡️', religion: 'jewish' },
   { id: 'int-womens',          dateStart: '2026-03-08',                       nameCN: '国际妇女节',         nameEN: "International Women's Day",                   category: 'international' },
   { id: 'mx-juarez',           dateStart: '2026-03-16',                       nameCN: '华雷斯诞辰纪念日(墨西哥)', nameEN: "Benito Juárez's Birthday (Mexico)",     category: 'international', emoji: '🇲🇽' },
-  { id: 'id-nyepi',            dateStart: '2026-03-19',                       nameCN: '宁静日·印尼新年(Nyepi)', nameEN: 'Nyepi - Balinese New Year (Indonesia)',  category: 'religious', emoji: '🇮🇩' },
-  { id: 'rel-eid-fitr',        dateStart: '2026-03-20', dateEnd: '2026-03-22', days: 3, nameCN: '开斋节',    nameEN: 'Eid al-Fitr',                               category: 'religious', emoji: '☪️' },
+  { id: 'id-nyepi',            dateStart: '2026-03-19',                       nameCN: '宁静日·印尼新年(Nyepi)', nameEN: 'Nyepi - Balinese New Year (Indonesia)',  category: 'religious', emoji: '🇮🇩', religion: 'hinduism' },
+  { id: 'rel-eid-fitr',        dateStart: '2026-03-20', dateEnd: '2026-03-22', days: 3, nameCN: '开斋节',    nameEN: 'Eid al-Fitr',                               category: 'religious', emoji: '☪️', religion: 'islam' },
   { id: 'ir-nowruz',           dateStart: '2026-03-20',                       nameCN: '诺鲁孜节(波斯新年)', nameEN: 'Nowruz (Persian New Year)',                   category: 'international', emoji: '🇮🇷' },
   { id: 'za-human-rights',     dateStart: '2026-03-21',                       nameCN: '南非人权日',         nameEN: 'Human Rights Day (South Africa)',              category: 'international', emoji: '🇿🇦' },
   { id: 'pr-emancipation',     dateStart: '2026-03-22',                       nameCN: '废奴纪念日(波多黎各)', nameEN: 'Emancipation Day (Puerto Rico)',             category: 'international' },
   { id: 'ar-memory',           dateStart: '2026-03-24',                       nameCN: '全国记忆日(阿根廷)', nameEN: 'National Memory Day (Argentina)',              category: 'international' },
 
   // ── 四月 ──────────────────────────────────────────────────────────────────
-  { id: 'rel-passover',        dateStart: '2026-04-01',                       nameCN: '逾越节',             nameEN: 'Passover (Pesach)',                            category: 'religious', emoji: '✡️' },
+  { id: 'rel-passover',        dateStart: '2026-04-01',                       nameCN: '逾越节',             nameEN: 'Passover (Pesach)',                            category: 'religious', emoji: '✡️', religion: 'jewish' },
   { id: 'int-maundy-thu',      dateStart: '2026-04-02',                       nameCN: '圣周四',             nameEN: 'Maundy Thursday',                             category: 'international' },
   { id: 'ar-malvinas',         dateStart: '2026-04-02',                       nameCN: '马岛战争纪念日(阿根廷)', nameEN: 'Malvinas Day (Argentina)',                category: 'international' },
   { id: 'int-good-friday',     dateStart: '2026-04-03',                       nameCN: '耶稣受难日',         nameEN: 'Good Friday',                                 category: 'international' },
@@ -95,17 +98,17 @@ export const HOLIDAYS_2026: Holiday[] = [
   { id: 'uy-piedras',          dateStart: '2026-05-18',                       nameCN: '拉斯彼德拉斯战役日(乌拉圭)', nameEN: 'Battle of Las Piedras (Uruguay)',       category: 'international' },
   { id: 'tr-ataturk',          dateStart: '2026-05-19',                       nameCN: '阿塔图尔克纪念日(土耳其)', nameEN: 'Commemoration of Atatürk Day (Turkey)',  category: 'international', emoji: '🇹🇷' },
   { id: 'cl-navy',             dateStart: '2026-05-21',                       nameCN: '海军节(智利)',       nameEN: 'Navy Day (Chile)',                             category: 'international' },
-  { id: 'rel-shavuot',         dateStart: '2026-05-21',                       nameCN: '七七节',             nameEN: 'Shavuot',                                     category: 'religious', emoji: '✡️' },
+  { id: 'rel-shavuot',         dateStart: '2026-05-21',                       nameCN: '七七节',             nameEN: 'Shavuot',                                     category: 'religious', emoji: '✡️', religion: 'jewish' },
   { id: 'ec-pichincha',        dateStart: '2026-05-24',                       nameCN: '皮钦查战役纪念日(厄瓜多尔)', nameEN: 'Battle of Pichincha (Ecuador)',        category: 'international' },
-  { id: 'kr-buddha',           dateStart: '2026-05-24',                       nameCN: '佛诞节(韩国)',       nameEN: "Buddha's Birthday (Korea)",                   category: 'religious', emoji: '🇰🇷' },
+  { id: 'kr-buddha',           dateStart: '2026-05-24',                       nameCN: '佛诞节(韩国)',       nameEN: "Buddha's Birthday (Korea)",                   category: 'religious', emoji: '🇰🇷', religion: 'buddhism' },
   { id: 'us-memorial',         dateStart: '2026-05-25',                       nameCN: '美国阵亡将士纪念日', nameEN: 'Memorial Day',                                category: 'international', emoji: '🇺🇸' },
   { id: 'gb-spring-bank',      dateStart: '2026-05-25',                       nameCN: '英国春季银行假日',   nameEN: 'Spring Bank Holiday (UK)',                     category: 'international', emoji: '🇬🇧' },
   { id: 'de-whit-mon',         dateStart: '2026-05-25',                       nameCN: '圣灵降临节(德国)',   nameEN: 'Whit Monday (DE)',                             category: 'international', emoji: '🇩🇪' },
   { id: 'ar-may-revolution',   dateStart: '2026-05-25',                       nameCN: '五月革命纪念日(阿根廷)', nameEN: 'May Revolution Day (Argentina)',           category: 'international' },
   { id: 'fr-whit-mon',         dateStart: '2026-05-25',                       nameCN: '圣灵降临节(法国)',   nameEN: 'Whit Monday (France)',                         category: 'international', emoji: '🇫🇷' },
   { id: 'nl-whit-mon',         dateStart: '2026-05-25',                       nameCN: '圣灵降临节(荷兰)',   nameEN: 'Whit Monday (Netherlands)',                    category: 'international' },
-  { id: 'rel-eid-adha',        dateStart: '2026-05-27', dateEnd: '2026-05-29', days: 3, nameCN: '宰牲节',    nameEN: 'Eid al-Adha',                               category: 'religious', emoji: '☪️' },
-  { id: 'rel-vesak',           dateStart: '2026-05-31',                       nameCN: '卫塞节(佛诞)',       nameEN: 'Vesak / Buddha Day',                          category: 'religious', emoji: '☸️' },
+  { id: 'rel-eid-adha',        dateStart: '2026-05-27', dateEnd: '2026-05-29', days: 3, nameCN: '宰牲节',    nameEN: 'Eid al-Adha',                               category: 'religious', emoji: '☪️', religion: 'islam' },
+  { id: 'rel-vesak',           dateStart: '2026-05-31',                       nameCN: '卫塞节(佛诞)',       nameEN: 'Vesak / Buddha Day',                          category: 'religious', emoji: '☸️', religion: 'buddhism' },
 
   // ── 六月 ──────────────────────────────────────────────────────────────────
   { id: 'id-pancasila',        dateStart: '2026-06-01',                       nameCN: '建国五基日(印尼)',   nameEN: 'Pancasila Day (Indonesia)',                    category: 'international', emoji: '🇮🇩' },
@@ -115,7 +118,7 @@ export const HOLIDAYS_2026: Holiday[] = [
   { id: 'au-kings-bday',       dateStart: '2026-06-08',                       nameCN: '国王诞辰日(澳大利亚)', nameEN: "King's Birthday (Australia)",               category: 'international', emoji: '🇦🇺' },
   { id: 'ru-russia-day',       dateStart: '2026-06-12',                       nameCN: '俄罗斯国庆日',       nameEN: 'Russia Day',                                  category: 'international', emoji: '🇷🇺' },
   { id: 'ph-independence',     dateStart: '2026-06-12',                       nameCN: '菲律宾独立日',       nameEN: 'Philippines Independence Day',                category: 'international', emoji: '🇵🇭' },
-  { id: 'rel-islamic-ny',      dateStart: '2026-06-16',                       nameCN: '伊斯兰新年',         nameEN: 'Islamic New Year (Hijri)',                     category: 'religious', emoji: '☪️' },
+  { id: 'rel-islamic-ny',      dateStart: '2026-06-16',                       nameCN: '伊斯兰新年',         nameEN: 'Islamic New Year (Hijri)',                     category: 'religious', emoji: '☪️', religion: 'islam' },
   { id: 'za-youth',            dateStart: '2026-06-16',                       nameCN: '青年节(南非)',       nameEN: 'Youth Day (South Africa)',                     category: 'international', emoji: '🇿🇦' },
   { id: 'cn-dragon-boat',      dateStart: '2026-06-19', dateEnd: '2026-06-21', days: 3, nameCN: '端午节',    nameEN: 'Dragon Boat Festival',                      category: 'china' },
   { id: 'us-juneteenth',       dateStart: '2026-06-19',                       nameCN: '美国黑人解放日',     nameEN: 'Juneteenth',                                  category: 'international', emoji: '🇺🇸' },
@@ -147,7 +150,7 @@ export const HOLIDAYS_2026: Holiday[] = [
   { id: 'in-independence',     dateStart: '2026-08-15',                       nameCN: '印度独立日',         nameEN: 'Independence Day (India)',                     category: 'international', emoji: '🇮🇳' },
   { id: 'do-restoration',      dateStart: '2026-08-16',                       nameCN: '多米尼加复国日',     nameEN: 'Dominican Restoration Day',                   category: 'international' },
   { id: 'id-independence',     dateStart: '2026-08-17',                       nameCN: '印尼独立日',         nameEN: 'Indonesia Independence Day',                  category: 'international', emoji: '🇮🇩' },
-  { id: 'rel-mawlid',          dateStart: '2026-08-25',                       nameCN: '先知诞辰(圣纪)',     nameEN: 'Mawlid al-Nabi',                              category: 'religious', emoji: '☪️' },
+  { id: 'rel-mawlid',          dateStart: '2026-08-25',                       nameCN: '先知诞辰(圣纪)',     nameEN: 'Mawlid al-Nabi',                              category: 'religious', emoji: '☪️', religion: 'islam' },
   { id: 'uy-independence',     dateStart: '2026-08-25',                       nameCN: '乌拉圭独立日',       nameEN: 'Uruguay Independence Day',                    category: 'international' },
   { id: 'tr-victory',          dateStart: '2026-08-30',                       nameCN: '胜利日(土耳其)',     nameEN: 'Victory Day (Turkey)',                         category: 'international', emoji: '🇹🇷' },
   { id: 'gb-summer-bank',      dateStart: '2026-08-31',                       nameCN: '英国夏季银行假日',   nameEN: 'Summer Bank Holiday (UK)',                     category: 'international', emoji: '🇬🇧' },
@@ -160,7 +163,7 @@ export const HOLIDAYS_2026: Holiday[] = [
   { id: 'us-labor',            dateStart: '2026-09-07',                       nameCN: '美国劳工节',         nameEN: 'US Labor Day',                                category: 'international', emoji: '🇺🇸' },
   { id: 'br-independence',     dateStart: '2026-09-07',                       nameCN: '巴西独立日',         nameEN: 'Brazil Independence Day',                     category: 'international', emoji: '🇧🇷' },
   { id: 'ca-labour',           dateStart: '2026-09-07',                       nameCN: '加拿大劳工节',       nameEN: 'Labour Day (Canada)',                          category: 'international', emoji: '🇨🇦' },
-  { id: 'rel-rosh-hash',       dateStart: '2026-09-11', dateEnd: '2026-09-12', days: 2, nameCN: '犹太新年',  nameEN: 'Rosh Hashanah',                             category: 'religious', emoji: '✡️' },
+  { id: 'rel-rosh-hash',       dateStart: '2026-09-11', dateEnd: '2026-09-12', days: 2, nameCN: '犹太新年',  nameEN: 'Rosh Hashanah',                             category: 'religious', emoji: '✡️', religion: 'jewish' },
   { id: 'cr-independence',     dateStart: '2026-09-15',                       nameCN: '中美洲独立日(哥斯达黎加)', nameEN: 'Independence Day (Costa Rica)',          category: 'international' },
   { id: 'sv-independence',     dateStart: '2026-09-15',                       nameCN: '萨尔瓦多独立日',     nameEN: 'El Salvador Independence Day',                category: 'international' },
   { id: 'gt-independence',     dateStart: '2026-09-15',                       nameCN: '危地马拉独立日',     nameEN: 'Guatemala Independence Day',                  category: 'international' },
@@ -168,14 +171,14 @@ export const HOLIDAYS_2026: Holiday[] = [
   { id: 'my-malaysia-day',     dateStart: '2026-09-16',                       nameCN: '马来西亚日',         nameEN: 'Malaysia Day',                                category: 'international', emoji: '🇲🇾' },
   { id: 'cl-independence',     dateStart: '2026-09-18',                       nameCN: '智利独立日',         nameEN: 'Chile Independence Day',                      category: 'international' },
   { id: 'cl-army',             dateStart: '2026-09-19',                       nameCN: '军队荣耀日(智利)',   nameEN: 'Army Day (Chile)',                             category: 'international' },
-  { id: 'rel-yom-kippur',      dateStart: '2026-09-20',                       nameCN: '赎罪日',             nameEN: 'Yom Kippur',                                  category: 'religious', emoji: '✡️' },
+  { id: 'rel-yom-kippur',      dateStart: '2026-09-20',                       nameCN: '赎罪日',             nameEN: 'Yom Kippur',                                  category: 'religious', emoji: '✡️', religion: 'jewish' },
   { id: 'jp-respect-aged',     dateStart: '2026-09-21',                       nameCN: '日本敬老日',         nameEN: 'Respect for the Aged Day (Japan)',             category: 'international', emoji: '🇯🇵' },
   { id: 'sa-national',         dateStart: '2026-09-23',                       nameCN: '沙特国庆日',         nameEN: 'Saudi National Day',                          category: 'international', emoji: '🇸🇦' },
   { id: 'kr-chuseok',          dateStart: '2026-09-24', dateEnd: '2026-09-26', days: 3, nameCN: '韩国中秋节(秋夕)', nameEN: 'Chuseok (Korean Thanksgiving)',        category: 'international', emoji: '🇰🇷' },
   { id: 'tt-republic',         dateStart: '2026-09-24',                       nameCN: '共和国日(特多)',     nameEN: 'Republic Day (Trinidad & Tobago)',             category: 'international' },
   { id: 'za-heritage',         dateStart: '2026-09-24',                       nameCN: '文化遗产日(南非)',   nameEN: 'Heritage Day (South Africa)',                  category: 'international', emoji: '🇿🇦' },
   { id: 'cn-mid-autumn',       dateStart: '2026-09-25',                       nameCN: '中秋节',             nameEN: 'Mid-Autumn Festival',                         category: 'china' },
-  { id: 'rel-sukkot',          dateStart: '2026-09-25',                       nameCN: '住棚节',             nameEN: 'Sukkot',                                      category: 'religious', emoji: '✡️' },
+  { id: 'rel-sukkot',          dateStart: '2026-09-25',                       nameCN: '住棚节',             nameEN: 'Sukkot',                                      category: 'religious', emoji: '✡️', religion: 'jewish' },
   { id: 'ca-reconciliation',   dateStart: '2026-09-30',                       nameCN: '加拿大原住民真相与和解日', nameEN: 'Truth & Reconciliation Day (Canada)',    category: 'international', emoji: '🇨🇦' },
 
   // ── 十月 ──────────────────────────────────────────────────────────────────
@@ -189,7 +192,7 @@ export const HOLIDAYS_2026: Holiday[] = [
   { id: 'ca-thanksgiving',     dateStart: '2026-10-12',                       nameCN: '加拿大感恩节',       nameEN: 'Canadian Thanksgiving',                       category: 'international', emoji: '🇨🇦' },
   { id: 'es-national',         dateStart: '2026-10-12',                       nameCN: '西班牙国庆日',       nameEN: 'Spain National Day',                          category: 'international' },
   { id: 'gt-revolution',       dateStart: '2026-10-20',                       nameCN: '革命纪念日(危地马拉)', nameEN: 'Revolution Day (Guatemala)',                 category: 'international' },
-  { id: 'in-dussehra',         dateStart: '2026-10-21',                       nameCN: '十胜节(达塞拉)',     nameEN: 'Dussehra / Vijayadashami (India)',             category: 'religious', emoji: '🇮🇳' },
+  { id: 'in-dussehra',         dateStart: '2026-10-21',                       nameCN: '十胜节(达塞拉)',     nameEN: 'Dussehra / Vijayadashami (India)',             category: 'religious', emoji: '🇮🇳', religion: 'hinduism' },
   { id: 'tr-republic',         dateStart: '2026-10-29',                       nameCN: '土耳其共和国日',     nameEN: 'Republic Day (Turkey)',                        category: 'international', emoji: '🇹🇷' },
   { id: 'int-halloween',       dateStart: '2026-10-31',                       nameCN: '万圣节',             nameEN: 'Halloween',                                   category: 'international' },
 
@@ -198,7 +201,7 @@ export const HOLIDAYS_2026: Holiday[] = [
   { id: 'int-all-saints',      dateStart: '2026-11-01',                       nameCN: '诸圣节',             nameEN: "All Saints' Day",                             category: 'international' },
   { id: 'jp-culture',          dateStart: '2026-11-03',                       nameCN: '日本文化节',         nameEN: 'Culture Day (Japan)',                          category: 'international', emoji: '🇯🇵' },
   { id: 'pa-separation',       dateStart: '2026-11-03',                       nameCN: '巴拿马分离日',       nameEN: 'Separation Day (Panama)',                      category: 'international' },
-  { id: 'in-diwali',           dateStart: '2026-11-08',                       nameCN: '排灯节(印度)',       nameEN: 'Diwali (India)',                               category: 'religious', emoji: '🇮🇳' },
+  { id: 'in-diwali',           dateStart: '2026-11-08',                       nameCN: '排灯节(印度)',       nameEN: 'Diwali (India)',                               category: 'religious', emoji: '🇮🇳', religion: 'hinduism' },
   { id: 'us-veterans',         dateStart: '2026-11-11',                       nameCN: '美国退伍军人节',     nameEN: 'Veterans Day',                                category: 'international', emoji: '🇺🇸' },
   { id: 'int-armistice',       dateStart: '2026-11-11',                       nameCN: '停战纪念日',         nameEN: 'Remembrance Day / Armistice Day',              category: 'international' },
   { id: 'br-republic',         dateStart: '2026-11-15',                       nameCN: '巴西共和国宣言日',   nameEN: 'Republic Day (Brazil)',                        category: 'international', emoji: '🇧🇷' },
@@ -212,7 +215,7 @@ export const HOLIDAYS_2026: Holiday[] = [
 
   // ── 十二月 ────────────────────────────────────────────────────────────────
   { id: 'ae-national',         dateStart: '2026-12-02', dateEnd: '2026-12-03', days: 2, nameCN: '阿联酋国庆日', nameEN: 'UAE National Day',                       category: 'international', emoji: '🇦🇪' },
-  { id: 'rel-hanukkah',        dateStart: '2026-12-04',                       nameCN: '光明节',             nameEN: 'Hanukkah',                                    category: 'religious', emoji: '✡️' },
+  { id: 'rel-hanukkah',        dateStart: '2026-12-04',                       nameCN: '光明节',             nameEN: 'Hanukkah',                                    category: 'religious', emoji: '✡️', religion: 'jewish' },
   { id: 'es-constitution',     dateStart: '2026-12-06',                       nameCN: '西班牙宪法日',       nameEN: 'Spain Constitution Day',                      category: 'international' },
   { id: 'int-immaculate',      dateStart: '2026-12-08',                       nameCN: '圣母无染原罪节',     nameEN: 'Immaculate Conception',                       category: 'international' },
   { id: 'mx-guadalupe',        dateStart: '2026-12-12',                       nameCN: '瓜达卢佩圣母节(墨西哥)', nameEN: 'Our Lady of Guadalupe (Mexico)',           category: 'international', emoji: '🇲🇽' },
@@ -233,4 +236,11 @@ export const CATEGORY_LABEL: Record<HolidayCategory, string> = {
   china: '中国假日',
   international: '国际假日',
   religious: '宗教节日',
+};
+
+export const RELIGION_LABEL: Record<HolidayReligion, string> = {
+  islam:    '伊斯兰教',
+  jewish:   '犹太教',
+  buddhism: '佛教',
+  hinduism: '印度教',
 };

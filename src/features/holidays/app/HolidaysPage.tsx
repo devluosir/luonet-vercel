@@ -3,11 +3,14 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Globe, ChevronLeft, ChevronRight, Info } from 'lucide-react';
+import { Globe, ChevronLeft, ChevronRight, ChevronDown, Info } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { usePermissionStore } from '@/lib/permissions';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
-import { HOLIDAYS_2026, CATEGORY_LABEL, type Holiday, type HolidayCategory } from '../data/holidays2026';
+import {
+  HOLIDAYS_2026, CATEGORY_LABEL, RELIGION_LABEL,
+  type Holiday, type HolidayCategory, type HolidayReligion,
+} from '../data/holidays2026';
 
 // ── 工具函数 ──────────────────────────────────────────────────────────────────
 
@@ -22,15 +25,22 @@ function daysFromToday(dateStr: string): number {
   return Math.round((target.getTime() - today.getTime()) / 86_400_000);
 }
 
-function monthKey(dateStr: string): string {
-  return dateStr.slice(0, 7);
+function monthKey(dateStr: string): string { return dateStr.slice(0, 7); }
+
+function getShortMonthName(key: string): string {
+  const m = parseInt(key.split('-')[1]) - 1;
+  return ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'][m];
+}
+
+function getFullMonthYear(key: string): string {
+  const [y, m] = key.split('-');
+  return `${y}年${parseInt(m)}月`;
 }
 
 function formatMonth(key: string): string {
   const [y, m] = key.split('-');
-  const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月',
-                      '七月', '八月', '九月', '十月', '十一月', '十二月'];
-  return `${y}年 ${monthNames[parseInt(m) - 1]}`;
+  const names = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+  return `${y}年 ${names[parseInt(m) - 1]}`;
 }
 
 function formatDateMD(dateStr: string): string {
@@ -40,104 +50,180 @@ function formatDateMD(dateStr: string): string {
 
 function formatWeekday(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  return days[d.getDay()];
+  return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()];
 }
 
-// ── 分类样式 ──────────────────────────────────────────────────────────────────
+// 根据 holiday.id 前缀推断地区
+function getRegion(id: string): string {
+  if (id.startsWith('us-')) return 'us';
+  if (id.startsWith('gb-')) return 'gb';
+  if (['de-','fr-','it-','es-','nl-','ru-'].some(p => id.startsWith(p))) return 'europe';
+  if (id.startsWith('jp-')) return 'jp';
+  if (id.startsWith('kr-')) return 'kr';
+  if (id.startsWith('in-')) return 'in';
+  if (['sg-','my-','th-','vn-','id-','ph-'].some(p => id.startsWith(p))) return 'sea';
+  if (['tr-','ae-','sa-','eg-','ir-'].some(p => id.startsWith(p))) return 'mideast';
+  if (['ca-','br-','mx-','ar-','cl-','uy-','pe-','co-','cr-','sv-','gt-','pa-','pr-','do-','tt-','ec-'].some(p => id.startsWith(p))) return 'americas';
+  return 'other';
+}
 
-const CATEGORY_STYLES: Record<HolidayCategory, { bg: string; text: string; dot: string }> = {
-  china:         { bg: 'bg-red-50 dark:bg-red-900/20',       text: 'text-red-600 dark:text-red-400',       dot: 'bg-red-500' },
-  international: { bg: 'bg-blue-50 dark:bg-blue-900/20',     text: 'text-blue-600 dark:text-blue-400',     dot: 'bg-blue-500' },
-  religious:     { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-600 dark:text-purple-400', dot: 'bg-purple-500' },
+// ── 样式常量 ──────────────────────────────────────────────────────────────────
+
+const CAT_DOT: Record<HolidayCategory, string> = {
+  china:         'bg-red-500',
+  international: 'bg-emerald-500',
+  religious:     'bg-amber-400',
 };
 
-// ── DaysBadge 组件 ────────────────────────────────────────────────────────────
+const CAT_BADGE: Record<HolidayCategory, string> = {
+  china:         'border-red-200 text-red-600 bg-red-50 dark:border-red-800 dark:text-red-400 dark:bg-red-900/20',
+  international: 'border-emerald-200 text-emerald-600 bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:bg-emerald-900/20',
+  religious:     'border-amber-200 text-amber-600 bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:bg-amber-900/20',
+};
+
+// ── 子筛选器定义 ──────────────────────────────────────────────────────────────
+
+const REGION_CHIPS = [
+  { key: 'all',       label: '全部',      emoji: undefined },
+  { key: 'us',        label: '美国',      emoji: '🇺🇸' },
+  { key: 'gb',        label: '英国',      emoji: '🇬🇧' },
+  { key: 'europe',    label: '欧洲',      emoji: '🌍' },
+  { key: 'jp',        label: '日本',      emoji: '🇯🇵' },
+  { key: 'kr',        label: '韩国',      emoji: '🇰🇷' },
+  { key: 'in',        label: '印度',      emoji: '🇮🇳' },
+  { key: 'sea',       label: '东南亚',    emoji: '🌏' },
+  { key: 'mideast',   label: '中东土耳其', emoji: '🌍' },
+  { key: 'americas',  label: '美洲',      emoji: '🌎' },
+  { key: 'other',     label: '其他',      emoji: '🌐' },
+];
+
+const RELIGION_CHIPS = [
+  { key: 'all',      label: '全部',    emoji: undefined },
+  { key: 'islam',    label: '伊斯兰教', emoji: '☪️' },
+  { key: 'jewish',   label: '犹太教',   emoji: '✡️' },
+  { key: 'buddhism', label: '佛教',     emoji: '☸️' },
+  { key: 'hinduism', label: '印度教',   emoji: '🕉️' },
+];
+
+// ── DaysBadge ─────────────────────────────────────────────────────────────────
 
 function DaysBadge({ diff, days }: { diff: number; days: number }) {
   const isOngoing = diff <= 0 && diff > -days;
-  if (diff === 0)
-    return <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-500 text-white">今天</span>;
-  if (isOngoing)
-    return <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-500 text-white">进行中</span>;
-  if (diff > 0 && diff <= 7)
-    return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{diff}天后</span>;
-  if (diff > 7 && diff <= 30)
-    return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">{diff}天后</span>;
-  if (diff > 30)
-    return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">{diff}天后</span>;
-  return <span className="text-xs px-2 py-0.5 rounded-full text-gray-300 dark:text-gray-600">已过</span>;
+  if (diff === 0) return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-500 text-white">今天</span>;
+  if (isOngoing) return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500 text-white">进行中</span>;
+  if (diff > 0 && diff <= 7) return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{diff}天后</span>;
+  if (diff > 7 && diff <= 30) return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">{diff}天后</span>;
+  if (diff > 30) return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500">{diff}天后</span>;
+  return null; // 已过去的不显示
 }
 
-// ── HolidayRow 组件 ───────────────────────────────────────────────────────────
+// ── HolidayRow ────────────────────────────────────────────────────────────────
 
 function HolidayRow({ holiday, diff }: { holiday: Holiday; diff: number }) {
   const days = holiday.days ?? 1;
   const isOngoing = diff <= 0 && diff > -days;
   const isPast = diff < 0 && !isOngoing;
-  const catStyle = CATEGORY_STYLES[holiday.category];
   const startMD = formatDateMD(holiday.dateStart);
   const endMD = holiday.dateEnd ? formatDateMD(holiday.dateEnd) : null;
   const weekday = formatWeekday(holiday.dateStart);
+  const dot = CAT_DOT[holiday.category];
+  const badge = CAT_BADGE[holiday.category];
 
   return (
-    <div className={`flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors ${
-      isPast
-        ? 'opacity-40'
-        : isOngoing
-          ? 'bg-green-50/70 dark:bg-green-900/10'
-          : diff <= 7 && diff >= 0
-            ? 'bg-amber-50/60 dark:bg-amber-900/10'
-            : ''
+    <div className={`flex items-start gap-3 py-3.5 px-4 border-b border-gray-50 dark:border-gray-700/40 last:border-0 transition-colors ${
+      isPast ? 'opacity-35' :
+      isOngoing ? 'bg-emerald-50/50 dark:bg-emerald-900/10' :
+      diff >= 0 && diff <= 7 ? 'bg-amber-50/40 dark:bg-amber-900/10' : ''
     }`}>
-      {/* 日期 */}
-      <div className="shrink-0 w-[96px]">
-        <div className={`text-sm font-mono font-bold leading-tight ${isPast ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>
-          {endMD ? `${startMD}–${endMD}` : startMD}
-        </div>
-        <div className="text-[10px] text-gray-400 flex items-center gap-1">
-          <span>{weekday}</span>
-          {days > 1 && <span className="text-gray-300 dark:text-gray-600">·</span>}
-          {days > 1 && <span>共 {days} 天</span>}
-        </div>
-      </div>
 
-      {/* emoji + 名称 */}
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        {holiday.emoji ? (
-          <span className="text-xl leading-none shrink-0">{holiday.emoji}</span>
+      {/* 日期列 */}
+      <div className="shrink-0 w-14 pt-0.5">
+        {endMD ? (
+          <>
+            <div className={`text-sm font-bold font-mono leading-none ${isPast ? 'text-gray-300 dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}>{startMD}–</div>
+            <div className={`text-sm font-bold font-mono leading-none mt-0.5 ${isPast ? 'text-gray-300 dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}>{endMD}</div>
+            <div className="text-[10px] text-gray-400 mt-1">{weekday}</div>
+            <div className="text-[10px] text-gray-400">共 {days} 天</div>
+          </>
         ) : (
-          <span className="w-6 shrink-0" />
+          <>
+            <div className={`text-sm font-bold font-mono leading-none ${isPast ? 'text-gray-300 dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}>{startMD}</div>
+            <div className="text-[10px] text-gray-400 mt-1">{weekday}</div>
+          </>
         )}
-        <div className="min-w-0">
-          <div className={`text-sm font-medium truncate ${isPast ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+      </div>
+
+      {/* 分类彩点 */}
+      <div className={`shrink-0 w-2 h-2 rounded-full mt-1.5 ${dot} ${isPast ? 'opacity-30' : ''}`} />
+
+      {/* 名称区域 */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          {holiday.emoji && <span className="text-base leading-none">{holiday.emoji}</span>}
+          <span className={`text-sm font-semibold leading-snug ${isPast ? 'text-gray-300 dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}>
             {holiday.nameCN}
-          </div>
-          <div className="text-xs text-gray-400 truncate">{holiday.nameEN}</div>
+          </span>
+        </div>
+        <div className={`text-xs mt-0.5 ${isPast ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400'}`}>
+          {holiday.nameEN}
         </div>
       </div>
 
-      {/* 分类标签 + 倒计时 */}
-      <div className="shrink-0 flex items-center gap-1.5">
-        <span className={`hidden sm:inline text-xs px-1.5 py-0.5 rounded font-medium ${catStyle.bg} ${catStyle.text}`}>
+      {/* 右侧：分类徽章 + 倒计时 + 箭头 */}
+      <div className="shrink-0 flex items-center gap-1.5 pt-0.5">
+        <DaysBadge diff={diff} days={days} />
+        <span className={`hidden sm:inline text-[10px] px-2 py-0.5 rounded-full border font-medium ${badge}`}>
           {CATEGORY_LABEL[holiday.category]}
         </span>
-        <DaysBadge diff={diff} days={days} />
+        <ChevronDown className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 shrink-0" />
       </div>
+    </div>
+  );
+}
+
+// ── SubChips（二级筛选器芯片） ────────────────────────────────────────────────
+
+interface SubChipsProps {
+  chips: { key: string; label: string; emoji?: string }[];
+  active: string;
+  onChange: (key: string) => void;
+  activeColor: string; // Tailwind active bg class
+}
+
+function SubChips({ chips, active, onChange, activeColor }: SubChipsProps) {
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {chips.map(chip => {
+        const isActive = chip.key === active;
+        return (
+          <button
+            key={chip.key}
+            onClick={() => onChange(chip.key)}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+              isActive
+                ? `${activeColor} border-transparent text-white`
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300'
+            }`}
+          >
+            {chip.emoji && <span className="text-sm leading-none">{chip.emoji}</span>}
+            {chip.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 // ── 主页面 ────────────────────────────────────────────────────────────────────
 
-type ViewRange = '30' | '90' | 'year';
 type CategoryFilter = 'all' | HolidayCategory;
+type ViewRange = '30' | '90' | 'year';
 
-const CATEGORY_TABS: { key: CategoryFilter; label: string; dot?: string }[] = [
+const CAT_TABS: { key: CategoryFilter; label: string; dot?: string }[] = [
   { key: 'all',           label: '全部' },
-  { key: 'china',         label: '中国假日',  dot: 'bg-red-500' },
-  { key: 'international', label: '国际假日',  dot: 'bg-blue-500' },
-  { key: 'religious',     label: '宗教节日',  dot: 'bg-purple-500' },
+  { key: 'china',         label: '中国假日',  dot: 'bg-violet-500' },
+  { key: 'international', label: '国际假日',  dot: 'bg-emerald-500' },
+  { key: 'religious',     label: '宗教节日',  dot: 'bg-amber-400' },
 ];
 
 export function HolidaysPage() {
@@ -145,9 +231,13 @@ export function HolidaysPage() {
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
 
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
-  const [viewRange, setViewRange] = useState<ViewRange>('90');
+  // 一级：分类 tab
+  const [catFilter, setCatFilter] = useState<CategoryFilter>('all');
+  // 二级：地区（全部/国际）或 教派（宗教）
+  const [subFilter, setSubFilter] = useState<string>('all');
 
+  // 视图范围
+  const [viewRange, setViewRange] = useState<ViewRange>('90');
   const today = useMemo(() => todayStr(), []);
   const [navMonthKey, setNavMonthKey] = useState<string>(() => today.slice(0, 7));
 
@@ -166,6 +256,23 @@ export function HolidaysPage() {
     if (mounted && status === 'unauthenticated') router.push('/');
   }, [status, mounted, router]);
 
+  // 切换一级分类时重置二级
+  const handleCatChange = useCallback((cat: CategoryFilter) => {
+    setCatFilter(cat);
+    setSubFilter('all');
+  }, []);
+
+  // 二级 chips 数据 & 激活色
+  const subChipsConfig = useMemo(() => {
+    if (catFilter === 'religious') {
+      return { chips: RELIGION_CHIPS, activeColor: 'bg-amber-400', show: true };
+    }
+    if (catFilter === 'international' || catFilter === 'all') {
+      return { chips: REGION_CHIPS, activeColor: 'bg-emerald-500', show: true };
+    }
+    return { chips: [], activeColor: '', show: false };
+  }, [catFilter]);
+
   // 过滤 + 分组
   const grouped = useMemo(() => {
     let minDate: string;
@@ -173,23 +280,36 @@ export function HolidaysPage() {
 
     if (viewRange === '30') {
       minDate = today;
-      const d = new Date(today + 'T00:00:00');
-      d.setDate(d.getDate() + 30);
+      const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() + 30);
       maxDate = d.toISOString().slice(0, 10);
     } else if (viewRange === '90') {
       minDate = today;
-      const d = new Date(today + 'T00:00:00');
-      d.setDate(d.getDate() + 90);
+      const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() + 90);
       maxDate = d.toISOString().slice(0, 10);
     } else {
       minDate = navMonthKey + '-01';
       const [y, m] = navMonthKey.split('-').map(Number);
-      const lastDay = new Date(y, m, 0).getDate();
-      maxDate = `${navMonthKey}-${String(lastDay).padStart(2, '0')}`;
+      maxDate = `${navMonthKey}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
     }
 
     const filtered = HOLIDAYS_2026.filter(h => {
-      if (categoryFilter !== 'all' && h.category !== categoryFilter) return false;
+      // 一级过滤
+      if (catFilter === 'china' && h.category !== 'china') return false;
+      if (catFilter === 'international' && h.category !== 'international') return false;
+      if (catFilter === 'religious' && h.category !== 'religious') return false;
+
+      // 二级过滤（仅 all/international → 地区；religious → 教派）
+      if (subFilter !== 'all') {
+        if (catFilter === 'religious') {
+          if (h.religion !== subFilter) return false;
+        } else {
+          // all 或 international：只对 international 条目做地区筛选
+          if (h.category === 'international' && getRegion(h.id) !== subFilter) return false;
+          // all 模式下，选了某地区→ china/religious 仍保留
+        }
+      }
+
+      // 日期范围
       const endDate = h.dateEnd ?? h.dateStart;
       return endDate >= minDate && h.dateStart <= maxDate;
     });
@@ -203,9 +323,8 @@ export function HolidaysPage() {
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push({ holiday: h, diff });
     }
-
     return Array.from(groups.entries()).map(([key, items]) => ({ key, items }));
-  }, [categoryFilter, viewRange, navMonthKey, today]);
+  }, [catFilter, subFilter, viewRange, navMonthKey, today]);
 
   // 月份导航
   const prevMonth = useCallback(() => {
@@ -213,16 +332,12 @@ export function HolidaysPage() {
     const d = new Date(y, m - 2, 1);
     setNavMonthKey(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   }, [navMonthKey]);
-
   const nextMonth = useCallback(() => {
     const [y, m] = navMonthKey.split('-').map(Number);
     const d = new Date(y, m, 1);
     setNavMonthKey(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   }, [navMonthKey]);
-
-  const goToCurrentMonth = useCallback(() => {
-    setNavMonthKey(today.slice(0, 7));
-  }, [today]);
+  const goToCurrentMonth = useCallback(() => setNavMonthKey(today.slice(0, 7)), [today]);
 
   if (!mounted || status === 'unauthenticated') return null;
 
@@ -240,38 +355,49 @@ export function HolidaysPage() {
     >
       <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 py-6">
 
-        {/* 页头 */}
-        <div className="mb-5">
-          <div className="flex items-center gap-2.5 mb-1">
-            <Globe className="h-5 w-5 text-blue-600" />
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">全球节假日</h1>
+        {/* ── 页头：标题左 + 分类 Tab 右 ── */}
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <Globe className="h-5 w-5 text-blue-600 shrink-0" />
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">全球节假日</h1>
+            </div>
+            <p className="text-sm text-gray-400">全球假日一览，懂客户的节，暖客户的心</p>
           </div>
-          <p className="text-sm text-gray-400">全球假日一览，懂客户的节，暖客户的心</p>
+
+          {/* 一级分类 Tabs（右上角） */}
+          <div className="flex items-center gap-0.5 shrink-0 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+            {CAT_TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => handleCatChange(tab.key)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                  catFilter === tab.key
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                }`}
+              >
+                {tab.dot && <span className={`w-1.5 h-1.5 rounded-full ${tab.dot}`} />}
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* 分类 Tabs */}
-        <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-          {CATEGORY_TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setCategoryFilter(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-medium transition-colors ${
-                categoryFilter === tab.key
-                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
-              }`}
-            >
-              {tab.dot && (
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${tab.dot}`} />
-              )}
-              <span className="truncate">{tab.label}</span>
-            </button>
-          ))}
-        </div>
+        {/* ── 二级筛选芯片 ── */}
+        {subChipsConfig.show && (
+          <div className="mb-4 overflow-x-auto pb-1">
+            <SubChips
+              chips={subChipsConfig.chips}
+              active={subFilter}
+              onChange={setSubFilter}
+              activeColor={subChipsConfig.activeColor}
+            />
+          </div>
+        )}
 
-        {/* 视图控制 */}
+        {/* ── 视图范围控制 ── */}
         <div className="flex items-center justify-between mb-4">
-          {/* 范围 tabs */}
           <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 gap-0.5">
             {([
               { key: '30',   label: '30天' },
@@ -292,25 +418,15 @@ export function HolidaysPage() {
             ))}
           </div>
 
-          {/* 月份导航（仅 year 模式） */}
           {viewRange === 'year' ? (
             <div className="flex items-center gap-1">
-              <button
-                onClick={prevMonth}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
+              <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <button
-                onClick={goToCurrentMonth}
-                className="text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors px-1 min-w-[80px] text-center"
-              >
+              <button onClick={goToCurrentMonth} className="text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-blue-600 transition-colors px-1 min-w-[80px] text-center">
                 {formatMonth(navMonthKey)}
               </button>
-              <button
-                onClick={nextMonth}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
+              <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -319,29 +435,32 @@ export function HolidaysPage() {
           )}
         </div>
 
-        {/* 假日列表 */}
+        {/* ── 假日列表 ── */}
         {grouped.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
             <Globe className="w-10 h-10 mx-auto mb-3 opacity-30" />
             <p className="text-sm">该时间段内没有假日</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {grouped.map(({ key, items }) => (
-              <div
-                key={key}
-                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden"
-              >
+              <div key={key} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 {/* 月份标题 */}
-                <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/80">
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                    {formatMonth(key)}
+                <div className="flex items-center px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                  <span className="text-base font-bold text-gray-800 dark:text-gray-200">
+                    {getShortMonthName(key)}
                   </span>
-                  <span className="text-xs text-gray-400">{items.length} 个假日</span>
+                  <span className="ml-2 text-sm text-gray-400">
+                    {getFullMonthYear(key)}
+                  </span>
+                  <div className="ml-auto flex items-center gap-1 text-xs text-emerald-500">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                    {items.length} 个假日
+                  </div>
                 </div>
 
                 {/* 假日行 */}
-                <div className="divide-y divide-gray-50 dark:divide-gray-700/50 px-1">
+                <div>
                   {items.map(({ holiday, diff }) => (
                     <HolidayRow key={holiday.id} holiday={holiday} diff={diff} />
                   ))}
@@ -355,7 +474,7 @@ export function HolidaysPage() {
         <div className="mt-6 flex items-start gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-400">
           <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
           <span>
-            宗教节日（开斋节、犹太新年等）按伊斯兰历或希伯来历推算，实际日期可能有 ±1~2 天误差。
+            开斋节、犹太新年等宗教节日按伊斯兰历或希伯来历推算，实际日期可能有 ±1~2 天误差。
           </span>
         </div>
       </div>
