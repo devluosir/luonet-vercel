@@ -73,10 +73,10 @@ export const NAV_ITEMS: SidebarItem[] = [
   { id: 'order',        label: '订单状态表', path: '/order',                  icon: ClipboardCheck,   permissionKey: 'canViewInquiry' },
   { id: 'history',      label: '单据历史',  path: '/history',                 icon: Archive,          permissionKey: 'canViewHistory' },
   { id: 'customer',     label: '客户管理',  path: '/customer',                icon: Users,     permissionKey: 'canManageCustomers' },
-  { id: 'mail',         label: 'AI 邮件',  path: '/mail',                    icon: Mail },
   { id: 'clock',        label: '世界时钟', path: '/clock',                   icon: Clock },
   { id: 'holidays',     label: '全球假日', path: '/holidays',                icon: CalendarDays },
   { id: 'rmb',          label: 'RMB大写',  path: '/rmb',                     icon: Banknote },
+  { id: 'mail',         label: 'AI 邮件',  path: '/mail',                    icon: Mail },
 ];
 
 /** 分组配置 */
