@@ -159,28 +159,31 @@ export function AppSidebar({
     ) ?? false;
   }
 
-  const widthClass = isCollapsed ? 'w-14' : 'w-[220px]';
+  const widthClass = isMobile ? 'w-[220px]' : 'app-sidebar';
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-30 flex h-screen flex-col border-r border-gray-200 bg-white transition-[width] duration-200 ease-in-out dark:border-gray-700 dark:bg-[#1c1c1e] ${widthClass} ${className}`}
+      className={`fixed left-0 top-0 z-30 flex h-screen flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-[#1c1c1e] ${widthClass} ${className}`}
     >
       {/* ── 头部 ── */}
       <div className="flex h-14 shrink-0 items-center border-b border-gray-200 dark:border-gray-700"
            style={{ padding: isCollapsed ? '0' : '0 12px' }}>
-        {isCollapsed ? (
-          /* 收缩：居中显示展开按钮 */
+        {/* 收缩态头部（CSS 首屏预置 + React 状态双保险） */}
+        {!isMobile && (
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="flex h-full w-full items-center justify-center text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+            className={`app-sidebar-header-collapsed h-full w-full items-center justify-center text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white ${isCollapsed ? 'flex' : 'hidden'}`}
             aria-label="展开侧边栏"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
-        ) : (
-          /* 展开：Logo + 名称 + 折叠按钮 */
-          <>
+        )}
+
+        {/* 展开态头部 */}
+        {(isMobile || !isCollapsed) && (
+          <div className={`app-sidebar-header-expanded flex min-w-0 flex-1 items-center ${isMobile ? 'w-full' : ''}`}
+               style={{ padding: isMobile ? '0 12px' : undefined }}>
             <div className="flex min-w-0 flex-1 items-center gap-2.5">
               <Image
                 src={LOGO_CONFIG.web.logo}
@@ -195,7 +198,6 @@ export function AppSidebar({
               </span>
             </div>
 
-            {/* 桌面端折叠按钮 */}
             {!isMobile && onToggleCollapse && (
               <button
                 type="button"
@@ -207,7 +209,6 @@ export function AppSidebar({
               </button>
             )}
 
-            {/* 移动端关闭按钮 */}
             {isMobile && onClose && (
               <button
                 type="button"
@@ -218,7 +219,7 @@ export function AppSidebar({
                 <X className="h-4 w-4" />
               </button>
             )}
-          </>
+          </div>
         )}
       </div>
 
@@ -236,7 +237,7 @@ export function AppSidebar({
             >
               {/* 组标签（仅展开时显示） */}
               {group.label && !isCollapsed && (
-                <div className="mb-0.5 mt-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                <div className="app-sidebar-group-label mb-0.5 mt-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   {group.label}
                 </div>
               )}
@@ -263,7 +264,7 @@ export function AppSidebar({
                     >
                       <Icon className="h-4 w-4 shrink-0" />
                       {!isCollapsed && (
-                        <span className="truncate">{item.label}</span>
+                        <span className="app-sidebar-nav-label truncate">{item.label}</span>
                       )}
                     </Link>
 

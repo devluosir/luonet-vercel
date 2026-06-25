@@ -1,3 +1,4 @@
+export { DesktopSidebarHost } from './DesktopSidebarHost';
 export { AppBottomActionBar, type ActionButton } from './AppBottomActionBar';
 export { AppLayout } from './AppLayout';
 export { AppQuickTools } from './AppQuickTools';

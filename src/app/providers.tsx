@@ -4,6 +4,8 @@ import { SessionProvider } from 'next-auth/react';
 import { usePermissionInit } from '@/hooks/usePermissionInit';
 import { useD1Sync } from '@/hooks/useD1Sync';
 import { ToastProvider } from '@/components/ui/Toast';
+import { SidebarCollapseProvider } from '@/contexts/SidebarCollapseContext';
+import { DesktopSidebarHost } from '@/components/layout/DesktopSidebarHost';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 
 // ✅ 全局权限初始化组件
@@ -25,11 +27,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
       refetchOnWindowFocus={false} // 窗口获得焦点时不刷新
     >
       <ThemeProvider>
-        <ToastProvider>
-          <PermissionInitializer />
-          <D1SyncInitializer />
-          {children}
-        </ToastProvider>
+        <SidebarCollapseProvider>
+          <ToastProvider>
+            <PermissionInitializer />
+            <D1SyncInitializer />
+            <DesktopSidebarHost />
+            {children}
+          </ToastProvider>
+        </SidebarCollapseProvider>
       </ThemeProvider>
     </SessionProvider>
   );

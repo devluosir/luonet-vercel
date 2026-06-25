@@ -41,6 +41,10 @@
   --transition-normal: 0.3s ease-out;
   --transition-slow: 0.5s ease-out;
 
+  /* 侧边栏宽度（由预置脚本 / sidebarCollapse 工具同步） */
+  --sidebar-width: 220px;
+  --sidebar-margin: 220px;
+
   /* 🎨 模块按钮颜色变量 - 彩色主题 (Apple风格) */
   /* 报价单 - 蓝色 */
   --quotation-from: rgba(59, 130, 246, 0.08);
@@ -1400,6 +1404,39 @@ html.dark button.mail-generate-button-compact:hover {
 .mail-settings-button.active .icon {
   color: white !important;
   transform: scale(1.1) !important;
+}
+
+/* ── 侧边栏布局（CSS 变量 + 首屏 data 属性，避免收缩态闪烁） ── */
+@media (min-width: 1024px) {
+  .app-sidebar {
+    width: var(--sidebar-width);
+    transition: width 200ms ease-in-out;
+  }
+
+  .app-main-content {
+    margin-left: var(--sidebar-margin);
+    transition: margin-left 200ms ease-in-out;
+  }
+
+  html[data-sidebar-collapsed='true'] .app-sidebar-nav-label,
+  html[data-sidebar-collapsed='true'] .app-sidebar-group-label,
+  html[data-sidebar-collapsed='true'] .app-sidebar-header-expanded {
+    display: none !important;
+  }
+
+  .app-sidebar-header-collapsed {
+    display: none;
+  }
+
+  html[data-sidebar-collapsed='true'] .app-sidebar-header-collapsed {
+    display: flex !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .app-main-content {
+    margin-left: 0;
+  }
 }
 
 

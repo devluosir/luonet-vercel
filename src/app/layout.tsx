@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from './providers';
 import ClientInitializer from '@/components/ClientInitializer';
+import { SIDEBAR_COLLAPSE_BOOTSTRAP_SCRIPT } from '@/utils/sidebarCollapse';
 
 
 export const metadata: Metadata = {
@@ -22,17 +23,14 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                // 从localStorage读取主题配置
                 var themeConfig = localStorage.getItem('themeConfig');
                 if (themeConfig) {
                   var config = JSON.parse(themeConfig);
-                  // 应用深色模式类
                   if (config.mode === 'dark') {
                     document.documentElement.classList.add('dark');
                   } else {
                     document.documentElement.classList.remove('dark');
                   }
-                  // 应用按钮主题类
                   if (config.buttonTheme === 'classic') {
                     document.documentElement.classList.add('classic-theme');
                   } else {
@@ -42,6 +40,7 @@ export default function RootLayout({
               } catch (e) {
                 console.error('主题预置脚本错误:', e);
               }
+              ${SIDEBAR_COLLAPSE_BOOTSTRAP_SCRIPT}
             `,
           }}
         />
