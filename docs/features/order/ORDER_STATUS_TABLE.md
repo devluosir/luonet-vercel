@@ -1,7 +1,7 @@
 # 订单状态表
 
-> 状态：**设计中（待实现）**  
-> 最后更新：2026-06-25
+> 状态：**已实现 / 维护中**
+> 最后更新：2026-06-26
 
 ---
 
@@ -15,7 +15,7 @@
 
 ---
 
-## 路由 & 文件结构（计划）
+## 路由 & 文件结构
 
 ```
 src/app/order/page.tsx               # 路由入口（re-export）
@@ -47,9 +47,9 @@ src/features/order/
 | `orderConfirmDate` | `string?` | 确认日，[m.D] 格式 |
 | `orderCustomerNo` | `string?` | 客户方订单号；为空时界面显示 `customerNo` |
 | `orderDeliveryStatus` | `string?` | 交货执行情况，自由文本 |
-| `orderAmount` | `number?` | 订单金额（**仅管理员可见**） |
+| `orderAmount` | `string?` | 订单金额（**仅管理员可见**），含币种符号，如 `¥120000` / `$15000` |
 | `orderPaymentDate` | `string?` | 回款月份，m 或 m.D 格式（**仅管理员可见**） |
-| `orderReceivedAmount` | `number?` | 到账金额（**仅管理员可见**） |
+| `orderReceivedAmount` | `string?` | 到账金额（**仅管理员可见**），含币种符号，如 `¥120000` / `$15000` |
 
 ---
 
@@ -59,7 +59,7 @@ src/features/order/
 
 | 列 | 内容 | 说明 |
 |----|------|------|
-| 订单编号 | `orderNo` + C/P/S 标识 | 订单编号红框标签；C/P/S 为红色粗体 |
+| 订单编号 | `orderNo` + C/P/S 标识 | 订单编号为粗体文本；C/P/S 为红色粗体字母，无底框 |
 | 客户/简述 | `inquirer` + `description` | 两行显示 |
 | 执行情况 | `orderDeliveryStatus` | 单行截断 |
 
@@ -92,9 +92,9 @@ src/features/order/
 ```
 
 - 日期字段（交货/确认日）：接受 `m.D` 格式输入，自动规范化为 `[m.D]`
-- 金额字段：数字输入，保存为 `number`
+- 金额字段：数字输入，保存为带币种符号的 `string`
 - 文本字段：自由输入
-- 客户订单号：空值时展示 `customerNo`（灰色提示），保存后覆盖
+- 客户订单号：空值时 fallback 展示 `customerNo`，保存后覆盖到 `orderCustomerNo`
 
 ---
 
@@ -104,10 +104,12 @@ src/features/order/
 
 | 标记 | `orderSubStatus` | 显示 | 筛选 |
 |------|-----------------|------|------|
-| 无 | `undefined` | 绿色订单编号徽标（正常边框） | 「正常」 |
-| 辙销C | `'cancelled'` | 绿色徽标 + 红色 **C** + 红色边框 | 「已辙销」 |
-| 悬挂P | `'suspended'` | 绿色徽标 + 红色 **P** + 红色边框 | 包含在「正常」内 |
-| 善后S | `'followup'` | 绿色徽标 + 红色 **S** + 红色边框 | 「善后」 |
+| 无 | `undefined` | 粗体订单编号文本 | 「正常」 |
+| 辙销C | `'cancelled'` | 粗体订单编号文本 + 红色 **C** | 「已辙销」 |
+| 悬挂P | `'suspended'` | 粗体订单编号文本 + 红色 **P** | 包含在「正常」内 |
+| 善后S | `'followup'` | 粗体订单编号文本 + 红色 **S** | 「善后」 |
+
+订单编号不再使用绿色徽标、绿色底框、ring 或圆角底色；C/P/S 后缀仅保留红色文字。
 
 ---
 
@@ -129,7 +131,43 @@ src/features/order/
 ```
 
 - 「正常」= `orderSubStatus` 为 undefined 或 'suspended'（含悬挂）
-- 各芯片显示当前时间范围内对应条目数角标
+- 各芯片显示当前时间、关键词、客户筛选后对应条目数角标
+
+### 搜索与客户选择器
+
+右侧筛选控件：
+
+```
+[搜索订单/客户/内容...]  [客户]  [重置]
+```
+
+- 搜索字段匹配：`orderNo`、`inquiryNo`、`inquirer`、`description`、`orderCustomerNo`、`customerNo`、`orderDeliveryStatus`
+- 客户选择器绑定订单表当前「客户」列，也就是 `InquiryRecord.inquirer`
+- 客户选项来自所有有效订单记录：`status !== 'deleted'` 且 `orderNo` 有值，再按 `inquirer` 去重排序
+- 筛选流程：
+  1. `allOrderRecords`：未删除 + 有 `orderNo`
+  2. `timeFiltered`：应用时间范围
+  3. `baseFiltered`：应用关键词 + 客户
+  4. `countByStatus`：基于 `baseFiltered` 计算芯片数量
+  5. `filteredRecords`：基于 `baseFiltered` 再应用订单状态筛选并排序
+- 当时间范围、关键词、客户或订单状态任一项非默认时显示「重置」，重置为近3月、全部状态、空关键词、空客户
+
+---
+
+## 行样式
+
+订单行不再根据执行情况使用整行粉色、蓝色或灰色底色，只保留中性 hover 效果。
+
+真实文本颜色跟随 `orderDeliveryStatus.trim()`：
+
+| 执行情况 | 行内真实文本颜色 |
+|----------|------------------|
+| `备货` | 粉红色文字 |
+| `交货` | 蓝色文字 |
+| `发票...` | 正常深色文字，使用 `startsWith('发票')` 兼容 `发票6.23` 等数据 |
+| 其他 / 空值 | 默认业务文本色 |
+
+颜色应用到订单号、交货日期、客户、内容简述、确认日、客户订单号、执行情况，以及管理员可见的金额、回款、到账金额。订单号下方的 `inquiryNo` 仍固定为灰色；空值占位（如 `m.D`、`执行情况`、`¥/$`、`—`）继续使用淡灰色，避免误认为已有数据。
 
 ---
 
@@ -156,31 +194,31 @@ src/features/order/
 
 ### Phase 1：数据模型扩展
 
-- [ ] `types/index.ts`：添加 7 个可选追踪字段到 `InquiryRecord`
-- [ ] TypeScript 验证通过（`npx tsc --noEmit`）
+- [x] `types/index.ts`：添加 7 个可选追踪字段到 `InquiryRecord`
+- [x] TypeScript 验证通过（历史实现阶段）
 
 ### Phase 2：UI 骨架
 
-- [ ] `src/features/order/app/OrderPage.tsx`：主页面
-- [ ] `src/features/order/components/OrderTable.tsx`：表格容器
-- [ ] `src/features/order/components/OrderRow.tsx`：行 + 行内编辑单元格
-- [ ] `src/features/order/index.ts`：模块出口
-- [ ] `src/app/order/page.tsx`：路由入口
+- [x] `src/features/order/app/OrderPage.tsx`：主页面
+- [x] `src/features/order/components/OrderTable.tsx`：表格容器
+- [x] `src/features/order/components/OrderRow.tsx`：行 + 行内编辑单元格
+- [x] `src/features/order/index.ts`：模块出口
+- [x] `src/app/order/page.tsx`：路由入口
 
 ### Phase 3：侧边栏 & 权限
 
-- [ ] `AppSidebar.tsx`：NAV_ITEMS 新增订单状态表
-- [ ] `NAV_GROUPS` 登记表 group 范围更新（slice(6, 8) → slice(6, 9)）
-- [ ] D1 权限配置：是否需要单独权限或复用 inquiry
+- [x] `AppSidebar.tsx`：NAV_ITEMS 新增订单状态表
+- [x] `NAV_GROUPS` 登记表 group 范围更新
+- [x] 当前复用现有询报价数据与权限边界，未新增 D1 schema
 
 ### Phase 4：功能细节
 
-- [ ] 行内编辑：点击/Enter/Escape 交互
-- [ ] 客户订单号：为空时 fallback 显示 `customerNo`（灰色提示文字）
-- [ ] Admin 列：非管理员时完全隐藏列头和列数据
-- [ ] C/P/S 徽标与询报价登记保持一致
-- [ ] 筛选面板：时间范围 + 订单状态芯片
-- [ ] 同步时间插槽（`topBarSlot`）
+- [x] 行内编辑：点击/Enter/Escape 交互
+- [x] 客户订单号：为空时 fallback 显示 `customerNo`
+- [x] Admin 列：非管理员时完全隐藏列头和列数据
+- [x] C/P/S 以红色文字后缀显示，无绿色徽标底框
+- [x] 筛选面板：时间范围 + 订单状态芯片 + 搜索 + 客户选择器
+- [x] 同步时间插槽（`topBarSlot`）
 
 ### Phase 5：验证
 

@@ -48,6 +48,20 @@ function matchesOrderStatus(record: InquiryRecord, filter: OrderStatusFilter): b
   return record.orderSubStatus === filter;
 }
 
+function matchesKeyword(record: InquiryRecord, keyword: string): boolean {
+  const q = keyword.trim().toLowerCase();
+  if (!q) return true;
+  return [
+    record.orderNo,
+    record.inquiryNo,
+    record.inquirer,
+    record.description,
+    record.orderCustomerNo,
+    record.customerNo,
+    record.orderDeliveryStatus,
+  ].some((value) => String(value ?? '').toLowerCase().includes(q));
+}
+
 // ── 简单芯片组件 ──────────────────────────────────────────────────────────────
 
 interface ChipProps {
@@ -94,6 +108,8 @@ export function OrderPage() {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('3months');
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>('all');
+  const [keyword, setKeyword] = useState('');
+  const [customerFilter, setCustomerFilter] = useState('');
   // 默认按交货日期降序排列
   const [sortField, setSortField] = useState<SortField>('deliveryDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -167,23 +183,54 @@ export function OrderPage() {
     [records]
   );
 
+  const customerOptions = useMemo(
+    () =>
+      Array.from(new Set(allOrderRecords.map((r) => r.inquirer.trim()).filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b, 'zh-CN')),
+    [allOrderRecords]
+  );
+
   // 应用时间范围筛选
   const timeFiltered = useMemo(
     () => allOrderRecords.filter((r) => matchesTimeRange(r, timeRange, now)),
     [allOrderRecords, timeRange, now]
   );
 
-  // 各订单状态数量（在时间范围内）
+  // 应用关键词 + 客户筛选，状态角标基于该集合计算
+  const baseFiltered = useMemo(
+    () =>
+      timeFiltered.filter((r) =>
+        matchesKeyword(r, keyword) &&
+        (!customerFilter || r.inquirer.trim() === customerFilter)
+      ),
+    [timeFiltered, keyword, customerFilter]
+  );
+
+  // 各订单状态数量（在时间、关键词、客户筛选后）
   const countByStatus = useMemo(
     () => ({
-      all: timeFiltered.length,
-      normal: timeFiltered.filter((r) => r.orderSubStatus === undefined || r.orderSubStatus === 'suspended').length,
-      cancelled: timeFiltered.filter((r) => r.orderSubStatus === 'cancelled').length,
-      suspended: timeFiltered.filter((r) => r.orderSubStatus === 'suspended').length,
-      followup: timeFiltered.filter((r) => r.orderSubStatus === 'followup').length,
+      all: baseFiltered.length,
+      normal: baseFiltered.filter((r) => r.orderSubStatus === undefined || r.orderSubStatus === 'suspended').length,
+      cancelled: baseFiltered.filter((r) => r.orderSubStatus === 'cancelled').length,
+      suspended: baseFiltered.filter((r) => r.orderSubStatus === 'suspended').length,
+      followup: baseFiltered.filter((r) => r.orderSubStatus === 'followup').length,
     }),
-    [timeFiltered]
+    [baseFiltered]
   );
+
+  const activeCount = [
+    timeRange !== '3months',
+    keyword.trim() !== '',
+    customerFilter !== '',
+    orderStatusFilter !== 'all',
+  ].filter(Boolean).length;
+
+  const resetFilters = () => {
+    setTimeRange('3months');
+    setOrderStatusFilter('all');
+    setKeyword('');
+    setCustomerFilter('');
+  };
 
   /** "m.D" 或 "[m.D]" → 数字排序键，无值返回 0（排末尾） */
   const parseDeliveryDate = (s: string | undefined): number => {
@@ -198,7 +245,7 @@ export function OrderPage() {
   // 最终展示记录
   const filteredRecords = useMemo(
     () =>
-      timeFiltered
+      baseFiltered
         .filter((r) => matchesOrderStatus(r, orderStatusFilter))
         .sort((a, b) => {
           if (sortField === 'deliveryDate') {
@@ -214,7 +261,7 @@ export function OrderPage() {
           const cmp = (a.orderNo ?? '').localeCompare(b.orderNo ?? '');
           return sortDir === 'desc' ? -cmp : cmp;
         }),
-    [timeFiltered, orderStatusFilter, sortField, sortDir]
+    [baseFiltered, orderStatusFilter, sortField, sortDir]
   );
 
   if (status === 'loading' || !user) return null;
@@ -240,9 +287,9 @@ export function OrderPage() {
       <div className="w-full px-3 py-3 sm:px-5 lg:px-6">
         {/* 筛选面板 */}
         <div className="mb-3 overflow-visible rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-          <div className="flex flex-col gap-2 overflow-visible">
-            {/* 时间行 */}
-            <div className="flex flex-wrap items-center gap-1.5 overflow-visible">
+          <div className="flex flex-col gap-2.5 overflow-visible xl:flex-row xl:items-center xl:justify-between xl:gap-4">
+            {/* 时间范围 + 订单状态筛选 */}
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 overflow-visible">
               <Chip
                 label="近3月"
                 active={timeRange === '3months'}
@@ -297,6 +344,42 @@ export function OrderPage() {
                 badge={countByStatus.followup}
                 onClick={() => setOrderStatusFilter('followup')}
               />
+            </div>
+
+            {/* 搜索 + 客户 + 重置 */}
+            <div className="flex w-full items-center gap-1.5 sm:ml-auto sm:max-w-md xl:ml-0 xl:w-auto xl:shrink-0 xl:border-l xl:border-gray-100 xl:pl-4 dark:xl:border-gray-700">
+              <input
+                type="search"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="搜索订单/客户/内容..."
+                className={
+                  'h-7 min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2 ' +
+                  'text-xs text-gray-700 outline-none placeholder:text-gray-400 ' +
+                  'focus:border-blue-400 focus:ring-1 focus:ring-blue-200 ' +
+                  'dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-500 ' +
+                  'dark:focus:border-blue-500 sm:w-44 sm:flex-none lg:w-52 xl:w-56'
+                }
+              />
+              <select
+                value={customerFilter}
+                onChange={(e) => setCustomerFilter(e.target.value)}
+                className="h-7 min-w-0 shrink-0 rounded-lg border border-gray-200 bg-white px-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              >
+                <option value="">客户</option>
+                {customerOptions.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+              {activeCount > 0 && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="h-7 shrink-0 rounded-lg border border-gray-200 px-2.5 text-xs font-medium text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800"
+                >
+                  重置
+                </button>
+              )}
             </div>
           </div>
         </div>

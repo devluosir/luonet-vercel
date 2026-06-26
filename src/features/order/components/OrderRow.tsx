@@ -11,17 +11,14 @@ import {
   showLgCols,
 } from '../utils/orderTableLayout';
 
-// ── 行背景颜色 ────────────────────────────────────────────────────────────────
+// ── 行文字颜色 ────────────────────────────────────────────────────────────────
 
-function getRowBgClass(record: InquiryRecord): string {
-  const s = record.orderDeliveryStatus ?? '';
-  if (s === '备货')
-    return 'bg-red-50 hover:bg-red-100/60 dark:bg-red-950/25 dark:hover:bg-red-950/40';
-  if (s === '交货')
-    return 'bg-blue-50 hover:bg-blue-100/60 dark:bg-blue-950/20 dark:hover:bg-blue-950/30';
-  if (s.startsWith('发票'))
-    return 'bg-gray-100 hover:bg-gray-200/60 dark:bg-gray-800/60 dark:hover:bg-gray-800/80';
-  return 'hover:bg-gray-50/70 dark:hover:bg-gray-800/30';
+function getRowTextClass(record: InquiryRecord): string {
+  const status = record.orderDeliveryStatus?.trim() ?? '';
+  if (status === '备货') return 'text-pink-500 dark:text-pink-400';
+  if (status === '交货') return 'text-blue-600 dark:text-blue-400';
+  if (status.startsWith('发票')) return 'text-gray-900 dark:text-gray-100';
+  return 'text-gray-700 dark:text-gray-300';
 }
 
 // ── 可编辑字段类型 ────────────────────────────────────────────────────────────
@@ -44,6 +41,7 @@ interface EditableCellProps {
   value: string | number | undefined;
   fallback?: string;    // 正常黑色（继承值）
   placeholder?: string;
+  textClassName?: string;
   onActivate: (f: EditField) => void;
   onSave: (raw: string) => void;
   onCancel: () => void;
@@ -51,6 +49,7 @@ interface EditableCellProps {
 
 function EditableCell({
   field, activeField, value, fallback, placeholder = '—',
+  textClassName,
   onActivate, onSave, onCancel,
 }: EditableCellProps) {
   const editing = activeField === field;
@@ -82,7 +81,7 @@ function EditableCell({
       title={effective ?? undefined}
       className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-xs
         hover:bg-black/5 dark:hover:bg-white/5
-        ${effective ? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
+        ${effective ? textClassName ?? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
     >
       {effective ?? placeholder}
     </span>
@@ -95,12 +94,13 @@ interface DatePickerCellProps {
   field: 'deliveryDate' | 'confirmDate';
   activeField: EditField;
   value: string | undefined;  // 已去掉方括号的 m.D
+  textClassName?: string;
   onActivate: (f: EditField) => void;
   onSave: (val: string | undefined) => void;
   onCancel: () => void;
 }
 
-function DatePickerCell({ field, activeField, value, onActivate, onSave, onCancel }: DatePickerCellProps) {
+function DatePickerCell({ field, activeField, value, textClassName, onActivate, onSave, onCancel }: DatePickerCellProps) {
   const dateRef = useRef<HTMLInputElement>(null);
   const editing = activeField === field;
   const displayStr = value?.trim() || null;
@@ -149,7 +149,7 @@ function DatePickerCell({ field, activeField, value, onActivate, onSave, onCance
         onClick={() => onActivate(field)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onActivate(field); }}
         className={`shrink-0 cursor-text rounded px-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/5
-          ${displayStr ? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
+          ${displayStr ? textClassName ?? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
       >
         {displayStr ?? 'm.D'}
       </span>
@@ -180,12 +180,13 @@ interface MonthPickerCellProps {
   field: 'paymentDate';
   activeField: EditField;
   value: string | undefined;
+  textClassName?: string;
   onActivate: (f: EditField) => void;
   onSave: (val: string | undefined) => void;
   onCancel: () => void;
 }
 
-function MonthPickerCell({ field, activeField, value, onActivate, onSave, onCancel }: MonthPickerCellProps) {
+function MonthPickerCell({ field, activeField, value, textClassName, onActivate, onSave, onCancel }: MonthPickerCellProps) {
   const monthRef = useRef<HTMLInputElement>(null);
   const editing = activeField === field;
   const displayStr = value?.trim() || null;
@@ -227,7 +228,7 @@ function MonthPickerCell({ field, activeField, value, onActivate, onSave, onCanc
         onClick={() => onActivate(field)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onActivate(field); }}
         className={`shrink-0 cursor-text rounded px-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/5
-          ${displayStr ? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
+          ${displayStr ? textClassName ?? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
       >
         {displayStr ?? 'm'}
       </span>
@@ -260,12 +261,13 @@ interface AmountCellProps {
   field: 'amount' | 'receivedAmount';
   activeField: EditField;
   value: string | number | undefined;   // 旧数据可能是 number
+  textClassName?: string;
   onActivate: (f: EditField) => void;
   onSave: (val: string | undefined) => void;
   onCancel: () => void;
 }
 
-function AmountCell({ field, activeField, value, onActivate, onSave, onCancel }: AmountCellProps) {
+function AmountCell({ field, activeField, value, textClassName, onActivate, onSave, onCancel }: AmountCellProps) {
   const [editCurrency, setEditCurrency] = useState<Currency>('¥');
   const [editAmount, setEditAmount] = useState('');
   const editing = activeField === field;
@@ -337,7 +339,7 @@ function AmountCell({ field, activeField, value, onActivate, onSave, onCancel }:
       title={display ?? undefined}
       className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-right text-xs
         hover:bg-black/5 dark:hover:bg-white/5
-        ${display ? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
+        ${display ? textClassName ?? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
     >
       {display ?? '¥/$'}
     </span>
@@ -355,12 +357,13 @@ const STATUS_PRESETS = [
 interface DeliveryStatusCellProps {
   activeField: EditField;
   value: string | undefined;
+  textClassName?: string;
   onActivate: () => void;
   onSave: (val: string | undefined) => void;
   onCancel: () => void;
 }
 
-function DeliveryStatusCell({ activeField, value, onActivate, onSave, onCancel }: DeliveryStatusCellProps) {
+function DeliveryStatusCell({ activeField, value, textClassName, onActivate, onSave, onCancel }: DeliveryStatusCellProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const editing = activeField === 'deliveryStatus';
   const displayStr = value != null ? String(value).trim() || null : null;
@@ -424,16 +427,16 @@ function DeliveryStatusCell({ activeField, value, onActivate, onSave, onCancel }
       title={displayStr ?? undefined}
       className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-xs
         hover:bg-black/5 dark:hover:bg-white/5
-        ${displayStr ? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
+        ${displayStr ? textClassName ?? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
     >
       {displayStr ?? '执行情况'}
     </span>
   );
 }
 
-// ── OrderSubStatus 徽标 ───────────────────────────────────────────────────────
+// ── OrderSubStatus 标记 ───────────────────────────────────────────────────────
 
-function OrderNoBadge({ record }: { record: InquiryRecord }) {
+function OrderNoText({ record, textClassName }: { record: InquiryRecord; textClassName: string }) {
   const { orderNo, orderSubStatus } = record;
   if (!orderNo) return null;
   const letter =
@@ -442,9 +445,7 @@ function OrderNoBadge({ record }: { record: InquiryRecord }) {
     : orderSubStatus === 'followup' ? 'S'
     : null;
   return (
-    <span className={`inline-flex max-w-full min-w-0 items-center gap-0.5 truncate rounded-full bg-green-50 px-1.5 py-0 text-[11px] font-medium leading-5 text-green-700 ring-1 dark:bg-green-950/40 dark:text-green-400 ${
-      letter ? 'ring-red-300 dark:ring-red-700' : 'ring-green-200 dark:ring-green-800'
-    }`}>
+    <span className={`inline-flex max-w-full min-w-0 items-baseline gap-0.5 truncate font-mono text-[11px] font-bold leading-5 ${textClassName}`}>
       <span className="truncate">{orderNo}</span>
       {letter && <span className="shrink-0 font-bold text-red-500">{letter}</span>}
     </span>
@@ -467,6 +468,7 @@ export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
   const [activeField, setActiveField] = useState<EditField>(null);
   const activate = (f: EditField) => setActiveField(f);
   const cancel = () => setActiveField(null);
+  const rowTextClass = getRowTextClass(record);
 
   // 客户订单号的 fallback：自动将 RFQ 显示/输入替换为 PO
   const customerNoFallback = record.customerNo.replace(/RFQ/g, 'PO');
@@ -483,12 +485,12 @@ export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
   };
 
   return (
-    <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getRowBgClass(record)}`}>
+    <tr className="group border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/30">
 
       {/* 订单编号 + 询价编号 */}
       <td className="max-w-0 overflow-hidden px-2 py-2 sm:px-3">
         <div className="flex min-w-0 flex-col gap-0.5" title={`${record.orderNo ?? ''} ${record.inquiryNo}`}>
-          <OrderNoBadge record={record} />
+          <OrderNoText record={record} textClassName={rowTextClass} />
           <span className="block truncate font-mono text-[10px] text-gray-400 dark:text-gray-500">{record.inquiryNo}</span>
         </div>
       </td>
@@ -497,6 +499,7 @@ export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
       <td className="max-w-0 overflow-hidden whitespace-nowrap px-1.5 py-2 sm:px-2">
         <DatePickerCell field="deliveryDate" activeField={activeField}
           value={record.orderDeliveryDate ? stripDateBrackets(record.orderDeliveryDate) : undefined}
+          textClassName={rowTextClass}
           onActivate={activate}
           onSave={(val) => { setActiveField(null); onUpdate({ orderDeliveryDate: val ? normalizeShortDateInput(val) : undefined }); }}
           onCancel={cancel}
@@ -504,16 +507,16 @@ export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
       </td>
 
       {customerCol && (
-        <td className="max-w-0 overflow-hidden px-2 py-2 text-xs text-gray-700 dark:text-gray-300">
-          <span className="block min-w-0 truncate" title={record.inquirer}>{record.inquirer}</span>
+        <td className="max-w-0 overflow-hidden px-2 py-2 text-xs">
+          <span className={`block min-w-0 truncate ${rowTextClass}`} title={record.inquirer}>{record.inquirer}</span>
         </td>
       )}
 
       {/* 内容简述 */}
       <td className="max-w-0 overflow-hidden px-1.5 py-2 sm:px-2">
-        <p className="truncate text-xs text-gray-700 dark:text-gray-300" title={record.description}>{record.description}</p>
+        <p className={`truncate text-xs ${rowTextClass}`} title={record.description}>{record.description}</p>
         {bp === 'sm' && (
-          <p className="truncate text-[10px] text-gray-400 dark:text-gray-500" title={record.inquirer}>{record.inquirer}</p>
+          <p className={`truncate text-[10px] ${rowTextClass}`} title={record.inquirer}>{record.inquirer}</p>
         )}
       </td>
 
@@ -522,6 +525,7 @@ export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
           <td className="max-w-0 overflow-hidden whitespace-nowrap px-2 py-2">
             <DatePickerCell field="confirmDate" activeField={activeField}
               value={record.orderConfirmDate ? stripDateBrackets(record.orderConfirmDate) : undefined}
+              textClassName={rowTextClass}
               onActivate={activate}
               onSave={(val) => { setActiveField(null); onUpdate({ orderConfirmDate: val ? normalizeShortDateInput(val) : undefined }); }}
               onCancel={cancel}
@@ -533,6 +537,7 @@ export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
                 value={record.orderCustomerNo}
                 fallback={customerNoFallback}
                 placeholder="—"
+                textClassName={rowTextClass}
                 onActivate={activate}
                 onSave={saveCustomerNo}
                 onCancel={cancel}
@@ -548,6 +553,7 @@ export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
           <DeliveryStatusCell
             activeField={activeField}
             value={record.orderDeliveryStatus}
+            textClassName={rowTextClass}
             onActivate={() => setActiveField('deliveryStatus')}
             onSave={saveDeliveryStatus}
             onCancel={cancel}
@@ -561,6 +567,7 @@ export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
             <div className="min-w-0">
               <AmountCell field="amount" activeField={activeField}
                 value={record.orderAmount}
+                textClassName={rowTextClass}
                 onActivate={activate}
                 onSave={(val) => { setActiveField(null); onUpdate({ orderAmount: val }); }}
                 onCancel={cancel}
@@ -570,6 +577,7 @@ export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
           <td className="max-w-0 overflow-hidden whitespace-nowrap px-2 py-2">
             <MonthPickerCell field="paymentDate" activeField={activeField}
               value={record.orderPaymentDate}
+              textClassName={rowTextClass}
               onActivate={activate}
               onSave={(val) => { setActiveField(null); onUpdate({ orderPaymentDate: val }); }}
               onCancel={cancel}
@@ -579,6 +587,7 @@ export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
             <div className="min-w-0">
               <AmountCell field="receivedAmount" activeField={activeField}
                 value={record.orderReceivedAmount}
+                textClassName={rowTextClass}
                 onActivate={activate}
                 onSave={(val) => { setActiveField(null); onUpdate({ orderReceivedAmount: val }); }}
                 onCancel={cancel}
