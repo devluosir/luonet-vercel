@@ -1,6 +1,7 @@
 # 询报价登记模块
 
-> 最后更新：2026-06-25
+> 状态：**已实现 / 维护中**
+> 最后更新：2026-06-26
 
 ---
 
@@ -63,9 +64,9 @@ interface InquiryRecord {
   orderConfirmDate?: string;       // 确认日 [m.D]
   orderCustomerNo?: string;        // 客户方订单号（可覆盖 customerNo）
   orderDeliveryStatus?: string;    // 交货执行情况（自由文本）
-  orderAmount?: number;            // 订单金额（管理员可见）
+  orderAmount?: string;            // 订单金额（管理员可见），含币种符号
   orderPaymentDate?: string;       // 回款月份，m 或 m.D 格式（管理员可见）
-  orderReceivedAmount?: number;    // 到账金额（管理员可见）
+  orderReceivedAmount?: string;    // 到账金额（管理员可见），含币种符号
   // ─────────────────────────────────────────────────────────────
 
   supplierStatuses: SupplierQuoteStatus[];
@@ -156,6 +157,21 @@ interface CustomerQuoteStatus {
 | `text-pink-500` | 等待中（未报价） | quotedStatuses 为空 |
 | `text-blue-600` | 已报价 | 有 quoted/supplemented 类型 |
 | `text-gray-400` | 无法报价/已关闭 | 有 unavailable/closed 类型 |
+
+---
+
+## 表格表头样式
+
+询报价登记表表头由 `src/features/inquiry/components/InquiryTable.tsx` 渲染。当前样式目标是提高登记表的扫描效率，保持内部业务工具的克制密度：
+
+- 表头使用浅灰渐变底色，增强与数据行的层级区分
+- 列之间使用细分隔线，便于横向扫描
+- 表头文字使用 `text-[11px]`、半粗体、灰色业务文本，不使用大写字距样式
+- 「询价编号」排序列使用蓝色高亮按钮，显示当前排序方向
+- Admin 编辑模式下的全选 checkbox 保持在独立窄列，样式与其他表头列对齐
+- 移动/平板/桌面断点继续沿用原列宽与显隐规则，不改变数据列结构
+
+本次表头样式调整已在 2026-06-26 手动验证完成；未改变筛选、排序、导入导出或 D1 同步逻辑。
 
 ---
 

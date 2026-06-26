@@ -39,10 +39,18 @@ function matchesTimeRange(record: InquiryRecord, range: TimeRange, now: Date): b
 
 // ── 订单状态筛选类型 ──────────────────────────────────────────────────────────
 
-type OrderStatusFilter = 'all' | 'normal' | OrderSubStatus;
+type OrderStatusFilter = 'all' | 'inProgress' | 'normal' | OrderSubStatus;
+
+function isInProgressOrder(record: InquiryRecord): boolean {
+  if (record.orderSubStatus === 'cancelled') return false;
+  if (record.orderSubStatus === 'suspended' || record.orderSubStatus === 'followup') return true;
+  const deliveryStatus = record.orderDeliveryStatus?.trim() ?? '';
+  return !deliveryStatus || deliveryStatus.startsWith('备货') || deliveryStatus.startsWith('交货');
+}
 
 function matchesOrderStatus(record: InquiryRecord, filter: OrderStatusFilter): boolean {
   if (filter === 'all') return true;
+  if (filter === 'inProgress') return isInProgressOrder(record);
   if (filter === 'normal')
     return record.orderSubStatus === undefined || record.orderSubStatus === 'suspended';
   return record.orderSubStatus === filter;
@@ -210,6 +218,7 @@ export function OrderPage() {
   const countByStatus = useMemo(
     () => ({
       all: baseFiltered.length,
+      inProgress: baseFiltered.filter(isInProgressOrder).length,
       normal: baseFiltered.filter((r) => r.orderSubStatus === undefined || r.orderSubStatus === 'suspended').length,
       cancelled: baseFiltered.filter((r) => r.orderSubStatus === 'cancelled').length,
       suspended: baseFiltered.filter((r) => r.orderSubStatus === 'suspended').length,
@@ -316,6 +325,17 @@ export function OrderPage() {
                 active={orderStatusFilter === 'all'}
                 badge={countByStatus.all}
                 onClick={() => setOrderStatusFilter('all')}
+              />
+              <Chip
+                label="进行中"
+                active={orderStatusFilter === 'inProgress'}
+                activeColor="bg-blue-600 text-white"
+                badge={countByStatus.inProgress}
+                onClick={() => {
+                  setOrderStatusFilter('inProgress');
+                  setSortField('orderNo');
+                  setSortDir('desc');
+                }}
               />
               <Chip
                 label="正常"

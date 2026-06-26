@@ -15,13 +15,13 @@ import {
 
 function getRowBgClass(record: InquiryRecord): string {
   if (record.orderSubStatus === 'cancelled') {
-    return 'bg-gray-50 hover:bg-gray-100/70 dark:bg-gray-800/50 dark:hover:bg-gray-800/70';
+    return 'bg-gray-100 hover:bg-gray-200/80 dark:bg-gray-800/75 dark:hover:bg-gray-700/80';
   }
   if (record.orderSubStatus === 'suspended') {
-    return 'bg-green-50/70 hover:bg-green-100/70 dark:bg-green-950/20 dark:hover:bg-green-950/35';
+    return 'bg-green-100 hover:bg-green-200/75 dark:bg-green-950/45 dark:hover:bg-green-900/45';
   }
   if (record.orderSubStatus === 'followup') {
-    return 'bg-red-50/70 hover:bg-red-100/70 dark:bg-red-950/20 dark:hover:bg-red-950/35';
+    return 'bg-red-100 hover:bg-red-200/75 dark:bg-red-950/45 dark:hover:bg-red-900/45';
   }
   return 'hover:bg-gray-50/70 dark:hover:bg-gray-800/30';
 }

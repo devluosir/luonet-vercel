@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-06-26
+
+### Changed
+
+#### 询报价登记 / 订单状态表
+- **表头样式统一**：询报价登记表和订单状态表统一为浅灰层级表头、列分隔线和排序高亮按钮，提升横向扫描效率。
+- **订单状态表筛选增强**：新增搜索框、客户选择器和「进行中」筛选；客户选项绑定 `InquiryRecord.inquirer`，状态角标基于时间、关键词、客户筛选后的集合计算。
+- **订单状态表行样式**：订单号改为粗体文本，去除绿色徽标底框；C/P/S 订单按标记显示加重灰底、绿底、红底；执行情况按 `备货...`、`交货...`、`发票...` 开头控制文字颜色，空执行情况按备货状态显示。
+
+### Docs
+- 更新 `docs/features/inquiry/INQUIRY_MODULE.md`、`docs/features/order/ORDER_STATUS_TABLE.md` 和功能文档索引，记录 2026-06-26 手动验证完成。
+
+---
+
 ## [1.3.0] - 2026-06-25
 
 ### Added
@@ -35,8 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `InquiryBasicInput` 扩展包含 `orderSubStatus`
 - `InquiryFilterBar` 筛选芯片：移除 `border-t` 分隔线，与新布局对齐
 
-### Planned（设计完成，待实现）
-- **订单状态表**（`/order`）：设计文档见 `docs/features/order/ORDER_STATUS_TABLE.md`
+### Delivered
+- **订单状态表**（`/order`）：已实现并进入维护状态，设计与维护文档见 `docs/features/order/ORDER_STATUS_TABLE.md`
 
 ---
 

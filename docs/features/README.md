@@ -2,6 +2,12 @@
 
 ## 📦 模块列表
 
+### [询报价登记模块](inquiry/)
+- [模块说明](inquiry/INQUIRY_MODULE.md) - 询报价登记、筛选、排序、表格样式与订单标记
+
+### [订单状态表](order/)
+- [订单状态表说明](order/ORDER_STATUS_TABLE.md) - 订单追踪字段、筛选、行内编辑、行样式与表头样式
+
 ### [报价模块](quotation/)
 - [模块化重构](quotation/quotation_modularization.md) - 完整的模块化重构总结
 - Notes自定义功能
