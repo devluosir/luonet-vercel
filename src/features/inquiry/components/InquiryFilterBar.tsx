@@ -101,10 +101,13 @@ export function InquiryFilterBar({
   const divider = <span className="select-none text-gray-200 dark:text-gray-700">·</span>;
 
   return (
-    <div id={id} className="flex flex-col gap-2.5 py-2">
+    <div
+      id={id}
+      className="flex flex-col gap-2.5 py-2 xl:flex-row xl:items-center xl:justify-between xl:gap-4"
+    >
 
-      {/* ── 第一行：时间范围 + 状态筛选芯片 ── */}
-      <div className="flex flex-wrap items-center gap-1.5">
+      {/* 时间范围 + 状态筛选芯片 */}
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
         <Chip
           label="近3月"
           active={filter.timeRange === '3months'}
@@ -186,8 +189,8 @@ export function InquiryFilterBar({
         ))}
       </div>
 
-      {/* ── 第二行：搜索 + 询价人 + 重置 ── */}
-      <div className="flex items-center gap-1.5">
+      {/* 搜索 + 询价人 + 重置（中屏右对齐限宽，大屏并入同一行） */}
+      <div className="flex w-full items-center gap-1.5 sm:max-w-md sm:ml-auto xl:ml-0 xl:w-auto xl:shrink-0 xl:border-l xl:border-gray-100 xl:pl-4 dark:xl:border-gray-700">
         <input
           type="search"
           value={filter.keyword}
@@ -198,13 +201,14 @@ export function InquiryFilterBar({
             'text-xs text-gray-700 outline-none placeholder:text-gray-400 ' +
             'focus:border-blue-400 focus:ring-1 focus:ring-blue-200 ' +
             'dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-500 ' +
-            'dark:focus:border-blue-500'
+            'dark:focus:border-blue-500 ' +
+            'sm:flex-none sm:w-40 lg:w-44 xl:w-48'
           }
         />
         <select
           value={filter.inquirer}
           onChange={(e) => setFilter({ ...filter, inquirer: e.target.value })}
-          className="h-7 rounded-lg border border-gray-200 bg-white px-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+          className="h-7 shrink-0 rounded-lg border border-gray-200 bg-white px-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
         >
           <option value="">询价人</option>
           {inquirers.map((name) => (

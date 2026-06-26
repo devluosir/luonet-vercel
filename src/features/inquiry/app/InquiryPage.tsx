@@ -416,7 +416,7 @@ export function InquiryPage() {
 
       <div className="w-full max-w-none px-3 py-3 sm:px-5 lg:px-6">
         <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 xl:items-center">
             <div className="min-w-0 flex-1">
               <InquiryFilterBar
                 id="inquiry-filter-panel"
@@ -432,7 +432,7 @@ export function InquiryPage() {
             <button
               type="button"
               onClick={openCreateModal}
-              className="mt-1 inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              className="mt-1 inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700 xl:mt-0"
             >
               <Plus className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">新增询价</span>
