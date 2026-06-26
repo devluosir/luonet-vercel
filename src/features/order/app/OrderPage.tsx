@@ -332,6 +332,7 @@ export function OrderPage() {
                 activeColor="bg-blue-600 text-white"
                 badge={countByStatus.inProgress}
                 onClick={() => {
+                  setTimeRange('all');
                   setOrderStatusFilter('inProgress');
                   setSortField('orderNo');
                   setSortDir('desc');
