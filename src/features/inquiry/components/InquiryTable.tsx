@@ -5,6 +5,22 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import type { InquiryRecord } from '../types';
 import { InquiryRow } from './InquiryRow';
 
+const headerRowClass =
+  'border-b border-gray-200/80 bg-gradient-to-b from-gray-50 to-gray-100/80 ' +
+  'shadow-[inset_0_-1px_0_rgba(15,23,42,0.04)] dark:border-gray-700/80 ' +
+  'dark:from-gray-900/90 dark:to-gray-800/80';
+
+const headerCellClass =
+  'border-r border-gray-200/70 px-2 py-2.5 text-left align-middle text-[11px] ' +
+  'font-semibold text-gray-600 last:border-r-0 dark:border-gray-700/70 dark:text-gray-300 md:px-3';
+
+const headerCellCenterClass =
+  'border-r border-gray-200/70 px-2 py-2.5 text-center align-middle last:border-r-0 dark:border-gray-700/70';
+
+const headerCellRightClass =
+  'border-r border-gray-200/70 px-1 py-2.5 text-right align-middle text-[11px] ' +
+  'font-semibold text-gray-600 last:border-r-0 dark:border-gray-700/70 dark:text-gray-300 md:px-3';
+
 function useBreakpoint() {
   const [bp, setBp] = useState<'sm' | 'md' | 'lg'>('lg');
 
@@ -89,11 +105,11 @@ export function InquiryTable({
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
       <div className="overflow-x-auto">
         <table className="w-full table-fixed divide-y divide-gray-100 dark:divide-gray-800">
-          <thead className="bg-gray-50 dark:bg-gray-900/50">
-            <tr>
+          <thead>
+            <tr className={headerRowClass}>
               {/* 全选 checkbox */}
               {isAdmin && (
-                <th style={{ width: W.check }} className="px-2 py-2 text-center">
+                <th style={{ width: W.check }} className={headerCellCenterClass}>
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -106,11 +122,11 @@ export function InquiryTable({
                 </th>
               )}
 
-              <th style={{ width: W.no }} className="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:px-3">
+              <th style={{ width: W.no }} className={headerCellClass}>
                 <button
                   type="button"
                   onClick={onSortToggle}
-                  className="inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded hover:text-gray-700 dark:hover:text-gray-200"
+                  className="inline-flex h-6 max-w-full items-center gap-1 whitespace-nowrap rounded-md bg-white/80 px-1.5 text-[11px] font-semibold text-blue-700 shadow-sm ring-1 ring-gray-200 transition-colors hover:bg-white hover:text-blue-800 dark:bg-gray-900/60 dark:text-blue-300 dark:ring-gray-700 dark:hover:bg-gray-900"
                   title={sortDir === 'desc' ? '当前：最新在前，点击切换' : '当前：最早在前，点击切换'}
                 >
                   <span className="truncate">询价编号</span>
@@ -121,19 +137,19 @@ export function InquiryTable({
                   )}
                 </button>
               </th>
-              <th style={{ width: W.inquirer }} className="hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:table-cell">
-                <span className="whitespace-nowrap">询价人</span>
+              <th style={{ width: W.inquirer }} className={`${headerCellClass} hidden md:table-cell`}>
+                <span className="block truncate">询价人</span>
               </th>
-              <th style={{ width: W.custno }} className="hidden px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 lg:table-cell">
-                <span className="whitespace-nowrap">客户编号</span>
+              <th style={{ width: W.custno }} className={`${headerCellClass} hidden lg:table-cell`}>
+                <span className="block truncate">客户编号</span>
               </th>
-              <th style={{ width: W.desc }} className="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:px-3">
-                <span className="whitespace-nowrap">内容简述</span>
+              <th style={{ width: W.desc }} className={headerCellClass}>
+                <span className="block truncate">内容简述</span>
               </th>
-              <th style={{ width: W.status }} className="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:px-3">
-                <span className="block whitespace-nowrap truncate">询报价状态</span>
+              <th style={{ width: W.status }} className={headerCellClass}>
+                <span className="block truncate">询报价状态</span>
               </th>
-              <th style={{ width: W.del }} className="px-1 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:px-3">
+              <th style={{ width: W.del }} className={headerCellRightClass}>
                 <span className="hidden md:inline">操作</span>
               </th>
             </tr>

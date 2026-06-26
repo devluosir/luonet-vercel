@@ -16,6 +16,19 @@ export type SortField = 'orderNo' | 'deliveryDate';
 
 export type { OrderTableBreakpoint };
 
+const headerRowClass =
+  'border-b border-gray-200/80 bg-gradient-to-b from-gray-50 to-gray-100/80 ' +
+  'shadow-[inset_0_-1px_0_rgba(15,23,42,0.04)] dark:border-gray-700/80 ' +
+  'dark:from-gray-900/90 dark:to-gray-800/80';
+
+const headerCellClass =
+  'overflow-hidden border-r border-gray-200/70 px-2 py-2.5 text-left align-middle text-[11px] ' +
+  'font-semibold text-gray-600 last:border-r-0 dark:border-gray-700/70 dark:text-gray-300';
+
+const headerCellRightClass =
+  'overflow-hidden border-r border-gray-200/70 px-2 py-2.5 text-right align-middle text-[11px] ' +
+  'font-semibold text-gray-600 last:border-r-0 dark:border-gray-700/70 dark:text-gray-300';
+
 function useBreakpoint(): OrderTableBreakpoint {
   const [bp, setBp] = useState<OrderTableBreakpoint>('lg');
 
@@ -42,10 +55,10 @@ interface OrderTableProps {
 }
 
 function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: SortField; sortDir: 'asc' | 'desc' }) {
-  if (field !== sortField) return <ChevronsUpDown className="h-3 w-3 text-gray-300 dark:text-gray-600" />;
+  if (field !== sortField) return <ChevronsUpDown className="h-3 w-3 shrink-0 text-gray-300 dark:text-gray-600" />;
   return sortDir === 'asc'
-    ? <ChevronUp className="h-3 w-3" />
-    : <ChevronDown className="h-3 w-3" />;
+    ? <ChevronUp className="h-3 w-3 shrink-0" />
+    : <ChevronDown className="h-3 w-3 shrink-0" />;
 }
 
 export function OrderTable({ records, isAdmin, sortField, sortDir, onSortToggle, onUpdate }: OrderTableProps) {
@@ -55,14 +68,23 @@ export function OrderTable({ records, isAdmin, sortField, sortDir, onSortToggle,
   const lgCols = showLgCols(bp);
   const adminCols = showAdminCols(bp, isAdmin);
 
-  const thSort = (field: SortField, label: string, shortLabel?: string) => (
-    <button type="button" onClick={() => onSortToggle(field)}
-      className="inline-flex max-w-full items-center gap-0.5 whitespace-nowrap text-[11px] font-semibold text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-    >
-      <span className="truncate">{bp === 'sm' && shortLabel ? shortLabel : label}</span>
-      <SortIcon field={field} sortField={sortField} sortDir={sortDir} />
-    </button>
-  );
+  const thSort = (field: SortField, label: string, shortLabel?: string) => {
+    const active = field === sortField;
+    return (
+      <button
+        type="button"
+        onClick={() => onSortToggle(field)}
+        className={`inline-flex h-6 max-w-full items-center gap-1 whitespace-nowrap rounded-md px-1.5 text-[11px] font-semibold transition-colors ${
+          active
+            ? 'bg-white/80 text-blue-700 shadow-sm ring-1 ring-gray-200 hover:bg-white hover:text-blue-800 dark:bg-gray-900/60 dark:text-blue-300 dark:ring-gray-700 dark:hover:bg-gray-900'
+            : 'text-gray-600 hover:bg-white/70 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/60 dark:hover:text-gray-100'
+        }`}
+      >
+        <span className="truncate">{bp === 'sm' && shortLabel ? shortLabel : label}</span>
+        <SortIcon field={field} sortField={sortField} sortDir={sortDir} />
+      </button>
+    );
+  };
 
   if (records.length === 0) {
     return (
@@ -84,46 +106,46 @@ export function OrderTable({ records, isAdmin, sortField, sortDir, onSortToggle,
           ))}
         </colgroup>
         <thead>
-          <tr className="border-b border-gray-100 dark:border-gray-800">
-            <th className="overflow-hidden px-2 py-2 text-left sm:px-3">
+          <tr className={headerRowClass}>
+            <th className={`${headerCellClass} sm:px-3`}>
               {thSort('orderNo', '订单编号', '编号')}
             </th>
-            <th className="overflow-hidden px-1.5 py-2 text-left sm:px-2">
+            <th className={`${headerCellClass} px-1.5 sm:px-2`}>
               {thSort('deliveryDate', '交货')}
             </th>
             {customerCol && (
-              <th className="overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-                <span className="whitespace-nowrap">客户</span>
+              <th className={headerCellClass}>
+                <span className="block truncate">客户</span>
               </th>
             )}
-            <th className="overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-              <span className="whitespace-nowrap">内容简述</span>
+            <th className={headerCellClass}>
+              <span className="block truncate">内容简述</span>
             </th>
             {lgCols && (
               <>
-                <th className="overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-                  <span className="whitespace-nowrap">确认日</span>
+                <th className={headerCellClass}>
+                  <span className="block truncate">确认日</span>
                 </th>
-                <th className="overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-                  <span className="whitespace-nowrap">客户订单号</span>
+                <th className={headerCellClass}>
+                  <span className="block truncate">客户订单号</span>
                 </th>
               </>
             )}
-            <th className="overflow-hidden px-1.5 py-2 text-left sm:px-2">
-              <span className="block truncate text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+            <th className={`${headerCellClass} px-1.5 sm:px-2`}>
+              <span className="block truncate">
                 {bp === 'sm' ? '执行' : '执行情况'}
               </span>
             </th>
             {adminCols && (
               <>
-                <th className="overflow-hidden px-2 py-2 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-                  <span className="whitespace-nowrap">金额</span>
+                <th className={headerCellRightClass}>
+                  <span className="block truncate">金额</span>
                 </th>
-                <th className="overflow-hidden px-2 py-2 text-left text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-                  <span className="whitespace-nowrap">回款</span>
+                <th className={headerCellClass}>
+                  <span className="block truncate">回款</span>
                 </th>
-                <th className="overflow-hidden px-2 py-2 text-right text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-                  <span className="whitespace-nowrap">到账金额</span>
+                <th className={headerCellRightClass}>
+                  <span className="block truncate">到账金额</span>
                 </th>
               </>
             )}
