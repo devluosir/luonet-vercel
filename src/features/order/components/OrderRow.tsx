@@ -13,10 +13,23 @@ import {
 
 // ── 行文字颜色 ────────────────────────────────────────────────────────────────
 
+function getRowBgClass(record: InquiryRecord): string {
+  if (record.orderSubStatus === 'cancelled') {
+    return 'bg-gray-50 hover:bg-gray-100/70 dark:bg-gray-800/50 dark:hover:bg-gray-800/70';
+  }
+  if (record.orderSubStatus === 'suspended') {
+    return 'bg-green-50/70 hover:bg-green-100/70 dark:bg-green-950/20 dark:hover:bg-green-950/35';
+  }
+  if (record.orderSubStatus === 'followup') {
+    return 'bg-red-50/70 hover:bg-red-100/70 dark:bg-red-950/20 dark:hover:bg-red-950/35';
+  }
+  return 'hover:bg-gray-50/70 dark:hover:bg-gray-800/30';
+}
+
 function getRowTextClass(record: InquiryRecord): string {
   const status = record.orderDeliveryStatus?.trim() ?? '';
-  if (status === '备货') return 'text-pink-500 dark:text-pink-400';
-  if (status === '交货') return 'text-blue-600 dark:text-blue-400';
+  if (!status || status.startsWith('备货')) return 'text-pink-500 dark:text-pink-400';
+  if (status.startsWith('交货')) return 'text-blue-600 dark:text-blue-400';
   if (status.startsWith('发票')) return 'text-gray-900 dark:text-gray-100';
   return 'text-gray-700 dark:text-gray-300';
 }
@@ -485,7 +498,7 @@ export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
   };
 
   return (
-    <tr className="group border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/30">
+    <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getRowBgClass(record)}`}>
 
       {/* 订单编号 + 询价编号 */}
       <td className="max-w-0 overflow-hidden px-2 py-2 sm:px-3">
