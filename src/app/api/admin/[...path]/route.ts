@@ -22,6 +22,15 @@ async function proxyAdmin(request: NextRequest, pathSegments: string[]): Promise
     return NextResponse.json({ error: '需要管理员权限' }, { status: 403 });
   }
 
+  if (
+    request.method === 'DELETE' &&
+    pathSegments[0] === 'users' &&
+    pathSegments.length === 2 &&
+    pathSegments[1] === session.user.id
+  ) {
+    return NextResponse.json({ error: '不能删除当前登录用户' }, { status: 400 });
+  }
+
   const url = new URL(request.url);
   const workerUrl = `${WORKER_BASE}/api/admin/${pathSegments.join('/')}${url.search}`;
   const body =

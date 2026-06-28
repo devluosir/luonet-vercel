@@ -16,7 +16,7 @@ export default function AdminPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { user, handleLogout } = useAppUser();
-  const { users, loading, error, fetchUsers, updateUserPermissions, clearError } = useUsers();
+  const { users, loading, error, fetchUsers, updateUserPermissions, deleteUser, clearError } = useUsers();
 
   const [ready, setReady] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -36,6 +36,18 @@ export default function AdminPage() {
       await updateUserPermissions(userId, permissions, isAdm, isAct);
     },
     [updateUserPermissions]
+  );
+
+  const handleDelete = useCallback(
+    async (targetUser: User) => {
+      if (targetUser.id === session?.user?.id) {
+        throw new Error('不能删除当前登录用户');
+      }
+
+      await deleteUser(targetUser.id);
+      setSelectedUser(null);
+    },
+    [deleteUser, session?.user?.id]
   );
 
   // ── 加载 / 鉴权 早返回 ──────────────────────────────
@@ -133,6 +145,8 @@ export default function AdminPage() {
         isOpen={selectedUser !== null}
         onClose={() => setSelectedUser(null)}
         onSave={handleSave}
+        onDelete={handleDelete}
+        currentUserId={session?.user?.id}
       />
     </AppLayout>
   );

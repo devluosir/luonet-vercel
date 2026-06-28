@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { User, Permission } from '../types';
+import { User, Permission, UpdateUserData } from '../types';
 import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
 
 export function useUsers() {
@@ -39,7 +39,7 @@ export function useUsers() {
       
       // 如果提供了用户状态信息，也更新用户状态
       if (isAdmin !== undefined || isActive !== undefined) {
-        const userUpdates: any = {};
+        const userUpdates: UpdateUserData = {};
         if (isAdmin !== undefined) userUpdates.isAdmin = isAdmin;
         if (isActive !== undefined) userUpdates.status = isActive;
         
@@ -57,6 +57,24 @@ export function useUsers() {
     }
   }, [fetchUsers]);
 
+  // 删除用户
+  const deleteUser = useCallback(async (userId: string) => {
+    try {
+      setError(null);
+
+      await apiRequestWithError(API_ENDPOINTS.USERS.DELETE(userId), {
+        method: 'DELETE'
+      });
+
+      await fetchUsers();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '删除用户失败';
+      setError(message);
+      console.error('删除用户失败:', error);
+      throw new Error(message);
+    }
+  }, [fetchUsers]);
+
   // 清除错误
   const clearError = useCallback(() => {
     setError(null);
@@ -68,6 +86,7 @@ export function useUsers() {
     error,
     fetchUsers,
     updateUserPermissions,
+    deleteUser,
     clearError
   };
 }

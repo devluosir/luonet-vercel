@@ -6,6 +6,7 @@ interface PermissionToggleProps {
   icon: string;
   isEnabled: boolean;
   onToggle: (moduleId: string) => void;
+  disabled?: boolean;
 }
 
 export const PermissionToggle = memo(function PermissionToggle({
@@ -13,7 +14,8 @@ export const PermissionToggle = memo(function PermissionToggle({
   name,
   icon,
   isEnabled,
-  onToggle
+  onToggle,
+  disabled = false
 }: PermissionToggleProps) {
   return (
     <div className="flex items-center justify-between p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-300 dark:hover:border-gray-600 transition-colors min-h-[55px] sm:min-h-[60px]">
@@ -24,7 +26,8 @@ export const PermissionToggle = memo(function PermissionToggle({
       <button
         type="button"
         onClick={() => onToggle(moduleId)}
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex-shrink-0 ${
+        disabled={disabled}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex-shrink-0 disabled:opacity-50 ${
           isEnabled 
             ? 'bg-blue-600' 
             : 'bg-gray-200 dark:bg-gray-700'

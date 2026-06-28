@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, RotateCcw, Save, Shield, Power } from 'lucide-react';
+import { X, RotateCcw, Save, Shield, Power, Trash2 } from 'lucide-react';
 import type { User as UserType, Permission } from '../types';
 import { usePermissions, MODULE_PERMISSIONS } from '../hooks/usePermissions';
 import { PermissionToggle } from './PermissionToggle';
@@ -11,6 +11,8 @@ interface UserDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (userId: string, permissions: Permission[], isAdmin: boolean, isActive: boolean) => Promise<void>;
+  onDelete: (user: UserType) => Promise<void>;
+  currentUserId?: string;
 }
 
 /** 小型开关按钮 */
@@ -39,8 +41,9 @@ function fmtDate(iso: string) {
   });
 }
 
-export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailModalProps) {
+export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, currentUserId }: UserDetailModalProps) {
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -70,6 +73,23 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
     }
   };
 
+  const handleDelete = async () => {
+    if (!user) return;
+
+    const confirmed = window.confirm(`确定要删除用户「${user.username}」吗？此操作无法撤销。`);
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setError(null);
+    try {
+      await onDelete(user);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '删除失败，请重试');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleReset = () => {
     if (!user) return;
     resetPermissions();
@@ -79,6 +99,8 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
   if (!isOpen || !user) return null;
 
   const initial = user.username.charAt(0).toUpperCase();
+  const isCurrentUser = currentUserId === user.id;
+  const isBusy = saving || deleting;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
@@ -99,7 +121,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
           </div>
           <button
             onClick={onClose}
-            disabled={saving}
+            disabled={isBusy}
             className="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200"
           >
             <X className="h-4 w-4" />
@@ -131,7 +153,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
                     <p className="text-[10px] text-gray-400 dark:text-gray-500">{isAdmin ? '是' : '否'}</p>
                   </div>
                 </div>
-                <Toggle on={isAdmin} onChange={toggleAdmin} color="bg-blue-600" disabled={saving} />
+                <Toggle on={isAdmin} onChange={toggleAdmin} color="bg-blue-600" disabled={isBusy} />
               </div>
 
               {/* 账户状态开关 */}
@@ -143,7 +165,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
                     <p className="text-[10px] text-gray-400 dark:text-gray-500">{isActive ? '启用' : '禁用'}</p>
                   </div>
                 </div>
-                <Toggle on={isActive} onChange={toggleActive} color="bg-green-600" disabled={saving} />
+                <Toggle on={isActive} onChange={toggleActive} color="bg-green-600" disabled={isBusy} />
               </div>
             </div>
           </section>
@@ -176,6 +198,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
                     icon={module.icon}
                     isEnabled={perm?.canAccess ?? false}
                     onToggle={togglePermission}
+                    disabled={isBusy}
                   />
                 );
               })}
@@ -184,31 +207,46 @@ export function UserDetailModal({ user, isOpen, onClose, onSave }: UserDetailMod
         </div>
 
         {/* ── 底部操作 ── */}
-        <div className="flex shrink-0 justify-end gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-gray-100 px-4 py-3 dark:border-gray-700">
           <button
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-lg border border-gray-200 px-4 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            onClick={handleDelete}
+            disabled={isBusy || isCurrentUser}
+            title={isCurrentUser ? '不能删除当前登录用户' : '删除用户'}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-900/20"
           >
-            取消
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !hasChanges}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? (
-              <>
-                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                保存中…
-              </>
+            {deleting ? (
+              <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-300/40 border-t-red-600 dark:border-red-400/30 dark:border-t-red-400" />
             ) : (
-              <>
-                <Save className="h-3.5 w-3.5" />
-                保存
-              </>
+              <Trash2 className="h-3.5 w-3.5" />
             )}
+            {deleting ? '删除中…' : '删除用户'}
           </button>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              onClick={onClose}
+              disabled={isBusy}
+              className="rounded-lg border border-gray-200 px-4 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isBusy || !hasChanges}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {saving ? (
+                <>
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  保存中…
+                </>
+              ) : (
+                <>
+                  <Save className="h-3.5 w-3.5" />
+                  保存
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
