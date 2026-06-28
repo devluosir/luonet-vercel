@@ -76,7 +76,7 @@ export const NAV_ITEMS: SidebarItem[] = [
   { id: 'clock',        label: '世界时钟', path: '/clock',                   icon: Clock },
   { id: 'holidays',     label: '全球假日', path: '/holidays',                icon: CalendarDays },
   { id: 'rmb',          label: 'RMB大写',  path: '/rmb',                     icon: Banknote },
-  { id: 'mail',         label: 'AI 邮件',  path: '/mail',                    icon: Mail },
+  { id: 'mail',         label: 'AI 邮件',  path: '/mail',                    icon: Mail,      permissionKey: 'canUseAiEmail' },
 ];
 
 /** 分组配置 */
@@ -118,6 +118,7 @@ const PERMISSION_MODULE_MAP: Record<string, string> = {
   canViewInquiry:       'inquiry',
   canViewHistory:       'history',
   canManageCustomers:   'customer',
+  canUseAiEmail:        'ai-email',
 };
 
 // ── 辅助函数 ──────────────────────────────────────────────────────────────────
