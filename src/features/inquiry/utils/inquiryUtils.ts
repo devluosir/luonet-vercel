@@ -130,7 +130,7 @@ export function roundDateBrackets(date: string): string {
 
 export function getRecordColorState(record: InquiryRecord): InquiryColorClass {
   if (record.quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed')) return 'text-gray-400';
-  if (record.quotedStatuses.some((s) => s.type === 'quoted')) return 'text-blue-600';
+  if (record.quotedStatuses.some((s) => !s.type || s.type === 'quoted')) return 'text-blue-600';
   return 'text-pink-500';
 }
 
