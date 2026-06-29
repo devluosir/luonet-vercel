@@ -126,7 +126,7 @@ export function useInquiryFilter(records: InquiryRecord[]) {
               (s) => !s.status || s.status === 'pending'
             );
           case 'customer_pending':
-            return record.quotedStatuses.length === 0;
+            return record.quotedStatuses.every((s) => s.type === 'supplemented');
           case 'customer_quoted':
             return (
               !record.quotedStatuses.some(
