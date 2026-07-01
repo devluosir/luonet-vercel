@@ -11502,3 +11502,107 @@ npm run build
 - 供应商/收货人现在点进去能看到详情页（联络人列表 + 使用次数），不再是死链接或者无反应
 - 客户详情页：地址长文本能正常换行显示；联络人列表里每个人各自的电话/邮箱都能看到、可点击拨打/发邮件；主联络人有"主"标签
 - 一个"询价0·订单0"的客户详情页能看到"暂无关联数据"的提示文字，不是干巴巴几个 0
+
+---
+
+## TASK-65：简化询报价"新增询价"里的客户/联络人选择器，修复"新建客户"提示干扰输入的问题
+
+**背景（Roger 反馈，附截图）**："新建询价时那个新建客户的提示会干扰输入，在这一步要更简洁，只显示可选择的简称公司及简称联系人就可以"。
+
+**根因排查（已定位，不是玄学）**：`InquiryFormModal.tsx` 现在是"搜索框选客户 → 再从一个单独的 `<select>` 里选联络人"两级选择器。选中客户后，`customerSearch` 会被设成 `getCustomerDisplay(customer)` 的组合展示串（形如 `"IC · INDIAN CHAIN PRIVATE LIMITED"`）。问题是：一旦这个组合串重新触发下拉（比如用户又点回搜索框想确认一下），`filteredCustomers` 的过滤逻辑是拿这个**组合串整体**去匹配 `customer.name`/`shortName`/`code`（都是单独的短字符串），组合串必然比这三者都长，`includes()` 恒为 `false`——于是 `filteredCustomers` 变空，`canCreateCustomer`（判断"没有精确匹配"）恒为 `true`，下拉框里就只剩一个"新建客户：IC · INDIAN CHAIN PRIVATE LIMITED"的选项，即便这个客户明明已经存在。这正是截图里"INDIAN CHAIN PRIVATE LIMITED"这个客户明明在库里、却只弹出"新建客户"的原因。
+
+**这次要改的两件事**：
+
+### 改动 1：客户+联络人合并成一个扁平的"简称-联系人简称"选择列表，去掉两级选择
+
+新建一个共享组件 `src/features/customer/components/CustomerContactPicker.tsx`（后面 TASK-66 的批量关联工具也会复用它，别写死在 `InquiryFormModal.tsx` 里）：
+
+```ts
+interface CustomerContactOption {
+  customerId: string;
+  contactId: string;
+  customer: Customer;
+  contact: Contact;
+  label: string; // 例如 "Indian Chain-Prateek"，客户简称(或全称)-联络人简称(或姓名)
+}
+
+interface CustomerContactPickerProps {
+  customers: Customer[];           // 由外部（已 fetchAllCustomers）传入，picker 本身不发请求
+  value: { customerId: string; contactId: string } | null;
+  onSelect: (option: CustomerContactOption) => void;
+  onCreateNew?: (query: string) => void; // 不传则不显示"新建客户"入口（TASK-66 的批量关联弹窗就不传）
+  placeholder?: string;
+  autoFocus?: boolean;
+}
+```
+
+- 内部把 `customers` 展开成扁平 `options`：每个客户的**每个联络人**各生成一条 `option`（一个客户有 3 个联络人就是 3 条可选行），`label = ${customer.shortName || customer.name}-${contact.shortName || contact.name}`。
+- 搜索框维护一个 `query` 状态（用户实际敲的字）。过滤规则：`option.label` 或 `customer.name`/`shortName`/`code` 或 `contact.name`/`shortName` 里**任意一个**包含 `query`（忽略大小写），命中即展示，最多展示 20 条。
+- **修复干扰 bug 的关键**：用一个 `committedLabelRef` 记录"上次选中后设置进输入框的 label"。搜索框 `onFocus` 时：如果当前 `query === committedLabelRef.current`（即用户没有在选中后又手动改过字），把用于过滤的"有效查询词"当作空字符串处理（展示全部/前20条），而不是拿组合串去过滤出空列表——这样重新点回一个已选中的框，看到的是"当前选中项 + 其他可选项"的正常列表，不会跳出"新建客户"。用户一旦开始真正输入新字符（`onChange` 里 `query` 变化），才切回正常按输入过滤，并清空 `value`（未确认选中状态）。
+- 下拉每行展示 `label`（主文案）+ 客户全称（小字灰色辅助，方便区分简称相同但公司不同的情况）。点击即 `onSelect(option)`，同时更新 `committedLabelRef.current = option.label`。
+- "新建客户"入口：只有传了 `onCreateNew` 且 `query` 非空且 `options` 过滤结果为空时才显示，样式改得低调（小字灰色/次要色，放在列表最下方、加一条分割线，不要用醒目的蓝色大按钮——现在这个按钮太显眼，是"干扰感"的一部分），文案 `新建客户：${query}`，点击回调 `onCreateNew(query)` 交给外部处理（不在 picker 内部直接创建）。
+
+### 改动 2：`InquiryFormModal.tsx` 接入新 picker，去掉旧的两级选择器
+
+- 删除现在的搜索框 + `<select>` 选联络人 两段 UI，换成一个 `<CustomerContactPicker>`。
+- `onSelect` 里：设置 `customerId`/`contactId`/`customerNo`（复用现有 `buildCustomerNo`）/`inquirer`（复用现有 `buildInquirer`），逻辑和现在 `selectCustomer`+`selectContact` 加起来的效果一致。
+- `onCreateNew` 回调：不要再像现在 `createInlineCustomer()` 那样直接拿整个搜索文本同时当公司名和联络人简称用（这在组合串污染的情况下会创建出名字很怪的垃圾客户）。改成弹出一个轻量小表单（可以是同一个弹窗内联展开一小块，不用开新的 Modal 组件）：两个输入框——"公司简称/名称"（默认值 = 传入的 `query`，可编辑）、"联络人姓名"（默认空，placeholder"主联络人"）。确认后调用 `customerService.saveCustomerProfile(...)` 创建，创建成功后用返回的客户直接走一遍 `onSelect` 逻辑选中它。
+- 保留现有对老记录（编辑模式下 `record.customerId` 为空）的兼容：没有 `customerId` 时 picker 的 `value` 传 `null`，搜索框留空即可，不强制要求编辑老记录时必须重新选择。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 新增询价时，搜索客户能只输入联络人简称、客户简称、客户全称片段中的任意一个片段都能命中；选中已存在客户后，再次点回搜索框不会跳出"新建客户"提示（除非真的输入库里不存在的新内容）
+- 一个客户有多个联络人时，下拉里能直接看到"简称-各联络人简称"的多条独立可选行，不需要选完客户再单独选联络人
+- "新建客户"只在真的搜不到匹配时出现，视觉上是列表末尾的次要入口，不是原来那种抢眼的蓝色按钮
+- 新建客户走的是"公司简称+联络人姓名"两个字段的小表单，不会把搜索框里的怪异组合字符串当成新公司名
+
+---
+
+## TASK-66：询报价登记表支持"批量关联客户"，处理历史未关联记录
+
+**背景**：TASK-63 的一次性回填脚本对生产 692 条历史询价记录全部匹配失败（历史 `customerNo`/`inquirer` 文本和客户库的简称/编号对不上）。现有"待关联客户"筛选（`linkStatus: 'unlinked'`）能筛出这些记录，但目前没有任何批量处理手段，只能一条条打开编辑弹窗手动改，692 条太慢。Roger 要求：询报价登记表里支持批量关联客户。
+
+**方案**：复用 `InquiryPage.tsx` 里已有的"批量选择"基础设施（`isEditMode`/`selectedIds`/`handleToggleSelectAll`，TASK-57B 加的），在批量操作菜单里新增一个"批量关联客户"动作。
+
+### 改动 1：新增 `BatchLinkCustomerModal.tsx`（`src/features/inquiry/components/`）
+
+```ts
+interface BatchLinkCustomerModalProps {
+  isOpen: boolean;
+  count: number;              // 选中的记录数，用于文案确认
+  onClose: () => void;
+  onConfirm: (customerId: string, contactId: string) => void;
+}
+```
+
+内部渲染 TASK-65 新建的 `<CustomerContactPicker customers={...} onSelect={...} />`（不传 `onCreateNew`——批量关联场景下客户库里没有的客户应该先去客户管理页面建好，不在这个弹窗里顺带建，保持这个弹窗简单）。顶部/底部文案："将把选中的 {count} 条询价记录关联到下方选择的客户"，选中一个选项后底部"确认关联"按钮才可点击，点击后调用 `onConfirm(customerId, contactId)` 并关闭弹窗。客户列表通过 `customerService.fetchAllCustomers('customer')` 在弹窗打开时拉取一次。
+
+### 改动 2：`InquiryPage.tsx` 接入批量关联动作
+
+- 新增 `const [isBatchLinkOpen, setIsBatchLinkOpen] = useState(false);`
+- 在批量编辑菜单（`isEditMode && selectedIds.size > 0` 那个条件块，现在只有"删除选中"和"取消选择"）里，"删除选中"上方加一个"关联客户（{selectedIds.size}）"按钮，图标用 `lucide-react` 的 `Link2`，点击 `setIsBatchLinkOpen(true)`（不要用红色系样式，避免和删除混淆，用蓝色/中性色）。
+- 新增 `handleBatchLinkCustomer = (customerId: string, contactId: string) => { Array.from(selectedIds).forEach((id) => updateRecord(id, { customerId, contactId })); setIsBatchLinkOpen(false); setSelectedIds(new Set()); alert(\`已关联 ${selectedIds.size} 条记录\`); }`——注意 `updateRecord` 是 `useInquiryStore` 里已有的通用方法（`updateRecord(id, patch: Partial<InquiryRecord>)`），内部已经处理了本地状态更新 + fire-and-forget 同步到 D1（`syncUpdatedRecord` → `inquiryService.updateInD1`，Worker 侧 `PUT /api/inquiry/:id` 是合并写入，不会覆盖掉记录其他字段），不需要新建 Worker 接口，直接循环调用即可。批量数量较大（几十到几百条）时这是几十到几百次并发的 fire-and-forget 请求，如果发现浏览器/Worker 有明显卡顿或报错再考虑加节流（比如分批 `await` 20 条一组），第一版先直接循环，能跑通即可。
+- 渲染 `<BatchLinkCustomerModal isOpen={isBatchLinkOpen} count={selectedIds.size} onClose={() => setIsBatchLinkOpen(false)} onConfirm={handleBatchLinkCustomer} />`。
+
+### 改动 3（确认现状，不需要改代码）
+
+`InquiryTable.tsx` 表头已有"全选"复选框（`onToggleSelectAll?.(allIds)`，`allIds` 是当前筛选后可见的记录），配合"待关联客户"筛选，用户已经可以做到"筛出待关联记录 → 全选 → 批量关联客户"的完整流程，不需要额外加"全选筛选结果"的按钮。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 询报价登记表开启"批量选择"、勾选若干条记录后，能看到"关联客户（N）"按钮
+- 点击后弹窗内可以搜索并选中一个"简称-联络人简称"组合，确认后选中的所有记录的 `customerId`/`contactId` 被更新（客户详情页对应客户的"业务统计"询价数应相应增加）
+- 批量关联不影响这些记录原有的 `customerNo`/`inquirer`/供应商报价/客户报价等其他字段（Worker 合并写入生效，没有整条记录被覆盖丢字段）
+- 结合"待关联客户"筛选 + 表头全选，可以一次性处理一大批同名历史记录

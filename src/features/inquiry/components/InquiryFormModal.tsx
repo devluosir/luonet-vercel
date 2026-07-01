@@ -1,7 +1,11 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Search, UserRound, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, UserRound, X } from 'lucide-react';
+import {
+  CustomerContactPicker,
+  type CustomerContactOption,
+} from '@/features/customer/components/CustomerContactPicker';
 import type { Contact, Customer } from '@/features/customer/types';
 import { customerService, getPrimaryContact } from '@/features/customer/services/customerService';
 import type {
@@ -43,10 +47,6 @@ const FIELD_CLS =
 
 const LABEL_CLS = 'block text-xs font-medium text-gray-400 dark:text-gray-500';
 
-function getCustomerDisplay(customer: Customer): string {
-  return customer.shortName ? `${customer.shortName} · ${customer.name}` : customer.name;
-}
-
 function buildCustomerNo(customer: Customer): string {
   return customer.code || customer.shortName || customer.name;
 }
@@ -82,10 +82,11 @@ export function InquiryFormModal({
   const [customerNo, setCustomerNo] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [contactId, setContactId] = useState('');
-  const [customerSearch, setCustomerSearch] = useState('');
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [showCustomerOptions, setShowCustomerOptions] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [createCustomerQuery, setCreateCustomerQuery] = useState('');
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newContactName, setNewContactName] = useState('');
   const [description, setDescription] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [orderSubStatus, setOrderSubStatus] = useState<OrderSubStatus | undefined>(undefined);
@@ -103,35 +104,6 @@ export function InquiryFormModal({
         .map((item) => item.inquiryNo),
     [existingRecords, record?.id]
   );
-
-  const selectedCustomer = useMemo(
-    () => customers.find((customer) => customer.id === customerId) ?? null,
-    [customerId, customers]
-  );
-  const selectedContact = useMemo(
-    () => selectedCustomer?.contacts.find((contact) => contact.id === contactId) ?? null,
-    [contactId, selectedCustomer]
-  );
-  const filteredCustomers = useMemo(() => {
-    const q = customerSearch.trim().toLowerCase();
-    if (!q) return customers.slice(0, 20);
-    return customers
-      .filter((customer) => {
-        return (
-          customer.name.toLowerCase().includes(q) ||
-          (customer.shortName || '').toLowerCase().includes(q) ||
-          (customer.code || '').toLowerCase().includes(q)
-        );
-      })
-      .slice(0, 20);
-  }, [customerSearch, customers]);
-  const canCreateCustomer = Boolean(customerSearch.trim()) &&
-    !customers.some((customer) => {
-      const q = customerSearch.trim().toLowerCase();
-      return customer.name.toLowerCase() === q ||
-        (customer.shortName || '').toLowerCase() === q ||
-        (customer.code || '').toLowerCase() === q;
-    });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -151,7 +123,9 @@ export function InquiryFormModal({
     setCustomerNo(record?.customerNo ?? '');
     setCustomerId(record?.customerId ?? '');
     setContactId(record?.contactId ?? '');
-    setCustomerSearch(record?.customerNo ?? '');
+    setCreateCustomerQuery('');
+    setNewCustomerName('');
+    setNewContactName('');
     setDescription(record?.description ?? '');
     setOrderNo(record?.orderNo ?? '');
     setOrderSubStatus(record?.orderSubStatus);
@@ -178,7 +152,6 @@ export function InquiryFormModal({
         if (currentCustomer) {
           const contact = currentCustomer.contacts.find((item) => item.id === record?.contactId) ??
             getPrimaryContact(currentCustomer);
-          setCustomerSearch(getCustomerDisplay(currentCustomer));
           setCustomerNo(record?.customerNo || buildCustomerNo(currentCustomer));
           if (contact) {
             setContactId(contact.id);
@@ -239,43 +212,58 @@ export function InquiryFormModal({
     });
   };
 
-  const selectCustomer = (customer: Customer) => {
-    const contact = getPrimaryContact(customer);
-    setCustomerId(customer.id);
-    setContactId(contact?.id ?? '');
-    setCustomerSearch(getCustomerDisplay(customer));
-    setCustomerNo(buildCustomerNo(customer));
-    setInquirer(buildInquirer(customer, contact));
-    setShowCustomerOptions(false);
+  const selectCustomerContact = (option: CustomerContactOption) => {
+    setCustomerId(option.customerId);
+    setContactId(option.contactId);
+    setCustomerNo(buildCustomerNo(option.customer));
+    setInquirer(buildInquirer(option.customer, option.contact));
+    setCreateCustomerQuery('');
+    setNewCustomerName('');
+    setNewContactName('');
   };
 
-  const selectContact = (nextContactId: string) => {
-    if (!selectedCustomer) return;
-    const contact = selectedCustomer.contacts.find((item) => item.id === nextContactId);
-    setContactId(nextContactId);
-    setInquirer(buildInquirer(selectedCustomer, contact));
+  const clearCustomerContactSelection = () => {
+    setCustomerId('');
+    setContactId('');
+    setCustomerNo('');
+    setInquirer('');
+  };
+
+  const openInlineCreate = (query: string) => {
+    setCreateCustomerQuery(query);
+    setNewCustomerName(query);
+    setNewContactName('');
   };
 
   const createInlineCustomer = async () => {
-    const name = customerSearch.trim();
+    const name = newCustomerName.trim();
     if (!name) return;
 
     setIsCreatingCustomer(true);
     try {
-      const fallbackContactName = inquirer.trim().split('-').pop()?.trim() || '主联络人';
+      const contactName = newContactName.trim() || '主联络人';
       const created = await customerService.saveCustomerProfile({
         type: 'customer',
         name,
         shortName: name,
         contacts: [{
           id: `contact-${Date.now()}`,
-          name: fallbackContactName,
-          shortName: fallbackContactName,
+          name: contactName,
+          shortName: newContactName.trim() || undefined,
           isPrimary: true,
         }],
       });
       setCustomers((prev) => [created, ...prev.filter((customer) => customer.id !== created.id)]);
-      selectCustomer(created);
+      const contact = getPrimaryContact(created);
+      if (contact) {
+        selectCustomerContact({
+          customerId: created.id,
+          contactId: contact.id,
+          customer: created,
+          contact,
+          label: buildInquirer(created, contact),
+        });
+      }
     } catch (error) {
       console.error('内联新建客户失败:', error);
     } finally {
@@ -402,81 +390,61 @@ export function InquiryFormModal({
                   <UserRound className="h-3.5 w-3.5" />
                   客户与询价人
                 </span>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-                  <input
-                    value={customerSearch}
-                    onChange={(e) => {
-                      setCustomerSearch(e.target.value);
-                      setCustomerId('');
-                      setContactId('');
-                      setCustomerNo(e.target.value);
-                      setInquirer('');
-                      setShowCustomerOptions(true);
-                    }}
-                    onFocus={() => setShowCustomerOptions(true)}
-                    className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-8 pr-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                    placeholder="搜索客户全称/简称/编号"
-                    autoComplete="off"
-                    required
-                  />
-                  {showCustomerOptions && (
-                    <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
-                      {filteredCustomers.map((customer) => (
-                        <button
-                          key={customer.id}
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => selectCustomer(customer)}
-                          className="block w-full border-b border-gray-100 px-3 py-2 text-left last:border-b-0 hover:bg-blue-50 dark:border-gray-800 dark:hover:bg-blue-950/30"
-                        >
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                            {customer.name}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {[customer.shortName, customer.code].filter(Boolean).join(' · ') || '未设置简称/编号'}
-                          </div>
-                        </button>
-                      ))}
-                      {canCreateCustomer && (
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={createInlineCustomer}
-                          disabled={isCreatingCustomer}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:text-gray-400 dark:text-blue-300 dark:hover:bg-blue-950/30"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          {isCreatingCustomer ? '新建中...' : `新建客户：${customerSearch.trim()}`}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <CustomerContactPicker
+                  customers={customers}
+                  value={customerId && contactId ? { customerId, contactId } : null}
+                  onSelect={selectCustomerContact}
+                  onCreateNew={openInlineCreate}
+                  onClear={clearCustomerContactSelection}
+                  placeholder="搜索客户简称/联络人简称"
+                />
 
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  <select
-                    value={contactId}
-                    onChange={(e) => selectContact(e.target.value)}
-                    disabled={!selectedCustomer}
-                    className="h-9 rounded-lg border border-gray-200 bg-white px-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:disabled:bg-gray-800"
-                    required
-                  >
-                    <option value="">选择联络人</option>
-                    {selectedCustomer?.contacts.map((contact) => (
-                      <option key={contact.id} value={contact.id}>
-                        {contact.name}{contact.shortName ? ` (${contact.shortName})` : ''}{contact.isPrimary ? ' · 主' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    value={inquirer}
-                    readOnly
-                    className="h-9 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm font-medium text-gray-700 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-                    placeholder="选择联络人后自动生成"
-                    required
-                  />
-                </div>
+                {createCustomerQuery && (
+                  <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/60">
+                    <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                      新建客户：{createCustomerQuery}
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <input
+                        value={newCustomerName}
+                        onChange={(e) => setNewCustomerName(e.target.value)}
+                        className="h-8 rounded-lg border border-gray-200 bg-white px-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                        placeholder="公司简称/名称"
+                      />
+                      <input
+                        value={newContactName}
+                        onChange={(e) => setNewContactName(e.target.value)}
+                        className="h-8 rounded-lg border border-gray-200 bg-white px-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                        placeholder="联络人姓名（默认主联络人）"
+                      />
+                    </div>
+                    <div className="mt-2 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCreateCustomerQuery('')}
+                        className="rounded-md px-2.5 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                      >
+                        取消
+                      </button>
+                      <button
+                        type="button"
+                        onClick={createInlineCustomer}
+                        disabled={isCreatingCustomer || !newCustomerName.trim()}
+                        className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700"
+                      >
+                        {isCreatingCustomer ? '新建中...' : '确认新建'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <input
+                  value={inquirer}
+                  readOnly
+                  className="mt-2 h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm font-medium text-gray-700 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                  placeholder="选择后自动生成询价人"
+                  required
+                />
               </div>
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { Download, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
+import { Download, Link2, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AppLayout, type ActionButton } from '@/components/layout';
@@ -16,6 +16,7 @@ import { inquiryService } from '../services/inquiry.service';
 import { InquiryFilterBar } from '../components/InquiryFilterBar';
 import { InquiryFormModal } from '../components/InquiryFormModal';
 import { InquiryTable } from '../components/InquiryTable';
+import { BatchLinkCustomerModal } from '../components/BatchLinkCustomerModal';
 
 // ── Excel 辅助 ────────────────────────────────────────
 const SUPPLIER_STATUS_LABEL: Record<string, string> = {
@@ -93,6 +94,7 @@ export function InquiryPage() {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+  const [isBatchLinkOpen, setIsBatchLinkOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const isModalOpenRef = useRef(false);
@@ -221,6 +223,15 @@ export function InquiryPage() {
     Array.from(selectedIds).forEach((id) => removeRecord(id));
     setSelectedIds(new Set());
   }, [selectedIds, removeRecord]);
+
+  const handleBatchLinkCustomer = useCallback((customerId: string, contactId: string) => {
+    const ids = Array.from(selectedIds);
+    ids.forEach((id) => updateRecord(id, { customerId, contactId }));
+    setIsBatchLinkOpen(false);
+    setIsAdminMenuOpen(false);
+    setSelectedIds(new Set());
+    alert(`已关联 ${ids.length} 条记录`);
+  }, [selectedIds, updateRecord]);
 
   const handleDeleteRecord = (recordId: string) => {
     if (window.confirm('确定删除这条询报价记录吗？')) {
@@ -514,6 +525,17 @@ export function InquiryPage() {
             {isEditMode && selectedIds.size > 0 && (
               <button
                 type="button"
+                onClick={() => { setIsBatchLinkOpen(true); setIsAdminMenuOpen(false); }}
+                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+              >
+                <Link2 className="h-4 w-4 shrink-0" />
+                关联客户（{selectedIds.size}）
+              </button>
+            )}
+
+            {isEditMode && selectedIds.size > 0 && (
+              <button
+                type="button"
                 onClick={() => { handleBatchDelete(); setIsAdminMenuOpen(false); }}
                 className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
               >
@@ -544,6 +566,13 @@ export function InquiryPage() {
         existingRecords={records}
         onClose={closeModal}
         onSubmit={handleSubmit}
+      />
+
+      <BatchLinkCustomerModal
+        isOpen={isBatchLinkOpen}
+        count={selectedIds.size}
+        onClose={() => setIsBatchLinkOpen(false)}
+        onConfirm={handleBatchLinkCustomer}
       />
     </AppLayout>
   );
