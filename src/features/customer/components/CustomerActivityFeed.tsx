@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { AlertTriangle, Calendar, CheckCircle, Clock, FileText, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
-import type { InquiryRecord } from '@/features/inquiry/types';
+import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '@/features/inquiry/types';
+import { InquiryFormModal } from '@/features/inquiry/components/InquiryFormModal';
 import { getInquiryQuoteStatusBadge, type InquiryQuoteStatusBadge } from '../services/inquiryTimelineService';
 import { useCustomerFollowUp } from '../hooks/useCustomerFollowUp';
 import { useCustomerTimeline } from '../hooks/useCustomerTimeline';
@@ -82,15 +82,6 @@ function formatAmount(amount?: number, currency?: string) {
   return `${currency || 'USD'} ${amount.toLocaleString()}`;
 }
 
-function buildInquiryHref(customerId: string, customerName: string, record: InquiryRecord) {
-  const params = new URLSearchParams({
-    customerId,
-    customerName,
-    keyword: record.inquiryNo,
-  });
-  return `/inquiry?${params.toString()}`;
-}
-
 function getActivityTime(value: string) {
   const time = new Date(value).getTime();
   return Number.isFinite(time) ? time : 0;
@@ -98,8 +89,10 @@ function getActivityTime(value: string) {
 
 export function CustomerActivityFeed({ customerId, customerName }: CustomerActivityFeedProps) {
   const inquiryRecords = useInquiryStore((state) => state.records);
+  const updateRecord = useInquiryStore((state) => state.updateRecord);
   const [showCustomEventForm, setShowCustomEventForm] = useState(false);
   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
+  const [editingInquiryRecord, setEditingInquiryRecord] = useState<InquiryRecord | null>(null);
   const [followUpForm, setFollowUpForm] = useState({
     title: '',
     description: '',
@@ -234,6 +227,20 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
     if (!window.confirm(`确定删除跟进「${followUp.title}」吗？`)) return;
     const success = await deleteFollowUp(followUp.id);
     if (!success) alert('删除跟进失败');
+  };
+
+  const handleInquiryEditSubmit = (
+    values: InquiryBasicInput,
+    suppliers: SupplierQuoteStatus[],
+    quoted: CustomerQuoteStatus[]
+  ) => {
+    if (!editingInquiryRecord) return;
+    updateRecord(editingInquiryRecord.id, {
+      ...values,
+      supplierStatuses: suppliers,
+      quotedStatuses: quoted,
+    });
+    setEditingInquiryRecord(null);
   };
 
   return (
@@ -431,15 +438,15 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
                         <Calendar className="h-3.5 w-3.5" />
                         {followUp ? '到期' : '日期'}: {formatDate(activity.date)}
                       </span>
-                      {event?.documentNo && <span>询价号: {event.documentNo}</span>}
                       {event?.amount && <span>金额: {formatAmount(event.amount, event.currency)}</span>}
                       {activity.relatedInquiry && (
-                        <Link
-                          href={buildInquiryHref(customerId, customerName, activity.relatedInquiry)}
+                        <button
+                          type="button"
+                          onClick={() => setEditingInquiryRecord(activity.relatedInquiry ?? null)}
                           className="text-blue-600 hover:underline dark:text-blue-400"
                         >
-                          查看询价
-                        </Link>
+                          详情
+                        </button>
                       )}
                     </div>
                   </div>
@@ -478,6 +485,16 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
           customerName={customerName}
           onSubmit={handleAddCustomEvent}
           onCancel={() => setShowCustomEventForm(false)}
+        />
+      )}
+      {editingInquiryRecord && (
+        <InquiryFormModal
+          isOpen
+          mode="edit"
+          record={editingInquiryRecord}
+          existingRecords={inquiryRecords}
+          onClose={() => setEditingInquiryRecord(null)}
+          onSubmit={handleInquiryEditSubmit}
         />
       )}
     </div>

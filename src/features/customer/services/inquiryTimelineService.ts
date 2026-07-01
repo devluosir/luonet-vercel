@@ -33,8 +33,8 @@ export function buildInquiryTimelineEvents(
       id: `inquiry-${record.id}`,
       customerId,
       type: 'inquiry' as const,
-      title: `询价 ${record.inquiryNo}`,
-      description: record.description || `询价人：${record.inquirer}`,
+      title: record.inquiryNo,
+      description: record.description || `客户询价编号：${record.customerNo}`,
       date: getDateInputValueFromInquiryNo(record.inquiryNo) || record.inquiryDate,
       status: record.orderSubStatus === 'cancelled'
         ? 'cancelled' as const

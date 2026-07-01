@@ -12630,3 +12630,173 @@ function buildInquiryFilterHref(
 - 区块标题显示"联络人"而不是"客户与询价人"。
 - 选定联络人后，"客户简称-联系人简称"这行文字只出现一次（在 `CustomerContactPicker` 的输入框里），不再有第二个只读框重复显示同样内容。
 - `inquirer` 字段的存储、校验、提交行为完全不变。
+
+---
+
+## TASK-81：客户详情页"活动列表"里询价类活动卡片，内容重排 + "查看询价"改成就地编辑
+
+**优先级**：中
+**风险**：低到中（新增了一个嵌入式编辑弹窗，需要跑一遍完整提交链路验证）
+
+### 背景 / 根因
+
+用户截图指出客户详情页"活动列表"里，询价类卡片当前显示：
+
+```
+[询价] [未报价]
+询价 C260701F              ← 标题：其实就是"询价 " + 询价号
+询价人：IC-Sumanta          ← 无内容简述时的兜底行
+日期: 2026年7月1日  询价号: C260701F  查看询价
+```
+
+问题：
+1. 标题"询价 C260701F"和底部"询价号: C260701F"是同一个值重复显示了两遍（标题里的"询价 "前缀本来就和卡片本身的"询价"分类标签重复，此为第三次出现"询价"字样）。
+2. 没有内容简述时，兜底显示的是"询价人：{inquirer}"，用户希望改成显示"客户询价编号"（即 TASK-79 里刚改好的、客户来函上的编号 `record.customerNo`），这样更有辨识度。
+3. "查看询价"目前是个跳到 `/inquiry` 列表页并带筛选参数的链接，用户希望改成"详情"，点开后直接是这条询价记录的编辑卡片（`InquiryFormModal` 的编辑态），不用跳转页面。
+
+用户这次要的字段顺序/内容：**询价编号、【询价状态】、内容简述(无简述时显示客户询价编号)、详情(点开后是编辑卡片)**。逐条对应：
+- "询价编号" → 卡片标题只显示询价号本身，不再重复"询价"前缀。
+- "【询价状态】" → 已经有（`activity.badge`，未报价/已报价/无法报价/已成单/已辙销），不用改。
+- "内容简述(无简述时显示客户询价编号)" → 兜底文案从"询价人：xxx"改成"客户询价编号：xxx"。
+- "详情" → 原"查看询价"链接改成打开就地编辑弹窗的按钮。
+
+**已确认的技术前提**：`event?.documentNo` 这个字段（决定要不要显示"询价号: ..."那行）在当前实际运行的代码路径里，只会被询价类事件设置成 `record.inquiryNo`（`useCustomerTimeline.ts` 只拉取 `custom` 类型的手动事件 + 询价类事件，`custom` 事件由 `CustomEventForm.tsx` 创建，不会设置 `documentNo`；`autoTimelineService.ts` 里另一套"从报价单历史提取时间轴"的逻辑没有被任何地方调用，是死代码），所以删掉"询价号: ..."这行不会丢失任何当前用得到的信息。
+
+### 涉及文件
+
+- `src/features/customer/services/inquiryTimelineService.ts`
+- `src/features/customer/components/CustomerActivityFeed.tsx`
+
+### 改动一：`inquiryTimelineService.ts` 的 `buildInquiryTimelineEvents`
+
+```diff
+     .map((record) => ({
+       id: `inquiry-${record.id}`,
+       customerId,
+       type: 'inquiry' as const,
+-      title: `询价 ${record.inquiryNo}`,
+-      description: record.description || `询价人：${record.inquirer}`,
++      title: record.inquiryNo,
++      description: record.description || `客户询价编号：${record.customerNo}`,
+       date: getDateInputValueFromInquiryNo(record.inquiryNo) || record.inquiryDate,
+```
+
+### 改动二：`CustomerActivityFeed.tsx`
+
+**2a. import 部分**：删除不再需要的 `Link`，新增 `InquiryFormModal` 和询价相关类型：
+
+```diff
+-import Link from 'next/link';
+ import { AlertTriangle, Calendar, CheckCircle, Clock, FileText, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+ import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
+-import type { InquiryRecord } from '@/features/inquiry/types';
++import type { InquiryBasicInput, InquiryRecord, SupplierQuoteStatus, CustomerQuoteStatus } from '@/features/inquiry/types';
++import { InquiryFormModal } from '@/features/inquiry/components/InquiryFormModal';
+ import { getInquiryQuoteStatusBadge, type InquiryQuoteStatusBadge } from '../services/inquiryTimelineService';
+```
+
+**2b. 删除 `buildInquiryHref` 函数**（不再使用）：
+
+```diff
+-function buildInquiryHref(customerId: string, customerName: string, record: InquiryRecord) {
+-  const params = new URLSearchParams({
+-    customerId,
+-    customerName,
+-    keyword: record.inquiryNo,
+-  });
+-  return `/inquiry?${params.toString()}`;
+-}
+-
+ function getActivityTime(value: string) {
+```
+
+**2c. 组件内部：拿到 `updateRecord`，新增编辑弹窗状态和提交处理函数**（放在现有的 `inquiryRecords`/`inquiryById` 附近即可）：
+
+```diff
+ export function CustomerActivityFeed({ customerId, customerName }: CustomerActivityFeedProps) {
+   const inquiryRecords = useInquiryStore((state) => state.records);
++  const updateRecord = useInquiryStore((state) => state.updateRecord);
+   const [showCustomEventForm, setShowCustomEventForm] = useState(false);
+   const [showFollowUpForm, setShowFollowUpForm] = useState(false);
++  const [editingInquiryRecord, setEditingInquiryRecord] = useState<InquiryRecord | null>(null);
+```
+
+再在 `handleDeleteFollowUp` 后面（或任意方法定义区）加一个提交处理函数：
+
+```ts
+const handleInquiryEditSubmit = (
+  values: InquiryBasicInput,
+  suppliers: SupplierQuoteStatus[],
+  quoted: CustomerQuoteStatus[]
+) => {
+  if (!editingInquiryRecord) return;
+  updateRecord(editingInquiryRecord.id, {
+    ...values,
+    supplierStatuses: suppliers,
+    quotedStatuses: quoted,
+  });
+  setEditingInquiryRecord(null);
+};
+```
+
+（和 `InquiryPage.tsx` 里 `handleSubmit` 的编辑分支写法完全一致，复用同一个 `useInquiryStore.updateRecord`，本地更新 + 后台异步同步 D1 的行为不变。）
+
+**2d. 活动卡片底部：删除"询价号: ..."那行，把"查看询价"链接改成打开编辑弹窗的按钮**：
+
+```diff
+                     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                       <span className="inline-flex items-center gap-1">
+                         <Calendar className="h-3.5 w-3.5" />
+                         {followUp ? '到期' : '日期'}: {formatDate(activity.date)}
+                       </span>
+-                      {event?.documentNo && <span>询价号: {event.documentNo}</span>}
+                       {event?.amount && <span>金额: {formatAmount(event.amount, event.currency)}</span>}
+                       {activity.relatedInquiry && (
+-                        <Link
+-                          href={buildInquiryHref(customerId, customerName, activity.relatedInquiry)}
++                        <button
++                          type="button"
++                          onClick={() => setEditingInquiryRecord(activity.relatedInquiry ?? null)}
+                           className="text-blue-600 hover:underline dark:text-blue-400"
+                         >
+-                          查看询价
+-                        </Link>
++                          详情
++                        </button>
+                       )}
+                     </div>
+```
+
+（这个改动对"询价"类卡片和"跟进"类卡片里带 `relatedInquiry` 的都生效，两者共用同一段 JSX，行为统一：点"详情"都是就地打开这条询价记录的编辑卡片，不再跳转到询报价列表页。）
+
+**2e. 渲染 `InquiryFormModal`**：在文件末尾 `{showCustomEventForm && (<CustomEventForm .../>)}` 后面加上：
+
+```tsx
+{editingInquiryRecord && (
+  <InquiryFormModal
+    isOpen
+    mode="edit"
+    record={editingInquiryRecord}
+    existingRecords={inquiryRecords}
+    onClose={() => setEditingInquiryRecord(null)}
+    onSubmit={handleInquiryEditSubmit}
+  />
+)}
+```
+
+### 验证
+
+1. `npx tsc --noEmit` 通过。
+2. `npx eslint src/features/customer/services/inquiryTimelineService.ts src/features/customer/components/CustomerActivityFeed.tsx` 通过，确认没有遗留未使用的 `Link` 导入或 `buildInquiryHref`。
+3. 手动核对（看代码即可）：
+   - 询价类活动卡片标题只显示询价号本身（比如"C260701F"），不再是"询价 C260701F"。
+   - 有内容简述的记录（比如"40mm横档"）显示不变；没有内容简述的记录，兜底显示"客户询价编号：xxx"而不是"询价人：xxx"。
+   - 卡片底部不再有单独一行"询价号: ..."。
+   - 点"详情"按钮，弹出的是这条询价记录的编辑卡片（`InquiryFormModal` 编辑态，字段都是这条记录已保存的值），不会跳转到 `/inquiry` 页面。
+   - 在弹窗里修改并保存，活动列表里对应卡片的标题/简述/状态徽章能反映修改后的内容（因为走的是同一个 `useInquiryStore.updateRecord`，数据是共享的）。
+   - 关联了询价记录的跟进（followup）卡片，"详情"按钮同样能弹出对应询价记录的编辑卡片。
+
+### 验收标准
+
+- 询价类活动卡片信息结构为：分类/状态徽章 → 询价编号（标题）→ 内容简述或客户询价编号（兜底）→ 日期 + 详情按钮，不再有重复的"询价号"展示。
+- "详情"点击后就地弹出编辑卡片而不是跳转页面，编辑保存后数据通过 `useInquiryStore.updateRecord` 正确落地，和询报价登记表页面编辑同一条记录的效果一致。
