@@ -1424,15 +1424,17 @@ async function handleInquiryRequest(
       const id = itemMatch[1];
       const body = await request.json() as InquiryRecordPayload;
       const now = new Date().toISOString();
-      const inquiryNo = typeof body.inquiryNo === 'string' ? body.inquiryNo : '';
-      const customerNo = typeof body.customerNo === 'string' ? body.customerNo : '';
-      const data = JSON.stringify({ ...body, id, updatedAt: now });
 
       // 保留原始创建时间；若记录不在 D1 则自动新建（upsert）
       const existingRow = await env.USERS_DB.prepare(
-        `SELECT created_at FROM Document WHERE id = ? AND type = 'inquiry'`
-      ).bind(id).first<{ created_at: string }>();
+        `SELECT created_at, data FROM Document WHERE id = ? AND type = 'inquiry'`
+      ).bind(id).first<{ created_at: string; data: string | null }>();
       const createdAt = existingRow?.created_at ?? now;
+      const existingData = parseJsonData<InquiryRecordPayload>(existingRow?.data ?? null, {});
+      const mergedData = { ...existingData, ...body, id, updatedAt: now };
+      const inquiryNo = typeof mergedData.inquiryNo === 'string' ? mergedData.inquiryNo : '';
+      const customerNo = typeof mergedData.customerNo === 'string' ? mergedData.customerNo : '';
+      const data = JSON.stringify(mergedData);
 
       await env.USERS_DB.prepare(`
         INSERT OR REPLACE INTO Document

@@ -470,14 +470,14 @@ function OrderNoText({ record, textClassName }: { record: InquiryRecord; textCla
 interface OrderRowProps {
   record: InquiryRecord;
   bp: OrderTableBreakpoint;
-  isAdmin: boolean;
+  canViewFinancials: boolean;
   onUpdate: (patch: Partial<InquiryRecord>) => void;
 }
 
-export function OrderRow({ record, bp, isAdmin, onUpdate }: OrderRowProps) {
+export function OrderRow({ record, bp, canViewFinancials, onUpdate }: OrderRowProps) {
   const customerCol = showCustomerCol(bp);
   const lgCols = showLgCols(bp);
-  const adminCols = showAdminCols(bp, isAdmin);
+  const adminCols = showAdminCols(bp, canViewFinancials);
   const [activeField, setActiveField] = useState<EditField>(null);
   const activate = (f: EditField) => setActiveField(f);
   const cancel = () => setActiveField(null);

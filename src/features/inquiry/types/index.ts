@@ -42,11 +42,11 @@ export interface InquiryRecord {
   orderCustomerNo?: string;
   /** 交货执行情况，自由文本 */
   orderDeliveryStatus?: string;
-  /** 订单金额（管理员可见），含币种符号自由录入，如 ¥120000 / $15000 */
+  /** 订单金额（需要 order.financials 权限），含币种符号自由录入，如 ¥120000 / $15000 */
   orderAmount?: string;
-  /** 回款月份，m 或 m.D 格式（管理员可见） */
+  /** 回款月份，m 或 m.D 格式（需要 order.financials 权限） */
   orderPaymentDate?: string;
-  /** 到账金额（管理员可见），含币种符号，如 ¥120000 / $15000 */
+  /** 到账金额（需要 order.financials 权限），含币种符号，如 ¥120000 / $15000 */
   orderReceivedAmount?: string;
   // ─────────────────────────────────────────────────────────────────────
 

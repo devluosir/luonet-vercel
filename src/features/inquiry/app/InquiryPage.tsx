@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AppLayout, type ActionButton } from '@/components/layout';
 import { useAppUser } from '@/hooks/useAppUser';
+import { usePermissionStore } from '@/lib/permissions';
 import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '../types';
 import { useInquiryActions } from '../hooks/useInquiryActions';
 import { useInquiryFilter } from '../hooks/useInquiryFilter';
@@ -96,6 +97,7 @@ export function InquiryPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const isModalOpenRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasBatchEditPermission = usePermissionStore((state) => state.hasPermission('inquiry.batchEdit'));
 
   const hasInquiryAccess = useMemo(() => {
     if (!session?.user) return false;
@@ -104,8 +106,6 @@ export function InquiryPage() {
       (permission) => permission.moduleId === 'inquiry' && permission.canAccess
     );
   }, [session]);
-
-  const isAdmin = session?.user?.isAdmin ?? false;
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -349,7 +349,7 @@ export function InquiryPage() {
   }, []);
 
   const bottomActions = useMemo<ActionButton[]>(() => {
-    if (!isAdmin) return [];
+    if (!hasBatchEditPermission) return [];
     return [
       {
         key: 'admin-menu',
@@ -359,7 +359,7 @@ export function InquiryPage() {
         icon: Pencil,
       },
     ];
-  }, [isAdmin, isAdminMenuOpen, isEditMode]);
+  }, [hasBatchEditPermission, isAdminMenuOpen, isEditMode]);
 
 
   if (!permissionChecked || status === 'loading') {
@@ -403,8 +403,8 @@ export function InquiryPage() {
         </span>
       ) : undefined}
     >
-      {/* 隐藏的文件选择框（仅管理员导入用） */}
-      {isAdmin && (
+      {/* 隐藏的文件选择框（批量编辑权限导入用） */}
+      {hasBatchEditPermission && (
         <input
           ref={fileInputRef}
           type="file"
@@ -455,15 +455,15 @@ export function InquiryPage() {
               ? '尝试调整筛选条件，或点击"重置筛选"查看全部。'
               : '点击"新增询价"后，会在这里登记供应商询价和客户报价状态。'
           }
-          isAdmin={isAdmin && isEditMode}
+          canBatchEdit={hasBatchEditPermission && isEditMode}
           selectedIds={selectedIds}
           onToggleSelect={handleToggleSelect}
           onToggleSelectAll={handleToggleSelectAll}
         />
       </div>
 
-      {/* ── 管理员批量编辑菜单 ── */}
-      {isAdmin && isAdminMenuOpen && (
+      {/* ── 批量编辑菜单 ── */}
+      {hasBatchEditPermission && isAdminMenuOpen && (
         <>
           {/* 点击遮罩关闭 */}
           <div

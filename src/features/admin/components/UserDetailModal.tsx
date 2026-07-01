@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { X, RotateCcw, Save, Shield, Power, Trash2 } from 'lucide-react';
+import { PERMISSION_MODULES } from '@/constants/permissionModules';
 import type { User as UserType, Permission } from '../types';
-import { usePermissions, MODULE_PERMISSIONS } from '../hooks/usePermissions';
+import { usePermissions } from '../hooks/usePermissions';
 import { PermissionToggle } from './PermissionToggle';
 
 interface UserDetailModalProps {
@@ -187,19 +188,41 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {MODULE_PERMISSIONS.map((module) => {
-                const perm = permissions.find((p) => p.moduleId === module.id);
+            {isAdmin && (
+              <p className="mb-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
+                管理员默认拥有全部模块权限，以下开关仅对普通用户生效
+              </p>
+            )}
+            <div className="grid grid-cols-1 gap-2">
+              {PERMISSION_MODULES.map((module) => {
+                const perm = permissions.find((p) => p.moduleId === module.moduleId);
+                const parentEnabled = perm?.canAccess ?? false;
                 return (
-                  <PermissionToggle
-                    key={module.id}
-                    moduleId={module.id}
-                    name={module.name}
-                    icon={module.icon}
-                    isEnabled={perm?.canAccess ?? false}
-                    onToggle={togglePermission}
-                    disabled={isBusy}
-                  />
+                  <div key={module.moduleId} className="rounded-lg border border-gray-200 p-1.5 dark:border-gray-700">
+                    <PermissionToggle
+                      moduleId={module.moduleId}
+                      name={module.label}
+                      icon={module.icon}
+                      isEnabled={isAdmin || parentEnabled}
+                      onToggle={togglePermission}
+                      disabled={isBusy || isAdmin}
+                    />
+                    {module.advancedFeatures?.map((feature) => {
+                      const featurePerm = permissions.find((p) => p.moduleId === feature.moduleId);
+                      return (
+                        <div key={feature.moduleId} className="ml-4 mt-1">
+                          <PermissionToggle
+                            moduleId={feature.moduleId}
+                            name={feature.label}
+                            icon={feature.icon}
+                            isEnabled={isAdmin || (featurePerm?.canAccess ?? false)}
+                            onToggle={togglePermission}
+                            disabled={isBusy || isAdmin || !parentEnabled}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 );
               })}
             </div>

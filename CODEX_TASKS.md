@@ -10531,3 +10531,407 @@ grep -n "latestPermissions\|permissionsTimestamp\|userInfo" src/app/page.tsx  # 
 ```
 
 **验收标准**：session 过期后访问根路径，停留在登录页等待用户输入，不再自动跳转。
+
+---
+
+## TASK-57A：统一权限模块注册表，补全工具类模块的权限位
+
+**背景（问题诊断）**
+
+当前权限模块清单存在 **3 处独立维护、已经互相漂移** 的列表：
+
+1. `src/components/layout/AppSidebar.tsx` 的 `NAV_ITEMS`（含 `permissionKey`）+ `PERMISSION_MODULE_MAP` —— 决定侧边栏可见性
+2. `src/features/admin/hooks/usePermissions.ts` 的 `MODULE_PERMISSIONS` —— 决定管理员编辑用户权限时显示哪些开关
+3. `src/constants/permissions.ts` 的 `PERMISSION_MODULES` —— **全仓库无任何引用，是死代码**
+
+漂移导致的具体缺口：
+
+- `世界时钟`（`/clock`）、`全球假日`（`/holidays`）、`RMB 大写`（`/rmb`）三个工具模块在 `NAV_ITEMS` 里**没有 `permissionKey`**，对所有登录用户永久可见，管理员权限编辑 UI 里也**没有对应开关**，完全无法关闭。
+- `订单状态表`（`/order`）复用了 `询报价登记表` 的 `inquiry` 模块权限（同一个开关），但在管理员权限编辑 UI（`MODULE_PERMISSIONS`）里**没有单独出现**，容易让人误以为这个模块没有权限控制、或者可以独立授权（实际不行，两者共用一个开关）。
+- `src/features/order/app/OrderPage.tsx` **完全没有做页面级权限校验**（对比 `src/features/inquiry/app/InquiryPage.tsx` 有 `hasInquiryAccess` 拦截）。目前仅靠侧边栏隐藏入口，普通用户直接访问 `/order` 这个 URL 可以绕过隐藏、看到订单状态表内容（金额列除外，那是另一个开关，见 TASK-57B）。
+- `src/lib/permissions.ts` 里 `usePermissionStore.hasPermission()` / `hasAnyPermission()` **没有 isAdmin 前置 bypass**——目前全仓库对"是否有权限"的判断散落在至少 3 处各自重复写 `isAdmin || permissions.some(...)`（`AppSidebar.tsx` 的 `isVisible`、`InquiryPage.tsx` 的 `hasInquiryAccess`、`api/inquiry/[[...path]]/route.ts` 的 `hasInquiryPermission`），这正是 `OrderPage.tsx` 漏掉权限校验的根因类型——多处重复实现，容易漏写。
+
+**设计目标**：建一个唯一的模块注册表 + 一个唯一的权限判断函数，其余地方都从这两处派生，不再各自维护列表。
+
+---
+
+### 改动 1：新建 `src/constants/permissionModules.ts`（替代死代码 `src/constants/permissions.ts`）
+
+```ts
+export type ModuleCategory = 'document' | 'registration' | 'management' | 'tool';
+
+export interface AdvancedFeatureDef {
+  /** 完整 moduleId，格式为 `${parentModuleId}.${featureKey}` */
+  moduleId: string;
+  label: string;
+  icon: string;
+}
+
+export interface PermissionModuleDef {
+  moduleId: string;
+  label: string;
+  icon: string;
+  category: ModuleCategory;
+  /** 依赖本模块开启后才能授予的二级“高级功能”开关 */
+  advancedFeatures?: AdvancedFeatureDef[];
+}
+
+/** 权限模块唯一注册表——新增/下线模块只改这一处 */
+export const PERMISSION_MODULES: PermissionModuleDef[] = [
+  { moduleId: 'quotation', label: '报价单 / 销售确认', icon: '📋', category: 'document' },
+  { moduleId: 'packing',   label: '箱单发票',           icon: '📦', category: 'document' },
+  { moduleId: 'invoice',   label: '财务发票',           icon: '🧾', category: 'document' },
+  { moduleId: 'purchase',  label: '采购订单',           icon: '🛒', category: 'document' },
+  {
+    moduleId: 'inquiry',
+    label: '询报价登记表 / 订单状态表',
+    icon: '🔍',
+    category: 'registration',
+    advancedFeatures: [
+      { moduleId: 'inquiry.batchEdit',   label: '批量编辑 / 导入导出', icon: '✏️' },
+      { moduleId: 'order.financials',    label: '订单金额 / 回款 / 到账金额', icon: '💰' },
+    ],
+  },
+  { moduleId: 'history',   label: '单据历史',   icon: '📚', category: 'management' },
+  { moduleId: 'customer',  label: '客户管理',   icon: '👥', category: 'management' },
+  { moduleId: 'ai-email',  label: 'AI 邮件',    icon: '🤖', category: 'tool' },
+  { moduleId: 'clock',     label: '世界时钟',   icon: '🕐', category: 'tool' },
+  { moduleId: 'holidays',  label: '全球假日',   icon: '📅', category: 'tool' },
+  { moduleId: 'rmb',       label: 'RMB 大写',   icon: '💴', category: 'tool' },
+];
+
+export function getAllPermissionModules(): string[] {
+  return PERMISSION_MODULES.flatMap((m) => [
+    m.moduleId,
+    ...(m.advancedFeatures?.map((f) => f.moduleId) ?? []),
+  ]);
+}
+```
+
+> 注意：`订单状态表` 不是独立 moduleId，故意复用 `inquiry`（避免给已有用户做权限迁移、避免两张表权限不同步）。`inquiry.batchEdit` 和 `order.financials` 都挂在 `inquiry` 这个父模块下面，因为两者都要求先有 `inquiry` 基础访问权限才有意义。
+
+**删除 `src/constants/permissions.ts`**：先执行 `grep -rn "from '@/constants/permissions'" src/` 确认真的无引用（预期无结果）后删除整个文件。不要删错到 `permissionModules.ts`。
+
+---
+
+### 改动 2：`src/lib/permissions.ts` —— 让 `hasPermission` 成为唯一权威判断，加 isAdmin bypass
+
+```ts
+// hasPermission 方法内部，最开头加一行：
+hasPermission: (moduleId: string) => {
+  const { user, permissionCache } = get();
+  if (!user) return false;
+  if (user.isAdmin) return true;   // ★ 新增：管理员隐式拥有所有模块权限
+  // ...原有逻辑不变
+},
+
+hasAnyPermission: (moduleIds: string[]) => {
+  const { user } = get();
+  if (!user) return false;
+  if (user.isAdmin) return true;   // ★ 新增
+  // ...原有逻辑不变
+},
+```
+
+加完之后，全仓库新代码里判断权限一律用 `hasPermission(moduleId)`（来自 `usePermissionStore` 或其导出的 `hasPermission` 函数），**不要**再手写 `isAdmin || permissions.some(...)`。已有的 `AppSidebar.tsx`、`InquiryPage.tsx`、`api/inquiry/route.ts` 里的手写版本本次不强制重构（避免无关改动），但新增的 `OrderPage.tsx` 权限校验（见改动 4）直接用 `usePermissionStore` 的 `hasPermission`。
+
+---
+
+### 改动 3：`src/components/layout/AppSidebar.tsx` —— 补全 clock/holidays/rmb 的权限位
+
+`NAV_ITEMS` 里三项加 `permissionKey`：
+
+```ts
+{ id: 'clock',    label: '世界时钟', path: '/clock',    icon: Clock,        permissionKey: 'canUseClock' },
+{ id: 'holidays', label: '全球假日', path: '/holidays', icon: CalendarDays, permissionKey: 'canUseHolidays' },
+{ id: 'rmb',      label: 'RMB大写',  path: '/rmb',      icon: Banknote,     permissionKey: 'canUseRmb' },
+```
+
+`PERMISSION_MODULE_MAP` 补充：
+
+```ts
+canUseClock:    'clock',
+canUseHolidays: 'holidays',
+canUseRmb:      'rmb',
+```
+
+`isVisible()` 逻辑不变（已有 `if (permissionUser.isAdmin) return true;` 短路，管理员自动可见新模块）。
+
+> ⚠️ 迁移兼容性：现有普通用户的 Permission 记录里不会有 `clock`/`holidays`/`rmb` 这三条，加上权限位后默认对普通用户**关闭**（因为 `permissions.some(...)` 找不到记录返回 `false`）。如果不希望上线当天就让所有老用户失去这三个工具的可见性，Codex 需要和 Roger 确认默认策略——**默认建议**：这三个工具类模块风险低（无业务数据），在 Worker/D1 层为所有现有非管理员用户批量插入这三条 `canAccess = true` 的 Permission 记录做一次性迁移（写一个一次性脚本或 SQL，不要在应用代码里做"默认开启"这种隐式逻辑，避免以后维护困惑）。若无法确认，先在 PR 描述里注明这一風险，由 Roger 决定是否要跑迁移。
+
+---
+
+### 改动 4：`src/features/order/app/OrderPage.tsx` —— 补齐页面级权限校验
+
+参照 `src/features/inquiry/app/InquiryPage.tsx` 第 100-106 行 `hasInquiryAccess` 的写法，在 `OrderPage.tsx` 里加同款拦截（复用 `inquiry` 权限，因为订单状态表和询报价共用一个开关）：
+
+```ts
+const hasOrderAccess = useMemo(() => {
+  if (!session?.user) return false;
+  if (session.user.isAdmin) return true;
+  return (session.user.permissions ?? []).some(
+    (permission) => permission.moduleId === 'inquiry' && permission.canAccess
+  );
+}, [session]);
+```
+
+在组件渲染逻辑里，无权限时展示和 `InquiryPage.tsx` 第 373-389 行一致的"权限不足"页面（文案改成"您没有订单状态表的访问权限"）。
+
+---
+
+### 改动 5：`src/features/admin/hooks/usePermissions.ts` —— MODULE_PERMISSIONS 从注册表派生
+
+```ts
+import { PERMISSION_MODULES } from '@/constants/permissionModules';
+
+// 删除原来手写的 MODULE_PERMISSIONS 数组，改为：
+export const MODULE_PERMISSIONS = PERMISSION_MODULES.map(({ moduleId, label, icon }) => ({
+  id: moduleId,
+  name: label,
+  icon,
+}));
+```
+
+（`advancedFeatures` 的渲染在 TASK-57B 里单独处理，这里只派生顶层模块列表，保持 `UserDetailModal.tsx` 现有渲染不炸。）
+
+---
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+grep -rn "from '@/constants/permissions'" src/   # 应无输出，确认死代码已清理
+```
+
+**验收标准**：
+- 管理员权限编辑 UI 里能看到 `世界时钟`、`全球假日`、`RMB 大写` 三个新开关
+- 直接访问 `/order`（无 `inquiry` 权限的普通用户）跳出"权限不足"提示，而不是看到表格内容
+- 管理员账号侧边栏和以前一样能看到全部模块，行为不变
+
+---
+
+## TASK-57B：询报价批量编辑 / 订单金额字段 改为可配置的高级功能开关
+
+**背景**
+
+两处功能目前都是**硬编码为"仅 `isAdmin` 可见"**，无法单独授权给普通用户，且服务端完全没有对应校验：
+
+1. `src/features/inquiry/app/InquiryPage.tsx`：批量编辑入口（`bottomActions` 第 351-362 行）、批量选择/导入/导出/批量删除菜单（第 465-538 行）全部用 `isAdmin &&` 或 `if (!isAdmin) return []` 控制。
+2. `src/features/order/components/OrderTable.tsx`（第 69、139 行）和 `OrderRow.tsx`（第 480、577 行）：`showAdminCols(bp, isAdmin)` 决定是否显示"金额 / 回款 / 到账金额"三列，直接传入 `isAdmin`。对应字段是 `src/features/inquiry/types/index.ts` 第 46/48/50 行的 `orderAmount` / `orderPaymentDate` / `orderReceivedAmount`（注释里写着"管理员可见"，这次要改成权限位可见）。
+
+TASK-57A 已经在权限注册表里加了两个二级开关：`inquiry.batchEdit`、`order.financials`。本任务把前端判断和后端保护都接上。
+
+---
+
+### 改动 1：管理员权限编辑 UI 支持二级"高级功能"开关
+
+`src/features/admin/hooks/usePermissions.ts` 的 `togglePermission` 增加级联逻辑：关闭父模块（`inquiry`）时，同时清空它名下的高级功能权限（`inquiry.batchEdit`、`order.financials`），避免出现"父权限关了、子权限还留着"的脏数据：
+
+```ts
+const togglePermission = useCallback((moduleId: string) => {
+  setPermissions(prev => {
+    const existing = prev.find(p => p.moduleId === moduleId);
+    let next = existing
+      ? prev.map(p => p.moduleId === moduleId ? { ...p, canAccess: !p.canAccess } : p)
+      : [...prev, { id: '', moduleId, canAccess: true }];
+
+    // 关闭父模块时级联关闭其高级功能子权限
+    const parentModule = PERMISSION_MODULES.find(m =>
+      m.advancedFeatures?.length && m.moduleId === moduleId
+    );
+    const turnedOff = existing?.canAccess === true; // 原来是开的，这次点击变关
+    if (parentModule && turnedOff) {
+      const childIds = parentModule.advancedFeatures!.map(f => f.moduleId);
+      next = next.map(p => childIds.includes(p.moduleId) ? { ...p, canAccess: false } : p);
+    }
+    return next;
+  });
+}, []);
+```
+
+`src/features/admin/components/UserDetailModal.tsx` 的"模块权限"区块，改为按 `PERMISSION_MODULES` 遍历，模块下若有 `advancedFeatures`，在同一个卡片内缩进渲染二级开关，且**仅当父模块 `canAccess=true` 时可点击**（父模块关闭时子开关置灰 disabled）：
+
+```tsx
+{PERMISSION_MODULES.map((module) => {
+  const perm = permissions.find((p) => p.moduleId === module.id);
+  const parentEnabled = perm?.canAccess ?? false;
+  return (
+    <div key={module.id}>
+      <PermissionToggle
+        moduleId={module.id} name={module.label} icon={module.icon}
+        isEnabled={isAdmin || parentEnabled}
+        onToggle={togglePermission}
+        disabled={isBusy || isAdmin}
+      />
+      {module.advancedFeatures?.map((feature) => {
+        const featurePerm = permissions.find((p) => p.moduleId === feature.moduleId);
+        return (
+          <div key={feature.moduleId} className="ml-4 mt-1">
+            <PermissionToggle
+              moduleId={feature.moduleId} name={feature.label} icon={feature.icon}
+              isEnabled={isAdmin || (featurePerm?.canAccess ?? false)}
+              onToggle={togglePermission}
+              disabled={isBusy || isAdmin || !parentEnabled}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+})}
+```
+
+同时：**当 `isAdmin` 开关为 true 时，所有模块 + 高级功能开关都显示为已授权（`isEnabled` 强制 true）且 `disabled`**，卡片区域顶部加一行说明文字："管理员默认拥有全部模块权限，以下开关仅对普通用户生效"。这是本次顺手修的 UX 问题：目前管理员编辑自己或其他管理员账号时，这些开关的开合状态会误导人——反正会被 isAdmin 全局 bypass 忽略。
+
+---
+
+### 改动 2：前端功能入口改用权限判断
+
+`src/features/inquiry/app/InquiryPage.tsx`：
+
+```ts
+// 顶部引入
+import { usePermissionStore } from '@/lib/permissions';
+// ...
+const hasBatchEditPermission = usePermissionStore((s) => s.hasPermission('inquiry.batchEdit'));
+
+// bottomActions 里
+const bottomActions = useMemo<ActionButton[]>(() => {
+  if (!isAdmin && !hasBatchEditPermission) return [];
+  // ... 其余不变
+}, [isAdmin, hasBatchEditPermission, isAdminMenuOpen, isEditMode]);
+```
+
+同时把第 407 行、466 行的 `isAdmin &&` 都改成 `(isAdmin || hasBatchEditPermission) &&`（隐藏文件选择框、批量编辑菜单展开条件）。**注意** TASK-57A 已经给 `hasPermission` 加了 isAdmin bypass，所以这里其实写 `hasBatchEditPermission` 一个变量就够了（它内部已经处理了 isAdmin），保留 `isAdmin ||` 只是为了和仓库里其他地方的写法保持一致、方便读者一眼看懂，Codex 按自己判断二选一即可，但全文件要统一，不要一半用短写法一半用长写法。
+
+`src/features/order/components/OrderTable.tsx` 和 `OrderRow.tsx`：`isAdmin` prop 改名为 `canViewFinancials`（或保留 `isAdmin` 参数名但调用方传入组合值，Codex 自行选择，优先选择**改名**，因为继续叫 `isAdmin` 但传的是"isAdmin或有financials权限"的组合值，语义会跟其他地方的 `isAdmin` 混淆，容易埋雷），由 `OrderPage.tsx` 计算好传入：
+
+```ts
+const hasFinancialsPermission = usePermissionStore((s) => s.hasPermission('order.financials'));
+// <OrderTable canViewFinancials={isAdmin || hasFinancialsPermission} ... />
+```
+
+`orderAmount` / `orderPaymentDate` / `orderReceivedAmount` 三个字段在 `src/features/inquiry/types/index.ts` 里的注释同步改成"（需要 order.financials 权限）"。
+
+---
+
+### 改动 3：服务端保护（重要，之前完全没做）—— `src/app/api/inquiry/[[...path]]/route.ts` + `src/worker.ts`
+
+**现状风险**：`route.ts` 目前只校验"是否有 `inquiry` 模块访问权限"，没有对金额字段做任何过滤。任何有 `inquiry` 权限的普通用户，哪怕 UI 隐藏了金额列，直接调用 `GET /api/inquiry` 接口也能拿到全部记录的 `orderAmount`/`orderPaymentDate`/`orderReceivedAmount`；`PUT` 同理可以随意改价格——这是真实的越权风险，必须服务端兜底，不能只靠前端隐藏列。
+
+**关键约束（务必先读懂再动手，否则会丢数据）**：`src/worker.ts` 里 `PUT /api/inquiry/:id`（第 1423-1451 行）目前是**整条记录覆盖式 upsert**（`{...body, id, updatedAt: now}` 直接整体替换 `data` 列），不是字段级 patch。如果代理层简单粗暴地"不返回金额字段给无权限用户 → 用户编辑保存 → 把没有金额字段的 body 转发给 Worker"，会导致这条记录的金额数据被整个抹掉。**必须先做下面第①步的 Worker 端合并式写入，再做第②③步的代理层过滤，顺序不能反。**
+
+**① 修改 `src/worker.ts` 的 PUT handler，改成与已有数据合并写入而不是整体覆盖**（顺手修复一个潜在的隐藏 bug：目前两个人分别编辑同一条记录的不同字段、先后保存时，后保存的会把先保存的其他字段覆盖丢失）：
+
+```ts
+// PUT /api/inquiry/:id 里，原来查询只 select created_at，改成同时查 data：
+const existingRow = await env.USERS_DB.prepare(
+  `SELECT created_at, data FROM Document WHERE id = ? AND type = 'inquiry'`
+).bind(id).first<{ created_at: string; data: string | null }>();
+const createdAt = existingRow?.created_at ?? now;
+const existingData = parseJsonData<InquiryRecordPayload>(existingRow?.data ?? null, {});
+
+// 原来：const data = JSON.stringify({ ...body, id, updatedAt: now });
+// 改成合并式写入：
+const data = JSON.stringify({ ...existingData, ...body, id, updatedAt: now });
+```
+
+这一步改的是生产 Worker（`udb.luocompany.net`），**改完需要单独执行 `npx wrangler deploy` 部署 Worker**，不是 `npm run build` / Vercel 部署能覆盖到的，Codex 完成代码修改后要在任务总结里明确提示 Roger 这一步需要手动/单独部署 Worker，并给出验证方法（比如部署后用 curl 测试一次 PUT 只带部分字段，确认其余字段没有丢）。
+
+**② `route.ts` 的 GET 响应做字段裁剪**：
+
+```ts
+async function proxyInquiryRequest(request: NextRequest, pathSegments: string[] = []) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: '未登录' }, { status: 401 });
+
+  const isAdmin = session.user.isAdmin === true;
+  const perms = session.user.permissions ?? [];
+  const hasInquiryPermission = isAdmin || perms.some((p) => p.moduleId === 'inquiry' && p.canAccess);
+  if (!hasInquiryPermission) return NextResponse.json({ error: '无询报价权限' }, { status: 403 });
+
+  const hasFinancialsPermission = isAdmin || perms.some((p) => p.moduleId === 'order.financials' && p.canAccess);
+  const FINANCIAL_FIELDS = ['orderAmount', 'orderPaymentDate', 'orderReceivedAmount'] as const;
+
+  // ...原有转发逻辑（body 处理见下方③）...
+
+  const data = await workerResp.json();
+
+  // GET 响应裁剪：无权限时从每条记录里删掉金额字段
+  if (request.method === 'GET' && !hasFinancialsPermission && Array.isArray(data?.records)) {
+    data.records = data.records.map((record: Record<string, unknown>) => {
+      const clean = { ...record };
+      FINANCIAL_FIELDS.forEach((f) => delete clean[f]);
+      return clean;
+    });
+  }
+
+  return NextResponse.json(data, { status: workerResp.status });
+}
+```
+
+**③ PUT / POST 请求体做字段过滤**（防止无权限用户绕过 UI 直接调 API 篡改金额）：
+
+```ts
+// body 目前是 request.text() 得到的字符串，PUT/POST 且无 financials 权限时要过滤：
+let body: string | undefined;
+if (request.method !== 'GET' && request.method !== 'HEAD' && request.method !== 'DELETE') {
+  const rawText = await request.text();
+  if ((request.method === 'PUT' || request.method === 'POST') && !hasFinancialsPermission) {
+    try {
+      const parsed = JSON.parse(rawText);
+      FINANCIAL_FIELDS.forEach((f) => delete parsed[f]);
+      body = JSON.stringify(parsed);
+    } catch {
+      body = rawText; // 解析失败就原样转发，交给 Worker 的 JSON.parse 报错
+    }
+  } else {
+    body = rawText;
+  }
+}
+```
+
+因为①已经把 Worker 的 PUT 改成合并式写入，这里从 body 里删掉这三个字段后，Worker 端 `{...existingData, ...body}` 会自然保留数据库里原有的金额值，不会丢数据，也不会被篡改。
+
+**关于"批量编辑"的服务端保护——如实说明一个限制**：`src/worker.ts` 没有真正的批量接口，前端"批量删除"本质是循环调用单条 `DELETE /api/inquiry/:id`（见 `InquiryPage.tsx` 第 219-223 行），服务端完全无法区分"批量删除里的一次调用"和"用户手动点了一下单条删除"——因为它们是同一个 API 调用。所以 `inquiry.batchEdit` 权限**目前只能做到前端工作流/工具入口级别的门控**（导入、导出、多选模式、批量删除按钮的可见性），无法在服务端做出比现有"有没有 `inquiry` 模块权限"更细粒度的数据层拦截。这不是本次任务遗漏，是当前后端 API 设计（无批量端点、单条 DELETE 对所有 inquiry 用户开放）决定的客观限制。如果之后需要"普通用户完全不能删除记录、只有 batchEdit/admin 才能删"这种更强的约束，需要额外给 Worker 加一个身份透传机制（比如 Next 代理把 `moduleId`/权限信息作为 header 转发给 Worker，Worker 侧对 DELETE 方法单独校验），属于更大的改动，本次不做，仅在 PR 描述里记录这个已知限制供 Roger 决策是否需要。
+
+---
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 创建一个仅有 `inquiry` 权限（未勾选 `inquiry.batchEdit`/`order.financials`）的测试用户，登录后：询报价登记表看不到"批量编辑"按钮；订单状态表看不到"金额/回款/到账金额"三列。
+- 用该测试用户的 session 直接 `curl` 请求 `GET /api/inquiry`，返回的记录里不应包含 `orderAmount`/`orderPaymentDate`/`orderReceivedAmount` 三个 key。
+- 用该测试用户尝试 `PUT` 一条记录只改 `orderDeliveryStatus` 字段（不带金额字段），保存后用管理员账号重新查看该记录，确认金额字段没有被清空（验证 Worker 合并写入生效）。
+- Worker 部署后（`npx wrangler deploy`），额外用管理员账号验证一次金额编辑仍然正常保存。
+
+---
+
+## TASK-57C：TASK-57A/57B 完成后的整体回归
+
+**验证命令**
+
+```bash
+npx tsc --noEmit
+npm run build
+npm run test  # 若有 Jest 单测覆盖到 permissions 相关逻辑
+npx playwright test  # 若时间允许，跑一遍 e2e，重点看权限相关用例
+```
+
+**人工回归清单**（写进 PR 描述，逐条打勾）：
+
+- [ ] 管理员账号登录：侧边栏模块、权限编辑 UI 里的开关状态和上线前一致，行为无变化
+- [ ] 新建一个"仅 `quotation` 权限"的普通用户：侧边栏只看到首页 + 报价单 + 世界时钟/全球假日/RMB（若 TASK-57A 的迁移脚本已跑，工具类默认开启）；直接访问 `/inquiry`、`/order`、`/customer` 等 URL 均应看到"权限不足"提示，不能绕过
+- [ ] 给该用户单独授予 `inquiry` 权限（不给 `inquiry.batchEdit`/`order.financials`）：能看询报价登记表和订单状态表基础字段，看不到批量编辑入口和金额三列
+- [ ] 再给该用户加 `inquiry.batchEdit`：出现批量编辑入口；再加 `order.financials`：出现金额三列
+- [ ] 关闭该用户的 `inquiry` 权限：确认 `inquiry.batchEdit`/`order.financials` 在管理员编辑 UI 里被级联清空（不会出现"父权限关了子权限还留着"的脏状态）
+- [ ] `GET /api/inquiry` 用无 `order.financials` 权限的用户 token 请求，确认金额字段不出现在响应里
+- [ ] `src/constants/permissions.ts` 已删除，`npx tsc --noEmit` 无报错
+
+**完成后请把改动的 commit hash 贴给 Claude，由 Claude 逐项核对代码是否符合以上设计，重点核对：① Worker PUT 是否真的改成合并写入且已 `wrangler deploy` ② 级联清空逻辑 ③ isAdmin 在权限编辑 UI 里是否正确禁用了子开关。**

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout';
 import { MonthRangeNav } from '@/components/MonthRangeNav';
 import { useAppUser } from '@/hooks/useAppUser';
+import { usePermissionStore } from '@/lib/permissions';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { inquiryService } from '@/features/inquiry/services/inquiry.service';
 import type { InquiryRecord, OrderSubStatus } from '@/features/inquiry/types';
@@ -109,6 +110,9 @@ export function OrderPage() {
   const { status } = useSession();
   const router = useRouter();
   const { user, handleLogout } = useAppUser();
+  const permissionUser = usePermissionStore((s) => s.user);
+  const hasOrderAccess = usePermissionStore((s) => s.hasPermission('inquiry'));
+  const hasFinancialsPermission = usePermissionStore((s) => s.hasPermission('order.financials'));
 
   const records = useInquiryStore((s) => s.records);
   const updateRecord = useInquiryStore((s) => s.updateRecord);
@@ -150,7 +154,7 @@ export function OrderPage() {
   }, []);
 
   useEffect(() => {
-    if (status !== 'authenticated') return;
+    if (status !== 'authenticated' || !hasOrderAccess) return;
 
     const POLL_INTERVAL_MS = 30_000;
     let cancelled = false;
@@ -181,7 +185,7 @@ export function OrderPage() {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [status]);
+  }, [status, hasOrderAccess]);
 
   const now = useMemo(() => new Date(), []);
 
@@ -273,7 +277,26 @@ export function OrderPage() {
     [baseFiltered, orderStatusFilter, sortField, sortDir]
   );
 
-  if (status === 'loading' || !user) return null;
+  if (status === 'loading' || !user || !permissionUser) return null;
+
+  if (!hasOrderAccess) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-black">
+        <div className="rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-900">
+          <div className="mb-4 text-6xl text-red-600 dark:text-red-400">🚫</div>
+          <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">权限不足</h1>
+          <p className="mb-6 text-gray-600 dark:text-gray-400">您没有订单状态表的访问权限</p>
+          <button
+            type="button"
+            onClick={() => router.push('/dashboard')}
+            className="rounded-lg bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700"
+          >
+            返回首页
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const topBarSlot = lastSyncedAt ? (
     <span>
@@ -408,7 +431,7 @@ export function OrderPage() {
         {/* 表格 */}
         <OrderTable
           records={filteredRecords}
-          isAdmin={user.isAdmin}
+          canViewFinancials={hasFinancialsPermission}
           sortField={sortField}
           sortDir={sortDir}
           onSortToggle={(field) => {

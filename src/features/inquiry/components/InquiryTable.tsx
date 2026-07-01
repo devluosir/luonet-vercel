@@ -46,7 +46,7 @@ interface InquiryTableProps {
   onDeleteRecord: (recordId: string) => void;
   emptyMessage?: string;
   emptySubMessage?: string;
-  isAdmin?: boolean;
+  canBatchEdit?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   onToggleSelectAll?: (allIds: string[]) => void;
@@ -60,7 +60,7 @@ export function InquiryTable({
   onDeleteRecord,
   emptyMessage = '暂无询报价记录',
   emptySubMessage = '点击"新增询价"后，会在这里登记供应商询价和客户报价状态。',
-  isAdmin = false,
+  canBatchEdit = false,
   selectedIds = new Set(),
   onToggleSelect,
   onToggleSelectAll,
@@ -72,7 +72,7 @@ export function InquiryTable({
   const someSelected = allIds.some((id) => selectedIds.has(id)) && !allSelected;
 
   // 列宽：有 checkbox 列时从询价编号列各借 3%
-  const W = isAdmin
+  const W = canBatchEdit
     ? {
         check:    '3%',
         no:       bp === 'lg' ? '9%'  : bp === 'md' ? '13%' : '25%',
@@ -108,7 +108,7 @@ export function InquiryTable({
           <thead>
             <tr className={headerRowClass}>
               {/* 全选 checkbox */}
-              {isAdmin && (
+              {canBatchEdit && (
                 <th style={{ width: W.check }} className={headerCellCenterClass}>
                   <input
                     type="checkbox"
@@ -161,7 +161,7 @@ export function InquiryTable({
                 record={record}
                 onEdit={onEditRecord}
                 onDelete={onDeleteRecord}
-                isAdmin={isAdmin}
+                canBatchEdit={canBatchEdit}
                 selected={selectedIds.has(record.id)}
                 onToggleSelect={onToggleSelect}
               />

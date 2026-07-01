@@ -9,7 +9,7 @@ interface InquiryRowProps {
   record: InquiryRecord;
   onEdit: (record: InquiryRecord) => void;
   onDelete: (recordId: string) => void;
-  isAdmin?: boolean;
+  canBatchEdit?: boolean;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
 }
@@ -18,7 +18,7 @@ export function InquiryRow({
   record,
   onEdit,
   onDelete,
-  isAdmin = false,
+  canBatchEdit = false,
   selected = false,
   onToggleSelect,
 }: InquiryRowProps) {
@@ -34,8 +34,8 @@ export function InquiryRow({
       }`}
       onClick={() => onEdit(record)}
     >
-      {/* 管理员批量选择 checkbox */}
-      {isAdmin && (
+      {/* 批量选择 checkbox */}
+      {canBatchEdit && (
         <td
           className="w-8 px-2 py-2 text-center"
           onClick={(e) => e.stopPropagation()}

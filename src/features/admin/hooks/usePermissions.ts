@@ -1,17 +1,12 @@
 import { useState, useCallback, useMemo } from 'react';
+import { PERMISSION_MODULES } from '@/constants/permissionModules';
 import { Permission } from '../types';
 
-// 权限模块列表
-export const MODULE_PERMISSIONS = [
-  { id: 'quotation', name: '报价单', icon: '📋' },
-  { id: 'packing', name: '装箱单', icon: '📦' },
-  { id: 'invoice', name: '发票', icon: '🧾' },
-  { id: 'purchase', name: '采购单', icon: '🛒' },
-  { id: 'inquiry', name: '询报价登记', icon: '🔍' },
-  { id: 'history', name: '历史记录', icon: '📚' },
-  { id: 'customer', name: '客户管理', icon: '👥' },
-  { id: 'ai-email', name: 'AI邮件', icon: '🤖' }
-];
+export const MODULE_PERMISSIONS = PERMISSION_MODULES.map(({ moduleId, label, icon }) => ({
+  id: moduleId,
+  name: label,
+  icon,
+}));
 
 export function usePermissions() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -36,15 +31,28 @@ export function usePermissions() {
   const togglePermission = useCallback((moduleId: string) => {
     setPermissions(prev => {
       const existing = prev.find(p => p.moduleId === moduleId);
-      if (existing) {
-        return prev.map(p => 
-          p.moduleId === moduleId 
+      let next = existing
+        ? prev.map(p =>
+          p.moduleId === moduleId
             ? { ...p, canAccess: !p.canAccess }
             : p
+        )
+        : [...prev, { id: '', moduleId, canAccess: true }];
+
+      const parentModule = PERMISSION_MODULES.find(
+        (module) => module.moduleId === moduleId && module.advancedFeatures?.length
+      );
+      const turnedOff = existing?.canAccess === true;
+      if (parentModule && turnedOff) {
+        const childIds = parentModule.advancedFeatures?.map((feature) => feature.moduleId) ?? [];
+        next = next.map((permission) =>
+          childIds.includes(permission.moduleId)
+            ? { ...permission, canAccess: false }
+            : permission
         );
-      } else {
-        return [...prev, { id: '', moduleId, canAccess: true }];
       }
+
+      return next;
     });
   }, []);
 

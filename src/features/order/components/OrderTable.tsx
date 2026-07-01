@@ -47,7 +47,7 @@ function useBreakpoint(): OrderTableBreakpoint {
 
 interface OrderTableProps {
   records: InquiryRecord[];
-  isAdmin: boolean;
+  canViewFinancials: boolean;
   sortField: SortField;
   sortDir: 'asc' | 'desc';
   onSortToggle: (field: SortField) => void;
@@ -61,12 +61,12 @@ function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: 
     : <ChevronDown className="h-3 w-3 shrink-0" />;
 }
 
-export function OrderTable({ records, isAdmin, sortField, sortDir, onSortToggle, onUpdate }: OrderTableProps) {
+export function OrderTable({ records, canViewFinancials, sortField, sortDir, onSortToggle, onUpdate }: OrderTableProps) {
   const bp = useBreakpoint();
-  const colWidths = getVisibleColWidths(bp, isAdmin);
+  const colWidths = getVisibleColWidths(bp, canViewFinancials);
   const customerCol = showCustomerCol(bp);
   const lgCols = showLgCols(bp);
-  const adminCols = showAdminCols(bp, isAdmin);
+  const adminCols = showAdminCols(bp, canViewFinancials);
 
   const thSort = (field: SortField, label: string, shortLabel?: string) => {
     const active = field === sortField;
@@ -157,7 +157,7 @@ export function OrderTable({ records, isAdmin, sortField, sortDir, onSortToggle,
               key={record.id}
               record={record}
               bp={bp}
-              isAdmin={isAdmin}
+              canViewFinancials={canViewFinancials}
               onUpdate={(patch) => onUpdate(record.id, patch)}
             />
           ))}

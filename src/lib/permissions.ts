@@ -287,6 +287,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   hasPermission: (moduleId: string) => {
     const { user, permissionCache } = get();
     if (!user) return false;
+    if (user.isAdmin) return true;
     
     // ✅ 优化：使用缓存机制
     const cacheKey = `${user.id}-${moduleId}`;
@@ -326,6 +327,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   hasAnyPermission: (moduleIds: string[]) => {
     const { user } = get();
     if (!user) return false;
+    if (user.isAdmin) return true;
     
     try {
       // 检查具体权限（管理员和普通用户使用相同的权限检查逻辑）
