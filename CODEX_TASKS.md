@@ -12560,3 +12560,73 @@ function buildInquiryFilterHref(
 - "客户询价编号"字段在新增/编辑询价弹窗里是可手动输入的文本框，不再随客户/联络人选择自动回填或清空。
 - 字段含义变更后，标签和占位文案清楚地表达"这是客户来函上的编号，需要人工填写"，不再暗示"自动生成"。
 - 不改动 `customerNo` 底层字段名、D1 存储结构、导出/筛选逻辑，风险收在表单交互层面。
+
+---
+
+## TASK-80：新增/编辑询价弹窗，"客户与询价人"区块去掉重复显示
+
+**优先级**：低（纯 UI 冗余，不影响数据）
+**风险**：极低
+
+### 背景 / 根因
+
+用户截图指出："客户与询价人"这个区块，选好联络人之后，同一个字符串显示了两遍。
+
+具体原因：`CustomerContactPicker`（`src/features/customer/components/CustomerContactPicker.tsx`）选中一个客户/联络人后，自己的搜索框会把已选项的 `label`（`buildCustomerContactLabel` 生成，格式是"客户简称-联系人简称"，比如"IC-Sumanta"）填回输入框显示。而 `InquiryFormModal.tsx` 里，紧跟在这个 picker 下面又渲染了一个独立的只读 `input`，显示的是 `inquirer` 字段，这个字段是通过 `buildInquirer(customer, contact)` 生成的，格式同样是"客户简称-联系人简称"——两者其实是同一个字符串，被渲染了两次。
+
+这个只读框本身从来不能手动编辑（一直是 `readOnly`），纯粹是个派生展示值，删掉它不会丢失任何输入能力；`inquirer` 这个 state 变量和它在提交时的用途（`payload.inquirer`、必填校验 `if (!payload.inquirer) return;`）完全不受影响，只是不再单独渲染一个重复的框。
+
+同时区块标题"客户与询价人"改成"联络人"（更准确：这个区块其实就是选联络人，客户是联络人的从属信息，picker 本身已经显示了完整的"客户-联络人"标签，不需要在标题里重复强调"询价人"）。
+
+### 涉及文件
+
+`src/features/inquiry/components/InquiryFormModal.tsx`
+
+### 精确改动
+
+```diff
+                 <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300">
+                   <UserRound className="h-3.5 w-3.5" />
+-                  客户与询价人
++                  联络人
+                 </span>
+                 <CustomerContactPicker
+                   customers={customers}
+                   value={customerId && contactId ? { customerId, contactId } : null}
+                   onSelect={selectCustomerContact}
+                   onCreateNew={openInlineCreate}
+                   onClear={clearCustomerContactSelection}
+                   placeholder="搜索客户简称/联络人简称"
+                 />
+
+                 {createCustomerQuery && (
+                   <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/60">
+                     ...（新建客户内联表单，不变）...
+                   </div>
+                 )}
+-
+-                <input
+-                  value={inquirer}
+-                  readOnly
+-                  className="mt-2 h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm font-medium text-gray-700 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+-                  placeholder="选择后自动生成询价人"
+-                  required
+-                />
+               </div>
+             </div>
+           </div>
+```
+
+即：只删除紧跟在 `{createCustomerQuery && (...)}` 块后面的那个只读 `<input value={inquirer} readOnly ... />`，其余（picker、内联新建客户表单）不变。`inquirer` 这个 state、`setInquirer(...)` 的调用（`selectCustomerContact`/`clearCustomerContactSelection`/两个 `useEffect`）、提交时的 `inquirer: inquirer.trim()` 和必填校验都保持不变——只是不再单独渲染出来。
+
+### 验证
+
+1. `npx tsc --noEmit` 通过。
+2. `npx eslint src/features/inquiry/components/InquiryFormModal.tsx` 通过。
+3. 手动核对：新增询价，选好客户/联络人后，"客户与询价人"区块（现在叫"联络人"）只有 picker 一处显示"客户简称-联系人简称"，下面没有第二个重复的框；提交询价时 `inquirer` 字段依然正确带上这个值（校验和存储逻辑不变，只是去掉了多余的展示）。
+
+### 验收标准
+
+- 区块标题显示"联络人"而不是"客户与询价人"。
+- 选定联络人后，"客户简称-联系人简称"这行文字只出现一次（在 `CustomerContactPicker` 的输入框里），不再有第二个只读框重复显示同样内容。
+- `inquirer` 字段的存储、校验、提交行为完全不变。

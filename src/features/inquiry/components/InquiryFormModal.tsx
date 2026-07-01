@@ -381,7 +381,7 @@ export function InquiryFormModal({
               <div className="rounded-2xl border border-blue-200 bg-white px-3.5 py-2.5 shadow-sm ring-1 ring-blue-100/70 dark:border-blue-500/30 dark:bg-blue-950/20 dark:ring-blue-500/10">
                 <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300">
                   <UserRound className="h-3.5 w-3.5" />
-                  客户与询价人
+                  联络人
                 </span>
                 <CustomerContactPicker
                   customers={customers}
@@ -430,14 +430,6 @@ export function InquiryFormModal({
                     </div>
                   </div>
                 )}
-
-                <input
-                  value={inquirer}
-                  readOnly
-                  className="mt-2 h-9 w-full rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm font-medium text-gray-700 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-                  placeholder="选择后自动生成询价人"
-                  required
-                />
               </div>
             </div>
           </div>
