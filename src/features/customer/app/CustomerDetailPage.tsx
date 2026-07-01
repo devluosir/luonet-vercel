@@ -15,6 +15,7 @@ import {
 } from '../components';
 import { useCustomerActions, useCustomerForm } from '../hooks';
 import { customerService } from '../services/customerService';
+import type { CustomerStats } from '../services/customerService';
 import type { Customer } from '../types';
 
 type DetailTab = 'timeline' | 'followup';
@@ -30,11 +31,11 @@ function getCustomerTitle(customer: Customer) {
   return customer.name.split('\n')[0] || customer.name;
 }
 
-function findCustomerFromUrl(customerId: string, customerName?: string | null) {
-  const byId = customerService.getCustomerById(customerId);
+async function findCustomerFromUrl(customerId: string, customerName?: string | null) {
+  const byId = await customerService.getCustomerById(customerId);
   if (byId) return byId;
 
-  const allCustomers = customerService.getAllCustomers();
+  const allCustomers = await customerService.getAllCustomers();
   const displayName = customerName || customerId;
   return allCustomers.find((customer) => {
     const title = getCustomerTitle(customer);
@@ -51,6 +52,8 @@ export default function CustomerDetailPage() {
 
   const [activeTab, setActiveTab] = useState<DetailTab>('timeline');
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [stats, setStats] = useState<CustomerStats | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isLoadingCustomer, setIsLoadingCustomer] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
@@ -81,13 +84,44 @@ export default function CustomerDetailPage() {
       return;
     }
 
-    setCustomer(findCustomerFromUrl(customerId, customerName));
-    setIsLoadingCustomer(false);
+    setIsLoadingCustomer(true);
+    void findCustomerFromUrl(customerId, customerName)
+      .then(setCustomer)
+      .catch((error) => {
+        console.error('加载客户详情失败:', error);
+        setCustomer(null);
+      })
+      .finally(() => setIsLoadingCustomer(false));
   }, [customerId, customerName]);
 
   useEffect(() => {
     reloadCustomer();
   }, [reloadCustomer]);
+
+  useEffect(() => {
+    if (!customer?.id) {
+      setStats(null);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingStats(true);
+    void customerService.fetchCustomerStats(customer.id)
+      .then((nextStats) => {
+        if (!cancelled) setStats(nextStats);
+      })
+      .catch((error) => {
+        console.warn('加载客户统计失败:', error);
+        if (!cancelled) setStats(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingStats(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [customer?.id]);
 
   const handleOpenEdit = () => {
     if (!customer) return;
@@ -171,6 +205,59 @@ export default function CustomerDetailPage() {
         ) : customer ? (
           <>
             <CustomerInfoCard customer={customer} onEdit={handleOpenEdit} />
+
+            <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">业务统计</h2>
+                {isLoadingStats && (
+                  <span className="text-xs text-gray-400 dark:text-gray-500">加载中...</span>
+                )}
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-950/30">
+                  <p className="text-xs text-blue-500 dark:text-blue-300">公司询价</p>
+                  <p className="mt-1 text-2xl font-semibold text-blue-700 dark:text-blue-200">
+                    {stats?.totals.inquiries ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-green-50 p-3 dark:bg-green-950/30">
+                  <p className="text-xs text-green-500 dark:text-green-300">公司订单</p>
+                  <p className="mt-1 text-2xl font-semibold text-green-700 dark:text-green-200">
+                    {stats?.totals.orders ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-900/60">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">未分配联络人</p>
+                  <p className="mt-1 text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                    {stats?.unassigned.inquiries ?? 0}
+                  </p>
+                </div>
+              </div>
+              {stats?.contacts.length ? (
+                <div className="mt-4 overflow-hidden rounded-lg border border-gray-100 dark:border-gray-700">
+                  {stats.contacts.map((contact) => (
+                    <div
+                      key={contact.contactId}
+                      className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-gray-100 px-3 py-2 text-sm last:border-b-0 dark:border-gray-700"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-medium text-gray-800 dark:text-gray-100">{contact.name}</span>
+                        {contact.shortName && (
+                          <span className="ml-1 text-xs text-gray-400">({contact.shortName})</span>
+                        )}
+                        {contact.isPrimary && (
+                          <span className="ml-2 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+                            主
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">询价 {contact.inquiries}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">订单 {contact.orders}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
 
             <div className="mb-6">
               <div className="border-b border-gray-200 dark:border-gray-700">

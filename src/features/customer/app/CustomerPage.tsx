@@ -109,7 +109,7 @@ export default function CustomerPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm(activeTab)) return;
     let success = false;
     if (activeTab === 'customers') success = await saveCustomer(formData, editingCustomer);
     else if (activeTab === 'suppliers') success = await saveSupplier(formData, editingSupplier);

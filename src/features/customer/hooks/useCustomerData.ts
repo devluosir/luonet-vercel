@@ -10,6 +10,7 @@ export function useCustomerData() {
   const [consignees, setConsignees] = useState<Consignee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isStale, setIsStale] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
   // 确保在客户端渲染
@@ -20,8 +21,9 @@ export function useCustomerData() {
   const loadCustomers = useCallback(async () => {
     try {
       if (typeof window === 'undefined' || !isClient) return;
-      const allCustomers = customerService.getAllCustomers();
-      setCustomers(allCustomers);
+      const result = await customerService.fetchAllCustomers('customer');
+      setCustomers(result.items);
+      setIsStale((current) => current || result.isStale);
     } catch (err) {
       console.error('Failed to load customers:', err);
       setError('Failed to load customers.');
@@ -31,7 +33,7 @@ export function useCustomerData() {
   const loadSuppliers = useCallback(async () => {
     try {
       if (typeof window === 'undefined' || !isClient) return;
-      const allSuppliers = supplierService.getAllSuppliers();
+      const allSuppliers = await supplierService.getAllSuppliers();
       setSuppliers(allSuppliers);
     } catch (err) {
       console.error('Failed to load suppliers:', err);
@@ -42,7 +44,7 @@ export function useCustomerData() {
   const loadConsignees = useCallback(async () => {
     try {
       if (typeof window === 'undefined' || !isClient) return;
-      const allConsignees = consigneeService.getAllConsignees();
+      const allConsignees = await consigneeService.getAllConsignees();
       setConsignees(allConsignees);
     } catch (err) {
       console.error('Failed to load consignees:', err);
@@ -56,6 +58,7 @@ export function useCustomerData() {
 
     setIsLoading(true);
     setError(null);
+    setIsStale(false);
     await Promise.all([loadCustomers(), loadSuppliers(), loadConsignees()]);
     setIsLoading(false);
   }, [loadCustomers, loadSuppliers, loadConsignees, isClient]);
@@ -72,5 +75,5 @@ export function useCustomerData() {
     }
   }, [loadAllData, isClient]);
 
-  return { customers, suppliers, consignees, isLoading, error, refreshData, isClient };
+  return { customers, suppliers, consignees, isLoading, error, isStale, refreshData, isClient };
 }

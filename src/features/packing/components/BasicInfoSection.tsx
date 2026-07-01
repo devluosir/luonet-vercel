@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { BasicInfoSectionProps } from '../types';
-import { getCustomersForDropdown } from '../../../utils/customerDataService';
+import { getCustomersForDropdown } from '@/features/customer/services/customerService';
 
 // 浮动标签字段组件
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -46,21 +46,27 @@ function ConsigneeField({
 
   // 从客户管理服务加载收货人数据
   useEffect(() => {
+    let cancelled = false;
     try {
-      const allConsignees = getCustomersForDropdown();
-      
-      console.log('从客户管理服务加载的收货人数据:', {
-        totalConsignees: allConsignees.length,
-        consignees: allConsignees
+      void getCustomersForDropdown('consignee').then((allConsignees) => {
+        if (cancelled) return;
+
+        console.log('从客户管理服务加载的收货人数据:', {
+          totalConsignees: allConsignees.length,
+          consignees: allConsignees
+        });
+
+        setSavedConsignees(allConsignees);
+        setFilteredConsignees(allConsignees);
       });
-      
-      setSavedConsignees(allConsignees);
-      setFilteredConsignees(allConsignees);
     } catch (error) {
       console.warn('Failed to load consignees from customer service:', error);
       setSavedConsignees([]);
       setFilteredConsignees([]);
     }
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // 根据输入实时过滤

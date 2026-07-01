@@ -11073,3 +11073,358 @@ npm run build
 - `inquiry.batchEdit`、`order.financials` 两个子开关仍然缩进显示在"询报价登记表 / 订单状态表"下方，且关闭父模块时仍然置灰（这一行为不能因为布局改动而回归）
 - 桌面浏览器和手机宽度下打开弹窗，每行开关的高度看起来一致（验证 `sm:` 断点已去除，不再出现桌面比手机更高的情况）
 - 整体弹窗内容大概率不需要滚动就能看完（视屏幕高度，至少比改动前明显短）
+
+---
+
+# 客户管理模块重新设计（TASK-59 ~ TASK-63）
+
+## 背景与关键发现
+
+用户要求重新设计客户档案：公司基础信息 + 多个联络人（各自有简称），询价数量/订单数量能"统计到公司或联络人"。调研现状后确认三个决策点（已和 Roger 确认）：
+
+1. **统计口径**：改成真正的 `customerId`/`contactId` 关联（而不是继续靠字符串模糊匹配），历史数据尽力回填，回填不上的标记"待关联"。
+2. **存储架构**：顺带修——D1 变成权威数据源，localStorage 降级为离线缓存；合并掉 `src/utils/customerDataService.ts` 这份给 Invoice 用的重复代码。
+3. **范围**：客户、供应商、收货人一起升级到"公司信息 + 多联络人"的统一结构。
+
+**调研中发现一个之前没人提过、必须先处理的问题**：D1 的 `Customer` 表当前是**按 `user_id` 隔离的**（每个登录用户查询/写入都带 `WHERE user_id = ?`，见 `src/worker.ts` 的 `handleListCustomers` 等四个 handler，以及 `src/app/api/customers/[[...path]]/route.ts` 第22-40行强制往每个请求里塞当前登录用户的 `user_id`）。而询报价数据（`Document` 表 type='inquiry'）是**团队共享**的（`user_id = '_shared_'`，所有人看到同一份）。也就是说：**如果两个销售员都用客户管理模块，他们现在看到的是两份完全不同、互相看不见的客户名单**。这次要把询价记录关联到客户库、还要统计"询价数量/订单数量"，前提是客户库必须和询价数据一样变成团队共享，否则"统计到公司"这件事本身就是伪命题（同一家公司在不同销售员那里是不同的私有记录，没法统一计数）。
+
+所以本次重新设计必须先把 Customer/Supplier/Consignee 从"按用户隔离"改成"团队共享"，这是排在数据模型升级之前的必要前置修复。**副作用**：不同销售员过去各自私有的客户记录里，可能存在同一家公司被重复登记多份（换了名字大小写、简称不一致等）的情况，合并成一张共享表后会有重复。这次的迁移**只做"合并进同一张表"，不做自动去重**（自动按名称模糊合并风险太高，可能把两家真不一样的公司合并错）。去重是合并后的人工整理工作，客户列表页后续应该加一个"疑似重复"的辅助识别功能（提上 TASK-63 之后的 backlog，本次先不做）。
+
+## 整体方案（5 个阶段）
+
+| 阶段 | 内容 | 状态 |
+|---|---|---|
+| TASK-59 | D1 schema 升级：Customer 表团队共享化 + 新增独立 Contact 表 + Document 表加 customer_id/contact_id | 本次详细规格 |
+| TASK-60 | 服务层重构：D1 变权威数据源，废弃 `utils/customerDataService.ts`，Worker/代理层去掉 user_id 隔离 | 本次详细规格 |
+| TASK-61 | Customer/Supplier/Consignee 类型与表单统一（联络人数组化，去掉 contact1 特殊字段），客户详情页展示统计 | 先给方向，跑完 59/60 验证后再细化 |
+| TASK-62 | 询报价登记表接入"选客户+选联络人"选择器（含内联新建客户），采购订单接入供应商库选择 | 同上 |
+| TASK-63 | 统计聚合 API（`/api/customers/:id/stats`）+ 历史询价记录的尽力匹配回填脚本 | 同上 |
+
+**执行顺序不能打乱**：TASK-59（建表）必须先于 TASK-60（改代码读写新表），TASK-60 必须先于 TASK-61/62（前端要基于新的共享数据模型改）。TASK-63 的回填脚本依赖 TASK-59 的 Contact 表和 TASK-61 的客户简称数据已经迁移完成。
+
+---
+
+## TASK-59：D1 schema 升级——Customer 团队共享化 + Contact 表 + Document 关联字段
+
+**⚠️ 执行前必读**：这是本项目目前最大的一次 D1 schema 改动，涉及重建 `Customer` 表（数据量应该不大，但操作不可轻易撤销）。要求：
+1. 先在本地/dev 环境跑一遍（`npx wrangler d1 execute mluonet-users --local --file=...`），确认语法和 `json_each`/`json_extract` 在当前 D1 版本上能跑通再对生产库操作。
+2. 对生产库操作前，先执行一次全量导出备份：`npx wrangler d1 export mluonet-users --remote --output=backup-before-task59-$(date +%Y%m%d).sql`，把备份文件路径记录在任务总结里。
+3. 迁移 SQL 分成"建表 + 拆分迁移"两步验证：先跑建表和 Document 加字段（风险低、可回滚性高），确认无误后再跑 Customer 重建和联络人拆分迁移（风险较高的部分）。
+
+### 新建迁移文件 `migrations/004_customer_contacts_redesign.sql`
+
+```sql
+-- Migration 004：客户体系重构
+-- 1) Customer 表去掉按用户隔离，变成团队共享；companyShortName 提升为一等字段 short_name
+-- 2) 新建独立 Contact 表（此前联络人塞在 Customer.data 的 JSON 里，不可查询/不可统计）
+-- 3) Document 表加 customer_id / contact_id，供询价/订单记录关联客户库（历史记录先留空，TASK-63 尽力回填）
+
+-- ── Step 1：Customer 表重建（去掉 user_id 隔离维度，保留 created_by 做审计追溯） ──
+ALTER TABLE Customer RENAME TO Customer_old;
+
+CREATE TABLE Customer (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL CHECK(type IN ('customer', 'supplier', 'consignee')),
+  name TEXT NOT NULL,
+  short_name TEXT,
+  code TEXT,
+  email TEXT,
+  phone TEXT,
+  address TEXT,
+  data TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'archived')),
+  created_by TEXT,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO Customer (id, type, name, short_name, code, email, phone, address, data, status, created_by, created_at, updated_at)
+SELECT
+  id, type, name,
+  json_extract(data, '$.companyShortName'),
+  code, email, phone, address,
+  data, status, user_id, created_at, updated_at
+FROM Customer_old;
+
+CREATE INDEX idx_customer_type ON Customer(type);
+CREATE INDEX idx_customer_name ON Customer(name);
+CREATE INDEX idx_customer_short_name ON Customer(short_name);
+CREATE INDEX idx_customer_status ON Customer(status);
+
+DROP TABLE Customer_old;
+-- 校验：SELECT COUNT(*) FROM CustomerEvent WHERE customer_id NOT IN (SELECT id FROM Customer); 必须为 0
+
+-- ── Step 2：新建 Contact 表 ──
+CREATE TABLE Contact (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  short_name TEXT,
+  email TEXT,
+  phone TEXT,
+  is_primary INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'archived')),
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (customer_id) REFERENCES Customer(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_contact_customer_id ON Contact(customer_id);
+CREATE INDEX idx_contact_short_name ON Contact(short_name);
+
+-- ── Step 3：联络人历史数据拆分迁移 ──
+-- 3a. "联系人1"：现状是复用 Customer 顶层 name/email/phone + data.contact1ShortName，标记为主联络人
+INSERT INTO Contact (id, customer_id, name, short_name, email, phone, is_primary, sort_order, created_at, updated_at)
+SELECT
+  'contact-primary-' || id, id, name,
+  json_extract(data, '$.contact1ShortName'),
+  email, phone, 1, 0, created_at, updated_at
+FROM Customer
+WHERE type = 'customer' AND name IS NOT NULL AND TRIM(name) != '';
+
+-- 3b. data.contacts[] 数组里的附加联系人
+INSERT INTO Contact (id, customer_id, name, short_name, email, phone, is_primary, sort_order, created_at, updated_at)
+SELECT
+  'contact-' || Customer.id || '-' || je.key,
+  Customer.id,
+  json_extract(je.value, '$.name'),
+  json_extract(je.value, '$.shortName'),
+  json_extract(je.value, '$.email'),
+  json_extract(je.value, '$.phone'),
+  0,
+  CAST(je.key AS INTEGER) + 1,
+  Customer.created_at,
+  Customer.updated_at
+FROM Customer, json_each(Customer.data, '$.contacts') AS je
+WHERE Customer.type = 'customer'
+  AND json_extract(je.value, '$.name') IS NOT NULL
+  AND TRIM(json_extract(je.value, '$.name')) != '';
+
+-- 3c. 遗留的 contact2*（旧版单一"联系人2"字段，可能有历史数据还没走过 contacts[] 结构）
+INSERT INTO Contact (id, customer_id, name, short_name, email, phone, is_primary, sort_order, created_at, updated_at)
+SELECT
+  'contact-legacy2-' || id, id,
+  json_extract(data, '$.contact2Name'),
+  json_extract(data, '$.contact2ShortName'),
+  json_extract(data, '$.contact2Email'),
+  json_extract(data, '$.contact2Phone'),
+  0, 99, created_at, updated_at
+FROM Customer
+WHERE type = 'customer'
+  AND json_extract(data, '$.contact2Name') IS NOT NULL
+  AND TRIM(json_extract(data, '$.contact2Name')) != '';
+
+-- ── Step 4：Document 表加客户关联字段（历史记录留空，TASK-63 处理回填） ──
+ALTER TABLE Document ADD COLUMN customer_id TEXT;
+ALTER TABLE Document ADD COLUMN contact_id TEXT;
+CREATE INDEX idx_doc_customer_id ON Document(customer_id);
+CREATE INDEX idx_doc_contact_id ON Document(contact_id);
+```
+
+**执行命令**：
+
+```bash
+# 1. 本地验证
+npx wrangler d1 execute mluonet-users --local --file=./migrations/004_customer_contacts_redesign.sql
+
+# 2. 生产库备份
+npx wrangler d1 export mluonet-users --remote --output=backup-before-task59-$(date +%Y%m%d).sql
+
+# 3. 生产库执行
+npx wrangler d1 execute mluonet-users --remote --file=./migrations/004_customer_contacts_redesign.sql
+```
+
+**验收标准**（跑完在生产库上逐条查询确认）：
+
+```sql
+-- Customer 表记录数应与迁移前一致（无数据丢失）
+SELECT COUNT(*) FROM Customer;
+
+-- 每个 type='customer' 且原来有 name 的客户，至少应有 1 条 is_primary=1 的联络人
+SELECT COUNT(*) FROM Customer c WHERE c.type='customer'
+  AND NOT EXISTS (SELECT 1 FROM Contact WHERE customer_id = c.id AND is_primary = 1);
+-- 结果应为 0（如果不为 0，说明有客户 name 是空字符串，需要人工确认这些是不是脏数据）
+
+-- CustomerEvent 外键完整性
+SELECT COUNT(*) FROM CustomerEvent WHERE customer_id NOT IN (SELECT id FROM Customer);
+-- 结果必须是 0
+
+-- Document 新字段已存在
+SELECT customer_id, contact_id FROM Document LIMIT 1;
+```
+
+在任务总结里附上以上几条 SQL 的实际执行结果，以及备份文件的存放路径。
+
+---
+
+## TASK-59 补充：`schema.sql` 未同步更新（请在 TASK-60 里一并修）
+
+Claude 核对 TASK-59 执行结果时发现：`schema.sql`（项目里作为"从零搭建 D1"的基准文件）还是旧版结构——`Customer` 表仍然带 `user_id NOT NULL` 和 `idx_customer_user_type` 索引，没有 `Contact` 表，`Document` 表也没有 `customer_id`/`contact_id` 列。对照 `002_add_inquiry_type.sql` 执行后 `schema.sql` 里 `Document.type` 的 CHECK 约束确实同步加上了 `'inquiry'`（第53行）——说明这个项目一直有"迁移执行后回填 schema.sql"的约定，这次不能漏。
+
+请在 TASK-60 提交前，把 `schema.sql` 第70-107行的 `Customer`/`CustomerEvent` 定义、以及 `Document` 表定义，改成与 004/005 迁移后的最终结构一致（`Customer` 去掉 `user_id`、加 `short_name`/`created_by`；新增 `Contact` 表定义；`Document` 加 `customer_id`/`contact_id` 两列及索引），让 `schema.sql` 能作为"这个项目现在长什么样"的准确参照，不需要再叠加读 004/005 才能拼出完整结构（004/005 文件本身继续保留，作为历史迁移记录，不要删）。
+
+---
+
+## TASK-60：服务层重构——D1 变权威数据源，去掉按用户隔离，合并重复代码
+
+**目标**：TASK-59 建好共享表后，让应用代码真正读写这张共享表，不再各自维护 per-user 的 localStorage 副本作为"事实来源"。
+
+### 改动 1：`src/worker.ts` 的客户 handler 去掉 `user_id` 隔离
+
+`handleListCustomers`／`handleGetCustomer`／`handleCreateCustomer`／`handleUpdateCustomer`／`handleDeleteCustomer`（第1476-1683行）：
+- 去掉所有 `WHERE user_id = ?` 条件和 `if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400)` 校验（客户数据不再按 user_id 过滤）。
+- `handleCreateCustomer`：`user_id` 参数改成可选的 `created_by`，写入新的 `created_by` 列（仅做审计，不参与查询过滤）。
+- `handleListCustomers` 新增 `GET /api/customers/:id` 时顺带查询该客户名下的 `Contact` 记录并嵌套返回：`{ customer: {...}, contacts: [...] }`（用一次 `SELECT * FROM Contact WHERE customer_id = ? AND status='active' ORDER BY sort_order`）。
+- 新增 `Contact` 的"整单替换"接口：`PUT /api/customers/:id/contacts`，请求体是完整的联络人数组 `{ contacts: [{id?, name, shortName, email, phone, isPrimary}, ...] }`，handler 逻辑：在一个事务里先 `DELETE FROM Contact WHERE customer_id = ?`，再逐条 `INSERT`（沿用前端传来的 `id`，若没有则生成新 `crypto.randomUUID()`）。选择"整单替换"而不是逐条增删改 API，是因为客户联络人数量少（通常 1-5 个），表单本来就是整体提交，没必要做精细化的单条 CRUD。
+
+### 改动 2：`src/app/api/customers/[[...path]]/route.ts` 代理层同步调整
+
+- 不再往每个请求里强制注入 `user_id`（第28、40行的 `url.searchParams.set('user_id', userId)` 和 `JSON.stringify({ ...parsedBody, user_id: userId })` 删掉）。
+- 仅在 `POST`（创建）请求时注入 `created_by: userId`。
+- 新增对 `PUT /api/customers/:id/contacts` 路径的透传（应该已经被现有的通配符 `pathSegments.join('/')` 逻辑覆盖，确认一下不需要额外处理）。
+
+### 改动 3：`src/features/customer/services/customerService.ts` 改成异步、D1 为权威源
+
+当前所有函数（`getAllCustomers`/`saveCustomer`/`deleteCustomer` 等）都是**同步**读写 localStorage。改造方向：
+
+```ts
+// 新的契约（具体实现 Codex 自行组织，以下是必须满足的行为）：
+export async function fetchAllCustomers(type: 'customer' | 'supplier' | 'consignee'): Promise<CustomerWithContacts[]> {
+  // 优先请求 /api/customers?type=xxx，成功则把结果写入 localStorage 做离线缓存（key 改名，比如 'customer_cache_v2'，避免和旧的 'customer_management' 混淆导致脏数据复活）
+  // 请求失败（离线/网络错误）时，读取上一次缓存并返回，同时要有明显的"离线数据，可能不是最新"提示（具体 UI 由 TASK-61 处理，这里只需要返回值里带一个 isStale: boolean 标记）
+}
+
+export async function saveCustomerProfile(profile: CustomerProfileInput): Promise<CustomerWithContacts> {
+  // 1. PUT/POST /api/customers/:id 保存公司基础信息
+  // 2. PUT /api/customers/:id/contacts 整单替换联络人
+  // 两步都成功才算成功；第2步失败要在返回值里明确报告（不要吞掉错误），因为公司信息和联络人如果不一致会很难排查
+  // 不再写 localStorage 作为"提交动作"的一部分——localStorage 只在 fetchAllCustomers 成功时被动更新为缓存
+}
+```
+
+**必须删除**：`extractCustomersFromHistory()`（第6-72行）和它在 `getAllCustomers()` 里的调用——这是"从历史单据反向猜测客户"的旧逻辑，在有了真正的客户库之后不再需要，保留的话新旧两套客户会同时出现在列表里造成混乱。
+
+**必须删除整个文件**：`src/utils/customerDataService.ts`。它是给 Invoice 的 `CustomerSection.tsx` 用的独立重复实现，字段集比 `features/customer` 那套旧（没有 `companyShortName`/`contacts`）。删除后，`CustomerSection.tsx`（及其他任何 import 这个文件的地方，先跑 `grep -rln "customerDataService" src/` 确认引用点）需要改成调用 `features/customer/services/customerService.ts` 新的异步 API。
+
+### 改动 4：`src/utils/d1Sync.ts` 的 `d1SyncCustomer` 相关代码可以整体删除
+
+因为 TASK-60 之后客户数据不再走"本地写 + fire-and-forget 补写 D1"的双写模式，而是直接读写 D1（`saveCustomerProfile` 内部就是 `fetch` 调 API，同步等待结果），`d1SyncCustomer`、`D1CustomerPayload` 类型、以及 `PendingOp` 里 `kind: 'customer'` 的分支都成了死代码，一并清理。**注意**：`d1SyncDocument`（询价/单据用的）不要动，那部分依然是 fire-and-forget 双写模式，本次不改。
+
+### 改动 5：调用点排查
+
+搜一遍所有同步调用 `customerService.getAllCustomers()` / `saveCustomer()` / `deleteCustomer()` 的地方（`useCustomerData.ts`、`useCustomerActions.ts`、`useAutoSync.ts`、`NewCustomerTracker.tsx` 等，先 `grep -rln "customerService\." src/features/customer` 拿到完整列表），逐个改成 `await` 新的异步函数，并处理好 loading/error 状态（参考 `usePermissionStore` 里 `fetchPermissions` 的 `isLoading`/`error` 模式）。
+
+---
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+grep -rn "customerDataService" src/   # 应无输出，确认死代码已清理
+grep -rn "d1SyncCustomer\|D1CustomerPayload" src/   # 应无输出
+```
+
+**验收标准**：
+- 用两个不同账号登录，客户管理页看到的是**同一份**客户列表（验证团队共享生效）
+- 新建/编辑/删除客户后，刷新页面或换一个账号登录，改动都能看到（验证 D1 是权威源，不再依赖本地 localStorage 才能看到别人的改动）
+- 断网状态下打开客户管理页，能看到上一次缓存的数据（离线兜底没坏掉）
+- Invoice 的客户选择功能（`CustomerSection.tsx`）改造后功能不回归
+
+---
+
+## TASK-59/60 复核结论（Claude 已核对，通过）
+
+两轮改动都独立验证过（`sha256sum` 核对备份文件、`git diff` 逐文件核对、独立跑 `tsc --noEmit`），细节：
+- TASK-59 的 `CustomerEvent` 外键被 SQLite 重写到 `Customer_old`这个坑，发现和修复方式都对；005 是给已跑过旧版 004 的库打补丁，004 本身也同步补了这段逻辑，两边不会再有人踩同一个坑。
+- TASK-60 的 `handleReplaceCustomerContacts` 用 `env.USERS_DB.batch(statements)` 做"先删后插"原子替换，比口头要求的"一个事务"更准确；`ConsigneeSection.tsx` 顺手把过去"硬塞进 packing_history 冒充保存"的 hack 换成了真正的 `saveCustomerProfile`，`d1Migration.ts` 正确停用了客户数据的旧迁移分支（避免把 per-user 时代的脏副本重新写回团队共享表）——这几处都超出了字面要求，但判断是对的，不需要改。
+- `schema.sql` 已同步更新，两个待办都清了。
+
+可以继续 TASK-61。
+
+---
+
+## TASK-61：`Customer`/`Supplier`/`Consignee` 类型与表单统一——彻底去掉"联系人1"特殊字段
+
+**背景**：现在的 `Customer` 类型（`src/features/customer/types/index.ts` 第9-25行）有个历史遗留的混乱设计——顶层的 `name`/`email`/`phone` 字段实际存的是"联系人1"这个人的姓名/邮箱/电话，真正的公司名称反而存在 `company` 字段里；`contact1ShortName` 是联系人1的简称，`contacts[]` 数组是"联系人2及以后"，`contact2Name/ShortName/Phone/Email` 是更早版本遗留、现在应该没人写入但读取时仍要兼容的旧字段。`CustomerForm.tsx`（第107-278行）对应地把表单拆成"公司信息"+"联系人1"（绑定顶层字段）+"附加联系人"（绑定 `contacts[]`）三个 fieldset，联系人1享受"特殊待遇"，不能删除、不能调整顺序、不能设为非主要联系人。
+
+TASK-60 的 `customerService.ts`（`normalizeProfile`/`buildBasePayload`/`buildContactsPayload`）为了不在那一步大改前端，专门做了新旧字段之间的双向转换桥接，把 D1 里已经拆开的 Contact 表数据重新拼回这个旧的混乱形状。这次要把这层桥接拆掉，让前端类型直接对应 D1 的真实结构。
+
+**目标结构**：
+
+```ts
+// src/features/customer/types/index.ts
+export interface Contact {
+  id: string;
+  name: string;
+  shortName?: string;
+  email?: string;
+  phone?: string;
+  isPrimary?: boolean;   // 新增：新增
+}
+
+export interface CustomerProfile {
+  id: string;
+  type: 'customer' | 'supplier' | 'consignee';
+  name: string;           // 公司/供应商/收货人全称（不再是"联系人1姓名"）
+  shortName?: string;     // 简称
+  code?: string;
+  address?: string;
+  contacts: Contact[];    // 客户类型：至少1个，其中恰好1个 isPrimary=true；供应商/收货人本次也统一升级为同结构（可以只有0-1个联络人）
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+**是否保留 `Customer`/`Supplier`/`Consignee` 三个独立类型名**：可以保留三个类型别名（`export type Customer = CustomerProfile` 等）以减少调用点改动量，但底层结构统一。具体怎么权衡改动量由 Codex 判断，只要求最终三种实体的字段形状一致。
+
+**注意**：原来的 `Customer.email`/`phone` 顶层字段（"联系人1的邮箱电话"）不再有顶层对应物——这两个信息现在只存在于 `contacts[]` 里对应的那个联络人身上。如果有代码依赖 `customer.email`/`customer.phone` 直接取值（比如 Invoice/Quotation 的下拉匹配逻辑），需要相应改成取主联络人（`contacts.find(c => c.isPrimary) ?? contacts[0]`）的 email/phone。改之前先 `grep -rn "\.email\b\|\.phone\b" src/features/customer src/features/invoice src/components/quotation src/features/packing` 摸清所有读取点，不要漏改导致运行时读到 `undefined`。
+
+### 改动 1：`src/features/customer/services/customerService.ts` 简化
+
+`normalizeProfile`：直接返回 `contacts` 全量数组（含主联络人，`isPrimary` 用 D1 的 `is_primary` 换算），不再拆分"主联络人揉进顶层字段 + 附加联络人数组"。删除 `contact1ShortName`/`contact2*` 相关的读取和拼装逻辑。
+
+`buildContactsPayload`：改成直接使用调用方传入的完整 `contacts: Contact[]`（不再需要用 `profile.name`/`contact1ShortName` 拼一个"假的主联络人"），要求数组里恰好有一个 `isPrimary: true`（如果调用方没标，取数组第一个兜底为主联络人，并在保存前用这条规则纠正，避免 0 个或多个 `isPrimary` 同时为真导致语义混乱）。
+
+`buildBasePayload`：`name`/`short_name` 直接来自 `profile.name`/`profile.shortName`（公司名/简称），不再有"取 company 还是取 name"的二选一逻辑。
+
+同步更新 `CustomerProfileInput` 接口，去掉 `contact1ShortName`/`companyShortName`（改名 `shortName`）等旧字段名。
+
+### 改动 2：`src/features/customer/components/CustomerForm.tsx` 表单重构
+
+去掉"联系人1"专属 fieldset（第140-174行）。改成不区分主次的统一"联络人"列表（复用现有第176-277行"附加联系人"那套增删渲染逻辑，扩展一下）：
+
+- 每个联络人卡片增加一个"设为主联络人"的单选/按钮（radio 语义：全列表里只能有一个被选中）
+- 列表初始至少保留 1 个联络人卡片（不允许删到 0 个，客户至少要留一个联络人；如果用户尝试删除最后一个，按钮 disabled 或者给提示）
+- 新增的联络人默认不是主联络人；如果列表里还没有任何 `isPrimary`，新增的第一个自动设为主联络人
+- Supplier/Consignee（`entityType !== 'customers'` 分支，第279-323行）也升级成同一套"公司信息 + 联络人列表"结构（供应商/收货人大概率只需要 0-1 个联络人，但复用同一组件不需要额外分支）
+
+`CustomerFormData` 类型（`types/index.ts` 第49-58行）同步简化，去掉不再需要的字段。
+
+### 改动 3：调用点排查
+
+`grep -rln "companyShortName\|contact1ShortName\|contact2Name\|contact2ShortName\|contact2Phone\|contact2Email" src/` 找出所有引用点（预计包括 `useCustomerForm.ts`、`CustomerInfoCard.tsx`、`inquirerOptions.ts` 里读 `companyShortName`/`contact1ShortName` 生成"询价人建议"那段逻辑——这处要相应改成从 `contacts[]` 里取简称组合成候选项），逐个改成新结构。
+
+---
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+grep -rn "contact1ShortName\|contact2Name\|contact2ShortName\|contact2Phone\|contact2Email" src/   # 应无输出
+```
+
+**验收标准**：
+- 客户表单里不再有单独的"联系人1"区块，所有联络人在同一个列表里，可以任意指定其中一个为"主联络人"，也可以调整增删
+- 供应商/收货人的编辑表单也能录入多个联络人（哪怕大部分场景只填1个）
+- 已有客户数据（TASK-59 迁移进来的联络人）打开编辑表单后能正常显示、编辑、保存，不丢字段
+- 询报价登记表的"询价人"候选列表（`inquirerOptions.ts`）功能不回归
+
+---
+
+## TASK-62 ~ TASK-63：待 TASK-61 落地验证后细化
+
+- **TASK-62**：`InquiryFormModal.tsx` 把自由文本 `customerNo` 输入框 + `inquirer` datalist，换成"选客户（公司名/简称模糊搜索）→ 选联络人（默认选中主联络人）"两级选择器，选中后把 `customerId`/`contactId` 写入记录，同时保留自动生成的 `customerNo`/`inquirer` 展示字符串（兼容现有筛选/导出/PDF）；支持"客户不在库里 → 内联新建"。`Purchase` 的 `SupplierSection.tsx` 同步接入供应商库选择。
+- **TASK-63**：新增统计聚合接口 `GET /api/customers/:id/stats`（公司级 + 联络人级的询价数量/订单数量），客户详情页展示；再写一次性回填脚本，对历史 `Document` 记录尝试用 `customerNo`/`inquirer` 字符串匹配 `Customer.code`/`short_name` + `Contact.short_name` 回填 `customer_id`/`contact_id`，匹配不上的加"待关联客户"筛选提示。

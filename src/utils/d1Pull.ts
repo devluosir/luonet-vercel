@@ -5,7 +5,6 @@
  * 仅在用户已登录时通过 /api/documents 和 /api/customers 代理调用。
  */
 
-import type { Contact } from '@/features/customer/types';
 import {
   d1SyncDocument,
   flushPendingQueue,
@@ -29,18 +28,6 @@ type D1Doc = {
   updated_at: string;
 };
 
-type D1Customer = {
-  id: string;
-  type: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  data: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-};
-
 type LocalStorageItem = {
   id: string;
   createdAt?: string;
@@ -48,19 +35,6 @@ type LocalStorageItem = {
   updatedAt?: string;
   updated_at?: string;
 };
-
-type LocalCustomerItem = LocalStorageItem & {
-  contacts?: Contact[];
-  contact2Name?: unknown;
-  contact2ShortName?: unknown;
-  contact2Phone?: unknown;
-  contact2Email?: unknown;
-  [key: string]: unknown;
-};
-
-function toOptionalString(value: unknown): string | undefined {
-  return typeof value === 'string' && value ? value : undefined;
-}
 
 async function fetchAll<T>(
   url: string,
@@ -305,31 +279,6 @@ function docToPurchaseHistory(doc: D1Doc) {
   };
 }
 
-function d1CustomerToLocal(c: D1Customer, _type: 'customer' | 'supplier' | 'consignee') {
-  const result: LocalCustomerItem = {
-    id: c.id,
-    name: c.name,
-    email: c.email || '',
-    phone: c.phone || '',
-    address: c.address || '',
-    ...c.data,
-    createdAt: c.created_at,
-    updatedAt: c.updated_at,
-  };
-
-  if (!Array.isArray(result.contacts) && result.contact2Name) {
-    result.contacts = [{
-      id: `legacy-contact2-${c.id}`,
-      name: String(result.contact2Name),
-      shortName: toOptionalString(result.contact2ShortName),
-      phone: toOptionalString(result.contact2Phone),
-      email: toOptionalString(result.contact2Email),
-    }];
-  }
-
-  return result;
-}
-
 /**
  * 拉取全部 D1 数据并合并到 localStorage。
  * 失败时静默（不影响现有功能）。
@@ -393,17 +342,6 @@ export async function pullAllFromD1(): Promise<void> {
     mergeIntoStorage('invoice_history', invRes.data.map(docToInvoiceHistory), invRes.ok, pendingIds, effectiveDeletedIds);
     mergeIntoStorage('packing_history', packRes.data.map(docToPackingHistory), packRes.ok, pendingIds, effectiveDeletedIds);
     mergeIntoStorage('purchase_history', purchRes.data.map(docToPurchaseHistory), purchRes.ok, pendingIds, effectiveDeletedIds);
-
-    const [custRes, suppRes, consRes] = await Promise.all([
-      fetchAll<D1Customer>('/api/customers?type=customer', 'customers'),
-      fetchAll<D1Customer>('/api/customers?type=supplier', 'customers'),
-      fetchAll<D1Customer>('/api/customers?type=consignee', 'customers'),
-    ]);
-
-    const noDeletedCustomerIds = new Set<string>();
-    mergeIntoStorage('customer_management', custRes.data.map((c) => d1CustomerToLocal(c, 'customer')), custRes.ok, pendingIds, noDeletedCustomerIds);
-    mergeIntoStorage('supplier_management', suppRes.data.map((c) => d1CustomerToLocal(c, 'supplier')), suppRes.ok, pendingIds, noDeletedCustomerIds);
-    mergeIntoStorage('consignee_management', consRes.data.map((c) => d1CustomerToLocal(c, 'consignee')), consRes.ok, pendingIds, noDeletedCustomerIds);
 
     const remaining = getPendingIds().size;
     console.log(`[d1Pull] 同步完成${remaining > 0 ? `，${remaining} 条待提交（网络不可达）` : ''}`);

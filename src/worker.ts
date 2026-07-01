@@ -67,6 +67,8 @@ type DocumentRow = {
   type: string;
   doc_no: string;
   customer_name: string | null;
+  customer_id: string | null;
+  contact_id: string | null;
   total_amount: number | null;
   currency: string | null;
   status: string;
@@ -79,6 +81,8 @@ type InquiryRecordPayload = {
   id?: string;
   inquiryNo?: string;
   customerNo?: string;
+  customerId?: string;
+  contactId?: string;
   createdAt?: string;
   updatedAt?: string;
   [key: string]: unknown;
@@ -93,23 +97,55 @@ function serializeDocument(row: DocumentRow) {
 
 type CustomerRow = {
   id: string;
-  user_id: string;
   type: string;
   name: string;
+  short_name: string | null;
   code: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
   data: string;
   status: string;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 };
 
-function serializeCustomer(row: CustomerRow) {
+type ContactRow = {
+  id: string;
+  customer_id: string;
+  name: string;
+  short_name: string | null;
+  email: string | null;
+  phone: string | null;
+  is_primary: number;
+  sort_order: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+function serializeContact(row: ContactRow) {
+  return {
+    id: row.id,
+    customer_id: row.customer_id,
+    name: row.name,
+    short_name: row.short_name,
+    email: row.email,
+    phone: row.phone,
+    is_primary: Boolean(row.is_primary),
+    sort_order: row.sort_order,
+    status: row.status,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function serializeCustomer(row: CustomerRow, contacts: ContactRow[] = []) {
   return {
     ...row,
     data: parseJsonData<Record<string, unknown>>(row.data, {}),
+    contacts: contacts.map(serializeContact),
   };
 }
 
@@ -164,6 +200,14 @@ export default {
 
     if (path === '/api/customers' && request.method === 'POST') {
       return handleCreateCustomer(request, env);
+    }
+
+    if (path.startsWith('/api/customers/') && path.split('/').length === 5 && path.endsWith('/stats') && request.method === 'GET') {
+      return handleGetCustomerStats(request, env);
+    }
+
+    if (path.startsWith('/api/customers/') && path.split('/').length === 5 && path.endsWith('/contacts') && request.method === 'PUT') {
+      return handleReplaceCustomerContacts(request, env);
     }
 
     if (path.startsWith('/api/customers/') && path.split('/').length === 4 && request.method === 'GET') {
@@ -1234,15 +1278,17 @@ async function handleCreateDocument(request: Request, env: Env): Promise<Respons
     const now = new Date().toISOString();
     await env.USERS_DB.prepare(`
       INSERT OR REPLACE INTO Document (
-        id, user_id, type, doc_no, customer_name, total_amount, currency, status, data,
+        id, user_id, type, doc_no, customer_name, customer_id, contact_id, total_amount, currency, status, data,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       userId,
       type,
       docNo,
       body.customer_name || null,
+      body.customer_id || null,
+      body.contact_id || null,
       body.total_amount ?? null,
       body.currency || 'USD',
       body.status || 'active',
@@ -1280,6 +1326,8 @@ async function handleUpdateDocument(request: Request, env: Env): Promise<Respons
       'type',
       'doc_no',
       'customer_name',
+      'customer_id',
+      'contact_id',
       'total_amount',
       'currency',
       'status',
@@ -1387,6 +1435,8 @@ async function handleInquiryRequest(
           customerNo: typeof data.customerNo === 'string' ? data.customerNo : row.customer_name ?? '',
           createdAt: typeof data.createdAt === 'string' ? data.createdAt : row.created_at,
           updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : row.updated_at,
+          customerId: typeof data.customerId === 'string' ? data.customerId : row.customer_id ?? undefined,
+          contactId: typeof data.contactId === 'string' ? data.contactId : row.contact_id ?? undefined,
         };
       });
 
@@ -1400,16 +1450,20 @@ async function handleInquiryRequest(
       const createdAt = typeof body.createdAt === 'string' && body.createdAt ? body.createdAt : now;
       const inquiryNo = typeof body.inquiryNo === 'string' ? body.inquiryNo : '';
       const customerNo = typeof body.customerNo === 'string' ? body.customerNo : '';
+      const customerId = typeof body.customerId === 'string' && body.customerId ? body.customerId : null;
+      const contactId = typeof body.contactId === 'string' && body.contactId ? body.contactId : null;
       const data = JSON.stringify({ ...body, id, createdAt, updatedAt: now });
 
       await env.USERS_DB.prepare(`
         INSERT OR REPLACE INTO Document (
-          id, user_id, type, doc_no, customer_name, total_amount, currency, status, data, created_at, updated_at
-        ) VALUES (?, '_shared_', 'inquiry', ?, ?, 0, 'CNY', 'active', ?, ?, ?)
+          id, user_id, type, doc_no, customer_name, customer_id, contact_id, total_amount, currency, status, data, created_at, updated_at
+        ) VALUES (?, '_shared_', 'inquiry', ?, ?, ?, ?, 0, 'CNY', 'active', ?, ?, ?)
       `).bind(
         id,
         inquiryNo,
         customerNo,
+        customerId,
+        contactId,
         data,
         createdAt,
         now
@@ -1434,16 +1488,20 @@ async function handleInquiryRequest(
       const mergedData = { ...existingData, ...body, id, updatedAt: now };
       const inquiryNo = typeof mergedData.inquiryNo === 'string' ? mergedData.inquiryNo : '';
       const customerNo = typeof mergedData.customerNo === 'string' ? mergedData.customerNo : '';
+      const customerId = typeof mergedData.customerId === 'string' && mergedData.customerId ? mergedData.customerId : null;
+      const contactId = typeof mergedData.contactId === 'string' && mergedData.contactId ? mergedData.contactId : null;
       const data = JSON.stringify(mergedData);
 
       await env.USERS_DB.prepare(`
         INSERT OR REPLACE INTO Document
-          (id, user_id, type, doc_no, customer_name, total_amount, currency, status, data, created_at, updated_at)
-        VALUES (?, '_shared_', 'inquiry', ?, ?, 0, 'CNY', 'active', ?, ?, ?)
+          (id, user_id, type, doc_no, customer_name, customer_id, contact_id, total_amount, currency, status, data, created_at, updated_at)
+        VALUES (?, '_shared_', 'inquiry', ?, ?, ?, ?, 0, 'CNY', 'active', ?, ?, ?)
       `).bind(
         id,
         inquiryNo,
         customerNo,
+        customerId,
+        contactId,
         data,
         createdAt,
         now
@@ -1478,17 +1536,14 @@ async function handleListCustomers(request: Request, env: Env): Promise<Response
     if (!verifyBearerToken(request, env)) return unauthorizedResponse();
 
     const url = new URL(request.url);
-    const userId = url.searchParams.get('user_id');
-    if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
-
     const type = url.searchParams.get('type');
     const status = url.searchParams.get('status') || 'active';
     const search = url.searchParams.get('search');
     const limit = Math.min(Number(url.searchParams.get('limit')) || 100, 500);
     const offset = Number(url.searchParams.get('offset')) || 0;
 
-    const conditions = ['user_id = ?'];
-    const values: Array<string | number> = [userId];
+    const conditions: string[] = [];
+    const values: Array<string | number> = [];
 
     if (type) {
       conditions.push('type = ?');
@@ -1501,21 +1556,40 @@ async function handleListCustomers(request: Request, env: Env): Promise<Response
     }
 
     if (search) {
-      conditions.push('(name LIKE ? OR code LIKE ? OR email LIKE ? OR phone LIKE ?)');
-      values.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+      conditions.push('(name LIKE ? OR short_name LIKE ? OR code LIKE ? OR email LIKE ? OR phone LIKE ?)');
+      values.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     values.push(limit, offset);
 
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const result = await env.USERS_DB.prepare(`
       SELECT * FROM Customer
-      WHERE ${conditions.join(' AND ')}
+      ${whereClause}
       ORDER BY updated_at DESC
       LIMIT ? OFFSET ?
     `).bind(...values).all<CustomerRow>();
 
+    let contactsByCustomer = new Map<string, ContactRow[]>();
+    if (result.results.length > 0) {
+      const ids = result.results.map((customer) => customer.id);
+      const placeholders = ids.map(() => '?').join(', ');
+      const contactResult = await env.USERS_DB.prepare(`
+        SELECT * FROM Contact
+        WHERE status = 'active' AND customer_id IN (${placeholders})
+        ORDER BY customer_id, sort_order, created_at
+      `).bind(...ids).all<ContactRow>();
+
+      contactsByCustomer = contactResult.results.reduce((map, contact) => {
+        const list = map.get(contact.customer_id) ?? [];
+        list.push(contact);
+        map.set(contact.customer_id, list);
+        return map;
+      }, new Map<string, ContactRow[]>());
+    }
+
     return jsonResponse({
-      customers: result.results.map(serializeCustomer),
+      customers: result.results.map((customer) => serializeCustomer(customer, contactsByCustomer.get(customer.id) ?? [])),
       pagination: { limit, offset, count: result.results.length },
     });
   } catch (error) {
@@ -1531,18 +1605,26 @@ async function handleGetCustomer(request: Request, env: Env): Promise<Response> 
     if (!verifyBearerToken(request, env)) return unauthorizedResponse();
 
     const url = new URL(request.url);
-    const userId = url.searchParams.get('user_id');
     const customerId = url.pathname.split('/')[3];
-    if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
 
     const customer = await env.USERS_DB.prepare(`
       SELECT * FROM Customer
-      WHERE id = ? AND user_id = ?
+      WHERE id = ?
       LIMIT 1
-    `).bind(customerId, userId).first<CustomerRow>();
+    `).bind(customerId).first<CustomerRow>();
 
     if (!customer) return jsonResponse({ error: '客户不存在' }, 404);
-    return jsonResponse({ customer: serializeCustomer(customer) });
+
+    const contacts = await env.USERS_DB.prepare(`
+      SELECT * FROM Contact
+      WHERE customer_id = ? AND status = 'active'
+      ORDER BY sort_order, created_at
+    `).bind(customerId).all<ContactRow>();
+
+    return jsonResponse({
+      customer: serializeCustomer(customer, contacts.results),
+      contacts: contacts.results.map(serializeContact),
+    });
   } catch (error) {
     return jsonResponse({
       error: '服务器错误',
@@ -1556,11 +1638,11 @@ async function handleCreateCustomer(request: Request, env: Env): Promise<Respons
     if (!verifyBearerToken(request, env)) return unauthorizedResponse();
 
     const body = await request.json();
-    const userId = body.user_id;
+    const createdBy = body.created_by || null;
     const type = body.type;
     const name = body.name;
 
-    if (!userId || !type || !name) {
+    if (!type || !name) {
       return jsonResponse({ error: '缺少必要字段' }, 400);
     }
 
@@ -1570,24 +1652,25 @@ async function handleCreateCustomer(request: Request, env: Env): Promise<Respons
 
     await env.USERS_DB.prepare(`
       INSERT OR REPLACE INTO Customer (
-        id, user_id, type, name, code, email, phone, address, data, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, type, name, short_name, code, email, phone, address, data, status, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
-      userId,
       type,
       name,
+      body.short_name || body.shortName || null,
       body.code || null,
       body.email || null,
       body.phone || null,
       body.address || null,
       dataText,
-      body.status || 'active'
+      body.status || 'active',
+      createdBy
     ).run();
 
     const created = await env.USERS_DB.prepare(`
-      SELECT * FROM Customer WHERE id = ? AND user_id = ? LIMIT 1
-    `).bind(id, userId).first<CustomerRow>();
+      SELECT * FROM Customer WHERE id = ? LIMIT 1
+    `).bind(id).first<CustomerRow>();
 
     return jsonResponse({ success: true, customer: created ? serializeCustomer(created) : null }, 201);
   } catch (error) {
@@ -1605,14 +1688,13 @@ async function handleUpdateCustomer(request: Request, env: Env): Promise<Respons
     const url = new URL(request.url);
     const customerId = url.pathname.split('/')[3];
     const body = await request.json();
-    const userId = body.user_id;
-    if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
 
     const fields: string[] = [];
     const values: Array<string | null> = [];
     const updatableFields = [
       'type',
       'name',
+      'short_name',
       'code',
       'email',
       'phone',
@@ -1635,18 +1717,18 @@ async function handleUpdateCustomer(request: Request, env: Env): Promise<Respons
       return jsonResponse({ error: '没有可更新字段' }, 400);
     }
 
-    values.push(userId, customerId);
+    values.push(customerId);
     const result = await env.USERS_DB.prepare(`
       UPDATE Customer
       SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = ? AND id = ?
+      WHERE id = ?
     `).bind(...values).run();
 
     if (result.meta.changes === 0) return jsonResponse({ error: '客户不存在' }, 404);
 
     const updated = await env.USERS_DB.prepare(`
-      SELECT * FROM Customer WHERE id = ? AND user_id = ? LIMIT 1
-    `).bind(customerId, userId).first<CustomerRow>();
+      SELECT * FROM Customer WHERE id = ? LIMIT 1
+    `).bind(customerId).first<CustomerRow>();
 
     return jsonResponse({ success: true, customer: updated ? serializeCustomer(updated) : null });
   } catch (error) {
@@ -1662,18 +1744,179 @@ async function handleDeleteCustomer(request: Request, env: Env): Promise<Respons
     if (!verifyBearerToken(request, env)) return unauthorizedResponse();
 
     const url = new URL(request.url);
-    const userId = url.searchParams.get('user_id');
     const customerId = url.pathname.split('/')[3];
-    if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
 
     const result = await env.USERS_DB.prepare(`
       UPDATE Customer
       SET status = 'archived', updated_at = CURRENT_TIMESTAMP
-      WHERE id = ? AND user_id = ?
-    `).bind(customerId, userId).run();
+      WHERE id = ?
+    `).bind(customerId).run();
 
     if (result.meta.changes === 0) return jsonResponse({ error: '客户不存在' }, 404);
     return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleGetCustomerStats(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const url = new URL(request.url);
+    const customerId = url.pathname.split('/')[3];
+
+    const customer = await env.USERS_DB.prepare(`
+      SELECT id FROM Customer WHERE id = ? LIMIT 1
+    `).bind(customerId).first<{ id: string }>();
+
+    if (!customer) return jsonResponse({ error: '客户不存在' }, 404);
+
+    const totals = await env.USERS_DB.prepare(`
+      SELECT
+        COUNT(*) AS inquiry_count,
+        SUM(
+          CASE
+            WHEN json_extract(data, '$.orderNo') IS NOT NULL
+              AND TRIM(CAST(json_extract(data, '$.orderNo') AS TEXT)) != ''
+            THEN 1 ELSE 0
+          END
+        ) AS order_count
+      FROM Document
+      WHERE type = 'inquiry'
+        AND status = 'active'
+        AND customer_id = ?
+    `).bind(customerId).first<{ inquiry_count: number; order_count: number | null }>();
+
+    const contacts = await env.USERS_DB.prepare(`
+      SELECT
+        ct.id AS contact_id,
+        ct.name AS name,
+        ct.short_name AS short_name,
+        ct.is_primary AS is_primary,
+        COUNT(d.id) AS inquiry_count,
+        SUM(
+          CASE
+            WHEN json_extract(d.data, '$.orderNo') IS NOT NULL
+              AND TRIM(CAST(json_extract(d.data, '$.orderNo') AS TEXT)) != ''
+            THEN 1 ELSE 0
+          END
+        ) AS order_count
+      FROM Contact ct
+      LEFT JOIN Document d
+        ON d.contact_id = ct.id
+       AND d.type = 'inquiry'
+       AND d.status = 'active'
+      WHERE ct.customer_id = ?
+        AND ct.status = 'active'
+      GROUP BY ct.id, ct.name, ct.short_name, ct.is_primary, ct.sort_order
+      ORDER BY ct.sort_order, ct.created_at
+    `).bind(customerId).all<{
+      contact_id: string;
+      name: string;
+      short_name: string | null;
+      is_primary: number;
+      inquiry_count: number;
+      order_count: number | null;
+    }>();
+
+    const unassigned = await env.USERS_DB.prepare(`
+      SELECT
+        COUNT(*) AS inquiry_count,
+        SUM(
+          CASE
+            WHEN json_extract(data, '$.orderNo') IS NOT NULL
+              AND TRIM(CAST(json_extract(data, '$.orderNo') AS TEXT)) != ''
+            THEN 1 ELSE 0
+          END
+        ) AS order_count
+      FROM Document
+      WHERE type = 'inquiry'
+        AND status = 'active'
+        AND customer_id = ?
+        AND (contact_id IS NULL OR contact_id = '')
+    `).bind(customerId).first<{ inquiry_count: number; order_count: number | null }>();
+
+    return jsonResponse({
+      customerId,
+      totals: {
+        inquiries: totals?.inquiry_count ?? 0,
+        orders: totals?.order_count ?? 0,
+      },
+      contacts: contacts.results.map((contact) => ({
+        contactId: contact.contact_id,
+        name: contact.name,
+        shortName: contact.short_name,
+        isPrimary: Boolean(contact.is_primary),
+        inquiries: contact.inquiry_count,
+        orders: contact.order_count ?? 0,
+      })),
+      unassigned: {
+        inquiries: unassigned?.inquiry_count ?? 0,
+        orders: unassigned?.order_count ?? 0,
+      },
+    });
+  } catch (error) {
+    return jsonResponse({
+      error: '服务器错误',
+      details: error instanceof Error ? error.message : '未知错误',
+    }, 500);
+  }
+}
+
+async function handleReplaceCustomerContacts(request: Request, env: Env): Promise<Response> {
+  try {
+    if (!verifyBearerToken(request, env)) return unauthorizedResponse();
+
+    const url = new URL(request.url);
+    const customerId = url.pathname.split('/')[3];
+    const body = await request.json();
+    const contacts = Array.isArray(body.contacts) ? body.contacts : null;
+
+    if (!contacts) {
+      return jsonResponse({ error: 'contacts 必须是数组' }, 400);
+    }
+
+    const customer = await env.USERS_DB.prepare(`
+      SELECT id FROM Customer WHERE id = ? LIMIT 1
+    `).bind(customerId).first<{ id: string }>();
+
+    if (!customer) return jsonResponse({ error: '客户不存在' }, 404);
+
+    const statements = [
+      env.USERS_DB.prepare('DELETE FROM Contact WHERE customer_id = ?').bind(customerId),
+      ...contacts
+        .filter((contact: any) => typeof contact?.name === 'string' && contact.name.trim())
+        .map((contact: any, index: number) => env.USERS_DB.prepare(`
+          INSERT INTO Contact (
+            id, customer_id, name, short_name, email, phone, is_primary, sort_order, status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
+        `).bind(
+          contact.id || crypto.randomUUID(),
+          customerId,
+          contact.name.trim(),
+          contact.short_name || contact.shortName || null,
+          contact.email || null,
+          contact.phone || null,
+          contact.is_primary || contact.isPrimary ? 1 : 0,
+          Number.isFinite(Number(contact.sort_order ?? contact.sortOrder))
+            ? Number(contact.sort_order ?? contact.sortOrder)
+            : index
+        )),
+    ];
+
+    await env.USERS_DB.batch(statements);
+
+    const updatedContacts = await env.USERS_DB.prepare(`
+      SELECT * FROM Contact
+      WHERE customer_id = ? AND status = 'active'
+      ORDER BY sort_order, created_at
+    `).bind(customerId).all<ContactRow>();
+
+    return jsonResponse({ success: true, contacts: updatedContacts.results.map(serializeContact) });
   } catch (error) {
     return jsonResponse({
       error: '服务器错误',

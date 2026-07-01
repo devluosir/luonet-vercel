@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS Document (
   type TEXT NOT NULL CHECK(type IN ('quotation', 'confirmation', 'invoice', 'packing', 'purchase', 'inquiry')),
   doc_no TEXT NOT NULL DEFAULT '',
   customer_name TEXT NOT NULL DEFAULT '',
+  customer_id TEXT,
+  contact_id TEXT,
   total_amount REAL NOT NULL DEFAULT 0,
   currency TEXT NOT NULL DEFAULT 'USD',
   status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'deleted')),
@@ -66,27 +68,49 @@ CREATE INDEX IF NOT EXISTS idx_doc_customer ON Document(customer_name);
 CREATE INDEX IF NOT EXISTS idx_doc_no ON Document(doc_no);
 CREATE INDEX IF NOT EXISTS idx_doc_created ON Document(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_doc_status ON Document(status);
+CREATE INDEX IF NOT EXISTS idx_doc_customer_id ON Document(customer_id);
+CREATE INDEX IF NOT EXISTS idx_doc_contact_id ON Document(contact_id);
 
 -- 客户数据表
 CREATE TABLE IF NOT EXISTS Customer (
   id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL,
   type TEXT NOT NULL CHECK(type IN ('customer', 'supplier', 'consignee')),
   name TEXT NOT NULL,
+  short_name TEXT,
   code TEXT,                                        -- 客户编号
   email TEXT,
   phone TEXT,
   address TEXT,
   data TEXT NOT NULL DEFAULT '{}',                 -- JSON 扩展字段
   status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'archived')),
+  created_by TEXT,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES User(id) ON DELETE CASCADE
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_customer_user_type ON Customer(user_id, type);
+CREATE INDEX IF NOT EXISTS idx_customer_type ON Customer(type);
 CREATE INDEX IF NOT EXISTS idx_customer_name ON Customer(name);
+CREATE INDEX IF NOT EXISTS idx_customer_short_name ON Customer(short_name);
 CREATE INDEX IF NOT EXISTS idx_customer_status ON Customer(status);
+
+-- 客户联络人表
+CREATE TABLE IF NOT EXISTS Contact (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  short_name TEXT,
+  email TEXT,
+  phone TEXT,
+  is_primary INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'archived')),
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (customer_id) REFERENCES Customer(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_contact_customer_id ON Contact(customer_id);
+CREATE INDEX IF NOT EXISTS idx_contact_short_name ON Contact(short_name);
 
 -- 客户事件表（时间轴 + 跟进记录）
 CREATE TABLE IF NOT EXISTS CustomerEvent (

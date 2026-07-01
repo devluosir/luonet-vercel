@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { recordCustomerUsage } from '@/utils/customerUsageTracker';
-import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
-import { getCustomersForDropdown, SavedCustomer } from '@/utils/customerDataService';
+import { getCustomersForDropdown, customerService } from '@/features/customer/services/customerService';
 
 interface SavedConsignee {
   name: string;
@@ -14,38 +12,6 @@ interface ConsigneeSectionProps {
   consigneeName: string;
   orderNo: string;
   onChange: (data: { consigneeName: string; orderNo: string }) => void;
-}
-
-/**
- * 标准化客户名称，用于匹配
- * @param name 客户名称
- * @returns 标准化后的客户名称
- */
-function normalizeCustomerName(name: string): string {
-  if (!name || typeof name !== 'string') {
-    return '未命名客户';
-  }
-  return name
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toUpperCase();
-}
-
-/**
- * 查找最匹配的客户记录
- * @param customerName 客户名称
- * @param records 客户记录数组
- * @returns 匹配的客户记录索引，如果未找到返回-1
- */
-function findBestCustomerMatch(customerName: string, records: any[]): number {
-  const normalizedSearchName = normalizeCustomerName(customerName);
-  
-  // 只进行精确匹配，避免错误的匹配
-  const exactMatch = records.findIndex(record => 
-    normalizeCustomerName(record.name) === normalizedSearchName
-  );
-  
-  return exactMatch;
 }
 
 const inputClassName = `w-full px-4 py-2.5 rounded-2xl
@@ -69,11 +35,11 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
 
   // 加载客户数据的通用函数
   // 使用统一的客户数据服务，从客户管理页面获取数据
-  const loadCustomerData = () => {
+  const loadCustomerData = async () => {
     try {
       if (typeof window !== 'undefined') {
         // 使用统一的客户数据服务
-        const allCustomers = getCustomersForDropdown();
+        const allCustomers = await getCustomersForDropdown('consignee');
         
         console.log('从客户管理服务加载的客户数据:', {
           totalCustomers: allCustomers.length,
@@ -96,7 +62,7 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
 
   // 加载保存的客户信息
   useEffect(() => {
-    loadCustomerData();
+    void loadCustomerData();
   }, []);
 
   // 添加点击外部区域关闭弹窗的功能
@@ -129,65 +95,23 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
   }, [showSavedConsignees]);
 
   // 保存收货人信息
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!consigneeName.trim()) return;
 
     const consigneeNameFirstLine = consigneeName.split('\n')[0].trim(); // 使用第一行作为收货人名称
-    const normalizedConsigneeName = normalizeCustomerName(consigneeNameFirstLine);
-    
-    // 保存到历史记录中，这样客户页面就能读取到
-    if (typeof window !== 'undefined') {
-      const packingHistory = JSON.parse(localStorage.getItem('packing_history') || '[]');
-      
-      // 检查是否已经存在相同的收货人信息
-      const existingIndex = packingHistory.findIndex((record: any) => {
-        if (!record.consigneeName) return false;
-        const recordNormalizedName = normalizeCustomerName(record.consigneeName);
-        return recordNormalizedName === normalizedConsigneeName;
+
+    try {
+      await customerService.saveCustomerProfile({
+        type: 'consignee',
+        name: consigneeNameFirstLine,
+        address: consigneeName,
+        contacts: [],
       });
-      
-      if (existingIndex !== -1) {
-        // 如果已存在，更新现有记录
-        packingHistory[existingIndex] = {
-          ...packingHistory[existingIndex],
-          consigneeName: consigneeNameFirstLine,
-          customerName: consigneeNameFirstLine, // 兼容性字段
-          updatedAt: new Date().toISOString(),
-          data: {
-            ...packingHistory[existingIndex].data,
-            consignee: {
-              name: consigneeName
-            },
-            consigneeName: consigneeNameFirstLine
-          }
-        };
-      } else {
-        // 如果不存在，创建新的历史记录
-        const newRecord = {
-          id: Date.now().toString(),
-          consigneeName: consigneeNameFirstLine,
-          customerName: consigneeNameFirstLine, // 兼容性字段
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          type: 'packing',
-          data: {
-            consignee: {
-              name: consigneeName
-            },
-            consigneeName: consigneeNameFirstLine
-          }
-        };
-        
-        // 添加到历史记录
-        packingHistory.push(newRecord);
-      }
-      
-      localStorage.setItem('packing_history', JSON.stringify(packingHistory));
+      await loadCustomerData();
+      setShowSavedConsignees(false);
+    } catch (error) {
+      console.error('保存收货人失败:', error);
     }
-    
-    // 重新加载客户数据
-    loadCustomerData();
-    setShowSavedConsignees(false);
   };
 
   // 加载收货人信息
@@ -298,4 +222,4 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
       </div>
     </div>
   );
-} 
+}

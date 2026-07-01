@@ -1,63 +1,44 @@
 import { useState } from 'react';
-import { Contact, CustomerFormData, Customer, Supplier, Consignee } from '../types';
+import { Contact, CustomerFormData, Customer, Supplier, Consignee, TabType } from '../types';
 
-const EMPTY_FORM_DATA: CustomerFormData = {
-  name: '',
-  email: '',
-  phone: '',
-  address: '',
-  company: '',
-  companyShortName: '',
-  contact1ShortName: '',
-  contacts: [],
-};
-
-function hasLegacyContact2(customer: Partial<Customer>): boolean {
-  return Boolean(
-    customer.contact2Name ||
-      customer.contact2ShortName ||
-      customer.contact2Phone ||
-      customer.contact2Email
-  );
+function createEmptyFormData(): CustomerFormData {
+  return {
+    name: '',
+    shortName: '',
+    code: '',
+    address: '',
+    contacts: [{ id: `primary-contact-${Date.now()}`, name: '', isPrimary: true }],
+  };
 }
 
-function migrateContacts(item: Customer | Supplier | Consignee): Contact[] {
-  const customerFields = item as Partial<Customer>;
-  if (Array.isArray(customerFields.contacts)) {
-    return customerFields.contacts;
+function normalizeContacts(contacts: Contact[]): Contact[] {
+  if (contacts.length === 0) {
+    return [{ id: 'primary-contact-draft', name: '', isPrimary: true }];
   }
-  if (!hasLegacyContact2(customerFields)) {
-    return [];
-  }
-  return [{
-    id: `legacy-contact2-${item.id}`,
-    name: customerFields.contact2Name ?? '',
-    shortName: customerFields.contact2ShortName ?? '',
-    phone: customerFields.contact2Phone ?? '',
-    email: customerFields.contact2Email ?? '',
-  }];
+  const primaryIndex = contacts.findIndex((contact) => contact.isPrimary);
+  const resolvedPrimaryIndex = primaryIndex >= 0 ? primaryIndex : 0;
+  return contacts.map((contact, index) => ({
+    ...contact,
+    isPrimary: index === resolvedPrimaryIndex,
+  }));
 }
 
 export function useCustomerForm() {
-  const [formData, setFormData] = useState<CustomerFormData>(EMPTY_FORM_DATA);
+  const [formData, setFormData] = useState<CustomerFormData>(createEmptyFormData);
 
   // 重置表单
   const resetForm = () => {
-    setFormData(EMPTY_FORM_DATA);
+    setFormData(createEmptyFormData());
   };
 
   // 设置表单数据（用于编辑）
   const setFormDataForEdit = (item: Customer | Supplier | Consignee) => {
-    const customerFields = item as Partial<Customer>;
     setFormData({
-      name: item.name.split('\n')[0],
-      email: item.email,
-      phone: item.phone,
+      name: item.name,
+      shortName: item.shortName ?? '',
+      code: item.code ?? '',
       address: item.address,
-      company: item.company,
-      companyShortName: customerFields.companyShortName ?? '',
-      contact1ShortName: customerFields.contact1ShortName ?? '',
-      contacts: migrateContacts(item),
+      contacts: normalizeContacts(item.contacts),
     });
   };
 
@@ -73,9 +54,13 @@ export function useCustomerForm() {
   };
 
   // 验证表单
-  const validateForm = (): boolean => {
+  const validateForm = (entityType: TabType = 'customers'): boolean => {
     if (!formData.name.trim()) {
       alert('请输入名称');
+      return false;
+    }
+    if (entityType === 'customers' && !formData.contacts.some((contact) => contact.name.trim())) {
+      alert('请至少填写一个联络人');
       return false;
     }
     return true;

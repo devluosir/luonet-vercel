@@ -1,8 +1,56 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Search } from 'lucide-react';
+import type { Customer as SupplierProfile } from '@/features/customer/types';
+import { customerService, getPrimaryContact } from '@/features/customer/services/customerService';
 import { usePurchaseForm } from '../../hooks/usePurchaseForm';
 
 export default function SupplierSection() {
-  const { field } = usePurchaseForm();
+  const { field, setField } = usePurchaseForm();
+  const [suppliers, setSuppliers] = useState<SupplierProfile[]>([]);
+  const [query, setQuery] = useState('');
+  const [showOptions, setShowOptions] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void customerService.fetchAllCustomers('supplier')
+      .then(({ items }) => {
+        if (!cancelled) setSuppliers(items);
+      })
+      .catch((error) => {
+        console.warn('加载供应商库失败:', error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredSuppliers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return suppliers.slice(0, 20);
+    return suppliers
+      .filter((supplier) => {
+        const primaryContact = getPrimaryContact(supplier);
+        return (
+          supplier.name.toLowerCase().includes(q) ||
+          (supplier.shortName || '').toLowerCase().includes(q) ||
+          (supplier.code || '').toLowerCase().includes(q) ||
+          (primaryContact?.name || '').toLowerCase().includes(q) ||
+          (primaryContact?.shortName || '').toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 20);
+  }, [query, suppliers]);
+
+  const selectSupplier = (supplier: SupplierProfile) => {
+    const primaryContact = getPrimaryContact(supplier);
+    setField('supplier.name', supplier.name);
+    setField('supplier.attn', primaryContact?.name || '');
+    setField('supplier.phone', primaryContact?.phone || '');
+    setField('supplier.email', primaryContact?.email || '');
+    setField('supplier.address', supplier.address || '');
+    setQuery(supplier.shortName || supplier.name);
+    setShowOptions(false);
+  };
   
   return (
     <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
@@ -10,6 +58,48 @@ export default function SupplierSection() {
         供应商信息
       </h3>
       <div className="space-y-3">
+        <div className="relative">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            从供应商库选择
+          </label>
+          <Search className="pointer-events-none absolute left-3 top-[42px] h-4 w-4 text-gray-400" />
+          <input
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setShowOptions(true);
+            }}
+            onFocus={() => setShowOptions(true)}
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 pl-9 text-sm text-gray-900 transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            placeholder="搜索供应商全称、简称或联络人"
+            autoComplete="off"
+          />
+          {showOptions && (
+            <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+              {filteredSuppliers.length > 0 ? filteredSuppliers.map((supplier) => {
+                const primaryContact = getPrimaryContact(supplier);
+                return (
+                  <button
+                    key={supplier.id}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selectSupplier(supplier)}
+                    className="block w-full border-b border-gray-100 px-3 py-2 text-left last:border-b-0 hover:bg-blue-50 dark:border-gray-700 dark:hover:bg-blue-950/30"
+                  >
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {supplier.name}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {[supplier.shortName, primaryContact?.name, primaryContact?.phone].filter(Boolean).join(' · ') || '未设置联络人'}
+                    </div>
+                  </button>
+                );
+              }) : (
+                <div className="px-3 py-2 text-sm text-gray-400">未找到匹配供应商</div>
+              )}
+            </div>
+          )}
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             供应商名称 Supplier Name

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Edit, Eye, Search, Trash2, Users } from 'lucide-react';
 import type { Customer, Supplier, Consignee } from '../types';
+import { getPrimaryContact } from '../services/customerService';
 
 const AVATAR_COLORS = [
   'bg-blue-500',
@@ -60,11 +61,12 @@ export function CustomerList({
     const q = searchQuery.toLowerCase();
     return customers.filter((c) => {
       const title = c.name.split('\n')[0] || c.name;
+      const primaryContact = getPrimaryContact(c);
       return (
         title.toLowerCase().includes(q) ||
-        (c.company || '').toLowerCase().includes(q) ||
-        (c.phone || '').toLowerCase().includes(q) ||
-        (c.email || '').toLowerCase().includes(q)
+        (c.shortName || '').toLowerCase().includes(q) ||
+        (primaryContact?.phone || '').toLowerCase().includes(q) ||
+        (primaryContact?.email || '').toLowerCase().includes(q)
       );
     });
   }, [customers, searchQuery]);
@@ -114,7 +116,8 @@ export function CustomerList({
         {filtered.map((customer) => {
           const title = customer.name.split('\n')[0] || customer.name;
           const initial = title.charAt(0).toUpperCase() || '客';
-          const contact = customer.phone || customer.email || '—';
+          const primaryContact = getPrimaryContact(customer);
+          const contact = primaryContact?.phone || primaryContact?.email || '—';
 
           return (
             <div
@@ -135,8 +138,8 @@ export function CustomerList({
                 >
                   {title}
                 </button>
-                {customer.company && (
-                  <p className="truncate text-xs text-gray-400 dark:text-gray-500">{customer.company}</p>
+                {customer.shortName && (
+                  <p className="truncate text-xs text-gray-400 dark:text-gray-500">{customer.shortName}</p>
                 )}
               </div>
 

@@ -1,7 +1,9 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, UserRound, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Search, UserRound, X } from 'lucide-react';
+import type { Contact, Customer } from '@/features/customer/types';
+import { customerService, getPrimaryContact } from '@/features/customer/services/customerService';
 import type {
   CustomerQuoteStatus,
   InquiryBasicInput,
@@ -17,7 +19,6 @@ import {
   getDateInputValueFromInquiryNo,
   getTodayDateInputValue,
 } from '../utils/inquiryUtils';
-import { getInquirerOptions } from '../utils/inquirerOptions';
 import { InquiryQuoteStatus } from './InquiryQuoteStatus';
 
 /** YYYY-MM-DD → m.D（如 6.21） */
@@ -42,6 +43,19 @@ const FIELD_CLS =
 
 const LABEL_CLS = 'block text-xs font-medium text-gray-400 dark:text-gray-500';
 
+function getCustomerDisplay(customer: Customer): string {
+  return customer.shortName ? `${customer.shortName} · ${customer.name}` : customer.name;
+}
+
+function buildCustomerNo(customer: Customer): string {
+  return customer.code || customer.shortName || customer.name;
+}
+
+function buildInquirer(customer: Customer, contact?: Contact): string {
+  const customerPart = customer.shortName || customer.code || customer.name;
+  if (!contact) return customerPart;
+  return `${customerPart}-${contact.shortName || contact.name}`;
+}
 
 interface InquiryFormModalProps {
   isOpen: boolean;
@@ -66,12 +80,17 @@ export function InquiryFormModal({
   const [inquiryNo, setInquiryNo] = useState('');
   const [inquirer, setInquirer] = useState('');
   const [customerNo, setCustomerNo] = useState('');
+  const [customerId, setCustomerId] = useState('');
+  const [contactId, setContactId] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [showCustomerOptions, setShowCustomerOptions] = useState(false);
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [description, setDescription] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [orderSubStatus, setOrderSubStatus] = useState<OrderSubStatus | undefined>(undefined);
   const [isInquiryNoManual, setIsInquiryNoManual] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
-  const [inquirerOptions, setInquirerOptions] = useState<string[]>([]);
 
   // ── 状态缓冲（随"保存修改"/"新增询价"一并提交） ──────
   const [localSuppliers, setLocalSuppliers] = useState<SupplierQuoteStatus[]>([]);
@@ -84,6 +103,35 @@ export function InquiryFormModal({
         .map((item) => item.inquiryNo),
     [existingRecords, record?.id]
   );
+
+  const selectedCustomer = useMemo(
+    () => customers.find((customer) => customer.id === customerId) ?? null,
+    [customerId, customers]
+  );
+  const selectedContact = useMemo(
+    () => selectedCustomer?.contacts.find((contact) => contact.id === contactId) ?? null,
+    [contactId, selectedCustomer]
+  );
+  const filteredCustomers = useMemo(() => {
+    const q = customerSearch.trim().toLowerCase();
+    if (!q) return customers.slice(0, 20);
+    return customers
+      .filter((customer) => {
+        return (
+          customer.name.toLowerCase().includes(q) ||
+          (customer.shortName || '').toLowerCase().includes(q) ||
+          (customer.code || '').toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 20);
+  }, [customerSearch, customers]);
+  const canCreateCustomer = Boolean(customerSearch.trim()) &&
+    !customers.some((customer) => {
+      const q = customerSearch.trim().toLowerCase();
+      return customer.name.toLowerCase() === q ||
+        (customer.shortName || '').toLowerCase() === q ||
+        (customer.code || '').toLowerCase() === q;
+    });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -101,6 +149,9 @@ export function InquiryFormModal({
     setInquiryNo(nextInquiryNo);
     setInquirer(record?.inquirer ?? '');
     setCustomerNo(record?.customerNo ?? '');
+    setCustomerId(record?.customerId ?? '');
+    setContactId(record?.contactId ?? '');
+    setCustomerSearch(record?.customerNo ?? '');
     setDescription(record?.description ?? '');
     setOrderNo(record?.orderNo ?? '');
     setOrderSubStatus(record?.orderSubStatus);
@@ -114,12 +165,34 @@ export function InquiryFormModal({
       ]
     );
     setLocalQuoted(record?.quotedStatuses ?? []);
-    const fromCustomers = getInquirerOptions();
-    const fromRecords = Array.from(
-      new Set(existingRecords.map((r) => r.inquirer).filter(Boolean))
-    ).sort();
-    setInquirerOptions(Array.from(new Set([...fromCustomers, ...fromRecords])).sort());
-  }, [existingNos, existingRecords, isOpen, mode, record]);
+  }, [existingNos, isOpen, mode, record]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    void customerService.fetchAllCustomers('customer')
+      .then(({ items }) => {
+        if (cancelled) return;
+        setCustomers(items);
+        const currentCustomer = items.find((customer) => customer.id === (record?.customerId ?? ''));
+        if (currentCustomer) {
+          const contact = currentCustomer.contacts.find((item) => item.id === record?.contactId) ??
+            getPrimaryContact(currentCustomer);
+          setCustomerSearch(getCustomerDisplay(currentCustomer));
+          setCustomerNo(record?.customerNo || buildCustomerNo(currentCustomer));
+          if (contact) {
+            setContactId(contact.id);
+            setInquirer(record?.inquirer || buildInquirer(currentCustomer, contact));
+          }
+        }
+      })
+      .catch((error) => {
+        console.warn('加载客户库失败:', error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, record?.contactId, record?.customerId, record?.customerNo, record?.inquirer]);
 
   useEffect(() => {
     if (!isOpen || isInquiryNoManual || mode === 'edit') return;
@@ -166,6 +239,50 @@ export function InquiryFormModal({
     });
   };
 
+  const selectCustomer = (customer: Customer) => {
+    const contact = getPrimaryContact(customer);
+    setCustomerId(customer.id);
+    setContactId(contact?.id ?? '');
+    setCustomerSearch(getCustomerDisplay(customer));
+    setCustomerNo(buildCustomerNo(customer));
+    setInquirer(buildInquirer(customer, contact));
+    setShowCustomerOptions(false);
+  };
+
+  const selectContact = (nextContactId: string) => {
+    if (!selectedCustomer) return;
+    const contact = selectedCustomer.contacts.find((item) => item.id === nextContactId);
+    setContactId(nextContactId);
+    setInquirer(buildInquirer(selectedCustomer, contact));
+  };
+
+  const createInlineCustomer = async () => {
+    const name = customerSearch.trim();
+    if (!name) return;
+
+    setIsCreatingCustomer(true);
+    try {
+      const fallbackContactName = inquirer.trim().split('-').pop()?.trim() || '主联络人';
+      const created = await customerService.saveCustomerProfile({
+        type: 'customer',
+        name,
+        shortName: name,
+        contacts: [{
+          id: `contact-${Date.now()}`,
+          name: fallbackContactName,
+          shortName: fallbackContactName,
+          isPrimary: true,
+        }],
+      });
+      setCustomers((prev) => [created, ...prev.filter((customer) => customer.id !== created.id)]);
+      selectCustomer(created);
+    } catch (error) {
+      console.error('内联新建客户失败:', error);
+    } finally {
+      setIsCreatingCustomer(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -176,6 +293,8 @@ export function InquiryFormModal({
       inquiryNo: inquiryNo.trim(),
       inquirer: inquirer.trim(),
       customerNo: customerNo.trim(),
+      customerId: customerId || undefined,
+      contactId: contactId || undefined,
       description: description.trim(),
       orderNo: orderNo.trim() || undefined,
       orderSubStatus: orderNo.trim() ? orderSubStatus : undefined,
@@ -278,38 +397,99 @@ export function InquiryFormModal({
                 </div>
               </div>
 
-              <label className="group block rounded-2xl border border-blue-200 bg-white px-3.5 py-2.5 shadow-sm ring-1 ring-blue-100/70 transition-all focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 dark:border-blue-500/30 dark:bg-blue-950/20 dark:ring-blue-500/10 dark:focus-within:border-blue-400">
-                <span className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300">
+              <div className="rounded-2xl border border-blue-200 bg-white px-3.5 py-2.5 shadow-sm ring-1 ring-blue-100/70 dark:border-blue-500/30 dark:bg-blue-950/20 dark:ring-blue-500/10">
+                <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300">
                   <UserRound className="h-3.5 w-3.5" />
-                  询价人
+                  客户与询价人
                 </span>
-                <input
-                  list="inquirer-suggestions"
-                  value={inquirer}
-                  onChange={(e) => setInquirer(e.target.value)}
-                  className="h-8 w-full bg-transparent text-lg font-semibold text-gray-950 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-500"
-                  placeholder="选择或输入"
-                  required
-                  autoComplete="off"
-                />
-                <datalist id="inquirer-suggestions">
-                  {inquirerOptions.map((opt) => (
-                    <option key={opt} value={opt} />
-                  ))}
-                </datalist>
-              </label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={customerSearch}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value);
+                      setCustomerId('');
+                      setContactId('');
+                      setCustomerNo(e.target.value);
+                      setInquirer('');
+                      setShowCustomerOptions(true);
+                    }}
+                    onFocus={() => setShowCustomerOptions(true)}
+                    className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-8 pr-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    placeholder="搜索客户全称/简称/编号"
+                    autoComplete="off"
+                    required
+                  />
+                  {showCustomerOptions && (
+                    <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                      {filteredCustomers.map((customer) => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => selectCustomer(customer)}
+                          className="block w-full border-b border-gray-100 px-3 py-2 text-left last:border-b-0 hover:bg-blue-50 dark:border-gray-800 dark:hover:bg-blue-950/30"
+                        >
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {customer.name}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {[customer.shortName, customer.code].filter(Boolean).join(' · ') || '未设置简称/编号'}
+                          </div>
+                        </button>
+                      ))}
+                      {canCreateCustomer && (
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={createInlineCustomer}
+                          disabled={isCreatingCustomer}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:text-gray-400 dark:text-blue-300 dark:hover:bg-blue-950/30"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          {isCreatingCustomer ? '新建中...' : `新建客户：${customerSearch.trim()}`}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <select
+                    value={contactId}
+                    onChange={(e) => selectContact(e.target.value)}
+                    disabled={!selectedCustomer}
+                    className="h-9 rounded-lg border border-gray-200 bg-white px-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 disabled:bg-gray-50 disabled:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:disabled:bg-gray-800"
+                    required
+                  >
+                    <option value="">选择联络人</option>
+                    {selectedCustomer?.contacts.map((contact) => (
+                      <option key={contact.id} value={contact.id}>
+                        {contact.name}{contact.shortName ? ` (${contact.shortName})` : ''}{contact.isPrimary ? ' · 主' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    value={inquirer}
+                    readOnly
+                    className="h-9 rounded-lg border border-gray-200 bg-gray-50 px-2.5 text-sm font-medium text-gray-700 outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                    placeholder="选择联络人后自动生成"
+                    required
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
           {/* ── 基本信息字段 ── */}
           <div className="mb-4 space-y-3">
             <div className="space-y-1">
-              <label className={LABEL_CLS}>客户编号</label>
+              <label className={LABEL_CLS}>客户显示编号</label>
               <input
                 value={customerNo}
-                onChange={(e) => setCustomerNo(e.target.value)}
+                readOnly
                 className={FIELD_CLS}
-                placeholder="A001"
+                placeholder="选择客户后自动生成"
                 required
               />
             </div>

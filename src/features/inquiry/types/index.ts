@@ -28,6 +28,8 @@ export interface InquiryRecord {
   inquiryNo: string;
   inquirer: string;
   customerNo: string;
+  customerId?: string;
+  contactId?: string;
   description: string;
   orderNo?: string;
   /** 辙销C / 悬挂P / 善后S — 仅在有订单编号时有意义 */
@@ -60,7 +62,15 @@ export interface InquiryRecord {
 
 export type InquiryBasicInput = Pick<
   InquiryRecord,
-  'inquiryDate' | 'inquiryNo' | 'inquirer' | 'customerNo' | 'description' | 'orderNo' | 'orderSubStatus'
+  | 'inquiryDate'
+  | 'inquiryNo'
+  | 'inquirer'
+  | 'customerNo'
+  | 'customerId'
+  | 'contactId'
+  | 'description'
+  | 'orderNo'
+  | 'orderSubStatus'
 >;
 
 export type InquiryRecordDraft = Omit<InquiryRecord, 'id' | 'createdAt' | 'updatedAt'>;

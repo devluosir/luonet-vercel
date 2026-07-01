@@ -1,197 +1,304 @@
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
-import { d1SyncCustomer } from '@/utils/d1Sync';
-import { Customer, HistoryDocument } from '../types';
+import { Contact, Customer, HistoryDocument } from '../types';
 
-// 从localStorage中提取客户数据
-export function extractCustomersFromHistory(): Customer[] {
+export type CustomerProfileType = 'customer' | 'supplier' | 'consignee';
+
+export interface FetchCustomersResult<T extends Customer = Customer> {
+  items: T[];
+  isStale: boolean;
+}
+
+export interface CustomerProfileInput {
+  id?: string;
+  type: CustomerProfileType;
+  name: string;
+  shortName?: string;
+  code?: string;
+  address?: string;
+  contacts?: Contact[];
+  createdAt?: string;
+}
+
+export interface SavedCustomer {
+  name: string;
+  to: string;
+  customerPO?: string;
+}
+
+export interface CustomerStats {
+  customerId: string;
+  totals: {
+    inquiries: number;
+    orders: number;
+  };
+  contacts: Array<{
+    contactId: string;
+    name: string;
+    shortName?: string | null;
+    isPrimary: boolean;
+    inquiries: number;
+    orders: number;
+  }>;
+  unassigned: {
+    inquiries: number;
+    orders: number;
+  };
+}
+
+type D1Contact = {
+  id: string;
+  customer_id?: string;
+  name: string;
+  short_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  is_primary?: boolean | number;
+  sort_order?: number;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type D1Customer = {
+  id: string;
+  type: CustomerProfileType;
+  name: string;
+  short_name?: string | null;
+  code?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  data?: Record<string, unknown> | string | null;
+  status?: string;
+  contacts?: D1Contact[];
+  created_at?: string;
+  updated_at?: string;
+};
+
+const CACHE_KEYS: Record<CustomerProfileType, string> = {
+  customer: 'customer_cache_v2',
+  supplier: 'supplier_cache_v2',
+  consignee: 'consignee_cache_v2',
+};
+
+function createId(prefix: string): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
+function parseData(data: D1Customer['data']): Record<string, unknown> {
+  if (!data) return {};
+  if (typeof data !== 'string') return data;
   try {
-    if (typeof window === 'undefined') return [];
+    return JSON.parse(data) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
 
-    const quotationHistory = getLocalStorageJSON<HistoryDocument[]>('quotation_history', []);
-    const packingHistory = getLocalStorageJSON<HistoryDocument[]>('packing_history', []);
-    const invoiceHistory = getLocalStorageJSON<HistoryDocument[]>('invoice_history', []);
-    
-    const allHistory = [...quotationHistory, ...packingHistory, ...invoiceHistory];
-    
-    // 提取客户信息
-    const customerMap = new Map<string, Customer>();
-    
-    allHistory.forEach((doc: any, index: number) => {
-      if (!doc) return;
-      
-      let customerName = '';
-      let customerAddress = '';
-      
-      // 根据文档类型提取客户信息
-      if (doc.type === 'packing') {
-        customerName = doc.consigneeName || doc.data?.consignee?.name || doc.customerName || '';
-        customerAddress = doc.consigneeName || doc.data?.consignee?.name || doc.data?.consignee || doc.to || '';
-      } else if (doc.type === 'invoice') {
-        customerName = doc.customerName || '';
-        customerAddress = doc.to || doc.data?.to || '';
-      } else {
-        customerName = doc.customerName || '';
-        customerAddress = doc.data?.to || doc.to || '';
-      }
-      
-      // 如果客户名称存在，则创建客户记录
-      if (customerName) {
-        const normalizedName = customerName.trim();
-        const customerId = `customer_${Date.now()}_${index}`;
-        
-        // 处理客户信息的标题和内容分离
-        let finalCustomerName = normalizedName;
-        
-        // 如果有地址信息，尝试组合成完整的客户信息
-        if (customerAddress && customerAddress.trim()) {
-          if (customerAddress.trim() !== normalizedName) {
-            finalCustomerName = `${normalizedName}\n${customerAddress.trim()}`;
-          }
-        }
-        
-        if (!customerMap.has(normalizedName)) {
-          customerMap.set(normalizedName, {
-            id: customerId,
-            name: finalCustomerName,
-            email: doc.customerEmail || doc.data?.customerEmail || '',
-            phone: doc.customerPhone || doc.data?.customerPhone || '',
-            address: customerAddress || '',
-            company: doc.customerCompany || doc.data?.customerCompany || '',
-            createdAt: doc.createdAt || doc.date || new Date().toISOString(),
-            updatedAt: doc.updatedAt || doc.date || new Date().toISOString()
-          });
-        }
-      }
+function isPrimary(contact: D1Contact): boolean {
+  return contact.is_primary === true || contact.is_primary === 1;
+}
+
+function toContact(contact: D1Contact): Contact {
+  return {
+    id: contact.id,
+    name: contact.name,
+    shortName: contact.short_name ?? undefined,
+    email: contact.email ?? undefined,
+    phone: contact.phone ?? undefined,
+    isPrimary: isPrimary(contact),
+  };
+}
+
+function normalizeContacts(contacts: Contact[]): Contact[] {
+  const namedContacts = contacts.filter((contact) => contact.name.trim());
+  if (namedContacts.length === 0) return [];
+
+  const primaryIndex = namedContacts.findIndex((contact) => contact.isPrimary);
+  const resolvedPrimaryIndex = primaryIndex >= 0 ? primaryIndex : 0;
+
+  return namedContacts.map((contact, index) => ({
+    ...contact,
+    name: contact.name.trim(),
+    shortName: contact.shortName?.trim() || undefined,
+    email: contact.email?.trim() || undefined,
+    phone: contact.phone?.trim() || undefined,
+    isPrimary: index === resolvedPrimaryIndex,
+  }));
+}
+
+export function getPrimaryContact(profile: Pick<Customer, 'contacts'>): Contact | undefined {
+  return profile.contacts.find((contact) => contact.isPrimary) ?? profile.contacts[0];
+}
+
+function normalizeProfile(row: D1Customer): Customer {
+  const data = parseData(row.data);
+  const legacyCompany = typeof data.company === 'string' && data.company.trim()
+    ? data.company.trim()
+    : undefined;
+  const createdAt = row.created_at ?? new Date().toISOString();
+  const updatedAt = row.updated_at ?? createdAt;
+
+  return {
+    id: row.id,
+    type: row.type,
+    name: legacyCompany ?? row.name,
+    shortName: row.short_name ?? undefined,
+    code: row.code ?? undefined,
+    address: row.address ?? '',
+    contacts: normalizeContacts((row.contacts ?? []).map(toContact)),
+    createdAt,
+    updatedAt,
+  };
+}
+
+function readCache<T extends Customer>(type: CustomerProfileType): T[] {
+  if (typeof window === 'undefined') return [];
+  return getLocalStorageJSON<T[]>(CACHE_KEYS[type], []);
+}
+
+function writeCache<T extends Customer>(type: CustomerProfileType, items: T[]): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(CACHE_KEYS[type], JSON.stringify(items));
+}
+
+async function parseResponse(resp: Response): Promise<any> {
+  const text = await resp.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(text);
+  }
+}
+
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const resp = await fetch(url, init);
+  const data = await parseResponse(resp);
+  if (!resp.ok) {
+    throw new Error(data?.error || data?.details || `请求失败：HTTP ${resp.status}`);
+  }
+  return data as T;
+}
+
+export async function fetchAllCustomers(type: CustomerProfileType = 'customer'): Promise<FetchCustomersResult> {
+  try {
+    const data = await requestJson<{ customers?: D1Customer[] }>(`/api/customers?type=${encodeURIComponent(type)}`);
+    const items = (data.customers ?? []).map(normalizeProfile);
+    writeCache(type, items);
+    return { items, isStale: false };
+  } catch (error) {
+    console.warn(`[customerService] 读取 ${type} D1 失败，使用离线缓存`, error);
+    return { items: readCache(type), isStale: true };
+  }
+}
+
+export async function getAllCustomers(): Promise<Customer[]> {
+  const result = await fetchAllCustomers('customer');
+  return result.items;
+}
+
+export async function getCustomerById(id: string): Promise<Customer | null> {
+  try {
+    const data = await requestJson<{ customer?: D1Customer; contacts?: D1Contact[] }>(`/api/customers/${encodeURIComponent(id)}`);
+    if (!data.customer) return null;
+    return normalizeProfile({ ...data.customer, contacts: data.contacts ?? data.customer.contacts ?? [] });
+  } catch (error) {
+    console.warn('[customerService] 读取客户详情失败，使用离线缓存', error);
+    return readCache('customer').find((customer) => customer.id === id) ?? null;
+  }
+}
+
+function buildBasePayload(profile: CustomerProfileInput) {
+  return {
+    type: profile.type,
+    name: profile.name.trim(),
+    short_name: profile.shortName?.trim() || undefined,
+    code: profile.code?.trim() || undefined,
+    address: profile.address?.trim() || undefined,
+    data: {},
+  };
+}
+
+function buildContactsPayload(profile: CustomerProfileInput) {
+  return normalizeContacts(profile.contacts ?? []).map((contact, index) => ({
+    id: contact.id || createId('contact'),
+    name: contact.name,
+    shortName: contact.shortName,
+    email: contact.email,
+    phone: contact.phone,
+    isPrimary: contact.isPrimary,
+    sortOrder: index,
+  }));
+}
+
+export async function saveCustomerProfile(profile: CustomerProfileInput): Promise<Customer> {
+  const id = profile.id || createId(profile.type);
+  const method = profile.id ? 'PUT' : 'POST';
+  const url = profile.id ? `/api/customers/${encodeURIComponent(profile.id)}` : '/api/customers';
+  const body = { id, ...buildBasePayload(profile) };
+
+  const data = await requestJson<{ customer?: D1Customer }>(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!data.customer) {
+    throw new Error('基础信息保存成功但服务端未返回记录');
+  }
+
+  try {
+    const contactData = await requestJson<{ contacts?: D1Contact[] }>(`/api/customers/${encodeURIComponent(id)}/contacts`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contacts: buildContactsPayload(profile) }),
     });
-    
-    return Array.from(customerMap.values());
+    return normalizeProfile({ ...data.customer, contacts: contactData.contacts ?? [] });
   } catch (error) {
-    console.error('提取客户数据失败:', error);
-    return [];
+    throw new Error(`基础信息已保存，但联络人保存失败：${error instanceof Error ? error.message : '未知错误'}`);
   }
 }
 
-// 从localStorage读取保存的客户数据
-export function loadSavedCustomers(): Customer[] {
-  try {
-    if (typeof window === 'undefined') return [];
-    
-    const savedCustomers = getLocalStorageJSON<Customer[]>('customer_management', []);
-    return savedCustomers;
-  } catch (error) {
-    console.error('读取保存的客户数据失败:', error);
-    return [];
-  }
+export async function saveCustomer(customer: Customer, isNew = false): Promise<Customer> {
+  return saveCustomerProfile({
+    id: isNew ? undefined : customer.id,
+    type: 'customer',
+    name: customer.name,
+    shortName: customer.shortName,
+    code: customer.code,
+    address: customer.address,
+    contacts: customer.contacts,
+    createdAt: customer.createdAt,
+  });
 }
 
-// 获取所有客户数据
-export function getAllCustomers(): Customer[] {
-  try {
-    const extractedCustomers = extractCustomersFromHistory();
-    const savedCustomers = loadSavedCustomers();
-    
-    // 合并数据，避免重复
-    const allCustomers = [...extractedCustomers];
-    
-    savedCustomers.forEach(savedCustomer => {
-      const exists = allCustomers.some(c => c.name === savedCustomer.name);
-      if (!exists) {
-        allCustomers.push(savedCustomer);
-      }
-    });
-    
-    return allCustomers;
-  } catch (error) {
-    console.error('获取所有客户数据失败:', error);
-    return [];
-  }
+export async function deleteCustomer(customerId: string): Promise<void> {
+  await requestJson(`/api/customers/${encodeURIComponent(customerId)}`, { method: 'DELETE' });
 }
 
-export function getCustomerById(id: string): Customer | null {
-  const allCustomers = getAllCustomers();
-  return allCustomers.find((customer) => customer.id === id) ?? null;
+export async function fetchCustomerStats(customerId: string): Promise<CustomerStats> {
+  return requestJson<CustomerStats>(`/api/customers/${encodeURIComponent(customerId)}/stats`);
 }
 
-// 保存客户数据
-export function saveCustomer(customer: Customer): void {
-  try {
-    if (typeof window === 'undefined') return;
-
-    const existingCustomers = getLocalStorageJSON<Customer[]>('customer_management', []);
-    
-    // 按 ID 更新，避免姓名和地址合并格式变化导致误判为新增
-    const existingIndex = existingCustomers.findIndex((c: Customer) => c.id === customer.id);
-    
-    let updatedCustomers;
-    if (existingIndex >= 0) {
-      updatedCustomers = [...existingCustomers];
-      updatedCustomers[existingIndex] = customer;
-    } else {
-      updatedCustomers = [...existingCustomers, customer];
-    }
-    
-    localStorage.setItem('customer_management', JSON.stringify(updatedCustomers));
-    console.log('客户数据保存成功:', customer);
-
-    // D1 双写（fire-and-forget）
-    d1SyncCustomer(existingIndex >= 0 ? 'update' : 'create', {
-      id: customer.id,
-      type: 'customer',
-      name: customer.name,
-      email: customer.email || undefined,
-      phone: customer.phone || undefined,
-      address: customer.address || undefined,
-      data: {
-        company: customer.company,
-        companyShortName: customer.companyShortName,
-        contact1ShortName: customer.contact1ShortName,
-        contacts: customer.contacts ?? [],
-      },
-    });
-  } catch (error) {
-    console.error('保存客户数据失败:', error);
-    throw error;
-  }
-}
-
-// 删除客户数据
-export function deleteCustomer(customerId: string): void {
-  try {
-    if (typeof window === 'undefined') return;
-
-    const existingCustomers = getLocalStorageJSON<Customer[]>('customer_management', []);
-    const updatedCustomers = existingCustomers.filter((c: Customer) => c.id !== customerId);
-    localStorage.setItem('customer_management', JSON.stringify(updatedCustomers));
-    console.log('客户删除成功:', customerId);
-
-    // D1 双写（fire-and-forget）
-    d1SyncCustomer('delete', { id: customerId, type: 'customer', name: '' });
-  } catch (error) {
-    console.error('删除客户失败:', error);
-    throw error;
-  }
-}
-
-// 检查客户是否被历史记录引用
 export function checkCustomerUsage(customerName: string): number {
   try {
     const quotationHistory = getLocalStorageJSON<HistoryDocument[]>('quotation_history', []);
     const packingHistory = getLocalStorageJSON<HistoryDocument[]>('packing_history', []);
     const invoiceHistory = getLocalStorageJSON<HistoryDocument[]>('invoice_history', []);
-    
+
     const allHistory = [...quotationHistory, ...packingHistory, ...invoiceHistory];
-    
+    const normalizedName = customerName.split('\n')[0]?.trim();
+
     return allHistory.filter((doc: any) => {
       if (!doc) return false;
-      
-      let customerNameInDoc = '';
-      if (doc.type === 'packing') {
-        customerNameInDoc = doc.consigneeName || doc.customerName || '';
-      } else {
-        customerNameInDoc = doc.customerName || '';
-      }
-      
-      return customerNameInDoc.trim() === customerName;
+      const customerNameInDoc = doc.type === 'packing'
+        ? doc.consigneeName || doc.customerName || ''
+        : doc.customerName || '';
+      return customerNameInDoc.trim() === normalizedName;
     }).length;
   } catch (error) {
     console.error('检查客户使用情况失败:', error);
@@ -199,12 +306,38 @@ export function checkCustomerUsage(customerName: string): number {
   }
 }
 
+function toDropdownItems(customers: Customer[]): SavedCustomer[] {
+  return customers.map((customer) => {
+    const primaryContact = getPrimaryContact(customer);
+    const title = customer.shortName || customer.name.split('\n')[0] || customer.name;
+    const lines = [
+      customer.name,
+      customer.address,
+      primaryContact?.email,
+      primaryContact?.phone,
+    ].filter(Boolean);
+
+    return {
+      name: title,
+      to: lines.join('\n') || title,
+      customerPO: '',
+    };
+  });
+}
+
+export async function getCustomersForDropdown(type: CustomerProfileType = 'customer'): Promise<SavedCustomer[]> {
+  const result = await fetchAllCustomers(type);
+  return toDropdownItems(result.items);
+}
+
 export const customerService = {
-  extractCustomersFromHistory,
-  loadSavedCustomers,
+  fetchAllCustomers,
   getAllCustomers,
   getCustomerById,
+  saveCustomerProfile,
   saveCustomer,
   deleteCustomer,
-  checkCustomerUsage
+  fetchCustomerStats,
+  checkCustomerUsage,
+  getCustomersForDropdown,
 };

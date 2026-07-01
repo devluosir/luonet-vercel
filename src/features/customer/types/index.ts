@@ -4,56 +4,30 @@ export interface Contact {
   shortName?: string;
   email?: string;
   phone?: string;
+  isPrimary?: boolean;
 }
 
-export interface Customer {
+export interface CustomerProfile {
   id: string;
+  type: 'customer' | 'supplier' | 'consignee';
   name: string;
-  email: string;
-  phone: string;
+  shortName?: string;
+  code?: string;
   address: string;
-  company: string;
-  companyShortName?: string;
-  contact1ShortName?: string;
-  contacts?: Contact[];
-  contact2Name?: string;
-  contact2ShortName?: string;
-  contact2Phone?: string;
-  contact2Email?: string;
+  contacts: Contact[];
   createdAt: string;
   updatedAt: string;
 }
 
-export interface Supplier {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  company: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Consignee {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  company: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export type Customer = CustomerProfile;
+export type Supplier = CustomerProfile;
+export type Consignee = CustomerProfile;
 
 export interface CustomerFormData {
   name: string;
-  email: string;
-  phone: string;
+  shortName?: string;
+  code?: string;
   address: string;
-  company: string;
-  companyShortName?: string;
-  contact1ShortName?: string;
   contacts: Contact[];
 }
 

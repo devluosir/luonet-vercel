@@ -9,9 +9,6 @@ import { getQuotationHistory } from '@/utils/quotationHistory';
 import { getInvoiceHistory } from '@/utils/invoiceHistory';
 import { getPackingHistory } from '@/utils/packingHistory';
 import { getPurchaseHistory } from '@/utils/purchaseHistory';
-import { getAllCustomers } from '@/features/customer/services/customerService';
-import { getAllSuppliers } from '@/features/customer/services/supplierService';
-import { getAllConsignees } from '@/features/customer/services/consigneeService';
 
 export interface MigrationResult {
   documents: { success: number; failed: number; total: number };
@@ -46,7 +43,7 @@ async function maybeYield(index: number): Promise<void> {
 }
 
 /**
- * 读取全部 localStorage 历史和客户数据，批量 POST 到 D1。
+ * 读取全部 localStorage 历史，批量 POST 到 D1。
  * @param onProgress 进度回调，可用于更新 UI
  */
 export async function migrateAllToD1(
@@ -135,35 +132,9 @@ export async function migrateAllToD1(
     data?: unknown;
   };
 
-  const customers: CustomerPayload[] = [
-    ...getAllCustomers().map((c) => ({
-      id: c.id,
-      type: 'customer' as const,
-      name: c.name,
-      email: c.email || undefined,
-      phone: c.phone || undefined,
-      address: c.address || undefined,
-      data: { company: c.company },
-    })),
-    ...getAllSuppliers().map((s) => ({
-      id: s.id,
-      type: 'supplier' as const,
-      name: s.name,
-      email: s.email || undefined,
-      phone: s.phone || undefined,
-      address: s.address || undefined,
-      data: { company: s.company },
-    })),
-    ...getAllConsignees().map((c) => ({
-      id: c.id,
-      type: 'consignee' as const,
-      name: c.name,
-      email: c.email || undefined,
-      phone: c.phone || undefined,
-      address: c.address || undefined,
-      data: { company: c.company },
-    })),
-  ];
+  // TASK-60 后客户/供应商/收货人以 D1 为权威源，不再从旧 localStorage 副本迁移，
+  // 避免 customer_management 等旧 key 的脏数据重新写回共享客户表。
+  const customers: CustomerPayload[] = [];
 
   result.customers.total = customers.length;
 

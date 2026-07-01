@@ -2,6 +2,7 @@
 
 import { Edit, Mail, MapPin, Phone, UserRound } from 'lucide-react';
 import type { Contact, Customer } from '../types';
+import { getPrimaryContact } from '../services/customerService';
 
 interface CustomerInfoCardProps {
   customer: Customer;
@@ -9,7 +10,7 @@ interface CustomerInfoCardProps {
 }
 
 function getDisplayName(customer: Customer) {
-  return customer.company?.trim() || customer.name.split('\n')[0] || customer.name;
+  return customer.name.split('\n')[0] || customer.name;
 }
 
 function getInitial(customer: Customer) {
@@ -18,12 +19,13 @@ function getInitial(customer: Customer) {
 
 function formatContact(contact: Contact) {
   const shortName = contact.shortName ? `(${contact.shortName})` : '';
-  return `${contact.name}${shortName}`;
+  return `${contact.name}${shortName}${contact.isPrimary ? ' 主' : ''}`;
 }
 
 export function CustomerInfoCard({ customer, onEdit }: CustomerInfoCardProps) {
   const displayName = getDisplayName(customer);
-  const contacts = customer.contacts ?? [];
+  const contacts = customer.contacts;
+  const primaryContact = getPrimaryContact(customer);
 
   return (
     <div className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -36,14 +38,9 @@ export function CustomerInfoCard({ customer, onEdit }: CustomerInfoCardProps) {
             <h1 className="truncate text-xl font-semibold text-gray-900 dark:text-white">
               {displayName}
             </h1>
-            {customer.companyShortName && (
+            {customer.shortName && (
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                简称：{customer.companyShortName}
-              </p>
-            )}
-            {customer.name.split('\n')[0] !== displayName && (
-              <p className="mt-1 truncate text-sm text-gray-500 dark:text-gray-400">
-                客户名：{customer.name.split('\n')[0]}
+                简称：{customer.shortName}
               </p>
             )}
           </div>
@@ -62,11 +59,11 @@ export function CustomerInfoCard({ customer, onEdit }: CustomerInfoCardProps) {
       <div className="mt-5 grid gap-3 text-sm text-gray-600 dark:text-gray-300 md:grid-cols-3">
         <div className="flex min-w-0 items-center gap-2">
           <Mail className="h-4 w-4 shrink-0 text-gray-400" />
-          <span className="truncate">{customer.email || '未填写邮箱'}</span>
+          <span className="truncate">{primaryContact?.email || '未填写邮箱'}</span>
         </div>
         <div className="flex min-w-0 items-center gap-2">
           <Phone className="h-4 w-4 shrink-0 text-gray-400" />
-          <span className="truncate">{customer.phone || '未填写电话'}</span>
+          <span className="truncate">{primaryContact?.phone || '未填写电话'}</span>
         </div>
         <div className="flex min-w-0 items-center gap-2">
           <MapPin className="h-4 w-4 shrink-0 text-gray-400" />
@@ -81,8 +78,6 @@ export function CustomerInfoCard({ customer, onEdit }: CustomerInfoCardProps) {
             <span className="font-medium text-gray-700 dark:text-gray-200">联系人：</span>
             {contacts.length > 0 ? (
               <span>{contacts.map(formatContact).join(' · ')}</span>
-            ) : customer.contact1ShortName ? (
-              <span>{customer.contact1ShortName}</span>
             ) : (
               <span className="text-gray-400">未填写联系人</span>
             )}

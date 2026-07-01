@@ -10,7 +10,7 @@ type ShowConfirm = (opts: {
 }) => Promise<boolean>;
 
 function normalizeContacts(customerData: CustomerFormData) {
-  return customerData.contacts
+  const contacts = customerData.contacts
     .map((contact) => ({
       ...contact,
       name: contact.name.trim(),
@@ -19,28 +19,28 @@ function normalizeContacts(customerData: CustomerFormData) {
       phone: contact.phone?.trim() || undefined,
     }))
     .filter((contact) => contact.name);
+
+  if (contacts.length === 0) return [];
+
+  const primaryIndex = contacts.findIndex((contact) => contact.isPrimary);
+  const resolvedPrimaryIndex = primaryIndex >= 0 ? primaryIndex : 0;
+  return contacts.map((contact, index) => ({
+    ...contact,
+    isPrimary: index === resolvedPrimaryIndex,
+  }));
 }
 
 export function useCustomerActions(showConfirm: ShowConfirm) {
   // 保存客户
   const saveCustomer = async (customerData: CustomerFormData, editingCustomer: Customer | null) => {
     try {
-      // 构建完整的客户信息
-      let fullCustomerName = customerData.name;
-      
-      if (customerData.address && customerData.address.trim()) {
-        fullCustomerName = `${customerData.name}\n${customerData.address.trim()}`;
-      }
-      
       const newCustomer: Customer = {
         id: editingCustomer ? editingCustomer.id : `customer_${Date.now()}`,
-        name: fullCustomerName,
-        email: customerData.email,
-        phone: customerData.phone,
+        type: 'customer',
+        name: customerData.name.trim(),
+        shortName: customerData.shortName?.trim() || undefined,
+        code: customerData.code?.trim() || undefined,
         address: customerData.address,
-        company: customerData.company,
-        companyShortName: customerData.companyShortName,
-        contact1ShortName: customerData.contact1ShortName,
         contacts: normalizeContacts(customerData),
         createdAt: editingCustomer ? editingCustomer.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -67,7 +67,7 @@ export function useCustomerActions(showConfirm: ShowConfirm) {
         }
       }
 
-      customerService.saveCustomer(newCustomer);
+      await customerService.saveCustomer(newCustomer, !editingCustomer);
       return true;
     } catch (error) {
       console.error('保存客户失败:', error);
@@ -80,11 +80,12 @@ export function useCustomerActions(showConfirm: ShowConfirm) {
     try {
       const newSupplier: Supplier = {
         id: editingSupplier ? editingSupplier.id : `supplier_${Date.now()}`,
-        name: supplierData.name,
-        email: supplierData.email,
-        phone: supplierData.phone,
+        type: 'supplier',
+        name: supplierData.name.trim(),
+        shortName: supplierData.shortName?.trim() || undefined,
+        code: supplierData.code?.trim() || undefined,
         address: supplierData.address,
-        company: supplierData.company,
+        contacts: normalizeContacts(supplierData),
         createdAt: editingSupplier ? editingSupplier.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -109,7 +110,7 @@ export function useCustomerActions(showConfirm: ShowConfirm) {
         }
       }
 
-      supplierService.saveSupplier(newSupplier);
+      await supplierService.saveSupplier(newSupplier, !editingSupplier);
       return true;
     } catch (error) {
       console.error('保存供应商失败:', error);
@@ -122,11 +123,12 @@ export function useCustomerActions(showConfirm: ShowConfirm) {
     try {
       const newConsignee: Consignee = {
         id: editingConsignee ? editingConsignee.id : `consignee_${Date.now()}`,
-        name: consigneeData.name,
-        email: consigneeData.email,
-        phone: consigneeData.phone,
+        type: 'consignee',
+        name: consigneeData.name.trim(),
+        shortName: consigneeData.shortName?.trim() || undefined,
+        code: consigneeData.code?.trim() || undefined,
         address: consigneeData.address,
-        company: consigneeData.company,
+        contacts: normalizeContacts(consigneeData),
         createdAt: editingConsignee ? editingConsignee.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -151,7 +153,7 @@ export function useCustomerActions(showConfirm: ShowConfirm) {
         }
       }
 
-      consigneeService.saveConsignee(newConsignee);
+      await consigneeService.saveConsignee(newConsignee, !editingConsignee);
       return true;
     } catch (error) {
       console.error('保存收货人失败:', error);
@@ -191,7 +193,7 @@ export function useCustomerActions(showConfirm: ShowConfirm) {
     }
 
     try {
-      customerService.deleteCustomer(customer.id);
+      await customerService.deleteCustomer(customer.id);
       return true;
     } catch (error) {
       console.error('删除客户失败:', error);
@@ -231,7 +233,7 @@ export function useCustomerActions(showConfirm: ShowConfirm) {
     }
 
     try {
-      supplierService.deleteSupplier(supplier.id);
+      await supplierService.deleteSupplier(supplier.id);
       return true;
     } catch (error) {
       console.error('删除供应商失败:', error);
@@ -271,7 +273,7 @@ export function useCustomerActions(showConfirm: ShowConfirm) {
     }
 
     try {
-      consigneeService.deleteConsignee(consignee.id);
+      await consigneeService.deleteConsignee(consignee.id);
       return true;
     } catch (error) {
       console.error('删除收货人失败:', error);

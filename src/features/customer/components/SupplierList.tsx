@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Building2, Edit, Search, Trash2 } from 'lucide-react';
 import type { Customer, Supplier, Consignee } from '../types';
+import { getPrimaryContact } from '../services/customerService';
 
 const AVATAR_COLORS = [
   'bg-emerald-500',
@@ -51,11 +52,12 @@ export function SupplierList({ suppliers, loading, searchQuery, onEdit, onDelete
     const q = searchQuery.toLowerCase();
     return suppliers.filter((s) => {
       const title = s.name.split('\n')[0] || s.name;
+      const primaryContact = getPrimaryContact(s);
       return (
         title.toLowerCase().includes(q) ||
-        (s.company || '').toLowerCase().includes(q) ||
-        (s.phone || '').toLowerCase().includes(q) ||
-        (s.email || '').toLowerCase().includes(q)
+        (s.shortName || '').toLowerCase().includes(q) ||
+        (primaryContact?.phone || '').toLowerCase().includes(q) ||
+        (primaryContact?.email || '').toLowerCase().includes(q)
       );
     });
   }, [suppliers, searchQuery]);
@@ -105,7 +107,8 @@ export function SupplierList({ suppliers, loading, searchQuery, onEdit, onDelete
         {filtered.map((supplier) => {
           const title = supplier.name.split('\n')[0] || supplier.name;
           const initial = title.charAt(0).toUpperCase() || '供';
-          const contact = supplier.phone || supplier.email || '—';
+          const primaryContact = getPrimaryContact(supplier);
+          const contact = primaryContact?.phone || primaryContact?.email || '—';
 
           return (
             <div
@@ -120,8 +123,8 @@ export function SupplierList({ suppliers, loading, searchQuery, onEdit, onDelete
               {/* 名称 + 公司 */}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{title}</p>
-                {supplier.company && (
-                  <p className="truncate text-xs text-gray-400 dark:text-gray-500">{supplier.company}</p>
+                {supplier.shortName && (
+                  <p className="truncate text-xs text-gray-400 dark:text-gray-500">{supplier.shortName}</p>
                 )}
               </div>
 

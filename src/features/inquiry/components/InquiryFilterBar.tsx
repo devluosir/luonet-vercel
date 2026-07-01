@@ -90,6 +90,7 @@ export function InquiryFilterBar({
 }: InquiryFilterBarProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
+  const unlinkedCount = records.filter((record) => !record.customerId).length;
 
   const isCustomMonth = filter.timeRange.startsWith('month:');
   const navMonth = isCustomMonth ? filter.timeRange.slice(6) : todayMonth();
@@ -170,6 +171,22 @@ export function InquiryFilterBar({
             />
           )}
         </div>
+
+        {divider}
+
+        <Chip
+          label="待关联客户"
+          active={filter.linkStatus === 'unlinked'}
+          activeColor="bg-slate-700 text-white"
+          badge={unlinkedCount}
+          badgeColor="bg-slate-700"
+          onClick={() =>
+            setFilter({
+              ...filter,
+              linkStatus: filter.linkStatus === 'unlinked' ? 'all' : 'unlinked',
+            })
+          }
+        />
 
         {divider}
 

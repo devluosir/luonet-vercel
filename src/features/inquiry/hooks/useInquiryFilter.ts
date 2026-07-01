@@ -19,11 +19,14 @@ export type QuoteStatusFilter =
   | 'cancelled'   // 辙销C
   | 'followup';   // 善后S
 
+export type LinkStatusFilter = 'all' | 'unlinked';
+
 export interface InquiryFilterState {
   timeRange: TimeRange;
   customerNo: string;
   inquirer: string;
   quoteStatus: QuoteStatusFilter;
+  linkStatus: LinkStatusFilter;
   sortDir: 'asc' | 'desc';
   keyword: string;
 }
@@ -33,6 +36,7 @@ const DEFAULT_FILTER: InquiryFilterState = {
   customerNo: '',
   inquirer: '',
   quoteStatus: 'all',
+  linkStatus: 'all',
   sortDir: 'desc',
   keyword: '',
 };
@@ -112,10 +116,11 @@ export function useInquiryFilter(records: InquiryRecord[]) {
 
       if (filter.customerNo && record.customerNo !== filter.customerNo) return false;
       if (filter.inquirer && record.inquirer !== filter.inquirer) return false;
+      if (filter.linkStatus === 'unlinked' && record.customerId) return false;
 
       return true;
     });
-  }, [filter.timeRange, filter.keyword, filter.customerNo, filter.inquirer, records]);
+  }, [filter.timeRange, filter.keyword, filter.customerNo, filter.inquirer, filter.linkStatus, records]);
 
   const filteredAndSorted = useMemo(() => {
     return baseFiltered
@@ -164,6 +169,7 @@ export function useInquiryFilter(records: InquiryRecord[]) {
     Boolean(filter.customerNo),
     Boolean(filter.inquirer),
     filter.quoteStatus !== 'all',
+    filter.linkStatus !== 'all',
   ].filter(Boolean).length;
 
   const reset = () => setFilter(DEFAULT_FILTER);

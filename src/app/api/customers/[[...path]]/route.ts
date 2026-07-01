@@ -25,7 +25,6 @@ async function proxyCustomerRequest(request: NextRequest, pathSegments: string[]
   }
 
   const url = new URL(request.url);
-  url.searchParams.set('user_id', userId);
 
   const workerPath = pathSegments.length > 0
     ? `/api/customers/${pathSegments.join('/')}`
@@ -37,7 +36,9 @@ async function proxyCustomerRequest(request: NextRequest, pathSegments: string[]
     const rawBody = await request.text();
     try {
       const parsedBody = rawBody ? JSON.parse(rawBody) : {};
-      body = JSON.stringify({ ...parsedBody, user_id: userId });
+      body = request.method === 'POST'
+        ? JSON.stringify({ ...parsedBody, created_by: userId })
+        : JSON.stringify(parsedBody);
     } catch {
       return NextResponse.json({ error: '请求体格式错误，请检查JSON格式' }, { status: 400 });
     }

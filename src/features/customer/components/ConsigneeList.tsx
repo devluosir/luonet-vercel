@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Edit, Package, Search, Trash2 } from 'lucide-react';
 import type { Customer, Supplier, Consignee } from '../types';
+import { getPrimaryContact } from '../services/customerService';
 
 const AVATAR_COLORS = [
   'bg-violet-500',
@@ -51,11 +52,12 @@ export function ConsigneeList({ consignees, loading, searchQuery, onEdit, onDele
     const q = searchQuery.toLowerCase();
     return consignees.filter((c) => {
       const title = c.name.split('\n')[0] || c.name;
+      const primaryContact = getPrimaryContact(c);
       return (
         title.toLowerCase().includes(q) ||
-        (c.company || '').toLowerCase().includes(q) ||
-        (c.phone || '').toLowerCase().includes(q) ||
-        (c.email || '').toLowerCase().includes(q) ||
+        (c.shortName || '').toLowerCase().includes(q) ||
+        (primaryContact?.phone || '').toLowerCase().includes(q) ||
+        (primaryContact?.email || '').toLowerCase().includes(q) ||
         (c.address || '').toLowerCase().includes(q)
       );
     });
@@ -106,7 +108,8 @@ export function ConsigneeList({ consignees, loading, searchQuery, onEdit, onDele
         {filtered.map((consignee) => {
           const title = consignee.name.split('\n')[0] || consignee.name;
           const initial = title.charAt(0).toUpperCase() || '收';
-          const contact = consignee.phone || consignee.email || consignee.address || '—';
+          const primaryContact = getPrimaryContact(consignee);
+          const contact = primaryContact?.phone || primaryContact?.email || consignee.address || '—';
 
           return (
             <div
@@ -121,8 +124,8 @@ export function ConsigneeList({ consignees, loading, searchQuery, onEdit, onDele
               {/* 名称 + 公司 */}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{title}</p>
-                {consignee.company && (
-                  <p className="truncate text-xs text-gray-400 dark:text-gray-500">{consignee.company}</p>
+                {consignee.shortName && (
+                  <p className="truncate text-xs text-gray-400 dark:text-gray-500">{consignee.shortName}</p>
                 )}
               </div>
 

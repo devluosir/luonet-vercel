@@ -5,7 +5,7 @@ import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { hasStringChanged, normalizeStringInput } from '@/features/quotation/utils/inputUtils';
 import { useDebounced } from '@/hooks/useDebounced';
 import { useQuotationStore } from '@/features/quotation/state/useQuotationStore';
-import { getCustomersForDropdown } from '@/utils/customerDataService';
+import { getCustomersForDropdown } from '@/features/customer/services/customerService';
 
 // 🛡️ 兜底：多行名称 → 单行展示（避免触发清空/过滤判定）
 function sanitizeForInput(s: string): string {
@@ -297,11 +297,11 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 加载客户数据的通用函数
   // 使用统一的客户数据服务，从客户管理页面获取数据
-  const loadCustomerData = useCallback(() => {
+  const loadCustomerData = useCallback(async () => {
     try {
       if (typeof window !== 'undefined') {
         // 使用统一的客户数据服务
-        const allCustomers = getCustomersForDropdown();
+        const allCustomers = await getCustomersForDropdown('customer');
         
         console.log('从客户管理服务加载的客户数据:', {
           totalCustomers: allCustomers.length,
@@ -320,7 +320,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
   // 加载保存的客户信息
   useEffect(() => {
-    loadCustomerData();
+    void loadCustomerData();
   }, [loadCustomerData]);
 
   // 根据输入内容过滤客户
@@ -710,4 +710,4 @@ CustomerInfoSection.displayName = 'CustomerInfoSection';
 // 性能调试标记（开发模式下可启用）
 if (process.env.NODE_ENV === 'development') {
   // CustomerInfoSection.whyDidYouRender = true;
-} 
+}

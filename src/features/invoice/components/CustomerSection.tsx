@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
-import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
-import { getCustomersForDropdown, SavedCustomer } from '@/utils/customerDataService';
+import { getCustomersForDropdown, SavedCustomer } from '@/features/customer/services/customerService';
 
 interface CustomerSectionProps {
   to: string;
@@ -75,11 +74,11 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
 
   // 加载客户数据的通用函数
   // 使用统一的客户数据服务，从客户管理页面获取数据
-  const loadCustomerData = () => {
+  const loadCustomerData = async () => {
     try {
       if (typeof window !== 'undefined') {
         // 使用统一的客户数据服务
-        const allCustomers = getCustomersForDropdown();
+        const allCustomers = await getCustomersForDropdown('customer');
         
         console.log('从客户管理服务加载的客户数据:', {
           totalCustomers: allCustomers.length,
@@ -98,7 +97,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
 
   // 加载保存的客户信息
   useEffect(() => {
-    loadCustomerData();
+    void loadCustomerData();
   }, []);
 
   // 处理点击外部区域关闭下拉列表

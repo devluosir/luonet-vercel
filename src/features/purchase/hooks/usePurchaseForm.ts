@@ -37,7 +37,7 @@ export function usePurchaseForm() {
 
   const selectField = field; // 选项型直接用 field
 
-  return { field, boolField, numberField, selectField, draft };
+  return { field, boolField, numberField, selectField, draft, setField };
 }
 
 // 工具函数：获取嵌套对象的值

@@ -7,7 +7,7 @@
  *   3. 如果请求失败，留在队列等待下次 flushPendingQueue() 重试
  *   4. pullAllFromD1 调用前先执行 flushPendingQueue，确保 D1 有最新数据
  *
- * localStorage 始终是主存储，D1 是云端权威副本。
+ * 业务单据仍以 localStorage 为主存储，D1 是云端权威副本。
  */
 
 export type D1DocType = 'quotation' | 'confirmation' | 'invoice' | 'packing' | 'purchase';
@@ -17,29 +17,20 @@ export interface D1DocumentPayload {
   type: D1DocType;
   doc_no: string;
   customer_name?: string;
+  customer_id?: string;
+  contact_id?: string;
   total_amount?: number;
   currency?: string;
   data: unknown;
-}
-
-export interface D1CustomerPayload {
-  id: string;
-  type: 'customer' | 'supplier' | 'consignee';
-  name: string;
-  code?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  data?: unknown;
 }
 
 type SyncAction = 'create' | 'update' | 'delete';
 
 interface PendingOp {
   opId: string;
-  kind: 'document' | 'customer';
+  kind: 'document';
   action: SyncAction;
-  payload: D1DocumentPayload | D1CustomerPayload;
+  payload: D1DocumentPayload;
 }
 
 const QUEUE_KEY = 'd1_pending_syncs';
@@ -160,7 +151,7 @@ export function getPendingIds(): Set<string> {
 }
 
 async function executeOp(op: PendingOp): Promise<boolean> {
-  const base = op.kind === 'document' ? '/api/documents' : '/api/customers';
+  const base = '/api/documents';
   try {
     let resp: Response;
     if (op.action === 'delete') {
@@ -231,22 +222,6 @@ export function d1SyncDocument(
   const op: PendingOp = {
     opId: `${payload.id}-${action}-${Date.now()}`,
     kind: 'document',
-    action,
-    payload,
-  };
-  enqueue(op);
-  fireAndForget(op);
-}
-
-/** 同步单条客户到 D1（create / update / delete）。写入前入队，成功后出队。 */
-export function d1SyncCustomer(
-  action: SyncAction,
-  payload: D1CustomerPayload
-): void {
-  if (typeof window === 'undefined') return;
-  const op: PendingOp = {
-    opId: `${payload.id}-${action}-${Date.now()}`,
-    kind: 'customer',
     action,
     payload,
   };
