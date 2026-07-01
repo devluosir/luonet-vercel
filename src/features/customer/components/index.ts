@@ -1,6 +1,7 @@
 export { CustomerList } from './CustomerList';
 export { SupplierList } from './SupplierList';
 export { ConsigneeList } from './ConsigneeList';
+export { ProfileCardGrid } from './ProfileCardGrid';
 export { CustomerForm } from './CustomerForm';
 export { CustomerToolbar } from './CustomerToolbar';
 export { CustomerTabs } from './CustomerTabs';

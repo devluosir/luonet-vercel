@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Clock, Plus, AlertTriangle, CheckCircle, Calendar } from 'lucide-react';
+import { Clock, Plus, AlertTriangle, CheckCircle, Calendar, Trash2 } from 'lucide-react';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { useCustomerFollowUp } from '../hooks/useCustomerFollowUp';
@@ -70,6 +70,7 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
     overdueFollowUps,
     loading,
     addFollowUp,
+    deleteFollowUp,
     completeFollowUp
   } = useCustomerFollowUp(customerId, customerAliases);
 
@@ -105,6 +106,14 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
       high: 'bg-red-100 text-red-800'
     };
     return colors[priority];
+  };
+
+  const handleDeleteFollowUp = async (followUp: CustomerFollowUp) => {
+    if (!window.confirm(`确定删除跟进「${followUp.title}」吗？`)) return;
+    const success = await deleteFollowUp(followUp.id);
+    if (!success) {
+      alert('删除跟进失败');
+    }
   };
 
   const renderFollowUpCard = (
@@ -187,6 +196,15 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
             {followUp.status === 'completed' && isDefault && (
               <CheckCircle className="h-4 w-4 text-green-600" />
             )}
+            <button
+              type="button"
+              onClick={() => handleDeleteFollowUp(followUp)}
+              className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+              title="删除跟进"
+              aria-label={`删除跟进 ${followUp.title}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>

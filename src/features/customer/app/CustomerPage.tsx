@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Building2, Package, Plus, Search, Users } from 'lucide-react';
+import { Building2, LayoutGrid, List as ListIcon, Package, Plus, Search, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAppUser } from '@/hooks/useAppUser';
 import { useCustomerData, useCustomerActions, useCustomerForm } from '../hooks';
-import { CustomerList, SupplierList, ConsigneeList, CustomerModal } from '../components';
+import { CustomerList, SupplierList, ConsigneeList, CustomerModal, ProfileCardGrid } from '../components';
 import type { Customer, Supplier, Consignee, TabType } from '../types';
 
 type ConfirmState = {
@@ -18,6 +18,8 @@ type ConfirmState = {
   variant: 'danger' | 'default';
   resolve: (ok: boolean) => void;
 } | null;
+
+type ViewMode = 'list' | 'card';
 
 export default function CustomerPage() {
   const router = useRouter();
@@ -30,6 +32,7 @@ export default function CustomerPage() {
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [editingConsignee, setEditingConsignee] = useState<Consignee | null>(null);
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
 
   const { customers, suppliers, consignees, isLoading, refreshData } = useCustomerData();
@@ -215,20 +218,62 @@ export default function CustomerPage() {
 
           {/* 搜索栏 */}
           <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={`搜索${LABEL[activeTab]}…`}
-                className="h-8 w-full max-w-xs rounded-lg border border-gray-200 bg-gray-50 pl-8 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-[#2c2c2e] dark:text-white dark:placeholder-gray-500"
-              />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={`搜索${LABEL[activeTab]}…`}
+                  className="h-8 w-full rounded-lg border border-gray-200 bg-gray-50 pl-8 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-[#2c2c2e] dark:text-white dark:placeholder-gray-500"
+                />
+              </div>
+              <div className="inline-flex w-fit rounded-lg border border-gray-200 bg-gray-50 p-0.5 dark:border-gray-700 dark:bg-[#2c2c2e]">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  aria-pressed={viewMode === 'list'}
+                  title="列表视图"
+                  className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
+                    viewMode === 'list'
+                      ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+                      : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <ListIcon className="h-3.5 w-3.5" />
+                  列表
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('card')}
+                  aria-pressed={viewMode === 'card'}
+                  title="卡片视图"
+                  className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
+                    viewMode === 'card'
+                      ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+                      : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  卡片
+                </button>
+              </div>
             </div>
           </div>
 
           {/* 列表内容 */}
-          {activeTab === 'customers' ? (
+          {viewMode === 'card' ? (
+            <ProfileCardGrid
+              items={activeTab === 'customers' ? customers : activeTab === 'suppliers' ? suppliers : consignees}
+              loading={isLoading}
+              searchQuery={search}
+              type={activeTab}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onViewDetail={(item) => handleViewDetail(item, activeTab)}
+            />
+          ) : activeTab === 'customers' ? (
             <CustomerList
               customers={customers}
               loading={isLoading}

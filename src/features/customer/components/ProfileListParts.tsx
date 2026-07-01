@@ -8,6 +8,7 @@ import { getPrimaryContact } from '../services/customerService';
 
 export type ProfileListItem = Customer | Supplier | Consignee;
 const MENU_WIDTH = 112;
+const MENU_HEIGHT = 88;
 const MENU_OFFSET = 4;
 
 export function getProfileTitle(item: ProfileListItem) {
@@ -82,9 +83,20 @@ export function RowActionMenu({ item, onEdit, onDelete }: RowActionMenuProps) {
 
     const rect = buttonRef.current?.getBoundingClientRect();
     if (rect) {
+      const left = Math.min(
+        Math.max(MENU_OFFSET, rect.right - MENU_WIDTH),
+        window.innerWidth - MENU_WIDTH - MENU_OFFSET
+      );
+      const topWhenOpeningDown = rect.bottom + MENU_OFFSET;
+      const shouldOpenUp =
+        window.innerHeight - topWhenOpeningDown < MENU_HEIGHT &&
+        rect.top > MENU_HEIGHT + MENU_OFFSET;
+
       setPosition({
-        top: rect.bottom + MENU_OFFSET,
-        left: Math.max(MENU_OFFSET, rect.right - MENU_WIDTH),
+        top: shouldOpenUp
+          ? Math.max(MENU_OFFSET, rect.top - MENU_HEIGHT - MENU_OFFSET)
+          : topWhenOpeningDown,
+        left,
       });
     }
     setOpen(true);

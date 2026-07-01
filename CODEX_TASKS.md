@@ -11829,6 +11829,84 @@ npm run build
 
 ---
 
+## TASK-72：跟进记录支持删除 + "···"菜单靠近视口底部时应该向上展开
+
+**背景（Roger 反馈两点）**
+
+1. "跟进记录要可以删除"——`useCustomerFollowUp.ts` 里 `deleteFollowUp` 这个方法本来就存在（调用 `FollowUpService.deleteFollowUp` 并重新加载列表，逻辑是完整的），只是 `FollowUpManager.tsx` 没有把它解构出来、也没有在卡片上放删除按钮，纯粹是 UI 上漏挂了。
+2. 客户列表"···"菜单还是有裁剪问题的截图——TASK-69 把菜单从"父容器 `overflow-hidden` 裁剪"改成了 `createPortal` + `position: fixed`，这部分本身没问题；但这次截图里的行是列表**最后一行**、离浏览器视口底部很近，菜单固定在按钮下方展开（`rect.bottom + 4`），而视口下方剩余空间本来就不够，所以菜单下半截还是会超出可视区域——这是一个新的、独立的边界情况（视口底部空间不够时应该向上展开），TASK-69 当时只处理了"父容器裁剪"和"滚动/resize 关闭"，没处理"贴着视口底部时要不要向上展开"。
+
+### 改动 1：`FollowUpManager.tsx` 加删除按钮
+
+- 从 `useCustomerFollowUp(customerId, customerAliases)` 的返回值里把 `deleteFollowUp` 也解构出来。
+- `renderFollowUpCard` 里，靠近"完成"按钮/`CheckCircle` 图标的位置加一个删除按钮（小号 `Trash2` 图标即可，参考 `ProfileListParts.tsx` 里删除按钮的配色 `text-red-600`/`hover:bg-red-50`），点击前用 `window.confirm('确定删除这条跟进记录吗？')` 二次确认（这个组件目前没有接入 `ConfirmDialog` 那套 Promise 化确认弹窗的基础设施，用 `window.confirm` 足够，不用为了这一个按钮专门接入）。
+- 确认后调用 `deleteFollowUp(followUp.id)`。
+
+### 改动 2：`ProfileListParts.tsx` 的 `RowActionMenu` 增加"贴近视口底部时向上展开"的判断
+
+- 在 `toggleOpen` 里，算完 `rect` 之后，判断 `window.innerHeight - rect.bottom` 是否小于菜单预估高度（2 个选项，大致 `84px`，可以定义一个 `MENU_HEIGHT_ESTIMATE = 84` 常量）：
+  - 空间不够（`window.innerHeight - rect.bottom < MENU_HEIGHT_ESTIMATE + MENU_OFFSET`）时，菜单改成显示在按钮**上方**：`top = rect.top - MENU_HEIGHT_ESTIMATE - MENU_OFFSET`。
+  - 空间足够时保持原来的逻辑：`top = rect.bottom + MENU_OFFSET`。
+  - `left` 的计算不用变。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 跟进记录列表里每条记录都能删除，删除前有二次确认，删除后列表立即更新
+- 客户/供应商/收货人列表里，滚动到让最后一行紧贴浏览器视口底部，点击"···"，菜单应该向上展开、完整可见，不再有任何部分超出可视区域
+
+---
+
+## TASK-73：客户管理列表加"卡片/列表"两种显示方式
+
+**背景（Roger 要求）**："客户列表，做成卡片，列表等多种方式"——现有的行式列表保留，作为其中一种视图，另外加一个卡片视图，用户可以切换。
+
+### 改动 1：新增共享卡片网格组件 `src/features/customer/components/ProfileCardGrid.tsx`
+
+不要照搬 `CustomerList.tsx`/`SupplierList.tsx`/`ConsigneeList.tsx` 三份几乎一样的文件那个模式再复制三份卡片版本——写**一个**通用组件，客户/供应商/收货人三个 tab 共用（复用 `ProfileListParts.tsx` 已经导出的 `getProfileTitle`/`PrimaryContactSummary`/`RowActionMenu`）：
+
+```ts
+interface ProfileCardGridProps {
+  items: ProfileListItem[];
+  loading: boolean;
+  searchQuery: string;
+  onEdit: (item: ProfileListItem) => void;
+  onDelete: (item: ProfileListItem) => void;
+  onViewDetail: (item: ProfileListItem) => void;
+  emptyLabel: string; // 比如"客户"/"供应商"/"收货人"，用于空状态文案
+}
+```
+
+- 搜索过滤逻辑和现有 `CustomerList.tsx` 里的 `filtered` 一致（按标题/简称/主联络人电话邮箱过滤），可以直接照抄这段逻辑。
+- 布局：响应式网格 `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3`，每张卡片 `rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow dark:border-gray-700 dark:bg-gray-800`，整张卡片（除"···"按钮外）可点击触发 `onViewDetail`（用和现有行一样的 `role="button" tabIndex={0}` + `onKeyDown` 无障碍处理）。
+- 卡片内容：头像（复用现有的 `avatarColor`/首字母逻辑，可以从 `CustomerList.tsx` 抄一份颜色数组，或者提到 `ProfileListParts.tsx` 里做成共享函数——如果顺手就提取共享，不强求）+ 标题 + 简称（复用 `ProfileShortName`）在卡片顶部；`PrimaryContactSummary` 单独一行；底部一行小灰字显示创建时间；`RowActionMenu` 放在卡片右上角（`absolute right-2 top-2`，卡片本身要加 `relative`）。
+- 加载中显示骨架屏卡片（网格铺几个灰色占位块即可，不用做得太复杂）；空状态和现有列表的空状态文案风格一致。
+
+### 改动 2：`CustomerPage.tsx` 加视图切换
+
+- 加 `const [viewMode, setViewMode] = useState<'list' | 'card'>('list')`（默认保持现在的列表视图，不改变现有用户习惯），可以顺手用 `localStorage`（比如 key `customer_view_mode`）记住上次选择，刷新页面/换 tab 后保留，不强求。
+- 在搜索栏那一行右侧（或标签页那一行右侧，哪个改动小放哪）加一个小的切换按钮组，两个图标按钮：`List`（列表）、`LayoutGrid`（卡片），当前选中的高亮（参考现有标签页 active 状态的配色写法）。
+- 列表内容区域：`viewMode === 'list'` 时保持现在渲染 `CustomerList`/`SupplierList`/`ConsigneeList` 不变；`viewMode === 'card'` 时统一渲染新的 `ProfileCardGrid`，三个 tab 传入对应的 `customers`/`suppliers`/`consignees` 数组和现有的 `handleEdit`/`handleDelete`/`handleViewDetail`（`handleViewDetail` 已经是通用签名 `(item, type)`，卡片视图下按 `activeTab` 传对应的 type 参数，和列表视图现在的调用方式一致）。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 客户/供应商/收货人三个 tab 都能在"列表"和"卡片"两种视图间切换，默认是列表视图（不影响现有用户习惯）
+- 卡片视图下，点卡片本体进详情页，点"···"能正常编辑/删除（复用同一个 `RowActionMenu`，包括 TASK-72 里加的向上展开逻辑）
+- 卡片视图的搜索、加载中骨架屏、空状态都能正常工作，和列表视图的筛选结果一致（同一个搜索词切换视图，看到的应该是同一批数据）
+
+---
+
 ## TASK-67 复核发现一个实际 bug，需要修正（TASK-68 部分已通过，不用动）
 
 **结论**：TASK-68（询报价 `customerId`/`contactId` 筛选 + 详情页联络人行可点击 + 筛选提示条）逐文件核对过（`useInquiryFilter.ts`/`InquiryPage.tsx`/`InquiryFilterBar.tsx`/`CustomerDetailPage.tsx`），逻辑正确，`tsc --noEmit` 独立跑通过，这部分不需要改。
