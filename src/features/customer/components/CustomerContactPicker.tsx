@@ -28,6 +28,7 @@ function normalizeText(value: string | undefined) {
 
 export function buildCustomerContactLabel(customer: Customer, contact: Contact) {
   const customerPart = customer.shortName || customer.code || customer.name;
+  if (customer.shortName && !contact.shortName) return customer.shortName;
   const contactPart = contact.shortName || contact.name;
   return `${customerPart}-${contactPart}`;
 }

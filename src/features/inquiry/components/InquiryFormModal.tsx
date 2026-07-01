@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, UserRound, X } from 'lucide-react';
 import {
+  buildCustomerContactLabel,
   CustomerContactPicker,
   type CustomerContactOption,
 } from '@/features/customer/components/CustomerContactPicker';
@@ -50,7 +51,7 @@ const LABEL_CLS = 'block text-xs font-medium text-gray-400 dark:text-gray-500';
 function buildInquirer(customer: Customer, contact?: Contact): string {
   const customerPart = customer.shortName || customer.code || customer.name;
   if (!contact) return customerPart;
-  return `${customerPart}-${contact.shortName || contact.name}`;
+  return buildCustomerContactLabel(customer, contact);
 }
 
 interface InquiryFormModalProps {
