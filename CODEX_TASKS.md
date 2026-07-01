@@ -11685,6 +11685,150 @@ npm run build
 
 ---
 
+## TASK-69：客户/供应商/收货人列表"···"菜单被裁剪的 bug + 行内信息密度优化
+
+**背景（Roger 反馈"编辑和删除按钮无法正常操作"，追问后确认）**：不是点击没反应，是"点击后展开的菜单被压下去了，看不到"。
+
+**根因**：`CustomerPage.tsx` 第 184 行左右，包裹标签页+搜索栏+列表的外层卡片容器是 `<div className="overflow-hidden rounded-xl border ...">`——这个 `overflow-hidden` 是为了让顶部标签栏和列表的圆角显示正常，但副作用是：`ProfileListParts.tsx` 里 `RowActionMenu` 展开的下拉菜单是相对于按钮 `absolute` 定位的，一旦这一行离卡片底部边缘比较近（列表稍微长一点、或者菜单打开时数得往下展开的高度超过了卡片剩余的可视高度），展开的菜单就会被这个 `overflow-hidden` 直接裁掉/挡住，看起来"压下去了看不到"，其实菜单是渲染了的，只是被父容器裁剪了。三个列表（客户/供应商/收货人）共用 `ProfileListParts.tsx`，所以都受影响。
+
+**修复方案：菜单改用 Portal 渲染到 `document.body`，彻底摆脱任何父容器 `overflow` 裁剪的影响**（这是这类"下拉菜单在可滚动/裁剪容器里被截断"问题的标准解法，不管以后其他地方套不套 `overflow-hidden` 都不会再受影响）：
+
+- `src/features/customer/components/ProfileListParts.tsx` 的 `RowActionMenu`：
+  - 触发按钮（"···"）用 `useRef<HTMLButtonElement>` 记录自身。
+  - 点击展开时，先用 `buttonRef.current.getBoundingClientRect()` 算出菜单应该出现的位置（比如 `top: rect.bottom + 4, left: rect.right - 112`，112 大概是菜单宽度 `min-w-[7rem]` 对应的像素值，右对齐到按钮右边缘），存进一个 `position` state，再 `setOpen(true)`。
+  - 用 `import { createPortal } from 'react-dom'`，把原来那个 `{open && (<><div fixed inset-0 .../><div absolute right-0 top-8 ...>...</div></>)}` 整体改成 `createPortal(<>...</>, document.body)`，菜单本体的定位从 `absolute right-0 top-8` 改成 `fixed`，用算出来的 `position.top`/`position.left`（内联 style 或 Tailwind 任意值都可以）。
+  - 菜单展开期间监听 `scroll`（外层是 `window`/文档级滚动，加在 `window` 上，`capture: true` 保证嵌套滚动容器也能捕获）和 `resize` 事件，触发时直接把菜单关掉（`setOpen(false)`）——这是下拉菜单+Portal 组合最简单可靠的处理方式，不需要做菜单跟随重新定位的复杂逻辑。
+  - `z-index` 可以调低一点（比如 `z-50`），因为现在挂在 `document.body` 下面，不再需要硬顶各种局部堆叠上下文。
+  - 背后的点击遮罩（`fixed inset-0`）逻辑不变，一起放进 portal。
+
+### 行内信息密度/排版微调（同样在三个列表文件里，样式改动为主）
+
+- 标题（客户名/公司名）和简称两行之间增加一点垂直间距（比如给简称那行加 `mt-0.5`），现在两行贴得太紧。
+- 简称目前的样式（`text-xs text-gray-400`）和"主联络人"列、"创建时间"列长得一模一样，扫一眼分不清哪个是哪个——给简称这行换个更轻的视觉权重或者加个小圆点/竖线前缀作区分，避免整行看起来都是同一种灰色文字、没有主次。
+- "主联络人"列、"创建时间"列和"···"按钮之间的间距稍微拉开一点（现在挤在一起），可以适当增加 `gap-x` 或者给"···"按钮左侧单独加一点 `pl-2` 之类的留白。
+- 不需要改变列表的整体结构（还是整行点击进详情、"···"收编辑删除），这次只是密度/排版层面的微调，具体像素值 Codex 可以自行判断，不需要和这份文档完全一致。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 客户/供应商/收货人列表里，滚动到接近列表末尾的几行，点击"···"展开的菜单能完整显示（不被裁掉/挡住），编辑、删除都能正常点击
+- 菜单展开时滚动页面，菜单会自动关闭（不会出现悬空在错误位置的菜单）
+- 三个列表的行内文字层次比之前清楚一点，标题/简称/主联络人/创建时间不再是"一整片同样深浅的灰字"
+
+---
+
+## TASK-70：客户详情页时间轴改为从询报价登记表取数据（完全替换，不再显示报价单/发票/装箱单历史事件）
+
+**背景（Roger 确认："完全替换：只显示询价记录，不再显示报价单等"）**：`CustomerTimeline.tsx` 现在点"同步历史"是调用 `autoTimelineService.ts` 里的 `syncAllHistoryToTimeline()`，从 `quotation_history`/`packing_history`/`invoice_history`（旧的报价单/装箱单/财务发票历史文档）里按**客户名字符串**匹配（`item.customerName === customerAliases[0]`），生成 `quotation`/`confirmation`/`packing`/`invoice` 四种类型的时间轴事件，写进独立的 `customer_timeline_events` localStorage。这套逻辑和这次询价关联客户 ID 的大方向（TASK-59~68 一路在做的"不再靠名字字符串匹配，改成真实 ID 关联"）背道而驰，Roger 要求改成：时间轴的取值来自询报价登记表（`InquiryRecord`），用真实的 `customerId` 关联，事件标题用报价编号（`inquiryNo`）。
+
+**确认过：`useAutoSync.ts` 这个 hook 定义了但整个仓库没有任何地方实际调用它**（`grep` 确认，只在 `hooks/index.ts` 里被 re-export），所以不用担心有后台任务在悄悄同步旧数据，改动范围就是 `CustomerTimeline.tsx`/`useCustomerTimeline.ts` 这一条链路。
+
+### 改动 1：新增询价事件派生函数，不落库、纯计算
+
+新建 `src/features/customer/services/inquiryTimelineService.ts`：
+
+```ts
+import type { InquiryRecord } from '@/features/inquiry/types';
+import { getDateInputValueFromInquiryNo } from '@/features/inquiry/utils/inquiryUtils';
+import type { CustomerTimelineEvent } from '../types';
+
+export function buildInquiryTimelineEvents(
+  customerId: string,
+  inquiryRecords: InquiryRecord[]
+): CustomerTimelineEvent[] {
+  return inquiryRecords
+    .filter((record) => record.customerId === customerId)
+    .map((record) => ({
+      id: `inquiry-${record.id}`,
+      customerId,
+      type: 'inquiry' as const,
+      title: `询价 ${record.inquiryNo}`,
+      description: record.description || `询价人：${record.inquirer}`,
+      date: getDateInputValueFromInquiryNo(record.inquiryNo) || record.inquiryDate,
+      status: record.orderSubStatus === 'cancelled'
+        ? 'cancelled' as const
+        : record.orderNo?.trim()
+          ? 'completed' as const
+          : 'pending' as const,
+      documentId: record.id,
+      documentNo: record.inquiryNo,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    }));
+}
+```
+
+`src/features/customer/types/timeline.ts` 的 `TimelineEventType` 加一个 `'inquiry'` 成员：`'quotation' | 'confirmation' | 'packing' | 'invoice' | 'inquiry' | 'custom'`（旧的四个类型先留着，不强制迁移历史 localStorage 数据，只是页面上不再产生/展示这几种）。
+
+### 改动 2：`useCustomerTimeline.ts` 接入询价 store，合并展示，不再合并旧文档类型事件
+
+- 引入 `import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';`，在 hook 里订阅 `const inquiryRecords = useInquiryStore((state) => state.records);`。
+- 加一个 `useEffect`，在 `customerId` 有值时调用一次 `useInquiryStore.getState().init()`（`init()` 本身是幂等的重新拉取，不用怕重复调用；这是为了兼容用户没有先打开过询报价登记表、直接进客户详情页看时间轴，`records` 还是空数组的情况）。
+- `loadEvents` 里：`TimelineService.getEventsByCustomerIds(customerKeys)` 拿到的结果先 `.filter(event => event.type === 'custom')`（只保留手动添加的自定义事件，历史遗留的 quotation/confirmation/packing/invoice 事件不再展示），再和 `buildInquiryTimelineEvents(customerId, inquiryRecords)` 的结果合并、按 `date` 倒序排序。
+- `syncHistory` 改名/改实现（函数名可以保留 `syncHistory` 不用改调用方，内部实现换掉）：不再调用 `syncAllHistoryToTimeline()`，改成 `useInquiryStore.getState().init()` 之后重新 `loadEvents()`——效果上从"同步历史文档"变成"刷新询价数据"。
+
+### 改动 3：`CustomerTimeline.tsx` 展示层小调整
+
+- `eventTypeIcons`/`eventTypeColors`/`getEventTypeLabel` 三个映射加上 `inquiry` 分支（图标用 `FileText` 或 `Search` 都行，颜色用蓝色系，标签"询价"）。`quotation`/`confirmation`/`packing`/`invoice` 对应的映射代码不用删（保留不影响什么，只是不会再被用到）。
+- 顶部按钮"同步历史"文案可以顺手改成"刷新"（`Calendar` 图标换成 `RefreshCw` 或保留都行），空状态提示文案里"点击同步历史按钮从历史记录中提取事件"改成"点击刷新按钮拉取最新询价记录，或点击添加事件创建自定义事件"。
+- "添加事件"（`CustomEventForm`，手动自定义事件）功能不变，继续保留。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 客户详情页时间轴只显示两类事件：这个客户名下的询价记录（标题是"询价 {报价编号}"）+ 手动添加的自定义事件，不再出现"报价单"/"财务发票"/"装箱单"类型的历史事件
+- 一个客户在询报价登记表里有 N 条已关联的询价记录，时间轴就应该看到 N 条对应的"询价"事件，日期能正确按询价编号对应的日期排序
+- 没有先打开过询报价登记表、直接从客户列表点进详情页看时间轴，也能正常显示（不会因为 store 未初始化而是空的）
+
+---
+
+## TASK-71：跟进记录关联询价记录，展示实时报价/订单状态
+
+**背景（Roger 确认："跟询价/订单状态联动"）**：`FollowUpManager.tsx` 现在是一个完全独立的手动待办事项（标题+描述+到期日+优先级+类型），和询价/订单数据没有任何关联。Roger 希望跟进记录能和具体的询价记录挂钩，跟进的时候能看到这条询价现在的实际状态（报价/订单进展），不是记完之后就是个孤立的备忘。
+
+**范围说明**：这次先做"能关联到具体询价记录 + 展示这条询价的实时状态 + 能跳转过去看"，不做"根据询价状态自动生成/提醒跟进"的智能功能（比如"询价3天没报价自动创建跟进"）——那个如果之后需要可以再单独提。
+
+### 改动 1：`CustomerFollowUp` 类型加关联字段
+
+`src/features/customer/types/timeline.ts` 的 `CustomerFollowUp` 接口加一个可选字段：`relatedInquiryId?: string;`（存 `InquiryRecord.id`）。
+
+### 改动 2：`FollowUpManager.tsx` 添加跟进表单里增加"关联询价记录"选择器
+
+- 引入 `useInquiryStore`，取 `records`，用传入的 `customerId` 过滤出这个客户名下的询价记录（`record.customerId === customerId`），如果一条都没有就不显示这个选择器（该客户没有已关联的询价记录，关联不了）。
+- 表单里加一个可选的 `<select>`："关联询价记录（可选）"，选项文案 `${record.inquiryNo}${record.description ? ' · ' + record.description : ''}`，选中后存进 `formData.relatedInquiryId`（不选就是 `undefined`，跟现在行为一样纯手动）。
+- 提交时把 `relatedInquiryId` 一起传给 `addFollowUp`。
+
+### 改动 3：跟进记录展示时，如果关联了询价，显示实时状态并可跳转
+
+- 在 `followUps`/`upcomingFollowUps`/`overdueFollowUps` 三处渲染跟进卡片的地方（三段结构基本重复，可以抽一个小的 `FollowUpCard` 子组件减少重复），如果 `followUp.relatedInquiryId` 有值：
+  - 从 `useInquiryStore` 的 `records` 里按 id 查出对应的 `InquiryRecord`（查不到说明这条询价记录后来被删了，就不显示这部分，不报错）。
+  - 显示一小行"关联询价：{inquiryNo}"，加一个简短的状态摘要——用现有的报价/订单状态判断逻辑（`InquiryQuoteStatus.tsx`/`useInquiryFilter.ts` 里已经有类似的状态归类判断，参考 `quoteStatus` 那几个 case 分支：未报价/已报价/无法报价/已成单/已辙销/善后），显示一个对应的小 badge。
+  - 这一行整体可以做成 `<Link>` 跳转到 `/inquiry?customerId=${customerId}&keyword=${encodeURIComponent(record.inquiryNo)}`——`useInquiryFilter.ts` 现有的 `keyword` 筛选已经会匹配 `inquiryNo`，用这个字段直接精确定位到这一条记录，不需要再新增筛选维度。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 添加跟进记录时，如果这个客户名下有已关联的询价记录，能在表单里选一条关联上；没有就不显示这个选择器，不影响正常手动跟进
+- 一条关联了询价记录的跟进，列表里能看到这条询价当前的实时状态（不是保存跟进时的快照），点击能跳转到询报价登记表并定位到这条记录
+- 关联的询价记录如果后来被删除了，跟进记录本身不报错、不崩溃，只是不再显示关联信息
+
+---
+
 ## TASK-67 复核发现一个实际 bug，需要修正（TASK-68 部分已通过，不用动）
 
 **结论**：TASK-68（询报价 `customerId`/`contactId` 筛选 + 详情页联络人行可点击 + 筛选提示条）逐文件核对过（`useInquiryFilter.ts`/`InquiryPage.tsx`/`InquiryFilterBar.tsx`/`CustomerDetailPage.tsx`），逻辑正确，`tsc --noEmit` 独立跑通过，这部分不需要改。

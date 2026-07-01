@@ -1,5 +1,5 @@
 // 时间轴事件类型
-export type TimelineEventType = 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'custom';
+export type TimelineEventType = 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'inquiry' | 'custom';
 export type TimelineEventStatus = 'pending' | 'completed' | 'cancelled';
 export type FollowUpType = 'new_customer' | 'follow_up' | 'reminder';
 export type FollowUpStatus = 'pending' | 'completed' | 'overdue';
@@ -18,7 +18,7 @@ export interface CustomerTimelineEvent {
   documentNo?: string; // 文档编号
   amount?: number; // 金额
   currency?: string; // 货币
-  customFields?: Record<string, any>; // 自定义字段
+  customFields?: Record<string, unknown>; // 自定义字段
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +27,7 @@ export interface CustomerTimelineEvent {
 export interface CustomerFollowUp {
   id: string;
   customerId: string;
+  relatedInquiryId?: string;
   type: FollowUpType;
   title: string;
   description: string;

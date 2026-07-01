@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Package, Search } from 'lucide-react';
 import type { Customer, Supplier, Consignee } from '../types';
 import { getPrimaryContact } from '../services/customerService';
-import { getProfileTitle, PrimaryContactSummary, RowActionMenu } from './ProfileListParts';
+import { getProfileTitle, PrimaryContactSummary, ProfileShortName, RowActionMenu } from './ProfileListParts';
 
 const AVATAR_COLORS = [
   'bg-violet-500',
@@ -96,12 +96,12 @@ export function ConsigneeList({ consignees, loading, searchQuery, onEdit, onDele
   return (
     <div>
       {/* 列标题 */}
-      <div className="hidden items-center gap-3 border-b border-gray-100 bg-gray-50/80 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/40 sm:flex">
+      <div className="hidden items-center gap-4 border-b border-gray-100 bg-gray-50/80 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/40 sm:flex">
         <div className="w-9 shrink-0" />
         <span className="flex-1 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">名称</span>
-        <span className="hidden w-40 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 sm:block">主联络人</span>
-        <span className="hidden w-24 shrink-0 text-right text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 md:block">创建时间</span>
-        <div className="w-10 shrink-0" />
+        <span className="hidden w-44 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 sm:block">主联络人</span>
+        <span className="hidden w-28 shrink-0 text-right text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 md:block">创建时间</span>
+        <div className="w-12 shrink-0" />
       </div>
 
       {/* 行列表 */}
@@ -122,7 +122,7 @@ export function ConsigneeList({ consignees, loading, searchQuery, onEdit, onDele
                   onViewDetail(consignee);
                 }
               }}
-              className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/40"
+              className="flex cursor-pointer items-center gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/40"
             >
               {/* 头像 */}
               <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColor(title)}`}>
@@ -132,18 +132,16 @@ export function ConsigneeList({ consignees, loading, searchQuery, onEdit, onDele
               {/* 名称 + 公司 */}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{title}</p>
-                {consignee.shortName && (
-                  <p className="truncate text-xs text-gray-400 dark:text-gray-500">{consignee.shortName}</p>
-                )}
+                <ProfileShortName value={consignee.shortName} />
               </div>
 
               {/* 主联络人 */}
-              <div className="hidden w-40 shrink-0 truncate text-xs text-gray-400 dark:text-gray-500 sm:block">
+              <div className="hidden w-44 shrink-0 truncate text-xs text-gray-500 dark:text-gray-400 sm:block">
                 <PrimaryContactSummary item={consignee} />
               </div>
 
               {/* 创建时间 */}
-              <div className="hidden w-24 shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 md:block">
+              <div className="hidden w-28 shrink-0 text-right text-xs text-gray-400 dark:text-gray-500 md:block">
                 {fmtDate(consignee.createdAt)}
               </div>
 

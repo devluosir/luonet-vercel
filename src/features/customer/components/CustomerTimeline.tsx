@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Calendar, FileText, Package, Receipt, ShoppingCart, Plus, Filter, Search } from 'lucide-react';
+import { Calendar, FileText, Package, Receipt, RefreshCw, ShoppingCart, Plus, Filter, Search } from 'lucide-react';
 import { useCustomerTimeline } from '../hooks/useCustomerTimeline';
 import { CustomEventForm } from './CustomEventForm';
-import type { CustomerTimelineEvent, TimelineEventType, TimelineEventStatus } from '../types';
+import type { CustomerTimelineEvent, TimelineEventStatus } from '../types';
 
 interface CustomerTimelineProps {
   customerId: string;
@@ -17,6 +17,7 @@ const eventTypeIcons = {
   confirmation: FileText,
   packing: Package,
   invoice: Receipt,
+  inquiry: Search,
   custom: ShoppingCart
 };
 
@@ -26,6 +27,7 @@ const eventTypeColors = {
   confirmation: 'text-green-600 bg-green-100',
   packing: 'text-teal-600 bg-teal-100',
   invoice: 'text-purple-600 bg-purple-100',
+  inquiry: 'text-blue-600 bg-blue-100',
   custom: 'text-orange-600 bg-orange-100'
 };
 
@@ -66,18 +68,6 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
     return `${currency || 'USD'} ${amount.toLocaleString()}`;
   };
 
-  // 获取事件类型标签
-  const getEventTypeLabel = (type: TimelineEventType) => {
-    const labels = {
-      quotation: '报价单',
-      confirmation: '销售确认',
-      packing: '装箱单',
-      invoice: '财务发票',
-      custom: '自定义'
-    };
-    return labels[type];
-  };
-
   // 获取状态标签
   const getStatusLabel = (status: TimelineEventStatus) => {
     const labels = {
@@ -89,7 +79,9 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
   };
 
   // 处理添加自定义事件
-  const handleAddCustomEvent = async (eventData: any) => {
+  const handleAddCustomEvent = async (
+    eventData: Omit<CustomerTimelineEvent, 'id' | 'createdAt' | 'updatedAt'>
+  ) => {
     try {
       await addCustomEvent(eventData);
       setShowCustomEventForm(false);
@@ -101,7 +93,7 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
+      <div role="status" className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -133,8 +125,8 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
             onClick={syncHistory}
             className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
           >
-            <Calendar className="h-4 w-4" />
-            <span>同步历史</span>
+            <RefreshCw className="h-4 w-4" />
+            <span>刷新</span>
           </button>
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -152,16 +144,21 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 搜索 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="timeline-event-search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 搜索
               </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
+                  id="timeline-event-search"
+                  aria-label="搜索"
                   type="text"
                   placeholder="搜索事件..."
                   value={filters.searchText}
-                  onChange={(e) => setFilters(prev => ({ ...prev, searchText: e.target.value }))}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFilters(prev => ({ ...prev, searchText: value }));
+                  }}
                   className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
@@ -176,7 +173,7 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>暂无时间轴事件</p>
-            <p className="text-sm mt-2">点击&quot;同步历史&quot;按钮从历史记录中提取事件，或点击&quot;添加事件&quot;创建自定义事件</p>
+            <p className="text-sm mt-2">点击&quot;刷新&quot;按钮拉取最新询价记录，或点击&quot;添加事件&quot;创建自定义事件</p>
           </div>
         ) : (
           <div className="space-y-4">

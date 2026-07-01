@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
+import type { InquiryRecord } from '@/features/inquiry/types';
 import { TimelineService } from '../services/timelineService';
-import { syncAllHistoryToTimeline } from '../services/autoTimelineService';
+import { buildInquiryTimelineEvents } from '../services/inquiryTimelineService';
 import type { CustomerTimelineEvent, TimelineEventType, TimelineEventStatus } from '../types';
 
 const EMPTY_ALIASES: string[] = [];
 
 export function useCustomerTimeline(customerId?: string, customerAliases: string[] = EMPTY_ALIASES) {
+  const inquiryRecords = useInquiryStore((state) => state.records);
   const [events, setEvents] = useState<CustomerTimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
@@ -19,30 +22,34 @@ export function useCustomerTimeline(customerId?: string, customerAliases: string
   );
 
   // 加载时间轴事件
-  const loadEvents = useCallback(async () => {
+  const loadEvents = useCallback(async (recordsOverride?: InquiryRecord[]) => {
     if (!customerId) return;
     
     setLoading(true);
     try {
-      const customerEvents = TimelineService.getEventsByCustomerIds(customerKeys);
-      setEvents(customerEvents);
+      const customEvents = TimelineService.getEventsByCustomerIds(customerKeys)
+        .filter((event) => event.type === 'custom');
+      const inquiryEvents = buildInquiryTimelineEvents(customerId, recordsOverride ?? inquiryRecords);
+      setEvents([...customEvents, ...inquiryEvents].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      ));
     } catch (error) {
       console.error('加载时间轴事件失败:', error);
     } finally {
       setLoading(false);
     }
-  }, [customerId, customerKeys]);
+  }, [customerId, customerKeys, inquiryRecords]);
 
-  // 同步历史记录
+  // 刷新询价记录
   const syncHistory = useCallback(async () => {
     setLoading(true);
     try {
-      await syncAllHistoryToTimeline();
+      useInquiryStore.getState().init();
       if (customerId) {
-        await loadEvents();
+        await loadEvents(useInquiryStore.getState().records);
       }
     } catch (error) {
-      console.error('同步历史记录失败:', error);
+      console.error('刷新询价记录失败:', error);
     } finally {
       setLoading(false);
     }
@@ -117,6 +124,13 @@ export function useCustomerTimeline(customerId?: string, customerAliases: string
     
     return true;
   });
+
+  // 初始化询价记录
+  useEffect(() => {
+    if (customerId) {
+      useInquiryStore.getState().init();
+    }
+  }, [customerId]);
 
   // 初始化加载
   useEffect(() => {

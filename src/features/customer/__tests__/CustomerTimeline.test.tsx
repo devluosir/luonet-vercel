@@ -1,11 +1,13 @@
 import '@testing-library/jest-dom';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { CustomerTimeline } from '../components/CustomerTimeline';
 import { useCustomerTimeline } from '../hooks/useCustomerTimeline';
 
 // Mock the hook
-jest.mock('../hooks/useCustomerTimeline');
+jest.mock('../hooks/useCustomerTimeline', () => ({
+  useCustomerTimeline: jest.fn(),
+}));
 
 const mockUseCustomerTimeline = useCustomerTimeline as jest.MockedFunction<typeof useCustomerTimeline>;
 
@@ -104,7 +106,7 @@ describe('CustomerTimeline', () => {
     render(<CustomerTimeline customerId="test-customer" customerName="Test Customer" />);
 
     expect(screen.getByText('暂无时间轴事件')).toBeInTheDocument();
-    expect(screen.getByText(/点击"同步历史"按钮从历史记录中提取事件/)).toBeInTheDocument();
+    expect(screen.getByText(/点击"刷新"按钮拉取最新询价记录/)).toBeInTheDocument();
   });
 
   it('toggles filters when filter button is clicked', () => {
@@ -132,7 +134,7 @@ describe('CustomerTimeline', () => {
 
     render(<CustomerTimeline customerId="test-customer" customerName="Test Customer" />);
 
-    const syncButton = screen.getByText('同步历史');
+    const syncButton = screen.getByText('刷新');
     fireEvent.click(syncButton);
 
     expect(mockSyncHistory).toHaveBeenCalled();
@@ -170,10 +172,14 @@ describe('CustomerTimeline', () => {
     const searchInput = screen.getByLabelText('搜索');
     fireEvent.change(searchInput, { target: { value: 'quotation' } });
 
-    expect(mockSetFilters).toHaveBeenCalledWith(
-      expect.objectContaining({
-        searchText: 'quotation'
-      })
+    expect(mockSetFilters).toHaveBeenCalledWith(expect.any(Function));
+    const updater = mockSetFilters.mock.calls.at(-1)?.[0] as (prev: {
+      eventTypes: [];
+      status: [];
+      searchText: string;
+    }) => { searchText: string };
+    expect(updater({ eventTypes: [], status: [], searchText: '' })).toEqual(
+      expect.objectContaining({ searchText: 'quotation' })
     );
   });
 });

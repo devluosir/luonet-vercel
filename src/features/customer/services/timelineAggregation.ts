@@ -47,6 +47,7 @@ export class TimelineAggregationService {
       confirmation: 0.8,
       packing: 0.7,
       invoice: 0.9,
+      inquiry: 0.7,
       custom: 0.5
     },
     amount: {
@@ -120,7 +121,7 @@ export class TimelineAggregationService {
     });
 
     // 处理每个分组
-    eventMap.forEach((groupEvents, key) => {
+    eventMap.forEach((groupEvents, _key) => {
       if (groupEvents.length === 1) {
         // 单个事件，直接转换
         const event = groupEvents[0];
@@ -287,12 +288,6 @@ export class TimelineAggregationService {
     timeWindow: number;
   } {
     const totalEvents = events.length;
-    const recentEvents = events.filter(e => {
-      const eventDate = new Date(e.date);
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      return eventDate >= weekAgo;
-    });
-
     return {
       showLowWeight: totalEvents < 50, // 事件少时显示低权重
       aggregationEnabled: totalEvents > 20, // 事件多时启用聚合

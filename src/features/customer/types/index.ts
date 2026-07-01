@@ -44,7 +44,7 @@ export interface HistoryDocument {
 }
 
 // 时间轴相关类型
-export type TimelineEventType = 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'custom';
+export type TimelineEventType = 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'inquiry' | 'custom';
 export type TimelineEventStatus = 'pending' | 'completed' | 'cancelled';
 
 export interface CustomerTimelineEvent {
@@ -71,6 +71,7 @@ export type FollowUpPriority = 'low' | 'medium' | 'high';
 export interface CustomerFollowUp {
   id: string;
   customerId: string;
+  relatedInquiryId?: string;
   type: FollowUpType;
   title: string;
   description: string;

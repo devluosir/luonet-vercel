@@ -1,25 +1,68 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Clock, Plus, AlertTriangle, CheckCircle, Calendar } from 'lucide-react';
+import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
+import type { InquiryRecord } from '@/features/inquiry/types';
 import { useCustomerFollowUp } from '../hooks/useCustomerFollowUp';
-import type { CustomerFollowUp, FollowUpType, FollowUpStatus, FollowUpPriority } from '../types';
+import type { CustomerFollowUp, FollowUpType, FollowUpPriority } from '../types';
 
 interface FollowUpManagerProps {
   customerId: string;
   customerName: string;
 }
 
+type FollowUpCardTone = 'default' | 'upcoming' | 'overdue';
+
+function getInquiryStatus(record: InquiryRecord) {
+  if (record.orderSubStatus === 'cancelled') {
+    return { label: '已撤销', className: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' };
+  }
+  if (record.orderSubStatus === 'followup') {
+    return { label: '善后', className: 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300' };
+  }
+  if (record.orderNo?.trim()) {
+    return { label: '已成单', className: 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300' };
+  }
+  if (record.quotedStatuses.some((status) => status.type === 'unavailable' || status.type === 'closed')) {
+    return { label: '无法报价', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300' };
+  }
+  if (record.quotedStatuses.some((status) => !status.type || status.type === 'quoted')) {
+    return { label: '已报价', className: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' };
+  }
+  return { label: '未报价', className: 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' };
+}
+
+function buildInquiryHref(customerId: string, customerName: string, record: InquiryRecord) {
+  const params = new URLSearchParams({
+    customerId,
+    customerName,
+    keyword: record.inquiryNo,
+  });
+  return `/inquiry?${params.toString()}`;
+}
+
 export function FollowUpManager({ customerId, customerName }: FollowUpManagerProps) {
+  const inquiryRecords = useInquiryStore((state) => state.records);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     dueDate: '',
     priority: 'medium' as FollowUpPriority,
-    type: 'follow_up' as FollowUpType
+    type: 'follow_up' as FollowUpType,
+    relatedInquiryId: ''
   });
   const customerAliases = useMemo(() => [customerName], [customerName]);
+  const customerInquiryRecords = useMemo(
+    () => inquiryRecords.filter((record) => record.customerId === customerId),
+    [customerId, inquiryRecords]
+  );
+  const inquiryById = useMemo(
+    () => new Map(inquiryRecords.map((record) => [record.id, record])),
+    [inquiryRecords]
+  );
 
   const {
     followUps,
@@ -27,10 +70,12 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
     overdueFollowUps,
     loading,
     addFollowUp,
-    updateFollowUp,
-    deleteFollowUp,
     completeFollowUp
   } = useCustomerFollowUp(customerId, customerAliases);
+
+  useEffect(() => {
+    useInquiryStore.getState().init();
+  }, [customerId]);
 
   // 格式化日期
   const formatDate = (dateString: string) => {
@@ -62,6 +107,92 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
     return colors[priority];
   };
 
+  const renderFollowUpCard = (
+    followUp: CustomerFollowUp,
+    tone: FollowUpCardTone = 'default'
+  ) => {
+    const relatedInquiry = followUp.relatedInquiryId
+      ? inquiryById.get(followUp.relatedInquiryId)
+      : undefined;
+    const status = relatedInquiry ? getInquiryStatus(relatedInquiry) : null;
+    const isDefault = tone === 'default';
+    const titleClass = tone === 'overdue'
+      ? 'text-red-900'
+      : tone === 'upcoming'
+        ? 'text-yellow-900'
+        : 'text-gray-900 dark:text-white';
+    const descriptionClass = tone === 'overdue'
+      ? 'text-red-700'
+      : tone === 'upcoming'
+        ? 'text-yellow-700'
+        : 'text-gray-600 dark:text-gray-400';
+    const dueClass = tone === 'overdue'
+      ? 'text-red-600'
+      : tone === 'upcoming'
+        ? 'text-yellow-600'
+        : 'text-gray-500 dark:text-gray-400';
+    const containerClass = tone === 'overdue'
+      ? 'p-3 bg-white border border-red-200 rounded-md'
+      : tone === 'upcoming'
+        ? 'p-3 bg-white border border-yellow-200 rounded-md'
+        : 'p-4';
+    const completeButtonClass = tone === 'overdue'
+      ? 'px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700'
+      : tone === 'upcoming'
+        ? 'px-2 py-1 text-xs bg-yellow-600 text-white rounded hover:bg-yellow-700'
+        : 'px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700';
+
+    return (
+      <div key={followUp.id} className={containerClass}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h5 className={`text-sm font-medium ${titleClass}`}>{followUp.title}</h5>
+            <p className={`mt-1 text-xs ${descriptionClass}`}>{followUp.description}</p>
+            {relatedInquiry && status && (
+              <Link
+                href={buildInquiryHref(customerId, customerName, relatedInquiry)}
+                className="mt-2 inline-flex max-w-full items-center gap-2 rounded-md border border-blue-100 bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:border-blue-200 hover:bg-blue-100 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300 dark:hover:bg-blue-950/50"
+              >
+                <span className="truncate">关联询价：{relatedInquiry.inquiryNo}</span>
+                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${status.className}`}>
+                  {status.label}
+                </span>
+              </Link>
+            )}
+            <div className={`mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs ${dueClass}`}>
+              <span className="flex items-center space-x-1">
+                <Calendar className="h-3 w-3" />
+                <span>到期: {formatDate(followUp.dueDate)}</span>
+              </span>
+              {isDefault && (
+                <span>
+                  状态: {followUp.status === 'pending' ? '待处理' : followUp.status === 'completed' ? '已完成' : '已过期'}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center space-x-2">
+            <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(followUp.priority)}`}>
+              {getPriorityLabel(followUp.priority)}
+            </span>
+            {followUp.status === 'pending' && (
+              <button
+                onClick={() => completeFollowUp(followUp.id)}
+                className={completeButtonClass}
+              >
+                完成
+              </button>
+            )}
+            {followUp.status === 'completed' && isDefault && (
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // 处理添加跟进
   const handleAddFollowUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,7 +210,8 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
         description: formData.description,
         dueDate: formData.dueDate,
         priority: formData.priority,
-        status: 'pending'
+        status: 'pending',
+        relatedInquiryId: formData.relatedInquiryId || undefined,
       });
 
       // 重置表单
@@ -88,7 +220,8 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
         description: '',
         dueDate: '',
         priority: 'medium',
-        type: 'follow_up'
+        type: 'follow_up',
+        relatedInquiryId: ''
       });
       setShowAddForm(false);
     } catch (error) {
@@ -207,6 +340,26 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
                 </select>
               </div>
             </div>
+
+            {customerInquiryRecords.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  关联询价记录（可选）
+                </label>
+                <select
+                  value={formData.relatedInquiryId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, relatedInquiryId: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                >
+                  <option value="">不关联询价记录</option>
+                  {customerInquiryRecords.map((record) => (
+                    <option key={record.id} value={record.id}>
+                      {record.inquiryNo}{record.description ? ` · ${record.description}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             
             <div className="flex justify-end space-x-2">
               <button
@@ -237,28 +390,7 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
             </h4>
           </div>
           <div className="space-y-2">
-            {upcomingFollowUps.map(followUp => (
-              <div key={followUp.id} className="p-3 bg-white border border-yellow-200 rounded-md">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h5 className="text-sm font-medium text-yellow-900">{followUp.title}</h5>
-                    <p className="text-xs text-yellow-700 mt-1">{followUp.description}</p>
-                    <p className="text-xs text-yellow-600 mt-1">到期: {formatDate(followUp.dueDate)}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(followUp.priority)}`}>
-                      {getPriorityLabel(followUp.priority)}
-                    </span>
-                    <button
-                      onClick={() => completeFollowUp(followUp.id)}
-                      className="px-2 py-1 text-xs bg-yellow-600 text-white rounded hover:bg-yellow-700"
-                    >
-                      完成
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+            {upcomingFollowUps.map((followUp) => renderFollowUpCard(followUp, 'upcoming'))}
           </div>
         </div>
       )}
@@ -273,28 +405,7 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
             </h4>
           </div>
           <div className="space-y-2">
-            {overdueFollowUps.map(followUp => (
-              <div key={followUp.id} className="p-3 bg-white border border-red-200 rounded-md">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h5 className="text-sm font-medium text-red-900">{followUp.title}</h5>
-                    <p className="text-xs text-red-700 mt-1">{followUp.description}</p>
-                    <p className="text-xs text-red-600 mt-1">到期: {formatDate(followUp.dueDate)}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(followUp.priority)}`}>
-                      {getPriorityLabel(followUp.priority)}
-                    </span>
-                    <button
-                      onClick={() => completeFollowUp(followUp.id)}
-                      className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
-                    >
-                      完成
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+            {overdueFollowUps.map((followUp) => renderFollowUpCard(followUp, 'overdue'))}
           </div>
         </div>
       )}
@@ -314,40 +425,7 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
           </div>
         ) : (
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {followUps.map(followUp => (
-              <div key={followUp.id} className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h5 className="text-sm font-medium text-gray-900 dark:text-white">{followUp.title}</h5>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{followUp.description}</p>
-                    <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      <span className="flex items-center space-x-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>到期: {formatDate(followUp.dueDate)}</span>
-                      </span>
-                      <span>状态: {followUp.status === 'pending' ? '待处理' : followUp.status === 'completed' ? '已完成' : '已过期'}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(followUp.priority)}`}>
-                      {getPriorityLabel(followUp.priority)}
-                    </span>
-                    {followUp.status === 'pending' && (
-                      <button
-                        onClick={() => completeFollowUp(followUp.id)}
-                        className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                      >
-                        完成
-                      </button>
-                    )}
-                    {followUp.status === 'completed' && (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+            {followUps.map((followUp) => renderFollowUpCard(followUp))}
           </div>
         )}
       </div>
