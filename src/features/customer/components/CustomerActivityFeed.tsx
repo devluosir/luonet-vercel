@@ -5,7 +5,7 @@ import { Calendar, RefreshCw } from 'lucide-react';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '@/features/inquiry/types';
 import { InquiryFormModal } from '@/features/inquiry/components/InquiryFormModal';
-import { buildInquiryTimelineEvents } from '../services/inquiryTimelineService';
+import { buildInquiryTimelineEvents, getInquiryQuoteStatusBadge, type InquiryQuoteStatusBadge } from '../services/inquiryTimelineService';
 
 interface CustomerActivityFeedProps {
   customerId: string;
@@ -17,6 +17,7 @@ interface ActivityItem {
   title: string;
   description?: string;
   relatedInquiry?: InquiryRecord;
+  badge?: InquiryQuoteStatusBadge;
 }
 
 export function CustomerActivityFeed({ customerId }: CustomerActivityFeedProps) {
@@ -34,12 +35,16 @@ export function CustomerActivityFeed({ customerId }: CustomerActivityFeedProps) 
   }, [customerId]);
 
   const activities = useMemo<ActivityItem[]>(() => {
-    return buildInquiryTimelineEvents(customerId, inquiryRecords).map((event) => ({
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      relatedInquiry: event.documentId ? inquiryById.get(event.documentId) : undefined,
-    }));
+    return buildInquiryTimelineEvents(customerId, inquiryRecords).map((event) => {
+      const relatedInquiry = event.documentId ? inquiryById.get(event.documentId) : undefined;
+      return {
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        relatedInquiry,
+        badge: relatedInquiry ? getInquiryQuoteStatusBadge(relatedInquiry) : undefined,
+      };
+    });
   }, [customerId, inquiryRecords, inquiryById]);
 
   const handleRefresh = () => {
@@ -94,6 +99,11 @@ export function CustomerActivityFeed({ customerId }: CustomerActivityFeedProps) 
               <span className="shrink-0 font-mono text-sm font-semibold text-gray-900 dark:text-white">
                 {activity.title}
               </span>
+              {activity.badge && (
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${activity.badge.className}`}>
+                  {activity.badge.label}
+                </span>
+              )}
               <span className="min-w-0 flex-1 truncate text-sm text-gray-600 dark:text-gray-400">
                 {activity.description}
               </span>

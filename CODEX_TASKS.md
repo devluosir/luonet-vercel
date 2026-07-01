@@ -13082,3 +13082,98 @@ export function CustomerActivityFeed({ customerId }: CustomerActivityFeedProps) 
 - 活动列表不再包含事件/跟进相关的按钮、表单、卡片和状态。
 - 每条询价记录只显示询价号、描述/客户询价编号、详情三项内容。
 - 中屏/大屏下这三项内容显示在同一行；"详情"点击行为和数据来源与 TASK-81 保持一致。
+
+---
+
+## TASK-84：活动列表补回"询价状态"徽章
+
+**优先级**：中
+**风险**：低
+
+### 背景
+
+TASK-83 把活动列表精简成"询价号、描述/客户询价编号、详情"三项后，把状态徽章（未报价/已报价/无法报价/已成单/已辙销）也一并去掉了。用户反馈这个漏掉了，需要加回来——即在 TASK-83 的三项基础上，把 `getInquiryQuoteStatusBadge` 这个状态徽章补回每一行，其余（去掉事件/跟进、单行布局）保持不变。
+
+### 涉及文件
+
+`src/features/customer/components/CustomerActivityFeed.tsx`
+
+### 精确改动
+
+**1. import：从 `inquiryTimelineService` 里多导入 `getInquiryQuoteStatusBadge` 和 `InquiryQuoteStatusBadge` 类型**
+
+```diff
+-import { buildInquiryTimelineEvents } from '../services/inquiryTimelineService';
++import { buildInquiryTimelineEvents, getInquiryQuoteStatusBadge, type InquiryQuoteStatusBadge } from '../services/inquiryTimelineService';
+```
+
+**2. `ActivityItem` 接口加一个 `badge` 字段**
+
+```diff
+ interface ActivityItem {
+   id: string;
+   title: string;
+   description?: string;
+   relatedInquiry?: InquiryRecord;
++  badge?: InquiryQuoteStatusBadge;
+ }
+```
+
+**3. `activities` 的 `useMemo` 里，取到 `relatedInquiry` 后顺便算出 `badge`**
+
+```diff
+   const activities = useMemo<ActivityItem[]>(() => {
+-    return buildInquiryTimelineEvents(customerId, inquiryRecords).map((event) => ({
+-      id: event.id,
+-      title: event.title,
+-      description: event.description,
+-      relatedInquiry: event.documentId ? inquiryById.get(event.documentId) : undefined,
+-    }));
++    return buildInquiryTimelineEvents(customerId, inquiryRecords).map((event) => {
++      const relatedInquiry = event.documentId ? inquiryById.get(event.documentId) : undefined;
++      return {
++        id: event.id,
++        title: event.title,
++        description: event.description,
++        relatedInquiry,
++        badge: relatedInquiry ? getInquiryQuoteStatusBadge(relatedInquiry) : undefined,
++      };
++    });
+   }, [customerId, inquiryRecords, inquiryById]);
+```
+
+**4. 每一行渲染时，在询价号后面插入状态徽章**
+
+```diff
+             <div
+               key={activity.id}
+               className="flex flex-col gap-1 rounded-lg border border-gray-100 bg-white px-3 py-2 shadow-sm dark:border-gray-700 dark:bg-gray-800 md:flex-row md:items-center md:gap-3"
+             >
+-              <span className="shrink-0 font-mono text-sm font-semibold text-gray-900 dark:text-white">
+-                {activity.title}
+-              </span>
++              <span className="shrink-0 font-mono text-sm font-semibold text-gray-900 dark:text-white">
++                {activity.title}
++              </span>
++              {activity.badge && (
++                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${activity.badge.className}`}>
++                  {activity.badge.label}
++                </span>
++              )}
+               <span className="min-w-0 flex-1 truncate text-sm text-gray-600 dark:text-gray-400">
+                 {activity.description}
+               </span>
+```
+
+即在"询价号"和"描述"之间插入状态徽章，其余布局（`md:flex-row` 单行、"详情"按钮）不变。
+
+### 验证
+
+1. `npx tsc --noEmit` 通过。
+2. `npx eslint src/features/customer/components/CustomerActivityFeed.tsx` 通过。
+3. 手动核对：每条询价活动记录显示"询价号 + 状态徽章（未报价/已报价/无法报价/已成单/已辙销，颜色和之前一致）+ 描述/客户询价编号 + 详情"，中屏/大屏时仍在同一行。
+
+### 验收标准
+
+- 每条询价活动都能看到对应的状态徽章，颜色/文案和询价列表页保持一致（复用同一个 `getInquiryQuoteStatusBadge`）。
+- 其余布局和 TASK-83 的结果保持一致，没有引入事件/跟进相关的内容。
