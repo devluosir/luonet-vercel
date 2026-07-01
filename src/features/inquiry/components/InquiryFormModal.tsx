@@ -308,78 +308,76 @@ export function InquiryFormModal({
         <form onSubmit={handleSubmit} className="px-6 py-5">
 
           {/* ── 身份信息条 ── */}
-          <div className="mb-4 rounded-[1.35rem] border border-gray-200/70 bg-[#f5f5f7] p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <div className="space-y-3">
-              <div className="rounded-2xl bg-white/95 px-3.5 py-3 ring-1 ring-gray-200/70 dark:bg-gray-900/70 dark:ring-gray-700">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-gray-100 px-1.5 py-1 dark:bg-gray-800">
-                    {mode === 'create' ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => adjustDate(-1)}
-                          tabIndex={-1}
-                          className="rounded-full p-0.5 text-gray-400 transition-colors hover:bg-white hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                          aria-label="前一天"
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </button>
-                        <input
-                          type="text"
-                          value={dateDisplayText}
-                          onChange={(e) => setDateDisplayText(e.target.value)}
-                          onBlur={commitDateText}
-                          onKeyDown={(e) => {
-                            if (e.key === 'ArrowUp') { e.preventDefault(); adjustDate(1); }
-                            if (e.key === 'ArrowDown') { e.preventDefault(); adjustDate(-1); }
-                            if (e.key === 'Enter') { e.preventDefault(); commitDateText(); }
-                          }}
-                          className="w-12 bg-transparent text-center text-lg font-semibold leading-7 text-gray-800 outline-none dark:text-gray-100"
-                          placeholder="6.21"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => adjustDate(1)}
-                          tabIndex={-1}
-                          className="rounded-full p-0.5 text-gray-400 transition-colors hover:bg-white hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                          aria-label="后一天"
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </button>
-                      </>
-                    ) : (
-                      <span className="w-20 text-center text-lg font-semibold leading-8 text-gray-800 dark:text-gray-100">
-                        {dateDisplayText}
-                      </span>
-                    )}
-                  </div>
-
-                  <input
-                    value={inquiryNo}
-                    onChange={(e) => { setInquiryNo(e.target.value); setIsInquiryNoManual(true); }}
-                    className="min-w-[9rem] flex-1 bg-transparent font-mono text-lg font-semibold leading-8 text-gray-900 outline-none placeholder:text-gray-300 dark:text-gray-50 dark:placeholder:text-gray-600"
-                    placeholder="C260621F"
-                    required
-                  />
-
-                  <label className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors ${
-                    isUrgent
-                      ? 'border-red-200 bg-red-50 text-red-600 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300'
-                      : 'border-gray-200 bg-white text-gray-500 hover:border-red-200 hover:text-red-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-red-500/40 dark:hover:text-red-300'
-                  }`}>
-                    <input
-                      type="checkbox"
-                      checked={isUrgent}
-                      onChange={(e) => toggleUrgent(e.target.checked)}
-                      className="h-3.5 w-3.5 cursor-pointer rounded accent-red-500"
-                    />
-                    <span>紧急</span>
-                  </label>
+          <div className="mb-4 rounded-xl border border-gray-200/70 bg-gray-50/90 p-2.5 shadow-sm dark:border-gray-700 dark:bg-gray-800/80">
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,0.85fr)]">
+              <div className="flex min-w-0 items-center gap-2 rounded-lg bg-white px-2.5 py-2 ring-1 ring-gray-200/70 dark:bg-gray-900/70 dark:ring-gray-700">
+                <div className="flex shrink-0 items-center gap-1 rounded-md bg-gray-100 px-1.5 py-1 dark:bg-gray-800">
+                  {mode === 'create' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => adjustDate(-1)}
+                        tabIndex={-1}
+                        className="rounded p-0.5 text-gray-400 transition-colors hover:bg-white hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                        aria-label="前一天"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <input
+                        type="text"
+                        value={dateDisplayText}
+                        onChange={(e) => setDateDisplayText(e.target.value)}
+                        onBlur={commitDateText}
+                        onKeyDown={(e) => {
+                          if (e.key === 'ArrowUp') { e.preventDefault(); adjustDate(1); }
+                          if (e.key === 'ArrowDown') { e.preventDefault(); adjustDate(-1); }
+                          if (e.key === 'Enter') { e.preventDefault(); commitDateText(); }
+                        }}
+                        className="w-10 bg-transparent text-center text-base font-semibold leading-6 text-gray-800 outline-none dark:text-gray-100"
+                        placeholder="6.21"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => adjustDate(1)}
+                        tabIndex={-1}
+                        className="rounded p-0.5 text-gray-400 transition-colors hover:bg-white hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                        aria-label="后一天"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="w-14 text-center text-base font-semibold leading-6 text-gray-800 dark:text-gray-100">
+                      {dateDisplayText}
+                    </span>
+                  )}
                 </div>
+
+                <input
+                  value={inquiryNo}
+                  onChange={(e) => { setInquiryNo(e.target.value); setIsInquiryNoManual(true); }}
+                  className="min-w-0 flex-1 bg-transparent font-mono text-lg font-semibold leading-7 text-gray-900 outline-none placeholder:text-gray-300 dark:text-gray-50 dark:placeholder:text-gray-600"
+                  placeholder="C260621F"
+                  required
+                />
+
+                <label className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors ${
+                  isUrgent
+                    ? 'border-red-200 bg-red-50 text-red-600 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300'
+                    : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-red-200 hover:text-red-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-red-500/40 dark:hover:text-red-300'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={isUrgent}
+                    onChange={(e) => toggleUrgent(e.target.checked)}
+                    className="h-3.5 w-3.5 cursor-pointer rounded accent-red-500"
+                  />
+                  <span>紧急</span>
+                </label>
               </div>
 
-              <div className="rounded-2xl border border-blue-200 bg-white px-3.5 py-2.5 shadow-sm ring-1 ring-blue-100/70 dark:border-blue-500/30 dark:bg-blue-950/20 dark:ring-blue-500/10">
-                <span className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300">
+              <div className="min-w-0 rounded-lg border border-blue-100 bg-white px-2.5 py-2 shadow-sm dark:border-blue-500/30 dark:bg-blue-950/20">
+                <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300">
                   <UserRound className="h-3.5 w-3.5" />
                   联络人
                 </span>
@@ -391,46 +389,46 @@ export function InquiryFormModal({
                   onClear={clearCustomerContactSelection}
                   placeholder="搜索客户简称/联络人简称"
                 />
-
-                {createCustomerQuery && (
-                  <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/60">
-                    <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-                      新建客户：{createCustomerQuery}
-                    </p>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <input
-                        value={newCustomerName}
-                        onChange={(e) => setNewCustomerName(e.target.value)}
-                        className="h-8 rounded-lg border border-gray-200 bg-white px-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                        placeholder="公司简称/名称"
-                      />
-                      <input
-                        value={newContactName}
-                        onChange={(e) => setNewContactName(e.target.value)}
-                        className="h-8 rounded-lg border border-gray-200 bg-white px-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                        placeholder="联络人姓名（默认主联络人）"
-                      />
-                    </div>
-                    <div className="mt-2 flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setCreateCustomerQuery('')}
-                        className="rounded-md px-2.5 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-                      >
-                        取消
-                      </button>
-                      <button
-                        type="button"
-                        onClick={createInlineCustomer}
-                        disabled={isCreatingCustomer || !newCustomerName.trim()}
-                        className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700"
-                      >
-                        {isCreatingCustomer ? '新建中...' : '确认新建'}
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
+
+              {createCustomerQuery && (
+                <div className="rounded-lg border border-gray-200 bg-white p-2.5 dark:border-gray-700 dark:bg-gray-900/60 sm:col-span-2">
+                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                    新建客户：{createCustomerQuery}
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <input
+                      value={newCustomerName}
+                      onChange={(e) => setNewCustomerName(e.target.value)}
+                      className="h-8 rounded-lg border border-gray-200 bg-white px-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                      placeholder="公司简称/名称"
+                    />
+                    <input
+                      value={newContactName}
+                      onChange={(e) => setNewContactName(e.target.value)}
+                      className="h-8 rounded-lg border border-gray-200 bg-white px-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                      placeholder="联络人姓名（默认主联络人）"
+                    />
+                  </div>
+                  <div className="mt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCreateCustomerQuery('')}
+                      className="rounded-md px-2.5 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                    >
+                      取消
+                    </button>
+                    <button
+                      type="button"
+                      onClick={createInlineCustomer}
+                      disabled={isCreatingCustomer || !newCustomerName.trim()}
+                      className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700"
+                    >
+                      {isCreatingCustomer ? '新建中...' : '确认新建'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
