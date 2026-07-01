@@ -365,16 +365,16 @@ export function InquiryFormModal({
                   required
                 />
 
-                <label className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-semibold transition-colors ${
+                <label className={`flex shrink-0 cursor-pointer items-center rounded-md border px-2 py-1 text-xs font-semibold transition-colors ${
                   isUrgent
-                    ? 'border-red-200 bg-red-50 text-red-600 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300'
-                    : 'border-gray-200 bg-gray-50 text-gray-500 hover:border-red-200 hover:text-red-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-red-500/40 dark:hover:text-red-300'
+                    ? 'border-red-500 bg-red-500 text-white shadow-sm shadow-red-200/60 dark:border-red-400 dark:bg-red-500 dark:text-white dark:shadow-none'
+                    : 'border-gray-200 bg-transparent text-gray-500 hover:border-red-200 hover:bg-red-50 hover:text-red-500 dark:border-gray-700 dark:text-gray-400 dark:hover:border-red-500/40 dark:hover:bg-red-500/10 dark:hover:text-red-300'
                 }`}>
                   <input
                     type="checkbox"
                     checked={isUrgent}
                     onChange={(e) => toggleUrgent(e.target.checked)}
-                    className="h-3.5 w-3.5 cursor-pointer rounded accent-red-500"
+                    className="sr-only"
                   />
                   <span>紧急</span>
                 </label>
