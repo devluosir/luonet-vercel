@@ -47,10 +47,6 @@ const FIELD_CLS =
 
 const LABEL_CLS = 'block text-xs font-medium text-gray-400 dark:text-gray-500';
 
-function buildCustomerNo(customer: Customer): string {
-  return customer.code || customer.shortName || customer.name;
-}
-
 function buildInquirer(customer: Customer, contact?: Contact): string {
   const customerPart = customer.shortName || customer.code || customer.name;
   if (!contact) return customerPart;
@@ -152,7 +148,6 @@ export function InquiryFormModal({
         if (currentCustomer) {
           const contact = currentCustomer.contacts.find((item) => item.id === record?.contactId) ??
             getPrimaryContact(currentCustomer);
-          setCustomerNo(record?.customerNo || buildCustomerNo(currentCustomer));
           if (contact) {
             setContactId(contact.id);
             setInquirer(record?.inquirer || buildInquirer(currentCustomer, contact));
@@ -165,7 +160,7 @@ export function InquiryFormModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, record?.contactId, record?.customerId, record?.customerNo, record?.inquirer]);
+  }, [isOpen, record?.contactId, record?.customerId, record?.inquirer]);
 
   useEffect(() => {
     if (!isOpen || isInquiryNoManual || mode === 'edit') return;
@@ -215,7 +210,6 @@ export function InquiryFormModal({
   const selectCustomerContact = (option: CustomerContactOption) => {
     setCustomerId(option.customerId);
     setContactId(option.contactId);
-    setCustomerNo(buildCustomerNo(option.customer));
     setInquirer(buildInquirer(option.customer, option.contact));
     setCreateCustomerQuery('');
     setNewCustomerName('');
@@ -225,7 +219,6 @@ export function InquiryFormModal({
   const clearCustomerContactSelection = () => {
     setCustomerId('');
     setContactId('');
-    setCustomerNo('');
     setInquirer('');
   };
 
@@ -452,12 +445,12 @@ export function InquiryFormModal({
           {/* ── 基本信息字段 ── */}
           <div className="mb-4 space-y-3">
             <div className="space-y-1">
-              <label className={LABEL_CLS}>客户显示编号</label>
+              <label className={LABEL_CLS}>客户询价编号</label>
               <input
                 value={customerNo}
-                readOnly
+                onChange={(e) => setCustomerNo(e.target.value)}
                 className={FIELD_CLS}
-                placeholder="选择客户后自动生成"
+                placeholder="客户来函/询价邮件上的编号，客户未提供时可自行填写标识"
                 required
               />
             </div>

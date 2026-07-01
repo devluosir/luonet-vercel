@@ -12433,3 +12433,130 @@ function buildInquiryFilterHref(
 - customer 类型详情页从"信息卡 + 业务统计卡 + 活动列表"3 张卡片变成"信息卡（含统计+联络人）+ 活动列表"2 张卡片，联络人信息不再重复出现两处。
 - supplier/consignee 类型详情页行为和视觉效果不变（回归测试点）。
 - 所有跳转链接（公司询价/公司订单/联络人徽章）的筛选参数行为与 TASK-76/77 完全一致，不允许有行为变化。
+
+---
+
+## TASK-79：修复"新增询价"弹窗里"客户编号"字段的语义错误
+
+**优先级**：高（数据语义错误，影响每一条新录入的询价）
+**风险**：低，改动范围收在 `InquiryFormModal.tsx` 一个文件内，不涉及数据库字段改名
+
+### 背景 / 根因
+
+用户反馈"添加新询价时的客户编号搞错了"。经确认，问题是：这个字段本来应该记录**客户自己发来的询价单/邮件上的编号**（客户那边的参照号，每次询价可能都不一样，需要人工从客户来函里抄过来），但现在的实现完全是另一回事——它是**只读的**，选好客户/联络人后自动回填成"我们系统里这个客户的代码/简称/全称"（`buildCustomerNo(customer) = customer.code || customer.shortName || customer.name`），根本没有地方能让用户手动输入客户来函上的真实编号。这两个概念完全不是一回事，字段名"客户显示编号"其实也在暗示这只是个"派生显示值"而非真实录入项。
+
+具体触发点（`src/features/inquiry/components/InquiryFormModal.tsx`）：
+1. `selectCustomerContact`（约第 215 行）：选中客户/联络人时会调用 `setCustomerNo(buildCustomerNo(option.customer))`，强制覆盖成客户档案里的代码/简称/全称。
+2. 加载客户库的 `useEffect`（约第 144 行）：编辑模式下，如果能在客户库里匹配到 `record.customerId`，也会用 `setCustomerNo(record?.customerNo || buildCustomerNo(currentCustomer))` 再次用客户档案覆盖。
+3. `clearCustomerContactSelection`（约第 225 行）：清空客户选择时连带把 `customerNo` 也清空了，导致用户手动填的客户来函编号会因为改选/清空客户而丢失。
+4. 表单里这个字段本身是 `readOnly`（约第 456 行），用户完全没有输入入口。
+
+用户已确认：改成手动输入后，这个字段**仍然必填**（即使客户来函本身没写编号，也要求人工填一个标识占位）。
+
+**范围说明**：`customerNo` 这个字段名、数据库/导出/筛选逻辑不用改，只改它的**产生方式**（从"自动派生自客户档案"改成"用户手动录入"）和**弹窗里的文案**。已确认 `useInquiryFilter.ts` 里那个基于 `customerNo` 去重的 `customers` 列表和 `filter.customerNo` 筛选条件目前没有被任何筛选栏 UI 实际引用（死代码，不受这次改动影响，不用管）。
+
+### 涉及文件
+
+`src/features/inquiry/components/InquiryFormModal.tsx`
+
+### 精确改动
+
+**1. 删除 `buildCustomerNo` 函数**（第 50-52 行），只在本文件内使用，删掉后不会影响别处：
+
+```diff
+-function buildCustomerNo(customer: Customer): string {
+-  return customer.code || customer.shortName || customer.name;
+-}
+-
+ function buildInquirer(customer: Customer, contact?: Contact): string {
+```
+
+**2. `selectCustomerContact`（约第 215-223 行）删除自动覆盖 `customerNo` 的那一行**：
+
+```diff
+ const selectCustomerContact = (option: CustomerContactOption) => {
+   setCustomerId(option.customerId);
+   setContactId(option.contactId);
+-  setCustomerNo(buildCustomerNo(option.customer));
+   setInquirer(buildInquirer(option.customer, option.contact));
+   setCreateCustomerQuery('');
+   setNewCustomerName('');
+   setNewContactName('');
+ };
+```
+
+**3. `clearCustomerContactSelection`（约第 225-230 行）删除清空 `customerNo` 的那一行**（清空客户选择不应该清掉用户已经手动填好的客户来函编号）：
+
+```diff
+ const clearCustomerContactSelection = () => {
+   setCustomerId('');
+   setContactId('');
+-  setCustomerNo('');
+   setInquirer('');
+ };
+```
+
+**4. 加载客户库的 `useEffect`（约第 144-168 行）删除自动覆盖 `customerNo` 的那一行，并从依赖数组里去掉不再用到的 `record?.customerNo`**：
+
+```diff
+   void customerService.fetchAllCustomers('customer')
+     .then(({ items }) => {
+       if (cancelled) return;
+       setCustomers(items);
+       const currentCustomer = items.find((customer) => customer.id === (record?.customerId ?? ''));
+       if (currentCustomer) {
+         const contact = currentCustomer.contacts.find((item) => item.id === record?.contactId) ??
+           getPrimaryContact(currentCustomer);
+-        setCustomerNo(record?.customerNo || buildCustomerNo(currentCustomer));
+         if (contact) {
+           setContactId(contact.id);
+           setInquirer(record?.inquirer || buildInquirer(currentCustomer, contact));
+         }
+       }
+     })
+     .catch((error) => {
+       console.warn('加载客户库失败:', error);
+     });
+   return () => {
+     cancelled = true;
+   };
+-}, [isOpen, record?.contactId, record?.customerId, record?.customerNo, record?.inquirer]);
++}, [isOpen, record?.contactId, record?.customerId, record?.inquirer]);
+```
+
+**5. 字段渲染部分（约第 452-463 行）改成可手动输入，并更新文案**：
+
+```diff
+   <div className="mb-4 space-y-3">
+     <div className="space-y-1">
+-      <label className={LABEL_CLS}>客户显示编号</label>
++      <label className={LABEL_CLS}>客户询价编号</label>
+       <input
+         value={customerNo}
+-        readOnly
++        onChange={(e) => setCustomerNo(e.target.value)}
+         className={FIELD_CLS}
+-        placeholder="选择客户后自动生成"
++        placeholder="客户来函/询价邮件上的编号，客户未提供时可自行填写标识"
+         required
+       />
+     </div>
+```
+
+改完之后，`customerNo`（state 变量本身、`InquiryBasicInput`/`InquiryRecord` 里的字段名、提交时 `customerNo: customerNo.trim()`）都不用改，只是它的值现在完全由用户手动输入，选客户/联络人、清空客户选择都不会再动它。新增询价时该字段默认是空的，需要用户照着客户来函手动填写；编辑已有记录时正常显示并可修改已保存的值。
+
+### 验证
+
+1. `npx tsc --noEmit` 通过。
+2. `npx eslint src/features/inquiry/components/InquiryFormModal.tsx` 通过，无新增 warning（注意确认删除 `buildCustomerNo` 后没有遗留未使用的导入）。
+3. 手动核对（看代码即可）：
+   - 新增询价：不选客户、只手动填"客户询价编号"，能正常提交（因为该字段依然必填，校验逻辑 `!payload.customerNo` 不变）。
+   - 新增询价：选好客户/联络人后，"客户询价编号"字段不会被自动覆盖或清空，用户此前手动填的内容原样保留。
+   - 清空客户选择（点击清除按钮）后，"客户询价编号"里已填的内容不会被清空。
+   - 编辑已有询价记录：字段正常显示 `record.customerNo` 的已保存值，且可编辑修改。
+
+### 验收标准
+
+- "客户询价编号"字段在新增/编辑询价弹窗里是可手动输入的文本框，不再随客户/联络人选择自动回填或清空。
+- 字段含义变更后，标签和占位文案清楚地表达"这是客户来函上的编号，需要人工填写"，不再暗示"自动生成"。
+- 不改动 `customerNo` 底层字段名、D1 存储结构、导出/筛选逻辑，风险收在表单交互层面。
