@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Calendar, RefreshCw } from 'lucide-react';
+import { buildCustomerContactLabel } from '@/features/customer/components/CustomerContactPicker';
+import type { Customer } from '@/features/customer/types';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
+import { inquiryService } from '@/features/inquiry/services/inquiry.service';
 import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '@/features/inquiry/types';
 import { InquiryFormModal } from '@/features/inquiry/components/InquiryFormModal';
 import { buildInquiryTimelineEvents, getInquiryQuoteStatusBadge, type InquiryQuoteStatusBadge } from '../services/inquiryTimelineService';
 
 interface CustomerActivityFeedProps {
-  customerId: string;
-  customerName: string;
+  customer: Customer;
 }
 
 interface ActivityItem {
@@ -20,22 +22,55 @@ interface ActivityItem {
   badge?: InquiryQuoteStatusBadge;
 }
 
-export function CustomerActivityFeed({ customerId }: CustomerActivityFeedProps) {
+function buildInquirerAliases(customer: Customer) {
+  const aliases = new Set<string>();
+  if (customer.shortName) aliases.add(customer.shortName);
+  if (customer.code) aliases.add(customer.code);
+  if (customer.name) aliases.add(customer.name);
+  for (const contact of customer.contacts) {
+    aliases.add(buildCustomerContactLabel(customer, contact));
+    if (customer.shortName && contact.shortName) {
+      aliases.add(`${customer.shortName}-${contact.shortName}`);
+    }
+  }
+  return Array.from(aliases);
+}
+
+export function CustomerActivityFeed({ customer }: CustomerActivityFeedProps) {
   const inquiryRecords = useInquiryStore((state) => state.records);
   const updateRecord = useInquiryStore((state) => state.updateRecord);
   const [editingInquiryRecord, setEditingInquiryRecord] = useState<InquiryRecord | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const inquiryById = useMemo(
     () => new Map(inquiryRecords.map((record) => [record.id, record])),
     [inquiryRecords]
   );
+  const contactIds = useMemo(
+    () => customer.contacts.map((contact) => contact.id).filter(Boolean),
+    [customer.contacts]
+  );
+  const inquirerAliases = useMemo(() => buildInquirerAliases(customer), [customer]);
+
+  const syncInquiryRecords = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const d1Records = await inquiryService.pullFromD1();
+      inquiryService.pushLocalToD1(d1Records);
+      const merged = inquiryService.mergeFromD1(d1Records);
+      useInquiryStore.setState({ records: merged });
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
 
   useEffect(() => {
     useInquiryStore.getState().init();
-  }, [customerId]);
+    void syncInquiryRecords();
+  }, [customer.id, syncInquiryRecords]);
 
   const activities = useMemo<ActivityItem[]>(() => {
-    return buildInquiryTimelineEvents(customerId, inquiryRecords).map((event) => {
+    return buildInquiryTimelineEvents(customer.id, inquiryRecords, { contactIds, inquirerAliases }).map((event) => {
       const relatedInquiry = event.documentId ? inquiryById.get(event.documentId) : undefined;
       return {
         id: event.id,
@@ -45,10 +80,10 @@ export function CustomerActivityFeed({ customerId }: CustomerActivityFeedProps) 
         badge: relatedInquiry ? getInquiryQuoteStatusBadge(relatedInquiry) : undefined,
       };
     });
-  }, [customerId, inquiryRecords, inquiryById]);
+  }, [contactIds, customer.id, inquirerAliases, inquiryById, inquiryRecords]);
 
   const handleRefresh = () => {
-    useInquiryStore.getState().init();
+    void syncInquiryRecords();
   };
 
   const handleInquiryEditSubmit = (
@@ -76,10 +111,11 @@ export function CustomerActivityFeed({ customerId }: CustomerActivityFeedProps) 
         <button
           type="button"
           onClick={handleRefresh}
+          disabled={isSyncing}
           className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
         >
-          <RefreshCw className="h-4 w-4" />
-          刷新
+          <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+          {isSyncing ? '刷新中' : '刷新'}
         </button>
       </div>
 

@@ -284,7 +284,7 @@ export default function CustomerDetailPage() {
             )}
 
             {isCustomerDetail && (
-              <CustomerActivityFeed customerId={customer.id} customerName={displayName} />
+              <CustomerActivityFeed customer={customer} />
             )}
           </>
         ) : (

@@ -25,10 +25,21 @@ export function getInquiryQuoteStatusBadge(record: InquiryRecord): InquiryQuoteS
 
 export function buildInquiryTimelineEvents(
   customerId: string,
-  inquiryRecords: InquiryRecord[]
+  inquiryRecords: InquiryRecord[],
+  options: {
+    contactIds?: string[];
+    inquirerAliases?: string[];
+  } = {}
 ): CustomerTimelineEvent[] {
+  const contactIdSet = new Set((options.contactIds ?? []).filter(Boolean));
+  const inquirerAliasSet = new Set((options.inquirerAliases ?? []).filter(Boolean));
+
   return inquiryRecords
-    .filter((record) => record.customerId === customerId)
+    .filter((record) => {
+      if (record.customerId) return record.customerId === customerId;
+      if (record.contactId && contactIdSet.has(record.contactId)) return true;
+      return Boolean(record.inquirer && inquirerAliasSet.has(record.inquirer));
+    })
     .map((record) => ({
       id: `inquiry-${record.id}`,
       customerId,
