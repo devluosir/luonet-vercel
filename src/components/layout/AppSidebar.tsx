@@ -75,7 +75,7 @@ export const NAV_ITEMS: SidebarItem[] = [
   { id: 'order',        label: '订单状态表', path: '/order',                  icon: ClipboardCheck,   permissionKey: 'canViewInquiry' },
   { id: 'history',      label: '单据历史',  path: '/history',                 icon: Archive,          permissionKey: 'canViewHistory' },
   { id: 'customer',     label: '客户管理',  path: '/customer',                icon: Users,     permissionKey: 'canManageCustomers' },
-  { id: 'impa',         label: 'IMPA物料', path: 'https://impa.luocompany.com', icon: PackageSearch, external: true },
+  { id: 'impa',         label: 'IMPA物料', path: 'https://impa.luocompany.com', icon: PackageSearch, permissionKey: 'canUseImpa', external: true },
   { id: 'clock',        label: '世界时钟', path: '/clock',                   icon: Clock,    permissionKey: 'canUseClock' },
   { id: 'holidays',     label: '全球假日', path: '/holidays',                icon: CalendarDays, permissionKey: 'canUseHolidays' },
   { id: 'rmb',          label: 'RMB大写',  path: '/rmb',                     icon: Banknote, permissionKey: 'canUseRmb' },
@@ -124,6 +124,7 @@ const PERMISSION_MODULE_MAP: Record<string, string> = {
   canUseClock:          'clock',
   canUseHolidays:       'holidays',
   canUseRmb:            'rmb',
+  canUseImpa:           'impa',
   canUseAiEmail:        'ai-email',
 };
 

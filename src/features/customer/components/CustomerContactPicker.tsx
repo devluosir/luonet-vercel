@@ -35,17 +35,32 @@ export function buildCustomerContactLabel(customer: Customer, contact: Contact) 
 }
 
 function buildOptions(customers: Customer[]): CustomerContactOption[] {
-  return customers.flatMap((customer) =>
-    customer.contacts
-      .filter((contact) => contact.id && contact.name.trim())
-      .map((contact) => ({
+  const options: CustomerContactOption[] = [];
+
+  customers.forEach((customer) => {
+    const validContacts = customer.contacts.filter((contact) => contact.id && contact.name.trim());
+    // 优先保留主联络人，这样当多个联络人都没填简称、标签退化为公司名时，保留下来的是主联络人对应的一项
+    const sortedContacts = [...validContacts].sort(
+      (a, b) => Number(Boolean(b.isPrimary)) - Number(Boolean(a.isPrimary))
+    );
+
+    const seenLabels = new Set<string>();
+    sortedContacts.forEach((contact) => {
+      const label = buildCustomerContactLabel(customer, contact);
+      // 多个联络人都没填简称时，标签会退化成只显示公司名——此时同一公司只保留一项，避免出现重复的公司名条目
+      if (seenLabels.has(label)) return;
+      seenLabels.add(label);
+      options.push({
         customerId: customer.id,
         contactId: contact.id,
         customer,
         contact,
-        label: buildCustomerContactLabel(customer, contact),
-      }))
-  );
+        label,
+      });
+    });
+  });
+
+  return options;
 }
 
 function optionMatches(option: CustomerContactOption, query: string) {

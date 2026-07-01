@@ -42,7 +42,8 @@ export const buildPermissionMap = (
         purchase: false,
         history: false,
         customer: false,
-        'ai-email': false
+        'ai-email': false,
+        impa: false
       },
       documentTypePermissions: {
         quotation: false,
@@ -67,7 +68,8 @@ export const buildPermissionMap = (
     purchase: permissionMap.get('purchase') === true,
     history: permissionMap.get('history') === true,
     customer: permissionMap.get('customer') === true,
-    'ai-email': permissionMap.get('ai-email') === true
+    'ai-email': permissionMap.get('ai-email') === true,
+    impa: permissionMap.get('impa') === true
   };
 
   const documentTypePermissions = {

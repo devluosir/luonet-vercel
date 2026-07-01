@@ -25,6 +25,7 @@ export interface PermissionMap {
     history: boolean;
     customer: boolean;
     'ai-email': boolean;
+    impa: boolean;
   };
   documentTypePermissions: {
     quotation: boolean;
