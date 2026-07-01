@@ -30,14 +30,14 @@ export function AppTopBar({ breadcrumbs, onMenuClick, topBarSlot }: AppTopBarPro
   const currentBreadcrumb = breadcrumbs[breadcrumbs.length - 1];
 
   return (
-    <header className="sticky top-0 z-40 h-14 bg-white shadow-sm dark:bg-[#1c1c1e] dark:shadow-gray-800/30">
-      <div className="flex h-full items-center gap-3 px-3 sm:px-4 lg:px-6">
+    <header className="sticky top-0 z-40 h-12 bg-white shadow-sm dark:bg-[#1c1c1e] dark:shadow-gray-800/30">
+      <div className="flex h-full items-center gap-2 px-3 sm:px-4 lg:px-5">
         {/* 移动端汉堡按钮 */}
         {onMenuClick && (
           <button
             type="button"
             onClick={onMenuClick}
-            className="rounded-md p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800/50 dark:hover:text-white lg:hidden"
+            className="rounded-md p-1.5 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800/50 dark:hover:text-white lg:hidden"
             aria-label="打开导航"
           >
             <Menu className="h-5 w-5" />
@@ -48,15 +48,15 @@ export function AppTopBar({ breadcrumbs, onMenuClick, topBarSlot }: AppTopBarPro
         <Image
           src={LOGO_CONFIG.web.logo}
           alt="LC App Logo"
-          width={28}
-          height={28}
+          width={26}
+          height={26}
           priority
           className="shrink-0 object-contain lg:hidden"
         />
 
         {/* 面包屑导航 */}
         <nav className="min-w-0 flex-1" aria-label="当前位置">
-          <ol className="hidden min-w-0 items-center gap-1 text-sm text-gray-500 dark:text-gray-400 md:flex">
+          <ol className="hidden min-w-0 items-center gap-1 text-[13px] text-gray-500 dark:text-gray-400 md:flex">
             {breadcrumbs.map((item, index) => {
               const isLast = index === breadcrumbs.length - 1;
               return (

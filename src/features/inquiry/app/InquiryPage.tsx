@@ -130,7 +130,8 @@ export function InquiryPage() {
     const customerName = searchParams?.get('customerName') ?? '';
     const contactName = searchParams?.get('contactName') ?? '';
     const keyword = searchParams?.get('keyword') ?? '';
-    return JSON.stringify({ customerId, contactId, customerName, contactName, keyword });
+    const quoteStatus = searchParams?.get('quoteStatus') === 'has_order' ? 'has_order' : '';
+    return JSON.stringify({ customerId, contactId, customerName, contactName, keyword, quoteStatus });
   }, [searchParams]);
 
   useEffect(() => {
@@ -140,6 +141,7 @@ export function InquiryPage() {
       customerName: string;
       contactName: string;
       keyword: string;
+      quoteStatus: 'has_order' | '';
     };
     if ((!parsed.customerId && !parsed.keyword) || appliedAssociationFilterRef.current === associationFilterKey) return;
 
@@ -152,6 +154,7 @@ export function InquiryPage() {
       contactId: parsed.contactId,
       associationLabel: associationLabel || '客户记录',
       keyword: parsed.keyword || filter.keyword,
+      quoteStatus: parsed.quoteStatus || filter.quoteStatus,
       linkStatus: 'all',
     });
   }, [associationFilterKey, filter, setFilter]);

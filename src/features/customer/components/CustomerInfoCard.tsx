@@ -31,14 +31,14 @@ export function CustomerInfoCard({ customer, onEdit }: CustomerInfoCardProps) {
   const contacts = customer.contacts;
 
   return (
-    <div className="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-        <div className="flex min-w-0 gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xl font-bold text-white">
+    <div className="mb-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="flex min-w-0 gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600 text-lg font-bold text-white">
             {getInitial(customer)}
           </div>
           <div className="min-w-0">
-            <h1 className="whitespace-pre-wrap break-words text-xl font-semibold text-gray-900 dark:text-white">
+            <h1 className="whitespace-pre-wrap break-words text-lg font-semibold leading-snug text-gray-900 dark:text-white">
               {customer.name}
             </h1>
             {customer.shortName && (
@@ -46,7 +46,7 @@ export function CustomerInfoCard({ customer, onEdit }: CustomerInfoCardProps) {
                 简称：{customer.shortName}
               </p>
             )}
-            <div className="mt-3 flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+            <div className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
               <span className="whitespace-pre-wrap break-words">
                 {formatAddressForDisplay(customer.address)}
@@ -58,15 +58,15 @@ export function CustomerInfoCard({ customer, onEdit }: CustomerInfoCardProps) {
         <button
           type="button"
           onClick={onEdit}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
         >
           <Edit className="h-4 w-4" />
           编辑
         </button>
       </div>
 
-      <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-700">
-        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+      <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
+        <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
           <UserRound className="h-4 w-4 shrink-0 text-gray-400" />
           联络人
         </div>
@@ -75,7 +75,7 @@ export function CustomerInfoCard({ customer, onEdit }: CustomerInfoCardProps) {
             {contacts.map((contact) => (
               <div
                 key={contact.id}
-                className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900/50"
+                className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-900/50"
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="truncate text-sm font-medium text-gray-900 dark:text-white">{contact.name}</span>
@@ -89,7 +89,7 @@ export function CustomerInfoCard({ customer, onEdit }: CustomerInfoCardProps) {
                   )}
                 </div>
                 {(contact.phone || contact.email) && (
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                     {contact.phone && (
                       <a
                         href={`tel:${contact.phone}`}

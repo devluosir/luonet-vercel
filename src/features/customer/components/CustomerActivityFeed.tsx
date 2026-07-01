@@ -237,18 +237,18 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">活动列表</h3>
-          <span className="text-sm text-gray-500 dark:text-gray-400">({activities.length} 条)</span>
+          <Calendar className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">活动列表</h3>
+          <span className="text-xs text-gray-500 dark:text-gray-400">({activities.length} 条)</span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => setShowCustomEventForm(true)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
           >
             <Plus className="h-4 w-4" />
             添加事件
@@ -256,7 +256,7 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
           <button
             type="button"
             onClick={() => setShowFollowUpForm(true)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-purple-600 px-3 py-2 text-sm font-medium text-white hover:bg-purple-700"
+            className="inline-flex items-center gap-1.5 rounded-md bg-purple-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-purple-700"
           >
             <Plus className="h-4 w-4" />
             添加跟进
@@ -264,7 +264,7 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
           <button
             type="button"
             onClick={handleRefresh}
-            className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
           >
             <RefreshCw className="h-4 w-4" />
             刷新
@@ -273,47 +273,47 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
       </div>
 
       {showFollowUpForm && (
-        <div className="rounded-lg border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-          <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">添加跟进记录</h4>
-          <form onSubmit={handleAddFollowUp} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <h4 className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">添加跟进记录</h4>
+          <form onSubmit={handleAddFollowUp} className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">标题 *</label>
+                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">标题 *</label>
                 <input
                   type="text"
                   value={followUpForm.title}
                   onChange={(event) => setFollowUpForm((prev) => ({ ...prev, title: event.target.value }))}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   placeholder="跟进标题"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">到期日期 *</label>
+                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">到期日期 *</label>
                 <input
                   type="date"
                   value={followUpForm.dueDate}
                   onChange={(event) => setFollowUpForm((prev) => ({ ...prev, dueDate: event.target.value }))}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">描述 *</label>
+              <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">描述 *</label>
               <textarea
                 value={followUpForm.description}
                 onChange={(event) => setFollowUpForm((prev) => ({ ...prev, description: event.target.value }))}
                 rows={3}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 placeholder="跟进描述"
               />
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-3">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">优先级</label>
+                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">优先级</label>
                 <select
                   value={followUpForm.priority}
                   onChange={(event) => setFollowUpForm((prev) => ({ ...prev, priority: event.target.value as FollowUpPriority }))}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 >
                   <option value="low">低</option>
                   <option value="medium">中</option>
@@ -321,11 +321,11 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">类型</label>
+                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">类型</label>
                 <select
                   value={followUpForm.type}
                   onChange={(event) => setFollowUpForm((prev) => ({ ...prev, type: event.target.value as FollowUpType }))}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 >
                   <option value="follow_up">跟进</option>
                   <option value="reminder">提醒</option>
@@ -333,11 +333,11 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">关联询价记录</label>
+                <label className="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">关联询价记录</label>
                 <select
                   value={followUpForm.relatedInquiryId}
                   onChange={(event) => setFollowUpForm((prev) => ({ ...prev, relatedInquiryId: event.target.value }))}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 >
                   <option value="">不关联询价记录</option>
                   {customerInquiryRecords.map((record) => (
@@ -355,11 +355,11 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
                   resetFollowUpForm();
                   setShowFollowUpForm(false);
                 }}
-                className="rounded-md px-4 py-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
               >
                 取消
               </button>
-              <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
+              <button type="submit" className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700">
                 添加跟进
               </button>
             </div>
@@ -368,17 +368,17 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
       )}
 
       {loading ? (
-        <div role="status" className="flex items-center justify-center p-8">
+        <div role="status" className="flex items-center justify-center p-6">
           <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
         </div>
       ) : activities.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-12 text-center text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-          <Calendar className="mx-auto mb-4 h-12 w-12 opacity-50" />
+        <div className="rounded-lg border border-dashed border-gray-300 bg-white px-5 py-9 text-center text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+          <Calendar className="mx-auto mb-3 h-10 w-10 opacity-50" />
           <p>暂无活动记录</p>
           <p className="mt-2 text-sm">点击“刷新”拉取最新询价记录，或添加自定义事件/跟进记录。</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {activities.map((activity) => {
             const config = KIND_CONFIG[activity.kind];
             const Icon = config.icon;
@@ -388,14 +388,14 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
             return (
               <div
                 key={activity.id}
-                className={`rounded-lg border border-l-4 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 ${config.borderClassName}`}
+                className={`rounded-lg border border-l-4 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800 ${config.borderClassName}`}
               >
-                <div className="flex items-start gap-3">
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${config.iconClassName}`}>
-                    <Icon className="h-5 w-5" />
+                <div className="flex items-start gap-2.5">
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${config.iconClassName}`}>
+                    <Icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-300">
                         {config.label}
                       </span>
@@ -422,11 +422,11 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
                         </span>
                       )}
                     </div>
-                    <h4 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{activity.title}</h4>
+                    <h4 className="mt-1.5 text-sm font-semibold text-gray-900 dark:text-white">{activity.title}</h4>
                     {activity.description && (
-                      <p className="mt-1 whitespace-pre-line text-sm text-gray-600 dark:text-gray-400">{activity.description}</p>
+                      <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-gray-600 dark:text-gray-400">{activity.description}</p>
                     )}
-                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                       <span className="inline-flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
                         {followUp ? '到期' : '日期'}: {formatDate(activity.date)}
@@ -444,7 +444,7 @@ export function CustomerActivityFeed({ customerId, customerName }: CustomerActiv
                     </div>
                   </div>
                   {followUp && (
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       {followUp.status === 'pending' && (
                         <button
                           type="button"

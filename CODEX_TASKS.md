@@ -11995,6 +11995,91 @@ npm run build
 
 ---
 
+## TASK-76：客户详情页整体收紧排版（信息卡片/业务统计/活动列表三块都偏松散）
+
+**背景（Roger 反馈，附 All Marine Spares International LLC 详情页截图）**："将这个页面再优化一下，收紧一下各部分"——详情页从上到下三块（客户信息卡片、业务统计卡片、活动列表）现在内边距/间距都偏大，头像、数字、卡片之间空隙多，46 条活动列表要滚很久。这次不改结构和交互，只收紧间距/字号，让信息密度提高一些。
+
+### 改动 1：`CustomerDetailPage.tsx` 页面整体间距
+
+- 最外层容器 `py-8` 改小一点（比如 `py-5`），三大块之间的 `mb-6` 都改成 `mb-4`。
+- "业务统计"卡片：`p-4` 可以保留或略减，`mb-3`（标题下方）改 `mb-2.5`；三个统计格子 `p-3` 改 `p-2.5`，数字 `text-2xl` 改 `text-xl`；联络人拆分行 `px-3 py-2` 改 `px-3 py-1.5`，外层 `mt-4` 改 `mt-3`。
+
+### 改动 2：`CustomerInfoCard.tsx` 收紧
+
+- 卡片整体 `p-6` 改 `p-5`；头像 `h-14 w-14 text-xl` 改小一档 `h-12 w-12 text-lg`；头像和文字之间 `gap-4` 改 `gap-3`；名称 `text-xl` 改 `text-lg`；简称/地址之间的 `mt-3` 改 `mt-2`。
+- 联络人区块：分隔线上方 `mt-5 pt-4` 改 `mt-4 pt-3`；"联络人"标题下方 `mb-3` 改 `mb-2.5`；每个联络人小卡片 `px-3 py-2` 改 `px-3 py-1.5`。
+
+### 改动 3：`CustomerActivityFeed.tsx` 活动列表收紧
+
+- 列表条目容器 `space-y-3` 改 `space-y-2`；每条卡片 `p-4` 改 `p-3`；左侧图标圆圈 `h-10 w-10` 改 `h-9 w-9`（图标本身 `h-5 w-5` 相应改 `h-4.5 w-4.5` 或保持不变，看视觉效果）；标题上方 `mt-2` 改 `mt-1.5`；底部日期/询价号那一行 `mt-3` 改 `mt-2`。
+- 顶部"活动列表 (N 条)"标题栏和按钮组的间距、跟进表单展开区域的内边距，如果看着也偏松可以顺手收一收，不强求。
+
+这次都是 Tailwind class 层面的数值调整，不涉及任何逻辑改动，Codex 可以根据实际观感做小幅度取舍（不用严格照抄以上数值），整体目标是"看起来比现在紧凑，但还是清晰易读，不要挤到影响可读性"。
+
+**（追加，Roger 二次强调）**：布局收紧要做得再彻底一些，不要只调以上列的这几个具体数值就停手——顶部面包屑区域、"活动列表"标题栏和按钮组的间距、跟进表单展开区域的内边距这些如果看着还是偏松，都一起收紧，目标是整个详情页从上到下都是同一种"紧凑"的观感，不要出现改完了但某几块看起来还是比其他块松散的情况。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 客户详情页三大块（信息卡片/业务统计/活动列表）整体看起来比现在紧凑，同一屏能看到更多内容
+- 不影响任何交互功能（编辑、业务统计跳转、活动列表的添加事件/添加跟进/完成/删除等都还正常）
+- 文字不会挤到难以辨认的程度，只是空白减少
+
+---
+
+## TASK-77："公司订单"点击后要自动筛选到"已成单"
+
+**背景（Roger 反馈）**：客户详情页"业务统计"卡片里，"公司询价"和"公司订单"两个数字格子现在点击跳转到询报价登记表用的是同一个链接（`buildInquiryFilterHref(customer)`，只带 `customerId`），效果都是"筛选出这个客户名下全部询价记录"——点"公司订单"应该只看到已经成单的那些，不是全部 46 条询价都出来，用户还得自己再手动点"已成单"筛选 chip。
+
+`useInquiryFilter.ts` 已经有现成的 `quoteStatus: 'has_order'` 筛选值（对应 `InquiryFilterBar.tsx` 里的"已成单"筛选 chip），这次只是要把它接到 URL 参数上。
+
+### 改动 1：`CustomerDetailPage.tsx` 的 `buildInquiryFilterHref` 加一个可选的 `quoteStatus` 参数
+
+```ts
+function buildInquiryFilterHref(
+  customer: Customer,
+  contact?: CustomerStats['contacts'][number],
+  quoteStatus?: 'has_order'
+) {
+  const params = new URLSearchParams({
+    customerId: customer.id,
+    customerName: customer.shortName || getCustomerTitle(customer),
+  });
+  if (contact) {
+    params.set('contactId', contact.contactId);
+    params.set('contactName', contact.shortName || contact.name);
+  }
+  if (quoteStatus) {
+    params.set('quoteStatus', quoteStatus);
+  }
+  return `/inquiry?${params.toString()}`;
+}
+```
+
+"公司订单"那个 `<Link href={buildInquiryFilterHref(customer)}>` 改成 `<Link href={buildInquiryFilterHref(customer, undefined, 'has_order')}>`；"公司询价"和联络人拆分行那几处调用不用加这个参数，保持现状（不限状态，显示该客户/联络人名下全部询价记录）。
+
+### 改动 2：`InquiryPage.tsx` 的 URL 筛选应用逻辑读取 `quoteStatus` 参数
+
+现在 `associationFilterKey`/对应的 `useEffect`（读 `customerId`/`contactId`/`customerName`/`contactName`/`keyword` 这几个 URL 参数、一次性应用到 `filter`）里加上 `quoteStatus` 这个参数：读取 `searchParams?.get('quoteStatus')`，值合法（等于 `'has_order'`）时在 `setFilter({...})` 里带上 `quoteStatus: parsed.quoteStatus || filter.quoteStatus`（没有这个参数时保持不变，不要覆盖成 `'all'`，因为现有的其他跳转场景——询价数/联络人行、TASK-71 跟进记录关联跳转——都没带这个参数，不应该受影响）。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 客户详情页点"公司订单"，跳转到询报价登记表后自动应用"已成单"筛选，只看到这个客户已成单的记录，数量应该等于详情页"公司订单"显示的数字
+- 点"公司询价"、联络人拆分行、跟进记录关联的询价链接，行为不变（不会被这次改动误加上"已成单"筛选）
+
+---
+
 ## TASK-67 复核发现一个实际 bug，需要修正（TASK-68 部分已通过，不用动）
 
 **结论**：TASK-68（询报价 `customerId`/`contactId` 筛选 + 详情页联络人行可点击 + 筛选提示条）逐文件核对过（`useInquiryFilter.ts`/`InquiryPage.tsx`/`InquiryFilterBar.tsx`/`CustomerDetailPage.tsx`），逻辑正确，`tsc --noEmit` 独立跑通过，这部分不需要改。

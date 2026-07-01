@@ -59,7 +59,11 @@ function getUsageText(type: DetailType, customer: Customer) {
   return '';
 }
 
-function buildInquiryFilterHref(customer: Customer, contact?: CustomerStats['contacts'][number]) {
+function buildInquiryFilterHref(
+  customer: Customer,
+  contact?: CustomerStats['contacts'][number],
+  quoteStatus?: 'has_order'
+) {
   const params = new URLSearchParams({
     customerId: customer.id,
     customerName: customer.shortName || getCustomerTitle(customer),
@@ -68,6 +72,9 @@ function buildInquiryFilterHref(customer: Customer, contact?: CustomerStats['con
   if (contact) {
     params.set('contactId', contact.contactId);
     params.set('contactName', contact.shortName || contact.name);
+  }
+  if (quoteStatus) {
+    params.set('quoteStatus', quoteStatus);
   }
 
   return `/inquiry?${params.toString()}`;
@@ -244,9 +251,9 @@ export default function CustomerDetailPage() {
       user={user}
       onLogout={handleLogout}
     >
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-5 lg:px-6">
         {isLoadingCustomer ? (
-          <div className="flex items-center justify-center py-16">
+          <div className="flex items-center justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
             <span className="ml-3 text-gray-600 dark:text-gray-400">加载{getTypeLabel(detailType)}信息...</span>
           </div>
@@ -255,41 +262,41 @@ export default function CustomerDetailPage() {
             <CustomerInfoCard customer={customer} onEdit={handleOpenEdit} />
 
             {isCustomerDetail ? (
-            <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <div className="mb-3 flex items-center justify-between">
+            <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3.5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="mb-2 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-white">业务统计</h2>
                 {isLoadingStats && (
                   <span className="text-xs text-gray-400 dark:text-gray-500">加载中...</span>
                 )}
               </div>
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-2.5 md:grid-cols-3">
                 <Link
                   href={buildInquiryFilterHref(customer)}
-                  className="rounded-lg bg-blue-50 p-3 transition hover:ring-2 hover:ring-blue-200 dark:bg-blue-950/30 dark:hover:ring-blue-800"
+                  className="rounded-lg bg-blue-50 p-2.5 transition hover:ring-2 hover:ring-blue-200 dark:bg-blue-950/30 dark:hover:ring-blue-800"
                 >
                   <p className="text-xs text-blue-500 dark:text-blue-300">公司询价</p>
-                  <p className="mt-1 text-2xl font-semibold text-blue-700 dark:text-blue-200">
+                  <p className="mt-0.5 text-xl font-semibold text-blue-700 dark:text-blue-200">
                     {stats?.totals.inquiries ?? 0}
                   </p>
                 </Link>
                 <Link
-                  href={buildInquiryFilterHref(customer)}
-                  className="rounded-lg bg-green-50 p-3 transition hover:ring-2 hover:ring-green-200 dark:bg-green-950/30 dark:hover:ring-green-800"
+                  href={buildInquiryFilterHref(customer, undefined, 'has_order')}
+                  className="rounded-lg bg-green-50 p-2.5 transition hover:ring-2 hover:ring-green-200 dark:bg-green-950/30 dark:hover:ring-green-800"
                 >
                   <p className="text-xs text-green-500 dark:text-green-300">公司订单</p>
-                  <p className="mt-1 text-2xl font-semibold text-green-700 dark:text-green-200">
+                  <p className="mt-0.5 text-xl font-semibold text-green-700 dark:text-green-200">
                     {stats?.totals.orders ?? 0}
                   </p>
                 </Link>
-                <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-900/60">
+                <div className="rounded-lg bg-gray-50 p-2.5 dark:bg-gray-900/60">
                   <p className="text-xs text-gray-500 dark:text-gray-400">未分配联络人</p>
-                  <p className="mt-1 text-2xl font-semibold text-gray-800 dark:text-gray-100">
+                  <p className="mt-0.5 text-xl font-semibold text-gray-800 dark:text-gray-100">
                     {stats?.unassigned.inquiries ?? 0}
                   </p>
                 </div>
               </div>
               {!isLoadingStats && stats && stats.totals.inquiries === 0 && stats.totals.orders === 0 && (
-                <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-2.5 text-xs text-gray-500 dark:text-gray-400">
                   暂无关联的询价/订单记录，可能是历史数据尚未关联客户，可到
                   <Link href="/inquiry" className="mx-1 text-blue-600 hover:underline dark:text-blue-400">
                     询报价登记表
@@ -298,12 +305,12 @@ export default function CustomerDetailPage() {
                 </p>
               )}
               {stats?.contacts.length ? (
-                <div className="mt-4 overflow-hidden rounded-lg border border-gray-100 dark:border-gray-700">
+                <div className="mt-3 overflow-hidden rounded-lg border border-gray-100 dark:border-gray-700">
                   {stats.contacts.map((contact) => (
                     <Link
                       key={contact.contactId}
                       href={buildInquiryFilterHref(customer, contact)}
-                      className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-gray-100 px-3 py-2 text-sm transition last:border-b-0 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900/50"
+                      className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-gray-100 px-3 py-1.5 text-sm transition last:border-b-0 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900/50"
                     >
                       <div className="min-w-0">
                         <span className="font-medium text-gray-800 dark:text-gray-100">{contact.name}</span>
@@ -324,10 +331,10 @@ export default function CustomerDetailPage() {
               ) : null}
             </div>
             ) : (
-              <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3.5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-900 dark:text-gray-300">
-                    <FileText className="h-5 w-5" />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-900 dark:text-gray-300">
+                    <FileText className="h-4 w-4" />
                   </div>
                   <div>
                     <h2 className="text-sm font-semibold text-gray-900 dark:text-white">使用情况</h2>
