@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   Mail,
   Package,
+  PackageSearch,
   Receipt,
   Search,
   ShoppingCart,
@@ -35,6 +36,7 @@ export interface SidebarItem {
   path: string;
   icon: LucideIcon;
   permissionKey?: string;
+  external?: boolean;
 }
 
 interface NavGroup {
@@ -73,6 +75,7 @@ export const NAV_ITEMS: SidebarItem[] = [
   { id: 'order',        label: '订单状态表', path: '/order',                  icon: ClipboardCheck,   permissionKey: 'canViewInquiry' },
   { id: 'history',      label: '单据历史',  path: '/history',                 icon: Archive,          permissionKey: 'canViewHistory' },
   { id: 'customer',     label: '客户管理',  path: '/customer',                icon: Users,     permissionKey: 'canManageCustomers' },
+  { id: 'impa',         label: 'IMPA物料', path: 'https://impa.luocompany.com', icon: PackageSearch, external: true },
   { id: 'clock',        label: '世界时钟', path: '/clock',                   icon: Clock,    permissionKey: 'canUseClock' },
   { id: 'holidays',     label: '全球假日', path: '/holidays',                icon: CalendarDays, permissionKey: 'canUseHolidays' },
   { id: 'rmb',          label: 'RMB大写',  path: '/rmb',                     icon: Banknote, permissionKey: 'canUseRmb' },
@@ -250,27 +253,43 @@ export function AppSidebar({
               {visibleItems.map((item) => {
                 const Icon   = item.icon;
                 const active = isItemActive(item, pathname, tab);
+                const navItemClassName = `flex h-9 items-center rounded-md text-sm transition-colors ${
+                  isCollapsed
+                    ? 'justify-center px-0 mx-1'
+                    : 'gap-2.5 px-2'
+                } ${
+                  active
+                    ? 'bg-blue-50 font-medium text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                    : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/50'
+                }`;
 
                 return (
                   <div key={item.id} className="relative group/nav">
-                    <Link
-                      href={item.path}
-                      onClick={onClose}
-                      className={`flex h-9 items-center rounded-md text-sm transition-colors ${
-                        isCollapsed
-                          ? 'justify-center px-0 mx-1'
-                          : 'gap-2.5 px-2'
-                      } ${
-                        active
-                          ? 'bg-blue-50 font-medium text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800/50'
-                      }`}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      {!isCollapsed && (
-                        <span className="app-sidebar-nav-label truncate">{item.label}</span>
-                      )}
-                    </Link>
+                    {item.external ? (
+                      <a
+                        href={item.path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={onClose}
+                        className={navItemClassName}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {!isCollapsed && (
+                          <span className="app-sidebar-nav-label truncate">{item.label}</span>
+                        )}
+                      </a>
+                    ) : (
+                      <Link
+                        href={item.path}
+                        onClick={onClose}
+                        className={navItemClassName}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {!isCollapsed && (
+                          <span className="app-sidebar-nav-label truncate">{item.label}</span>
+                        )}
+                      </Link>
+                    )}
 
                     {/* 收缩时的 tooltip */}
                     {isCollapsed && (
