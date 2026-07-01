@@ -16,6 +16,17 @@ function getInitial(customer: Customer) {
   return getDisplayName(customer).charAt(0).toUpperCase() || '客';
 }
 
+function formatAddressForDisplay(address: string) {
+  const trimmed = address.trim();
+  if (!trimmed) return '未填写地址';
+  if (trimmed.includes('\n')) return trimmed;
+
+  return trimmed.replace(
+    /(Phone|Tel|Telephone|Mobile|Mob|E-?mail|IEC|PAN\s*NO|GSTIN\s*No|GSTIN|GST|TIN)(\s*:)/gi,
+    (match, label: string, colon: string, offset: number) => `${offset > 0 ? '\n' : ''}${label}${colon}`
+  );
+}
+
 export function CustomerInfoCard({ customer, onEdit }: CustomerInfoCardProps) {
   const contacts = customer.contacts;
 
@@ -38,7 +49,7 @@ export function CustomerInfoCard({ customer, onEdit }: CustomerInfoCardProps) {
             <div className="mt-3 flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
               <span className="whitespace-pre-wrap break-words">
-                {customer.address || '未填写地址'}
+                {formatAddressForDisplay(customer.address)}
               </span>
             </div>
           </div>

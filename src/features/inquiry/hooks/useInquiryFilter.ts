@@ -25,6 +25,9 @@ export interface InquiryFilterState {
   timeRange: TimeRange;
   customerNo: string;
   inquirer: string;
+  customerId: string;
+  contactId: string;
+  associationLabel: string;
   quoteStatus: QuoteStatusFilter;
   linkStatus: LinkStatusFilter;
   sortDir: 'asc' | 'desc';
@@ -35,6 +38,9 @@ const DEFAULT_FILTER: InquiryFilterState = {
   timeRange: '3months', // 默认显示近3个月
   customerNo: '',
   inquirer: '',
+  customerId: '',
+  contactId: '',
+  associationLabel: '',
   quoteStatus: 'all',
   linkStatus: 'all',
   sortDir: 'desc',
@@ -116,11 +122,22 @@ export function useInquiryFilter(records: InquiryRecord[]) {
 
       if (filter.customerNo && record.customerNo !== filter.customerNo) return false;
       if (filter.inquirer && record.inquirer !== filter.inquirer) return false;
+      if (filter.customerId && record.customerId !== filter.customerId) return false;
+      if (filter.contactId && record.contactId !== filter.contactId) return false;
       if (filter.linkStatus === 'unlinked' && record.customerId) return false;
 
       return true;
     });
-  }, [filter.timeRange, filter.keyword, filter.customerNo, filter.inquirer, filter.linkStatus, records]);
+  }, [
+    filter.timeRange,
+    filter.keyword,
+    filter.customerNo,
+    filter.inquirer,
+    filter.customerId,
+    filter.contactId,
+    filter.linkStatus,
+    records,
+  ]);
 
   const filteredAndSorted = useMemo(() => {
     return baseFiltered
@@ -168,6 +185,7 @@ export function useInquiryFilter(records: InquiryRecord[]) {
     Boolean(filter.keyword.trim()),
     Boolean(filter.customerNo),
     Boolean(filter.inquirer),
+    Boolean(filter.customerId || filter.contactId),
     filter.quoteStatus !== 'all',
     filter.linkStatus !== 'all',
   ].filter(Boolean).length;

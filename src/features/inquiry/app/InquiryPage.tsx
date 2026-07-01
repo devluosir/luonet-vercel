@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { Download, Link2, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AppLayout, type ActionButton } from '@/components/layout';
 import { useAppUser } from '@/hooks/useAppUser';
 import { usePermissionStore } from '@/lib/permissions';
@@ -82,6 +82,7 @@ function rowToRecord(row: Record<string, unknown>): InquiryRecord | null {
 export function InquiryPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, handleLogout } = useAppUser();
   const records = useInquiryStore((state) => state.records);
   const { createRecord, removeRecord } = useInquiryActions();
@@ -98,6 +99,7 @@ export function InquiryPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const isModalOpenRef = useRef(false);
+  const appliedAssociationFilterRef = useRef('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasBatchEditPermission = usePermissionStore((state) => state.hasPermission('inquiry.batchEdit'));
 
@@ -121,6 +123,35 @@ export function InquiryPage() {
   useEffect(() => {
     useInquiryStore.getState().init();
   }, []);
+
+  const associationFilterKey = useMemo(() => {
+    const customerId = searchParams?.get('customerId') ?? '';
+    const contactId = searchParams?.get('contactId') ?? '';
+    const customerName = searchParams?.get('customerName') ?? '';
+    const contactName = searchParams?.get('contactName') ?? '';
+    return JSON.stringify({ customerId, contactId, customerName, contactName });
+  }, [searchParams]);
+
+  useEffect(() => {
+    const parsed = JSON.parse(associationFilterKey) as {
+      customerId: string;
+      contactId: string;
+      customerName: string;
+      contactName: string;
+    };
+    if (!parsed.customerId || appliedAssociationFilterRef.current === associationFilterKey) return;
+
+    const associationLabel = [parsed.customerName, parsed.contactName].filter(Boolean).join(' / ');
+    appliedAssociationFilterRef.current = associationFilterKey;
+    setFilter({
+      ...filter,
+      timeRange: 'all',
+      customerId: parsed.customerId,
+      contactId: parsed.contactId,
+      associationLabel: associationLabel || '客户记录',
+      linkStatus: 'all',
+    });
+  }, [associationFilterKey, filter, setFilter]);
 
   useEffect(() => {
     isModalOpenRef.current = isModalOpen;
@@ -232,6 +263,17 @@ export function InquiryPage() {
     setSelectedIds(new Set());
     alert(`已关联 ${ids.length} 条记录`);
   }, [selectedIds, updateRecord]);
+
+  const handleClearAssociationFilter = useCallback(() => {
+    appliedAssociationFilterRef.current = '';
+    setFilter({
+      ...filter,
+      customerId: '',
+      contactId: '',
+      associationLabel: '',
+    });
+    router.replace('/inquiry');
+  }, [filter, router, setFilter]);
 
   const handleDeleteRecord = (recordId: string) => {
     if (window.confirm('确定删除这条询报价记录吗？')) {
@@ -436,6 +478,7 @@ export function InquiryPage() {
                 inquirers={inquirers}
                 activeCount={activeCount}
                 onReset={reset}
+                onClearAssociation={handleClearAssociationFilter}
                 records={baseFiltered}
                 filteredCount={filteredAndSorted.length}
               />

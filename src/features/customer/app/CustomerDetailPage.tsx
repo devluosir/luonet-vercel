@@ -61,6 +61,20 @@ function getUsageText(type: DetailType, customer: Customer) {
   return '';
 }
 
+function buildInquiryFilterHref(customer: Customer, contact?: CustomerStats['contacts'][number]) {
+  const params = new URLSearchParams({
+    customerId: customer.id,
+    customerName: customer.shortName || getCustomerTitle(customer),
+  });
+
+  if (contact) {
+    params.set('contactId', contact.contactId);
+    params.set('contactName', contact.shortName || contact.name);
+  }
+
+  return `/inquiry?${params.toString()}`;
+}
+
 async function findCustomerFromUrl(customerId: string, type: DetailType, customerName?: string | null) {
   const byId = await customerService.getCustomerById(customerId, type);
   if (byId) return byId;
@@ -252,18 +266,24 @@ export default function CustomerDetailPage() {
                 )}
               </div>
               <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-lg bg-blue-50 p-3 dark:bg-blue-950/30">
+                <Link
+                  href={buildInquiryFilterHref(customer)}
+                  className="rounded-lg bg-blue-50 p-3 transition hover:ring-2 hover:ring-blue-200 dark:bg-blue-950/30 dark:hover:ring-blue-800"
+                >
                   <p className="text-xs text-blue-500 dark:text-blue-300">公司询价</p>
                   <p className="mt-1 text-2xl font-semibold text-blue-700 dark:text-blue-200">
                     {stats?.totals.inquiries ?? 0}
                   </p>
-                </div>
-                <div className="rounded-lg bg-green-50 p-3 dark:bg-green-950/30">
+                </Link>
+                <Link
+                  href={buildInquiryFilterHref(customer)}
+                  className="rounded-lg bg-green-50 p-3 transition hover:ring-2 hover:ring-green-200 dark:bg-green-950/30 dark:hover:ring-green-800"
+                >
                   <p className="text-xs text-green-500 dark:text-green-300">公司订单</p>
                   <p className="mt-1 text-2xl font-semibold text-green-700 dark:text-green-200">
                     {stats?.totals.orders ?? 0}
                   </p>
-                </div>
+                </Link>
                 <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-900/60">
                   <p className="text-xs text-gray-500 dark:text-gray-400">未分配联络人</p>
                   <p className="mt-1 text-2xl font-semibold text-gray-800 dark:text-gray-100">
@@ -283,9 +303,10 @@ export default function CustomerDetailPage() {
               {stats?.contacts.length ? (
                 <div className="mt-4 overflow-hidden rounded-lg border border-gray-100 dark:border-gray-700">
                   {stats.contacts.map((contact) => (
-                    <div
+                    <Link
                       key={contact.contactId}
-                      className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-gray-100 px-3 py-2 text-sm last:border-b-0 dark:border-gray-700"
+                      href={buildInquiryFilterHref(customer, contact)}
+                      className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-gray-100 px-3 py-2 text-sm transition last:border-b-0 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900/50"
                     >
                       <div className="min-w-0">
                         <span className="font-medium text-gray-800 dark:text-gray-100">{contact.name}</span>
@@ -300,7 +321,7 @@ export default function CustomerDetailPage() {
                       </div>
                       <span className="text-xs text-gray-500 dark:text-gray-400">询价 {contact.inquiries}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">订单 {contact.orders}</span>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : null}

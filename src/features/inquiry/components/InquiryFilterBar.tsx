@@ -16,6 +16,7 @@ interface InquiryFilterBarProps {
   inquirers: string[];
   activeCount: number;
   onReset: () => void;
+  onClearAssociation?: () => void;
   records: InquiryRecord[];
   filteredCount?: number;
 }
@@ -86,7 +87,15 @@ function Chip({
 
 // ── 主组件 ────────────────────────────────────────────────
 export function InquiryFilterBar({
-  id, filter, setFilter, inquirers, activeCount, onReset, records, filteredCount,
+  id,
+  filter,
+  setFilter,
+  inquirers,
+  activeCount,
+  onReset,
+  onClearAssociation,
+  records,
+  filteredCount,
 }: InquiryFilterBarProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
@@ -208,6 +217,19 @@ export function InquiryFilterBar({
 
       {/* 搜索 + 询价人 + 重置（中屏右对齐限宽，大屏并入同一行） */}
       <div className="flex w-full items-center gap-1.5 sm:max-w-md sm:ml-auto xl:ml-0 xl:w-auto xl:shrink-0 xl:border-l xl:border-gray-100 xl:pl-4 dark:xl:border-gray-700">
+        {(filter.customerId || filter.contactId) && (
+          <span className="inline-flex h-7 max-w-[12rem] shrink-0 items-center gap-1 rounded-full bg-blue-50 px-2 text-xs font-medium text-blue-700 dark:bg-blue-950/30 dark:text-blue-300">
+            <span className="truncate">关联：{filter.associationLabel || '客户记录'}</span>
+            <button
+              type="button"
+              onClick={onClearAssociation}
+              className="rounded-full px-1 text-blue-400 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-900/50 dark:hover:text-blue-200"
+              aria-label="清除关联筛选"
+            >
+              ×
+            </button>
+          </span>
+        )}
         <input
           type="search"
           value={filter.keyword}

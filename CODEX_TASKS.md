@@ -11606,3 +11606,115 @@ npm run build
 - 点击后弹窗内可以搜索并选中一个"简称-联络人简称"组合，确认后选中的所有记录的 `customerId`/`contactId` 被更新（客户详情页对应客户的"业务统计"询价数应相应增加）
 - 批量关联不影响这些记录原有的 `customerNo`/`inquirer`/供应商报价/客户报价等其他字段（Worker 合并写入生效，没有整条记录被覆盖丢字段）
 - 结合"待关联客户"筛选 + 表头全选，可以一次性处理一大批同名历史记录
+
+---
+
+## TASK-65/66 复核结论（Claude 已核对，通过）
+
+`CustomerContactPicker.tsx` 的 `committedLabelRef` 机制核对过：重新聚焦已选中的搜索框时 `effectiveQuery` 会被当作空字符串处理，不再拿组合展示串误判成"无匹配"，`InquiryFormModal.tsx`/`BatchLinkCustomerModal.tsx` 接入方式与规格一致，"新建客户"改成了公司简称+联络人姓名两个独立字段的小表单。`InquiryPage.tsx` 批量关联直接复用已有 `updateRecord`（Worker 合并写入），菜单位置和交互符合规格。独立跑过 `tsc --noEmit`（通过）和对 4 个改动文件的 `eslint`（无警告）；`npm run build` 因这次审核环境单条命令有执行时限、后台任务无法跨调用存活，没能在 Claude 这边独立跑完整，但前面的走查加上 tsc/eslint 全过，足以确认正确性。
+
+---
+
+## TASK-67：客户地址支持多行显示 + 编辑时可手动换行
+
+**背景（Roger 反馈，附 INDIAN CHAIN PRIVATE LIMITED 客户详情页截图）**：这个客户的地址字段里其实塞了地址+电话+邮箱+IEC+PAN+GSTIN 好几段信息，但界面上挤成一整行看不清（`238B AJC BOSE ROAD KOLKATA 700020Phone : +91 33 4017 7000Email : info@indianchain.comIEC: 0288034830PAN NO: AAACI6291GGSTIN No : 19AAACI6291G1ZE`）。TASK-64 已经把 `CustomerInfoCard.tsx` 的地址展示改成了 `whitespace-pre-wrap`（支持渲染 `\n` 换行），但这治标不治本——真正的问题是数据里根本没有换行符：`CustomerForm.tsx` 里"地址"字段用的是单行 `<input type="text">`（`FormField` 组件, `FIELD_CLASS` 里是固定 `h-10`），单行输入框天然无法输入或粘贴保留换行，导致所有历史地址数据（很可能是从其他系统整段复制粘贴进来的）都是这种挤在一起的长字符串。
+
+**这次要改两件事，双管齐下**：
+
+### 改动 1：展示层启发式换行——不改数据，只改渲染，让现有历史数据立刻好看
+
+在 `src/features/customer/components/CustomerInfoCard.tsx`（或新建一个小工具函数 `src/features/customer/utils/formatAddress.ts`，供其他用到地址展示的地方一起复用）新增一个 `formatAddressForDisplay(address: string): string`：
+
+- 如果 `address` 里已经包含 `\n`，原样返回（说明是新数据或已经手动整理过，不要重复处理）。
+- 如果没有 `\n`，用正则在常见标签前插入换行，标签清单（不区分大小写，容忍标签和冒号之间有空格）：`Phone`、`Tel`、`Fax`、`Email`、`Mail`、`IEC`、`PAN NO`、`PAN`、`GSTIN No`、`GSTIN`、`Website`、`Mobile`——大致是 `/(?<!^)\s*(Phone|Tel|Fax|E-?mail|IEC|PAN\s*NO|GSTIN\s*No|GSTIN|Website|Mobile)\s*:/gi`，命中处替换成 `\n$1:`（第一次出现在字符串开头的不加换行，避免地址本身第一段就是这几个词之一时开头多一个空行）。
+- `CustomerInfoCard.tsx` 渲染地址时用 `formatAddressForDisplay(customer.address)` 包一层，其余 `whitespace-pre-wrap break-words` 保持不变。
+
+### 改动 2：`CustomerForm.tsx` 地址字段改成 `<textarea>`，支持编辑时手动换行
+
+- 地址字段（`id="address"`）不再用 `FormField`（那个组件内部写死是 `<input>`），单独写一小段：`<textarea>`，3~4 行高（`rows={3}`），允许用户手动换行分段（新建客户或后续编辑存量客户时，可以把地址、电话、邮箱等分开一行一行填，不用再依赖启发式正则去猜）。样式上沿用 `FIELD_CLASS` 的边框/圆角/焦点样式，但去掉固定 `h-10`，换成 `min-h-[4.5rem] py-2` 之类。
+- 保存逻辑不用改（`address` 本来就是字符串，`\n` 可以正常存进 D1 的 JSON `data` 字段）。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- INDIAN CHAIN PRIVATE LIMITED 这类历史数据，不用手动编辑，详情页地址就能自动按 Phone/Email/IEC/PAN/GSTIN 等标签分行显示
+- 已经手动整理过换行的地址（存量或新建的都一样）不会被误处理成奇怪的双重换行
+- 客户表单里编辑地址是一个可以直接按回车换行的多行文本框，不再是单行输入框
+
+---
+
+## TASK-68：客户详情页"业务统计"里的联络人行，点击跳转到询报价登记表并按该联络人筛选
+
+**背景（Roger 反馈）**："将在询报价单中显示的联络人字符，在这个详情页可作为关联项"——客户详情页"业务统计"卡片里，联络人拆分表格（比如 INDIAN CHAIN 详情页里 Prateek 询价0订单0、Sumanta 询价51订单15 那两行）现在只是纯展示，点了没反应。Roger 想要点这些行能直接跳到询报价登记表、看到这个联络人对应的具体记录列表（而不是只看到一个孤零零的数字 51，不知道是哪些单子）。
+
+### 改动 1：`useInquiryFilter.ts` 增加按 `customerId`/`contactId` 筛选
+
+- `InquiryFilterState` 新增两个字段：`customerId: string`、`contactId: string`（默认 `''`，加入 `DEFAULT_FILTER`）。
+- `baseFiltered` 里加两行过滤：`if (filter.customerId && record.customerId !== filter.customerId) return false;` 和 `if (filter.contactId && record.contactId !== filter.contactId) return false;`（放在现有 `linkStatus` 判断附近即可）。
+- `activeCount` 计算里加上 `Boolean(filter.customerId)` 这一项（`contactId` 不用单独算，永远伴随 `customerId` 一起出现，算一次即可）。
+- `reset()` 复用 `DEFAULT_FILTER`，两个新字段自然会被清空，不用额外处理。
+
+### 改动 2：`InquiryPage.tsx` 读取 URL 上的 `customerId`/`contactId`/`label` 参数，预设筛选，并显示一个可清除的筛选提示条
+
+- 用 `useSearchParams()`（`next/navigation`，页面本来就是 client component）读取 `customerId`、`contactId`、`label`（`label` 是外部传来的展示文案，比如"IC-Sumanta"，用来在筛选条上显示，不用反查客户名）。
+- 用一个 `useEffect`（依赖 `searchParams`）：如果读到 `customerId` 就 `setFilter((prev) => ({ ...prev, customerId, contactId: contactId ?? '' }))`，只在参数存在时触发一次（不要每次 render 都重复 set，用 `searchParams?.toString()` 或参数值本身做依赖）。
+- 在 `InquiryFilterBar` 上方（或 `InquiryFilterBar` 内部搜索框左侧，看哪个改动量小）加一个筛选提示 chip：当 `filter.customerId` 非空时显示"关联：{label || '客户'} ✕"，点击 `✕` 清空 `customerId`/`contactId`（不用完全重置其他筛选条件，只清这两个字段）。`label` 从 URL 参数带过来，存在一个 state 里（因为清空筛选后 URL 参数还在，不需要跟着变；只是别再从 URL 重新读取覆盖用户已经手动清除的操作——用一个 `hasAppliedUrlFilter` ref 或类似的一次性标记，保证只在页面首次加载时应用一次 URL 里的筛选）。
+
+### 改动 3：`CustomerDetailPage.tsx` 联络人统计行改成可点击链接
+
+- `stats.contacts.map(...)` 渲染的每一行外面包一层 `<Link href={\`/inquiry?customerId=${customer.id}&contactId=${contact.contactId}&label=${encodeURIComponent(\`${customer.shortName || customer.name}-${contact.shortName || contact.name}\`)}\`}>`，整行可点击（hover 有高亮），跳转到询报价登记表并自动应用上面的筛选。
+- 顺手把"业务统计"卡片最上面的"公司询价"/"公司订单"两个数字格子也包成链接（只带 `customerId`，不带 `contactId`），方便验证公司级别的总数对不对得上。"未分配联络人"那个格子不用做链接（那个概念对应的是 `customer_id` 有值但 `contact_id` 为空的记录，现有筛选机制还不支持这种"有客户无联络人"的组合，这次不做，需要的话可以再提）。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 在客户详情页点击某个联络人的统计行，能跳转到询报价登记表，且列表已经自动筛选成只显示这个联络人的记录，数量应该和详情页显示的"询价 N"一致
+- 筛选条上能看到一个"关联：xxx ✕"的提示，点 ✕ 能清除这个筛选（不影响其他已设置的筛选条件比如时间范围）
+- 点击公司级别的"公司询价"数字，同样能跳转并筛选出该客户名下（不限联络人）的全部记录
+- 不带 `customerId`/`contactId` 参数正常访问 `/inquiry`（比如从侧边栏直接进入）行为不受影响
+
+---
+
+## TASK-67 复核发现一个实际 bug，需要修正（TASK-68 部分已通过，不用动）
+
+**结论**：TASK-68（询报价 `customerId`/`contactId` 筛选 + 详情页联络人行可点击 + 筛选提示条）逐文件核对过（`useInquiryFilter.ts`/`InquiryPage.tsx`/`InquiryFilterBar.tsx`/`CustomerDetailPage.tsx`），逻辑正确，`tsc --noEmit` 独立跑通过，这部分不需要改。
+
+**但 TASK-67 的地址展示修复实际没有生效，需要改正**：`CustomerInfoCard.tsx` 里 `formatAddressForDisplay` 用的正则是
+
+```js
+trimmed.replace(
+  /\s+(?=(?:Phone|Tel|Telephone|Mobile|Mob|Email|E-mail|IEC|PAN|GSTIN|GST|TIN)\b\s*:?\s*)/gi,
+  '\n'
+);
+```
+
+这个正则要求标签**前面必须先有空白字符**才会匹配（`\s+` 是必需的，不是可选的）。但截图里那条真实数据（INDIAN CHAIN PRIVATE LIMITED 的地址，也就是这次任务的起因）是"700020Phone""7000Email""comIEC""0288034830PAN NO""GGSTIN No"这样**完全没有任何分隔符、直接粘连**的，标签前面根本没有空格，所以这个正则在这条数据上一次都不会命中，整个字符串原样返回——也就是说，触发这次需求的那个具体案例，改完之后其实还是老样子挤在一起，没有变化（已经用这条真实数据在本地跑过验证，确认零匹配）。
+
+**改正方案**：不要求标签前面一定要有空白，只要求"不在字符串开头"，直接在标签前插入换行（标签本身通常后面紧跟着冒号，用这个来避免误伤普通词汇）：
+
+```js
+function formatAddressForDisplay(address: string) {
+  const trimmed = address.trim();
+  if (!trimmed) return '未填写地址';
+  if (trimmed.includes('\n')) return trimmed;
+
+  return trimmed.replace(
+    /(Phone|Tel|Telephone|Mobile|Mob|E-?mail|IEC|PAN\s*NO|GSTIN\s*No|GSTIN|GST|TIN)(\s*:)/gi,
+    (match, label, colon, offset) => (offset === 0 ? match : `\n${label}${colon}`)
+  );
+}
+```
+
+（用 `replace` 的回调函数拿到 `offset`，只有不在字符串开头的匹配才补换行，避免地址第一段恰好就是这几个词之一时开头多一个空行。标签清单和之前保持一致即可，`GSTIN\s*No` 要放在 `GSTIN` 前面，保证优先匹配到更长的"GSTIN No"整体。）
+
+已经用 INDIAN CHAIN PRIVATE LIMITED 那条真实地址在 Node 里跑过这个新正则，能正确拆成六行（地址本身 / Phone / Email / IEC / PAN NO / GSTIN No），改完请照这个思路调整、跑一下 `tsc --noEmit`，不需要额外验证脚本。

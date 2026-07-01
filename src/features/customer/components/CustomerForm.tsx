@@ -33,6 +33,10 @@ const FIELD_CLASS =
   'mt-1 block h-10 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm ' +
   'focus:border-blue-500 focus:outline-none focus:ring-blue-500 ' +
   'dark:border-gray-600 dark:bg-gray-700 dark:text-white';
+const TEXTAREA_CLASS =
+  'mt-1 block min-h-24 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm ' +
+  'focus:border-blue-500 focus:outline-none focus:ring-blue-500 ' +
+  'dark:border-gray-600 dark:bg-gray-700 dark:text-white';
 
 const SECTION_CLASS = 'rounded-lg border border-gray-200 p-4 dark:border-gray-700';
 
@@ -156,13 +160,19 @@ export function CustomerForm({
             onInputChange={onInputChange}
             placeholder="可选"
           />
-          <FormField
-            id="address"
-            label="地址"
-            value={formData.address}
-            onInputChange={onInputChange}
-            className="md:col-span-2"
-          />
+          <div className="md:col-span-2">
+            <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              地址
+            </label>
+            <textarea
+              id="address"
+              value={formData.address}
+              onChange={(e) => onInputChange('address', e.target.value)}
+              className={TEXTAREA_CLASS}
+              rows={4}
+              placeholder="可分多行填写地址、电话、邮箱、税号等信息"
+            />
+          </div>
         </div>
       </fieldset>
 
