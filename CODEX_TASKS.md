@@ -12800,3 +12800,285 @@ const handleInquiryEditSubmit = (
 
 - 询价类活动卡片信息结构为：分类/状态徽章 → 询价编号（标题）→ 内容简述或客户询价编号（兜底）→ 日期 + 详情按钮，不再有重复的"询价号"展示。
 - "详情"点击后就地弹出编辑卡片而不是跳转页面，编辑保存后数据通过 `useInquiryStore.updateRecord` 正确落地，和询报价登记表页面编辑同一条记录的效果一致。
+
+---
+
+## TASK-82：客户详情页信息卡，业务统计精简并移到公司名称同一行
+
+**优先级**：中
+**风险**：低，单文件改动，不涉及数据获取逻辑
+
+### 背景
+
+用户要求：
+1. 业务统计里去掉"未分配联络人"这一项。
+2. 剩下的"公司询价"/"公司订单"两个数字，不再单独占一整块"业务统计"区域（带自己的标题、三宫格），而是直接显示在客户名称那一行的右侧（和"编辑"按钮同一行）。
+
+这样客户详情页头部从"姓名行 + 独立的业务统计区块（标题+三宫格+空数据提示）"精简成"姓名行（右侧带询价/订单两个小徽章 + 编辑按钮）+ 需要时才出现的空数据提示"，少了一整块的标题和边框，更紧凑。
+
+### 涉及文件
+
+`src/features/customer/components/CustomerInfoCard.tsx`
+
+### 精确改动
+
+把头部这一块（从外层 `<div className="flex flex-col gap-3 md:flex-row ...">` 开始，到 `{isCustomerDetail && (<div className="mt-4 border-t ...">...业务统计...</div>)}` 结束，即当前文件第 60-135 行）替换成：
+
+```tsx
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="flex min-w-0 gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600 text-lg font-bold text-white">
+            {getInitial(customer)}
+          </div>
+          <div className="min-w-0">
+            <h1 className="whitespace-pre-wrap break-words text-lg font-semibold leading-snug text-gray-900 dark:text-white">
+              {customer.name}
+            </h1>
+            {customer.shortName && (
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                简称：{customer.shortName}
+              </p>
+            )}
+            <div className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+              <span className="whitespace-pre-wrap break-words">
+                {formatAddressForDisplay(customer.address)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          {isCustomerDetail && (
+            <>
+              <Link
+                href={buildInquiryHref ? buildInquiryHref() : '#'}
+                className="rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-100 dark:bg-blue-950/30 dark:text-blue-300 dark:hover:bg-blue-950/50"
+              >
+                询价 <span className="font-semibold">{isLoadingStats ? '…' : (stats?.totals.inquiries ?? 0)}</span>
+              </Link>
+              <Link
+                href={buildOrderHref ? buildOrderHref() : '#'}
+                className="rounded-lg bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-700 transition hover:bg-green-100 dark:bg-green-950/30 dark:text-green-300 dark:hover:bg-green-950/50"
+              >
+                订单 <span className="font-semibold">{isLoadingStats ? '…' : (stats?.totals.orders ?? 0)}</span>
+              </Link>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
+          >
+            <Edit className="h-4 w-4" />
+            编辑
+          </button>
+        </div>
+      </div>
+
+      {showEmptyStatsHint && (
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          暂无关联的询价/订单记录，可能是历史数据尚未关联客户，可到
+          <Link href="/inquiry" className="mx-1 text-blue-600 hover:underline dark:text-blue-400">
+            询报价登记表
+          </Link>
+          使用「待关联客户」筛选手动补充
+        </p>
+      )}
+```
+
+后面紧跟的"联络人"区块（`<div className="mt-4 border-t border-gray-100 pt-3 ...">...联络人...</div>`）原样保留、不用动。`showEmptyStatsHint` 这个变量的定义（组件顶部）也不用改。
+
+即：删掉"业务统计"这个标题和三宫格网格，"未分配联络人"这一项彻底不再显示；"公司询价"/"公司订单"两个 `Link` 挪到姓名行右侧、编辑按钮左边，样式从大数字卡片改成小徽章（`询价 12`/`订单 5` 这种一行文字+加粗数字），保留原来的跳转行为（分别带 `has_order` 筛选）；空数据提示保留，位置挪到姓名行下面。
+
+### 验证
+
+1. `npx tsc --noEmit` 通过。
+2. `npx eslint src/features/customer/components/CustomerInfoCard.tsx` 通过。
+3. 手动核对：
+   - customer 类型详情页：姓名行右侧依次显示"询价 N"、"订单 N"两个小徽章、然后是"编辑"按钮；点击两个徽章的跳转行为和之前一致（订单带 `has_order` 筛选）。
+   - 不再有"未分配联络人"这个数字出现在页面任何地方。
+   - supplier/consignee 类型详情页：姓名行右侧只有"编辑"按钮，没有询价/订单徽章（`isCustomerDetail` 为 false），和之前视觉一致。
+   - 没有关联询价/订单记录时，姓名行下方仍然显示"暂无关联的询价/订单记录…"提示。
+
+### 验收标准
+
+- "业务统计"标题和三宫格整块消失，"未分配联络人"不再显示。
+- "公司询价"/"公司订单"数字以小徽章形式出现在客户名称同一行的右侧（编辑按钮旁边）。
+- 所有原有跳转链接、空数据提示的触发条件保持不变。
+
+---
+
+## TASK-83：客户详情页"活动列表"精简为纯询价单行列表，去掉事件和跟进
+
+**优先级**：中
+**风险**：中（大幅简化组件逻辑，删除了事件/跟进相关的状态和函数，需要仔细跑一遍 tsc/eslint 确认没有遗留死代码引用）
+
+### 背景
+
+用户明确要求：
+1. 活动列表里去掉"事件"和"跟进"这两类，都用不到——即去掉"添加事件"/"添加跟进"按钮、对应的表单、以及列表里这两类卡片本身，活动列表只保留询价记录。
+2. 每条询价记录只需要显示三项内容：**询价号码、描述/客编（有内容简述显示内容简述，没有则显示客户询价编号——这个逻辑 TASK-81 已经做好了，不用再改）、详情**（点开是编辑卡片，TASK-81 已实现，保留）。除此之外的东西（分类标签"询价"、状态徽章、图标、日期、金额等）都不要显示。
+3. 中屏和大屏（`md` 断点及以上）时，这三项内容要能显示在同一行；小屏可以按需要换行堆叠。
+
+**范围说明**：这次只是让"客户详情页的活动列表"这个组件不再渲染/使用事件和跟进的数据与交互入口，不delete这些功能背后的文件（`useCustomerFollowUp.ts`、`CustomEventForm.tsx`、`FollowUpManager.tsx`、`TimelineService`、`useCustomerTimeline.ts`）——这些文件保留在代码库里不用管，只是不再被这个组件引用。如果以后确认这些功能彻底不需要了，可以再单独清理，这次不做。
+
+### 涉及文件
+
+`src/features/customer/components/CustomerActivityFeed.tsx`（整个文件替换成下面的内容）
+
+### 新文件内容
+
+```tsx
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { Calendar, RefreshCw } from 'lucide-react';
+import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
+import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '@/features/inquiry/types';
+import { InquiryFormModal } from '@/features/inquiry/components/InquiryFormModal';
+import { buildInquiryTimelineEvents } from '../services/inquiryTimelineService';
+
+interface CustomerActivityFeedProps {
+  customerId: string;
+  customerName: string;
+}
+
+interface ActivityItem {
+  id: string;
+  title: string;
+  description?: string;
+  relatedInquiry?: InquiryRecord;
+}
+
+export function CustomerActivityFeed({ customerId }: CustomerActivityFeedProps) {
+  const inquiryRecords = useInquiryStore((state) => state.records);
+  const updateRecord = useInquiryStore((state) => state.updateRecord);
+  const [editingInquiryRecord, setEditingInquiryRecord] = useState<InquiryRecord | null>(null);
+
+  const inquiryById = useMemo(
+    () => new Map(inquiryRecords.map((record) => [record.id, record])),
+    [inquiryRecords]
+  );
+
+  useEffect(() => {
+    useInquiryStore.getState().init();
+  }, [customerId]);
+
+  const activities = useMemo<ActivityItem[]>(() => {
+    return buildInquiryTimelineEvents(customerId, inquiryRecords).map((event) => ({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      relatedInquiry: event.documentId ? inquiryById.get(event.documentId) : undefined,
+    }));
+  }, [customerId, inquiryRecords, inquiryById]);
+
+  const handleRefresh = () => {
+    useInquiryStore.getState().init();
+  };
+
+  const handleInquiryEditSubmit = (
+    values: InquiryBasicInput,
+    suppliers: SupplierQuoteStatus[],
+    quoted: CustomerQuoteStatus[]
+  ) => {
+    if (!editingInquiryRecord) return;
+    updateRecord(editingInquiryRecord.id, {
+      ...values,
+      supplierStatuses: suppliers,
+      quotedStatuses: quoted,
+    });
+    setEditingInquiryRecord(null);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">活动列表</h3>
+          <span className="text-xs text-gray-500 dark:text-gray-400">({activities.length} 条)</span>
+        </div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+        >
+          <RefreshCw className="h-4 w-4" />
+          刷新
+        </button>
+      </div>
+
+      {activities.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-gray-300 bg-white px-5 py-9 text-center text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+          <Calendar className="mx-auto mb-3 h-10 w-10 opacity-50" />
+          <p>暂无询价记录</p>
+          <p className="mt-2 text-sm">点击"刷新"拉取最新询价记录。</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {activities.map((activity) => (
+            <div
+              key={activity.id}
+              className="flex flex-col gap-1 rounded-lg border border-gray-100 bg-white px-3 py-2 shadow-sm dark:border-gray-700 dark:bg-gray-800 md:flex-row md:items-center md:gap-3"
+            >
+              <span className="shrink-0 font-mono text-sm font-semibold text-gray-900 dark:text-white">
+                {activity.title}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm text-gray-600 dark:text-gray-400">
+                {activity.description}
+              </span>
+              {activity.relatedInquiry && (
+                <button
+                  type="button"
+                  onClick={() => setEditingInquiryRecord(activity.relatedInquiry ?? null)}
+                  className="shrink-0 self-start text-sm text-blue-600 hover:underline dark:text-blue-400 md:self-auto"
+                >
+                  详情
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {editingInquiryRecord && (
+        <InquiryFormModal
+          isOpen
+          mode="edit"
+          record={editingInquiryRecord}
+          existingRecords={inquiryRecords}
+          onClose={() => setEditingInquiryRecord(null)}
+          onSubmit={handleInquiryEditSubmit}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+要点说明：
+- `CustomerActivityFeedProps` 仍然保留 `customerName` 字段（`CustomerDetailPage.tsx` 调用处不用改），只是组件内部不再解构/使用它——不会有 TS/eslint 报错，接口没变化。
+- `activities` 直接由 `buildInquiryTimelineEvents(customerId, inquiryRecords)`（TASK-81 里已经改好格式：标题=询价号，描述=内容简述或客户询价编号兜底）映射而来，不再经过 `useCustomerTimeline`/`useCustomerFollowUp` 这两个 hook，也不再合并 custom/followup 事件。
+- 每一行用 `flex flex-col ... md:flex-row md:items-center` 实现："中屏和大屏"（`md` 及以上）三项内容在同一行，小屏堆叠。
+- "刷新"按钮只需要重新触发 `useInquiryStore.getState().init()`（原来的写法一样），不再涉及跟进数据刷新。
+- 删除了 `KIND_CONFIG`、状态徽章（`getInquiryQuoteStatusBadge`）、跟进优先级/完成/过期徽章、事件表单、跟进表单等一切事件/跟进相关代码。
+
+### 验证
+
+1. `npx tsc --noEmit` 通过。
+2. `npx eslint src/features/customer/components/CustomerActivityFeed.tsx` 通过。
+3. 全项目搜索确认 `CustomerActivityFeed.tsx` 里不再出现 `CustomEventForm`、`useCustomerFollowUp`、`useCustomerTimeline`、`followUp`、`事件`、`跟进` 字样。
+4. 手动核对：
+   - 活动列表标题栏只有"活动列表 (N 条)"和"刷新"按钮，没有"添加事件"/"添加跟进"按钮。
+   - 每一行只显示：询价号、描述（或客户询价编号兜底）、详情。没有分类标签、状态徽章、日期、图标。
+   - 在浏览器宽度 ≥ 768px（`md` 断点）时，三项内容在同一行显示；窄屏时可以堆叠换行，不影响阅读。
+   - 点击"详情"仍然能正确打开这条记录的编辑弹窗，保存后活动列表内容能刷新（因为共用 `useInquiryStore`）。
+   - `CustomerDetailPage.tsx` 不用改，`<CustomerActivityFeed customerId={customer.id} customerName={displayName} />` 调用处保持原样，确认没有因为这次改动报类型错误。
+
+### 验收标准
+
+- 活动列表不再包含事件/跟进相关的按钮、表单、卡片和状态。
+- 每条询价记录只显示询价号、描述/客户询价编号、详情三项内容。
+- 中屏/大屏下这三项内容显示在同一行；"详情"点击行为和数据来源与 TASK-81 保持一致。

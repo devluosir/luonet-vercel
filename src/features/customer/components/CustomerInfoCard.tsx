@@ -80,58 +80,42 @@ export function CustomerInfoCard({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onEdit}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
-        >
-          <Edit className="h-4 w-4" />
-          编辑
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {isCustomerDetail && (
+            <>
+              <Link
+                href={buildInquiryHref ? buildInquiryHref() : '#'}
+                className="rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-100 dark:bg-blue-950/30 dark:text-blue-300 dark:hover:bg-blue-950/50"
+              >
+                询价 <span className="font-semibold">{isLoadingStats ? '…' : (stats?.totals.inquiries ?? 0)}</span>
+              </Link>
+              <Link
+                href={buildOrderHref ? buildOrderHref() : '#'}
+                className="rounded-lg bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-700 transition hover:bg-green-100 dark:bg-green-950/30 dark:text-green-300 dark:hover:bg-green-950/50"
+              >
+                订单 <span className="font-semibold">{isLoadingStats ? '…' : (stats?.totals.orders ?? 0)}</span>
+              </Link>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
+          >
+            <Edit className="h-4 w-4" />
+            编辑
+          </button>
+        </div>
       </div>
 
-      {isCustomerDetail && (
-        <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">业务统计</h2>
-            {isLoadingStats && <span className="text-xs text-gray-400 dark:text-gray-500">加载中...</span>}
-          </div>
-          <div className="grid grid-cols-3 gap-2.5">
-            <Link
-              href={buildInquiryHref ? buildInquiryHref() : '#'}
-              className="rounded-lg bg-blue-50 p-2.5 transition hover:ring-2 hover:ring-blue-200 dark:bg-blue-950/30 dark:hover:ring-blue-800"
-            >
-              <p className="text-xs text-blue-500 dark:text-blue-300">公司询价</p>
-              <p className="mt-0.5 text-xl font-semibold text-blue-700 dark:text-blue-200">
-                {stats?.totals.inquiries ?? 0}
-              </p>
-            </Link>
-            <Link
-              href={buildOrderHref ? buildOrderHref() : '#'}
-              className="rounded-lg bg-green-50 p-2.5 transition hover:ring-2 hover:ring-green-200 dark:bg-green-950/30 dark:hover:ring-green-800"
-            >
-              <p className="text-xs text-green-500 dark:text-green-300">公司订单</p>
-              <p className="mt-0.5 text-xl font-semibold text-green-700 dark:text-green-200">
-                {stats?.totals.orders ?? 0}
-              </p>
-            </Link>
-            <div className="rounded-lg bg-gray-50 p-2.5 dark:bg-gray-900/60">
-              <p className="text-xs text-gray-500 dark:text-gray-400">未分配联络人</p>
-              <p className="mt-0.5 text-xl font-semibold text-gray-800 dark:text-gray-100">
-                {stats?.unassigned.inquiries ?? 0}
-              </p>
-            </div>
-          </div>
-          {showEmptyStatsHint && (
-            <p className="mt-2.5 text-xs text-gray-500 dark:text-gray-400">
-              暂无关联的询价/订单记录，可能是历史数据尚未关联客户，可到
-              <Link href="/inquiry" className="mx-1 text-blue-600 hover:underline dark:text-blue-400">
-                询报价登记表
-              </Link>
-              使用「待关联客户」筛选手动补充
-            </p>
-          )}
-        </div>
+      {showEmptyStatsHint && (
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          暂无关联的询价/订单记录，可能是历史数据尚未关联客户，可到
+          <Link href="/inquiry" className="mx-1 text-blue-600 hover:underline dark:text-blue-400">
+            询报价登记表
+          </Link>
+          使用「待关联客户」筛选手动补充
+        </p>
       )}
 
       <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
