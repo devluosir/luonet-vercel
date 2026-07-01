@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { Building2, Edit, Search, Trash2 } from 'lucide-react';
+import { Building2, Search } from 'lucide-react';
 import type { Customer, Supplier, Consignee } from '../types';
 import { getPrimaryContact } from '../services/customerService';
+import { getProfileTitle, PrimaryContactSummary, RowActionMenu } from './ProfileListParts';
 
 const AVATAR_COLORS = [
   'bg-emerald-500',
@@ -32,7 +33,6 @@ function SkeletonRow() {
       <div className="hidden h-3 w-20 rounded bg-gray-100 dark:bg-gray-800 md:block" />
       <div className="flex gap-0.5">
         <div className="h-7 w-7 rounded bg-gray-100 dark:bg-gray-800" />
-        <div className="h-7 w-7 rounded bg-gray-100 dark:bg-gray-800" />
       </div>
     </div>
   );
@@ -44,9 +44,10 @@ interface SupplierListProps {
   searchQuery: string;
   onEdit: (supplier: Customer | Supplier | Consignee) => void;
   onDelete: (supplier: Customer | Supplier | Consignee) => void;
+  onViewDetail: (supplier: Supplier) => void;
 }
 
-export function SupplierList({ suppliers, loading, searchQuery, onEdit, onDelete }: SupplierListProps) {
+export function SupplierList({ suppliers, loading, searchQuery, onEdit, onDelete, onViewDetail }: SupplierListProps) {
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return suppliers;
     const q = searchQuery.toLowerCase();
@@ -97,23 +98,30 @@ export function SupplierList({ suppliers, loading, searchQuery, onEdit, onDelete
       <div className="hidden items-center gap-3 border-b border-gray-100 bg-gray-50/80 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/40 sm:flex">
         <div className="w-9 shrink-0" />
         <span className="flex-1 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">名称</span>
-        <span className="hidden w-40 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 sm:block">联系方式</span>
+        <span className="hidden w-40 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 sm:block">主联络人</span>
         <span className="hidden w-24 shrink-0 text-right text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 md:block">创建时间</span>
-        <div className="w-[60px] shrink-0" />
+        <div className="w-10 shrink-0" />
       </div>
 
       {/* 行列表 */}
       <div className="divide-y divide-gray-100 dark:divide-gray-800">
         {filtered.map((supplier) => {
-          const title = supplier.name.split('\n')[0] || supplier.name;
+          const title = getProfileTitle(supplier);
           const initial = title.charAt(0).toUpperCase() || '供';
-          const primaryContact = getPrimaryContact(supplier);
-          const contact = primaryContact?.phone || primaryContact?.email || '—';
 
           return (
             <div
               key={supplier.id}
-              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/40"
+              role="button"
+              tabIndex={0}
+              onClick={() => onViewDetail(supplier)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onViewDetail(supplier);
+                }
+              }}
+              className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/40"
             >
               {/* 头像 */}
               <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColor(title)}`}>
@@ -128,9 +136,9 @@ export function SupplierList({ suppliers, loading, searchQuery, onEdit, onDelete
                 )}
               </div>
 
-              {/* 联系方式 */}
+              {/* 主联络人 */}
               <div className="hidden w-40 shrink-0 truncate text-xs text-gray-400 dark:text-gray-500 sm:block">
-                {contact}
+                <PrimaryContactSummary item={supplier} />
               </div>
 
               {/* 创建时间 */}
@@ -138,25 +146,7 @@ export function SupplierList({ suppliers, loading, searchQuery, onEdit, onDelete
                 {fmtDate(supplier.createdAt)}
               </div>
 
-              {/* 操作 */}
-              <div className="flex shrink-0 items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => onEdit(supplier)}
-                  title="编辑"
-                  className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                >
-                  <Edit className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(supplier)}
-                  title="删除"
-                  className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
+              <RowActionMenu item={supplier} onEdit={onEdit} onDelete={onDelete} />
             </div>
           );
         })}

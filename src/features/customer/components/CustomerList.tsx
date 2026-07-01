@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { Edit, Eye, Search, Trash2, Users } from 'lucide-react';
+import { Search, Users } from 'lucide-react';
 import type { Customer, Supplier, Consignee } from '../types';
 import { getPrimaryContact } from '../services/customerService';
+import { getProfileTitle, PrimaryContactSummary, RowActionMenu } from './ProfileListParts';
 
 const AVATAR_COLORS = [
   'bg-blue-500',
@@ -31,8 +32,6 @@ function SkeletonRow() {
       <div className="hidden h-3 w-32 rounded bg-gray-100 dark:bg-gray-800 sm:block" />
       <div className="hidden h-3 w-20 rounded bg-gray-100 dark:bg-gray-800 md:block" />
       <div className="flex gap-0.5">
-        <div className="h-7 w-7 rounded bg-gray-100 dark:bg-gray-800" />
-        <div className="h-7 w-7 rounded bg-gray-100 dark:bg-gray-800" />
         <div className="h-7 w-7 rounded bg-gray-100 dark:bg-gray-800" />
       </div>
     </div>
@@ -106,23 +105,30 @@ export function CustomerList({
       <div className="hidden items-center gap-3 border-b border-gray-100 bg-gray-50/80 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/40 sm:flex">
         <div className="w-9 shrink-0" />
         <span className="flex-1 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">名称</span>
-        <span className="hidden w-40 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 sm:block">联系方式</span>
+        <span className="hidden w-40 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 sm:block">主联络人</span>
         <span className="hidden w-24 shrink-0 text-right text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 md:block">创建时间</span>
-        <div className="w-[88px] shrink-0" />
+        <div className="w-10 shrink-0" />
       </div>
 
       {/* 行列表 */}
       <div className="divide-y divide-gray-100 dark:divide-gray-800">
         {filtered.map((customer) => {
-          const title = customer.name.split('\n')[0] || customer.name;
+          const title = getProfileTitle(customer);
           const initial = title.charAt(0).toUpperCase() || '客';
-          const primaryContact = getPrimaryContact(customer);
-          const contact = primaryContact?.phone || primaryContact?.email || '—';
 
           return (
             <div
               key={customer.id}
-              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/40"
+              role="button"
+              tabIndex={0}
+              onClick={() => onViewDetail(customer)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onViewDetail(customer);
+                }
+              }}
+              className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/40"
             >
               {/* 头像 */}
               <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${avatarColor(title)}`}>
@@ -131,21 +137,17 @@ export function CustomerList({
 
               {/* 名称 + 公司 */}
               <div className="min-w-0 flex-1">
-                <button
-                  type="button"
-                  onClick={() => onViewDetail(customer)}
-                  className="block w-full truncate text-left text-sm font-medium text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
-                >
+                <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
                   {title}
-                </button>
+                </p>
                 {customer.shortName && (
                   <p className="truncate text-xs text-gray-400 dark:text-gray-500">{customer.shortName}</p>
                 )}
               </div>
 
-              {/* 联系方式 */}
+              {/* 主联络人 */}
               <div className="hidden w-40 shrink-0 truncate text-xs text-gray-400 dark:text-gray-500 sm:block">
-                {contact}
+                <PrimaryContactSummary item={customer} />
               </div>
 
               {/* 创建时间 */}
@@ -153,33 +155,7 @@ export function CustomerList({
                 {fmtDate(customer.createdAt)}
               </div>
 
-              {/* 操作 */}
-              <div className="flex shrink-0 items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => onViewDetail(customer)}
-                  title="查看详情"
-                  className="rounded-md p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onEdit(customer)}
-                  title="编辑"
-                  className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-                >
-                  <Edit className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(customer)}
-                  title="删除"
-                  className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
+              <RowActionMenu item={customer} onEdit={onEdit} onDelete={onDelete} />
             </div>
           );
         })}

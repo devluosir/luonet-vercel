@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, FileText } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAppUser } from '@/hooks/useAppUser';
@@ -15,10 +16,13 @@ import {
 } from '../components';
 import { useCustomerActions, useCustomerForm } from '../hooks';
 import { customerService } from '../services/customerService';
-import type { CustomerStats } from '../services/customerService';
-import type { Customer } from '../types';
+import { consigneeService } from '../services/consigneeService';
+import { supplierService } from '../services/supplierService';
+import type { CustomerProfileType, CustomerStats } from '../services/customerService';
+import type { Customer, TabType } from '../types';
 
 type DetailTab = 'timeline' | 'followup';
+type DetailType = CustomerProfileType;
 type ConfirmState = {
   open: boolean;
   title: string;
@@ -31,13 +35,39 @@ function getCustomerTitle(customer: Customer) {
   return customer.name.split('\n')[0] || customer.name;
 }
 
-async function findCustomerFromUrl(customerId: string, customerName?: string | null) {
-  const byId = await customerService.getCustomerById(customerId);
+function parseDetailType(value: string | null | undefined): DetailType {
+  return value === 'supplier' || value === 'consignee' ? value : 'customer';
+}
+
+function toTabType(type: DetailType): TabType {
+  if (type === 'supplier') return 'suppliers';
+  if (type === 'consignee') return 'consignees';
+  return 'customers';
+}
+
+function getTypeLabel(type: DetailType) {
+  if (type === 'supplier') return '供应商';
+  if (type === 'consignee') return '收货人';
+  return '客户';
+}
+
+function getUsageText(type: DetailType, customer: Customer) {
+  if (type === 'supplier') {
+    return `在 ${supplierService.checkSupplierUsage(customer.name)} 张采购单中被使用过`;
+  }
+  if (type === 'consignee') {
+    return `在 ${consigneeService.checkConsigneeUsage(customer.name)} 张箱单中被用作收货人`;
+  }
+  return '';
+}
+
+async function findCustomerFromUrl(customerId: string, type: DetailType, customerName?: string | null) {
+  const byId = await customerService.getCustomerById(customerId, type);
   if (byId) return byId;
 
-  const allCustomers = await customerService.getAllCustomers();
+  const result = await customerService.fetchAllCustomers(type);
   const displayName = customerName || customerId;
-  return allCustomers.find((customer) => {
+  return result.items.find((customer) => {
     const title = getCustomerTitle(customer);
     return customer.name === customerId || title === customerId || title === displayName;
   }) ?? null;
@@ -49,6 +79,9 @@ export default function CustomerDetailPage() {
   const searchParams = useSearchParams();
   const customerId = searchParams?.get('id');
   const customerName = searchParams?.get('name');
+  const detailType = parseDetailType(searchParams?.get('type'));
+  const detailTabType = toTabType(detailType);
+  const isCustomerDetail = detailType === 'customer';
 
   const [activeTab, setActiveTab] = useState<DetailTab>('timeline');
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -74,7 +107,7 @@ export default function CustomerDetailPage() {
     });
   }, []);
 
-  const { saveCustomer } = useCustomerActions(showConfirm);
+  const { saveCustomer, saveSupplier, saveConsignee } = useCustomerActions(showConfirm);
   const { formData, resetForm, setFormDataForEdit, handleInputChange, validateForm } = useCustomerForm();
 
   const reloadCustomer = useCallback(() => {
@@ -85,21 +118,21 @@ export default function CustomerDetailPage() {
     }
 
     setIsLoadingCustomer(true);
-    void findCustomerFromUrl(customerId, customerName)
+    void findCustomerFromUrl(customerId, detailType, customerName)
       .then(setCustomer)
       .catch((error) => {
         console.error('加载客户详情失败:', error);
         setCustomer(null);
       })
       .finally(() => setIsLoadingCustomer(false));
-  }, [customerId, customerName]);
+  }, [customerId, customerName, detailType]);
 
   useEffect(() => {
     reloadCustomer();
   }, [reloadCustomer]);
 
   useEffect(() => {
-    if (!customer?.id) {
+    if (!customer?.id || !isCustomerDetail) {
       setStats(null);
       return;
     }
@@ -121,7 +154,7 @@ export default function CustomerDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [customer?.id]);
+  }, [customer?.id, isCustomerDetail]);
 
   const handleOpenEdit = () => {
     if (!customer) return;
@@ -138,9 +171,12 @@ export default function CustomerDetailPage() {
     event.preventDefault();
     if (!customer) return;
 
-    if (!validateForm()) return;
+    if (!validateForm(detailTabType)) return;
 
-    const success = await saveCustomer(formData, customer);
+    let success = false;
+    if (detailType === 'supplier') success = await saveSupplier(formData, customer);
+    else if (detailType === 'consignee') success = await saveConsignee(formData, customer);
+    else success = await saveCustomer(formData, customer);
     if (!success) return;
 
     setShowEditModal(false);
@@ -177,14 +213,15 @@ export default function CustomerDetailPage() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h2 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">客户信息不完整</h2>
-          <p className="text-gray-600 dark:text-gray-400">无法显示客户详情，请返回客户列表重新选择</p>
+          <h2 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">{getTypeLabel(detailType)}信息不完整</h2>
+          <p className="text-gray-600 dark:text-gray-400">无法显示详情，请返回客户列表重新选择</p>
         </div>
       </div>
     );
   }
 
-  const displayName = customer ? getCustomerTitle(customer) : customerName || '客户详情';
+  const displayName = customer ? getCustomerTitle(customer) : customerName || `${getTypeLabel(detailType)}详情`;
+  const usageText = customer ? getUsageText(detailType, customer) : '';
 
   return (
     <AppLayout
@@ -200,12 +237,13 @@ export default function CustomerDetailPage() {
         {isLoadingCustomer ? (
           <div className="flex items-center justify-center py-16">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
-            <span className="ml-3 text-gray-600 dark:text-gray-400">加载客户信息...</span>
+            <span className="ml-3 text-gray-600 dark:text-gray-400">加载{getTypeLabel(detailType)}信息...</span>
           </div>
         ) : customer ? (
           <>
             <CustomerInfoCard customer={customer} onEdit={handleOpenEdit} />
 
+            {isCustomerDetail ? (
             <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-white">业务统计</h2>
@@ -233,6 +271,15 @@ export default function CustomerDetailPage() {
                   </p>
                 </div>
               </div>
+              {!isLoadingStats && stats && stats.totals.inquiries === 0 && stats.totals.orders === 0 && (
+                <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                  暂无关联的询价/订单记录，可能是历史数据尚未关联客户，可到
+                  <Link href="/inquiry" className="mx-1 text-blue-600 hover:underline dark:text-blue-400">
+                    询报价登记表
+                  </Link>
+                  使用「待关联客户」筛选手动补充
+                </p>
+              )}
               {stats?.contacts.length ? (
                 <div className="mt-4 overflow-hidden rounded-lg border border-gray-100 dark:border-gray-700">
                   {stats.contacts.map((contact) => (
@@ -258,48 +305,65 @@ export default function CustomerDetailPage() {
                 </div>
               ) : null}
             </div>
-
-            <div className="mb-6">
-              <div className="border-b border-gray-200 dark:border-gray-700">
-                <nav className="-mb-px flex space-x-8">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('timeline')}
-                    className={`border-b-2 px-1 py-2 text-sm font-medium ${
-                      activeTab === 'timeline'
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    <Calendar className="mr-2 inline h-4 w-4" />
-                    时间轴
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('followup')}
-                    className={`border-b-2 px-1 py-2 text-sm font-medium ${
-                      activeTab === 'followup'
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    <Clock className="mr-2 inline h-4 w-4" />
-                    跟进记录
-                  </button>
-                </nav>
-              </div>
-            </div>
-
-            {activeTab === 'timeline' ? (
-              <CustomerTimeline customerId={customer.id} customerName={displayName} />
             ) : (
-              <FollowUpManager customerId={customer.id} customerName={displayName} />
+              <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-900 dark:text-gray-300">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold text-gray-900 dark:text-white">使用情况</h2>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{usageText}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isCustomerDetail && (
+              <>
+              <div className="mb-6">
+                <div className="border-b border-gray-200 dark:border-gray-700">
+                  <nav className="-mb-px flex space-x-8">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('timeline')}
+                      className={`border-b-2 px-1 py-2 text-sm font-medium ${
+                        activeTab === 'timeline'
+                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                      }`}
+                    >
+                      <Calendar className="mr-2 inline h-4 w-4" />
+                      时间轴
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('followup')}
+                      className={`border-b-2 px-1 py-2 text-sm font-medium ${
+                        activeTab === 'followup'
+                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                      }`}
+                    >
+                      <Clock className="mr-2 inline h-4 w-4" />
+                      跟进记录
+                    </button>
+                  </nav>
+                </div>
+              </div>
+
+              {activeTab === 'timeline' ? (
+                <CustomerTimeline customerId={customer.id} customerName={displayName} />
+              ) : (
+                <FollowUpManager customerId={customer.id} customerName={displayName} />
+              )}
+              </>
             )}
           </>
         ) : (
           <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-gray-700 dark:bg-gray-800">
-            <h2 className="mb-3 text-xl font-semibold text-gray-900 dark:text-white">未找到客户</h2>
-            <p className="text-gray-600 dark:text-gray-400">该客户可能已被删除，请返回客户列表重新选择。</p>
+            <h2 className="mb-3 text-xl font-semibold text-gray-900 dark:text-white">未找到{getTypeLabel(detailType)}</h2>
+            <p className="text-gray-600 dark:text-gray-400">该{getTypeLabel(detailType)}可能已被删除，请返回客户列表重新选择。</p>
           </div>
         )}
       </div>
@@ -312,7 +376,7 @@ export default function CustomerDetailPage() {
           onInputChange={handleInputChange}
           onSubmit={handleSubmitEdit}
           isEditing
-          activeTab="customers"
+          activeTab={detailTabType}
         />
       )}
 

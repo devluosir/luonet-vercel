@@ -201,14 +201,14 @@ export async function getAllCustomers(): Promise<Customer[]> {
   return result.items;
 }
 
-export async function getCustomerById(id: string): Promise<Customer | null> {
+export async function getCustomerById(id: string, type: CustomerProfileType = 'customer'): Promise<Customer | null> {
   try {
     const data = await requestJson<{ customer?: D1Customer; contacts?: D1Contact[] }>(`/api/customers/${encodeURIComponent(id)}`);
     if (!data.customer) return null;
     return normalizeProfile({ ...data.customer, contacts: data.contacts ?? data.customer.contacts ?? [] });
   } catch (error) {
     console.warn('[customerService] 读取客户详情失败，使用离线缓存', error);
-    return readCache('customer').find((customer) => customer.id === id) ?? null;
+    return readCache(type).find((customer) => customer.id === id) ?? null;
   }
 }
 

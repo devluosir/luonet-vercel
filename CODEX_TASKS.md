@@ -11428,3 +11428,77 @@ grep -rn "contact1ShortName\|contact2Name\|contact2ShortName\|contact2Phone\|con
 
 - **TASK-62**：`InquiryFormModal.tsx` 把自由文本 `customerNo` 输入框 + `inquirer` datalist，换成"选客户（公司名/简称模糊搜索）→ 选联络人（默认选中主联络人）"两级选择器，选中后把 `customerId`/`contactId` 写入记录，同时保留自动生成的 `customerNo`/`inquirer` 展示字符串（兼容现有筛选/导出/PDF）；支持"客户不在库里 → 内联新建"。`Purchase` 的 `SupplierSection.tsx` 同步接入供应商库选择。
 - **TASK-63**：新增统计聚合接口 `GET /api/customers/:id/stats`（公司级 + 联络人级的询价数量/订单数量），客户详情页展示；再写一次性回填脚本，对历史 `Document` 记录尝试用 `customerNo`/`inquirer` 字符串匹配 `Customer.code`/`short_name` + `Contact.short_name` 回填 `customer_id`/`contact_id`，匹配不上的加"待关联客户"筛选提示。
+
+---
+
+## TASK-59~63 复核结论（Claude 已核对，全部通过）
+
+五个任务逐一核对：D1 迁移的 `CustomerEvent` 外键坑（TASK-59）、`handleReplaceCustomerContacts` 原子替换与 `ConsigneeSection.tsx`/`d1Migration.ts`/`d1Pull.ts` 的连带清理（TASK-60）、`Customer.name/email/phone` 历史上其实是"联系人1"信息这个混乱的彻底拆分（TASK-61）、`InquiryFormModal` 两级选择器对旧记录的兼容处理（TASK-62）、统计接口的"未分配联络人"桶与 692 条历史记录 0 回填的真实原因（TASK-63）——都逐项验证过，独立跑过 `tsc --noEmit`，细节见本文件更早的"复核结论"记录和对话历史。整体质量很高，可以继续下一阶段。
+
+---
+
+## TASK-64：客户管理页面布局与交互优化（客户/供应商/收货人三个 tab 一起理顺）
+
+**背景（截图走查发现的问题，已和 Roger 确认要改的方向）**
+
+1. 列表页每行"查看/编辑/删除"三个小图标，"查看"和"点名字进详情"功能重复，图标又小又挤，删除紧挨着编辑容易手滑。
+2. 列表页"联系方式"列几乎所有行都显示"—"——不是 bug，是因为联络人的 email/phone 字段历史上大部分没人填（详情页也能看到同一客户的主联络人显示"未填写邮箱/电话"），这一列现在信息密度很低，值得换成更常年有值的字段。
+3. 客户详情页头部的"未填写邮箱""未填写电话"两个图标，实际读的是**主联络人**的 email/phone（`CustomerInfoCard.tsx` 里 `primaryContact?.email`/`primaryContact?.phone`），但视觉上呈现得像是"公司"的联系方式，容易让人误解。更严重的是：**除了主联络人，其他联络人的电话/邮箱现在完全没有地方显示**——详情页"联系人："那一行只列了姓名和简称（`formatContact` 只拼 `${name}${shortName})`），一个客户如果有三个联络人、各自电话不同，现在只有主联络人的电话能看到，这是个真实的功能缺口，不只是好看不好看的问题。
+4. 地址在详情页头部是单行截断显示省略号，地址长一点就看不全。
+5. "业务统计"卡片现在几乎所有客户都是"询价0·订单0"——已在 TASK-63 确认是历史询价记录大多未关联客户 ID 导致的，不是这个客户真的没生意。裸着显示"0"容易被误解成"这个客户没成交过"。
+6. 供应商/收货人两个 tab 目前只有列表，没有详情页，交互和客户 tab 不统一。
+
+**这次改的方向**（已确认）：三个 tab 一起理顺；统计卡片 0 值时加提示；列表行改成整行点击进详情、编辑删除收进"更多"菜单。
+
+---
+
+### 改动 1：列表行交互统一——整行点击进详情，编辑/删除收进"更多"菜单
+
+涉及 `CustomerList.tsx`、`SupplierList.tsx`、`ConsigneeList.tsx`（三个文件结构接近，改动逻辑一致）：
+
+- 整行（除最右侧"更多"按钮外的区域）可点击，点击即调用 `onViewDetail`，不再需要单独的"查看"眼睛图标。
+- "联系方式"列改为"主联络人"列：显示 `getPrimaryContact(customer)?.name`（+ `shortName` 括注），如果联络人总数 > 1，额外显示一个 `+N` 的小灰色徽标（N = 总联络人数 - 1）。如果连主联络人姓名都没有（理论上不该发生，因为迁移保证了每个客户至少有一个联络人），兜底显示"—"。
+- 最右侧的"编辑""删除"两个图标合并成一个"···"更多按钮，点击展开一个悬浮小菜单（参考 `src/features/inquiry/app/InquiryPage.tsx` 里 `isAdminMenuOpen` 那套"点击遮罩关闭"的浮层交互写法，保持全仓库风格一致），菜单里两行：编辑、删除（删除保持现有的 `ConfirmDialog` 二次确认，不要因为进了菜单就省略确认步骤）。
+- `SupplierList`/`ConsigneeList` 目前没有 `onViewDetail` prop（因为供应商/收货人还没有详情页），这次要补上——同时看改动 3，给它们也接上详情页。
+
+### 改动 2：`CustomerPage.tsx` 打通供应商/收货人的详情页导航
+
+`handleViewDetail` 目前签名是 `(customer: Customer) => void`，硬编码只处理客户。改成通用的 `handleViewDetail(item: Customer | Supplier | Consignee, type: TabType)`，导航到 `/customer/detail?id=...&name=...&type=${type}`（`type` 参数新增，默认省略时等价于 `customer`，保持现有客户详情页链接不受影响）。`SupplierList`/`ConsigneeList` 调用时传各自的 `activeTab` 值。
+
+### 改动 3：详情页按 `type` 分支——供应商/收货人也有详情页，但不显示业务统计/时间轴/跟进记录
+
+`src/app/customer/detail/page.tsx` 和 `CustomerDetailPage.tsx` 读取 URL 里新增的 `type` 参数（`customer` | `supplier` | `consignee`，缺省 `customer`）：
+
+- `type === 'customer'`：保留现有的业务统计卡片 + 时间轴 + 跟进记录两个 tab，行为不变（见改动 5 的小调整）。
+- `type !== 'customer'`：不调用 `fetchCustomerStats`（这个 API 是按 `inquiry` 类型的 `Document.customer_id` 统计的，供应商/收货人永远是 0，调了也没意义，浪费一次请求）；不显示时间轴/跟进记录 tab（那套是给客户维护关系用的，供应商/收货人不适用）。改成显示一个简单的"使用情况"卡片，复用已有的 `checkSupplierUsage(name)` / `checkConsigneeUsage(name)`（在 `supplierService.ts`/`consigneeService.ts` 里已经存在，同步函数，从 `purchase_history`/`packing_history` 里数出现次数），文案类似"在 N 张采购单中被使用过" / "在 N 张箱单中被用作收货人"。
+- 头部的 `CustomerInfoCard`（见改动 4）三种类型共用，不用因为 type 分支重新写一份。
+
+### 改动 4：`CustomerInfoCard.tsx` 重做联络人展示，修复"其他联络人电话邮箱看不到"的缺口
+
+- 头部保留：名称、简称、地址。地址改成允许换行（去掉 `truncate`，用 `whitespace-pre-wrap` 或普通换行展示），不要单行截断出省略号。
+- 去掉现在顶部那一排"邮箱/电话/地址"三个图标格子里的邮箱和电话（那其实是主联络人的信息，摆在公司信息区容易让人以为是公司的联系方式）——地址格子可以保留或并入头部区块，邮箱/电话不再在这里出现。
+- 新增一个"联络人"列表区块（在头部下方），把 `customer.contacts` 全部渲染出来，不再只是一行逗号拼接的姓名。每个联络人一行/一张小卡片，包含：姓名、简称、主联络人徽标（沿用现有"主"标签样式）、电话（有值时用 `<a href="tel:...">` 可点击拨号）、邮箱（有值时用 `<a href="mailto:...">` 可点击）。没有电话/邮箱的字段直接不显示那个图标（不需要都写"未填写"，联络人多的时候会很啰嗦）。
+- 这个改动同时影响供应商/收货人详情页（因为共用组件），效果是一致的——供应商如果也维护了多个联络人，同样能在这里看到每个人的电话邮箱。
+
+### 改动 5：`CustomerDetailPage.tsx` 业务统计卡片 0 值提示
+
+当 `stats` 加载完成且 `stats.totals.inquiries === 0 && stats.totals.orders === 0` 时，在三个统计格子下方加一行小字提示（灰色，非警示色，避免显得像出错了）：
+
+> 暂无关联的询价/订单记录，可能是历史数据尚未关联客户，可到「询报价登记表」使用「待关联客户」筛选手动补充
+
+如果顺手能做，给这行文字加个链接跳到 `/inquiry`（能不能带上预设"待关联客户"筛选的 query 参数，取决于 `useInquiryFilter.ts` 要不要顺便支持从 URL 初始化 `linkStatus`——如果改动量小就顺手做，如果发现要动的地方比较多就先跳转到 `/inquiry` 普通页面，不强求这次做深链接）。
+
+---
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 客户/供应商/收货人三个 tab 的列表行为一致：点整行进详情，"···"菜单里编辑/删除都能正常工作，删除仍有二次确认
+- 供应商/收货人现在点进去能看到详情页（联络人列表 + 使用次数），不再是死链接或者无反应
+- 客户详情页：地址长文本能正常换行显示；联络人列表里每个人各自的电话/邮箱都能看到、可点击拨打/发邮件；主联络人有"主"标签
+- 一个"询价0·订单0"的客户详情页能看到"暂无关联数据"的提示文字，不是干巴巴几个 0

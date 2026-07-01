@@ -102,9 +102,15 @@ export default function CustomerPage() {
     if (success) void refreshData();
   };
 
-  const handleViewDetail = (customer: Customer) => {
-    const name = customer.name.split('\n')[0] || customer.name;
-    router.push(`/customer/detail?id=${encodeURIComponent(customer.id)}&name=${encodeURIComponent(name)}`);
+  const handleViewDetail = (item: Customer | Supplier | Consignee, type: TabType) => {
+    const name = item.name.split('\n')[0] || item.name;
+    const detailType = type === 'customers' ? 'customer' : type === 'suppliers' ? 'supplier' : 'consignee';
+    const params = new URLSearchParams({
+      id: item.id,
+      name,
+      type: detailType,
+    });
+    router.push(`/customer/detail?${params.toString()}`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -229,7 +235,7 @@ export default function CustomerPage() {
               searchQuery={search}
               onEdit={handleEdit}
               onDelete={handleDelete}
-              onViewDetail={handleViewDetail}
+              onViewDetail={(customer) => handleViewDetail(customer, 'customers')}
             />
           ) : activeTab === 'suppliers' ? (
             <SupplierList
@@ -238,6 +244,7 @@ export default function CustomerPage() {
               searchQuery={search}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onViewDetail={(supplier) => handleViewDetail(supplier, 'suppliers')}
             />
           ) : (
             <ConsigneeList
@@ -246,6 +253,7 @@ export default function CustomerPage() {
               searchQuery={search}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onViewDetail={(consignee) => handleViewDetail(consignee, 'consignees')}
             />
           )}
         </div>
