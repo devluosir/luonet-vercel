@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X, RotateCcw, Save, Shield, Power, Trash2 } from 'lucide-react';
-import { PERMISSION_MODULES } from '@/constants/permissionModules';
+import { PERMISSION_MODULES, type ModuleCategory } from '@/constants/permissionModules';
 import type { User as UserType, Permission } from '../types';
 import { usePermissions } from '../hooks/usePermissions';
 import { PermissionToggle } from './PermissionToggle';
@@ -41,6 +41,15 @@ function fmtDate(iso: string) {
     year: 'numeric', month: 'numeric', day: 'numeric',
   });
 }
+
+const CATEGORY_LABELS: Record<ModuleCategory, string> = {
+  document: '单据',
+  registration: '登记表',
+  management: '管理',
+  tool: '工具',
+};
+
+const CATEGORY_ORDER: ModuleCategory[] = ['document', 'registration', 'management', 'tool'];
 
 export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, currentUserId }: UserDetailModalProps) {
   const [saving, setSaving] = useState(false);
@@ -130,7 +139,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
         </div>
 
         {/* ── 可滚动内容区 ── */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
 
           {/* 错误提示 */}
           {error && (
@@ -146,7 +155,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
             </p>
             <div className="grid grid-cols-2 gap-2">
               {/* 管理员开关 */}
-              <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 dark:border-gray-700">
+              <div className="flex items-center justify-between rounded-lg border border-gray-200 px-2.5 py-2 dark:border-gray-700">
                 <div className="flex min-w-0 items-center gap-2">
                   <Shield className="h-3.5 w-3.5 shrink-0 text-blue-400" />
                   <div className="min-w-0">
@@ -158,7 +167,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
               </div>
 
               {/* 账户状态开关 */}
-              <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 dark:border-gray-700">
+              <div className="flex items-center justify-between rounded-lg border border-gray-200 px-2.5 py-2 dark:border-gray-700">
                 <div className="flex min-w-0 items-center gap-2">
                   <Power className="h-3.5 w-3.5 shrink-0 text-green-400" />
                   <div className="min-w-0">
@@ -193,35 +202,54 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                 管理员默认拥有全部模块权限，以下开关仅对普通用户生效
               </p>
             )}
-            <div className="grid grid-cols-1 gap-2">
-              {PERMISSION_MODULES.map((module) => {
-                const perm = permissions.find((p) => p.moduleId === module.moduleId);
-                const parentEnabled = perm?.canAccess ?? false;
+            <div className="space-y-3">
+              {CATEGORY_ORDER.map((category) => {
+                const categoryModules = PERMISSION_MODULES.filter((module) => module.category === category);
+                if (categoryModules.length === 0) return null;
+
                 return (
-                  <div key={module.moduleId} className="rounded-lg border border-gray-200 p-1.5 dark:border-gray-700">
-                    <PermissionToggle
-                      moduleId={module.moduleId}
-                      name={module.label}
-                      icon={module.icon}
-                      isEnabled={isAdmin || parentEnabled}
-                      onToggle={togglePermission}
-                      disabled={isBusy || isAdmin}
-                    />
-                    {module.advancedFeatures?.map((feature) => {
-                      const featurePerm = permissions.find((p) => p.moduleId === feature.moduleId);
-                      return (
-                        <div key={feature.moduleId} className="ml-4 mt-1">
-                          <PermissionToggle
-                            moduleId={feature.moduleId}
-                            name={feature.label}
-                            icon={feature.icon}
-                            isEnabled={isAdmin || (featurePerm?.canAccess ?? false)}
-                            onToggle={togglePermission}
-                            disabled={isBusy || isAdmin || !parentEnabled}
-                          />
-                        </div>
-                      );
-                    })}
+                  <div key={category}>
+                    <p className="mb-1 px-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                      {CATEGORY_LABELS[category]}
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {categoryModules.map((module) => {
+                        const perm = permissions.find((p) => p.moduleId === module.moduleId);
+                        const parentEnabled = perm?.canAccess ?? false;
+                        const hasAdvanced = !!module.advancedFeatures?.length;
+
+                        return (
+                          <div key={module.moduleId} className={hasAdvanced ? 'col-span-2' : undefined}>
+                            <PermissionToggle
+                              moduleId={module.moduleId}
+                              name={module.label}
+                              icon={module.icon}
+                              isEnabled={isAdmin || parentEnabled}
+                              onToggle={togglePermission}
+                              disabled={isBusy || isAdmin}
+                            />
+                            {hasAdvanced && (
+                              <div className="mt-1 space-y-1 border-l-2 border-gray-100 pl-3 dark:border-gray-800">
+                                {module.advancedFeatures!.map((feature) => {
+                                  const featurePerm = permissions.find((p) => p.moduleId === feature.moduleId);
+                                  return (
+                                    <PermissionToggle
+                                      key={feature.moduleId}
+                                      moduleId={feature.moduleId}
+                                      name={feature.label}
+                                      icon={feature.icon}
+                                      isEnabled={isAdmin || (featurePerm?.canAccess ?? false)}
+                                      onToggle={togglePermission}
+                                      disabled={isBusy || isAdmin || !parentEnabled}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}

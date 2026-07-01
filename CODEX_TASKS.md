@@ -10935,3 +10935,141 @@ npx playwright test  # 若时间允许，跑一遍 e2e，重点看权限相关�
 - [ ] `src/constants/permissions.ts` 已删除，`npx tsc --noEmit` 无报错
 
 **完成后请把改动的 commit hash 贴给 Claude，由 Claude 逐项核对代码是否符合以上设计，重点核对：① Worker PUT 是否真的改成合并写入且已 `wrangler deploy` ② 级联清空逻辑 ③ isAdmin 在权限编辑 UI 里是否正确禁用了子开关。**
+
+---
+
+## TASK-58：`UserDetailModal.tsx` 权限编辑弹窗布局压缩（TASK-57B 上线后变得太长）
+
+**背景**
+
+TASK-57B 把"模块权限"区块从 `grid-cols-2` 改成了 `grid-cols-1`（因为 `inquiry` 模块下面要挂 2 个高级功能子开关，1 列布局最省事），但代价是：9 个模块 + 2 个子权限，每行还是原来 `PermissionToggle` 的高度（`min-h-[55px] sm:min-h-[60px]`），单列堆起来导致弹窗内容区非常长，用户需要滚动很久才能看到"世界时钟"往后的模块（截图反馈：滚动到"世界时钟"就快到弹窗内容区外了，后面还有全球假日/RMB/账户信息等）。
+
+另外 `PermissionToggle.tsx` 用了 `sm:` 响应式断点把桌面浏览器下的内边距和高度都调大了（`p-2.5 sm:p-3`、`min-h-[55px] sm:min-h-[60px]`），但这个弹窗容器是固定 `max-w-sm`（~384px）窄列，`sm:`（≥640px）断点判断的是浏览器窗口宽度而不是弹窗宽度——桌面端打开时窗口通常 >640px，实际会命中更大的那一档，导致弹窗在桌面反而比手机上更占空间，这是不必要的。
+
+**优化方案**：① 恢复 2 列网格（简单模块占 1 格，带高级功能的模块整行 `col-span-2`，子开关缩进堆叠在下面）② 按 `category` 字段（`PERMISSION_MODULES` 里已有，无需新增数据）分组加小标题，便于扫读，也顺带把视觉上的"一整墙开关"切成 4 个小节 ③ `PermissionToggle` 去掉无意义的 `sm:` 响应式档位，统一用更紧凑的尺寸 ④ 去掉外层多余的边框包裹（之前每个模块外面套了一层 `rounded-lg border p-1.5`，和 `PermissionToggle` 自己的边框重复，视觉上是双层框）。
+
+---
+
+### 改动 1：`src/features/admin/components/PermissionToggle.tsx` —— 去掉 `sm:` 断点，整体收紧
+
+```tsx
+// 改动前（第 21-24 行）：
+<div className="flex items-center justify-between p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-300 dark:hover:border-gray-600 transition-colors min-h-[55px] sm:min-h-[60px]">
+  <div className="flex items-center gap-2 sm:gap-2 min-w-0 flex-1 pr-2">
+    <span className="text-sm sm:text-base flex-shrink-0">{icon}</span>
+    <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">{name}</span>
+  </div>
+
+// 改动后：
+<div className="flex items-center justify-between p-2 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-300 dark:hover:border-gray-600 transition-colors min-h-[44px]">
+  <div className="flex items-center gap-1.5 min-w-0 flex-1 pr-1">
+    <span className="text-sm flex-shrink-0">{icon}</span>
+    <span className="font-medium text-gray-900 dark:text-white text-xs truncate">{name}</span>
+  </div>
+```
+
+其余部分（toggle 按钮本身的 `h-5 w-9`）不用改，已经够小。
+
+---
+
+### 改动 2：`src/features/admin/components/UserDetailModal.tsx` —— 模块权限区块改为分类 2 列网格
+
+在文件顶部引入 `ModuleCategory` 类型（仅用于分类顺序数组的类型标注，可选，不引入也不影响功能）：
+
+```ts
+import { PERMISSION_MODULES, type ModuleCategory } from '@/constants/permissionModules';
+```
+
+在组件外部（或文件顶部，`fmtDate` 函数附近）加两个常量：
+
+```ts
+const CATEGORY_LABELS: Record<ModuleCategory, string> = {
+  document: '单据',
+  registration: '登记表',
+  management: '管理',
+  tool: '工具',
+};
+
+const CATEGORY_ORDER: ModuleCategory[] = ['document', 'registration', 'management', 'tool'];
+```
+
+把"模块权限"区块（现在的第 196-228 行，`<div className="grid grid-cols-1 gap-2">...</div>` 那一整段）替换成：
+
+```tsx
+<div className="space-y-3">
+  {CATEGORY_ORDER.map((category) => {
+    const categoryModules = PERMISSION_MODULES.filter((m) => m.category === category);
+    if (categoryModules.length === 0) return null;
+
+    return (
+      <div key={category}>
+        <p className="mb-1 px-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+          {CATEGORY_LABELS[category]}
+        </p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {categoryModules.map((module) => {
+            const perm = permissions.find((p) => p.moduleId === module.moduleId);
+            const parentEnabled = perm?.canAccess ?? false;
+            const hasAdvanced = !!module.advancedFeatures?.length;
+
+            return (
+              <div key={module.moduleId} className={hasAdvanced ? 'col-span-2' : undefined}>
+                <PermissionToggle
+                  moduleId={module.moduleId}
+                  name={module.label}
+                  icon={module.icon}
+                  isEnabled={isAdmin || parentEnabled}
+                  onToggle={togglePermission}
+                  disabled={isBusy || isAdmin}
+                />
+                {hasAdvanced && (
+                  <div className="mt-1 space-y-1 border-l-2 border-gray-100 pl-3 dark:border-gray-800">
+                    {module.advancedFeatures!.map((feature) => {
+                      const featurePerm = permissions.find((p) => p.moduleId === feature.moduleId);
+                      return (
+                        <PermissionToggle
+                          key={feature.moduleId}
+                          moduleId={feature.moduleId}
+                          name={feature.label}
+                          icon={feature.icon}
+                          isEnabled={isAdmin || (featurePerm?.canAccess ?? false)}
+                          onToggle={togglePermission}
+                          disabled={isBusy || isAdmin || !parentEnabled}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  })}
+</div>
+```
+
+注意：`inquiry` 模块的 `label` 是"询报价登记表 / 订单状态表"，比较长，所以它必须保留 `col-span-2` 整行显示，不能塞进单列格子里（会被截断）。其他 8 个不带 `advancedFeatures` 的模块保持单列格（1/2 宽）。
+
+---
+
+### 改动 3（可选，如果改完①②后还是偏长再做）：整体内容区间距再收紧一档
+
+`UserDetailModal.tsx` 第 133 行 `<div className="flex-1 overflow-y-auto p-4 space-y-5">` 里的 `space-y-5` 可以改成 `space-y-4`；"账户设置"卡片（第 149、161 行）的 `px-3 py-2.5` 可以改成 `px-2.5 py-2`。这一步优先级低，先做完①②看效果，肉眼观察还是长的话再动。
+
+---
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 打开任意用户的权限编辑弹窗，"模块权限"区块能看到"单据 / 登记表 / 管理 / 工具"四个小分类标题
+- 除"询报价登记表 / 订单状态表"外，其余模块两两一行显示
+- `inquiry.batchEdit`、`order.financials` 两个子开关仍然缩进显示在"询报价登记表 / 订单状态表"下方，且关闭父模块时仍然置灰（这一行为不能因为布局改动而回归）
+- 桌面浏览器和手机宽度下打开弹窗，每行开关的高度看起来一致（验证 `sm:` 断点已去除，不再出现桌面比手机更高的情况）
+- 整体弹窗内容大概率不需要滚动就能看完（视屏幕高度，至少比改动前明显短）

@@ -18,10 +18,10 @@ export const PermissionToggle = memo(function PermissionToggle({
   disabled = false
 }: PermissionToggleProps) {
   return (
-    <div className="flex items-center justify-between p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-300 dark:hover:border-gray-600 transition-colors min-h-[55px] sm:min-h-[60px]">
-      <div className="flex items-center gap-2 sm:gap-2 min-w-0 flex-1 pr-2">
-        <span className="text-sm sm:text-base flex-shrink-0">{icon}</span>
-        <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">{name}</span>
+    <div className="flex min-h-[44px] items-center justify-between rounded-lg border border-gray-200 p-2 transition-colors hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 pr-1">
+        <span className="flex-shrink-0 text-sm">{icon}</span>
+        <span className="truncate text-xs font-medium text-gray-900 dark:text-white">{name}</span>
       </div>
       <button
         type="button"
