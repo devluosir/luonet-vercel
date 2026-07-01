@@ -12113,3 +12113,323 @@ function formatAddressForDisplay(address: string) {
 （用 `replace` 的回调函数拿到 `offset`，只有不在字符串开头的匹配才补换行，避免地址第一段恰好就是这几个词之一时开头多一个空行。标签清单和之前保持一致即可，`GSTIN\s*No` 要放在 `GSTIN` 前面，保证优先匹配到更长的"GSTIN No"整体。）
 
 已经用 INDIAN CHAIN PRIVATE LIMITED 那条真实地址在 Node 里跑过这个新正则，能正确拆成六行（地址本身 / Phone / Email / IEC / PAN NO / GSTIN No），改完请照这个思路调整、跑一下 `tsc --noEmit`，不需要额外验证脚本。
+
+---
+
+## TASK-78：客户详情页（customer 类型）消除联络人重复列表，合并卡片，提升信息密度
+
+**优先级**：中
+**风险**：低，纯前端渲染重构，不涉及数据层
+
+### 背景 / 根因
+
+TASK-76/77 只是把现有卡片的内外边距、字号收紧了一轮（padding/gap/text-size），用户这次要的是"更紧凑、合理、美观、提高信息密度"，属于结构性问题，不是继续缩 padding 能解决的。
+
+具体问题：`CustomerDetailPage.tsx` 里，customer 类型详情页当前有两处**联络人列表是重复的**：
+
+1. `CustomerInfoCard.tsx` 底部"联络人"区块：每个联络人显示 姓名/简称/主联系人标记 + 电话/邮箱。
+2. `CustomerDetailPage.tsx` 里"业务统计"卡片下方的联络人拆分列表：每个联络人显示 姓名/简称/主联系人标记 + 询价数/订单数（可点击跳转）。
+
+同一批联络人被渲染了两遍，分布在两张独立的卡片里，读者要跨卡片对照才能拿到一个联络人的完整信息（电话/邮箱在上面，询价/订单数在下面），既浪费竖向空间，也不利于阅读效率。
+
+修复方案：把"业务统计"卡片的**统计数字部分**（公司询价/公司订单/未分配联络人 三个数字块 + 空数据提示）并入 `CustomerInfoCard.tsx`，联络人只保留一份列表，在这一份列表里同时显示电话/邮箱和询价/订单数（询价/订单数做成一个可点击的小徽章）。这样 customer 类型详情页从 3 张卡片（信息卡 + 业务统计卡 + 活动列表）减少到 2 张卡片（信息卡[含统计+联络人] + 活动列表），且不再有重复数据。
+
+supplier/consignee 类型详情页（`isCustomerDetail === false`）保持现状不变：`CustomerInfoCard` 仍然只显示普通联络人列表（无统计、无跳转），下面的"使用情况"卡片不变。
+
+### 涉及文件
+
+- `src/features/customer/components/CustomerInfoCard.tsx`（改动较大，见下方完整新文件内容）
+- `src/features/customer/app/CustomerDetailPage.tsx`（删除业务统计卡片 JSX，改为给 `CustomerInfoCard` 传新 props；`buildInquiryFilterHref` 的 `contact` 参数类型放宽；移除因此变成未使用的 `Link` import）
+
+### 改动一：`CustomerInfoCard.tsx` 替换为以下完整内容
+
+```tsx
+'use client';
+
+import Link from 'next/link';
+import { Edit, Mail, MapPin, Phone, UserRound } from 'lucide-react';
+import type { Customer } from '../types';
+import type { CustomerStats } from '../services/customerService';
+
+interface ContactHrefInput {
+  contactId: string;
+  name: string;
+  shortName?: string | null;
+}
+
+interface CustomerInfoCardProps {
+  customer: Customer;
+  onEdit: () => void;
+  isCustomerDetail?: boolean;
+  stats?: CustomerStats | null;
+  isLoadingStats?: boolean;
+  buildInquiryHref?: () => string;
+  buildOrderHref?: () => string;
+  buildContactHref?: (contact: ContactHrefInput) => string;
+}
+
+function getDisplayName(customer: Customer) {
+  return customer.name.split('\n')[0] || customer.name;
+}
+
+function getInitial(customer: Customer) {
+  return getDisplayName(customer).charAt(0).toUpperCase() || '客';
+}
+
+function formatAddressForDisplay(address: string) {
+  const trimmed = address.trim();
+  if (!trimmed) return '未填写地址';
+  if (trimmed.includes('\n')) return trimmed;
+
+  return trimmed.replace(
+    /(Phone|Tel|Telephone|Mobile|Mob|E-?mail|IEC|PAN\s*NO|GSTIN\s*No|GSTIN|GST|TIN)(\s*:)/gi,
+    (match, label: string, colon: string, offset: number) => `${offset > 0 ? '\n' : ''}${label}${colon}`
+  );
+}
+
+export function CustomerInfoCard({
+  customer,
+  onEdit,
+  isCustomerDetail = false,
+  stats,
+  isLoadingStats,
+  buildInquiryHref,
+  buildOrderHref,
+  buildContactHref,
+}: CustomerInfoCardProps) {
+  const contacts = customer.contacts;
+  const showEmptyStatsHint =
+    isCustomerDetail && !isLoadingStats && Boolean(stats) && stats!.totals.inquiries === 0 && stats!.totals.orders === 0;
+
+  return (
+    <div className="mb-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="flex min-w-0 gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600 text-lg font-bold text-white">
+            {getInitial(customer)}
+          </div>
+          <div className="min-w-0">
+            <h1 className="whitespace-pre-wrap break-words text-lg font-semibold leading-snug text-gray-900 dark:text-white">
+              {customer.name}
+            </h1>
+            {customer.shortName && (
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                简称：{customer.shortName}
+              </p>
+            )}
+            <div className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+              <span className="whitespace-pre-wrap break-words">
+                {formatAddressForDisplay(customer.address)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onEdit}
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-700"
+        >
+          <Edit className="h-4 w-4" />
+          编辑
+        </button>
+      </div>
+
+      {isCustomerDetail && (
+        <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">业务统计</h2>
+            {isLoadingStats && <span className="text-xs text-gray-400 dark:text-gray-500">加载中...</span>}
+          </div>
+          <div className="grid grid-cols-3 gap-2.5">
+            <Link
+              href={buildInquiryHref ? buildInquiryHref() : '#'}
+              className="rounded-lg bg-blue-50 p-2.5 transition hover:ring-2 hover:ring-blue-200 dark:bg-blue-950/30 dark:hover:ring-blue-800"
+            >
+              <p className="text-xs text-blue-500 dark:text-blue-300">公司询价</p>
+              <p className="mt-0.5 text-xl font-semibold text-blue-700 dark:text-blue-200">
+                {stats?.totals.inquiries ?? 0}
+              </p>
+            </Link>
+            <Link
+              href={buildOrderHref ? buildOrderHref() : '#'}
+              className="rounded-lg bg-green-50 p-2.5 transition hover:ring-2 hover:ring-green-200 dark:bg-green-950/30 dark:hover:ring-green-800"
+            >
+              <p className="text-xs text-green-500 dark:text-green-300">公司订单</p>
+              <p className="mt-0.5 text-xl font-semibold text-green-700 dark:text-green-200">
+                {stats?.totals.orders ?? 0}
+              </p>
+            </Link>
+            <div className="rounded-lg bg-gray-50 p-2.5 dark:bg-gray-900/60">
+              <p className="text-xs text-gray-500 dark:text-gray-400">未分配联络人</p>
+              <p className="mt-0.5 text-xl font-semibold text-gray-800 dark:text-gray-100">
+                {stats?.unassigned.inquiries ?? 0}
+              </p>
+            </div>
+          </div>
+          {showEmptyStatsHint && (
+            <p className="mt-2.5 text-xs text-gray-500 dark:text-gray-400">
+              暂无关联的询价/订单记录，可能是历史数据尚未关联客户，可到
+              <Link href="/inquiry" className="mx-1 text-blue-600 hover:underline dark:text-blue-400">
+                询报价登记表
+              </Link>
+              使用「待关联客户」筛选手动补充
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700">
+        <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+          <UserRound className="h-4 w-4 shrink-0 text-gray-400" />
+          联络人
+        </div>
+        {contacts.length > 0 ? (
+          <div className="grid gap-2 md:grid-cols-2">
+            {contacts.map((contact) => {
+              const contactStat = stats?.contacts.find((c) => c.contactId === contact.id);
+              return (
+                <div
+                  key={contact.id}
+                  className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-900/50"
+                >
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm font-medium text-gray-900 dark:text-white">{contact.name}</span>
+                      {contact.shortName && (
+                        <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500">({contact.shortName})</span>
+                      )}
+                      {contact.isPrimary && (
+                        <span className="shrink-0 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+                          主
+                        </span>
+                      )}
+                    </div>
+                    {isCustomerDetail && buildContactHref && (
+                      <Link
+                        href={buildContactHref({ contactId: contact.id, name: contact.name, shortName: contact.shortName })}
+                        className="shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-medium text-gray-500 transition hover:bg-blue-100 hover:text-blue-700 dark:text-gray-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
+                      >
+                        询{contactStat?.inquiries ?? 0}·单{contactStat?.orders ?? 0}
+                      </Link>
+                    )}
+                  </div>
+                  {(contact.phone || contact.email) && (
+                    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                      {contact.phone && (
+                        <a
+                          href={`tel:${contact.phone}`}
+                          className="inline-flex min-w-0 items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400"
+                        >
+                          <Phone className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{contact.phone}</span>
+                        </a>
+                      )}
+                      {contact.email && (
+                        <a
+                          href={`mailto:${contact.email}`}
+                          className="inline-flex min-w-0 items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400"
+                        >
+                          <Mail className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{contact.email}</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <span className="text-sm text-gray-400">未填写联系人</span>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+要点说明：
+- `isCustomerDetail` 为 `false`（supplier/consignee）时，不渲染"业务统计"区块，联络人行也不渲染询价/订单徽章 —— 渲染结果和改动前完全一样。
+- 询价/订单徽章用独立的 `<Link>`（不是把整行包成 `<Link>`），避免和同一行内的 `tel:`/`mailto:` `<a>` 标签发生 HTML 嵌套 `<a>` 的问题。
+- `contactStat` 找不到匹配项时（比如 stats 还没加载完，或者这个联络人还没有任何询价记录）用 `?? 0` 兜底显示"询0·单0"，不会报错或显示 `undefined`。
+
+### 改动二：`CustomerDetailPage.tsx`
+
+**2a. 放宽 `buildInquiryFilterHref` 的 `contact` 参数类型**（原来强绑定 `CustomerStats['contacts'][number]`，现在改成只要求 `CustomerInfoCard` 能提供的最小字段集）：
+
+```ts
+function buildInquiryFilterHref(
+  customer: Customer,
+  contact?: { contactId: string; name: string; shortName?: string | null },
+  quoteStatus?: 'has_order'
+) {
+  const params = new URLSearchParams({
+    customerId: customer.id,
+    customerName: customer.shortName || getCustomerTitle(customer),
+  });
+
+  if (contact) {
+    params.set('contactId', contact.contactId);
+    params.set('contactName', contact.shortName || contact.name);
+  }
+  if (quoteStatus) {
+    params.set('quoteStatus', quoteStatus);
+  }
+
+  return `/inquiry?${params.toString()}`;
+}
+```
+（函数体不变，只改参数类型声明。）
+
+**2b. 替换渲染部分**：把原来这一段（`<CustomerInfoCard ... />` 紧跟着的 `isCustomerDetail ? <div>...业务统计...</div> : <div>...使用情况...</div>`，再到 `{isCustomerDetail && (<CustomerActivityFeed .../>)}`）整体替换成：
+
+```tsx
+<CustomerInfoCard
+  customer={customer}
+  onEdit={handleOpenEdit}
+  isCustomerDetail={isCustomerDetail}
+  stats={stats}
+  isLoadingStats={isLoadingStats}
+  buildInquiryHref={() => buildInquiryFilterHref(customer)}
+  buildOrderHref={() => buildInquiryFilterHref(customer, undefined, 'has_order')}
+  buildContactHref={(contact) => buildInquiryFilterHref(customer, contact)}
+/>
+
+{!isCustomerDetail && (
+  <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3.5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="flex items-center gap-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-900 dark:text-gray-300">
+        <FileText className="h-4 w-4" />
+      </div>
+      <div>
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">使用情况</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{usageText}</p>
+      </div>
+    </div>
+  </div>
+)}
+
+{isCustomerDetail && (
+  <CustomerActivityFeed customerId={customer.id} customerName={displayName} />
+)}
+```
+
+**2c. 移除 import**：这次改动之后 `Link`（`import Link from 'next/link';`）在 `CustomerDetailPage.tsx` 里不再被用到（原来的用法全部搬进了 `CustomerInfoCard.tsx`），需要删掉这一行 import，否则 eslint 会报 unused-import。`CustomerStats` 类型 import 继续保留（`useState<CustomerStats | null>` 还在用）。
+
+### 验证
+
+1. `npx tsc --noEmit` 通过。
+2. `npx eslint src/features/customer/components/CustomerInfoCard.tsx src/features/customer/app/CustomerDetailPage.tsx` 通过，无新增 warning。
+3. `npm run build` 通过（如果沙盒环境限制跑不了完整 build，至少跑通 tsc + eslint 并说明）。
+4. 手动核对（看代码即可，不需要截图）：
+   - customer 类型详情页：只有一份联络人列表，每个联络人同时显示电话/邮箱和"询X·单Y"徽章；点击徽章跳转到询报价登记表并正确带上 `customerId`/`contactId`/`contactName`；"公司询价"/"公司订单"两个统计数字块可点击，"公司订单"带 `quoteStatus=has_order`。
+   - supplier/consignee 类型详情页：`CustomerInfoCard` 渲染结果和改动前一致（无统计区块、联络人行无询价/订单徽章），下方"使用情况"卡片不变。
+   - stats 还在加载（`isLoadingStats === true`）时不报错，徽章显示"询0·单0"直到数据回来后刷新为真实值。
+
+### 验收标准
+
+- customer 类型详情页从"信息卡 + 业务统计卡 + 活动列表"3 张卡片变成"信息卡（含统计+联络人）+ 活动列表"2 张卡片，联络人信息不再重复出现两处。
+- supplier/consignee 类型详情页行为和视觉效果不变（回归测试点）。
+- 所有跳转链接（公司询价/公司订单/联络人徽章）的筛选参数行为与 TASK-76/77 完全一致，不允许有行为变化。

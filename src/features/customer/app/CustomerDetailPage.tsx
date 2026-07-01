@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { FileText } from 'lucide-react';
@@ -61,7 +60,7 @@ function getUsageText(type: DetailType, customer: Customer) {
 
 function buildInquiryFilterHref(
   customer: Customer,
-  contact?: CustomerStats['contacts'][number],
+  contact?: { contactId: string; name: string; shortName?: string | null },
   quoteStatus?: 'has_order'
 ) {
   const params = new URLSearchParams({
@@ -259,78 +258,18 @@ export default function CustomerDetailPage() {
           </div>
         ) : customer ? (
           <>
-            <CustomerInfoCard customer={customer} onEdit={handleOpenEdit} />
+            <CustomerInfoCard
+              customer={customer}
+              onEdit={handleOpenEdit}
+              isCustomerDetail={isCustomerDetail}
+              stats={stats}
+              isLoadingStats={isLoadingStats}
+              buildInquiryHref={() => buildInquiryFilterHref(customer)}
+              buildOrderHref={() => buildInquiryFilterHref(customer, undefined, 'has_order')}
+              buildContactHref={(contact) => buildInquiryFilterHref(customer, contact)}
+            />
 
-            {isCustomerDetail ? (
-            <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3.5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-white">业务统计</h2>
-                {isLoadingStats && (
-                  <span className="text-xs text-gray-400 dark:text-gray-500">加载中...</span>
-                )}
-              </div>
-              <div className="grid gap-2.5 md:grid-cols-3">
-                <Link
-                  href={buildInquiryFilterHref(customer)}
-                  className="rounded-lg bg-blue-50 p-2.5 transition hover:ring-2 hover:ring-blue-200 dark:bg-blue-950/30 dark:hover:ring-blue-800"
-                >
-                  <p className="text-xs text-blue-500 dark:text-blue-300">公司询价</p>
-                  <p className="mt-0.5 text-xl font-semibold text-blue-700 dark:text-blue-200">
-                    {stats?.totals.inquiries ?? 0}
-                  </p>
-                </Link>
-                <Link
-                  href={buildInquiryFilterHref(customer, undefined, 'has_order')}
-                  className="rounded-lg bg-green-50 p-2.5 transition hover:ring-2 hover:ring-green-200 dark:bg-green-950/30 dark:hover:ring-green-800"
-                >
-                  <p className="text-xs text-green-500 dark:text-green-300">公司订单</p>
-                  <p className="mt-0.5 text-xl font-semibold text-green-700 dark:text-green-200">
-                    {stats?.totals.orders ?? 0}
-                  </p>
-                </Link>
-                <div className="rounded-lg bg-gray-50 p-2.5 dark:bg-gray-900/60">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">未分配联络人</p>
-                  <p className="mt-0.5 text-xl font-semibold text-gray-800 dark:text-gray-100">
-                    {stats?.unassigned.inquiries ?? 0}
-                  </p>
-                </div>
-              </div>
-              {!isLoadingStats && stats && stats.totals.inquiries === 0 && stats.totals.orders === 0 && (
-                <p className="mt-2.5 text-xs text-gray-500 dark:text-gray-400">
-                  暂无关联的询价/订单记录，可能是历史数据尚未关联客户，可到
-                  <Link href="/inquiry" className="mx-1 text-blue-600 hover:underline dark:text-blue-400">
-                    询报价登记表
-                  </Link>
-                  使用「待关联客户」筛选手动补充
-                </p>
-              )}
-              {stats?.contacts.length ? (
-                <div className="mt-3 overflow-hidden rounded-lg border border-gray-100 dark:border-gray-700">
-                  {stats.contacts.map((contact) => (
-                    <Link
-                      key={contact.contactId}
-                      href={buildInquiryFilterHref(customer, contact)}
-                      className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-gray-100 px-3 py-1.5 text-sm transition last:border-b-0 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900/50"
-                    >
-                      <div className="min-w-0">
-                        <span className="font-medium text-gray-800 dark:text-gray-100">{contact.name}</span>
-                        {contact.shortName && (
-                          <span className="ml-1 text-xs text-gray-400">({contact.shortName})</span>
-                        )}
-                        {contact.isPrimary && (
-                          <span className="ml-2 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
-                            主
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">询价 {contact.inquiries}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">订单 {contact.orders}</span>
-                    </Link>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            ) : (
+            {!isCustomerDetail && (
               <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3.5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-900 dark:text-gray-300">
