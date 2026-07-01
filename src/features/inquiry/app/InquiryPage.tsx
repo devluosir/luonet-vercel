@@ -261,9 +261,9 @@ export function InquiryPage() {
     setSelectedIds(new Set());
   }, [selectedIds, removeRecord]);
 
-  const handleBatchLinkCustomer = useCallback((customerId: string, contactId: string) => {
+  const handleBatchLinkCustomer = useCallback((customerId: string, contactId: string, inquirer: string) => {
     const ids = Array.from(selectedIds);
-    ids.forEach((id) => updateRecord(id, { customerId, contactId }));
+    ids.forEach((id) => updateRecord(id, { customerId, contactId, inquirer }));
     setIsBatchLinkOpen(false);
     setIsAdminMenuOpen(false);
     setSelectedIds(new Set());

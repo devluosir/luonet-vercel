@@ -160,12 +160,16 @@ function readCache<T extends Customer>(type: CustomerProfileType): T[] {
   return getLocalStorageJSON<T[]>(CACHE_KEYS[type], []);
 }
 
+export function getCachedCustomers(type: CustomerProfileType = 'customer'): Customer[] {
+  return readCache<Customer>(type);
+}
+
 function writeCache<T extends Customer>(type: CustomerProfileType, items: T[]): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(CACHE_KEYS[type], JSON.stringify(items));
 }
 
-async function parseResponse(resp: Response): Promise<any> {
+async function parseResponse(resp: Response): Promise<unknown> {
   const text = await resp.text();
   if (!text) return {};
   try {
@@ -179,7 +183,10 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const resp = await fetch(url, init);
   const data = await parseResponse(resp);
   if (!resp.ok) {
-    throw new Error(data?.error || data?.details || `请求失败：HTTP ${resp.status}`);
+    const errorData = data && typeof data === 'object'
+      ? data as { error?: string; details?: string }
+      : {};
+    throw new Error(errorData.error || errorData.details || `请求失败：HTTP ${resp.status}`);
   }
   return data as T;
 }
@@ -293,11 +300,11 @@ export function checkCustomerUsage(customerName: string): number {
     const allHistory = [...quotationHistory, ...packingHistory, ...invoiceHistory];
     const normalizedName = customerName.split('\n')[0]?.trim();
 
-    return allHistory.filter((doc: any) => {
+    return allHistory.filter((doc) => {
       if (!doc) return false;
       const customerNameInDoc = doc.type === 'packing'
-        ? doc.consigneeName || doc.customerName || ''
-        : doc.customerName || '';
+        ? String(doc.consigneeName || doc.customerName || '')
+        : String(doc.customerName || '');
       return customerNameInDoc.trim() === normalizedName;
     }).length;
   } catch (error) {
@@ -332,6 +339,7 @@ export async function getCustomersForDropdown(type: CustomerProfileType = 'custo
 
 export const customerService = {
   fetchAllCustomers,
+  getCachedCustomers,
   getAllCustomers,
   getCustomerById,
   saveCustomerProfile,

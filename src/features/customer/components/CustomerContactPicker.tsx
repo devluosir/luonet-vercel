@@ -20,6 +20,7 @@ interface CustomerContactPickerProps {
   onClear?: () => void;
   placeholder?: string;
   autoFocus?: boolean;
+  fallbackLabel?: string;
 }
 
 function normalizeText(value: string | undefined) {
@@ -68,6 +69,7 @@ export function CustomerContactPicker({
   onClear,
   placeholder = '搜索客户简称/联络人简称',
   autoFocus = false,
+  fallbackLabel,
 }: CustomerContactPickerProps) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -84,6 +86,11 @@ export function CustomerContactPicker({
 
   useEffect(() => {
     if (!selectedOption) {
+      if (value && fallbackLabel) {
+        committedLabelRef.current = fallbackLabel;
+        setQuery(fallbackLabel);
+        return;
+      }
       if (!value && committedLabelRef.current) {
         const previousLabel = committedLabelRef.current;
         committedLabelRef.current = '';
@@ -93,7 +100,7 @@ export function CustomerContactPicker({
     }
     committedLabelRef.current = selectedOption.label;
     setQuery(selectedOption.label);
-  }, [selectedOption, value]);
+  }, [fallbackLabel, selectedOption, value]);
 
   const effectiveQuery = isFocused && query === committedLabelRef.current ? '' : query;
   const filteredOptions = useMemo(

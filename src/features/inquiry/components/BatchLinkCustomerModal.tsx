@@ -13,7 +13,7 @@ interface BatchLinkCustomerModalProps {
   isOpen: boolean;
   count: number;
   onClose: () => void;
-  onConfirm: (customerId: string, contactId: string) => void;
+  onConfirm: (customerId: string, contactId: string, inquirer: string) => void;
 }
 
 export function BatchLinkCustomerModal({
@@ -107,7 +107,7 @@ export function BatchLinkCustomerModal({
             disabled={!selected || count === 0}
             onClick={() => {
               if (!selected) return;
-              onConfirm(selected.customerId, selected.contactId);
+              onConfirm(selected.customerId, selected.contactId, selected.label);
             }}
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700"
           >

@@ -54,6 +54,18 @@ function buildInquirer(customer: Customer, contact?: Contact): string {
   return buildCustomerContactLabel(customer, contact);
 }
 
+function resolveAssociatedContact(
+  customers: Customer[],
+  customerId?: string,
+  contactId?: string
+): { customer: Customer; contact: Contact } | null {
+  if (!customerId) return null;
+  const customer = customers.find((item) => item.id === customerId);
+  if (!customer) return null;
+  const contact = customer.contacts.find((item) => item.id === contactId) ?? getPrimaryContact(customer);
+  return contact ? { customer, contact } : null;
+}
+
 interface InquiryFormModalProps {
   isOpen: boolean;
   mode: 'create' | 'edit';
@@ -141,19 +153,26 @@ export function InquiryFormModal({
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
+
+    const applyAssociatedContact = (items: Customer[]) => {
+      const associated = resolveAssociatedContact(items, record?.customerId, record?.contactId);
+      if (!associated) return;
+      setCustomerId(associated.customer.id);
+      setContactId(associated.contact.id);
+      setInquirer(buildInquirer(associated.customer, associated.contact));
+    };
+
+    const cachedCustomers = customerService.getCachedCustomers('customer');
+    if (cachedCustomers.length > 0) {
+      setCustomers(cachedCustomers);
+      applyAssociatedContact(cachedCustomers);
+    }
+
     void customerService.fetchAllCustomers('customer')
       .then(({ items }) => {
         if (cancelled) return;
         setCustomers(items);
-        const currentCustomer = items.find((customer) => customer.id === (record?.customerId ?? ''));
-        if (currentCustomer) {
-          const contact = currentCustomer.contacts.find((item) => item.id === record?.contactId) ??
-            getPrimaryContact(currentCustomer);
-          if (contact) {
-            setContactId(contact.id);
-            setInquirer(record?.inquirer || buildInquirer(currentCustomer, contact));
-          }
-        }
+        applyAssociatedContact(items);
       })
       .catch((error) => {
         console.warn('加载客户库失败:', error);
@@ -393,6 +412,7 @@ export function InquiryFormModal({
                   onCreateNew={openInlineCreate}
                   onClear={clearCustomerContactSelection}
                   placeholder="搜索客户简称/联络人简称"
+                  fallbackLabel={customerId && contactId ? inquirer : undefined}
                 />
               </div>
 
