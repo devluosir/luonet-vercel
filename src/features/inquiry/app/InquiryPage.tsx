@@ -267,7 +267,6 @@ export function InquiryPage() {
     setIsBatchLinkOpen(false);
     setIsAdminMenuOpen(false);
     setSelectedIds(new Set());
-    alert(`已关联 ${ids.length} 条记录`);
   }, [selectedIds, updateRecord]);
 
   const handleClearAssociationFilter = useCallback(() => {

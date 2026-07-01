@@ -310,8 +310,8 @@ export function InquiryFormModal({
           {/* ── 身份信息条 ── */}
           <div className="mb-4 rounded-xl border border-gray-200/70 bg-gray-50/90 p-2.5 shadow-sm dark:border-gray-700 dark:bg-gray-800/80">
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(14rem,0.85fr)]">
-              <div className="flex min-w-0 items-center gap-2 rounded-lg bg-white px-2.5 py-2 ring-1 ring-gray-200/70 dark:bg-gray-900/70 dark:ring-gray-700">
-                <div className="flex shrink-0 items-center gap-1 rounded-md bg-gray-100 px-1.5 py-1 dark:bg-gray-800">
+              <div className="flex min-w-0 items-center gap-2 rounded-lg px-1 py-1.5">
+                <div className="flex shrink-0 items-center gap-1 rounded-md px-1 py-0.5">
                   {mode === 'create' ? (
                     <>
                       <button
@@ -333,7 +333,7 @@ export function InquiryFormModal({
                           if (e.key === 'ArrowDown') { e.preventDefault(); adjustDate(-1); }
                           if (e.key === 'Enter') { e.preventDefault(); commitDateText(); }
                         }}
-                        className="w-10 bg-transparent text-center text-base font-semibold leading-6 text-gray-800 outline-none dark:text-gray-100"
+                        className="w-9 bg-transparent text-center text-sm font-semibold leading-6 text-gray-700 outline-none dark:text-gray-200"
                         placeholder="6.21"
                       />
                       <button
@@ -347,7 +347,7 @@ export function InquiryFormModal({
                       </button>
                     </>
                   ) : (
-                    <span className="w-14 text-center text-base font-semibold leading-6 text-gray-800 dark:text-gray-100">
+                    <span className="w-12 text-center text-sm font-semibold leading-6 text-gray-700 dark:text-gray-200">
                       {dateDisplayText}
                     </span>
                   )}
@@ -356,7 +356,11 @@ export function InquiryFormModal({
                 <input
                   value={inquiryNo}
                   onChange={(e) => { setInquiryNo(e.target.value); setIsInquiryNoManual(true); }}
-                  className="min-w-0 flex-1 bg-transparent font-mono text-lg font-semibold leading-7 text-gray-900 outline-none placeholder:text-gray-300 dark:text-gray-50 dark:placeholder:text-gray-600"
+                  className={`min-w-0 flex-1 bg-transparent font-mono text-base font-semibold leading-7 outline-none placeholder:text-gray-300 dark:placeholder:text-gray-600 ${
+                    mode === 'create'
+                      ? 'text-pink-500 dark:text-pink-300'
+                      : 'text-gray-900 dark:text-gray-50'
+                  }`}
                   placeholder="C260621F"
                   required
                 />
