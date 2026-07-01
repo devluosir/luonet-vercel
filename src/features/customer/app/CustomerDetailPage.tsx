@@ -4,15 +4,14 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
-import { Calendar, Clock, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAppUser } from '@/hooks/useAppUser';
 import {
+  CustomerActivityFeed,
   CustomerInfoCard,
   CustomerModal,
-  CustomerTimeline,
-  FollowUpManager,
 } from '../components';
 import { useCustomerActions, useCustomerForm } from '../hooks';
 import { customerService } from '../services/customerService';
@@ -21,7 +20,6 @@ import { supplierService } from '../services/supplierService';
 import type { CustomerProfileType, CustomerStats } from '../services/customerService';
 import type { Customer, TabType } from '../types';
 
-type DetailTab = 'timeline' | 'followup';
 type DetailType = CustomerProfileType;
 type ConfirmState = {
   open: boolean;
@@ -97,7 +95,6 @@ export default function CustomerDetailPage() {
   const detailTabType = toTabType(detailType);
   const isCustomerDetail = detailType === 'customer';
 
-  const [activeTab, setActiveTab] = useState<DetailTab>('timeline');
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [stats, setStats] = useState<CustomerStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
@@ -341,44 +338,7 @@ export default function CustomerDetailPage() {
             )}
 
             {isCustomerDetail && (
-              <>
-              <div className="mb-6">
-                <div className="border-b border-gray-200 dark:border-gray-700">
-                  <nav className="-mb-px flex space-x-8">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('timeline')}
-                      className={`border-b-2 px-1 py-2 text-sm font-medium ${
-                        activeTab === 'timeline'
-                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                      }`}
-                    >
-                      <Calendar className="mr-2 inline h-4 w-4" />
-                      时间轴
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('followup')}
-                      className={`border-b-2 px-1 py-2 text-sm font-medium ${
-                        activeTab === 'followup'
-                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                      }`}
-                    >
-                      <Clock className="mr-2 inline h-4 w-4" />
-                      跟进记录
-                    </button>
-                  </nav>
-                </div>
-              </div>
-
-              {activeTab === 'timeline' ? (
-                <CustomerTimeline customerId={customer.id} customerName={displayName} />
-              ) : (
-                <FollowUpManager customerId={customer.id} customerName={displayName} />
-              )}
-              </>
+              <CustomerActivityFeed customerId={customer.id} customerName={displayName} />
             )}
           </>
         ) : (

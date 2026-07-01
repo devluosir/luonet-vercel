@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Clock, Plus, AlertTriangle, CheckCircle, Calendar, Trash2 } from 'lucide-react';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import type { InquiryRecord } from '@/features/inquiry/types';
+import { getInquiryQuoteStatusBadge } from '../services/inquiryTimelineService';
 import { useCustomerFollowUp } from '../hooks/useCustomerFollowUp';
 import type { CustomerFollowUp, FollowUpType, FollowUpPriority } from '../types';
 
@@ -14,25 +15,6 @@ interface FollowUpManagerProps {
 }
 
 type FollowUpCardTone = 'default' | 'upcoming' | 'overdue';
-
-function getInquiryStatus(record: InquiryRecord) {
-  if (record.orderSubStatus === 'cancelled') {
-    return { label: '已撤销', className: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' };
-  }
-  if (record.orderSubStatus === 'followup') {
-    return { label: '善后', className: 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300' };
-  }
-  if (record.orderNo?.trim()) {
-    return { label: '已成单', className: 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300' };
-  }
-  if (record.quotedStatuses.some((status) => status.type === 'unavailable' || status.type === 'closed')) {
-    return { label: '无法报价', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300' };
-  }
-  if (record.quotedStatuses.some((status) => !status.type || status.type === 'quoted')) {
-    return { label: '已报价', className: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' };
-  }
-  return { label: '未报价', className: 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' };
-}
 
 function buildInquiryHref(customerId: string, customerName: string, record: InquiryRecord) {
   const params = new URLSearchParams({
@@ -123,7 +105,7 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
     const relatedInquiry = followUp.relatedInquiryId
       ? inquiryById.get(followUp.relatedInquiryId)
       : undefined;
-    const status = relatedInquiry ? getInquiryStatus(relatedInquiry) : null;
+    const status = relatedInquiry ? getInquiryQuoteStatusBadge(relatedInquiry) : null;
     const isDefault = tone === 'default';
     const titleClass = tone === 'overdue'
       ? 'text-red-900'

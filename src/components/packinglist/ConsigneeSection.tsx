@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getCustomersForDropdown, customerService } from '@/features/customer/services/customerService';
+import { getCustomersForDropdown } from '@/features/customer/services/customerService';
 
 interface SavedConsignee {
   name: string;
@@ -94,26 +94,6 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
     };
   }, [showSavedConsignees]);
 
-  // 保存收货人信息
-  const handleSave = async () => {
-    if (!consigneeName.trim()) return;
-
-    const consigneeNameFirstLine = consigneeName.split('\n')[0].trim(); // 使用第一行作为收货人名称
-
-    try {
-      await customerService.saveCustomerProfile({
-        type: 'consignee',
-        name: consigneeNameFirstLine,
-        address: consigneeName,
-        contacts: [],
-      });
-      await loadCustomerData();
-      setShowSavedConsignees(false);
-    } catch (error) {
-      console.error('保存收货人失败:', error);
-    }
-  };
-
   // 加载收货人信息
   const handleLoad = (consignee: SavedConsignee) => {
     onChange({
@@ -151,17 +131,6 @@ export function ConsigneeSection({ consigneeName, orderNo, onChange }: Consignee
                 transition-all duration-200"
             >
               Load
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="px-3 py-1 rounded-lg text-xs font-medium
-                bg-[#007AFF]/[0.08] dark:bg-[#0A84FF]/[0.08]
-                hover:bg-[#007AFF]/[0.12] dark:hover:bg-[#0A84FF]/[0.12]
-                text-[#007AFF] dark:text-[#0A84FF]
-                transition-all duration-200"
-            >
-              Save
             </button>
           </div>
 

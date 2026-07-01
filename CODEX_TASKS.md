@@ -11907,6 +11907,94 @@ npm run build
 
 ---
 
+## TASK-74：装箱单"收货人"栏不再把自由文本写入客户管理数据库
+
+**背景（Roger 问"客户管理中的客户数据，是从单据管理中获取的吗？"——排查后确认：有，就这一处）**
+
+排查了所有会写入客户管理（`customerService.saveCustomerProfile`）的地方：`InquiryFormModal.tsx`（TASK-65 已改造成规范的两字段小表单）、`CustomerForm.tsx`（客户管理自己的表单）都没问题；但 **`src/components/packinglist/ConsigneeSection.tsx`（装箱单"Consignee"栏）有一个"保存"按钮，`handleSave()` 直接把装箱单里那个自由多行文本框（`consigneeName`，本来是给用户粘贴"公司名+地址+联系方式"整段收货人信息用的）第一行当作 `name`、整段文本当作 `address`、`contacts: []`（不带任何联络人），调用 `saveCustomerProfile({ type: 'consignee', ... })` 直接写进了客户管理的收货人数据库**。这很可能就是客户管理列表里那批"Dear Michelle""To: Mr. Alfredo Garcia Moreno"这类怪异条目的来源之一——用户在装箱单里粘贴邮件里收货人那段文字，点了"保存"，就变成了一条正式的收货人档案，且不满足"至少一个联络人"这个客户管理数据模型的约定。
+
+`getCustomersForDropdown('consignee')`（`loadCustomerData` 用来加载"已保存收货人"下拉列表给用户选用）是只读的，不是问题所在，可以保留。
+
+### 改动
+
+- `ConsigneeSection.tsx` 里删除"保存"这个写入动作（`handleSave` 函数和对应的保存按钮），不再从装箱单往客户管理数据库里写数据。
+- 装箱单本身的收货人自由文本框、"从已保存收货人加载"下拉选择功能都保留不变——用户还是可以在装箱单里手动输入本次的收货人信息，也还是可以从已经在客户管理里维护好的收货人档案里选一个来填充；只是不再能从装箱单反向创建/污染客户管理的数据。
+- 以后要新增收货人，只能通过客户管理页面本身的"新增收货人"表单（`CustomerForm.tsx`，已经是规范的公司信息+联络人列表结构）。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 装箱单"Consignee"栏不再有"保存"按钮/动作，输入的收货人信息不会再意外写进客户管理数据库
+- "从已保存收货人加载"功能不受影响，还能正常读取客户管理里已有的收货人档案
+
+---
+
+## TASK-75：客户详情页把"时间轴"和"跟进记录"合并成一个统一列表，状态按询价实际状态标示
+
+**背景（Roger 要求）**："将时间轴和跟进记录合并，并且状态根据实际询报价表中的状态来标示：未报价/已报价/无法报价/已成单/已辙销"。现在客户详情页是两个独立 tab：时间轴（`CustomerTimeline.tsx`，TASK-70 后已经是"询价事件+手动自定义事件"）和跟进记录（`FollowUpManager.tsx`，TASK-71 后已经支持关联询价记录并显示状态，但状态文案是"已撤销/善后/已成单/无法报价/已报价/未报价"六种，比这次要求的五种多了"善后"）。这次要把两个 tab 合并成一个统一的活动列表，并把状态标示统一成这五种。
+
+### 改动 1：统一的询价状态判定函数（五种状态，替换 TASK-71 里 `FollowUpManager.tsx` 那个六状态版本）
+
+在 `src/features/customer/services/inquiryTimelineService.ts` 里新增导出函数：
+
+```ts
+export interface InquiryQuoteStatusBadge {
+  label: '未报价' | '已报价' | '无法报价' | '已成单' | '已辙销';
+  className: string;
+}
+
+export function getInquiryQuoteStatusBadge(record: InquiryRecord): InquiryQuoteStatusBadge {
+  if (record.orderSubStatus === 'cancelled') {
+    return { label: '已辙销', className: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' };
+  }
+  if (record.orderNo?.trim()) {
+    return { label: '已成单', className: 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300' };
+  }
+  if (record.quotedStatuses.some((s) => s.type === 'unavailable' || s.type === 'closed')) {
+    return { label: '无法报价', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300' };
+  }
+  if (record.quotedStatuses.some((s) => !s.type || s.type === 'quoted')) {
+    return { label: '已报价', className: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' };
+  }
+  return { label: '未报价', className: 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' };
+}
+```
+
+（注意：`orderSubStatus === 'followup'`善后这种情况这次不单独列状态，直接并入"已成单"分支——只要有 `orderNo` 就算已成单，善后只是成单之后的一个子标记，不再单独占一个状态格。）
+
+`buildInquiryTimelineEvents` 里原来算 `status: 'pending'|'completed'|'cancelled'` 那段可以顺手改成调用这个新函数取 `label`，事件卡片展示的时候用 `getInquiryQuoteStatusBadge` 的结果替代原来的三态状态徽标。
+
+### 改动 2：合并时间轴+跟进记录成一个统一列表
+
+新建 `src/features/customer/components/CustomerActivityFeed.tsx`，替换 `CustomerDetailPage.tsx` 里现在"时间轴/跟进记录"两个 tab 的结构（删除 `activeTab`/`setActiveTab('timeline'|'followup')` 那套 tab 切换 state 和 nav，改成只渲染这一个组件）：
+
+- 内部同时用 `useCustomerTimeline`（拿询价事件+自定义事件）和 `useCustomerFollowUp`（拿跟进记录）两个 hook，把两边的数据统一映射成一种通用的"活动条目"形状（大致 `{ id, kind: 'inquiry' | 'custom' | 'followup', date, title, description?, badge?: InquiryQuoteStatusBadge, raw }`），按日期倒序合并成一个列表渲染。
+  - `kind: 'followup'` 的条目如果有 `relatedInquiryId`，联动查出对应的 `InquiryRecord`，用 `getInquiryQuoteStatusBadge` 算出的 `badge` 一起展示（复用 TASK-71 已经做好的"实时查询、不是快照"这套逻辑，不用重新发明）。
+  - 三种 kind 用不同的图标/左侧色条做区分（比如询价用蓝色 `Search` 图标，自定义事件用橙色，跟进用紫色/`Clock` 图标），但整体在同一个纵向列表里，不要求做成三个分区，一个时间倒序的统一 feed 就行。
+- 顶部保留两个独立的操作入口："添加事件"（复用现有 `CustomEventForm.tsx`，逻辑不变）和"添加跟进"（复用 `FollowUpManager.tsx` 里现有那个跟进表单的字段和提交逻辑，包括 TASK-71 加的"关联询价记录"选择器）——这两个还是各自独立的按钮和表单，只是提交完之后的结果都汇入同一个统一列表展示，不用合并成一个表单。
+- 跟进类型的条目保留"完成"/"删除"操作（复用 TASK-72 加的 `completeFollowUp`/`deleteFollowUp`）；自定义事件类型如果原来有编辑/删除能力就保留，没有就不用新增。
+- `CustomerTimeline.tsx`/`FollowUpManager.tsx` 这两个文件如果合并完之后彻底没人用了（先 grep 确认一下这次改完之后是不是真的没别的地方引用），可以顺手删掉，连带它们各自的测试文件一起清理；如果发现内部逻辑直接复用起来更省事就复用，不强求必须删文件，重点是 `CustomerDetailPage.tsx` 呈现出来是"一个统一列表"而不是两个 tab。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+```
+
+**验收标准**：
+- 客户详情页不再有"时间轴"/"跟进记录"两个切换 tab，是一个统一的活动列表，时间倒序，询价事件、自定义事件、跟进记录混在一起显示
+- 关联了询价记录的询价事件/跟进记录，状态徽标只会是"未报价/已报价/无法报价/已成单/已辙销"这五种之一，且是当前询价记录的实时状态（改了询价的报价/订单状态后，这里应该跟着变，不需要额外刷新页面之外的操作）
+- "添加事件"和"添加跟进"两个入口都还能正常用，提交后新条目会出现在同一个统一列表里
+- 跟进记录还能正常"完成"/删除
+
+---
+
 ## TASK-67 复核发现一个实际 bug，需要修正（TASK-68 部分已通过，不用动）
 
 **结论**：TASK-68（询报价 `customerId`/`contactId` 筛选 + 详情页联络人行可点击 + 筛选提示条）逐文件核对过（`useInquiryFilter.ts`/`InquiryPage.tsx`/`InquiryFilterBar.tsx`/`CustomerDetailPage.tsx`），逻辑正确，`tsc --noEmit` 独立跑通过，这部分不需要改。
