@@ -13177,3 +13177,123 @@ TASK-83 把活动列表精简成"询价号、描述/客户询价编号、详情"
 
 - 每条询价活动都能看到对应的状态徽章，颜色/文案和询价列表页保持一致（复用同一个 `getInquiryQuoteStatusBadge`）。
 - 其余布局和 TASK-83 的结果保持一致，没有引入事件/跟进相关的内容。
+
+---
+
+## TASK-85：批量关联客户后去掉二次确认弹窗（已完成）
+
+### 背景
+
+批量关联客户时，用户已经在 `BatchLinkCustomerModal` 里点击了一次"确认关联"，关联成功后 `InquiryPage.tsx` 又触发浏览器 `alert("已关联 N 条记录")`，体验上变成了两次确认。
+
+### 改动
+
+- `src/features/inquiry/app/InquiryPage.tsx`
+  - 删除 `handleBatchLinkCustomer` 末尾的成功 `alert`。
+  - 保留批量 `updateRecord`、关闭弹窗、关闭批量菜单、清空选择等原有流程。
+
+### 验证
+
+- `npx tsc --noEmit` 通过。
+- `npx eslint src/features/inquiry/app/InquiryPage.tsx src/features/inquiry/components/BatchLinkCustomerModal.tsx` 通过。
+
+---
+
+## TASK-86：询价弹窗顶部身份信息区紧凑化（已完成）
+
+### 背景
+
+新增/编辑询价弹窗顶部的日期、询价编号、紧急状态和联络人区域占用空间偏大，新增询价编号在窄宽度下拥挤；紧急勾选后红色状态和编号容易互相挤压。
+
+### 改动
+
+- `src/features/inquiry/components/InquiryFormModal.tsx`
+  - 顶部身份信息区改为更紧凑的两列布局。
+  - 去掉编号区域内部的块状背景，减少视觉重量。
+  - 日期和询价编号字号调小；新增询价编号使用粉红色文字。
+  - 紧急状态改为紧凑红色状态胶囊，保留原有 checkbox 语义和提交逻辑。
+  - 编辑态和新增态共用同一套紧凑布局。
+
+### 验证
+
+- `npx tsc --noEmit` 通过。
+- `npx eslint src/features/inquiry/components/InquiryFormModal.tsx` 通过。
+
+---
+
+## TASK-87：客户/联络人显示标签规则统一（已完成）
+
+### 背景
+
+当客户资料里公司有简称、联络人没有简称时，选择器和询价弹窗会显示类似 `Bluereact-Blue React` 的重复组合。业务上这种情况只需要显示公司简称。
+
+### 改动
+
+- `src/features/customer/components/CustomerContactPicker.tsx`
+  - `buildCustomerContactLabel` 调整为：公司有简称且联络人无简称时，只返回公司简称。
+  - 公司和联络人都有简称时，仍显示 `公司简称-联络人简称`。
+- `src/features/inquiry/components/InquiryFormModal.tsx`
+  - `buildInquirer` 复用 `buildCustomerContactLabel`，确保保存到询价记录里的 `inquirer` 和选择器显示一致。
+- `src/features/inquiry/utils/inquirerOptions.ts`
+  - 同步旧入口的候选项生成规则，避免不同入口显示不一致。
+
+### 验证
+
+- `npx tsc --noEmit` 通过。
+- `npx eslint src/features/customer/components/CustomerContactPicker.tsx src/features/inquiry/components/InquiryFormModal.tsx src/features/inquiry/utils/inquirerOptions.ts` 通过。
+
+---
+
+## TASK-88：编辑询价联络人以客户资料为准并减少加载延迟（已完成）
+
+### 背景
+
+编辑已关联客户的询价时，弹窗里的"询价人/联络人"应以客户资料里的联络人为准，而不是继续信任旧记录里的 `inquirer` 文本。另一个问题是每次打开窗口时，联络人需要等远程客户列表加载完成才显示，用户会看到短暂空白或旧文本。
+
+### 改动
+
+- `src/features/customer/services/customerService.ts`
+  - 增加 `getCachedCustomers(type = 'customer')`，允许弹窗先读本地缓存客户资料。
+- `src/features/customer/components/CustomerContactPicker.tsx`
+  - 增加 `fallbackLabel`，在客户选项尚未加载完但记录已有 `customerId/contactId` 时，先展示已解析出的联络人标签。
+- `src/features/inquiry/components/InquiryFormModal.tsx`
+  - 打开弹窗时先用缓存客户资料解析 `customerId/contactId`，再拉取远程 D1 客户资料并二次校准。
+  - 如果能从客户资料中找到对应联络人，则用客户资料生成 `inquirer`，覆盖旧记录里的历史文本。
+- `src/features/inquiry/components/BatchLinkCustomerModal.tsx`
+  - 批量关联确认时把选择器标签一起传回。
+- `src/features/inquiry/app/InquiryPage.tsx`
+  - 批量关联时同步写入 `customerId`、`contactId` 和规范化后的 `inquirer`。
+
+### 验证
+
+- `npx tsc --noEmit` 通过。
+- `npx eslint src/features/customer/services/customerService.ts src/features/customer/components/CustomerContactPicker.tsx src/features/inquiry/components/InquiryFormModal.tsx src/features/inquiry/components/BatchLinkCustomerModal.tsx src/features/inquiry/app/InquiryPage.tsx` 通过。
+
+---
+
+## TASK-89：客户详情活动列表显示该客户所有联络人的询价（已完成）
+
+### 背景
+
+客户详情页需要显示该客户所有联络人的询价记录，而不是只看某一个联络人或只按客户名字符串匹配。历史数据里还存在三种形态：新记录有 `customerId`，部分记录只有 `contactId`，更旧的记录只有 `inquirer` 文本。
+
+### 改动
+
+- `src/features/customer/app/CustomerDetailPage.tsx`
+  - `CustomerActivityFeed` 改为接收完整 `customer`，而不是只传 `customerId/customerName`。
+- `src/features/customer/components/CustomerActivityFeed.tsx`
+  - 从客户资料收集全部联络人的 `contactId` 和显示别名。
+  - 刷新时拉取 D1 询价数据并合并到本地 store，避免客户详情页只看旧 localStorage。
+  - 刷新按钮增加加载态，避免重复触发。
+- `src/features/customer/services/inquiryTimelineService.ts`
+  - `buildInquiryTimelineEvents` 增加 `contactIds` 和 `inquirerAliases` 参数。
+  - 匹配优先级：
+    - 有 `customerId` 的记录必须精确等于当前客户。
+    - 没有 `customerId` 但 `contactId` 属于当前客户任一联络人时纳入。
+    - 没有结构化关联的旧记录，再按规范化后的 `inquirer` 别名兜底匹配。
+
+### 验证
+
+- `npx tsc --noEmit` 通过。
+- `npx eslint src/features/customer/components/CustomerActivityFeed.tsx src/features/customer/services/inquiryTimelineService.ts src/features/customer/app/CustomerDetailPage.tsx` 通过。
+- `npm run build` 通过；仅保留项目既有构建 warning。
