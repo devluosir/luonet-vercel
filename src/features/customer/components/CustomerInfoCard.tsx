@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Edit, Mail, MapPin, Phone, UserRound } from 'lucide-react';
 import type { Customer } from '../types';
 import type { CustomerStats } from '../services/customerService';
+import { CategoryBadge } from './ProfileListParts';
 
 interface ContactHrefInput {
   contactId: string;
@@ -63,12 +64,20 @@ export function CustomerInfoCard({
             {getInitial(customer)}
           </div>
           <div className="min-w-0">
-            <h1 className="whitespace-pre-wrap break-words text-lg font-semibold leading-snug text-gray-900 dark:text-white">
-              {customer.name}
-            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="whitespace-pre-wrap break-words text-lg font-semibold leading-snug text-gray-900 dark:text-white">
+                {customer.name}
+              </h1>
+              <CategoryBadge category={customer.category} note={customer.categoryNote} />
+            </div>
             {customer.shortName && (
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 简称：{customer.shortName}
+              </p>
+            )}
+            {customer.categoryNote && (
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                分类备注：{customer.categoryNote}
               </p>
             )}
             <div className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
