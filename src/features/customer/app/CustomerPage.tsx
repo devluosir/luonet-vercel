@@ -188,18 +188,11 @@ export default function CustomerPage() {
       user={user}
       onLogout={handleLogout}
     >
-      <div className="w-full max-w-none px-3 py-4 sm:px-5 lg:px-6">
+      <div className="mx-auto max-w-7xl px-3 py-4 sm:px-5 lg:px-6">
 
         {/* ── 页头 ── */}
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-base font-semibold text-gray-900 dark:text-white">客户管理</h1>
-            {!isLoading && (
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                {customers.length} 位客户 · {suppliers.length} 家供应商 · {consignees.length} 位收货人
-              </p>
-            )}
-          </div>
+        <div className="mb-3 flex items-center justify-between">
+          <h1 className="text-base font-semibold text-gray-900 dark:text-white">客户管理</h1>
           <button
             onClick={handleAddNew}
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
