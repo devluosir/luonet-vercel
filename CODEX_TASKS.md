@@ -13297,3 +13297,130 @@ TASK-83 把活动列表精简成"询价号、描述/客户询价编号、详情"
 - `npx tsc --noEmit` 通过。
 - `npx eslint src/features/customer/components/CustomerActivityFeed.tsx src/features/customer/services/inquiryTimelineService.ts src/features/customer/app/CustomerDetailPage.tsx` 通过。
 - `npm run build` 通过；仅保留项目既有构建 warning。
+
+---
+
+## TASK-90：IMPA 物料接入模块权限并执行生产 D1 迁移（已完成）
+
+### 背景
+
+左侧工具栏的 `IMPA物料` 入口原本是硬编码公开入口，没有接入模块权限体系。这样普通用户是否能看到该外部工具无法在后台权限管理里控制。
+
+### 改动
+
+- `src/components/layout/AppSidebar.tsx`
+  - 给 `IMPA物料` 菜单项增加 `permissionKey: 'canUseImpa'`。
+  - 在侧边栏权限映射中把 `canUseImpa` 映射到 `impa` 模块。
+  - 保持原有行为：点击后仍在新窗口打开 `https://impa.luocompany.com`。
+- `src/constants/permissionModules.ts`
+  - 后台权限模块列表新增 `impa`，显示为 `IMPA 物料`，分类为 `tool`。
+- `src/types/permissions.ts`、`src/utils/mapPermissions.ts`
+  - 补齐 `impa` 权限映射，保持类型和运行时结构一致。
+- `src/features/customer/components/CustomerContactPicker.tsx`
+  - 同次提交中保留了已完成的客户联络人选择器优化：当同一客户多个联络人都没有简称、标签退化为公司简称时，只保留主联络人对应的一项，避免重复公司名条目。
+- `migrations/007_grant_default_impa_permission.sql`
+  - 新增生产 D1 迁移，给现有普通用户默认补上 `impa` 权限，避免上线后入口突然消失。
+
+### 验证
+
+- `npx tsc --noEmit` 通过。
+- `npx eslint src/components/layout/AppSidebar.tsx src/constants/permissionModules.ts src/types/permissions.ts src/utils/mapPermissions.ts src/features/customer/components/CustomerContactPicker.tsx` 通过。
+- 已提交并推送到 GitHub：
+  - commit：`117e03f4 Add IMPA module permission`
+  - branch：`main`
+- 已执行生产 D1 迁移：
+  - `npx wrangler d1 execute mluonet-users --file=./migrations/007_grant_default_impa_permission.sql --remote`
+  - Wrangler 返回成功，实际 `changes = 9`。
+  - 复查 SQL：`impa_permissions = 8`，`enabled_permissions = 8`。
+
+### 验收标准
+
+- 后台用户权限弹窗能看到 `IMPA 物料` 模块开关。
+- 非管理员只有拥有 `impa` 权限时才显示左侧 `IMPA物料` 入口。
+- 管理员仍默认可见。
+- 入口继续以新窗口打开 `https://impa.luocompany.com`。
+
+---
+
+## TASK-91：客户分类、客户管理页布局与联络人选择器去重记录补齐（已完成）
+
+### 背景
+
+`docs/core/CHANGELOG.md` 已记录 2026-07-02 的客户管理相关改动，但 `CODEX_TASKS.md` 尾部缺少对应任务记录。为保持任务文档和变更日志一致，需要把已完成的客户分类、客户管理页布局、联络人选择器去重同步补进任务文档。
+
+### 已完成改动
+
+- 客户分类
+  - 客户可标记为 `A` / `B` / `C` / `New` / `Blacklist`。
+  - 分类备注存入 `categoryNote`，用于说明评定理由。
+  - 分类与备注通过 `Customer.data` 透传保存为 `data.category` / `data.categoryNote`，未新增 D1 字段，未修改 `src/worker.ts`。
+  - 仅客户 tab 使用分类；供应商和收货人不涉及。
+- 展示与筛选
+  - `CustomerForm.tsx` 增加客户分类和分类备注编辑项。
+  - `CustomerList.tsx`、`ProfileCardGrid.tsx`、`CustomerInfoCard.tsx` 显示分类徽章，备注通过 tooltip 或详情文案展示。
+  - `CustomerPage.tsx` 增加分类筛选 chip，并按当前客户数量显示各分类计数。
+- 客户管理页布局
+  - 移除页面标题下方与 tab 数字重复的汇总提示行。
+  - 外层容器改为 `mx-auto max-w-7xl`，避免大屏过宽。
+  - 搜索框、分类筛选和视图切换在大屏下合并为更紧凑的一行，小屏自然换行。
+- 联络人选择器去重
+  - `CustomerContactPicker.tsx` 在同一客户多个联络人都没有简称、标签退化为公司简称时，只保留一项。
+  - 去重时优先保留主联络人，避免新增询价选择器出现多条相同公司名。
+
+### 涉及文件
+
+- `src/features/customer/types/index.ts`
+- `src/features/customer/services/customerService.ts`
+- `src/features/customer/hooks/useCustomerForm.ts`
+- `src/features/customer/hooks/useCustomerActions.ts`
+- `src/features/customer/components/CustomerForm.tsx`
+- `src/features/customer/components/ProfileListParts.tsx`
+- `src/features/customer/components/CustomerList.tsx`
+- `src/features/customer/components/ProfileCardGrid.tsx`
+- `src/features/customer/components/CustomerInfoCard.tsx`
+- `src/features/customer/app/CustomerPage.tsx`
+- `src/features/customer/components/CustomerContactPicker.tsx`
+
+### 文档对齐
+
+- `docs/core/CHANGELOG.md` 的 `2026-07-02 Unreleased` 已包含：
+  - `Added / 客户管理 / 客户分类`
+  - `Fixed / 联络人选择器（CustomerContactPicker）`
+  - `Changed / 客户管理页布局`
+- `CODEX_TASKS.md` 已通过本 TASK-91 补齐对应记录。
+
+---
+
+## TASK-92：Markdown 文档体系整理与过程文件清理（已完成）
+
+### 背景
+
+仓库中积累了大量一次性过程文档、重复总结和过时入口说明。用户要求保留最新现状说明书，并清理不需要长期保留的过程 Markdown。
+
+### 处理原则
+
+- 保留当前事实源：`docs/core/CURRENT_STATE.md`。
+- 保留变更历史：`docs/core/CHANGELOG.md`。
+- 保留任务账本：`CODEX_TASKS.md`。
+- 保留入口说明：`README.md`、`AGENTS.md`、`docs/README.md`、`docs/core/README.md`、`docs/core/PROJECT_SUMMARY.md`。
+- 删除根目录和 `docs/core/` 中明显属于临时过程、重复整理报告、旧系统状态报告的一次性 Markdown。
+- 不批量改写 `docs/bugfixes/`、`docs/technical/`、`docs/features/` 里的历史材料；这些作为历史证据保留，入口文档会指明它们不是当前事实源。
+
+### 主要改动
+
+- 新增 `docs/core/CURRENT_STATE.md`，汇总当前系统、权限、数据、迁移和风险。
+- 更新 `README.md`、`AGENTS.md`、`docs/README.md`、`docs/core/README.md`、`docs/core/PROJECT_SUMMARY.md`。
+- 重写客户模块入口文档：
+  - `docs/features/customer/README.md`
+  - `docs/features/customer/USER_GUIDE.md`
+  - `src/features/customer/README.md`
+- 重写权限技术现状：
+  - `docs/technical/permissions/PERMISSION_SYSTEM_FINAL_SUMMARY.md`
+- 更新 `docs/features/README.md` 的客户模块链接。
+- 删除根目录临时 CODEX 汇报、session/test 总结，以及 `docs/core/` 中重复过程总结。
+
+### 结果
+
+- Markdown 文件数量从 218 份降到 177 份。
+- `docs/core/` 只保留核心入口和必要历史摘要。
+- 后续维护以 `CURRENT_STATE.md` 作为最新事实源，避免继续新增零散过程文档。

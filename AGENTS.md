@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本文件给后续维护代理使用。范围覆盖整个仓库。最后更新：2026-06-18（V26.4.24.0.1）
+本文件给后续维护代理使用。范围覆盖整个仓库。最后更新：2026-07-02（main 快照：81c65e8d）
 
 ## 项目定位
 
@@ -18,7 +18,7 @@
 ## 当前版本状态
 
 - 应用版本：`1.2.0`（package.json）
-- 最新 git tag：`V26.4.24.0.1`
+- 最新发布 tag：`v1.2.0`
 - 主框架：Next.js 14、React 18、TypeScript 5、Tailwind CSS 3
 - 部署目标：Vercel 主站（香港 hkg1 区域）+ Cloudflare Worker + D1
 - 已知问题：`check:production` 脚本指向 `scripts/pre-production-check.js`，但实际文件是 `scripts/pre-release-check.js`，使用前先修复或用 `check:selectors` 代替。
@@ -148,12 +148,17 @@ Worker 入口：`src/worker.ts`，D1 客户端：`src/lib/d1-client.ts`，配置
 
 **Worker 管理接口安全**：当前通过请求头 `X-User-ID`、`X-User-Name`、`X-User-Admin` 传递身份，**客户端可伪造**。这是高风险点，后续应迁移到 HMAC 签名或 NextAuth 服务端 session 校验。
 
-权限模块列表（`src/constants/permissions.ts`）：
+权限模块唯一注册表：`src/constants/permissionModules.ts`
+
+当前权限模块：
 ```text
-quotation, packing, invoice, purchase, customer, history, ai-email, admin
+quotation, packing, invoice, purchase,
+inquiry, inquiry.batchEdit, order.financials,
+history, customer,
+ai-email, impa, clock, holidays, rmb
 ```
 
-修改权限时至少检查：`src/constants/permissions.ts`、`src/constants/dashboardModules.ts`、`src/lib/permissions.ts`、`src/hooks/usePermissionInit.ts`、`src/hooks/usePermissionRefresh.ts`、`src/middleware.ts`、`src/features/admin`。
+说明：`admin` 不是普通 moduleId，后台访问由 `isAdmin` 和中间件控制。修改权限时至少检查：`src/constants/permissionModules.ts`、`src/components/layout/AppSidebar.tsx`、`src/components/layout/MobileBottomTab.tsx`、`src/lib/permissions.ts`、`src/hooks/usePermissionInit.ts`、`src/hooks/usePermissionRefresh.ts`、`src/middleware.ts`、`src/features/admin`。
 
 ## PDF 和 Excel 规则
 
@@ -266,8 +271,10 @@ GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git f
 
 - `README.md`：项目概览和快速上手
 - `AGENTS.md`：代理维护说明（本文件）
-- `docs/README.md`：文档总目录（96个文档）
-- `docs/core/`：项目总结、更新日志、系统报告
+- `docs/README.md`：文档总目录
+- `docs/core/CURRENT_STATE.md`：最新系统现状说明书
+- `docs/core/CHANGELOG.md`：更新日志
+- `docs/core/PROJECT_SUMMARY.md`：项目总结
 - `docs/features/`：各功能模块设计文档
 - `docs/bugfixes/`：问题修复记录
 - `docs/technical/`：性能、主题、稳定性、权限技术文档

@@ -1,105 +1,79 @@
 # MLUONET 项目总结
 
-## 🎯 项目概述
+最后更新：2026-07-02
 
-MLUONET是一个现代化的企业管理系统，提供完整的业务管理解决方案，包括报价、采购、发票、装箱单等核心功能。
+## 项目定位
 
-## 🚀 核心功能
+MLUONET / LC App 是 Luo & Company 内部业务管理系统，用于处理报价、销售确认、询报价登记、订单状态、装箱单、财务发票、采购订单、客户资料、权限管理和 AI 邮件助手。
 
-### 业务管理模块
-- **报价管理**: 创建和管理客户报价单
-- **采购管理**: 处理供应商采购订单  
-- **发票管理**: 生成和管理发票
-- **装箱单管理**: 创建详细的装箱清单
-- **客户管理**: 管理客户和供应商信息
-- **邮件系统**: 集成AI邮件助手功能
+它不是展示站，维护优先级是：业务稳定 > 数据兼容 > PDF/Excel 输出正确 > UI 打磨 > 重构。
 
-### 娱乐功能
-- **五子棋游戏**: 经典的五子棋对战游戏
-- **2048游戏**: 数字合并游戏，支持AI推演功能
+## 当前技术栈
 
-## 🔧 技术栈
+- Next.js 14 App Router
+- React 18
+- TypeScript 5
+- Tailwind CSS 3
+- Zustand
+- NextAuth Credentials
+- Cloudflare Worker + D1
+- Vercel 部署
+- DeepSeek Chat API
 
-- **前端框架**: Next.js 14 (App Router)
-- **UI组件**: Tailwind CSS
-- **图标库**: Lucide React
-- **状态管理**: React Hooks
-- **部署平台**: Vercel
+## 核心模块
 
-## 📊 最新优化
+| 模块 | 路由 | 状态 |
+|------|------|------|
+| Dashboard | `/dashboard` | 快速入口、最近文档、权限过滤 |
+| 报价 / 销售确认 | `/quotation` | 本地历史为主，支持 PDF/Excel |
+| 询报价登记 | `/inquiry` | 已接入 D1 `Document`，支持客户/联络人关联和批量关联 |
+| 订单状态表 | `/order` | 基于询报价记录，支持订单状态和金额权限 |
+| 装箱单 | `/packing` | 本地历史为主，支持 PDF 和唛头 |
+| 财务发票 | `/invoice` | 本地历史为主，支持 PDF/Excel |
+| 采购订单 | `/purchase` | 本地历史为主，支持供应商资料和草稿 |
+| 客户管理 | `/customer` | D1 客户/供应商/收货人资料，支持联络人、分类、详情活动 |
+| AI 邮件 | `/mail` | DeepSeek 邮件生成和回复 |
+| 管理后台 | `/admin` | 用户、状态、管理员、模块权限 |
+| 工具 | `/clock`、`/holidays`、`/rmb`、IMPA 外链 | 受模块权限控制 |
 
-### 权限系统优化 ✅
-- 移除冗余的页面级权限检查
-- 简化中间件逻辑，只保留登录验证
-- 提升页面加载性能
-- 简化代码架构
+## 数据现状
 
-### 性能优化 ✅
-- 字体压缩和预加载
-- 图片资源优化
-- 静态资源嵌入
-- 代码分割和懒加载
+- 用户和权限：Cloudflare D1。
+- 询报价登记：D1 `Document`。
+- 客户/供应商/收货人：D1 `Customer` + `Contact`。
+- 多数历史单据：浏览器 `localStorage`。
+- PDF 静态资源：构建时嵌入 `src/lib/embedded-resources.ts`。
 
-### 功能增强 ✅
-- AI邮件助手
-- 2048游戏AI推演
-- 历史记录管理
-- 数据导入导出
+## 权限现状
 
-## 🏗️ 项目结构
+权限唯一注册表是 `src/constants/permissionModules.ts`。
 
-```
-mluonet/
-├── src/
-│   ├── app/                 # Next.js App Router页面
-│   ├── components/          # React组件
-│   ├── lib/                 # 工具库和配置
-│   ├── types/               # TypeScript类型定义
-│   └── utils/               # 工具函数
-├── public/                  # 静态资源
-└── scripts/                 # 构建脚本
+模块包括：
+
+```text
+quotation, packing, invoice, purchase,
+inquiry, inquiry.batchEdit, order.financials,
+history, customer,
+ai-email, impa, clock, holidays, rmb
 ```
 
-## 📝 文档说明
+`admin` 不是普通 moduleId，由 `isAdmin` 控制后台访问。
 
-### 核心文档
-- `README.md` - 项目主要说明
-- `PERMISSION_SYSTEM_FINAL_SUMMARY.md` - 权限系统优化总结
+## 当前文档结构
 
-### 功能文档
-- `AI_PLAYER_FEATURE.md` - AI游戏功能
-- `AI_STATE_SYNC_FIX.md` - 状态同步修复
-- `RANDOM_MOVE_FEATURE.md` - 随机移动功能
-- `PRELOAD_FEATURE.md` - 预加载功能
-- `FONT_OPTIMIZATION_SUMMARY.md` - 字体优化
-- `LOGO_OPTIMIZATION_SUMMARY.md` - Logo优化
-- `CLEANUP_SUMMARY.md` - 清理总结
-- `VERCEL_ENV_SETUP.md` - Vercel环境配置
+- `docs/core/CURRENT_STATE.md`：最新事实源。
+- `docs/core/CHANGELOG.md`：变更历史。
+- `CODEX_TASKS.md`：任务执行记录。
+- `docs/features/`：模块文档。
+- `docs/technical/`：技术专题。
+- `docs/bugfixes/`：历史修复记录。
 
-## 🚀 部署
+## 已知风险
 
-项目已配置为Vercel部署，包含以下优化：
-- 字体优化和预加载
-- 图片资源优化
-- 性能监控
-- 错误处理
+1. Worker 管理接口仍依赖客户端 `X-User-*` 请求头，存在伪造风险。
+2. `wrangler.toml` 仍有明文 token，应迁移到 Cloudflare secret 并轮换。
+3. 多数业务历史仍在 `localStorage`，有容量和多设备同步风险。
+4. `check:production` 脚本路径仍需修复。
+5. `src/components` 与 `src/features` 仍有迁移中的重复边界。
 
-## 📈 性能指标
-
-- **页面加载时间**: 显著减少
-- **权限响应延迟**: 几乎无感知
-- **构建时间**: 优化后更快
-- **用户体验**: 大幅提升
-
-## 🎉 项目状态
-
-- ✅ **核心功能**: 完整实现
-- ✅ **权限系统**: 优化完成
-- ✅ **性能优化**: 显著提升
-- ✅ **部署配置**: 生产就绪
-- ✅ **文档完善**: 结构清晰
-
----
-
-*项目状态: 生产就绪*
-*最后更新: 2024年8月* 
+更完整现状见 [CURRENT_STATE.md](CURRENT_STATE.md)。

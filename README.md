@@ -8,11 +8,11 @@ git@github.com:devluosir/luonet-vercel.git
 
 ## 当前状态
 
-- **应用版本**：`1.2.0`（最新 tag：`V26.4.24.0.1`，2026-04-24）
+- **应用版本**：`1.2.0`（最新发布 tag：`v1.2.0`；当前 main 快照见 `docs/core/CURRENT_STATE.md`）
 - **主框架**：Next.js 14、React 18、TypeScript 5、Tailwind CSS 3
 - **部署**：Vercel 主站（香港 hkg1）+ Cloudflare Worker + D1（用户权限服务）
 - **认证**：NextAuth Credentials，远程调用 D1 用户 API 校验账密
-- **业务数据**：单据和客户数据保存在浏览器 `localStorage`；用户和权限保存在 Cloudflare D1
+- **业务数据**：询报价和客户资料已接入 D1；多数历史单据仍以浏览器 `localStorage` 为主；用户和权限保存在 Cloudflare D1
 - **PDF/Excel**：前端生成，中文字体与头图在构建时预嵌入（`scripts/embed-resources.js`）
 - **AI 邮件**：调用 DeepSeek Chat API（`/api/generate`）
 
@@ -27,9 +27,10 @@ git@github.com:devluosir/luonet-vercel.git
 | 财务发票 | `/invoice` | `invoice_history` | 导入报价数据、PDF、Excel、复制、编辑 |
 | 采购订单 | `/purchase` | `purchase_history`、`draftPurchase` | 供应商、银行信息、PDF、自动草稿保存 |
 | 历史管理 | `/history` | 全部历史记录 | 搜索、筛选、批量删除、导入导出 JSON |
-| 客户管理 | `/customer`、`/customer/detail` | 客户/供应商/收货人、时间轴、跟进 | 从历史单据提取联系人，客户时间轴和跟进记录 |
+| 客户管理 | `/customer`、`/customer/detail` | 客户/供应商/收货人、联络人、分类、活动、跟进 | 统一公司信息 + 联络人数组结构，支持客户分类、卡片/列表视图、详情活动列表 |
 | AI 邮件助手 | `/mail` | DeepSeek API（无持久化） | 撰写、回复、多语言、多语气风格 |
 | 管理后台 | `/admin`、`/admin/users/[id]` | D1 User、Permission | 用户创建、账户状态、管理员状态、模块权限 |
+| IMPA 物料 | 外部链接 | `impa` 权限 | 左侧工具入口，新窗口打开 `https://impa.luocompany.com` |
 
 **动态路由**（编辑/复制）：`/quotation/edit/[id]`、`/quotation/copy/[id]`、`/packing/edit/[id]`、`/packing/copy/[id]`、`/invoice/edit/[id]`、`/invoice/copy/[id]`、`/purchase/edit/[id]`、`/purchase/copy/[id]`
 
@@ -62,19 +63,23 @@ src/
 
 ## 数据与存储
 
-### Cloudflare D1（用户权限）
+### Cloudflare D1（用户、权限、询报价、客户资料）
 
-`schema.sql` 定义三张表：
+`schema.sql` 当前包含：
 
 ```sql
 User        -- id、username、password(bcrypt)、email、status、isAdmin、lastLoginAt
 Permission  -- id、userId、moduleId、canAccess  （外键 User.id 级联删除）
 quotation_history  -- 旧表，保留兼容，主站历史目前不使用
+Document    -- 统一业务单据表，当前询报价登记使用
+Customer    -- 客户/供应商/收货人公司资料
+Contact     -- 联络人资料
+CustomerEvent -- 客户事件、时间轴、跟进
 ```
 
 Worker 入口：`src/worker.ts`。配置：`wrangler.toml`（Worker 名 `mluonet-users`，D1 binding `USERS_DB`，自定义域 `udb.luocompany.net`）。
 
-### 浏览器 localStorage（业务单据主存储）
+### 浏览器 localStorage（多数历史单据仍以此为主）
 
 | Key | 用途 | 上限影响 |
 |-----|------|---------|
@@ -109,12 +114,17 @@ Worker 入口：`src/worker.ts`。配置：`wrangler.toml`（Worker 名 `mluonet
 4. 客户端 `src/app/providers.tsx` 同步 session → Zustand store → localStorage 缓存
 5. `src/middleware.ts` 拦截未登录用户和 `/admin` 路径
 
-权限模块（`src/constants/permissions.ts`）：
+权限模块唯一注册表：`src/constants/permissionModules.ts`
+
+当前模块：
 ```text
-quotation, packing, invoice, purchase, customer, history, ai-email, admin
+quotation, packing, invoice, purchase,
+inquiry, inquiry.batchEdit, order.financials,
+history, customer,
+ai-email, impa, clock, holidays, rmb
 ```
 
-修改权限逻辑时需同步检查：`permissions.ts`、`dashboardModules.ts`、`src/lib/permissions.ts`、`usePermissionInit.ts`、`usePermissionRefresh.ts`、`middleware.ts`、`src/features/admin`（共 7 处）。
+说明：`admin` 不是普通 moduleId，后台访问由 `isAdmin` 控制。修改权限逻辑时需同步检查 `permissionModules.ts`、侧边栏/移动端入口、`src/lib/permissions.ts`、权限初始化/刷新 hooks、middleware 和 `src/features/admin`。
 
 ## PDF、Excel 与静态资源
 
@@ -246,8 +256,9 @@ GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git f
 ## 文档索引
 
 - `AGENTS.md`：代理维护说明（完整技术细节）
-- `docs/README.md`：文档总目录（96 个文档）
-- `docs/core/`：项目总结、更新日志
+- `docs/core/CURRENT_STATE.md`：最新系统现状说明书
+- `docs/README.md`：文档总目录
+- `docs/core/`：项目总结、现状说明、更新日志
 - `docs/features/`：各功能模块设计文档
 - `docs/bugfixes/`：问题修复记录
 - `docs/technical/`：性能、主题、稳定性、权限技术文档

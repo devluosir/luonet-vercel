@@ -1,77 +1,56 @@
-# MLUONET 项目文档索引
+# MLUONET 文档索引
 
-## 📚 快速导航
+最后更新：2026-07-02
 
-### 🎯 核心文档
-- [项目说明](../README.md) - 项目主要说明
-- [项目总结](core/PROJECT_SUMMARY.md) - 项目总体总结
-- [更新日志](core/CHANGELOG.md) - 版本更新记录
+## 先看这里
 
-### 🚀 功能模块
-- [报价模块](features/quotation/) - 报价管理功能
-- [采购模块](features/purchase/) - 采购管理功能
-- [装箱单模块](features/packing/) - 装箱单管理功能
-- [邮件模块](features/mail/) - 邮件系统功能
-- [游戏功能](features/games/) - 娱乐游戏功能
-- [客户模块](features/customer/) - 客户管理功能
-- [发票模块](features/invoice/) - 发票管理功能
-- [管理模块](features/admin/) - 系统管理功能
+- [当前系统现状](core/CURRENT_STATE.md)：最新事实源，说明当前代码、数据、权限、部署和风险。
+- [更新日志](core/CHANGELOG.md)：按时间记录已完成变更。
+- [项目总结](core/PROJECT_SUMMARY.md)：项目定位、模块概览和维护方式。
+- [根 README](../README.md)：仓库快速说明、开发命令、部署入口。
+- [AGENTS](../AGENTS.md)：给维护代理使用的工程规则和高风险区域。
 
-### 🔧 技术文档
-- [性能优化](technical/performance/) - 性能优化相关
-- [主题系统](technical/theme/) - 主题和样式系统
-- [稳定性保障](technical/stability/) - 系统稳定性
-- [权限系统](technical/permissions/) - 权限管理
+## 文档分层
 
-### 🐛 问题修复
-- [问题修复记录](bugfixes/) - 各种问题修复
+### 核心文档
 
-### 🧪 测试文档
-- [测试记录](testing/) - 测试相关文档
+`docs/core/` 只保留入口级文档：
 
-## 📊 文档统计
-- 总文档数: 96个
-- 已整理: 按功能模块分类
-- 最后更新: 2025年1月
+- `CURRENT_STATE.md`：当前事实。
+- `CHANGELOG.md`：变更历史。
+- `PROJECT_SUMMARY.md`：项目摘要。
+- `RELEASE_v1.2.0_SUMMARY.md`：版本发布摘要。
+- `VERCEL_ENV_SETUP.md`：Vercel 环境说明。
 
-## 🔍 按角色导航
+### 功能模块
 
-### 👤 新用户
-1. [项目说明](../README.md) - 了解项目基本功能
-2. [项目总结](core/PROJECT_SUMMARY.md) - 查看项目整体情况
+- [询报价登记](features/inquiry/INQUIRY_MODULE.md)
+- [订单状态表](features/order/ORDER_STATUS_TABLE.md)
+- [客户管理](features/customer/README.md)
+- [报价模块](features/quotation/)
+- [采购模块](features/purchase/)
+- [装箱单模块](features/packing/)
+- [发票模块](features/invoice/)
+- [AI 邮件](features/mail/)
+- [管理后台](features/admin/)
 
-### 👨‍💻 开发者
-1. [权限系统](technical/permissions/) - 权限系统架构
-2. [性能优化](technical/performance/) - 性能优化指南
-3. [稳定性保障](technical/stability/) - 系统稳定性
+### 技术专题
 
-### 🚀 部署人员
-1. [问题修复](bugfixes/) - 常见问题解决
+- [权限系统](technical/permissions/PERMISSION_SYSTEM_FINAL_SUMMARY.md)
+- [稳定性保障](technical/stability/)
+- [性能优化](technical/performance/)
+- [主题系统](technical/theme/)
 
-## 📁 目录结构
+### 历史材料
 
-```
-docs/
-├── README.md                    # 主索引
-├── core/                        # 核心文档
-├── features/                    # 功能模块
-│   ├── quotation/              # 报价模块
-│   ├── purchase/               # 采购模块
-│   ├── packing/                # 装箱单模块
-│   ├── mail/                   # 邮件模块
-│   ├── games/                  # 游戏功能
-│   ├── customer/               # 客户模块
-│   ├── invoice/                # 发票模块
-│   └── admin/                  # 管理模块
-├── technical/                   # 技术文档
-│   ├── performance/            # 性能优化
-│   ├── theme/                  # 主题系统
-│   ├── stability/              # 稳定性保障
-│   └── permissions/            # 权限系统
-├── bugfixes/                    # 问题修复
-└── testing/                     # 测试文档
-```
+- `docs/bugfixes/`：历史 bug 修复记录。
+- `docs/archived/`：已归档旧方案。
+- 各模块目录中的旧 `*_SUMMARY.md`、`*_FIX.md` 是历史证据，不作为当前事实源。
 
----
+## 维护规则
 
-*文档索引最后更新: 2025年1月*
+1. 当前状态只更新 `docs/core/CURRENT_STATE.md`。
+2. 完成用户可见功能或生产迁移时，同步更新 `docs/core/CHANGELOG.md`。
+3. 任务过程只写入 `CODEX_TASKS.md`，不要再新增根目录 `CODEX_*.md` 临时文件。
+4. 旧过程总结、重复报告、一次性排查文档应删除或归档，不继续散落在根目录和 `docs/core/`。
+5. 模块 README 只保留当前可用行为，不记录过时实现细节。

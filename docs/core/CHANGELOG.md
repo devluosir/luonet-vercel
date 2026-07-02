@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-07-02
+
+### Added
+
+#### 权限 / 工具模块
+- **IMPA 物料模块权限**：左侧 `IMPA物料` 外部工具入口接入模块权限体系，后台用户权限弹窗新增 `IMPA 物料` 开关；非管理员只有拥有 `impa` 权限时才显示该入口，管理员默认可见
+- **IMPA 权限生产迁移**：新增并已执行 `migrations/007_grant_default_impa_permission.sql`，给现有普通用户默认补上 `impa` 权限；生产 D1 复查结果为 `impa_permissions = 8`、`enabled_permissions = 8`
+
+#### 客户管理 / 客户分类
+- **客户分类标记**：客户可标记为 A类 / B类 / C类 / New（未成单新客户）/ 黑名单 五档，人为评定订单量、付款及时性等；仅适用于「客户」标签页（供应商/收货人不涉及）
+- **分类备注**：分类旁可填写简短文字摘要说明评定理由（如"月均3单，回款及时"）
+- **展示位置**：编辑弹窗内选择分类 + 填写备注（`CustomerForm.tsx`）；客户列表行、卡片视图、客户详情页均显示彩色分类徽章（黑名单红色），鼠标悬停徽章显示备注全文
+- **分类筛选**：客户列表页新增分类筛选 chip（全部/A类/B类/C类/New/黑名单），各自带数量统计，点击即筛选
+- **存储方式**：分类与备注存入 `Customer.data` 既有的 JSON 透传列（`data.category` / `data.categoryNote`），未修改数据库 schema，未改动 `src/worker.ts`（该列本就原样存取）
+
+### Fixed
+
+#### 联络人选择器（CustomerContactPicker）
+- **去重公司名条目**：客户下多个联络人均未填「简称」时，标签会退化成只显示公司名；此前会在「新增询价」联络人选择器中重复出现多条相同公司名，现在同一公司只保留一项（优先保留主联络人）
+
+### Changed
+
+#### 文档体系
+- **新增最新事实源**：新增 `docs/core/CURRENT_STATE.md`，作为当前系统、权限、数据、迁移和风险的统一现状说明书
+- **核心文档精简**：清理根目录和 `docs/core/` 中大量一次性过程总结、重复文档整理报告、旧系统状态报告和临时 CODEX 汇报，保留事实源、更新日志、项目总结、发布摘要和必要部署说明
+- **入口文档更新**：更新 `README.md`、`AGENTS.md`、`docs/README.md`、`docs/core/README.md`、`docs/core/PROJECT_SUMMARY.md`，统一指向 `CURRENT_STATE.md` 和当前权限注册表 `src/constants/permissionModules.ts`
+- **客户文档修正**：重写 `docs/features/customer/README.md`、`docs/features/customer/USER_GUIDE.md` 和 `src/features/customer/README.md`，删除错位/过时的客户模块过程文档
+
+#### 客户管理页布局
+- **头部精简**：移除「客户管理」标题下方与标签页数字重复的「37位客户·10家供应商·6位收货人」提示行
+- **大屏紧凑**：外层容器由 `max-w-none`（无限拉伸）改为 `mx-auto max-w-7xl`，与客户详情页保持一致，避免大屏下内容被拉得过宽、行间过于稀疏
+- **搜索栏与分类筛选同行**：客户分类筛选 chip 与搜索框合并到同一行（`lg` 断点起横排），视图切换按钮靠右；小屏下自然换行堆叠
+
+---
+
 ## [Unreleased] - 2026-06-26
 
 ### Changed

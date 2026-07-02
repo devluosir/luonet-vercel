@@ -1,83 +1,59 @@
-# 权限系统最终总结
+# 权限系统现状
 
-## 🎯 项目概述
+最后更新：2026-07-02
 
-MLUONET企业管理系统已完成权限检查优化，移除了冗余的权限验证，简化了架构，提升了性能。
+## 当前结论
 
-## 📋 主要变更
+权限模块唯一注册表是：
 
-### ✅ 已完成的优化
-
-1. **移除页面级权限检查**
-   - 所有模块页面移除 `PermissionGuard` 组件
-   - 移除 `hasPermission` 变量和 `usePermissionStore` 导入
-   - 页面直接返回内容，无需权限包装
-
-2. **简化中间件逻辑**
-   - 移除模块权限检查
-   - 只保留登录状态验证
-   - 管理员路径检查保持不变
-
-3. **优化历史页面**
-   - 简化 `getAvailableTabs` 函数
-   - 移除权限验证逻辑
-   - 修复类型错误
-
-## 🏗️ 当前架构
-
-### 权限控制机制
-```
-用户访问 → 中间件(登录检查) → 页面内容
-                ↓
-        管理员控制可见模块
+```text
+src/constants/permissionModules.ts
 ```
 
-### 安全层级
-1. **中间件**: 检查用户登录状态
-2. **管理员**: 控制用户可见的模块
-3. **页面**: 直接显示内容
+后台用户权限弹窗、模块分组和高级权限都应从该注册表派生。不要再新增分散的权限常量文件。
 
-## 📊 性能提升
+## 当前模块
 
-| 优化项目 | 优化前 | 优化后 | 提升幅度 |
-|---------|--------|--------|----------|
-| 权限检查调用 | 每次渲染都检查 | 无页面级检查 | **减少100%** |
-| 中间件复杂度 | 模块权限验证 | 仅登录检查 | **简化80%** |
-| 页面加载时间 | 包含权限检查 | 直接渲染 | **显著减少** |
+| moduleId | 说明 |
+|----------|------|
+| `quotation` | 报价单 / 销售确认 |
+| `packing` | 箱单发票 |
+| `invoice` | 财务发票 |
+| `purchase` | 采购订单 |
+| `inquiry` | 询报价登记表 / 订单状态表 |
+| `inquiry.batchEdit` | 询报价批量编辑 / 导入导出 |
+| `order.financials` | 订单金额 / 回款 / 到账金额 |
+| `history` | 单据历史 |
+| `customer` | 客户管理 |
+| `ai-email` | AI 邮件 |
+| `impa` | IMPA 物料外部工具 |
+| `clock` | 世界时钟 |
+| `holidays` | 全球假日 |
+| `rmb` | RMB 大写 |
 
-## 🔧 技术实现
+`admin` 不是普通 moduleId，后台访问由用户的 `isAdmin` 控制。
 
-### 移除的组件
-- `PermissionGuard` 组件包装
-- `usePermissionStore` 页面级使用
-- `hasPermission` 函数调用
-- 中间件模块权限检查
+## 权限入口
 
-### 保留的功能
-- 用户登录验证
-- 管理员权限控制
-- 路由级安全检查
-- 管理员模块显示控制
+- 左侧导航：`src/components/layout/AppSidebar.tsx`
+- 移动底部导航：`src/components/layout/MobileBottomTab.tsx`
+- 后台权限弹窗：`src/features/admin/components/UserDetailModal.tsx`
+- 权限注册表：`src/constants/permissionModules.ts`
+- 客户端权限 store：`src/lib/permissions.ts`
+- 权限初始化：`src/hooks/usePermissionInit.ts`
+- 权限刷新：`src/hooks/usePermissionRefresh.ts`
+- API 权限校验示例：`src/app/api/inquiry/[[...path]]/route.ts`
 
-## ✅ 验证结果
+## 最近变更
 
-- [x] 所有模块页面功能正常
-- [x] 构建成功，无编译错误
-- [x] 类型检查通过
-- [x] 权限控制机制有效
-- [x] 性能显著提升
+- `impa` 已加入模块权限。
+- 生产 D1 已执行 `migrations/007_grant_default_impa_permission.sql`。
+- 复查结果：`impa_permissions = 8`，`enabled_permissions = 8`。
 
-## 🎉 总结
+## 维护注意
 
-权限系统优化已完成，现在：
-- **更简洁**: 移除了冗余的权限检查
-- **更高效**: 减少了不必要的验证逻辑
-- **更安全**: 保持了必要的安全机制
-- **更易维护**: 简化了代码结构
-
-权限控制现在完全依赖于中间件登录检查和管理员模块控制，实现了高效且安全的访问控制。
-
----
-
-*完成时间: 2024年8月*
-*状态: 已完成* 
+1. 新增模块时先改 `permissionModules.ts`。
+2. 再把入口组件映射到对应 moduleId。
+3. 对已有普通用户可见的新工具，需要补 D1 迁移，否则上线后默认不可见。
+4. 页面级权限并不是安全边界；敏感接口仍需要服务端校验。
+5. Worker 管理接口当前仍有 `X-User-*` header 可伪造风险，应迁移到 HMAC/JWT 或服务端 session 校验。
