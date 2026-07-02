@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { InquiryRecord } from '../types';
 import type {
   InquiryFilterState,
@@ -100,6 +100,7 @@ export function InquiryFilterBar({
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
   const unlinkedCount = records.filter((record) => !record.customerId).length;
+  const shouldShowUnlinkedFilter = unlinkedCount > 0;
 
   const isCustomMonth = filter.timeRange.startsWith('month:');
   const navMonth = isCustomMonth ? filter.timeRange.slice(6) : todayMonth();
@@ -109,6 +110,12 @@ export function InquiryFilterBar({
     setFilter({ ...filter, timeRange: `month:${ym}` as TimeRange });
 
   const divider = <span className="select-none text-gray-200 dark:text-gray-700">·</span>;
+
+  useEffect(() => {
+    if (filter.linkStatus === 'unlinked' && unlinkedCount === 0) {
+      setFilter({ ...filter, linkStatus: 'all' });
+    }
+  }, [filter, setFilter, unlinkedCount]);
 
   return (
     <div
@@ -183,21 +190,25 @@ export function InquiryFilterBar({
 
         {divider}
 
-        <Chip
-          label="待关联客户"
-          active={filter.linkStatus === 'unlinked'}
-          activeColor="bg-slate-700 text-white"
-          badge={unlinkedCount}
-          badgeColor="bg-slate-700"
-          onClick={() =>
-            setFilter({
-              ...filter,
-              linkStatus: filter.linkStatus === 'unlinked' ? 'all' : 'unlinked',
-            })
-          }
-        />
+        {shouldShowUnlinkedFilter && (
+          <>
+            <Chip
+              label="待关联客户"
+              active={filter.linkStatus === 'unlinked'}
+              activeColor="bg-slate-700 text-white"
+              badge={unlinkedCount}
+              badgeColor="bg-slate-700"
+              onClick={() =>
+                setFilter({
+                  ...filter,
+                  linkStatus: filter.linkStatus === 'unlinked' ? 'all' : 'unlinked',
+                })
+              }
+            />
 
-        {divider}
+            {divider}
+          </>
+        )}
 
         {/* 报价状态 chips */}
         {statusOptions.map((opt) => (
