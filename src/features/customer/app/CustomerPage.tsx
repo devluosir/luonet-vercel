@@ -237,18 +237,45 @@ export default function CustomerPage() {
 
           {/* 搜索栏 */}
           <div className="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative w-full sm:max-w-xs">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={`搜索${LABEL[activeTab]}…`}
-                  className="h-8 w-full rounded-lg border border-gray-200 bg-gray-50 pl-8 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-[#2c2c2e] dark:text-white dark:placeholder-gray-500"
-                />
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <div className="relative w-full sm:max-w-xs">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={`搜索${LABEL[activeTab]}…`}
+                    className="h-8 w-full rounded-lg border border-gray-200 bg-gray-50 pl-8 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-[#2c2c2e] dark:text-white dark:placeholder-gray-500"
+                  />
+                </div>
+
+                {/* 客户分类筛选 */}
+                {activeTab === 'customers' && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {CATEGORY_FILTERS.map((filter) => {
+                      const active = categoryFilter === filter.key;
+                      return (
+                        <button
+                          key={filter.key}
+                          type="button"
+                          onClick={() => setCategoryFilter(filter.key)}
+                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                            active
+                              ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
+                              : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {filter.label}
+                          <span className={active ? 'text-blue-500' : 'text-gray-400'}>{categoryCounts[filter.key]}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              <div className="inline-flex w-fit rounded-lg border border-gray-200 bg-gray-50 p-0.5 dark:border-gray-700 dark:bg-[#2c2c2e]">
+
+              <div className="inline-flex w-fit shrink-0 rounded-lg border border-gray-200 bg-gray-50 p-0.5 dark:border-gray-700 dark:bg-[#2c2c2e]">
                 <button
                   type="button"
                   onClick={() => setViewMode('list')}
@@ -279,30 +306,6 @@ export default function CustomerPage() {
                 </button>
               </div>
             </div>
-
-            {/* 客户分类筛选 */}
-            {activeTab === 'customers' && (
-              <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                {CATEGORY_FILTERS.map((filter) => {
-                  const active = categoryFilter === filter.key;
-                  return (
-                    <button
-                      key={filter.key}
-                      type="button"
-                      onClick={() => setCategoryFilter(filter.key)}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                        active
-                          ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
-                          : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {filter.label}
-                      <span className={active ? 'text-blue-500' : 'text-gray-400'}>{categoryCounts[filter.key]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
           {/* 列表内容 */}
