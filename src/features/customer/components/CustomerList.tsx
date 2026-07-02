@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Search, Users } from 'lucide-react';
 import type { Customer, Supplier, Consignee } from '../types';
 import { getPrimaryContact } from '../services/customerService';
-import { getProfileTitle, PrimaryContactSummary, ProfileShortName, RowActionMenu } from './ProfileListParts';
+import { CategoryBadge, getProfileTitle, PrimaryContactSummary, ProfileShortName, RowActionMenu } from './ProfileListParts';
 
 const AVATAR_COLORS = [
   'bg-blue-500',
@@ -137,9 +137,12 @@ export function CustomerList({
 
               {/* 名称 + 公司 */}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                  {title}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                    {title}
+                  </p>
+                  <CategoryBadge category={customer.category} note={customer.categoryNote} />
+                </div>
                 <ProfileShortName value={customer.shortName} />
               </div>
 

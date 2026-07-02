@@ -7,6 +7,9 @@ export interface Contact {
   isPrimary?: boolean;
 }
 
+// 客户分类：根据订单量、付款及时性等人为评定 A/B/C 三档，New 表示尚未成单的新客户，Blacklist 为黑名单
+export type CustomerCategory = 'A' | 'B' | 'C' | 'New' | 'Blacklist';
+
 export interface CustomerProfile {
   id: string;
   type: 'customer' | 'supplier' | 'consignee';
@@ -15,6 +18,8 @@ export interface CustomerProfile {
   code?: string;
   address: string;
   contacts: Contact[];
+  category?: CustomerCategory;
+  categoryNote?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,6 +34,8 @@ export interface CustomerFormData {
   code?: string;
   address: string;
   contacts: Contact[];
+  category?: CustomerCategory;
+  categoryNote?: string;
 }
 
 export type TabType = 'customers' | 'suppliers' | 'consignees';

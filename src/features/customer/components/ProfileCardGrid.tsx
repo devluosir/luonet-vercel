@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Building2, CalendarDays, MapPin, Package, Search, Users } from 'lucide-react';
 import { getPrimaryContact } from '../services/customerService';
 import type { Consignee, Customer, Supplier, TabType } from '../types';
-import { getProfileTitle, PrimaryContactSummary, ProfileShortName, RowActionMenu } from './ProfileListParts';
+import { CategoryBadge, getProfileTitle, PrimaryContactSummary, ProfileShortName, RowActionMenu } from './ProfileListParts';
 
 type ProfileCardItem = Customer | Supplier | Consignee;
 
@@ -170,7 +170,10 @@ export function ProfileCardGrid({
                 {initial}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{title}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{title}</p>
+                  <CategoryBadge category={item.category} note={item.categoryNote} />
+                </div>
                 <ProfileShortName value={item.shortName} />
               </div>
               <RowActionMenu item={item} onEdit={onEdit} onDelete={onDelete} />

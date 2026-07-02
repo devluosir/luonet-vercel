@@ -42,6 +42,8 @@ export function useCustomerActions(showConfirm: ShowConfirm) {
         code: customerData.code?.trim() || undefined,
         address: customerData.address,
         contacts: normalizeContacts(customerData),
+        category: customerData.category,
+        categoryNote: customerData.categoryNote?.trim() || undefined,
         createdAt: editingCustomer ? editingCustomer.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

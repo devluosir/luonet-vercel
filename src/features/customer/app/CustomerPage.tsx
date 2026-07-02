@@ -9,7 +9,18 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAppUser } from '@/hooks/useAppUser';
 import { useCustomerData, useCustomerActions, useCustomerForm } from '../hooks';
 import { CustomerList, SupplierList, ConsigneeList, CustomerModal, ProfileCardGrid } from '../components';
-import type { Customer, Supplier, Consignee, TabType } from '../types';
+import type { Customer, CustomerCategory, Supplier, Consignee, TabType } from '../types';
+
+type CategoryFilter = CustomerCategory | 'all';
+
+const CATEGORY_FILTERS: Array<{ key: CategoryFilter; label: string }> = [
+  { key: 'all', label: '全部' },
+  { key: 'A', label: 'A类' },
+  { key: 'B', label: 'B类' },
+  { key: 'C', label: 'C类' },
+  { key: 'New', label: 'New' },
+  { key: 'Blacklist', label: '黑名单' },
+];
 
 type ConfirmState = {
   open: boolean;
@@ -32,6 +43,7 @@ export default function CustomerPage() {
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [editingConsignee, setEditingConsignee] = useState<Consignee | null>(null);
   const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
 
@@ -140,9 +152,23 @@ export default function CustomerPage() {
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
     setSearch('');
+    setCategoryFilter('all');
   };
 
   const isEditing = !!(editingCustomer || editingSupplier || editingConsignee);
+
+  const categoryCounts: Record<CategoryFilter, number> = {
+    all: customers.length,
+    A: customers.filter((c) => c.category === 'A').length,
+    B: customers.filter((c) => c.category === 'B').length,
+    C: customers.filter((c) => c.category === 'C').length,
+    New: customers.filter((c) => c.category === 'New' || !c.category).length,
+    Blacklist: customers.filter((c) => c.category === 'Blacklist').length,
+  };
+
+  const displayedCustomers = categoryFilter === 'all'
+    ? customers
+    : customers.filter((c) => (categoryFilter === 'New' ? (c.category === 'New' || !c.category) : c.category === categoryFilter));
 
   // ── Tab config ──────────────────────────────────────────────────
   const tabs: Array<{
@@ -260,12 +286,36 @@ export default function CustomerPage() {
                 </button>
               </div>
             </div>
+
+            {/* 客户分类筛选 */}
+            {activeTab === 'customers' && (
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                {CATEGORY_FILTERS.map((filter) => {
+                  const active = categoryFilter === filter.key;
+                  return (
+                    <button
+                      key={filter.key}
+                      type="button"
+                      onClick={() => setCategoryFilter(filter.key)}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                        active
+                          ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
+                          : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {filter.label}
+                      <span className={active ? 'text-blue-500' : 'text-gray-400'}>{categoryCounts[filter.key]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* 列表内容 */}
           {viewMode === 'card' ? (
             <ProfileCardGrid
-              items={activeTab === 'customers' ? customers : activeTab === 'suppliers' ? suppliers : consignees}
+              items={activeTab === 'customers' ? displayedCustomers : activeTab === 'suppliers' ? suppliers : consignees}
               loading={isLoading}
               searchQuery={search}
               type={activeTab}
@@ -275,7 +325,7 @@ export default function CustomerPage() {
             />
           ) : activeTab === 'customers' ? (
             <CustomerList
-              customers={customers}
+              customers={displayedCustomers}
               loading={isLoading}
               searchQuery={search}
               onEdit={handleEdit}

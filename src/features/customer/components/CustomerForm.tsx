@@ -1,7 +1,15 @@
 'use client';
 
 import { type FormEvent } from 'react';
-import { Contact, CustomerFormData } from '../types';
+import { Contact, CustomerCategory, CustomerFormData } from '../types';
+
+const CATEGORY_OPTIONS: Array<{ value: CustomerCategory; label: string }> = [
+  { value: 'A', label: 'A类' },
+  { value: 'B', label: 'B类' },
+  { value: 'C', label: 'C类' },
+  { value: 'New', label: 'New（未成单新客户）' },
+  { value: 'Blacklist', label: '黑名单' },
+];
 
 type TextFieldId = Exclude<keyof CustomerFormData, 'contacts'>;
 
@@ -160,6 +168,42 @@ export function CustomerForm({
             onInputChange={onInputChange}
             placeholder="可选"
           />
+          {entityType === 'customers' && (
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                客户分类
+                <span className="ml-1 text-xs font-normal text-gray-400">人为评定，可随时调整</span>
+              </label>
+              <select
+                id="category"
+                value={formData.category ?? 'New'}
+                onChange={(e) => onInputChange('category', e.target.value as CustomerCategory)}
+                className={FIELD_CLASS}
+              >
+                {CATEGORY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {entityType === 'customers' && (
+            <div className="md:col-span-3">
+              <label htmlFor="categoryNote" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                分类备注
+                <span className="ml-1 text-xs font-normal text-gray-400">简述评定理由，如订单量、回款情况等</span>
+              </label>
+              <input
+                type="text"
+                id="categoryNote"
+                value={formData.categoryNote ?? ''}
+                onChange={(e) => onInputChange('categoryNote', e.target.value)}
+                className={FIELD_CLASS}
+                placeholder="可选，如：月均3单，回款及时"
+              />
+            </div>
+          )}
           <div className="md:col-span-2">
             <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               地址

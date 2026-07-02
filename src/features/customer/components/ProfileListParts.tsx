@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
-import type { Consignee, Customer, Supplier } from '../types';
+import type { Consignee, Customer, CustomerCategory, Supplier } from '../types';
 import { getPrimaryContact } from '../services/customerService';
 
 export type ProfileListItem = Customer | Supplier | Consignee;
@@ -13,6 +13,35 @@ const MENU_OFFSET = 4;
 
 export function getProfileTitle(item: ProfileListItem) {
   return item.name.split('\n')[0] || item.name;
+}
+
+const CATEGORY_STYLES: Record<CustomerCategory, string> = {
+  A: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  B: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  C: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+  New: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  Blacklist: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+};
+
+const CATEGORY_LABELS: Record<CustomerCategory, string> = {
+  A: 'A类',
+  B: 'B类',
+  C: 'C类',
+  New: 'New',
+  Blacklist: '黑名单',
+};
+
+export function CategoryBadge({ category, note }: { category?: CustomerCategory; note?: string }) {
+  if (!category) return null;
+
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${CATEGORY_STYLES[category]}`}
+      title={note}
+    >
+      {CATEGORY_LABELS[category]}
+    </span>
+  );
 }
 
 export function PrimaryContactSummary({ item }: { item: ProfileListItem }) {

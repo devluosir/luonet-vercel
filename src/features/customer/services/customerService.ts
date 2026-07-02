@@ -1,5 +1,13 @@
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
-import { Contact, Customer, HistoryDocument } from '../types';
+import { Contact, Customer, CustomerCategory, HistoryDocument } from '../types';
+
+const VALID_CATEGORIES: CustomerCategory[] = ['A', 'B', 'C', 'New', 'Blacklist'];
+
+function toCustomerCategory(value: unknown): CustomerCategory | undefined {
+  return typeof value === 'string' && (VALID_CATEGORIES as string[]).includes(value)
+    ? (value as CustomerCategory)
+    : undefined;
+}
 
 export type CustomerProfileType = 'customer' | 'supplier' | 'consignee';
 
@@ -16,6 +24,8 @@ export interface CustomerProfileInput {
   code?: string;
   address?: string;
   contacts?: Contact[];
+  category?: CustomerCategory;
+  categoryNote?: string;
   createdAt?: string;
 }
 
@@ -150,6 +160,8 @@ function normalizeProfile(row: D1Customer): Customer {
     code: row.code ?? undefined,
     address: row.address ?? '',
     contacts: normalizeContacts((row.contacts ?? []).map(toContact)),
+    category: toCustomerCategory(data.category),
+    categoryNote: typeof data.categoryNote === 'string' && data.categoryNote.trim() ? data.categoryNote : undefined,
     createdAt,
     updatedAt,
   };
@@ -220,13 +232,18 @@ export async function getCustomerById(id: string, type: CustomerProfileType = 'c
 }
 
 function buildBasePayload(profile: CustomerProfileInput) {
+  const data: Record<string, unknown> = {};
+  if (profile.category) data.category = profile.category;
+  const categoryNote = profile.categoryNote?.trim();
+  if (categoryNote) data.categoryNote = categoryNote;
+
   return {
     type: profile.type,
     name: profile.name.trim(),
     short_name: profile.shortName?.trim() || undefined,
     code: profile.code?.trim() || undefined,
     address: profile.address?.trim() || undefined,
-    data: {},
+    data,
   };
 }
 
@@ -279,6 +296,8 @@ export async function saveCustomer(customer: Customer, isNew = false): Promise<C
     code: customer.code,
     address: customer.address,
     contacts: customer.contacts,
+    category: customer.category,
+    categoryNote: customer.categoryNote,
     createdAt: customer.createdAt,
   });
 }
