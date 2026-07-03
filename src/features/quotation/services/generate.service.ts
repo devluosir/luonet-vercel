@@ -1,14 +1,15 @@
 import type { QuotationData } from '@/types/quotation';
+import type { NoteConfig } from '../types/notes';
 import { monitorPdfGeneration } from '@/utils/performance';
 import { sanitizeQuotation } from '@/utils/sanitizeQuotation';
 
 export const generatePdf = async (
-  tab: 'quotation' | 'confirmation', 
-  rawData: any,
-  notesConfig: any[],
+  tab: 'quotation' | 'confirmation',
+  rawData: QuotationData,
+  notesConfig: NoteConfig[],
   setProgress: (progress: number) => void,
-  opts?: { 
-    mode?: 'preview' | 'final'; 
+  opts?: {
+    mode?: 'preview' | 'final';
     descriptionMergeMode?: 'auto' | 'manual';
     remarksMergeMode?: 'auto' | 'manual';
     manualMergedCells?: {
@@ -30,12 +31,12 @@ export const generatePdf = async (
 ): Promise<Blob> => {
   // 数据准备阶段（不计入生成监控）
   setProgress(20);
-  
+
   try {
     // 净化数据
     const data = sanitizeQuotation(rawData);
     setProgress(40);
-    
+
     // 根据notesConfig过滤和排序notes
     const visibleNotes = notesConfig
       .filter(note => note.visible)
@@ -45,7 +46,7 @@ export const generatePdf = async (
         if (note.content && note.content.trim()) {
           return note.content;
         }
-        
+
         // 如果没有content，使用默认值
         const defaultTitles: Record<string, string> = {
           'delivery_time': 'Delivery Time',
@@ -54,7 +55,7 @@ export const generatePdf = async (
           'payment_terms': 'Payment Term',
           'validity': 'Validity'
         };
-        
+
         const title = defaultTitles[note.id];
         return title ? `${title}: [待填写]` : 'Custom Note: [待填写]';
       })
@@ -67,14 +68,14 @@ export const generatePdf = async (
     };
 
     setProgress(80);
-    
+
     // 只在这里监控真正的PDF生成核心
     const blob = await monitorPdfGeneration(`${tab}`, async () => {
       if (tab === 'quotation') {
         const { generateQuotationPDF } = await import('@/utils/quotationPdfGenerator');
         return await generateQuotationPDF(
-          dataWithConfiguredNotes, 
-          opts?.mode === 'preview' ? 'preview' : 'export', 
+          dataWithConfiguredNotes,
+          opts?.mode === 'preview' ? 'preview' : 'export',
           opts?.descriptionMergeMode,
           opts?.remarksMergeMode,
           opts?.manualMergedCells,
@@ -83,8 +84,8 @@ export const generatePdf = async (
       } else {
         const { generateOrderConfirmationPDF } = await import('@/utils/orderConfirmationPdfGenerator');
         return await generateOrderConfirmationPDF(
-          dataWithConfiguredNotes, 
-          opts?.mode === 'preview', 
+          dataWithConfiguredNotes,
+          opts?.mode === 'preview',
           opts?.descriptionMergeMode,
           opts?.remarksMergeMode,
           opts?.manualMergedCells,
@@ -92,7 +93,7 @@ export const generatePdf = async (
         );
       }
     }, { mode: opts?.mode === 'preview' ? 'preview' : 'export', operation: tab });
-    
+
     setProgress(100);
     return blob;
   } catch (error) {
@@ -111,11 +112,11 @@ export function downloadPdf(blob: Blob, tab: 'quotation' | 'confirmation', data:
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  
-  const fileName = tab === 'confirmation' 
+
+  const fileName = tab === 'confirmation'
     ? `SC_${data.contractNo || data.quotationNo || 'draft'}.pdf`
     : `QTN_${data.quotationNo || 'draft'}.pdf`;
-    
+
   link.download = fileName;
   document.body.appendChild(link);
   link.click();

@@ -1,7 +1,6 @@
 'use client';
 import React, { useCallback, memo, useMemo } from 'react';
 import { usePurchaseStore } from '../../state/purchase.store';
-import { usePurchaseForm } from '../../hooks/usePurchaseForm';
 import { usePurchaseValidation } from '../../hooks/usePurchaseValidation';
 import ErrorBadge from '../ErrorBadge';
 import type { PurchaseItem } from '../../utils/types';
@@ -43,13 +42,13 @@ export default function ItemsTable() {
 
   const total = useMemo(() => items.reduce((a, it) => a + it.qty * it.price, 0), [items]);
 
-  const err = (path: string) => errors.find(e => e.path === path)?.message;
+  const _err = (path: string) => errors.find(e => e.path === path)?.message;
 
   return (
     <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">商品列表</h3>
-        <button 
+        <button
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
           onClick={handleAdd}
         >
@@ -154,7 +153,7 @@ const ItemRow = memo(({ id, index }: { id: string; index: number }) => {
       </td>
       <td className="py-2 pl-2 text-right text-gray-800 dark:text-[#F5F5F7]">{amount.toFixed(2)}</td>
       <td className="py-2 pl-2">
-        <button 
+        <button
           className="w-6 h-6 rounded-full transition-colors flex items-center justify-center text-sm font-medium text-gray-400 hover:bg-red-100 hover:text-red-600"
           aria-label="删除"
           onClick={() => removeItem(id)}

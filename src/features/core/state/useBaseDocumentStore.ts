@@ -11,11 +11,11 @@ export interface BaseDocumentState<T extends BaseDocument> {
   isSaving: boolean;
   isGenerating: boolean;
   error: string | null;
-  
+
   // 操作状态
   isDirty: boolean;
   lastSaved: string | null;
-  
+
   // 基础操作
   setData: (data: Partial<T>) => void;
   setLoading: (loading: boolean) => void;
@@ -23,7 +23,7 @@ export interface BaseDocumentState<T extends BaseDocument> {
   setGenerating: (generating: boolean) => void;
   setError: (error: string | null) => void;
   reset: () => void;
-  
+
   // 高级操作
   markDirty: () => void;
   markClean: () => void;
@@ -33,10 +33,10 @@ export interface BaseDocumentState<T extends BaseDocument> {
 // 创建基础单据Store的工厂函数
 export function createBaseDocumentStore<T extends BaseDocument>(
   initialState: T,
-  storeName: string
+  _storeName: string
 ) {
   return create<BaseDocumentState<T>>()(
-    subscribeWithSelector((set, get) => ({
+    subscribeWithSelector((set, _get) => ({
       // 初始状态
       data: initialState,
       isLoading: false,
@@ -93,9 +93,9 @@ export function createBaseDocumentStore<T extends BaseDocument>(
       },
 
       updateLastSaved: () => {
-        set({ 
+        set({
           lastSaved: new Date().toISOString(),
-          isDirty: false 
+          isDirty: false
         });
       },
     }))
@@ -105,7 +105,7 @@ export function createBaseDocumentStore<T extends BaseDocument>(
 // 通用单据Store Hook
 export function useBaseDocumentStore<T extends BaseDocument>(
   store: ReturnType<typeof createBaseDocumentStore<T>>,
-  selector?: (state: BaseDocumentState<T>) => any
+  selector?: (state: BaseDocumentState<T>) => unknown
 ) {
   if (selector) {
     return store(selector);

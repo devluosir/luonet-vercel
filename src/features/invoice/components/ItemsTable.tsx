@@ -1,13 +1,12 @@
 'use client';
-
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useInvoiceStore } from '../state/invoice.store';
-import { LineItem, OtherFee } from '../types';
-import { INPUT_CLASSNAMES, HIGHLIGHT_CLASS } from '../constants/settings';
+import { LineItem } from '../types';
+import { HIGHLIGHT_CLASS } from '../constants/settings';
 import { handleTableKeyDown } from '../utils/keyboardNavigation';
 import { ImportDataButton } from './ImportDataButton';
 import { ColumnToggle } from './ColumnToggle';
-import { QuickImport } from './QuickImport';
+import { QuickImport, type PresetParsedInvoiceData } from './QuickImport';
 
 // 导入单位处理模块
 import { useUnitHandler } from '@/hooks/useUnitHandler';
@@ -80,14 +79,14 @@ export const ItemsTable = React.memo(() => {
     data,
     updateData,
     updateLineItem,
-    addLineItem,
+    addLineItem: _addLineItem,
     removeLineItem,
-    addOtherFee,
+    addOtherFee: _addOtherFee,
     removeOtherFee,
     updateOtherFee,
     handleDoubleClick,
     handleOtherFeeDoubleClick,
-    focusedCell,
+    focusedCell: _focusedCell,
     setFocusedCell
   } = useInvoiceStore();
 
@@ -99,7 +98,7 @@ export const ItemsTable = React.memo(() => {
   const [editingQtyAmount, setEditingQtyAmount] = useState<string>('');
   const [editingOtherFeeIndex, setEditingOtherFeeIndex] = useState<number | null>(null);
   const [editingOtherFeeAmount, setEditingOtherFeeAmount] = useState<string>('');
-  const [importPreset, setImportPreset] = useState<{ raw: string; parsed: any } | null>(null);
+  const [importPreset, setImportPreset] = useState<{ raw: string; parsed: PresetParsedInvoiceData } | null>(null);
 
   // iOS输入框样式
   const iosCaretStyle = { caretColor: '#007AFF' } as React.CSSProperties;
@@ -144,7 +143,7 @@ export const ItemsTable = React.memo(() => {
 
 
   // 处理键盘导航
-  const handleKeyDown = (
+  const _handleKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
     rowIndex: number,
     column: string
@@ -153,11 +152,11 @@ export const ItemsTable = React.memo(() => {
   };
 
   // 处理数量变化
-  const handleQuantityChange = (index: number, value: string) => {
+  const _handleQuantityChange = (index: number, value: string) => {
     const numValue = parseFloat(value) || 0;
     const item = data.items[index];
     const result = handleUnitItemChange(item, 'quantity', numValue);
-    
+
     updateLineItem(index, 'quantity', result.quantity);
     // 如果单位发生变化，同时更新单位
     if (result.unit !== item.unit) {
@@ -215,10 +214,10 @@ export const ItemsTable = React.memo(() => {
   };
 
   // 使用单位处理Hook
-  const { 
-    handleItemChange: handleUnitItemChange, 
-    getDisplayUnit, 
-    allUnits 
+  const {
+    handleItemChange: handleUnitItemChange,
+    getDisplayUnit: _getDisplayUnit,
+    allUnits: _allUnits
   } = useUnitHandler(data.customUnits || []);
 
   // 处理导入数据
@@ -232,13 +231,13 @@ export const ItemsTable = React.memo(() => {
         amount: item.quantity * item.unitPrice,
       };
     });
-    
+
     // 更新数据
     updateData({ items: [...data.items, ...processed] });
   };
 
   // 处理插入导入数据
-  const handleInsertImported = (rows: any[], replaceMode = false) => {
+  const handleInsertImported = (rows: Array<Partial<LineItem> & { partName?: string }>, replaceMode = false) => {
     const mapped: LineItem[] = rows.map((r, index) => {
       const quantity = Number(r.quantity) || 0;
       const unitPrice = Number(r.unitPrice) || 0;
@@ -255,7 +254,7 @@ export const ItemsTable = React.memo(() => {
         highlight: {}
       } as LineItem;
     });
-    
+
     const finalItems = replaceMode ? mapped : [...data.items, ...mapped];
     updateData({ items: finalItems });
   };
@@ -264,7 +263,7 @@ export const ItemsTable = React.memo(() => {
   const qtyInputProps = (index: number) => {
     const item = data.items?.[index];
     if (!item) return { value: '', onChange: () => {}, onFocus: () => {}, onBlur: () => {} };
-    
+
     return {
       value: editingQtyIndex === index ? editingQtyAmount : String(item.quantity),
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -298,7 +297,7 @@ export const ItemsTable = React.memo(() => {
   const priceInputProps = (index: number) => {
     const item = data.items?.[index];
     if (!item) return { value: '', onChange: () => {}, onFocus: () => {}, onBlur: () => {} };
-    
+
     return {
       value: editingPriceIndex === index ? editingPriceAmount : item.unitPrice.toFixed(2),
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -347,7 +346,7 @@ export const ItemsTable = React.memo(() => {
   };
 
   // 获取有效可见列 - HS code、Part Name、Description、Remarks 可控，其他列常显
-  const effectiveVisibleCols = visibleCols.filter(col => 
+  const effectiveVisibleCols = visibleCols.filter(col =>
     ['hsCode', 'partName', 'description', 'remarks'].includes(col)
   );
 
@@ -816,13 +815,13 @@ export const ItemsTable = React.memo(() => {
                             {(data.items?.length || 0) + index + 1}
                           </span>
                         </td>
-                        <td 
+                        <td
                           colSpan={
                             (effectiveVisibleCols.includes('hsCode') ? 1 : 0) +
                             (effectiveVisibleCols.includes('partName') ? 1 : 0) +
                             (effectiveVisibleCols.includes('description') ? 1 : 0) +
                             3 // Q'TY, Unit, U/Price
-                          } 
+                          }
                           className="px-2 py-2 bg-white/90 dark:bg-[#1C1C1E]/90"
                         >
                           <AutoGrowTextarea

@@ -16,18 +16,18 @@ const baseInputClassName = `w-full px-2 py-1.5 rounded-lg
   hover:bg-white/90 dark:hover:bg-[#1c1c1e]/90`;
 
 // 文本输入框样式
-const textInputClassName = `${baseInputClassName} text-left`;
+const _textInputClassName = `${baseInputClassName} text-left`;
 
-// 数字输入框样式  
-const numberInputClassName = `${baseInputClassName} text-center
-  [appearance:textfield] 
-  [&::-webkit-outer-spin-button]:appearance-none 
+// 数字输入框样式
+const _numberInputClassName = `${baseInputClassName} text-center
+  [appearance:textfield]
+  [&::-webkit-outer-spin-button]:appearance-none
   [&::-webkit-inner-spin-button]:appearance-none`;
 
 // 选择框样式
-const selectInputClassName = `${baseInputClassName} text-center cursor-pointer
+const _selectInputClassName = `${baseInputClassName} text-center cursor-pointer
   appearance-none bg-white/80 dark:bg-[#1c1c1e]/80
-  bg-[url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")] 
+  bg-[url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")]
   bg-[length:1rem_1rem] bg-[right_0.5rem_center] bg-no-repeat pr-8`;
 
 // 导入单位处理模块
@@ -62,6 +62,9 @@ interface PackingItem {
 }
 
 type OtherFeeField = 'description' | 'amount';
+type CaretStyle = CSSStyleDeclaration & {
+  webkitCaretColor?: string;
+};
 
 interface PackingData {
   items: PackingItem[];
@@ -118,16 +121,16 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   editingFeeAmount,
   setEditingFeeIndex,
   setEditingFeeAmount,
-  totals,
+  totals: _totals,
   onEnterGroupMode,
   onExitGroupMode,
   onDataChange
 }) => {
   // 使用单位处理Hook
-  const { 
-    handleItemChange: handleUnitItemChange, 
-    getDisplayUnit, 
-    allUnits 
+  const {
+    handleItemChange: handleUnitItemChange,
+    getDisplayUnit: _getDisplayUnit,
+    allUnits: _allUnits
   } = useUnitHandler(data.customUnits || []);
 
   // 编辑状态管理
@@ -151,7 +154,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     };
 
     checkDarkMode();
-    
+
     if (window.matchMedia) {
       const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
       darkModeQuery.addEventListener('change', checkDarkMode);
@@ -173,10 +176,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   // iOS输入框优化处理函数
   const handleIOSInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const element = e.target;
-    
+
     // 设置光标颜色
     element.style.caretColor = isDarkMode ? '#0A84FF' : '#007AFF';
-    (element.style as any).webkitCaretColor = isDarkMode ? '#0A84FF' : '#007AFF';
+    (element.style as CaretStyle).webkitCaretColor = isDarkMode ? '#0A84FF' : '#007AFF';
   };
 
   // 初始化函数，用于调整所有textarea的高度
@@ -210,12 +213,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   };
 
   // 处理数量变更时同时更新单位（确保只接受整数）
-  const handleQuantityChange = (index: number, value: string | number) => {
+  const _handleQuantityChange = (index: number, value: string | number) => {
     // 确保只接受整数
     const quantity = typeof value === 'string' ? parseInt(value) || 0 : Math.floor(Number(value));
     const item = data.items[index];
     const result = handleUnitItemChange(item, 'quantity', quantity);
-    
+
     onItemChange(index, 'quantity', result.quantity);
     // 如果单位发生变化，同时更新单位
     if (result.unit !== item.unit) {
@@ -232,7 +235,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
   // 计算 Other Fee 总额
   const otherFeesTotal = data.otherFees?.reduce((sum, fee) => sum + fee.amount, 0) || 0;
-  
+
   // 修改总计计算逻辑，对于组内的项目，只计算合并后的那一行的数值
   const calculateTotals = () => {
     let totalPrice = 0;
@@ -240,7 +243,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     let grossWeight = 0;
     let packageQty = 0;
     const processedGroups = new Set<string>();
-    data.items.forEach((item, index) => {
+    data.items.forEach((item, _index) => {
       totalPrice += item.totalPrice;
       const isInGroup = !!item.groupId;
       const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
@@ -270,7 +273,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   const totalAmount = calculatedTotals.totalPrice + otherFeesTotal;
 
   // 处理分组数据渲染
-  const renderGroupedItems = () => {
+  const _renderGroupedItems = () => {
     const groupedItems: Array<{
       items: PackingItem[];
       groupId?: string;
@@ -285,7 +288,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
     let currentGroup: typeof groupedItems[0] | null = null;
 
-    data.items.forEach((item, index) => {
+    data.items.forEach((item, _index) => {
       if (item.groupId && data.isInGroupMode) {
         // 在分组模式中，有groupId的项目
         if (!currentGroup || currentGroup.groupId !== item.groupId) {
@@ -336,7 +339,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   };
 
   // 修改 handleOtherFeeChange 的类型
-  const handleOtherFeeChange = (index: number, field: OtherFeeField, value: string | number) => {
+  const _handleOtherFeeChange = (_index: number, _field: OtherFeeField, _value: string | number) => {
     // ... existing code ...
   };
 
@@ -357,7 +360,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 }
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                data.isInGroupMode 
+                data.isInGroupMode
                   ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
                   : 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40'
               }`}
@@ -400,9 +403,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     description: '',
                     amount: 0
                   };
-                  onDataChange?.({ 
-                    ...data, 
-                    otherFees: [...(data.otherFees || []), newOtherFee] 
+                  onDataChange?.({
+                    ...data,
+                    otherFees: [...(data.otherFees || []), newOtherFee]
                   });
                 }}
                 className="px-3 py-1.5 rounded-lg bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 text-xs font-medium transition-all duration-200"
@@ -414,7 +417,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
           {/* 列设置按钮 - 右侧 */}
           <div className="flex items-center gap-2">
-            <ColumnToggle 
+            <ColumnToggle
               packageQtyMergeMode={data.packageQtyMergeMode || 'auto'}
               dimensionsMergeMode={data.dimensionsMergeMode || 'auto'}
               onPackageQtyMergeModeChange={(mode) => {
@@ -435,7 +438,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
           const isInGroup = !!item.groupId;
           const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
           const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
-          
+
           return (
           <div key={item.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
@@ -449,7 +452,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 </button>
               )}
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Marks */}
               <div>
@@ -470,7 +473,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   placeholder="Marks"
                 />
               </div>
-              
+
               {/* 描述 */}
               <div className="sm:col-span-2">
                 <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
@@ -490,7 +493,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   placeholder="Enter product description..."
                 />
               </div>
-              
+
               {/* HS Code */}
               {data.showHsCode && (
                 <div>
@@ -508,7 +511,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   />
                 </div>
               )}
-              
+
               {/* 数量 */}
               <div>
                   <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
@@ -552,7 +555,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                     }}
                   />
                 </div>
-              
+
               {/* 单位 */}
                 <div>
                   <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
@@ -904,7 +907,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
           </div>
           );
         })}
-        
+
         {/* 移动端按钮区域 */}
         <div className="space-y-3">
           {/* 分组按钮 */}
@@ -912,20 +915,20 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
             type="button"
             onClick={data.isInGroupMode ? onExitGroupMode : onEnterGroupMode}
             className={`w-full py-3 border-2 border-dashed rounded-xl transition-colors ${
-              data.isInGroupMode 
+              data.isInGroupMode
                 ? 'border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:border-red-400 dark:hover:border-red-500'
                 : 'border-[#E5E5EA] dark:border-[#2C2C2E] text-[#86868B] dark:text-[#86868B] hover:border-[#0066CC] hover:text-[#0066CC] dark:hover:border-[#0A84FF] dark:hover:text-[#0A84FF]'
             }`}
           >
             {data.isInGroupMode ? 'Exit Group' : 'Add Group'}
           </button>
-          
+
           {/* 添加行按钮 */}
         <button
           type="button"
           onClick={onAddLine}
           className="w-full py-3 border-2 border-dashed border-[#E5E5EA] dark:border-[#2C2C2E] rounded-xl
-            text-[#86868B] dark:text-[#86868B] hover:border-[#0066CC] hover:text-[#0066CC] 
+            text-[#86868B] dark:text-[#86868B] hover:border-[#0066CC] hover:text-[#0066CC]
             dark:hover:border-[#0A84FF] dark:hover:text-[#0A84FF] transition-colors"
         >
           + Add Item
@@ -1102,7 +1105,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               {/* 商品行（支持分组合并单元格和分组底色） */}
               {(() => {
                 // 记录已处理的组ID，避免重复渲染rowSpan
-                const renderedGroupIds = new Set<string>();
+                const _renderedGroupIds = new Set<string>();
                 return data.items.map((item, index) => {
                   const isInGroup = !!item.groupId;
                   const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
@@ -1114,7 +1117,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                   return (
                     <tr key={item.id} className={`border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10 ${groupBg}`}>
                       <td className="py-2 px-4 text-center text-sm">
-                      <span 
+                      <span
                           className="flex items-center justify-center w-5 h-5 rounded-full text-xs text-gray-400 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors"
                         onClick={() => handleSoftDelete(index)}
                       >
@@ -1561,4 +1564,4 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       </div>
     </div>
   );
-}; 
+};

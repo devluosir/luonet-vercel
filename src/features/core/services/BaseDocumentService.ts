@@ -8,7 +8,7 @@ export interface BaseDocumentService<T extends BaseDocument> {
   delete(id: string): Promise<void>;
   getById(id: string): Promise<T>;
   list(params?: ListParams): Promise<ListResult<T>>;
-  
+
   // 特殊操作
   duplicate(id: string): Promise<T>;
   export(id: string, format: 'pdf' | 'excel'): Promise<Blob>;
@@ -22,7 +22,7 @@ export interface ListParams {
   search?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
 }
 
 // 列表结果
@@ -50,7 +50,7 @@ export abstract class BaseDocumentServiceImpl<T extends BaseDocument> implements
     options: RequestInit = {}
   ): Promise<TResult> {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     const defaultOptions: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
@@ -102,13 +102,13 @@ export abstract class BaseDocumentServiceImpl<T extends BaseDocument> implements
   // 获取文档列表
   async list(params: ListParams = {}): Promise<ListResult<T>> {
     const searchParams = new URLSearchParams();
-    
+
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.limit) searchParams.append('limit', params.limit.toString());
     if (params.search) searchParams.append('search', params.search);
     if (params.sortBy) searchParams.append('sortBy', params.sortBy);
     if (params.sortOrder) searchParams.append('sortOrder', params.sortOrder);
-    
+
     if (params.filters) {
       Object.entries(params.filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -119,7 +119,7 @@ export abstract class BaseDocumentServiceImpl<T extends BaseDocument> implements
 
     const queryString = searchParams.toString();
     const url = `/${this.documentType}${queryString ? `?${queryString}` : ''}`;
-    
+
     return this.apiCall<ListResult<T>>(url);
   }
 
@@ -150,7 +150,7 @@ export abstract class BaseDocumentServiceImpl<T extends BaseDocument> implements
   }
 
   // 本地存储操作
-  protected saveToLocalStorage(key: string, data: any): void {
+  protected saveToLocalStorage(key: string, data: unknown): void {
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (error) {

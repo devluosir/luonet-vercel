@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { X, FileText, Download, ExternalLink, Smartphone } from 'lucide-react';
-import { generateQuotationPDF } from '@/utils/quotationPdfGenerator';
-import { generateOrderConfirmationPDF } from '@/utils/orderConfirmationPdfGenerator';
-import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
 import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
 import { generatePackingListPDF } from '@/utils/packingPdfGenerator';
 import { getDeviceInfo, handlePDFPreview, openPDFInNewTab } from '@/utils/pdfHelpers';
+import type { QuotationData } from '@/types/quotation';
+import type { NoteConfig } from '@/features/quotation/types/notes';
+import type { InvoiceData } from '@/features/invoice/types';
+import type { PurchaseOrderData } from '@/types/purchase';
+import type { PackingData } from '@/features/packing/types';
 
 interface PreviewHistoryItem {
   data: unknown;
@@ -43,6 +45,11 @@ interface PreviewInfo {
   showOpenInNewTab: boolean;
 }
 
+type QuotationPreviewData = QuotationData & {
+  notesConfig?: NoteConfig[];
+  savedVisibleCols?: string[] | null;
+};
+
 export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDFPreviewModalProps) {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
@@ -63,7 +70,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
       try {
         const info = getDeviceInfo();
         setDeviceInfo(info);
-        
+
         if (info.isAndroid || !info.canPreviewPDF) {
           setShowDownloadFallback(true);
         }
@@ -109,7 +116,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
 
     setIsGeneratingPdf(true);
     setPdfPreviewUrl(null);
-    
+
     try {
       let pdfUrl: string | null = null;
 
@@ -124,24 +131,24 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         if (itemType === 'quotation' || itemType === 'confirmation') {
           // 使用新的generatePdf服务来处理报价单和订单确认
           const { generatePdf } = await import('@/features/quotation/services/generate.service');
-          
+
           // 从历史记录数据中提取notesConfig
-          const quotationData = item.data as any;
+          const quotationData = item.data as QuotationPreviewData;
           const notesConfig = quotationData.notesConfig || [];
-          
+
           // 🆕 从历史记录数据中提取保存时的列显示设置
-          const savedVisibleCols = quotationData.savedVisibleCols || null;
-          
+          const savedVisibleCols = quotationData.savedVisibleCols || undefined;
+
           // 使用新的生成服务，传入notesConfig和保存时的列显示设置
           const pdfBlob = await generatePdf(
-            itemType, 
-            quotationData, 
-            notesConfig, 
+            itemType,
+            quotationData,
+            notesConfig,
             (progress) => {
               // 预览时不需要显示进度
               console.log(`PDF生成进度: ${progress}%`);
-            }, 
-            { 
+            },
+            {
               mode: 'preview',
               savedVisibleCols // 🆕 传递保存时的列显示设置
             }
@@ -150,16 +157,14 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         } else if (itemType === 'invoice') {
           // 使用PDF服务来处理数据转换
           const { PDFService } = await import('@/features/invoice/services/pdf.service');
-          const pdfBlob = await PDFService.generateInvoicePDF(item.data as any);
+          const pdfBlob = await PDFService.generateInvoicePDF(item.data as InvoiceData);
           pdfUrl = URL.createObjectURL(pdfBlob);
         } else if (itemType === 'purchase') {
-          // @ts-ignore - 历史记录数据可能来自不同来源
-          const pdfBlob = await generatePurchaseOrderPDF(item.data, true);
+          const pdfBlob = await generatePurchaseOrderPDF(item.data as PurchaseOrderData, true);
           pdfUrl = URL.createObjectURL(pdfBlob);
         } else if (itemType === 'packing') {
-          // @ts-ignore - 历史记录数据可能来自不同来源
-          const packingData = item.data as any;
-          const savedVisibleCols = packingData.savedVisibleCols || null;
+          const packingData = item.data as PackingData;
+          const savedVisibleCols = packingData.savedVisibleCols || undefined;
           const pdfBlob = await generatePackingListPDF(packingData, undefined, savedVisibleCols);
           pdfUrl = URL.createObjectURL(pdfBlob);
         }
@@ -200,24 +205,24 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         if (itemType === 'quotation' || itemType === 'confirmation') {
           // 使用新的generatePdf服务来处理报价单和订单确认
           const { generatePdf } = await import('@/features/quotation/services/generate.service');
-          
+
           // 从历史记录数据中提取notesConfig
-          const quotationData = item.data as any;
+          const quotationData = item.data as QuotationPreviewData;
           const notesConfig = quotationData.notesConfig || [];
-          
+
           // 🆕 从历史记录数据中提取保存时的列显示设置
-          const savedVisibleCols = quotationData.savedVisibleCols || null;
-          
+          const savedVisibleCols = quotationData.savedVisibleCols || undefined;
+
           // 使用新的生成服务，传入notesConfig和保存时的列显示设置
           pdfBlob = await generatePdf(
-            itemType, 
-            quotationData, 
-            notesConfig, 
+            itemType,
+            quotationData,
+            notesConfig,
             (progress) => {
               // 下载时不需要显示进度
               console.log(`PDF生成进度: ${progress}%`);
-            }, 
-            { 
+            },
+            {
               mode: 'final',
               savedVisibleCols // 🆕 传递保存时的列显示设置
             }
@@ -225,14 +230,12 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         } else if (itemType === 'invoice') {
           // 使用PDF服务来处理数据转换
           const { PDFService } = await import('@/features/invoice/services/pdf.service');
-          pdfBlob = await PDFService.generateInvoicePDF(item.data as any);
+          pdfBlob = await PDFService.generateInvoicePDF(item.data as InvoiceData);
         } else if (itemType === 'purchase') {
-          // @ts-ignore - 历史记录数据可能来自不同来源
-          pdfBlob = await generatePurchaseOrderPDF(item.data, false);
+          pdfBlob = await generatePurchaseOrderPDF(item.data as PurchaseOrderData, false);
         } else if (itemType === 'packing') {
-          // @ts-ignore - 历史记录数据可能来自不同来源
-          const packingData = item.data as any;
-          const savedVisibleCols = packingData.savedVisibleCols || null;
+          const packingData = item.data as PackingData;
+          const savedVisibleCols = packingData.savedVisibleCols || undefined;
           pdfBlob = await generatePackingListPDF(packingData, undefined, savedVisibleCols);
         } else {
           throw new Error('未知的文档类型');
@@ -243,7 +246,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
-      
+
       // 根据类型设置文件名
       let fileName = 'export.pdf';
       if (itemType === 'quotation') {
@@ -257,7 +260,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
       } else if (itemType === 'packing') {
         fileName = `PL_${item.orderNo || 'export'}.pdf`;
       }
-      
+
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
@@ -334,7 +337,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
               <X className="w-5 h-5" />
             </button>
           </div>
-          
+
           {/* 内容区域 */}
           <div className="p-6">
             {isGeneratingPdf ? (
@@ -347,15 +350,15 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                 <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
                   <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                 </div>
-                
+
                 <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                   PDF已准备就绪
                 </h4>
-                
+
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                   选择您的查看方式
                 </p>
-                
+
                 {/* 主操作按钮 */}
                 <div className="space-y-3">
                   {/* 推荐操作 - 新窗口打开 */}
@@ -369,14 +372,14 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                       <span className="px-2 py-0.5 bg-blue-500 text-xs rounded-full">推荐</span>
                     </button>
                   )}
-                  
+
                   {/* 下载按钮 */}
                   <button
                     onClick={downloadPDF}
                     disabled={isGeneratingPdf}
                     className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-medium transition-colors shadow-md ${
-                      deviceInfo?.browser?.name === 'Chrome' 
-                        ? 'border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700' 
+                      deviceInfo?.browser?.name === 'Chrome'
+                        ? 'border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                         : 'bg-green-600 text-white hover:bg-green-700 shadow-lg'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
@@ -395,7 +398,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                       </>
                     )}
                   </button>
-                  
+
                   {/* 备用选项 - 只有在Chrome中才显示 */}
                   {pdfPreviewUrl && deviceInfo?.browser?.name === 'Chrome' && (
                     <button
@@ -408,7 +411,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                     </button>
                   )}
                 </div>
-                
+
                 {/* 简化的提示信息 */}
                 {deviceInfo?.browser?.name !== 'Chrome' && (
                   <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
@@ -447,7 +450,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                 <ExternalLink className="w-5 h-5" />
               </button>
             )}
-            
+
             {/* 下载按钮 */}
             <button
               onClick={downloadPDF}
@@ -457,7 +460,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
             >
               <Download className={`w-5 h-5 ${isGeneratingPdf ? 'animate-pulse' : ''}`} />
             </button>
-            
+
             {/* 关闭按钮 */}
             <button
               onClick={onClose}
@@ -467,7 +470,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
             </button>
           </div>
         </div>
-        
+
         <div className="bg-white dark:bg-gray-800 rounded-b-xl flex items-center justify-center border border-gray-200 dark:border-gray-600" style={{padding:0}}>
           {isGeneratingPdf ? (
             <div className="flex flex-col items-center space-y-4 py-12">
@@ -486,7 +489,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                 {previewInfo?.message || '选择您偏好的PDF查看方式'}
               </p>
-              
+
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 {/* 推荐操作按钮 */}
                 {deviceInfo?.recommendedAction === 'newTab' && pdfPreviewUrl && (
@@ -498,13 +501,13 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                     <span>新窗口打开 (推荐)</span>
                   </button>
                 )}
-                
+
                 <button
                   onClick={downloadPDF}
                   disabled={isGeneratingPdf}
                   className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors ${
-                    deviceInfo?.recommendedAction === 'download' 
-                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                    deviceInfo?.recommendedAction === 'download'
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
@@ -520,7 +523,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
                     </>
                   )}
                 </button>
-                
+
                 {deviceInfo?.recommendedAction !== 'newTab' && pdfPreviewUrl && (
                   <button
                     onClick={openInNewTab}
@@ -551,4 +554,4 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
       </div>
     </div>
   );
-} 
+}

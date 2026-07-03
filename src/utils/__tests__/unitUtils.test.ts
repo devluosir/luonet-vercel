@@ -126,8 +126,8 @@ describe('Unit Utils', () => {
     test('should reject invalid units', () => {
       expect(isValidUnit('invalid')).toBe(false);
       expect(isValidUnit('')).toBe(false);
-      expect(isValidUnit(null as any)).toBe(false);
-      expect(isValidUnit(undefined as any)).toBe(false);
+      expect(isValidUnit(null as unknown as string)).toBe(false);
+      expect(isValidUnit(undefined as unknown as string)).toBe(false);
     });
   });
 

@@ -2,22 +2,23 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { useHistoryFilters, useHistorySortConfig } from '../state/history.selectors';
 import { useHistoryStore } from '../state/history.store';
+import type { Filters } from '../types';
 
 interface HistoryFiltersProps {
   showFilters: boolean;
   onToggleFilters: () => void;
 }
 
-export function HistoryFilters({ showFilters, onToggleFilters }: HistoryFiltersProps) {
+export function HistoryFilters({ showFilters, onToggleFilters: _onToggleFilters }: HistoryFiltersProps) {
   const filters = useHistoryFilters();
   const sortConfig = useHistorySortConfig();
   const { setFilters, resetFilters, toggleSort } = useHistoryStore();
 
   const handleDateRangeChange = (value: string) => {
-    setFilters({ dateRange: value as any });
+    setFilters({ dateRange: value as Filters['dateRange'] });
   };
 
-  const handleSort = (key: string) => {
+  const _handleSort = (key: string) => {
     toggleSort(key);
   };
 
@@ -62,7 +63,7 @@ export function HistoryFilters({ showFilters, onToggleFilters }: HistoryFiltersP
               <select
                 value={`${sortConfig.key}-${sortConfig.direction}`}
                 onChange={(e) => {
-                  const [key, direction] = e.target.value.split('-');
+                  const [key, _direction] = e.target.value.split('-');
                   if (key === 'updatedAt' || key === 'totalAmount') {
                     // 如果当前已经是这个key，则切换方向
                     if (sortConfig.key === key) {

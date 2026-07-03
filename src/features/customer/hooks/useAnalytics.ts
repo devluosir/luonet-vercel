@@ -27,7 +27,7 @@ const ANALYTICS_EVENTS = {
 
 export function useAnalytics() {
   const isInitializedRef = useRef(false);
-  const { data: session } = useSession();
+  const { data: _session } = useSession();
   const [isClient, setIsClient] = useState(false);
 
   // 确保在客户端渲染
@@ -55,7 +55,7 @@ export function useAnalytics() {
   // 跟踪用户行为
   const trackUserAction = useCallback((
     action: string,
-    properties?: Record<string, any>
+    properties?: Record<string, unknown>
   ) => {
     if (isFeatureEnabled('performanceMonitoring') && isClient) {
       AnalyticsManager.getInstance().trackEvent(action, ANALYTICS_EVENTS.USER_ACTION, properties);
@@ -67,7 +67,7 @@ export function useAnalytics() {
     metric: string,
     value: number,
     unit?: string,
-    context?: Record<string, any>
+    context?: Record<string, unknown>
   ) => {
     if (isFeatureEnabled('performanceMonitoring') && isClient) {
       AnalyticsManager.getInstance().trackPerformance(metric, value, unit, context);
@@ -89,7 +89,7 @@ export function useAnalytics() {
   // 跟踪功能使用
   const trackFeatureUsage = useCallback((
     feature: string,
-    properties?: Record<string, any>
+    properties?: Record<string, unknown>
   ) => {
     if (isFeatureEnabled('performanceMonitoring') && isClient) {
       AnalyticsManager.getInstance().trackEvent(feature, ANALYTICS_EVENTS.FEATURE_USAGE, properties);
@@ -134,12 +134,12 @@ export function useAnalytics() {
   }, [trackUserAction]);
 
   // 验证错误
-  const trackValidationError = useCallback((field: string, error: string) => {
+  const trackValidationError = useCallback((field: string, _error: string) => {
     trackError(`Validation error: ${field}`, undefined, 'form', 'validation');
   }, [trackError]);
 
   // API错误
-  const trackApiError = useCallback((endpoint: string, status: number, message: string) => {
+  const trackApiError = useCallback((endpoint: string, _status: number, _message: string) => {
     trackError(`API Error: ${endpoint}`, undefined, 'api', 'request');
   }, [trackError]);
 

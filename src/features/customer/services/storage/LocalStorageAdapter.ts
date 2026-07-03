@@ -25,12 +25,12 @@ export class LocalStorageAdapter implements StorageAdapter {
   ): T {
     const startTime = performance.now();
     const startSize = this.getCurrentSize();
-    
+
     try {
       const result = fn();
       const endTime = performance.now();
       const endSize = this.getCurrentSize();
-      
+
       this.recordMetric({
         operation,
         key,
@@ -39,11 +39,11 @@ export class LocalStorageAdapter implements StorageAdapter {
         success: true,
         timestamp: Date.now()
       });
-      
+
       return result;
     } catch (error) {
       const endTime = performance.now();
-      
+
       this.recordMetric({
         operation,
         key,
@@ -52,14 +52,14 @@ export class LocalStorageAdapter implements StorageAdapter {
         error: error instanceof Error ? error.message : String(error),
         timestamp: Date.now()
       });
-      
+
       throw error;
     }
   }
 
   private recordMetric(metric: StorageMetrics): void {
     this.metrics.push(metric);
-    
+
     // 保持最近1000条指标
     if (this.metrics.length > 1000) {
       this.metrics = this.metrics.slice(-1000);
@@ -93,18 +93,18 @@ export class LocalStorageAdapter implements StorageAdapter {
       try {
         const fullKey = this.getFullKey(key);
         const item = localStorage.getItem(fullKey);
-        
+
         if (item === null) {
           return null;
         }
-        
+
         const parsed = JSON.parse(item);
-        
+
         // 检查版本兼容性
         if (parsed._version && parsed._version !== this.config.version) {
           console.warn(`Data version mismatch for key ${key}: expected ${this.config.version}, got ${parsed._version}`);
         }
-        
+
         return parsed.data;
       } catch (error) {
         throw new StorageError(
@@ -125,11 +125,11 @@ export class LocalStorageAdapter implements StorageAdapter {
           _version: this.config.version,
           _timestamp: Date.now()
         };
-        
+
         const serialized = JSON.stringify(dataToStore);
         const currentSize = this.getCurrentSize();
         const newSize = currentSize + serialized.length;
-        
+
         // 检查存储配额
         if (newSize > (this.config.maxSize! * 1024 * 1024)) {
           throw new StorageError(
@@ -137,10 +137,10 @@ export class LocalStorageAdapter implements StorageAdapter {
             'QUOTA_EXCEEDED'
           );
         }
-        
+
         const oldValue = localStorage.getItem(fullKey);
         localStorage.setItem(fullKey, serialized);
-        
+
         this.emitEvent({
           type: 'change',
           key,
@@ -166,7 +166,7 @@ export class LocalStorageAdapter implements StorageAdapter {
         const fullKey = this.getFullKey(key);
         const oldValue = localStorage.getItem(fullKey);
         localStorage.removeItem(fullKey);
-        
+
         if (oldValue) {
           this.emitEvent({
             type: 'change',
@@ -188,7 +188,7 @@ export class LocalStorageAdapter implements StorageAdapter {
   async keys(prefix?: string): Promise<string[]> {
     const keys: string[] = [];
     const searchPrefix = prefix ? this.getFullKey(prefix) : this.config.prefix!;
-    
+
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith(searchPrefix)) {
@@ -197,25 +197,25 @@ export class LocalStorageAdapter implements StorageAdapter {
         keys.push(originalKey);
       }
     }
-    
+
     return keys;
   }
 
   async clear(): Promise<void> {
     return this.measureOperation('clear', 'all', () => {
       const keysToRemove: string[] = [];
-      
+
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith(this.config.prefix!)) {
           keysToRemove.push(key);
         }
       }
-      
+
       keysToRemove.forEach(key => {
         localStorage.removeItem(key);
       });
-      
+
       this.emitEvent({
         type: 'change',
         key: 'all'
@@ -264,8 +264,8 @@ export class LocalStorageAdapter implements StorageAdapter {
   } {
     const used = this.getCurrentSize();
     const max = this.config.maxSize! * 1024 * 1024;
-    const keys = this.keys().then(keys => keys.length);
-    
+    const _keys = this.keys().then(keys => keys.length);
+
     return {
       used,
       max,

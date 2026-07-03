@@ -1,8 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { usePurchaseStore } from '../state/purchase.store';
 import { PdfService } from '../services/pdf.service';
-import type { PurchaseDraft } from '../utils/types';
-
 export function usePurchasePdf() {
   const draft = usePurchaseStore(s => s.draft);
 

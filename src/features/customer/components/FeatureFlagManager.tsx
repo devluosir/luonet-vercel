@@ -3,13 +3,12 @@
  * 仅在开发环境中显示，用于调试和功能控制
  */
 
-import { useState, useEffect, useMemo } from 'react';
-import { Settings, X } from 'lucide-react';
-import { 
-  getFeatureManager, 
-  isFeatureEnabled, 
+import { useState, useEffect } from 'react';
+import {
+  getFeatureManager,
+  isFeatureEnabled,
   setFeatureEnabled,
-  FEATURE_FLAGS 
+  FEATURE_FLAGS
 } from '../config/featureFlags';
 
 export function FeatureFlagManager() {
@@ -25,10 +24,7 @@ export function FeatureFlagManager() {
   }, []);
 
   // 获取统计信息 - 必须在条件返回之前调用
-  const stats = useMemo(() => {
-    const manager = getFeatureManager();
-    return manager.getStats();
-  }, [flags]); // 当flags状态变化时重新计算统计
+  const stats = getFeatureManager().getStats();
 
   // 只在开发环境显示
   if (process.env.NODE_ENV !== 'development') {
@@ -44,9 +40,9 @@ export function FeatureFlagManager() {
   const handleToggleFlag = (flagName: keyof typeof FEATURE_FLAGS) => {
     const currentValue = isFeatureEnabled(flagName);
     const newValue = !currentValue;
-    
+
     console.log(`切换功能开关: ${flagName}, 当前状态: ${currentValue}, 新状态: ${newValue}`);
-    
+
     // 检查依赖关系
     const flag = flags[flagName];
     if (flag.dependencies && flag.dependencies.length > 0) {
@@ -57,9 +53,9 @@ export function FeatureFlagManager() {
         return;
       }
     }
-    
+
     setFeatureEnabled(flagName, newValue);
-    
+
     // 更新本地状态
     setFlags(prev => ({
       ...prev,
@@ -68,7 +64,7 @@ export function FeatureFlagManager() {
         enabled: newValue
       }
     }));
-    
+
     // 强制重新获取最新状态
     setTimeout(() => {
       const updatedFlags = getFeatureManager().getAllFlags();
@@ -82,7 +78,7 @@ export function FeatureFlagManager() {
     Object.keys(flags).forEach(flagName => {
       setFeatureEnabled(flagName as keyof typeof FEATURE_FLAGS, false);
     });
-    
+
     setTimeout(() => {
       const updatedFlags = getFeatureManager().getAllFlags();
       setFlags(updatedFlags);
@@ -93,7 +89,7 @@ export function FeatureFlagManager() {
   // 全部重置为默认值
   const handleResetAll = () => {
     getFeatureManager().resetToDefault();
-    
+
     setTimeout(() => {
       const updatedFlags = getFeatureManager().getAllFlags();
       setFlags(updatedFlags);
@@ -135,7 +131,7 @@ export function FeatureFlagManager() {
 
       {/* 管理面板 */}
       {isVisible && (
-        <div 
+        <div
           style={{
             position: 'fixed',
             top: '160px',
@@ -171,10 +167,10 @@ export function FeatureFlagManager() {
               </button>
             </div>
           </div>
-          
-          <div style={{ 
-            padding: '16px', 
-            flex: 1, 
+
+          <div style={{
+            padding: '16px',
+            flex: 1,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column'
@@ -182,12 +178,12 @@ export function FeatureFlagManager() {
             <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#6b7280' }}>
               开发环境功能开关管理 - 用于测试新功能
             </p>
-            
+
             {/* 统计信息 */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr 1fr', 
-              gap: '8px', 
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '8px',
               marginBottom: '16px',
               padding: '12px',
               backgroundColor: '#f9fafb',
@@ -214,11 +210,11 @@ export function FeatureFlagManager() {
                 </div>
               </div>
             </div>
-            
+
             {/* 操作按钮 */}
-            <div style={{ 
-              display: 'flex', 
-              gap: '8px', 
+            <div style={{
+              display: 'flex',
+              gap: '8px',
               marginBottom: '16px',
               flexShrink: 0
             }}>
@@ -255,10 +251,10 @@ export function FeatureFlagManager() {
                 重置默认
               </button>
             </div>
-            
+
             {/* 功能开关列表 - 可滚动 */}
-            <div style={{ 
-              flex: 1, 
+            <div style={{
+              flex: 1,
               overflow: 'auto',
               paddingRight: '4px'
             }}>
@@ -266,18 +262,18 @@ export function FeatureFlagManager() {
                 {Object.entries(flags).map(([flagName, flag]) => {
                   const isEnabled = isFeatureEnabled(flagName as keyof typeof FEATURE_FLAGS);
                   const hasDependencies = flag.dependencies && flag.dependencies.length > 0;
-                  const missingDeps = hasDependencies ? 
+                  const missingDeps = hasDependencies ?
                     flag.dependencies.filter((dep: string) => !isFeatureEnabled(dep as keyof typeof FEATURE_FLAGS)) : [];
-                  
+
                   return (
-                    <div 
+                    <div
                       key={flagName}
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'space-between', 
-                        padding: '12px', 
-                        backgroundColor: '#f9fafb', 
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px',
+                        backgroundColor: '#f9fafb',
                         borderRadius: '8px',
                         cursor: 'pointer',
                         opacity: missingDeps.length > 0 ? 0.6 : 1,
@@ -301,22 +297,22 @@ export function FeatureFlagManager() {
                           </div>
                         )}
                       </div>
-                      <div style={{ 
-                        width: '40px', 
-                        height: '24px', 
-                        backgroundColor: isEnabled ? '#3b82f6' : '#d1d5db', 
-                        borderRadius: '12px', 
+                      <div style={{
+                        width: '40px',
+                        height: '24px',
+                        backgroundColor: isEnabled ? '#3b82f6' : '#d1d5db',
+                        borderRadius: '12px',
                         position: 'relative',
                         transition: 'background-color 0.2s',
                         flexShrink: 0
                       }}>
-                        <div style={{ 
-                          width: '16px', 
-                          height: '16px', 
-                          backgroundColor: 'white', 
-                          borderRadius: '50%', 
-                          position: 'absolute', 
-                          top: '4px', 
+                        <div style={{
+                          width: '16px',
+                          height: '16px',
+                          backgroundColor: 'white',
+                          borderRadius: '50%',
+                          position: 'absolute',
+                          top: '4px',
                           left: isEnabled ? '20px' : '4px',
                           transition: 'left 0.2s'
                         }}></div>

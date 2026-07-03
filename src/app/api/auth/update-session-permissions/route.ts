@@ -8,6 +8,17 @@ interface Permission {
   canAccess: boolean;
 }
 
+interface BackendUser {
+  id: string;
+  username?: string;
+}
+
+interface BackendPermission {
+  id?: string;
+  moduleId: string;
+  canAccess?: boolean;
+}
+
 export async function POST(_request: NextRequest) {
   try {
     // 从 NextAuth session 获取用户信息，不信任客户端身份头
@@ -29,14 +40,14 @@ export async function POST(_request: NextRequest) {
     // 从后端API获取最新权限
     let permissions: Permission[] = [];
     let userEmail: string | null = null;
-    
+
     try {
       // 从后端API获取最新用户数据（包含权限）
 
       // 尝试直接通过用户名获取用户详情
       let userUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users/by-username/${encodeURIComponent(userName)}`;
       console.log('权限刷新API: 尝试直接获取用户详情:', userUrl);
-      
+
       let userResponse = await fetch(userUrl, {
         method: 'GET',
         headers: {
@@ -49,10 +60,10 @@ export async function POST(_request: NextRequest) {
       // 如果直接获取失败，回退到用户列表方式
       if (!userResponse.ok) {
         console.log('权限刷新API: 直接获取用户详情失败，回退到用户列表方式');
-        
+
         const usersUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users?username=${encodeURIComponent(userName)}`;
         console.log('权限刷新API: 调用用户列表API:', usersUrl);
-        
+
         const usersResponse = await fetch(usersUrl, {
           method: 'GET',
           headers: {
@@ -63,18 +74,18 @@ export async function POST(_request: NextRequest) {
         });
 
         if (usersResponse.ok) {
-          const usersData = await usersResponse.json();
-          
+          const usersData = await usersResponse.json() as { users?: BackendUser[] };
+
           // 找到正确的用户
-          const correctUser = usersData.users?.find((user: any) => 
+          const correctUser = usersData.users?.find((user: BackendUser) =>
             user.username?.toLowerCase() === userName.toLowerCase()
           );
-          
+
           if (correctUser) {
             // 使用正确的用户ID调用单个用户API
             userUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net'}/api/admin/users/${correctUser.id}`;
             console.log('权限刷新API: 调用单个用户API:', userUrl);
-            
+
             userResponse = await fetch(userUrl, {
               method: 'GET',
               headers: {
@@ -90,17 +101,20 @@ export async function POST(_request: NextRequest) {
       console.log('权限刷新API: 单个用户响应状态:', userResponse.status);
 
       if (userResponse.ok) {
-        const userData = await userResponse.json();
+        const userData = await userResponse.json() as {
+          email?: string | null;
+          permissions?: BackendPermission[];
+        };
         console.log('权限刷新API: 单个用户数据:', userData);
-        
+
         if (userData && userData.permissions && Array.isArray(userData.permissions)) {
           // 转换后端权限格式
-          permissions = userData.permissions.map((perm: any) => ({
+          permissions = userData.permissions.map((perm: BackendPermission) => ({
             id: perm.id || `backend-${perm.moduleId}`,
             moduleId: perm.moduleId,
             canAccess: !!perm.canAccess
           }));
-          
+
           userEmail = userData.email || null;
           console.log('权限刷新API: 获取到权限数据:', permissions);
         } else {
@@ -113,7 +127,7 @@ export async function POST(_request: NextRequest) {
       console.error('权限刷新API: 后端API调用失败:', backendError);
       return NextResponse.json({ error: '无法从后端获取权限数据' }, { status: 500 });
     }
-    
+
     // 后端返回了空权限时，直接使用空数组（用户确实没有任何权限）
     // 注意：不添加默认权限，空权限 = 无权访问任何受保护模块
     if (permissions.length === 0) {
@@ -123,8 +137,8 @@ export async function POST(_request: NextRequest) {
     // 由于NextAuth的限制，我们需要通过重新生成token来更新session
     // 这里我们返回更新后的权限数据，并指示前端需要重新登录
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: '权限数据已更新',
       user: {
         id: userId,
@@ -141,4 +155,4 @@ export async function POST(_request: NextRequest) {
     const errorMessage = error instanceof Error ? error.message : '未知错误';
     return NextResponse.json({ error: `服务器错误: ${errorMessage}` }, { status: 500 });
   }
-} 
+}

@@ -15,17 +15,17 @@ const initialFormData: MailFormData = {
 interface MailState {
   // 表单数据
   formData: MailFormData;
-  
+
   // UI状态
   activeTab: MailTab;
   mailType: string;
   isLoading: boolean;
   error: string;
   copySuccess: boolean;
-  
+
   // 生成内容
   generatedContent: string;
-  
+
   // Actions
   setActiveTab: (tab: MailTab) => void;
   updateFormData: (data: Partial<MailFormData>) => void;
@@ -39,7 +39,7 @@ interface MailState {
 }
 
 // 创建store
-export const useMailStore = create<MailState>((set, get) => ({
+export const useMailStore = create<MailState>((set, _get) => ({
   // 初始状态
   formData: initialFormData,
   activeTab: 'mail',
@@ -48,29 +48,29 @@ export const useMailStore = create<MailState>((set, get) => ({
   error: '',
   copySuccess: false,
   generatedContent: '',
-  
+
   // Actions
   setActiveTab: (tab) => set({ activeTab: tab }),
-  
+
   updateFormData: (data) => set((state) => ({
     formData: { ...state.formData, ...data }
   })),
-  
+
   setMailType: (type) => set({ mailType: type }),
-  
+
   setGeneratedContent: (content) => set({ generatedContent: content }),
-  
+
   setLoading: (loading) => set({ isLoading: loading }),
-  
+
   setError: (error) => set({ error }),
-  
+
   setCopySuccess: (success) => set({ copySuccess: success }),
-  
-  resetForm: () => set({ 
+
+  resetForm: () => set({
     formData: initialFormData,
     generatedContent: '',
     error: ''
   }),
-  
+
   clearError: () => set({ error: '' })
 }));

@@ -1,5 +1,5 @@
-import { DefaultSession, DefaultUser } from "next-auth"
-import { JWT, DefaultJWT } from "next-auth/jwt"
+import { DefaultSession, DefaultUser } from "next-auth";
+import { DefaultJWT } from "next-auth/jwt";
 
 interface Permission {
   id: string
@@ -14,6 +14,7 @@ declare module "next-auth" {
       username: string
       isAdmin: boolean
       permissions: Permission[]
+      status?: string
     } & DefaultSession["user"]
   }
 
@@ -21,6 +22,7 @@ declare module "next-auth" {
     username: string
     isAdmin: boolean
     permissions: Permission[]
+    status?: string
   }
 }
 
@@ -29,7 +31,8 @@ declare module "next-auth/jwt" {
     username: string
     isAdmin: boolean
     permissions: Permission[]
+    status?: string
   }
-} 
+}
 
- 
+

@@ -2,7 +2,6 @@ import React from 'react';
 import type { QuotationData } from '@/types/quotation';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
-import { hasStringChanged, normalizeStringInput } from '@/features/quotation/utils/inputUtils';
 import { useDebounced } from '@/hooks/useDebounced';
 import { useQuotationStore } from '@/features/quotation/state/useQuotationStore';
 import { getCustomersForDropdown } from '@/features/customer/services/customerService';
@@ -56,7 +55,7 @@ interface SavedCustomer {
 }
 
 // 历史记录文档的通用接口
-interface HistoryDocument {
+interface _HistoryDocument {
   id?: string;
   type?: string;
   customerName?: string;
@@ -78,7 +77,7 @@ interface HistoryDocument {
 const localStorageCache = new Map<string, unknown>();
 
 // 获取缓存的localStorage数据
-const getCachedLocalStorage = (key: string): unknown => {
+const _getCachedLocalStorage = (key: string): unknown => {
   if (!localStorageCache.has(key)) {
     try {
       const data = localStorage.getItem(key);
@@ -98,72 +97,72 @@ const getCachedLocalStorage = (key: string): unknown => {
 export const CustomerInfoSection = React.memo(({ data, onChange, type }: CustomerInfoSectionProps) => {
   // 🔥 获取store的UI标记控制
   const { setUIFlags } = useQuotationStore();
-  
+
   const [savedCustomers, setSavedCustomers] = useState<SavedCustomer[]>([]);
   const [showSavedCustomers, setShowSavedCustomers] = useState(false);
   const [showAutoComplete, setShowAutoComplete] = useState(false);
   const [autoCompleteSuggestions, setAutoCompleteSuggestions] = useState<SavedCustomer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<SavedCustomer[]>([]);
   const [hasSelectedCustomer, setHasSelectedCustomer] = useState(() => Boolean(data?.to?.trim()));
-  
+
   // 统一弹窗状态管理 - 确保同时只有一个弹窗显示
   const closeAllPopups = useCallback(() => {
     setShowSavedCustomers(false);
     setShowAutoComplete(false);
   }, []);
-  
+
   const showSavedCustomersPopup = useCallback(() => {
     setShowAutoComplete(false);
     setShowSavedCustomers(true);
   }, []);
-  
+
   const showAutoCompletePopup = useCallback(() => {
     setShowSavedCustomers(false);
     setShowAutoComplete(true);
   }, []);
-  
+
   // 防抖输入状态 - 减少高频更新
   const [inquiryDraft, setInquiryDraft] = useState(data.inquiryNo ?? '');
   const [quotationDraft, setQuotationDraft] = useState(data.quotationNo ?? '');
   const [contractDraft, setContractDraft] = useState(data.contractNo ?? '');
-  
+
   // 防抖处理，320ms延迟（降低输入期频率峰值）
   const debouncedInquiry = useDebounced(inquiryDraft, 320);
   const debouncedQuotation = useDebounced(quotationDraft, 320);
   const debouncedContract = useDebounced(contractDraft, 320);
-  
+
   // 防抖值变化时更新到store
   useEffect(() => {
     if (debouncedInquiry !== (data.inquiryNo ?? '')) {
       onChange({ inquiryNo: debouncedInquiry });
     }
   }, [debouncedInquiry, data.inquiryNo, onChange]);
-  
+
   useEffect(() => {
     if (debouncedQuotation !== (data.quotationNo ?? '')) {
       onChange({ quotationNo: debouncedQuotation });
     }
   }, [debouncedQuotation, data.quotationNo, onChange]);
-  
+
   useEffect(() => {
     if (debouncedContract !== (data.contractNo ?? '')) {
       onChange({ contractNo: debouncedContract });
     }
   }, [debouncedContract, data.contractNo, onChange]);
-  
+
   // 外部数据变化时同步到draft状态
   useEffect(() => {
     setInquiryDraft(data.inquiryNo ?? '');
   }, [data.inquiryNo]);
-  
+
   useEffect(() => {
     setQuotationDraft(data.quotationNo ?? '');
   }, [data.quotationNo]);
-  
+
   useEffect(() => {
     setContractDraft(data.contractNo ?? '');
   }, [data.contractNo]);
-  
+
   // 添加 ref 用于检测点击外部区域
   const savedCustomersRef = useRef<HTMLDivElement>(null);
   const buttonsRef = useRef<HTMLDivElement>(null);
@@ -184,11 +183,11 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   // 自动完成匹配函数
   const getAutoCompleteSuggestions = useCallback((input: string) => {
     if (!input.trim()) return [];
-    
+
     const normalizedInput = normalizeCustomerName(input);
     return savedCustomers.filter(customer => {
       const normalizedCustomer = normalizeCustomerName(customer.name);
-      return normalizedCustomer.includes(normalizedInput) || 
+      return normalizedCustomer.includes(normalizedInput) ||
              customer.name.toLowerCase().includes(input.toLowerCase());
     }).slice(0, 5); // 限制显示5个建议
   }, [savedCustomers, normalizeCustomerName]);
@@ -196,27 +195,27 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   // 客户信息草稿状态（减少store更新频率）
   const [toDraft, setToDraft] = useState(data.to ?? '');
   const debouncedTo = useDebounced(toDraft, 320);
-  
+
   // 选择状态管理
   const [isSelecting, setIsSelecting] = useState(false);
   const lastSubmittedRef = useRef(data.to);
-  
+
   // 🔥 选择态开合控制（同步到store）
   const onOpenSelect = useCallback(() => {
     setIsSelecting(true);
     setUIFlags({ selectingCustomer: true });
   }, [setUIFlags]);
-  
+
   const onCloseSelect = useCallback(() => {
     setIsSelecting(false);
     setUIFlags({ selectingCustomer: false });
   }, [setUIFlags]);
-  
+
   // 处理客户信息输入变化（只更新草稿状态）
   const handleCustomerInfoChange = useCallback((newTo: string) => {
     // 更新草稿状态
     setToDraft(newTo);
-    
+
     // 如果输入内容变化，显示自动完成建议
     if (newTo.trim() && savedCustomers.length > 0) {
       const suggestions = getAutoCompleteSuggestions(newTo);
@@ -234,11 +233,11 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
         closeAllPopups();
       }
     }
-    
+
     // 当用户开始输入时，重置选择状态
     setHasSelectedCustomer(false);
   }, [savedCustomers, getAutoCompleteSuggestions, hasSelectedCustomer, showAutoCompletePopup, showSavedCustomersPopup, closeAllPopups]);
-  
+
   // 只在确实变更时提交，绝不写入只含空白的值
   const commitTo = useCallback((v: string) => {
     const trimmed = v.replace(/\s+/g, ' ').trim();
@@ -254,7 +253,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
     const v = debouncedTo;
     if (v !== (data.to ?? '')) commitTo(v);
   }, [debouncedTo, isSelecting, data.to, commitTo]);
-  
+
   // 外部数据变化时同步到草稿状态
   useEffect(() => {
     setToDraft(data.to ?? '');
@@ -263,23 +262,23 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   // 🔥 外点抑制机制
   const suppressOutsideRef = useRef(false);
   const ignoreOutsideUntilRef = useRef(0);
-  
+
   // 选择自动完成建议（按正确顺序回填）
   const handleAutoCompleteSelect = useCallback((customer: SavedCustomer, e?: React.MouseEvent) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    
+
     if (customer.to === data.to) return; // 相同值不更新
-    
+
     suppressOutsideRef.current = true; // 这一帧忽略外点
     const sanitizedTo = sanitizeForInput(customer.to);
-    
+
     // ① 先让UI立即显示
     setToDraft(sanitizedTo);
-    
+
     // ② 立即提交store（覆盖防抖）
     commitTo(sanitizedTo);
-    
+
     // ③ 微任务里再关弹窗（避开外点）
     queueMicrotask(() => {
       closeAllPopups();
@@ -288,12 +287,12 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
       suppressOutsideRef.current = false;
       ignoreOutsideUntilRef.current = Date.now() + 120; // 120ms宽限
     });
-    
+
     // 记录使用情况
     if (data.quotationNo) {
       recordCustomerUsage(customer.name, 'quotation', data.quotationNo);
     }
-  }, [data.to, data.quotationNo, commitTo, onCloseSelect]);
+  }, [data.to, data.quotationNo, commitTo, onCloseSelect, closeAllPopups]);
 
   // 加载客户数据的通用函数
   // 使用统一的客户数据服务，从客户管理页面获取数据
@@ -302,12 +301,12 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
       if (typeof window !== 'undefined') {
         // 使用统一的客户数据服务
         const allCustomers = await getCustomersForDropdown('customer');
-        
+
         console.log('从客户管理服务加载的客户数据:', {
           totalCustomers: allCustomers.length,
           customers: allCustomers
         });
-        
+
         setSavedCustomers(allCustomers);
         setFilteredCustomers(allCustomers);
       }
@@ -335,17 +334,17 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
         const inputLower = data.to.toLowerCase();
         const nameLower = customer.name.toLowerCase();
         const toLower = customer.to.toLowerCase();
-        
+
         return nameLower.includes(inputLower) || toLower.includes(inputLower);
       });
-      
+
       console.log('筛选结果:', {
         input: data.to,
         totalCustomers: savedCustomers.length,
         filteredCount: filtered.length,
         filtered: filtered.map(c => ({ name: c.name, to: c.to.substring(0, 50) }))
       });
-      
+
       setFilteredCustomers(filtered);
     }
   }, [data.to, savedCustomers]);
@@ -354,18 +353,18 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   const handleOutside = useCallback((e: MouseEvent) => {
     if (suppressOutsideRef.current) return;
     if (Date.now() < ignoreOutsideUntilRef.current) return;
-    
+
     const target = e.target as Node;
-    
+
     // 统一处理所有弹窗的外点关闭
     const isClickOutsideCustomerArea = customerInputRef.current && !customerInputRef.current.contains(target);
     const isClickOutsideSavedCustomers = savedCustomersRef.current && !savedCustomersRef.current.contains(target);
     const isClickOutsideAutoComplete = autoCompleteRef.current && !autoCompleteRef.current.contains(target);
     const isClickOutsideButtons = buttonsRef.current && !buttonsRef.current.contains(target);
-    
+
     if (isClickOutsideCustomerArea && isClickOutsideButtons) {
       // 关闭所有客户相关弹窗
-      if ((showSavedCustomers && isClickOutsideSavedCustomers) || 
+      if ((showSavedCustomers && isClickOutsideSavedCustomers) ||
           (showAutoComplete && isClickOutsideAutoComplete)) {
         console.log('外点关闭所有弹窗');
         closeAllPopups();
@@ -391,10 +390,10 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   useEffect(() => {
     // 只在弹窗显示时添加事件监听器
     if (!showSavedCustomers && !showAutoComplete) return;
-    
+
     const now = Date.now();
     ignoreOutsideUntilRef.current = now + 120; // 刚打开的宽限，避免同帧误关
-    
+
     if (typeof window !== 'undefined') {
       document.addEventListener('mousedown', handleOutsideThrottled, true);
       if (process.env.NODE_ENV === 'development') {
@@ -418,18 +417,18 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
   const handleLoad = useCallback((customer: SavedCustomer, e?: React.MouseEvent) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    
+
     if (customer.to === data.to) return; // 相同值不更新
-    
+
     suppressOutsideRef.current = true; // 这一帧忽略外点
     const sanitizedTo = sanitizeForInput(customer.to);
-    
+
     // ① 先让UI立即显示
     setToDraft(sanitizedTo);
-    
+
     // ② 立即提交store（覆盖防抖）
     commitTo(sanitizedTo);
-    
+
     // ③ 微任务里再关弹窗（避开外点）
     queueMicrotask(() => {
       closeAllPopups();
@@ -438,12 +437,12 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
       suppressOutsideRef.current = false;
       ignoreOutsideUntilRef.current = Date.now() + 120; // 120ms宽限
     });
-    
+
     // 记录使用情况
     if (data.quotationNo) {
       recordCustomerUsage(customer.name, 'quotation', data.quotationNo);
     }
-  }, [data.to, data.quotationNo, commitTo, onCloseSelect]);
+  }, [data.to, data.quotationNo, commitTo, onCloseSelect, closeAllPopups]);
 
   // 弹窗状态日志
   useEffect(() => {
@@ -498,7 +497,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
               onFocus={() => {
                 // 聚焦即进入选择态
                 onOpenSelect();
-                
+
                 // 只在输入框为空且有客户数据时显示客户列表
                 if (!toDraft.trim() && savedCustomers.length > 0 && !hasSelectedCustomer) {
                   showSavedCustomersPopup();
@@ -509,7 +508,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                 if (toDraft !== (data.to ?? '')) {
                   commitTo(toDraft);
                 }
-                
+
                 // 延迟关闭，让用户有时间点击列表项
                 setTimeout(() => {
                   closeAllPopups();
@@ -525,7 +524,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
             {/* 自动完成建议弹窗 */}
             {showAutoComplete && autoCompleteSuggestions.length > 0 && (
-              <div 
+              <div
                 ref={autoCompleteRef}
                 className="absolute z-20 left-0 right-0 top-full mt-1
                   bg-white dark:bg-[#2C2C2E] rounded-xl shadow-lg
@@ -557,7 +556,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
             {/* 保存的客户列表弹窗 */}
             {showSavedCustomers && filteredCustomers.length > 0 && (
-              <div 
+              <div
                 ref={savedCustomersRef}
                 className="absolute z-50 right-0 top-full mt-1 w-full max-w-md
                   bg-white dark:bg-[#2C2C2E] rounded-xl shadow-lg
@@ -571,7 +570,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
                   {filteredCustomers.map((customer, index) => {
                     const title = customer.name; // 使用提取的标题
                     const content = customer.to; // 完整信息作为内容
-                    
+
                     return (
                       <div
                         key={index}
@@ -618,7 +617,7 @@ export const CustomerInfoSection = React.memo(({ data, onChange, type }: Custome
 
       {/* 右列：根据类型显示不同内容 */}
       <div>
-    
+
         <div className="space-y-4">
           {type === 'quotation' ? (
             <>

@@ -4,9 +4,9 @@ import { Download, Eye, FileSpreadsheet } from 'lucide-react';
 import { ActionButtonsProps } from '../types';
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
-  data,
+  data: _data,
   isGenerating,
-  isSaving,
+  isSaving: _isSaving,
   saveMessage,
   onGenerate,
   onPreview,

@@ -3,11 +3,8 @@ import 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
 import { UserOptions } from 'jspdf-autotable';
 import { generateTableConfig } from './pdfTableGenerator';
-import { ensureCnFonts } from '@/utils/pdfFonts';
 import { ensurePdfFont } from './pdfFontRegistry';
 import { getHeaderImage, getHeaderImageFormat } from './imageLoader';
-import { sanitizeQuotation } from './sanitizeQuotation';
-import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 import { safeSetCnFont } from './pdf/ensureFont';
 
 // 扩展jsPDF类型
@@ -56,8 +53,8 @@ async function getStampImage(stampType: string): Promise<string> {
 
 // 生成订单确认PDF
 export const generateOrderConfirmationPDF = async (
-  data: QuotationData, 
-  preview = false, 
+  data: QuotationData,
+  preview = false,
   descriptionMergeMode: 'auto' | 'manual' = 'auto',
   remarksMergeMode: 'auto' | 'manual' = 'auto',
   manualMergedCells?: {
@@ -88,7 +85,7 @@ export const generateOrderConfirmationPDF = async (
     format: 'a4',
     putOnlyUsedFonts: true,
     floatPrecision: 16
-  }) as ExtendedJsPDF;
+  }) as unknown as ExtendedJsPDF;
 
   try {
     // 确保字体在当前 doc 实例注册（带回退保护）
@@ -107,7 +104,7 @@ export const generateOrderConfirmationPDF = async (
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
   const margin = 20;  // 页面边距
-  
+
   // 分页检查函数 - 确保内容不被页码区域截断
   // 页码区域占用15mm（从pageHeight - 15开始），预留空间检查设为10mm
   const FOOTER_HEIGHT = 10; // 预留空间检查
@@ -124,7 +121,7 @@ export const generateOrderConfirmationPDF = async (
 
     // 读取页面列显示偏好，与页面表格保持一致
     let visibleCols: string[] | undefined;
-    
+
     // 🆕 优先使用保存时的列显示设置，如果没有则使用当前的localStorage设置
     if (savedVisibleCols) {
       visibleCols = savedVisibleCols;
@@ -143,7 +140,7 @@ export const generateOrderConfirmationPDF = async (
         const normalizedHeaderType = headerType as 'bilingual' | 'english';
         const headerImage = await getHeaderImage(normalizedHeaderType);
         const headerFormat = getHeaderImageFormat(normalizedHeaderType);
-        
+
         // 使用jsPDF的getImageProperties方法获取图片尺寸，避免创建Image对象
         const imgProperties = doc.getImageProperties(headerImage);
         const aspectRatio = imgProperties.width / imgProperties.height;
@@ -151,12 +148,12 @@ export const generateOrderConfirmationPDF = async (
         const maxHeight = 40;
         let imgWidth = maxWidth;
         let imgHeight = imgWidth / aspectRatio;
-        
+
         if (imgHeight > maxHeight) {
           imgHeight = maxHeight;
           imgWidth = imgHeight * aspectRatio;
         }
-        
+
         const xPosition = margin + (maxWidth - imgWidth) / 2;
         doc.addImage(headerImage, headerFormat, xPosition, startY, imgWidth, imgHeight);
         startY += imgHeight + 10;
@@ -177,22 +174,22 @@ export const generateOrderConfirmationPDF = async (
     // 添加客户信息
     doc.setFontSize(8);
     safeSetCnFont(doc, 'normal', preview ? 'preview' : 'export');
-    
+
     let currentY = startY;
     const leftMargin = 20;
     const rightMargin = pageWidth - 20;
     const colonX = rightMargin - 20;  // 冒号的固定位置
-    
+
     // 右上角信息区域
     safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
-    
+
     // Contract No.
     doc.text('Contract No.', colonX - 2, currentY, { align: 'right' });
     doc.text(':', colonX, currentY);
     doc.setTextColor(255, 0, 0); // 设置文字颜色为红色
     doc.text(data.contractNo || '', colonX + 3, currentY);
     doc.setTextColor(0, 0, 0); // 恢复文字颜色为黑色
-    
+
     // Date
     doc.text('Date', colonX - 2, currentY + 5, { align: 'right' });
     doc.text(':', colonX, currentY + 5);
@@ -202,7 +199,7 @@ export const generateOrderConfirmationPDF = async (
     doc.text('From', colonX - 2, currentY + 10, { align: 'right' });
     doc.text(':', colonX, currentY + 10);
     doc.text(data.from || '', colonX + 3, currentY + 10);
-    
+
     // Currency
     doc.text('Currency', colonX - 2, currentY + 15, { align: 'right' });
     doc.text(':', colonX, currentY + 15);
@@ -211,7 +208,7 @@ export const generateOrderConfirmationPDF = async (
     // 客户信息区域
     doc.text('To:', leftMargin, currentY);
     const toTextWidth = doc.getTextWidth('To: ');
-    
+
     // 处理To字段的多行文本
     const toLines = (data.to || '').split('\n');
     toLines.forEach((line, index) => {
@@ -238,13 +235,13 @@ export const generateOrderConfirmationPDF = async (
     // 添加表格
     if (data.items && data.items.length > 0) {
       doc.autoTable(generateTableConfig(
-        data, 
-        doc, 
-        currentY, 
-        margin, 
-        pageWidth, 
-        'export', 
-        visibleCols, 
+        data,
+        doc,
+        currentY,
+        margin,
+        pageWidth,
+        'export',
+        visibleCols,
         descriptionMergeMode,
         remarksMergeMode,
         manualMergedCells
@@ -257,7 +254,7 @@ export const generateOrderConfirmationPDF = async (
 
     // 检查剩余空间是否足够显示总金额
     const requiredSpace = 20; // 显示总金额所需的最小空间(mm)
-    
+
     // 如果当前页剩余空间不足，添加新页面
     if (pageHeight - currentY < requiredSpace) {
       doc.addPage();
@@ -268,31 +265,31 @@ export const generateOrderConfirmationPDF = async (
     const itemsTotal = (data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0);
     const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
     const total = itemsTotal + feesTotal;
-    
+
     // 准备表格数据
-    const tableData: any[][] = [];
-    
+    const tableData: NonNullable<UserOptions['body']> = [];
+
     // 添加总金额行
     const totalAmountValue = `${currencySymbols[data.currency]}${total.toFixed(2)}`;
     tableData.push([
       { content: 'Total Amount:', styles: { fontStyle: 'bold', fontSize: 9 } },
       { content: totalAmountValue, styles: { fontStyle: 'bold', fontSize: 9 } }
     ]);
-    
+
     // 添加定金和余额信息
     if (data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0) {
       const depositAmount = data.depositAmount || (data.depositPercentage / 100) * total;
       const depositValue = `${currencySymbols[data.currency]}${depositAmount.toFixed(2)}`;
       const depositLabel = `${data.depositPercentage}% Deposit:`;
-      
+
       // 根据是否显示余额来决定定金金额的颜色
-      const depositColor = data.showBalance ? [0, 0, 0] : [0, 0, 255]; // 显示余额时定金为黑色，否则为蓝色
-      
+      const depositColor: [number, number, number] = data.showBalance ? [0, 0, 0] : [0, 0, 255]; // 显示余额时定金为黑色，否则为蓝色
+
       tableData.push([
         { content: depositLabel, styles: { fontStyle: 'bold', fontSize: 9 } },
         { content: depositValue, styles: { fontStyle: 'bold', fontSize: 9, textColor: depositColor } }
       ]);
-      
+
       if (data.showBalance) {
         const balanceAmount = data.balanceAmount || (total - depositAmount);
         const balanceValue = `${currencySymbols[data.currency]}${balanceAmount.toFixed(2)}`;
@@ -303,11 +300,11 @@ export const generateOrderConfirmationPDF = async (
         ]);
       }
     }
-    
+
     // 计算表格宽度和位置
     const tableWidth = 58; // 表格宽度58mm
     const tableX = pageWidth - margin - tableWidth; // 右对齐
-    
+
     // 使用autoTable创建摘要表格
     doc.autoTable({
       startY: currentY + 2, // 减少间距，让总额表格更靠近主表
@@ -337,27 +334,27 @@ export const generateOrderConfirmationPDF = async (
       margin: { left: tableX, right: margin },
       tableWidth: tableWidth,
       showFoot: 'never',
-      didDrawCell: (data: any) => {
+      didDrawCell: (data) => {
         // 隐藏单元格边框
         if (data.cell && data.cell.styles) {
           data.cell.styles.lineWidth = 0;
           data.cell.styles.lineColor = [255, 255, 255]; // 白色，相当于隐藏
         }
-        
+
         // 为每个单元格添加下划线
         if (data.cell && data.cell.x && data.cell.y && data.cell.width) {
           const cellX = data.cell.x;
           const cellY = data.cell.y;
           const cellWidth = data.cell.width;
           const cellHeight = data.cell.height || 8; // 默认高度8mm
-          
+
           // 在单元格底部绘制下划线
           doc.setDrawColor(0, 0, 0); // 黑色
           doc.setLineWidth(0.1); // 线条宽度0.1mm
           doc.line(cellX, cellY + cellHeight - 1, cellX + cellWidth, cellY + cellHeight - 1);
         }
       },
-      willDrawCell: (data: any) => {
+      willDrawCell: (data) => {
         // 隐藏单元格边框
         if (data.cell && data.cell.styles) {
           data.cell.styles.lineWidth = 0;
@@ -365,7 +362,7 @@ export const generateOrderConfirmationPDF = async (
         }
       }
     });
-    
+
     currentY = doc.lastAutoTable.finalY + 2;
 
     // 显示大写金额 - 根据内容类型优化间距
@@ -379,15 +376,15 @@ export const generateOrderConfirmationPDF = async (
     } else {
       currentY += 4; // 无定金时，保持原有间距
     }
-    
+
     doc.setFontSize(8);
     safeSetCnFont(doc, 'bold', preview ? 'preview' : 'export');
-    
+
     // 根据是否有定金决定显示哪个金额的大写
     let amountInWords: string;
     if (data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0) {
       const { numberToWords } = require('../features/invoice/utils/calculations');
-      
+
       if (data.showBalance) {
         // 显示尾款金额的大写
         const balanceAmount = data.balanceAmount || (total - data.depositAmount);
@@ -402,25 +399,25 @@ export const generateOrderConfirmationPDF = async (
       // 显示总金额的大写
       amountInWords = `SAY TOTAL ${data.currency === 'USD' ? 'US DOLLARS' : data.currency === 'EUR' ? 'EUROS' : 'CHINESE YUAN'} ${data.amountInWords.dollars}${data.amountInWords.hasDecimals ? ` AND ${data.amountInWords.cents}` : ' ONLY'}`;
     }
-    
+
     const lines = doc.splitTextToSize(amountInWords, pageWidth - (margin * 2));
-    
+
     // 检查大写金额是否需要换页
     const requiredHeight = lines.length * 5 + 10; // 大写金额所需高度 + 额外间距
     currentY = checkAndAddPage(currentY, requiredHeight);
-    
+
     lines.forEach((line: string, index: number) => {
       doc.text(String(line), margin, currentY + (index * 5));
     });
 
     // 大写金额后的间距 - 根据后续内容动态调整
     currentY += (lines.length * 5);
-    
+
     // 检查是否有其他内容（银行信息或付款条款）
     const hasBankInfo = data.showBank;
     const hasPaymentTerms = data.showMainPaymentTerm || data.additionalPaymentTerms || data.showInvoiceReminder;
-    const hasOtherContent = hasBankInfo || hasPaymentTerms;
-    
+    const _hasOtherContent = hasBankInfo || hasPaymentTerms;
+
     // 根据内容类型调整间距
     if (hasBankInfo) {
       currentY += 5; // 有银行信息时减少间距
@@ -438,7 +435,7 @@ export const generateOrderConfirmationPDF = async (
     // 检查Notes和其他内容是否会导致印章单独出现在下一页
     const validNotes = data.notes?.filter(note => note.trim() !== '') || [];
     const estimatedLineHeight = 5; // 每行文本的估计高度
-    
+
     // 更准确地估算Notes所需高度
     let notesHeight = 0;
     if (validNotes.length > 0) {
@@ -472,15 +469,15 @@ export const generateOrderConfirmationPDF = async (
     }
 
     const totalContentHeight = notesHeight + bankInfoHeight + paymentTermsHeight + 15; // 添加15mm作为内容间距
-    
+
     // 检查当前页剩余空间
     const remainingSpace = pageHeight - currentY;
     const stampWithContentHeight = stampHeight + 10; // 印章高度加上10mm边距
-    
+
     // 如果剩余空间不足以容纳所有内容和印章，但足够容纳内容，则先添加内容
     const contentFitsCurrentPage = remainingSpace >= totalContentHeight;
     const stampNeedsNewPage = remainingSpace < (totalContentHeight + stampWithContentHeight);
-    
+
     // 如果内容可以放在当前页，但加上印章后空间不够，则印章需要放到下一页
     const stampWillBeAlone = contentFitsCurrentPage && stampNeedsNewPage;
 
@@ -498,7 +495,7 @@ export const generateOrderConfirmationPDF = async (
         // 设置印章透明度为0.9
         doc.saveGraphicsState();
         doc.setGState(new doc.GState({ opacity: 0.9 }));
-        
+
         // 在总金额下方添加印章
         doc.addImage(
           stampImage,
@@ -537,32 +534,32 @@ export const generateOrderConfirmationPDF = async (
       doc.setFont('NotoSansSC', 'bold');
       doc.text('Notes:', leftMargin, currentY);
       currentY += 5;
-      
+
       doc.setFont('NotoSansSC', 'normal');
       // 使用页面宽度减去左右边距作为 Notes 的最大宽度
       const notesMaxWidth = pageWidth - (margin * 2);
-      
+
       // 显示所有有效条款，在条款间进行分页检查
       validNotes.forEach((line: string, index: number) => {
         // 处理长文本自动换行，考虑编号的宽度
         const numberText = `${index + 1}. `;
         const numberWidth = doc.getTextWidth(numberText);
         const wrappedText = doc.splitTextToSize(line, notesMaxWidth - numberWidth);
-        
+
         // 估算当前条款所需空间：编号行 + 内容行数 * 行高 + 间距（最小化额外间距）
         const estimatedHeight = 1 + (wrappedText.length * 5) + 1;
-        
+
         // 检查是否需要换页（在条款开始前检查，确保整个条款能完整显示）
         currentY = checkAndAddPage(currentY, estimatedHeight);
-        
+
         // 添加编号
         doc.text(numberText, leftMargin, currentY);
-        
+
         // 渲染内容行
         wrappedText.forEach((textLine: string, lineIndex: number) => {
           doc.text(textLine, leftMargin + numberWidth, currentY + (lineIndex * 5));
         });
-        
+
         // 更新Y坐标到最后一行之后
         currentY += wrappedText.length * 5;
       });
@@ -582,7 +579,7 @@ export const generateOrderConfirmationPDF = async (
       doc.setFont('NotoSansSC', 'bold');
       doc.text('Bank Information:', leftMargin, currentY);
       currentY += 5;
-      
+
       const bankInfo = [
         { label: 'Bank Name:', value: 'The Hongkong and Shanghai Banking Corporation Limited' },
         { label: 'Swift code:', value: 'HSBCHKHHHKH' },
@@ -651,51 +648,51 @@ export const generateOrderConfirmationPDF = async (
           const term1Text = `Full payment not later than ${data.paymentDate} by ${paymentMethodText}.`;
           const term1Parts = term1Text.split(data.paymentDate);
           const firstPartWidth = doc.getTextWidth(term1Parts[0]);
-          
+
           // 增加标题和内容之间的间距
           const titleWidth = doc.getTextWidth('Payment Term:');
           const spacing = 5; // 设置合适的间距
-          
+
           doc.text(term1Parts[0], margin + titleWidth + spacing, currentY);
-          
+
           // 日期显示为红色
           doc.setTextColor(255, 0, 0);
           doc.text(data.paymentDate, margin + titleWidth + spacing + firstPartWidth, currentY);
-          
+
           // 恢复黑色并绘制剩余部分
           doc.setTextColor(0, 0, 0);
           doc.text(term1Parts[1], margin + titleWidth + spacing + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
-          
+
           currentY += 5;
         } else if (data.showInvoiceReminder) {
           // 只有合同号提醒时的布局
           const contractNo = data.contractNo && data.contractNo.trim() ? data.contractNo : 'TBD';
           const reminderPrefix = `Please state our contract no. "`;
           const reminderSuffix = `" on your payment documents.`;
-          
+
           // 计算各部分的宽度
           const titleWidth = doc.getTextWidth('Payment Term:');
           const spacing = 5; // 设置合适的间距
           const prefixWidth = doc.getTextWidth(reminderPrefix);
           const contractNoWidth = doc.getTextWidth(contractNo);
-          
+
           // 绘制前缀（黑色）
           doc.text(reminderPrefix, margin + titleWidth + spacing, currentY);
-          
+
           // 绘制合同号（红色）
           doc.setTextColor(255, 0, 0);
           doc.text(contractNo, margin + titleWidth + spacing + prefixWidth, currentY);
-          
+
           // 绘制后缀（黑色）
           doc.setTextColor(0, 0, 0);
           doc.text(reminderSuffix, margin + titleWidth + spacing + prefixWidth + contractNoWidth, currentY);
-          
+
           currentY += 5;
         }
       } else {
         // 多条付款条款的情况，使用编号列表格式
         currentY += 5;  // 标题和第一条之间的间距
-        
+
         const termRightMargin = 15;
         const numberWidth = doc.getTextWidth('1. '); // 获取序号的标准宽度
         const maxWidth = pageWidth - margin - numberWidth - termRightMargin;
@@ -727,7 +724,7 @@ export const generateOrderConfirmationPDF = async (
         if (data.showMainPaymentTerm) {
           // 绘制条款编号
           doc.text(`${termIndex}.`, margin, currentY);
-          
+
           // 绘制第一部分文本
           // 构建付款方式文本
           const methodMap: Record<string, string> = {
@@ -741,19 +738,19 @@ export const generateOrderConfirmationPDF = async (
           const term1Text = `Full payment not later than ${data.paymentDate} by ${paymentMethodText}.`;
           const term1Parts = term1Text.split(data.paymentDate);
           const firstPartWidth = doc.getTextWidth(term1Parts[0]);
-          
+
           // 处理长文本自动换行
           const wrappedText = doc.splitTextToSize(term1Parts[0], maxWidth - firstPartWidth);
           doc.text(wrappedText[0], margin + numberWidth, currentY);
-          
+
           // 日期显示为红色
           doc.setTextColor(255, 0, 0);
           doc.text(data.paymentDate, margin + numberWidth + firstPartWidth, currentY);
-          
+
           // 恢复黑色并绘制剩余部分
           doc.setTextColor(0, 0, 0);
           doc.text(term1Parts[1], margin + numberWidth + firstPartWidth + doc.getTextWidth(data.paymentDate), currentY);
-          
+
           currentY += termSpacing;
           termIndex++;
         }
@@ -763,25 +760,25 @@ export const generateOrderConfirmationPDF = async (
           const contractNo = data.contractNo && data.contractNo.trim() ? data.contractNo : 'TBD';
           const reminderPrefix = `${termIndex}. Please state our contract no. "`;
           const reminderSuffix = `" on your payment documents.`;
-          
+
           // 计算各部分的宽度
           const prefixWidth = doc.getTextWidth(reminderPrefix);
           const contractNoWidth = doc.getTextWidth(contractNo);
-          
+
           // 处理长文本自动换行，使用定义好的 maxWidth
           const wrappedPrefix = doc.splitTextToSize(reminderPrefix, maxWidth);
-          
+
           // 绘制前缀（黑色）
           doc.text(wrappedPrefix, margin, currentY);
-          
+
           // 绘制合同号（红色）
           doc.setTextColor(255, 0, 0);
           doc.text(contractNo, margin + prefixWidth, currentY);
-          
+
           // 绘制后缀（黑色）
           doc.setTextColor(0, 0, 0);
           doc.text(reminderSuffix, margin + prefixWidth + contractNoWidth, currentY);
-          
+
           currentY += 5;
         }
       }
@@ -801,19 +798,19 @@ export const generateOrderConfirmationPDF = async (
         // 计算页面底部边界和当前页剩余空间
         const pageBottom = doc.internal.pageSize.height - margin;
         const remainingSpace = pageBottom - currentY;
-        
+
         // 如果当前页剩余空间不足以放置印章，且当前页已经有其他内容，则将印章放在上一部分内容的旁边
         if (remainingSpace < stampHeight && currentY > margin + 50) {
           // 找到合适的Y坐标，通常是在总金额附近
           let adjustedY = currentY - stampHeight - 20; // 从当前位置向上偏移
-          
+
           // 确保不会太靠近页面顶部
           adjustedY = Math.max(adjustedY, margin + 50);
-          
+
           // 设置印章透明度为0.9
           doc.saveGraphicsState();
           doc.setGState(new doc.GState({ opacity: 0.9 }));
-          
+
           doc.addImage(
             stampImage,
             'PNG',
@@ -822,13 +819,13 @@ export const generateOrderConfirmationPDF = async (
             stampWidth,
             stampHeight
           );
-          
+
           // 恢复透明度
           doc.restoreGraphicsState();
         } else {
           // 正常情况下的印章位置处理
           let stampY = currentY + 5;
-          
+
           // 如果印章会超出页面底部，添加新页面
           if (stampY + stampHeight > pageBottom) {
             // 在添加新页面之前，检查当前页是否已经有内容
@@ -841,11 +838,11 @@ export const generateOrderConfirmationPDF = async (
               currentY = margin;
             }
           }
-          
+
           // 设置印章透明度为0.9
           doc.saveGraphicsState();
           doc.setGState(new doc.GState({ opacity: 0.9 }));
-          
+
           doc.addImage(
             stampImage,
             'PNG',
@@ -854,10 +851,10 @@ export const generateOrderConfirmationPDF = async (
             stampWidth,
             stampHeight
           );
-          
+
           // 恢复透明度
           doc.restoreGraphicsState();
-          
+
           // 更新当前Y坐标
           currentY = stampY + stampHeight + 5;
         }
@@ -875,7 +872,7 @@ export const generateOrderConfirmationPDF = async (
         // 清除页面底部区域
         doc.setFillColor(255, 255, 255);
         doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-        
+
         // 添加页码
         const str = `Page ${i} of ${totalPages}`;
         doc.setFontSize(8);
@@ -884,7 +881,7 @@ export const generateOrderConfirmationPDF = async (
       }
       return doc.output('blob');
     }
-    
+
     // 确保所有页面都有页码（非预览模式下也需要）
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
@@ -892,7 +889,7 @@ export const generateOrderConfirmationPDF = async (
       // 清除页面底部区域
       doc.setFillColor(255, 255, 255);
       doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-      
+
       // 添加页码
       const str = `Page ${i} of ${totalPages}`;
       doc.setFontSize(8);
@@ -906,4 +903,4 @@ export const generateOrderConfirmationPDF = async (
     console.error('Error generating PDF:', error);
     throw error;
   }
-}; 
+};

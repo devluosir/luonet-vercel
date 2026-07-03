@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTablePrefsHydrated } from '../state/useTablePrefs';
 import { ColumnToggle } from './ColumnToggle';
 import { OtherFeesTable } from '../../../components/packinglist/OtherFeesTable';
@@ -23,18 +23,18 @@ const baseInputClassName = `w-full px-2 py-1.5 rounded-lg
   hover:bg-white/90 dark:hover:bg-[#1c1c1e]/90`;
 
 // 文本输入框样式
-const textInputClassName = `${baseInputClassName} text-left`;
+const _textInputClassName = `${baseInputClassName} text-left`;
 
-// 数字输入框样式  
-const numberInputClassName = `${baseInputClassName} text-center
-  [appearance:textfield] 
-  [&::-webkit-outer-spin-button]:appearance-none 
+// 数字输入框样式
+const _numberInputClassName = `${baseInputClassName} text-center
+  [appearance:textfield]
+  [&::-webkit-outer-spin-button]:appearance-none
   [&::-webkit-inner-spin-button]:appearance-none`;
 
 // 选择框样式
-const selectInputClassName = `${baseInputClassName} text-center cursor-pointer
+const _selectInputClassName = `${baseInputClassName} text-center cursor-pointer
   appearance-none bg-white/80 dark:bg-[#1c1c1e]/80
-  bg-[url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")] 
+  bg-[url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")]
   bg-[length:1rem_1rem] bg-[right_0.5rem_center] bg-no-repeat pr-8`;
 
 // 导入单位处理模块
@@ -88,7 +88,7 @@ interface PackingItem {
   };
 }
 
-type OtherFeeField = 'description' | 'amount';
+type _OtherFeeField = 'description' | 'amount';
 
 interface PackingData {
   orderNo: string;
@@ -166,15 +166,15 @@ interface ItemsTableEnhancedProps {
     marks: MergedCellInfo[]; // 新增marks手动合并数据
   }) => void;
   // 导入相关
-  onImport?: (newItems: any[]) => void;
-  onInsertImported?: (rows: any[], replaceMode?: boolean) => void;
+  onImport?: (newItems: PackingItem[]) => void;
+  onInsertImported?: (rows: Array<Partial<PackingItem>>, replaceMode?: boolean) => void;
 }
 
 export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   data,
   onItemChange,
   onDataChange,
-  onAddLine,
+  onAddLine: _onAddLine,
   onDeleteLine,
   onOtherFeeChange,
   onOtherFeeDoubleClick,
@@ -183,9 +183,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   editingFeeAmount,
   setEditingFeeIndex,
   setEditingFeeAmount,
-  totals,
-  onEnterGroupMode,
-  onExitGroupMode,
+  totals: _totals,
+  onEnterGroupMode: _onEnterGroupMode,
+  onExitGroupMode: _onExitGroupMode,
   // 合并单元格相关
   onPackageQtyMergeModeChange,
   onDimensionsMergeModeChange,
@@ -234,7 +234,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
 
   // 合并单元格计算函数
-  const calculateMergedCells = (
+  const calculateMergedCells = useCallback((
     items: PackingItem[],
     mode: 'auto' | 'manual' = 'auto',
     column: 'packageQty' | 'dimensions' | 'marks' = 'packageQty'
@@ -253,17 +253,17 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
         mergedCells.push({
           startRow: index,
           endRow: index,
-          content: column === 'packageQty' ? item.packageQty.toString() : 
-                  column === 'dimensions' ? item.dimensions : 
+          content: column === 'packageQty' ? item.packageQty.toString() :
+                  column === 'dimensions' ? item.dimensions :
                   item.marks || '',
           isMerged: false,
         });
       });
-      
+
       // 应用手动合并数据
       const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [], marks: [] };
       const manualCells = Array.isArray(currentManualMergedCells[column]) ? currentManualMergedCells[column] : [];
-      
+
       if (manualCells.length > 0) {
         // 移除被合并的独立单元格
         manualCells.forEach(manualCell => {
@@ -276,34 +276,34 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
           // 添加合并的单元格
           mergedCells.push(manualCell);
         });
-        
+
         // 保持顺序
         mergedCells.sort((a, b) => a.startRow - b.startRow);
       }
-      
+
       return mergedCells;
     }
 
     let currentStart = 0;
-    let currentContent = column === 'packageQty' ? items[0]?.packageQty.toString() : 
-                        column === 'dimensions' ? items[0]?.dimensions : 
+    let currentContent = column === 'packageQty' ? items[0]?.packageQty.toString() :
+                        column === 'dimensions' ? items[0]?.dimensions :
                         items[0]?.marks || '';
 
     for (let i = 1; i <= items.length; i++) {
       const currentItem = items[i];
       const prevItem = items[i - 1];
 
-      const prevContent = column === 'packageQty' ? prevItem?.packageQty.toString() : 
-                         column === 'dimensions' ? prevItem?.dimensions : 
+      const prevContent = column === 'packageQty' ? prevItem?.packageQty.toString() :
+                         column === 'dimensions' ? prevItem?.dimensions :
                          prevItem?.marks || '';
       const currentContentValue = currentItem
-        ? column === 'packageQty' ? currentItem.packageQty.toString() : 
-          column === 'dimensions' ? currentItem.dimensions : 
+        ? column === 'packageQty' ? currentItem.packageQty.toString() :
+          column === 'dimensions' ? currentItem.dimensions :
           currentItem.marks || ''
         : '';
 
       // 合并逻辑：相同内容合并，但排除0和空值
-      const shouldEndMerge = !currentItem || 
+      const shouldEndMerge = !currentItem ||
         (currentContentValue !== prevContent) ||
         // 排除无意义的合并（所有列都排除空值）
         (prevContent === '0' || prevContent === '') ||
@@ -322,7 +322,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
           // 单行，不合并
           mergedCells.push({ startRow: currentStart, endRow: currentStart, content: currentContent, isMerged: false });
         }
-        
+
         if (currentItem) {
           currentStart = i;
           currentContent = currentContentValue;
@@ -330,13 +330,13 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
       }
     }
     return mergedCells;
-  };
+  }, [data.manualMergedCells]);
 
   // 计算合并单元格数据 - 需要在使用之前声明
   const packageQtyMergeMode = data.packageQtyMergeMode || 'auto';
   const dimensionsMergeMode = data.dimensionsMergeMode || 'auto';
   const marksMergeMode = data.marksMergeMode || 'auto'; // 新增marks合并模式
-  
+
   // 使用 useMemo 优化合并单元格计算，避免每次渲染都重新计算
   const mergedPackageQtyCells = useMemo(() => {
     if (packageQtyMergeMode === 'manual') {
@@ -344,15 +344,15 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     }
     // 自动模式下直接计算，不依赖 data.autoMergedCells
     return calculateMergedCells(data.items, 'auto', 'packageQty');
-  }, [packageQtyMergeMode, data.manualMergedCells?.packageQty, data.items]);
-    
+  }, [packageQtyMergeMode, data.manualMergedCells?.packageQty, data.items, calculateMergedCells]);
+
   const mergedDimensionsCells = useMemo(() => {
     if (dimensionsMergeMode === 'manual') {
       return data.manualMergedCells?.dimensions || [];
     }
     // 自动模式下直接计算，不依赖 data.autoMergedCells
     return calculateMergedCells(data.items, 'auto', 'dimensions');
-  }, [dimensionsMergeMode, data.manualMergedCells?.dimensions, data.items]);
+  }, [dimensionsMergeMode, data.manualMergedCells?.dimensions, data.items, calculateMergedCells]);
 
   const mergedMarksCells = useMemo(() => {
     if (marksMergeMode === 'manual') {
@@ -360,37 +360,37 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     }
     // 自动模式下直接计算，不依赖 data.autoMergedCells
     return calculateMergedCells(data.items, 'auto', 'marks');
-  }, [marksMergeMode, data.manualMergedCells?.marks, data.items]);
+  }, [marksMergeMode, data.manualMergedCells?.marks, data.items, calculateMergedCells]);
 
   // 合并单元格相关工具函数 - 使用 useMemo 优化性能
   const mergedCellInfoMap = useMemo(() => {
     const packageQtyMap = new Map<number, MergedCellInfo>();
     const dimensionsMap = new Map<number, MergedCellInfo>();
     const marksMap = new Map<number, MergedCellInfo>();
-    
+
     mergedPackageQtyCells.forEach(cell => {
       for (let i = cell.startRow; i <= cell.endRow; i++) {
         packageQtyMap.set(i, cell);
       }
     });
-    
+
     mergedDimensionsCells.forEach(cell => {
       for (let i = cell.startRow; i <= cell.endRow; i++) {
         dimensionsMap.set(i, cell);
       }
     });
-    
+
     mergedMarksCells.forEach(cell => {
       for (let i = cell.startRow; i <= cell.endRow; i++) {
         marksMap.set(i, cell);
       }
     });
-    
+
     return { packageQty: packageQtyMap, dimensions: dimensionsMap, marks: marksMap };
   }, [mergedPackageQtyCells, mergedDimensionsCells, mergedMarksCells]);
 
   const getMergedCellInfo = (rowIndex: number, column: 'packageQty' | 'dimensions' | 'marks') => {
-    const map = column === 'packageQty' ? mergedCellInfoMap.packageQty : 
+    const map = column === 'packageQty' ? mergedCellInfoMap.packageQty :
                column === 'dimensions' ? mergedCellInfoMap.dimensions :
                mergedCellInfoMap.marks;
     return map.get(rowIndex);
@@ -406,7 +406,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   };
 
   const findNextMergedGroupStartBeforeEnd = (currentEndRow: number, column: 'packageQty' | 'dimensions' | 'marks') => {
-    const mergedCells = column === 'packageQty' ? mergedPackageQtyCells : 
+    const mergedCells = column === 'packageQty' ? mergedPackageQtyCells :
                        column === 'dimensions' ? mergedDimensionsCells :
                        mergedMarksCells;
     for (let i = 0; i < mergedCells.length; i++) {
@@ -417,7 +417,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   };
 
   const findPrevMergedGroupEndAfterStart = (currentStartRow: number, column: 'packageQty' | 'dimensions' | 'marks') => {
-    const mergedCells = column === 'packageQty' ? mergedPackageQtyCells : 
+    const mergedCells = column === 'packageQty' ? mergedPackageQtyCells :
                        column === 'dimensions' ? mergedDimensionsCells :
                        mergedMarksCells;
     for (let i = mergedCells.length - 1; i >= 0; i--) {
@@ -429,16 +429,16 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
 
   const manualMergeRows = (startRow: number, endRow: number, column: 'packageQty' | 'dimensions' | 'marks' = 'packageQty') => {
     if (startRow === endRow) return;
-    const field = column;
-    
+    const _field = column;
+
     // 获取起始行的内容作为合并后的显示内容
     const startItem = data.items?.[startRow];
     if (!startItem) return;
-    
-    const mergedContent = column === 'packageQty' ? startItem.packageQty.toString() : 
-                         column === 'dimensions' ? startItem.dimensions : 
+
+    const mergedContent = column === 'packageQty' ? startItem.packageQty.toString() :
+                         column === 'dimensions' ? startItem.dimensions :
                          startItem.marks || '';
-    
+
     // 添加调试信息
     console.log('手动合并调试:', {
       startRow,
@@ -447,7 +447,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
       mergedContent,
       selectedValue: mergedContent
     });
-    
+
     // 创建合并单元格，以起始行的内容为准
     const cell: MergedCellInfo = { startRow, endRow, content: mergedContent, isMerged: true };
     const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [], marks: [] };
@@ -628,10 +628,10 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   };
 
   // 使用单位处理Hook
-  const { 
-    handleItemChange: handleUnitItemChange, 
-    getDisplayUnit, 
-    allUnits 
+  const {
+    handleItemChange: handleUnitItemChange,
+    getDisplayUnit: _getDisplayUnit,
+    allUnits: _allUnits
   } = useUnitHandler(data.customUnits || []);
 
   // 处理单位变更
@@ -646,7 +646,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     const quantity = typeof value === 'string' ? parseInt(value) || 0 : Math.floor(Number(value));
     const item = data.items[index];
     const result = handleUnitItemChange(item, 'quantity', quantity);
-    
+
     onItemChange(index, 'quantity', result.quantity);
     // 如果单位发生变化，同时更新单位
     if (result.unit !== item.unit) {
@@ -657,7 +657,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
   // 处理双击高亮
   const handleDoubleClick = (index: number, field: keyof NonNullable<PackingItem['highlight']>) => {
     if (!onDataChange) return;
-    
+
     const newItems = [...data.items];
     newItems[index] = {
       ...newItems[index],
@@ -687,7 +687,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
 
 
 
-  
+
   // 使用 useMemo 优化总计计算，避免每次渲染都重新计算
   const calculatedTotals = useMemo(() => {
     let totalPrice = 0;
@@ -696,14 +696,14 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     let packageQty = 0;
     const processedGroups = new Set<string>();
     const processedMergedRows = new Set<number>();
-    
+
     // 处理合并单元格，标记已合并的行
     const allMergedCells = [
       ...mergedPackageQtyCells,
       ...mergedDimensionsCells,
       ...mergedMarksCells
     ];
-    
+
     allMergedCells.forEach(cell => {
       if (cell.isMerged) {
         for (let i = cell.startRow; i <= cell.endRow; i++) {
@@ -711,16 +711,16 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
         }
       }
     });
-    
+
     data.items.forEach((item, index) => {
       totalPrice += item.totalPrice;
-      
+
       // 检查是否在合并单元格中且不是合并的起始行
       const isInMergedCell = processedMergedRows.has(index);
-      const isMergeStart = allMergedCells.some(cell => 
+      const isMergeStart = allMergedCells.some(cell =>
         cell.isMerged && cell.startRow === index
       );
-      
+
       // 如果不在合并单元格中，或者是合并的起始行，则计算
       if (!isInMergedCell || isMergeStart) {
         const isInGroup = !!item.groupId;
@@ -747,7 +747,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
       packageQty
     };
   }, [data.items, mergedPackageQtyCells, mergedDimensionsCells, mergedMarksCells]);
-  
+
   // 使用 useMemo 优化总金额计算
   const totalAmount = useMemo(() => {
     return calculatedTotals.totalPrice + otherFeesTotal;
@@ -771,7 +771,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
           <div className="flex items-center gap-4">
             {/* 导入按钮 */}
             {onImport && <ImportDataButton onImport={onImport} />}
-            
+
             {/* 分组按钮 */}
             <button
               type="button"
@@ -783,7 +783,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                 }
               }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                data.isInGroupMode 
+                data.isInGroupMode
                   ? 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
                   : 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40'
               }`}
@@ -825,9 +825,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                     description: '',
                     amount: 0
                   };
-                  onDataChange?.({ 
-                    ...data, 
-                    otherFees: [...(data.otherFees || []), newOtherFee] 
+                  onDataChange?.({
+                    ...data,
+                    otherFees: [...(data.otherFees || []), newOtherFee]
                   });
                 }}
                 className="px-3 py-1.5 rounded-lg bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 text-xs font-medium transition-all duration-200"
@@ -839,7 +839,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
 
           {/* 右侧工具栏 */}
           <div className="flex items-center gap-3">
-            <ColumnToggle 
+            <ColumnToggle
               packageQtyMergeMode={data.packageQtyMergeMode || 'auto'}
               dimensionsMergeMode={data.dimensionsMergeMode || 'auto'}
               marksMergeMode={data.marksMergeMode || 'auto'} // 新增marks合并模式
@@ -910,8 +910,8 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                 onClick={() => {
                   const priceCols: Col[] = ['unitPrice', 'amount'];
                   const hasAnyPriceCol = priceCols.some(col => visibleCols.includes(col));
-                  const hasAnyWeightCol = (['netWeight', 'grossWeight', 'packageQty'] as Col[]).some(col => visibleCols.includes(col));
-                  
+                  const _hasAnyWeightCol = (['netWeight', 'grossWeight', 'packageQty'] as Col[]).some(col => visibleCols.includes(col));
+
                   if (hasAnyPriceCol) {
                     const newCols = visibleCols.filter(col => !priceCols.includes(col));
                     setCols(newCols);
@@ -939,8 +939,8 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                   onClick={() => {
                     const weightCols: Col[] = ['netWeight', 'grossWeight', 'packageQty'];
                     const hasAnyWeightCol = weightCols.some(col => visibleCols.includes(col));
-                    const hasAnyPriceCol = (['unitPrice', 'amount'] as Col[]).some(col => visibleCols.includes(col));
-                    
+                    const _hasAnyPriceCol = (['unitPrice', 'amount'] as Col[]).some(col => visibleCols.includes(col));
+
                     if (hasAnyWeightCol) {
                       const newCols = visibleCols.filter(col => !weightCols.includes(col));
                       setCols(newCols);
@@ -1016,8 +1016,8 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
           // 检查当前项目是否在组内
           const isInGroup = !!item.groupId;
           const groupItems = isInGroup ? data.items.filter(i => i.groupId === item.groupId) : [];
-          const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
-          
+          const _isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
+
           return (
             <div key={item.id} className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
@@ -1031,7 +1031,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                   </button>
                 )}
               </div>
-              
+
               <div className="space-y-4">
                 {/* Marks */}
                 {effectiveVisibleCols.includes('marks') && (
@@ -1053,7 +1053,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                     />
                   </div>
                 )}
-                
+
                 {/* 描述 */}
                 {effectiveVisibleCols.includes('description') && (
                   <div>
@@ -1074,7 +1074,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                     />
                   </div>
                 )}
-                
+
                 {/* HS Code */}
                 {effectiveVisibleCols.includes('hsCode') && data.showHsCode && (
                   <div>
@@ -1091,7 +1091,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                     />
                   </div>
                 )}
-                
+
                 {/* 数量 + 单位 */}
                 {(effectiveVisibleCols.includes('quantity') || effectiveVisibleCols.includes('unit')) && (
                   <div className="grid grid-cols-2 gap-3">
@@ -1117,7 +1117,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         />
                       </div>
                     )}
-                    
+
                     {effectiveVisibleCols.includes('unit') && (
                       <div>
                         <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Unit</label>
@@ -1135,7 +1135,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                     )}
                   </div>
                 )}
-                
+
                 {/* 单价 + 金额 */}
                 {data.showPrice && (effectiveVisibleCols.includes('unitPrice') || effectiveVisibleCols.includes('amount')) && (
                   <div className="grid grid-cols-2 gap-3">
@@ -1161,7 +1161,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         />
                       </div>
                     )}
-                    
+
                     {effectiveVisibleCols.includes('amount') && (
                       <div>
                         <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Amount</label>
@@ -1173,7 +1173,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                     )}
                   </div>
                 )}
-                
+
                 {/* 净重 + 毛重 */}
                 {data.showWeightAndPackage && (effectiveVisibleCols.includes('netWeight') || effectiveVisibleCols.includes('grossWeight')) && (
                   <div className="grid grid-cols-2 gap-3">
@@ -1199,7 +1199,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         />
                       </div>
                     )}
-                    
+
                     {effectiveVisibleCols.includes('grossWeight') && (
                       <div>
                         <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">G.W.(kg)</label>
@@ -1224,7 +1224,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                     )}
                   </div>
                 )}
-                
+
                 {/* 包装数量 + 尺寸 */}
                 {(data.showWeightAndPackage || data.showDimensions) && (effectiveVisibleCols.includes('packageQty') || effectiveVisibleCols.includes('dimensions')) && (
                   <div className="grid grid-cols-2 gap-3">
@@ -1250,7 +1250,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         />
                       </div>
                     )}
-                    
+
                     {effectiveVisibleCols.includes('dimensions') && data.showDimensions && (
                       <div>
                         <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Dimensions ({data.dimensionUnit})</label>
@@ -1272,7 +1272,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
             </div>
           );
         })}
-        
+
         {/* Other Fees 移动端视图 */}
         {data.showPrice && data.otherFees && data.otherFees.length > 0 && (
           <div className="pt-6">
@@ -1289,7 +1289,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                       ×
                     </button>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="sm:col-span-1">
                       <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Description</label>
@@ -1304,7 +1304,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         placeholder="Fee description"
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Amount</label>
                       <input
@@ -1394,7 +1394,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                 const isFirstInGroup = isInGroup && groupItems[0]?.id === item.id;
                 const groupRowSpan = isInGroup ? groupItems.length : 1;
                 const groupBg = isInGroup ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-white/90 dark:bg-[#1C1C1E]/90';
-                
+
                 return (
                   <tr key={item.id} className={`border-b border-[#007AFF]/10 dark:border-[#0A84FF]/10 ${groupBg}`}>
                     {effectiveVisibleCols.includes('marks') && (
@@ -1425,9 +1425,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                             const marksMergedInfo = getMergedCellInfo(index, 'marks');
                             const marksRowSpan = marksMergedInfo ? marksMergedInfo.endRow - marksMergedInfo.startRow + 1 : 1;
                             const marksIsMerged = !!marksMergedInfo?.isMerged;
-                            
+
                             return (
-                              <td 
+                              <td
                                 className={`py-2 px-4 text-center text-sm ${
                                   marksIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
                                 }`}
@@ -1442,7 +1442,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                                     e.target.style.height = `${e.target.scrollHeight}px`;
                                     if (marksIsMerged && marksMergedInfo) {
                                       // 如果是合并单元格，使用批量更新
-                                      
+
                                       // 使用批量更新，避免React状态更新的竞态条件
                                       if (onDataChange) {
                                         const newItems = [...data.items];
@@ -1456,11 +1456,11 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                                           onItemChange(i, 'marks', newValue);
                                         }
                                       }
-                                      
+
                                       // 如果是手动合并模式，更新合并单元格的内容
                                       if (marksMergeMode === 'manual' && onManualMergedCellsChange) {
                                         const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [], marks: [] };
-                                        const updatedMarks = currentManualMergedCells.marks.map(cell => 
+                                        const updatedMarks = currentManualMergedCells.marks.map(cell =>
                                           cell.startRow === marksMergedInfo.startRow && cell.endRow === marksMergedInfo.endRow
                                             ? { ...cell, content: newValue }
                                             : cell
@@ -1492,7 +1492,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                       )
                     )}
                     <td className="py-2 px-4 text-center text-sm">
-                      <span 
+                      <span
                         className="flex items-center justify-center w-5 h-5 rounded-full text-xs text-gray-400 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-colors"
                         onClick={() => handleSoftDelete(index)}
                         title="Click to delete"
@@ -1500,7 +1500,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         {index + 1}
                       </span>
                     </td>
-                    
+
                     {effectiveVisibleCols.includes('description') && (
                       <td className="py-2 px-4 text-center text-[12px]">
                         <textarea
@@ -1520,7 +1520,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         />
                       </td>
                     )}
-                    
+
                     {effectiveVisibleCols.includes('hsCode') && data.showHsCode && (
                       <td className="py-2 px-4 text-center text-sm">
                         <input
@@ -1532,7 +1532,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         />
                       </td>
                     )}
-                    
+
                     {effectiveVisibleCols.includes('quantity') && (
                       <td className="py-2 px-4 text-center text-sm">
                         <input
@@ -1570,7 +1570,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         />
                       </td>
                     )}
-                    
+
                     {effectiveVisibleCols.includes('unit') && (
                       <td className="py-2 px-4 text-center text-sm">
                         <UnitSelector
@@ -1583,7 +1583,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         />
                       </td>
                     )}
-                    
+
                     {effectiveVisibleCols.includes('unitPrice') && data.showPrice && (
                       <td className="py-2 px-4 text-center text-sm">
                         <input
@@ -1613,7 +1613,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         />
                       </td>
                     )}
-                    
+
                     {effectiveVisibleCols.includes('amount') && data.showPrice && (
                       <td className="py-2 px-4 text-center text-sm">
                         <input
@@ -1625,7 +1625,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         />
                       </td>
                     )}
-                    
+
                     {/* 合并单元格：只在组内第一行渲染，rowSpan=组内行数 */}
                     {effectiveVisibleCols.includes('netWeight') && data.showWeightAndPackage && (
                       isInGroup && isFirstInGroup ? (
@@ -1703,7 +1703,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         </td>
                       ) : null
                     )}
-                    
+
                     {effectiveVisibleCols.includes('grossWeight') && data.showWeightAndPackage && (
                       isInGroup && isFirstInGroup ? (
                         <td rowSpan={groupRowSpan} className="py-2 px-4 text-center align-middle" style={{verticalAlign:'middle'}}>
@@ -1780,7 +1780,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         </td>
                       ) : null
                     )}
-                    
+
                     {effectiveVisibleCols.includes('packageQty') && data.showWeightAndPackage && (
                       // 当有分组数据时，使用普通单元格渲染
                       hasGroupedItems ? (
@@ -1819,9 +1819,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                             const packageQtyMergedInfo = getMergedCellInfo(index, 'packageQty');
                             const packageQtyRowSpan = packageQtyMergedInfo ? packageQtyMergedInfo.endRow - packageQtyMergedInfo.startRow + 1 : 1;
                             const packageQtyIsMerged = !!packageQtyMergedInfo?.isMerged;
-                            
+
                             return (
-                              <td 
+                              <td
                                 className={`py-2 px-4 text-center text-sm ${
                                   packageQtyIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
                                 }`}
@@ -1854,7 +1854,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                                         // 如果是手动合并模式，更新合并单元格的内容
                                         if (packageQtyMergeMode === 'manual' && onManualMergedCellsChange) {
                                           const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [], marks: [] };
-                                          const updatedPackageQty = currentManualMergedCells.packageQty.map(cell => 
+                                          const updatedPackageQty = currentManualMergedCells.packageQty.map(cell =>
                                             cell.startRow === packageQtyMergedInfo.startRow && cell.endRow === packageQtyMergedInfo.endRow
                                               ? { ...cell, content: newValue.toString() }
                                               : cell
@@ -1891,7 +1891,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         )
                       )
                     )}
-                    
+
                     {effectiveVisibleCols.includes('dimensions') && data.showDimensions && (
                       // 当有分组数据时，使用普通单元格渲染
                       hasGroupedItems ? (
@@ -1927,9 +1927,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                             const dimensionsMergedInfo = getMergedCellInfo(index, 'dimensions');
                             const dimensionsRowSpan = dimensionsMergedInfo ? dimensionsMergedInfo.endRow - dimensionsMergedInfo.startRow + 1 : 1;
                             const dimensionsIsMerged = !!dimensionsMergedInfo?.isMerged;
-                            
+
                             return (
-                              <td 
+                              <td
                                 className={`py-2 px-4 text-center text-sm ${
                                   dimensionsIsMerged ? 'bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-2 border-l-blue-200 dark:border-l-blue-300' : ''
                                 }`}
@@ -1960,7 +1960,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                                       // 如果是手动合并模式，更新合并单元格的内容
                                       if (dimensionsMergeMode === 'manual' && onManualMergedCellsChange) {
                                         const currentManualMergedCells = data.manualMergedCells || { packageQty: [], dimensions: [], marks: [] };
-                                        const updatedDimensions = currentManualMergedCells.dimensions.map(cell => 
+                                        const updatedDimensions = currentManualMergedCells.dimensions.map(cell =>
                                           cell.startRow === dimensionsMergedInfo.startRow && cell.endRow === dimensionsMergedInfo.endRow
                                             ? { ...cell, content: newValue }
                                             : cell
@@ -2000,7 +2000,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                 );
               })}
             </tbody>
-            
+
             {/* Other Fees 表格 - 无缝衔接 */}
             {data.showPrice && data.otherFees && data.otherFees.length > 0 && (
               <OtherFeesTable
@@ -2099,7 +2099,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
           mergeToRow(start, end);
         }}
         isManualMode={
-          contextMenu?.column === 'packageQty' ? packageQtyMergeMode === 'manual' : 
+          contextMenu?.column === 'packageQty' ? packageQtyMergeMode === 'manual' :
           contextMenu?.column === 'dimensions' ? dimensionsMergeMode === 'manual' :
           contextMenu?.column === 'marks' ? marksMergeMode === 'manual' : false
         }

@@ -1,14 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { 
-  UnitConfig, 
-  getUnitDisplay, 
-  getAllUnits, 
-  processUnitChange, 
-  updateUnitForQuantityChange,
-  getUnitOptions,
-  createUnitConfig,
-  DEFAULT_UNIT_CONFIG
-} from '@/utils/unitUtils';
+import { getUnitDisplay, getAllUnits, processUnitChange, updateUnitForQuantityChange, getUnitOptions, createUnitConfig } from '@/utils/unitUtils';
 
 /**
  * 单位处理Hook
@@ -27,7 +18,7 @@ export function useUnitHandler(customUnits: string[] = []) {
 
   // 获取单位显示文本
   const getDisplayUnit = useCallback((
-    baseUnit: string, 
+    baseUnit: string,
     quantity: number
   ): string => {
     return getUnitDisplay(baseUnit, quantity, unitConfig);
@@ -35,7 +26,7 @@ export function useUnitHandler(customUnits: string[] = []) {
 
   // 处理单位变更
   const handleUnitChange = useCallback((
-    newUnit: string, 
+    newUnit: string,
     quantity: number
   ): string => {
     return processUnitChange(newUnit, quantity, unitConfig);
@@ -43,7 +34,7 @@ export function useUnitHandler(customUnits: string[] = []) {
 
   // 处理数量变更时的单位更新
   const handleQuantityChange = useCallback((
-    currentUnit: string, 
+    currentUnit: string,
     newQuantity: number
   ): string => {
     return updateUnitForQuantityChange(currentUnit, newQuantity, unitConfig);
@@ -81,16 +72,16 @@ export function useUnitHandler(customUnits: string[] = []) {
     // 配置
     unitConfig,
     allUnits,
-    
+
     // 核心函数
     getDisplayUnit,
     handleUnitChange,
     handleQuantityChange,
     handleItemChange,
-    
+
     // 选项
     getUnitSelectOptions,
-    
+
     // 便捷方法
     getUnitDisplay: getDisplayUnit,
     processUnitChange: handleUnitChange,
@@ -144,22 +135,22 @@ export function useUnitValidator(customUnits: string[] = []) {
     if (!unit || typeof unit !== 'string') {
       return false;
     }
-    
+
     const { defaultUnits, customUnits } = unitConfig;
     const singularUnit = unit.replace(/s$/, '');
-    
-    return defaultUnits.includes(singularUnit as any) || customUnits.includes(unit);
+
+    return defaultUnits.some(defaultUnit => defaultUnit === singularUnit) || customUnits.includes(unit);
   }, [unitConfig]);
 
   const getUnitError = useCallback((unit: string): string | null => {
     if (!unit) {
       return '单位不能为空';
     }
-    
+
     if (!validateUnit(unit)) {
       return '无效的单位';
     }
-    
+
     return null;
   }, [validateUnit]);
 

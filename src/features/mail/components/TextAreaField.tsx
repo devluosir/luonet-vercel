@@ -1,6 +1,4 @@
 import { forwardRef } from 'react';
-import { PLACEHOLDERS } from '../utils/constants';
-
 interface TextAreaFieldProps {
   label?: string;
   placeholder?: string;
@@ -13,12 +11,12 @@ interface TextAreaFieldProps {
 }
 
 export const TextAreaField = forwardRef<HTMLTextAreaElement, TextAreaFieldProps>(
-  ({ 
-    label, 
-    placeholder, 
-    required = false, 
-    value, 
-    onChange, 
+  ({
+    label,
+    placeholder,
+    required = false,
+    value,
+    onChange,
     className = '',
     rows = 8,
     disabled = false

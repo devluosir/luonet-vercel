@@ -31,7 +31,7 @@ export const authOptions: NextAuthOptions = {
 
         // ✅ 支持silent-refresh
         const isSilentRefresh = credentials.password === 'silent-refresh';
-        
+
         if (isSilentRefresh) {
           console.log('silent-refresh: 从远程重新获取用户信息:', credentials.username);
           try {
@@ -83,7 +83,7 @@ export const authOptions: NextAuthOptions = {
           }
 
           const data = await response.json();
-          
+
           // 验证用户状态
           if (!data.user || !data.user.status) {
             throw new Error("用户账户已被禁用");
@@ -115,7 +115,7 @@ export const authOptions: NextAuthOptions = {
         token.username = user.username;
         token.isAdmin = !!user.isAdmin;
         token.permissions = user.permissions || [];
-        token.status = (user as any).status;
+        token.status = user.status;
         token.email = user.email;
       }
 
@@ -143,8 +143,8 @@ export const authOptions: NextAuthOptions = {
         session.user.username = token.username;
         session.user.isAdmin = !!token.isAdmin;
         session.user.email = token.email;
-        (session.user as any).status = token.status;
-        
+        session.user.status = token.status;
+
         // ✅ 确保权限数据格式正确
         if (Array.isArray(token.permissions)) {
           session.user.permissions = token.permissions;
@@ -168,7 +168,7 @@ export const authOptions: NextAuthOptions = {
         // 如果URL是首页，不需要重定向
         return url;
       }
-      
+
       // 确保重定向到正确的URL
       if (url.startsWith('/')) {
         const fullUrl = `${baseUrl}${url}`;
@@ -176,7 +176,7 @@ export const authOptions: NextAuthOptions = {
       } else if (new URL(url).origin === baseUrl) {
         return url;
       }
-      
+
       return baseUrl;
     }
   },
@@ -186,4 +186,4 @@ export const authOptions: NextAuthOptions = {
 
 const handler = NextAuth(authOptions);
 
-export { handler as auth, handler as GET, handler as POST }; 
+export { handler as auth, handler as GET, handler as POST };

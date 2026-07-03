@@ -1,18 +1,35 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-export function QuickImport({ 
+export interface ImportedInvoiceRow {
+  lineNo: number;
+  hsCode: string;
+  partName: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  amount: number;
+  remarks: string;
+  highlight: Record<string, boolean>;
+}
+
+export interface PresetParsedInvoiceData {
+  rows?: ImportedInvoiceRow[];
+}
+
+export function QuickImport({
   onInsert,
   presetRaw,
   presetParsed,
   onClosePreset,
-}: { 
-  onInsert: (items: any[], replaceMode?: boolean) => void;
-  presetRaw?: string;
-  presetParsed?: any;
-  onClosePreset?: () => void;
-}) {
+	}: {
+	  onInsert: (items: ImportedInvoiceRow[], replaceMode?: boolean) => void;
+	  presetRaw?: string;
+	  presetParsed?: PresetParsedInvoiceData;
+	  onClosePreset?: () => void;
+	}) {
   const [open, setOpen] = useState(false);
-  
+
   // 拖拽相关状态
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -20,7 +37,7 @@ export function QuickImport({
   const modalRef = useRef<HTMLDivElement>(null);
 
   const closeAll = useCallback(() => {
-    setOpen(false); 
+    setOpen(false);
     // 重置位置
     setPosition({ x: 0, y: 0 });
     onClosePreset?.();
@@ -76,7 +93,7 @@ export function QuickImport({
 
     document.addEventListener('paste', handlePaste);
     document.addEventListener('contextmenu', handleContextMenu);
-    
+
     return () => {
       document.removeEventListener('paste', handlePaste);
       document.removeEventListener('contextmenu', handleContextMenu);
@@ -102,23 +119,23 @@ export function QuickImport({
     }
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (isDragging && modalRef.current) {
       const rect = modalRef.current.getBoundingClientRect();
       // 直接计算新位置，考虑transform的影响
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
-      
+
       // 限制在视窗范围内
       const maxX = window.innerWidth - rect.width;
       const maxY = window.innerHeight - rect.height;
-      
+
       setPosition({
         x: Math.max(0, Math.min(newX, maxX)),
         y: Math.max(0, Math.min(newY, maxY))
       });
     }
-  };
+  }, [dragOffset.x, dragOffset.y, isDragging]);
 
   const handleMouseUp = () => {
     setIsDragging(false);
@@ -134,19 +151,19 @@ export function QuickImport({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [open, isDragging, dragOffset]);
+  }, [open, isDragging, dragOffset, handleMouseMove]);
 
   // 简单的发票数据解析函数
-  const parseInvoiceData = (text: string) => {
+  const parseInvoiceData = (text: string): ImportedInvoiceRow[] => {
     const lines = text.trim().split('\n');
-    const items: any[] = [];
-    
+    const items: ImportedInvoiceRow[] = [];
+
     lines.forEach((line, index) => {
       const columns = line.split('\t');
       if (columns.length >= 4) {
         const quantity = parseFloat(columns[2]) || 0;
         const unitPrice = parseFloat(columns[3]) || 0;
-        
+
         items.push({
           lineNo: index + 1,
           hsCode: columns[0] || '',
@@ -161,18 +178,18 @@ export function QuickImport({
         });
       }
     });
-    
+
     return items;
   };
 
   return (
     <div className="relative">
-      <button 
+      <button
         type="button"
-        className="relative inline-flex items-center gap-0 px-3 py-2 rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
-                   bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 
+        className="relative inline-flex items-center gap-0 px-3 py-2 rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E]
+                   bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20
                    text-sm font-medium text-blue-700 dark:text-blue-300
-                   hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 
+                   hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30
                    hover:border-blue-300 dark:hover:border-blue-600
                    transition-all duration-200 shadow-sm hover:shadow-md"
         onClick={()=>setOpen(true)}
@@ -194,10 +211,10 @@ export function QuickImport({
       </button>
       {open && (
         <div className="fixed inset-0 z-50" onClick={closeAll}>
-          <div 
+          <div
             ref={modalRef}
-            className="absolute w-full max-w-2xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
-                       bg-white dark:bg-[#1C1C1E] shadow-2xl max-h-[80vh] overflow-hidden cursor-move" 
+            className="absolute w-full max-w-2xl rounded-2xl border border-[#E5E5EA] dark:border-[#2C2C2E]
+                       bg-white dark:bg-[#1C1C1E] shadow-2xl max-h-[80vh] overflow-hidden cursor-move"
             style={{
               left: `${position.x}px`,
               top: `${position.y}px`,
@@ -206,7 +223,7 @@ export function QuickImport({
             onClick={(e) => e.stopPropagation()}
           >
             {/* 标题栏 - 可拖拽区域 */}
-            <div 
+            <div
               className="flex items-center justify-between p-4 border-b border-[#E5E5EA] dark:border-[#2C2C2E] cursor-move"
               onMouseDown={handleMouseDown}
             >
@@ -214,7 +231,7 @@ export function QuickImport({
               <button
                 type="button"
                 onClick={closeAll}
-                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 
+                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300
                            hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,7 +239,7 @@ export function QuickImport({
                 </svg>
               </button>
             </div>
-            
+
             <div className="p-6">
               <div className="text-center space-y-4">
                 <div className="text-lg font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
@@ -234,7 +251,7 @@ export function QuickImport({
                   <p>包含表头、序号、备注的区域</p>
                   <p>无序号的行不用复制进来</p>
                 </div>
-                <div 
+                <div
                   className="mt-6 p-4 border-2 border-dashed border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg bg-[#F5F5F7]/30 dark:bg-[#2C2C2E]/30 cursor-pointer hover:bg-[#F5F5F7]/50 dark:hover:bg-[#2C2C2E]/50 transition-colors"
                   onContextMenu={(e) => {
                     e.preventDefault();

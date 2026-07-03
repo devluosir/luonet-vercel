@@ -1,8 +1,8 @@
 'use client';
-
 import { useMemo } from 'react';
 import { useInvoiceStore } from '../state/invoice.store';
-import { calculateAmount, calculatePaymentDate, numberToWords } from '../utils/calculations';
+import { calculatePaymentDate, numberToWords } from '../utils/calculations';
+import type { InvoiceData, LineItem } from '../types';
 
 /**
  * 发票表单逻辑Hook
@@ -38,12 +38,12 @@ export const useInvoiceForm = () => {
   };
 
   // 处理输入变化
-  const handleInputChange = (field: keyof typeof data, value: any) => {
+  const handleInputChange = <K extends keyof InvoiceData>(field: K, value: InvoiceData[K]) => {
     updateData({ [field]: value });
   };
 
   // 处理商品行变化
-  const handleLineItemChange = (index: number, field: keyof typeof data.items[0], value: any) => {
+  const handleLineItemChange = (index: number, field: keyof LineItem, value: string | number) => {
     updateLineItem(index, field, value);
   };
 

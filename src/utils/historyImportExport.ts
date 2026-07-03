@@ -1,15 +1,15 @@
 import { format } from 'date-fns';
-import { 
-  getQuotationHistory, 
-  importQuotationHistory 
+import {
+  getQuotationHistory,
+  importQuotationHistory
 } from './quotationHistory';
-import { 
-  getPurchaseHistory, 
-  importPurchaseHistory 
+import {
+  getPurchaseHistory,
+  importPurchaseHistory
 } from './purchaseHistory';
-import { 
-  getInvoiceHistory, 
-  importInvoiceHistory 
+import {
+  getInvoiceHistory,
+  importInvoiceHistory
 } from './invoiceHistory';
 import {
   getPackingHistory,
@@ -32,8 +32,56 @@ export interface HistoryItem {
   currency: string;
   documentType?: string;
   type?: string;
-  data: any;
+  data: unknown;
 }
+
+type NumericLike = string | number;
+
+type ImportRecord = Record<string, unknown> & {
+  id?: string;
+  type?: string;
+  documentType?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  customerName?: string;
+  supplierName?: string;
+  consigneeName?: string;
+  quotationNo?: string;
+  invoiceNo?: string;
+  orderNo?: string;
+  purchaseNo?: string;
+  packingNo?: string;
+  totalAmount?: NumericLike;
+  amount?: NumericLike;
+  price?: NumericLike;
+  quantity?: NumericLike;
+  currency?: string;
+  data?: ImportRecord[];
+  items?: ImportRecord[];
+  records?: ImportRecord[];
+  history?: ImportRecord[];
+};
+
+const isImportRecord = (value: unknown): value is ImportRecord => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
+const toImportRecords = (value: unknown): ImportRecord[] => (
+  Array.isArray(value) ? value.filter(isImportRecord) : []
+);
+
+const toNumber = (value: unknown): number => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return parseFloat(value) || 0;
+  return 0;
+};
+
+const recordsFromNumericKeys = (record: ImportRecord, numericKeys: string[]): ImportRecord[] => (
+  numericKeys
+    .sort((a, b) => Number(a) - Number(b))
+    .map(key => record[key])
+    .filter(isImportRecord)
+);
 
 export interface ImportResult {
   success: boolean;
@@ -50,7 +98,7 @@ export interface ExportResult {
 }
 
 // 处理单据数据
-const processDocumentData = (data: any[], documentType: string): { processedData: any[], customerCount: number } => {
+const processDocumentData = (data: ImportRecord[], documentType: string): { processedData: ImportRecord[], customerCount: number } => {
   const processedData = data.map(item => {
     // 为导入的数据添加必要的默认值，确保组件能正常渲染
     const processedItem = {
@@ -64,12 +112,12 @@ const processDocumentData = (data: any[], documentType: string): { processedData
       createdAt: item.createdAt || new Date().toISOString(),
       updatedAt: item.updatedAt || new Date().toISOString(),
       // 确保有金额字段（装箱单需要）
-      totalAmount: typeof item.totalAmount === 'number' ? item.totalAmount : (parseFloat(item.totalAmount) || 0),
+      totalAmount: toNumber(item.totalAmount),
       currency: item.currency || 'USD',
       // 确保金额字段不为undefined
-      amount: typeof item.amount === 'number' ? item.amount : (parseFloat(item.amount) || 0),
-      price: typeof item.price === 'number' ? item.price : (parseFloat(item.price) || 0),
-      quantity: typeof item.quantity === 'number' ? item.quantity : (parseFloat(item.quantity) || 0),
+      amount: toNumber(item.amount),
+      price: toNumber(item.price),
+      quantity: toNumber(item.quantity),
       // 确保有基本字段
       customerName: item.customerName || '',
       supplierName: item.supplierName || '',
@@ -83,10 +131,10 @@ const processDocumentData = (data: any[], documentType: string): { processedData
       // 确保有items数组
       items: item.items || []
     };
-    
+
     return processedItem;
   });
-  
+
   console.log(`🔍 处理 ${documentType} 类型数据，共 ${data.length} 条记录`);
 
   // 移除客户信息提取和保存逻辑，直接返回处理后的数据
@@ -98,47 +146,45 @@ const processDocumentData = (data: any[], documentType: string): { processedData
 export const smartImport = (content: string, activeTab: HistoryType): ImportResult => {
   try {
     console.log(`📥 开始智能导入，当前标签: ${activeTab}`);
-    
+
     // 解析JSON数据
-    const parsedData = JSON.parse(content);
+    const parsedData: unknown = JSON.parse(content);
     console.log(`📋 导入数据解析成功，数据类型: ${typeof parsedData}, 是否为数组: ${Array.isArray(parsedData)}, 包含 ${Array.isArray(parsedData) ? parsedData.length : '非数组'} 条记录`);
 
     // 处理不同的数据格式
-    let importData: any[];
-    
+    let importData: ImportRecord[];
+
     if (Array.isArray(parsedData)) {
       // 直接是数组格式
-      importData = parsedData;
-    } else if (typeof parsedData === 'object' && parsedData !== null) {
+      importData = toImportRecords(parsedData);
+    } else if (isImportRecord(parsedData)) {
       // 对象格式，尝试提取数组数据
       console.log('🔍 检测到对象格式数据，尝试提取数组...');
-      
+
       // 检查常见的对象结构
       if (parsedData.data && Array.isArray(parsedData.data)) {
-        importData = parsedData.data;
+        importData = toImportRecords(parsedData.data);
         console.log(`✅ 从 data 字段提取到 ${importData.length} 条记录`);
       } else if (parsedData.items && Array.isArray(parsedData.items)) {
-        importData = parsedData.items;
+        importData = toImportRecords(parsedData.items);
         console.log(`✅ 从 items 字段提取到 ${importData.length} 条记录`);
       } else if (parsedData.records && Array.isArray(parsedData.records)) {
-        importData = parsedData.records;
+        importData = toImportRecords(parsedData.records);
         console.log(`✅ 从 records 字段提取到 ${importData.length} 条记录`);
       } else if (parsedData.history && Array.isArray(parsedData.history)) {
-        importData = parsedData.history;
+        importData = toImportRecords(parsedData.history);
         console.log(`✅ 从 history 字段提取到 ${importData.length} 条记录`);
       } else {
         // 尝试将对象转换为数组
         const objectKeys = Object.keys(parsedData);
         if (objectKeys.length > 0) {
           // 检查是否所有值都是对象（可能是以ID为键的对象数组）
-          const allValuesAreObjects = objectKeys.every(key => 
-            typeof parsedData[key] === 'object' && parsedData[key] !== null
-          );
-          
+          const allValuesAreObjects = objectKeys.every(key => isImportRecord(parsedData[key]));
+
           if (allValuesAreObjects) {
             importData = objectKeys.map(key => ({
               id: key,
-              ...parsedData[key]
+              ...(parsedData[key] as ImportRecord)
             }));
             console.log(`✅ 将对象转换为数组，共 ${importData.length} 条记录`);
           } else {
@@ -173,7 +219,7 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
     const details: string[] = [];
     const otherTabs: string[] = [];
 
-    importData.forEach((item: any, index: number) => {
+    importData.forEach((item: ImportRecord, index: number) => {
       console.log(`🔍 检查第${index + 1}条数据:`, {
         id: item.id,
         documentType: item.documentType,
@@ -181,7 +227,7 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         customerName: item.customerName,
         supplierName: item.supplierName
       });
-      
+
       // 检查多种可能的类型字段
       if (item.documentType) {
         dataTypes.add(item.documentType);
@@ -235,9 +281,9 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
 
     // 报价单导入
     if (dataTypes.has('quotation')) {
-      const quotationItem = importData.find((item: any) => item.id === 'quotation');
-      let quotationData: any[] = [];
-      
+      const quotationItem = importData.find((item: ImportRecord) => item.id === 'quotation');
+      let quotationData: ImportRecord[] = [];
+
       if (quotationItem) {
         // 如果找到ID为'quotation'的对象，提取其数据
         console.log(`🔍 quotation对象结构:`, {
@@ -251,7 +297,7 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           keys: Object.keys(quotationItem)
         });
         console.log(`🔍 quotation对象完整内容:`, quotationItem);
-        
+
         if (Array.isArray(quotationItem.data)) {
           quotationData = quotationItem.data;
         } else if (Array.isArray(quotationItem.items)) {
@@ -260,15 +306,13 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           quotationData = quotationItem.records;
         } else {
           // 检查是否是以数字为键的对象（如 {0: {...}, 1: {...}, 2: {...}}）
-          const numericKeys = Object.keys(quotationItem).filter(key => 
+          const numericKeys = Object.keys(quotationItem).filter(key =>
             key !== 'id' && !isNaN(Number(key))
           );
-          
+
           if (numericKeys.length > 0) {
             // 按数字键排序并提取数据
-            quotationData = numericKeys
-              .sort((a, b) => Number(a) - Number(b))
-              .map(key => quotationItem[key]);
+            quotationData = recordsFromNumericKeys(quotationItem, numericKeys);
             console.log(`🔍 从quotation对象中按数字键提取到 ${quotationData.length} 条记录`);
           } else {
             // 如果quotationItem本身就是数据数组
@@ -278,17 +322,17 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         console.log(`🔍 从quotation对象中提取到 ${quotationData.length} 条记录`);
       } else {
         // 兼容旧格式：直接过滤数组中的quotation数据
-        quotationData = importData.filter((item: any) => 
+        quotationData = importData.filter((item: ImportRecord) =>
           item.documentType === 'quotation' || item.type === 'quotation'
         );
       }
-      
+
       if (quotationData.length > 0) {
         const { processedData } = processDocumentData(quotationData, 'quotation');
         importQuotationHistory(JSON.stringify(processedData));
         totalImported += processedData.length;
         details.push(`报价单: ${processedData.length} 条`);
-        
+
         if (activeTab !== 'quotation') {
           otherTabs.push('quotation');
         }
@@ -297,9 +341,9 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
 
     // 订单确认导入
     if (dataTypes.has('confirmation')) {
-      const confirmationItem = importData.find((item: any) => item.id === 'confirmation');
-      let confirmationData: any[] = [];
-      
+      const confirmationItem = importData.find((item: ImportRecord) => item.id === 'confirmation');
+      let confirmationData: ImportRecord[] = [];
+
       if (confirmationItem) {
         // 如果找到ID为'confirmation'的对象，提取其数据
         console.log(`🔍 confirmation对象结构:`, {
@@ -312,7 +356,7 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           dataLength: confirmationItem.data?.length,
           keys: Object.keys(confirmationItem)
         });
-        
+
         if (Array.isArray(confirmationItem.data)) {
           confirmationData = confirmationItem.data;
         } else if (Array.isArray(confirmationItem.items)) {
@@ -321,15 +365,13 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           confirmationData = confirmationItem.records;
         } else {
           // 检查是否是以数字为键的对象（如 {0: {...}, 1: {...}, 2: {...}}）
-          const numericKeys = Object.keys(confirmationItem).filter(key => 
+          const numericKeys = Object.keys(confirmationItem).filter(key =>
             key !== 'id' && !isNaN(Number(key))
           );
-          
+
           if (numericKeys.length > 0) {
             // 按数字键排序并提取数据
-            confirmationData = numericKeys
-              .sort((a, b) => Number(a) - Number(b))
-              .map(key => confirmationItem[key]);
+            confirmationData = recordsFromNumericKeys(confirmationItem, numericKeys);
             console.log(`🔍 从confirmation对象中按数字键提取到 ${confirmationData.length} 条记录`);
           } else {
             // 如果confirmationItem本身就是数据数组
@@ -339,17 +381,17 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         console.log(`🔍 从confirmation对象中提取到 ${confirmationData.length} 条记录`);
       } else {
         // 兼容旧格式：直接过滤数组中的confirmation数据
-        confirmationData = importData.filter((item: any) => 
+        confirmationData = importData.filter((item: ImportRecord) =>
           item.documentType === 'confirmation' || item.type === 'confirmation'
         );
       }
-      
+
       if (confirmationData.length > 0) {
         const { processedData } = processDocumentData(confirmationData, 'confirmation');
         importQuotationHistory(JSON.stringify(processedData));
         totalImported += processedData.length;
         details.push(`订单确认: ${processedData.length} 条`);
-        
+
         if (activeTab !== 'confirmation') {
           otherTabs.push('confirmation');
         }
@@ -358,9 +400,9 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
 
     // 采购单导入
     if (dataTypes.has('purchase')) {
-      const purchaseItem = importData.find((item: any) => item.id === 'purchase');
-      let purchaseData: any[] = [];
-      
+      const purchaseItem = importData.find((item: ImportRecord) => item.id === 'purchase');
+      let purchaseData: ImportRecord[] = [];
+
       if (purchaseItem) {
         // 如果找到ID为'purchase'的对象，提取其数据
         console.log(`🔍 purchase对象结构:`, {
@@ -374,7 +416,7 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           keys: Object.keys(purchaseItem)
         });
         console.log(`🔍 purchase对象完整内容:`, purchaseItem);
-        
+
         if (Array.isArray(purchaseItem.data)) {
           purchaseData = purchaseItem.data;
         } else if (Array.isArray(purchaseItem.items)) {
@@ -383,15 +425,13 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           purchaseData = purchaseItem.records;
         } else {
           // 检查是否是以数字为键的对象（如 {0: {...}, 1: {...}, 2: {...}}）
-          const numericKeys = Object.keys(purchaseItem).filter(key => 
+          const numericKeys = Object.keys(purchaseItem).filter(key =>
             key !== 'id' && !isNaN(Number(key))
           );
-          
+
           if (numericKeys.length > 0) {
             // 按数字键排序并提取数据
-            purchaseData = numericKeys
-              .sort((a, b) => Number(a) - Number(b))
-              .map(key => purchaseItem[key]);
+            purchaseData = recordsFromNumericKeys(purchaseItem, numericKeys);
             console.log(`🔍 从purchase对象中按数字键提取到 ${purchaseData.length} 条记录`);
           } else {
             // 如果purchaseItem本身就是数据数组
@@ -401,19 +441,19 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         console.log(`🔍 从purchase对象中提取到 ${purchaseData.length} 条记录`);
       } else {
         // 兼容旧格式：直接过滤数组中的purchase数据
-        purchaseData = importData.filter((item: any) => 
-          item.documentType === 'purchase' || 
+        purchaseData = importData.filter((item: ImportRecord) =>
+          item.documentType === 'purchase' ||
           item.type === 'purchase' ||
           (item.supplierName && !item.customerName && !item.documentType && !item.type)
         );
       }
-      
+
       if (purchaseData.length > 0) {
         const { processedData } = processDocumentData(purchaseData, 'purchase');
         importPurchaseHistory(JSON.stringify(processedData));
         totalImported += processedData.length;
         details.push(`采购单: ${processedData.length} 条`);
-        
+
         if (activeTab !== 'purchase') {
           otherTabs.push('purchase');
         }
@@ -422,9 +462,9 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
 
     // 发票导入
     if (dataTypes.has('invoice')) {
-      const invoiceItem = importData.find((item: any) => item.id === 'invoice');
-      let invoiceData: any[] = [];
-      
+      const invoiceItem = importData.find((item: ImportRecord) => item.id === 'invoice');
+      let invoiceData: ImportRecord[] = [];
+
       if (invoiceItem) {
         // 如果找到ID为'invoice'的对象，提取其数据
         if (Array.isArray(invoiceItem.data)) {
@@ -435,15 +475,13 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           invoiceData = invoiceItem.records;
         } else {
           // 检查是否是以数字为键的对象（如 {0: {...}, 1: {...}, 2: {...}}）
-          const numericKeys = Object.keys(invoiceItem).filter(key => 
+          const numericKeys = Object.keys(invoiceItem).filter(key =>
             key !== 'id' && !isNaN(Number(key))
           );
-          
+
           if (numericKeys.length > 0) {
             // 按数字键排序并提取数据
-            invoiceData = numericKeys
-              .sort((a, b) => Number(a) - Number(b))
-              .map(key => invoiceItem[key]);
+            invoiceData = recordsFromNumericKeys(invoiceItem, numericKeys);
             console.log(`🔍 从invoice对象中按数字键提取到 ${invoiceData.length} 条记录`);
           } else {
             // 如果invoiceItem本身就是数据数组
@@ -453,19 +491,19 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         console.log(`🔍 从invoice对象中提取到 ${invoiceData.length} 条记录`);
       } else {
         // 兼容旧格式：直接过滤数组中的invoice数据
-        invoiceData = importData.filter((item: any) => 
-          item.documentType === 'invoice' || 
+        invoiceData = importData.filter((item: ImportRecord) =>
+          item.documentType === 'invoice' ||
           item.type === 'invoice' ||
           (item.invoiceNo && !item.quotationNo && !item.orderNo && !item.documentType && !item.type)
         );
       }
-      
+
       if (invoiceData.length > 0) {
         const { processedData } = processDocumentData(invoiceData, 'invoice');
         importInvoiceHistory(JSON.stringify(processedData));
         totalImported += processedData.length;
         details.push(`发票: ${processedData.length} 条`);
-        
+
         if (activeTab !== 'invoice') {
           otherTabs.push('invoice');
         }
@@ -474,9 +512,9 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
 
     // 装箱单导入
     if (dataTypes.has('packing')) {
-      const packingItem = importData.find((item: any) => item.id === 'packing');
-      let packingData: any[] = [];
-      
+      const packingItem = importData.find((item: ImportRecord) => item.id === 'packing');
+      let packingData: ImportRecord[] = [];
+
       if (packingItem) {
         // 如果找到ID为'packing'的对象，提取其数据
         if (Array.isArray(packingItem.data)) {
@@ -487,15 +525,13 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           packingData = packingItem.records;
         } else {
           // 检查是否是以数字为键的对象（如 {0: {...}, 1: {...}, 2: {...}}）
-          const numericKeys = Object.keys(packingItem).filter(key => 
+          const numericKeys = Object.keys(packingItem).filter(key =>
             key !== 'id' && !isNaN(Number(key))
           );
-          
+
           if (numericKeys.length > 0) {
             // 按数字键排序并提取数据
-            packingData = numericKeys
-              .sort((a, b) => Number(a) - Number(b))
-              .map(key => packingItem[key]);
+            packingData = recordsFromNumericKeys(packingItem, numericKeys);
             console.log(`🔍 从packing对象中按数字键提取到 ${packingData.length} 条记录`);
           } else {
             // 如果packingItem本身就是数据数组
@@ -505,19 +541,19 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         console.log(`🔍 从packing对象中提取到 ${packingData.length} 条记录`);
       } else {
         // 兼容旧格式：直接过滤数组中的packing数据
-        packingData = importData.filter((item: any) => 
-          item.documentType === 'packing' || 
+        packingData = importData.filter((item: ImportRecord) =>
+          item.documentType === 'packing' ||
           item.type === 'packing' ||
           (item.consigneeName && !item.customerName && !item.supplierName && !item.documentType && !item.type)
         );
       }
-      
+
       if (packingData.length > 0) {
         const { processedData } = processDocumentData(packingData, 'packing');
         importPackingHistory(JSON.stringify(processedData));
         totalImported += processedData.length;
         details.push(`装箱单: ${processedData.length} 条`);
-        
+
         if (activeTab !== 'packing') {
           otherTabs.push('packing');
         }
@@ -618,32 +654,32 @@ export const fullExport = (): ExportResult => {
     const purchaseData = getPurchaseHistory() as HistoryItem[];
     const invoiceData = getInvoiceHistory() as HistoryItem[];
     const packingData = getPackingHistory() as HistoryItem[];
-    
+
     console.log(`📊 全量导出数据统计:`);
     console.log(`  - 报价单: ${quotationData.length} 条`);
     console.log(`  - 订单确认: ${confirmationData.length} 条`);
     console.log(`  - 采购单: ${purchaseData.length} 条`);
     console.log(`  - 发票: ${invoiceData.length} 条`);
     console.log(`  - 装箱单: ${packingData.length} 条`);
-    
+
     // 为采购单数据添加类型标识
     const purchaseDataWithType = purchaseData.map(item => ({
       ...item,
       type: 'purchase'
     }));
-    
+
     // 为发票数据添加类型标识
     const invoiceDataWithType = invoiceData.map(item => ({
       ...item,
       type: 'invoice'
     }));
-    
+
     // 为装箱单数据添加类型标识
     const packingDataWithType = packingData.map(item => ({
       ...item,
       type: 'packing'
     }));
-    
+
     const allData: HistoryItem[] = [
       ...quotationData,
       ...confirmationData,

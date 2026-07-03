@@ -3,7 +3,7 @@
 import { RemarksSectionProps } from '../types';
 
 // 浮动标签字段组件
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function _Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="group block relative">
       {children}
@@ -23,8 +23,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export const RemarksSection: React.FC<RemarksSectionProps> = ({ 
-  data, 
+export const RemarksSection: React.FC<RemarksSectionProps> = ({
+  data,
   onDataChange
 }) => {
   return (
@@ -51,7 +51,7 @@ export const RemarksSection: React.FC<RemarksSectionProps> = ({
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">SHIP&apos;S SPARES IN TRANSIT</span>
             </label>
-            
+
             <label className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"

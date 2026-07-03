@@ -6,8 +6,6 @@ import type { HistoryType, HistoryItem } from '../types';
 import { convertConfirmationToPacking, hasMergedCells, getMergedCellsInfo } from '@/utils/convertConfirmationToPacking';
 import { savePackingHistory } from '@/utils/packingHistory';
 import { getQuotationHistory } from '@/utils/quotationHistory';
-import type { QuotationData } from '@/types/quotation';
-
 export function useHistoryActions() {
   const router = useRouter();
   const {
@@ -27,7 +25,7 @@ export function useHistoryActions() {
   const handleEdit = useCallback((id: string) => {
     const activeTab = useHistoryStore.getState().activeTab;
     let path = '';
-    
+
     switch (activeTab) {
       case 'quotation':
         path = `/quotation/edit/${id}`;
@@ -45,7 +43,7 @@ export function useHistoryActions() {
         path = `/packing/edit/${id}`;
         break;
     }
-    
+
     if (path) {
       router.push(path);
     }
@@ -55,7 +53,7 @@ export function useHistoryActions() {
   const handleCopy = useCallback((id: string) => {
     const activeTab = useHistoryStore.getState().activeTab;
     let path = '';
-    
+
     switch (activeTab) {
       case 'quotation':
         path = `/quotation/copy/${id}`;
@@ -73,7 +71,7 @@ export function useHistoryActions() {
         path = `/packing/copy/${id}`;
         break;
     }
-    
+
     if (path) {
       router.push(path);
     }
@@ -89,9 +87,9 @@ export function useHistoryActions() {
   const handleConfirmDelete = useCallback(async () => {
     const state = useHistoryStore.getState();
     const { activeTab, deleteConfirmId } = state;
-    
+
     if (!deleteConfirmId) return;
-    
+
     setIsDeleting(true);
     try {
       HistoryService.deleteHistory(activeTab, deleteConfirmId);
@@ -110,9 +108,9 @@ export function useHistoryActions() {
   const handleBatchDelete = useCallback(async () => {
     const state = useHistoryStore.getState();
     const { activeTab, selectedItems } = state;
-    
+
     if (selectedItems.size === 0) return;
-    
+
     setIsDeleting(true);
     try {
       HistoryService.deleteMultipleHistory(activeTab, Array.from(selectedItems));
@@ -144,12 +142,12 @@ export function useHistoryActions() {
       const hasMerged = hasMergedCells(confirmationItem.data);
       if (hasMerged) {
         const mergedInfo = getMergedCellsInfo(confirmationItem.data);
-        const confirmMessage = 
+        const confirmMessage =
           `此订单确认包含${mergedInfo}。\n\n` +
           '这些合并信息将被转换为装箱单的对应字段：\n' +
           '- Part Name 和 Description 将合并到 Description 列\n\n' +
           '是否继续转换？';
-        
+
         if (!window.confirm(confirmMessage)) {
           return;
         }
@@ -157,7 +155,7 @@ export function useHistoryActions() {
 
       // 执行转换
       const packingData = convertConfirmationToPacking(confirmationItem.data);
-      
+
       // 保存到历史记录
       const newPackingHistory = savePackingHistory(packingData);
       if (!newPackingHistory) {
@@ -166,7 +164,7 @@ export function useHistoryActions() {
 
       // 转换成功，直接跳转到编辑页面
       router.push(`/packing/edit/${newPackingHistory.id}`);
-      
+
     } catch (error) {
       console.error('转换订单确认为装箱单时出错:', error);
       alert('转换失败: ' + (error instanceof Error ? error.message : '未知错误'));

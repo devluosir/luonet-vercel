@@ -12,9 +12,9 @@ export function useUsers() {
     try {
       setLoading(true);
       setError(null);
-      
-      const data = await apiRequestWithError(API_ENDPOINTS.USERS.LIST);
-      
+
+      const data = await apiRequestWithError<{ users?: User[] }>(API_ENDPOINTS.USERS.LIST);
+
       if (data.users && Array.isArray(data.users)) {
         setUsers(data.users);
       } else {
@@ -36,19 +36,19 @@ export function useUsers() {
         method: 'PUT',
         body: JSON.stringify({ permissions })
       });
-      
+
       // 如果提供了用户状态信息，也更新用户状态
       if (isAdmin !== undefined || isActive !== undefined) {
         const userUpdates: UpdateUserData = {};
         if (isAdmin !== undefined) userUpdates.isAdmin = isAdmin;
         if (isActive !== undefined) userUpdates.status = isActive;
-        
+
         await apiRequestWithError(API_ENDPOINTS.USERS.UPDATE(userId), {
           method: 'PUT',
           body: JSON.stringify(userUpdates)
         });
       }
-      
+
       // 刷新用户列表
       await fetchUsers();
     } catch (error) {

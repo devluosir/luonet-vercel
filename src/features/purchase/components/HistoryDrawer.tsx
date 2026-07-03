@@ -5,13 +5,15 @@ import { usePurchaseStore } from '../state/purchase.store';
 import type { PurchaseOrderData } from '@/types/purchase';
 import { format } from 'date-fns';
 
+type PurchaseHistorySummary = Awaited<ReturnType<typeof PurchaseService.list>>[number];
+
 export default function HistoryDrawer() {
-  const [list, setList] = useState<any[]>([]);
+  const [list, setList] = useState<PurchaseHistorySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const init = usePurchaseStore(s => s.init);
 
-  useEffect(() => { 
+  useEffect(() => {
     (async () => {
       try {
         setLoading(true);
@@ -23,7 +25,7 @@ export default function HistoryDrawer() {
       } finally {
         setLoading(false);
       }
-    })(); 
+    })();
   }, []);
 
   const filtered = useMemo(() => {
@@ -88,13 +90,13 @@ export default function HistoryDrawer() {
           </div>
         ) : (
           filtered.map((it) => (
-            <button 
-              key={it.id} 
+            <button
+              key={it.id}
               className="w-full text-left py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               onClick={() => handleLoadItem(it.id)}
             >
               <div className="text-sm font-medium text-gray-800 dark:text-[#F5F5F7]">
-                {it.title || it.orderNo || it.id}
+                {it.title || it.poNo || it.id}
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 {it.updatedAt || it.date || ''}

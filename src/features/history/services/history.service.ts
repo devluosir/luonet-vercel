@@ -1,21 +1,26 @@
 import type { HistoryType, HistoryItem } from '../types';
-import { 
-  getQuotationHistory, 
-  deleteQuotationHistory 
+import {
+  getQuotationHistory,
+  deleteQuotationHistory
 } from '@/utils/quotationHistory';
-import { 
-  getPurchaseHistory, 
-  deletePurchaseHistory 
+import {
+  getPurchaseHistory,
+  deletePurchaseHistory
 } from '@/utils/purchaseHistory';
-import { 
-  getInvoiceHistory, 
-  deleteInvoiceHistory 
+import {
+  getInvoiceHistory,
+  deleteInvoiceHistory
 } from '@/utils/invoiceHistory';
-import { 
-  getPackingHistory, 
-  deletePackingHistory 
+import {
+  getPackingHistory,
+  deletePackingHistory
 } from '@/utils/packingHistory';
 import { isQuotationUpgraded } from '@/utils/dashboardUtils';
+
+const getStringField = (item: HistoryItem, key: string): string => {
+  const value = (item as unknown as Record<string, unknown>)[key];
+  return typeof value === 'string' ? value : '';
+};
 
 export class HistoryService {
   /**
@@ -26,20 +31,20 @@ export class HistoryService {
       case 'quotation':
         // 获取所有报价单记录
         const quotationHistory = getQuotationHistory();
-        
+
         // 获取所有confirmation记录，用于过滤
-        const confirmationRecords = quotationHistory.filter((item: any) => 
+        const confirmationRecords = quotationHistory.filter((item) =>
           'type' in item && item.type === 'confirmation'
         );
-        
+
         // 只返回type为'quotation'且未升级的记录
-        return quotationHistory.filter((item: any) => {
+        return quotationHistory.filter((item) => {
           // 只保留type为'quotation'的记录
           if (!('type' in item) || item.type !== 'quotation') return false;
-          
+
           // 检查这个报价单是否已经升级为confirmation
           const isUpgraded = isQuotationUpgraded(item, confirmationRecords);
-          
+
           // 如果已升级，则不显示在报价单列表中
           return !isUpgraded;
         });
@@ -101,21 +106,21 @@ export class HistoryService {
    * 搜索历史记录
    */
   static searchHistory(
-    type: HistoryType, 
-    searchTerm: string, 
-    dateRange: string, 
+    type: HistoryType,
+    searchTerm: string,
+    dateRange: string,
     amountRange: string
   ): HistoryItem[] {
     let results = this.getHistory(type);
-    
+
     // 搜索过滤
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       results = results.filter(item => {
         if ('customerName' in item) {
           return (item.customerName?.toLowerCase() || '').includes(searchLower) ||
-                 (item as any).quotationNo?.toLowerCase().includes(searchLower) ||
-                 (item as any).invoiceNo?.toLowerCase().includes(searchLower);
+                 getStringField(item, 'quotationNo').toLowerCase().includes(searchLower) ||
+                 getStringField(item, 'invoiceNo').toLowerCase().includes(searchLower);
         }
         if ('supplierName' in item) {
           return item.supplierName.toLowerCase().includes(searchLower) ||
@@ -137,7 +142,7 @@ export class HistoryService {
         const itemDate = new Date(item.createdAt);
         const diffTime = Math.abs(now.getTime() - itemDate.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
+
         switch (dateRange) {
           case 'today': return diffDays <= 1;
           case 'week': return diffDays <= 7;
@@ -168,13 +173,13 @@ export class HistoryService {
    * 排序历史记录
    */
   static sortHistory(
-    items: HistoryItem[], 
-    sortKey: string, 
+    items: HistoryItem[],
+    sortKey: string,
     direction: 'asc' | 'desc'
   ): HistoryItem[] {
     return [...items].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number = '';
+      let bValue: string | number = '';
 
       switch (sortKey) {
         case 'createdAt':
@@ -192,18 +197,18 @@ export class HistoryService {
         case 'customerName':
         case 'supplierName':
         case 'consigneeName':
-          aValue = (a as any)[sortKey] || '';
-          bValue = (b as any)[sortKey] || '';
+          aValue = getStringField(a, sortKey);
+          bValue = getStringField(b, sortKey);
           break;
         case 'quotationNo':
         case 'invoiceNo':
         case 'orderNo':
-          aValue = (a as any)[sortKey] || '';
-          bValue = (b as any)[sortKey] || '';
+          aValue = getStringField(a, sortKey);
+          bValue = getStringField(b, sortKey);
           break;
         default:
-          aValue = aValue || '';
-          bValue = bValue || '';
+          aValue = '';
+          bValue = '';
       }
 
       if (direction === 'asc') {

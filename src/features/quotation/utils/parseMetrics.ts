@@ -8,7 +8,7 @@ export interface ParseMetrics {
     mixed: boolean;
     mapping: Record<string, number>; // field -> column index
   };
-  
+
   // 预览打开原因
   qi_preview_open_reason: {
     reason: 'low_confidence' | 'mixed_format' | 'manual' | 'too_many_columns' | 'large_dataset';
@@ -16,7 +16,7 @@ export interface ParseMetrics {
     rowCount?: number;
     colCount?: number;
   };
-  
+
   // 插入结果
   qi_insert_result: {
     inserted: number;
@@ -24,7 +24,7 @@ export interface ParseMetrics {
     duration_ms: number;
     method: 'enhanced' | 'legacy' | 'manual';
   };
-  
+
   // 列映射分布
   qi_mapping_dist: {
     name?: number;
@@ -34,14 +34,14 @@ export interface ParseMetrics {
     price?: number;
     ignore: number;
   };
-  
+
   // 警告统计
   qi_warning_stats: {
     type: string;
     count: number;
     severity: 'error' | 'warning' | 'info';
   }[];
-  
+
   // Day 4 新增：自动修复统计
   qi_autofix_stats: {
     originalWarnings: number;
@@ -58,25 +58,25 @@ export interface ParseMetrics {
 export interface ParseFeatureFlags {
   // 增强列推断
   enhancedInferenceEnabled: boolean;
-  
+
   // 自动插入阈值 (0-100)
   autoInsertThreshold: number;
-  
+
   // 显示警告
   showWarnings: boolean;
-  
+
   // 匈牙利算法
   useHungarianMatching: boolean;
-  
+
   // 性能优化
   enableCaching: boolean;
-  
+
   // 采样大小
   maxSampleSize: number;
-  
+
   // 大数据集阈值
   largeDatasetThreshold: number;
-  
+
   // Day 4 新增：数据质量校验
   tinyPrice?: number;       // 最小价格阈值，默认 0.01
   largeQty?: number;        // 大数量阈值，默认 1e6
@@ -111,15 +111,15 @@ export const DEFAULT_FEATURE_FLAGS: ParseFeatureFlags = {
 class MetricsCollector {
   private metrics: Partial<ParseMetrics> = {};
   private startTime: number = 0;
-  
+
   startTiming(): void {
     this.startTime = performance.now();
   }
-  
+
   endTiming(): number {
     return Math.round(performance.now() - this.startTime);
   }
-  
+
   recordInference(confidence: number, rows: number, cols: number, mixed: boolean, mapping: Record<string, number>): void {
     this.metrics.qi_infer_confidence = {
       confidence,
@@ -129,14 +129,14 @@ class MetricsCollector {
       mapping
     };
   }
-  
-  recordPreviewReason(reason: ParseMetrics['qi_preview_open_reason']['reason'], context?: any): void {
+
+  recordPreviewReason(reason: ParseMetrics['qi_preview_open_reason']['reason'], context?: Partial<Omit<ParseMetrics['qi_preview_open_reason'], 'reason'>>): void {
     this.metrics.qi_preview_open_reason = {
       reason,
       ...context
     };
   }
-  
+
   recordInsertResult(inserted: number, skipped: number, method: ParseMetrics['qi_insert_result']['method']): void {
     this.metrics.qi_insert_result = {
       inserted,
@@ -145,24 +145,24 @@ class MetricsCollector {
       method
     };
   }
-  
+
   recordMappingDistribution(mapping: string[]): void {
     const dist: ParseMetrics['qi_mapping_dist'] = { ignore: 0 };
-    
+
     mapping.forEach((field, index) => {
       if (field === 'ignore') {
         dist.ignore++;
-      } else {
-        (dist as any)[field] = index;
+      } else if (field === 'name' || field === 'desc' || field === 'qty' || field === 'unit' || field === 'price') {
+        dist[field] = index;
       }
     });
-    
+
     this.metrics.qi_mapping_dist = dist;
   }
-  
+
   recordWarnings(warnings: Array<{type: string, severity: 'error' | 'warning' | 'info'}>): void {
     const warningStats = new Map<string, {count: number, severity: 'error' | 'warning' | 'info'}>();
-    
+
     warnings.forEach(w => {
       const existing = warningStats.get(w.type);
       if (existing) {
@@ -171,24 +171,24 @@ class MetricsCollector {
         warningStats.set(w.type, { count: 1, severity: w.severity });
       }
     });
-    
+
     this.metrics.qi_warning_stats = Array.from(warningStats.entries()).map(([type, data]) => ({
       type,
       count: data.count,
       severity: data.severity
     }));
   }
-  
+
   recordAutoFix(
-    originalWarnings: number, 
-    fixedWarnings: number, 
-    droppedRows: number, 
+    originalWarnings: number,
+    fixedWarnings: number,
+    droppedRows: number,
     mergedRows: number,
     fixedUnits: number,
     fixedNumbers: number
   ): void {
     const fixSuccessRate = originalWarnings > 0 ? (originalWarnings - fixedWarnings) / originalWarnings : 1;
-    
+
     this.metrics.qi_autofix_stats = {
       originalWarnings,
       fixedWarnings,
@@ -199,23 +199,23 @@ class MetricsCollector {
       fixSuccessRate: Math.round(fixSuccessRate * 100) / 100
     };
   }
-  
+
   flush(): Partial<ParseMetrics> {
     const result = { ...this.metrics };
     this.metrics = {};
     return result;
   }
-  
+
   // 发送到分析服务（开发环境仅打印）
   send(): void {
     const metrics = this.flush();
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.groupCollapsed('[Parse Metrics]');
       console.table(metrics);
       console.groupEnd();
     }
-    
+
     // 生产环境可以发送到分析服务
     // analytics.track('parse_metrics', metrics);
   }
@@ -229,7 +229,7 @@ export function getFeatureFlags(): ParseFeatureFlags {
   if (typeof window === 'undefined') {
     return DEFAULT_FEATURE_FLAGS;
   }
-  
+
   try {
     const stored = localStorage.getItem('qi.featureFlags');
     if (stored) {
@@ -239,14 +239,14 @@ export function getFeatureFlags(): ParseFeatureFlags {
   } catch (e) {
     console.warn('Failed to parse feature flags:', e);
   }
-  
+
   return DEFAULT_FEATURE_FLAGS;
 }
 
 // 设置特性开关
 export function setFeatureFlags(flags: Partial<ParseFeatureFlags>): void {
   if (typeof window === 'undefined') return;
-  
+
   try {
     const current = getFeatureFlags();
     const updated = { ...current, ...flags };
@@ -261,10 +261,14 @@ export function debugParseFlags(): void {
   if (process.env.NODE_ENV === 'development') {
     const flags = getFeatureFlags();
     console.table(flags);
-    
+
     // 全局暴露调试函数
-    (window as any).setQuickImportFlags = setFeatureFlags;
-    (window as any).getQuickImportFlags = getFeatureFlags;
+    const debugWindow = window as Window & {
+      setQuickImportFlags?: typeof setFeatureFlags;
+      getQuickImportFlags?: typeof getFeatureFlags;
+    };
+    debugWindow.setQuickImportFlags = setFeatureFlags;
+    debugWindow.getQuickImportFlags = getFeatureFlags;
     console.log('💡 Use window.setQuickImportFlags({autoInsertThreshold: 80}) to adjust settings');
   }
 }

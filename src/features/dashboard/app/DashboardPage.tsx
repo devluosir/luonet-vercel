@@ -7,10 +7,10 @@ import { AppLayout } from '@/components/layout';
 import { usePermissionStore } from '@/lib/permissions';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
 import { usePermissionRefresh } from '@/hooks/usePermissionRefresh';
-import { 
-  QUICK_CREATE_MODULES, 
-  TOOL_MODULES, 
-  TOOLS_MODULES 
+import {
+  QUICK_CREATE_MODULES,
+  TOOL_MODULES,
+  TOOLS_MODULES
 } from '@/constants/dashboardModules';
 
 // 导入新的模块化组件
@@ -21,10 +21,10 @@ import { StatsCards } from '@/features/dashboard/components/StatsCards';
 import { useDashboardState } from '@/features/dashboard/hooks/useDashboardState';
 import { useDashboardPermissions } from '@/features/dashboard/hooks/useDashboardPermissions';
 import { useDashboardDocuments } from '@/features/dashboard/hooks/useDashboardDocuments';
-import { 
-  filterQuickCreateModules, 
-  filterToolModules, 
-  filterToolsModules 
+import {
+  filterQuickCreateModules,
+  filterToolModules,
+  filterToolsModules
 } from '@/features/dashboard/utils/moduleFilters';
 import type { DashboardModule } from '@/features/dashboard/types';
 // 调试组件已移除
@@ -34,37 +34,37 @@ export default function DashboardPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
-  
+
   // 使用自定义hooks管理状态
-  const { 
-    showSuccessMessage, 
-    setShowSuccessMessage, 
-    successMessage, 
-    setSuccessMessage 
+  const {
+    showSuccessMessage,
+    setShowSuccessMessage,
+    successMessage,
+    setSuccessMessage: _setSuccessMessage
   } = useDashboardState();
-  
-  const { 
-    permissionMap, 
-    user, 
-    isPermissionLoading 
+
+  const {
+    permissionMap,
+    user,
+    isPermissionLoading
   } = useDashboardPermissions(session);
-  
-  const { 
-    recentDocuments, 
-    timeFilter, 
-    setTimeFilter, 
-    typeFilter, 
-    setTypeFilter, 
-    showAllFilters, 
+
+  const {
+    recentDocuments,
+    timeFilter,
+    setTimeFilter,
+    typeFilter,
+    setTypeFilter,
+    showAllFilters,
     setShowAllFilters,
     documentCounts,
     todayCounts,
-    updateDocumentCounts 
+    updateDocumentCounts: _updateDocumentCounts
   } = useDashboardDocuments(permissionMap, mounted);
-  
+
   // 使用权限刷新Hook
-  const { refresh: refreshPermissions } = usePermissionRefresh();
-  
+  const { refresh: _refreshPermissions } = usePermissionRefresh();
+
   // 初始化逻辑
   useEffect(() => {
     setMounted(true);
@@ -78,7 +78,7 @@ export default function DashboardPage() {
         (window as { __QUOTATION_TYPE__?: string }).__QUOTATION_TYPE__ = 'confirmation';
       }
     }
-    
+
     router.push(module.path);
   }, [router]);
 
@@ -89,15 +89,15 @@ export default function DashboardPage() {
 
   // 动态模块过滤，根据权限显示模块
   const availableQuickCreateModules = useMemo(() => {
-    return filterQuickCreateModules(QUICK_CREATE_MODULES, permissionMap as any);
+    return filterQuickCreateModules(QUICK_CREATE_MODULES, permissionMap);
   }, [permissionMap]);
 
   const availableToolModules = useMemo(() => {
-    return filterToolModules(TOOL_MODULES, permissionMap as any);
+    return filterToolModules(TOOL_MODULES, permissionMap);
   }, [permissionMap]);
 
   const availableToolsModules = useMemo(() => {
-    return filterToolsModules(TOOLS_MODULES, permissionMap as any);
+    return filterToolsModules(TOOLS_MODULES, permissionMap);
   }, [permissionMap]);
 
   // 优化的退出逻辑
@@ -107,7 +107,7 @@ export default function DashboardPage() {
       localStorage.removeItem('userCache');
       clearD1DocumentLocalState();
     }
-    
+
     await signOut();
   }, []);
 
@@ -121,7 +121,7 @@ export default function DashboardPage() {
   // 提前返回检查
   if (!mounted) return null;
   if (status === 'unauthenticated') return null;
-  
+
   if (isPermissionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -144,7 +144,7 @@ export default function DashboardPage() {
       onLogout={handleLogout}
     >
       <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-6">
-        <DashboardSuccessMessage 
+        <DashboardSuccessMessage
           show={showSuccessMessage}
           message={successMessage}
           onClose={() => setShowSuccessMessage(false)}

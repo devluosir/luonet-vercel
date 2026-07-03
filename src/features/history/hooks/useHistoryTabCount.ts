@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { HistoryService } from '../services/history.service';
 import { useHistoryFilters } from '../state/history.selectors';
-import type { HistoryType } from '../types';
+import type { HistoryItem, HistoryType } from '../types';
+
+const getStringField = (item: HistoryItem, field: string): string => {
+  const value = (item as unknown as Record<string, unknown>)[field];
+  return typeof value === 'string' ? value : '';
+};
 
 export function useHistoryTabCount() {
   const filters = useHistoryFilters();
@@ -19,21 +24,23 @@ export function useHistoryTabCount() {
 
     try {
       let results = HistoryService.getHistory(tabType);
-      
+
       // 根据筛选条件过滤结果
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
-        results = results.filter((item: any) => {
+        results = results.filter((item: HistoryItem) => {
           // 搜索客户名称、单据号等字段
-          const matches = 
-            (item.customerName?.toLowerCase() || '').includes(searchLower) ||
-            (item.invoiceNo?.toLowerCase() || '').includes(searchLower) ||
-            (item.orderNo?.toLowerCase() || '').includes(searchLower) ||
-            (item.quotationNo?.toLowerCase() || '').includes(searchLower) ||
-            (item.purchaseNo?.toLowerCase() || '').includes(searchLower) ||
-            (item.packingNo?.toLowerCase() || '').includes(searchLower) ||
-            (item.confirmationNo?.toLowerCase() || '').includes(searchLower);
-          
+          const matches =
+            getStringField(item, 'customerName').toLowerCase().includes(searchLower) ||
+            getStringField(item, 'supplierName').toLowerCase().includes(searchLower) ||
+            getStringField(item, 'consigneeName').toLowerCase().includes(searchLower) ||
+            getStringField(item, 'invoiceNo').toLowerCase().includes(searchLower) ||
+            getStringField(item, 'orderNo').toLowerCase().includes(searchLower) ||
+            getStringField(item, 'quotationNo').toLowerCase().includes(searchLower) ||
+            getStringField(item, 'purchaseNo').toLowerCase().includes(searchLower) ||
+            getStringField(item, 'packingNo').toLowerCase().includes(searchLower) ||
+            getStringField(item, 'confirmationNo').toLowerCase().includes(searchLower);
+
           return matches;
         });
       }
@@ -42,7 +49,7 @@ export function useHistoryTabCount() {
       if (filters.dateRange !== 'all') {
         const now = new Date();
         const filterDate = new Date();
-        
+
         switch (filters.dateRange) {
           case 'today':
             filterDate.setHours(0, 0, 0, 0);
@@ -57,13 +64,13 @@ export function useHistoryTabCount() {
             filterDate.setFullYear(now.getFullYear() - 1);
             break;
         }
-        
-        results = results.filter((item: any) => {
-          const itemDate = new Date(item.updatedAt || item.createdAt || item.date);
+
+        results = results.filter((item: HistoryItem) => {
+          const itemDate = new Date(item.updatedAt || item.createdAt || getStringField(item, 'date'));
           return itemDate >= filterDate;
         });
       }
-      
+
       return results.length;
     } catch (error) {
       return 0;

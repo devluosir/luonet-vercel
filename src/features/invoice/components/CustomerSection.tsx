@@ -30,14 +30,14 @@ function normalizeCustomerName(name: string): string {
  * @param records 客户记录数组
  * @returns 匹配的客户记录索引，如果未找到返回-1
  */
-function findBestCustomerMatch(customerName: string, records: any[]): number {
+function findBestCustomerMatch(customerName: string, records: SavedCustomer[]): number {
   const normalizedSearchName = normalizeCustomerName(customerName);
-  
+
   // 只进行精确匹配，避免错误的匹配
-  const exactMatch = records.findIndex(record => 
+  const exactMatch = records.findIndex(record =>
     normalizeCustomerName(record.name) === normalizedSearchName
   );
-  
+
   return exactMatch;
 }
 
@@ -62,7 +62,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
   const buttonsRef = useRef<HTMLDivElement>(null);
 
   // 统一处理客户名称格式
-  const normalizeCustomerName = (name: string) => {
+  const _normalizeCustomerName = (name: string) => {
     if (!name || typeof name !== 'string') {
       return '未命名客户';
     }
@@ -79,12 +79,12 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
       if (typeof window !== 'undefined') {
         // 使用统一的客户数据服务
         const allCustomers = await getCustomersForDropdown('customer');
-        
+
         console.log('从客户管理服务加载的客户数据:', {
           totalCustomers: allCustomers.length,
           customers: allCustomers
         });
-        
+
         setSavedCustomers(allCustomers);
         setFilteredCustomers(allCustomers);
       }
@@ -122,7 +122,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
   // 处理客户名称输入变化
   const handleCustomerNameChange = (value: string) => {
     onChange({ to: value, customerPO });
-    
+
     // 如果输入框为空，显示所有客户
     if (!value.trim()) {
       setFilteredCustomers(savedCustomers);
@@ -147,7 +147,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
   const handleSelectCustomer = (customer: SavedCustomer) => {
     onChange({ to: customer.name, customerPO: customer.customerPO || '' });
     setShowSavedCustomers(false);
-    
+
     // 记录客户使用情况
     recordCustomerUsage(customer.name, 'invoice', 'draft');
   };
@@ -155,12 +155,12 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
   // 自动匹配客户
   const handleAutoMatch = () => {
     if (!to.trim()) return;
-    
+
     const matchIndex = findBestCustomerMatch(to, savedCustomers);
     if (matchIndex !== -1) {
       const matchedCustomer = savedCustomers[matchIndex];
       onChange({ to: matchedCustomer.name, customerPO: matchedCustomer.customerPO || '' });
-      
+
       // 记录客户使用情况
       recordCustomerUsage(matchedCustomer.name, 'invoice', 'draft');
     }
@@ -177,8 +177,8 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
           <button
             type="button"
             onClick={handleAutoMatch}
-            className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 
-                     bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 
+            className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400
+                     bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100
                      dark:hover:bg-blue-900/30 transition-colors"
           >
             自动匹配
@@ -186,8 +186,8 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
           <button
             type="button"
             onClick={() => setShowSavedCustomers(!showSavedCustomers)}
-            className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 
-                     bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 
+            className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400
+                     bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100
                      dark:hover:bg-gray-700 transition-colors"
           >
             选择客户
@@ -208,12 +208,12 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
           className={inputClassName}
           required
         />
-        
+
         {/* 保存的客户下拉列表 */}
         {showSavedCustomers && (
           <div
             ref={savedCustomersRef}
-            className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 
+            className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200
                      dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto"
           >
             {filteredCustomers.map((customer, index) => (
@@ -221,7 +221,7 @@ export function CustomerSection({ to, customerPO, onChange }: CustomerSectionPro
                 key={index}
                 type="button"
                 onClick={() => handleSelectCustomer(customer)}
-                className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 
+                className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700
                          border-b border-gray-100 dark:border-gray-600 last:border-b-0
                          transition-colors"
               >

@@ -62,12 +62,6 @@ const getInitialData = (): PackingData => ({
   savedVisibleCols: null
 });
 
-interface CustomWindow extends Window {
-  __PACKING_DATA__?: PackingData;
-  __EDIT_MODE__?: boolean;
-  __EDIT_ID__?: string;
-}
-
 export const usePackingData = () => {
   const [data, setData] = useState<PackingData>(getInitialData);
   const [editId, setEditId] = useState<string | undefined>(undefined);
@@ -80,11 +74,9 @@ export const usePackingData = () => {
   // 检查并加载注入的数据
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const customWindow = window as unknown as CustomWindow;
-      const injectedData = customWindow.__PACKING_DATA__;
-      const injectedEditId = customWindow.__EDIT_ID__;
-      const editMode = customWindow.__EDIT_MODE__;
-      
+      const injectedData = window.__PACKING_DATA__;
+      const injectedEditId = window.__EDIT_ID__;
+
       if (injectedData) {
         setData(injectedData);
         setEditId(injectedEditId);
@@ -97,7 +89,7 @@ export const usePackingData = () => {
     setData(prev => {
       const newItems = [...prev.items];
       const item = { ...newItems[index] };
-      
+
       if (field === 'unit') {
         // 处理单位变更
         const baseUnit = value.toString().replace(/s$/, '');
@@ -120,9 +112,11 @@ export const usePackingData = () => {
         item[field] = typeof value === 'string' ? parseFloat(value) || 0 : value;
       } else {
         // 字符串字段直接赋值
-        (item as any)[field] = value;
+        if (field === 'serialNo' || field === 'marks' || field === 'description' || field === 'hsCode' || field === 'dimensions' || field === 'groupId') {
+          item[field] = value.toString();
+        }
       }
-      
+
       newItems[index] = item;
       return { ...prev, items: newItems };
     });
@@ -175,7 +169,7 @@ export const usePackingData = () => {
   const handleDocumentTypeChange = useCallback((type: 'proforma' | 'packing' | 'both') => {
     setData(prev => {
       const updates: Partial<PackingData> = { documentType: type };
-      
+
       // 根据文档类型自动调整显示选项
       switch (type) {
         case 'proforma':
@@ -191,7 +185,7 @@ export const usePackingData = () => {
           updates.showWeightAndPackage = true;
           break;
       }
-      
+
       return { ...prev, ...updates };
     });
   }, []);

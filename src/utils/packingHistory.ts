@@ -69,6 +69,37 @@ export interface PackingHistoryFilters {
 
 const STORAGE_KEY = 'packing_history';
 
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
+const isQuotaExceededError = (error: unknown): boolean => (
+  isRecord(error) &&
+  (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')
+);
+
+const createEmptyPackingData = (): PackingData => ({
+  orderNo: '',
+  invoiceNo: '',
+  date: '',
+  consignee: { name: '' },
+  items: [],
+  currency: 'USD',
+  remarkOptions: {
+    shipsSpares: false,
+    customsPurpose: false,
+  },
+  showHsCode: true,
+  showDimensions: false,
+  showWeightAndPackage: true,
+  showPrice: true,
+  dimensionUnit: 'mm',
+  documentType: 'packing',
+  templateConfig: {
+    headerType: 'bilingual',
+  },
+});
+
 // 生成唯一ID
 const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -116,7 +147,7 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
         };
         history[index] = updatedHistory;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-        
+
         // 触发自定义事件，通知Dashboard页面更新
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('customStorageChange', {
@@ -136,18 +167,18 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
           updated_at: updatedHistory.updatedAt,
           data: dataWithVisibleCols,
         });
-        
+
         return updatedHistory;
       }
     }
 
     // 🆕 检查是否已存在相同发票号的记录（与invoice模块保持一致）
     if (data.invoiceNo && data.invoiceNo.trim() !== '') {
-      const existingPacking = history.find(item => 
-        item.invoiceNo === data.invoiceNo && 
+      const existingPacking = history.find(item =>
+        item.invoiceNo === data.invoiceNo &&
         item.invoiceNo.trim() !== '' // 避免空发票号的误匹配
       );
-      
+
       if (existingPacking) {
         // 如果存在相同发票号，更新现有记录
         const updatedHistory = history.map(item => {
@@ -166,19 +197,19 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
           }
           return item;
         });
-        
+
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
-        } catch (storageError: any) {
+        } catch (storageError: unknown) {
           // 处理配额超限错误
-          if (storageError?.name === 'QuotaExceededError' || storageError?.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+          if (isQuotaExceededError(storageError)) {
             console.warn('存储配额超限，尝试清理后重试...');
             // 清理旧数据
-            const keysToClean = Object.keys(localStorage).filter(k => 
+            const keysToClean = Object.keys(localStorage).filter(k =>
               k.includes('packing') || k.includes('draft') || k.includes('v2')
             );
             keysToClean.forEach(k => localStorage.removeItem(k));
-            
+
             // 只保留最近的50条记录
             const trimmedHistory = updatedHistory.slice(-50);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
@@ -186,7 +217,7 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
             throw storageError;
           }
         }
-        
+
         // 触发自定义事件，通知Dashboard页面更新
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('customStorageChange', {
@@ -209,7 +240,7 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
             data: dataWithVisibleCols,
           });
         }
-        
+
         return updatedHistory.find(item => item.id === existingPacking.id) || null;
       }
     }
@@ -230,19 +261,19 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
     };
 
     history.unshift(newHistory);
-    
+
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-    } catch (storageError: any) {
+    } catch (storageError: unknown) {
       // 处理配额超限错误
-      if (storageError?.name === 'QuotaExceededError' || storageError?.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      if (isQuotaExceededError(storageError)) {
         console.warn('存储配额超限，尝试清理后重试...');
         // 清理旧数据
-        const keysToClean = Object.keys(localStorage).filter(k => 
+        const keysToClean = Object.keys(localStorage).filter(k =>
           k.includes('packing') || k.includes('draft') || k.includes('v2')
         );
         keysToClean.forEach(k => localStorage.removeItem(k));
-        
+
         // 只保留最近的50条记录
         const trimmedHistory = history.slice(-50);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
@@ -250,7 +281,7 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
         throw storageError;
       }
     }
-    
+
     // 触发自定义事件，通知Dashboard页面更新
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('customStorageChange', {
@@ -270,7 +301,7 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
       updated_at: newHistory.updatedAt,
       data: dataWithVisibleCols,
     });
-    
+
     return newHistory;
   } catch (error) {
     console.error('Error saving packing history:', error);
@@ -279,25 +310,28 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
 };
 
 // 数据清理函数 - 确保所有字段都有正确的默认值
-const sanitizePackingHistoryItem = (item: any): PackingHistory => {
+const sanitizePackingHistoryItem = (item: unknown): PackingHistory => {
+  const record = isRecord(item) ? item : {};
+  const data = isRecord(record.data) ? record.data as unknown as PackingData : createEmptyPackingData();
+
   return {
-    id: item.id || '',
-    createdAt: item.createdAt || new Date().toISOString(),
-    updatedAt: item.updatedAt || new Date().toISOString(),
-    consigneeName: item.consigneeName || '',
-    invoiceNo: item.invoiceNo || '',
-    orderNo: item.orderNo || '',
-    totalAmount: typeof item.totalAmount === 'number' ? item.totalAmount : (parseFloat(item.totalAmount) || 0),
-    currency: item.currency || 'USD',
-    documentType: item.documentType || 'packing',
-    data: item.data || {}
+    id: typeof record.id === 'string' ? record.id : '',
+    createdAt: typeof record.createdAt === 'string' ? record.createdAt : new Date().toISOString(),
+    updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : new Date().toISOString(),
+    consigneeName: typeof record.consigneeName === 'string' ? record.consigneeName : '',
+    invoiceNo: typeof record.invoiceNo === 'string' ? record.invoiceNo : '',
+    orderNo: typeof record.orderNo === 'string' ? record.orderNo : '',
+    totalAmount: typeof record.totalAmount === 'number' ? record.totalAmount : (parseFloat(String(record.totalAmount ?? '')) || 0),
+    currency: typeof record.currency === 'string' ? record.currency : 'USD',
+    documentType: record.documentType === 'proforma' || record.documentType === 'packing' || record.documentType === 'both' ? record.documentType : 'packing',
+    data
   };
 };
 
 // 获取所有历史记录
 export const getPackingHistory = (filters?: PackingHistoryFilters): PackingHistory[] => {
   try {
-    const rawHistory = getLocalStorageJSON(STORAGE_KEY, []) as any[];
+    const rawHistory = getLocalStorageJSON<unknown[]>(STORAGE_KEY, []);
 
     // 清理所有数据，确保字段完整性
     let history = rawHistory.map(sanitizePackingHistoryItem);
@@ -306,7 +340,7 @@ export const getPackingHistory = (filters?: PackingHistoryFilters): PackingHisto
       // 搜索
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
-        history = history.filter((item: PackingHistory) => 
+        history = history.filter((item: PackingHistory) =>
           item.consigneeName.toLowerCase().includes(searchLower) ||
           item.invoiceNo.toLowerCase().includes(searchLower) ||
           item.orderNo.toLowerCase().includes(searchLower)
@@ -402,7 +436,7 @@ export const importPackingHistory = (jsonData: string, mergeStrategy: 'replace' 
         return false;
       }
     }
-    
+
     // 验证导入的数据格式
     if (!Array.isArray(importedHistory)) {
       console.error('Invalid data format: expected an array');

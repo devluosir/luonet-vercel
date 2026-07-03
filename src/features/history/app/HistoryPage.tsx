@@ -9,7 +9,7 @@ import { useAppUser } from '@/hooks/useAppUser';
 import { HistoryTabs } from '../components/HistoryTabs';
 import { useHistoryStore } from '../state/history.store';
 import { useHistoryActions } from '../hooks/useHistoryActions';
-import { 
+import {
   useHistoryMounted,
   useHistoryActiveTab,
   useHistoryIsDeleting,
@@ -22,6 +22,7 @@ import {
   useHistorySelectedCount,
 } from '../state/history.selectors';
 import { pullAllFromD1 } from '@/utils/d1Pull';
+import type { HistoryItem, HistoryType } from '../types';
 
 // 动态导入Tab组件
 const QuotationHistoryTab = dynamic(() => import('@/app/history/tabs/QuotationHistoryTab'), {
@@ -57,7 +58,7 @@ const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewMod
 export function HistoryPage() {
   const searchParams = useSearchParams();
   const { user, handleLogout } = useAppUser();
-  
+
   // 状态
   const mounted = useHistoryMounted();
   const activeTab = useHistoryActiveTab();
@@ -120,10 +121,10 @@ export function HistoryPage() {
 
   // 处理URL参数中的tab参数
   useEffect(() => {
-    if (mounted && searchParams) {
+      if (mounted && searchParams) {
       const tabParam = searchParams.get('tab');
       if (tabParam && ['quotation', 'confirmation', 'invoice', 'purchase', 'packing'].includes(tabParam)) {
-        setActiveTab(tabParam as any);
+        setActiveTab(tabParam as HistoryType);
       }
     }
   }, [mounted, searchParams, setActiveTab]);
@@ -149,7 +150,7 @@ export function HistoryPage() {
         void syncFromD1();
       }
     };
-    
+
     // 监听localStorage变化，自动刷新数据
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key && (
@@ -180,7 +181,7 @@ export function HistoryPage() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('customStorageChange', handleCustomStorageChange as EventListener);
-    
+
     // 组件卸载时的清理函数
     return () => {
       cancelled = true;
@@ -203,8 +204,8 @@ export function HistoryPage() {
       onPreview: (id: string) => {
         // 根据id找到对应的item并预览
         const historyService = require('../services/history.service').HistoryService;
-        const currentData = historyService.getHistory(activeTab);
-        const item = currentData.find((item: any) => item.id === id);
+        const currentData = historyService.getHistory(activeTab) as HistoryItem[];
+        const item = currentData.find((item) => item.id === id);
         if (item) {
           handlePreview(item);
         }
@@ -221,8 +222,8 @@ export function HistoryPage() {
         if (selected) {
           // 全选当前tab的所有数据
           const historyService = require('../services/history.service').HistoryService;
-          const currentData = historyService.getHistory(activeTab);
-          const allIds = currentData.map((item: any) => item.id);
+          const currentData = historyService.getHistory(activeTab) as HistoryItem[];
+          const allIds = currentData.map((item) => item.id);
           useHistoryStore.getState().setSelectedItems(new Set(allIds));
         } else {
           useHistoryStore.getState().clearSelectedItems();
@@ -236,8 +237,8 @@ export function HistoryPage() {
         return <QuotationHistoryTab {...commonProps} mainColor={activeColor} />;
       case 'confirmation':
         return (
-          <ConfirmationHistoryTab 
-            {...commonProps} 
+          <ConfirmationHistoryTab
+            {...commonProps}
             mainColor={activeColor}
             onConvert={handleConvert}
           />

@@ -31,7 +31,7 @@ describe('useQuotationStore Actions Contract Tests', () => {
         otherFees: [],
       }));
     });
-    
+
     jest.clearAllMocks();
     // 清理控制台spy
     (global.console.log as jest.Mock).mockRestore?.();
@@ -41,7 +41,7 @@ describe('useQuotationStore Actions Contract Tests', () => {
   describe('updateFrom', () => {
     it('should update from and recalculate notes', () => {
       const { result } = renderHook(() => useQuotationStore());
-      
+
       act(() => {
         result.current.updateFrom('Emily');
       });
@@ -54,9 +54,9 @@ describe('useQuotationStore Actions Contract Tests', () => {
     it('should not trigger set when from value is the same', () => {
       const { result } = renderHook(() => useQuotationStore());
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-      
+
       const initialFrom = result.current.data.from;
-      
+
       act(() => {
         result.current.updateFrom(initialFrom);
       });
@@ -64,7 +64,7 @@ describe('useQuotationStore Actions Contract Tests', () => {
       // 应该跳过更新
       expect(consoleLogSpy).toHaveBeenCalledWith('[updateFrom] from相同，跳过更新', initialFrom);
       expect(getDefaultNotes).not.toHaveBeenCalled();
-      
+
       consoleLogSpy.mockRestore();
     });
   });
@@ -73,9 +73,9 @@ describe('useQuotationStore Actions Contract Tests', () => {
     it('should not trigger set when data has no changes (shallow equal)', () => {
       const { result } = renderHook(() => useQuotationStore());
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-      
+
       const currentData = result.current.data;
-      
+
       act(() => {
         // 传入相同的数据
         result.current.updateData({
@@ -86,20 +86,20 @@ describe('useQuotationStore Actions Contract Tests', () => {
 
       // 应该跳过更新
       expect(consoleLogSpy).toHaveBeenCalledWith(
-        '[updateData] 无变化，跳过更新', 
+        '[updateData] 无变化，跳过更新',
         expect.objectContaining({
           quotationNo: currentData.quotationNo,
           currency: currentData.currency,
         })
       );
-      
+
       consoleLogSpy.mockRestore();
     });
 
     it('should apply updates when data has changes', () => {
       const { result } = renderHook(() => useQuotationStore());
       const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-      
+
       act(() => {
         result.current.updateData({
           quotationNo: 'QT-001',
@@ -116,7 +116,7 @@ describe('useQuotationStore Actions Contract Tests', () => {
           currency: 'EUR',
         })
       );
-      
+
       consoleLogSpy.mockRestore();
     });
   });
@@ -126,28 +126,28 @@ describe('useQuotationStore Actions Contract Tests', () => {
       // 模拟开发环境
       const originalEnv = process.env.NODE_ENV;
       Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', configurable: true, writable: true });
-      
+
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-      
-      const { result } = renderHook(() => useQuotationStore());
-      
+
+      const { result: _result } = renderHook(() => useQuotationStore());
+
       // 模拟QuotationPage中的handleSettingsChange逻辑
       const mockPatch = {
         from: 'Emily',
         currency: 'EUR' as const,
         notes: ['should-be-ignored'],
       };
-      
+
       // 模拟handleSettingsChange的逻辑
       if ('notes' in mockPatch) {
         console.warn('[Guard] UI should not pass `notes` in SettingsPanel.onChange');
       }
-      
+
       // 验证警告被触发
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         '[Guard] UI should not pass `notes` in SettingsPanel.onChange'
       );
-      
+
       // 恢复环境
       Object.defineProperty(process.env, 'NODE_ENV', { value: originalEnv, configurable: true, writable: true });
       consoleWarnSpy.mockRestore();

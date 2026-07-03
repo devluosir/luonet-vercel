@@ -86,13 +86,13 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
   const applyTemplate = (templateKey: 'exw' | 'fob' | 'cif') => {
     // 设置选中的模板
     setSelectedTemplate(templateKey);
-    
+
     const template = NOTES_TEMPLATES_BILINGUAL[templateKey];
     const { setNotesConfig } = useQuotationStore.getState();
-    
+
     // 重置为默认配置
     setNotesConfig(DEFAULT_NOTES_CONFIG);
-    
+
     // 应用模板内容
     setTimeout(() => {
       if (templateKey === 'exw') {
@@ -103,7 +103,7 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
         updateNoteContent('delivery_terms', extractEnglishContent(template[3]));
         updateNoteContent('payment_terms', extractEnglishContent(template[4]));
         updateNoteContent('validity', extractEnglishContent(template[5]));
-        
+
         // 确保payment_terms条款可见
         updateNoteVisibility('payment_terms', true);
       } else {
@@ -114,7 +114,7 @@ export const NotesSection: React.FC<NotesSectionProps> = () => {
         updateNoteContent('delivery_terms', extractEnglishContent(template[2]));
         updateNoteContent('payment_terms', extractEnglishContent(template[3]));
         updateNoteContent('validity', extractEnglishContent(template[4]));
-        
+
         // 隐藏excluding_hpfc条款，确保payment_terms条款可见
         const { updateNoteVisibility } = useQuotationStore.getState();
         updateNoteVisibility('excluding_hpfc', false);
@@ -236,7 +236,7 @@ interface SortableNoteProps {
   onRemove: (noteId: string) => void;
 }
 
-const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, onUpdateContent, onRemove }) => {
+const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, onUpdateContent, onRemove: _onRemove }) => {
   const {
     attributes,
     listeners,
@@ -351,8 +351,8 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
                   onVisibilityToggle(note.id, note.visible);
                 }}
                 className={`inline-flex items-center justify-center w-5 h-5 rounded-full transition-all duration-200 ${
-                  note.visible 
-                    ? 'text-gray-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400' 
+                  note.visible
+                    ? 'text-gray-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400'
                     : 'text-gray-400'
                 }`}
                 title={note.visible ? `隐藏条款 (当前序号: ${noteIndex})` : '显示条款'}
@@ -366,7 +366,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
                 )}
               </button>
             </div>
-            
+
             {/* 内容区域 */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-1 sm:space-x-2">
@@ -388,7 +388,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
                       }}
                     />
                   ) : (
-                    <div 
+                    <div
                       className="min-h-8 box-border text-sm leading-5 text-gray-600 dark:text-[#98989D] cursor-text hover:bg-gray-100 dark:hover:bg-[#3A3A3C] px-2 py-1 rounded -mx-2 border border-transparent whitespace-pre-wrap break-words"
                       onClick={handleStartEdit}
                       title="点击编辑"
@@ -400,7 +400,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
               </div>
             </div>
           </div>
-          
+
           {/* 右侧：操作按钮 */}
           <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0 ml-2 sm:ml-3">
             {/* 特殊Notes的选项按钮（与 PaymentTermsSection 风格统一） */}
@@ -433,10 +433,10 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
                 )}
               </div>
             )}
-            
+
             {/* 拖拽句柄 - 只在非编辑状态下可用 */}
             {!isEditing && (
-              <div 
+              <div
                 {...attributes}
                 {...listeners}
                 className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 dark:hover:bg-[#3A3A3C] rounded"
@@ -448,7 +448,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
           </div>
         </div>
       </div>
-      
+
 
     </div>
   );

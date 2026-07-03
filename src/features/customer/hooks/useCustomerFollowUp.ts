@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { FollowUpService } from '../services/timelineService';
-import type { CustomerFollowUp, FollowUpType, FollowUpStatus, FollowUpPriority } from '../types';
+import type { CustomerFollowUp, FollowUpStatus, FollowUpPriority } from '../types';
 
 const EMPTY_ALIASES: string[] = [];
 
@@ -20,7 +20,7 @@ export function useCustomerFollowUp(customerId?: string, customerAliases: string
   // 加载跟进记录
   const loadFollowUps = useCallback(async () => {
     if (!customerId) return;
-    
+
     setLoading(true);
     try {
       const customerFollowUps = FollowUpService.getFollowUpsByCustomerIds(customerKeys);
@@ -35,7 +35,7 @@ export function useCustomerFollowUp(customerId?: string, customerAliases: string
   // 添加跟进记录
   const addFollowUp = useCallback(async (followUpData: Omit<CustomerFollowUp, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (!customerId) return null;
-    
+
     try {
       const newFollowUp = FollowUpService.addFollowUp(followUpData);
       await loadFollowUps();
@@ -76,7 +76,7 @@ export function useCustomerFollowUp(customerId?: string, customerAliases: string
 
   // 完成跟进
   const completeFollowUp = useCallback(async (id: string) => {
-    return await updateFollowUp(id, { 
+    return await updateFollowUp(id, {
       status: 'completed' as FollowUpStatus,
       updatedAt: new Date().toISOString()
     });
@@ -88,45 +88,45 @@ export function useCustomerFollowUp(customerId?: string, customerAliases: string
     if (filters.status.length > 0 && !filters.status.includes(followUp.status)) {
       return false;
     }
-    
+
     // 按优先级筛选
     if (filters.priority.length > 0 && !filters.priority.includes(followUp.priority)) {
       return false;
     }
-    
+
     // 按搜索文本筛选
     if (filters.searchText) {
       const searchText = filters.searchText.toLowerCase();
-      const matchesSearch = 
+      const matchesSearch =
         followUp.title.toLowerCase().includes(searchText) ||
         followUp.description.toLowerCase().includes(searchText);
-      
+
       if (!matchesSearch) {
         return false;
       }
     }
-    
+
     return true;
   });
 
   // 获取即将到期的跟进记录
   const upcomingFollowUps = filteredFollowUps.filter(followUp => {
     if (followUp.status !== 'pending') return false;
-    
+
     const dueDate = new Date(followUp.dueDate);
     const now = new Date();
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    
+
     return dueDate <= sevenDaysFromNow && dueDate >= now;
   });
 
   // 获取过期的跟进记录
   const overdueFollowUps = filteredFollowUps.filter(followUp => {
     if (followUp.status !== 'pending') return false;
-    
+
     const dueDate = new Date(followUp.dueDate);
     const now = new Date();
-    
+
     return dueDate < now;
   });
 

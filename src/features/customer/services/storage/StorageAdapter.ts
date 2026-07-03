@@ -40,8 +40,8 @@ export interface StorageMetrics {
 export interface StorageEvent {
   type: 'change' | 'error' | 'quota_exceeded';
   key?: string;
-  oldValue?: any;
-  newValue?: any;
+  oldValue?: unknown;
+  newValue?: unknown;
   error?: StorageError;
 }
 

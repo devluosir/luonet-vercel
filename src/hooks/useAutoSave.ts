@@ -9,17 +9,22 @@ interface UseAutoSaveOptions<T> {
 }
 
 // 安全的localStorage写入函数
-const safeSet = (key: string, obj: any) => {
+const safeSet = (key: string, obj: unknown) => {
   const serialized = JSON.stringify(obj);
   const size = new Blob([serialized]).size;
   const maxSize = 4_500_000; // ~4.5MB限制
-  
+
   if (size > maxSize) {
     throw new Error('Draft too large');
   }
-  
+
   localStorage.setItem(key, serialized);
   return size;
+};
+
+const isQuotaOrSizeError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) return false;
+  return error.name === 'QuotaExceededError' || /too large/i.test(error.message);
 };
 
 export function useAutoSave<T>({ data, key, delay = 1000, enabled = true }: UseAutoSaveOptions<T>) {
@@ -29,7 +34,7 @@ export function useAutoSave<T>({ data, key, delay = 1000, enabled = true }: UseA
 
   // 清理旧数据
   const cleanupOldData = () => {
-    const keysToClean = Object.keys(localStorage).filter(k => 
+    const keysToClean = Object.keys(localStorage).filter(k =>
       (k.includes('draft') || k.includes('v2') || k.includes('temp') || k.includes('cache')) &&
       !k.includes('_history') // 不清理历史记录
     );
@@ -42,9 +47,9 @@ export function useAutoSave<T>({ data, key, delay = 1000, enabled = true }: UseA
 
     try {
       // 使用精简数据
-      const draft = pickDraft(dataToSave as any);
+      const draft = pickDraft(dataToSave);
       const serializedData = JSON.stringify(draft);
-      
+
       // 如果数据没有变化，不保存
       if (serializedData === lastSavedRef.current) {
         return;
@@ -57,11 +62,11 @@ export function useAutoSave<T>({ data, key, delay = 1000, enabled = true }: UseA
         if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
           console.log(`自动保存到 ${key}`);
         }
-      } catch (error: any) {
-        if (error?.name === 'QuotaExceededError' || /too large/i.test(error?.message)) {
+      } catch (error: unknown) {
+        if (isQuotaOrSizeError(error)) {
           console.warn('存储空间不足，尝试清理后重试');
           cleanupOldData();
-          
+
           try {
             // 重试保存
             safeSet(key, draft);

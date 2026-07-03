@@ -1,21 +1,6 @@
 'use client';
-
 import React, { useState, useCallback, useMemo, memo, useRef, useEffect } from 'react';
-import { 
-  Settings, 
-  Plus, 
-  X, 
-  GripVertical, 
-  EyeOff, 
-  ChevronDown, 
-  ChevronUp,
-  Edit3,
-  Check,
-  MoreHorizontal,
-  Eye,
-  Trash2,
-  Move,
-} from 'lucide-react';
+import { Settings, Plus, X, EyeOff, ChevronDown, ChevronUp, Edit3, Check, MoreHorizontal, Eye, Trash2 } from 'lucide-react';
 import type { NoteConfig } from '../types/notes';
 
 // 🚀 移动端优化配置
@@ -61,7 +46,7 @@ const useTouchGestures = () => {
       y: touch.clientY,
       time: Date.now(),
     };
-    
+
     // 长按检测
     setTimeout(() => {
       if (touchStartRef.current) {
@@ -79,8 +64,8 @@ const useTouchGestures = () => {
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
     if (distance > 10) {
-      setGestureState(prev => ({ 
-        ...prev, 
+      setGestureState(prev => ({
+        ...prev,
         isDragging: true,
         isLongPress: false,
       }));
@@ -126,7 +111,7 @@ export const MobileOptimizedNotes = memo<MobileOptimizedNotesProps>(({
   notes,
   onUpdateVisibility,
   onUpdateContent,
-  onUpdateOrder,
+  onUpdateOrder: _onUpdateOrder,
   onAddNote,
   onRemoveNote,
   onApplyTemplate,
@@ -203,7 +188,7 @@ export const MobileOptimizedNotes = memo<MobileOptimizedNotesProps>(({
         onClick={onAddNote}
         className="w-full flex items-center justify-center gap-2 h-12 rounded-lg
           bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium
-          hover:bg-[#0056CC] dark:hover:bg-[#0056CC] 
+          hover:bg-[#0056CC] dark:hover:bg-[#0056CC]
           active:scale-95 transition-all duration-200"
         style={{ minHeight: TOUCH_TARGET_SIZE }}
       >
@@ -227,8 +212,8 @@ export const MobileOptimizedNotes = memo<MobileOptimizedNotesProps>(({
           onClick={() => setShowConfig(!showConfig)}
           className="flex items-center justify-center rounded-lg transition-all duration-200 active:scale-95
             hover:bg-gray-100 dark:hover:bg-[#3A3A3C]"
-          style={{ 
-            width: TOUCH_TARGET_SIZE, 
+          style={{
+            width: TOUCH_TARGET_SIZE,
             height: TOUCH_TARGET_SIZE,
             minWidth: TOUCH_TARGET_SIZE,
             minHeight: TOUCH_TARGET_SIZE,
@@ -365,10 +350,10 @@ const MobileNoteItem = memo<MobileNoteItemProps>(({
   }, [gestureState.isLongPress, isTouchDevice, onShowContextMenu]);
 
   return (
-    <div 
+    <div
       className={`relative rounded-xl border transition-all duration-300 ${
-        isEditing 
-          ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800' 
+        isEditing
+          ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800'
           : 'bg-white dark:bg-[#1C1C1E] border-gray-200 dark:border-[#3A3A3C] hover:border-gray-300 dark:hover:border-[#48484A]'
       } ${gestureState.isDragging ? 'scale-105 shadow-lg' : ''}`}
       {...(isTouchDevice ? touchHandlers : {})}
@@ -384,13 +369,13 @@ const MobileNoteItem = memo<MobileNoteItemProps>(({
             className={`flex items-center justify-center rounded-full transition-all duration-200 ${
               isMobile ? 'w-8 h-8' : 'w-5 h-5'
             } ${
-              note.visible 
-                ? 'text-gray-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400' 
+              note.visible
+                ? 'text-gray-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400'
                 : 'text-gray-400'
             }`}
-            style={{ 
-              minWidth: isMobile ? 32 : 20, 
-              minHeight: isMobile ? 32 : 20 
+            style={{
+              minWidth: isMobile ? 32 : 20,
+              minHeight: isMobile ? 32 : 20
             }}
           >
             <span className={`${isMobile ? 'text-sm' : 'text-xs'}`}>
@@ -421,8 +406,8 @@ const MobileNoteItem = memo<MobileNoteItemProps>(({
               type="button"
               onClick={onShowContextMenu}
               className="flex items-center justify-center rounded-lg transition-colors"
-              style={{ 
-                width: TOUCH_TARGET_SIZE, 
+              style={{
+                width: TOUCH_TARGET_SIZE,
                 height: isMobile ? 32 : 28,
                 minWidth: isMobile ? 32 : 28,
               }}
@@ -453,7 +438,7 @@ const MobileNoteItem = memo<MobileNoteItemProps>(({
                     adjustTextareaHeight(e.currentTarget);
                   }}
                 />
-                
+
                 {/* 编辑操作按钮 */}
                 <div className="flex space-x-2">
                   <button
@@ -479,7 +464,7 @@ const MobileNoteItem = memo<MobileNoteItemProps>(({
                 </div>
               </div>
             ) : (
-              <div 
+              <div
                 className={`cursor-text rounded-lg p-3 -mx-3 transition-colors
                   hover:bg-gray-50 dark:hover:bg-[#2C2C2E] ${
                   isMobile ? 'text-base leading-relaxed' : 'text-sm'
@@ -553,11 +538,11 @@ const MobileContextMenu = memo<MobileContextMenuProps>(({
   return (
     <div className="absolute top-0 left-0 right-0 bottom-0 z-50">
       {/* 背景遮罩 */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/20 backdrop-blur-sm rounded-xl"
         onClick={onClose}
       />
-      
+
       {/* 菜单内容 */}
       <div className="absolute inset-x-4 top-1/2 transform -translate-y-1/2">
         <div className="bg-white dark:bg-[#1C1C1E] rounded-xl shadow-2xl border border-gray-200 dark:border-[#3A3A3C] overflow-hidden">
@@ -569,8 +554,8 @@ const MobileContextMenu = memo<MobileContextMenuProps>(({
               className={`w-full flex items-center gap-3 px-4 py-3 transition-colors
                 hover:bg-gray-50 dark:hover:bg-[#2C2C2E]
                 ${index < menuActions.length - 1 ? 'border-b border-gray-100 dark:border-[#3A3A3C]' : ''}
-                ${action.color === 'red' ? 'text-red-600 dark:text-red-400' : 
-                  action.color === 'blue' ? 'text-blue-600 dark:text-blue-400' : 
+                ${action.color === 'red' ? 'text-red-600 dark:text-red-400' :
+                  action.color === 'blue' ? 'text-blue-600 dark:text-blue-400' :
                   'text-gray-700 dark:text-[#F5F5F7]'}`}
               style={{ minHeight: TOUCH_TARGET_SIZE }}
             >
@@ -601,7 +586,7 @@ const MobileEmptyState = memo<{ onAddNote: () => void }>(({ onAddNote }) => (
       onClick={onAddNote}
       className="inline-flex items-center gap-2 px-6 py-3 rounded-xl
         bg-[#007AFF] dark:bg-[#0A84FF] text-white font-medium
-        hover:bg-[#0056CC] dark:hover:bg-[#0056CC] 
+        hover:bg-[#0056CC] dark:hover:bg-[#0056CC]
         active:scale-95 transition-all duration-200"
       style={{ minHeight: TOUCH_TARGET_SIZE }}
     >

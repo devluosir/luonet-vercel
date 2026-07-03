@@ -1,12 +1,13 @@
 // 适配旧 purchaseHistory.ts，统一暴露接口
-import { 
-  getPurchaseHistory, 
-  getPurchaseHistoryById, 
-  savePurchaseHistory, 
+import {
+  getPurchaseHistory,
+  getPurchaseHistoryById,
+  savePurchaseHistory,
   deletePurchaseHistory,
   exportPurchaseHistory,
   importPurchaseHistory
 } from '@/utils/purchaseHistory';
+import type { PurchaseOrderData } from '@/types/purchase';
 
 export type PurchaseId = string;
 
@@ -26,7 +27,7 @@ export const PurchaseService = {
     const item = getPurchaseHistoryById(id);
     return item?.data || null;
   },
-  save: async (data: any) => {
+  save: async (data: PurchaseOrderData) => {
     const result = savePurchaseHistory(data);
     return result ? { id: result.id } : null;
   },

@@ -79,7 +79,7 @@ export async function loadFontDataOnce(): Promise<{ regB64: string; boldB64: str
 }
 
 // 性能监控
-const performanceMonitor = {
+const _performanceMonitor = {
   start: (name: string) => {
     const startTime = performance.now();
     return { name, startTime };
@@ -105,7 +105,7 @@ export async function registerChineseFonts(doc: jsPDF): Promise<void> {
   const t0 = performance.now();
   try {
     console.log('[PDF] 开始字体注册(实例级)...');
-    
+
     // 1) 获取预处理的字体数据
     const { regB64, boldB64 } = await loadFontDataOnce();
 
@@ -118,7 +118,7 @@ export async function registerChineseFonts(doc: jsPDF): Promise<void> {
     // 3) 验证注册结果
     const list = doc.getFontList();
     const styles = list[FONT_NAME] || [];
-    
+
     if (!styles.includes('normal') || !styles.includes('bold')) {
       throw new Error(`字体 ${FONT_NAME} 注册不完整: ${styles.join(', ')}`);
     }
@@ -131,11 +131,11 @@ export async function registerChineseFonts(doc: jsPDF): Promise<void> {
 
     const t1 = performance.now();
     logFontRegistered(t1 - t0);
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.log('[PDF] 可用字体列表:', list);
     }
-    
+
   } catch (err) {
     console.error('[PDF] 字体注册失败:', err);
     throw err;
@@ -149,16 +149,16 @@ export async function warmupFontRegistration(): Promise<void> {
   try {
     console.log('[PDF] 开始字体数据预热...');
     const t0 = performance.now();
-    
+
     // 仅加载和编码字体数据，不注册到任何实例
     const { regB64, boldB64 } = await loadFontDataOnce();
-    
+
     const t1 = performance.now();
-    logPerformance('字体数据预热', t1 - t0, { 
-      regSize: `${Math.round(regB64.length/1024)}KB`, 
-      boldSize: `${Math.round(boldB64.length/1024)}KB` 
+    logPerformance('字体数据预热', t1 - t0, {
+      regSize: `${Math.round(regB64.length/1024)}KB`,
+      boldSize: `${Math.round(boldB64.length/1024)}KB`
     });
-    
+
   } catch (error) {
     console.error('[PDF] 字体数据预热失败:', error);
     throw error;

@@ -26,23 +26,23 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 // 收货人选择字段组件
-function ConsigneeField({ 
-  label, 
-  value, 
-  onChange, 
-  placeholder 
-}: { 
-  label: string; 
-  value: string; 
-  onChange: (value: string) => void; 
-  placeholder: string; 
+function ConsigneeField({
+  label,
+  value,
+  onChange,
+  placeholder: _placeholder
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [savedConsignees, setSavedConsignees] = useState<Array<{name: string; to: string}>>([]);
   const [filteredConsignees, setFilteredConsignees] = useState<Array<{name: string; to: string}>>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const normalizeKey = (name: string, to: string) => `${(name || '').trim().toLowerCase()}__${(to || '').trim().toLowerCase()}`;
+  const _normalizeKey = (name: string, to: string) => `${(name || '').trim().toLowerCase()}__${(to || '').trim().toLowerCase()}`;
 
   // 从客户管理服务加载收货人数据
   useEffect(() => {

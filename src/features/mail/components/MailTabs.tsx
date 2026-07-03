@@ -1,15 +1,20 @@
 import { Settings } from 'lucide-react';
-import { useMailStore } from '../state/mail.store';
-import type { MailTab } from '../types';
+import type { MailFormData, MailTab } from '../types';
 import { SelectField } from './SelectField';
-import { LANGUAGE_OPTIONS, MAIL_TYPE_OPTIONS, FORM_LABELS } from '../utils/constants';
+import { LANGUAGE_OPTIONS, MAIL_TYPE_OPTIONS } from '../utils/constants';
+
+type MailFieldBinding = {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  name: keyof MailFormData;
+};
 
 interface MailTabsProps {
   activeTab: MailTab;
   onTabChange: (tab: MailTab) => void;
   showSettings: boolean;
   onToggleSettings: () => void;
-  field: any;
+  field: (name: keyof MailFormData) => MailFieldBinding;
   mailType: string;
   setMailType: (type: string) => void;
 }
@@ -49,8 +54,8 @@ export function MailTabs({ activeTab, onTabChange, showSettings, onToggleSetting
       <div className="flex items-center gap-3">
         {/* 语言选择 */}
         <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          showSettings 
-            ? 'opacity-100 max-w-[200px]' 
+          showSettings
+            ? 'opacity-100 max-w-[200px]'
             : 'opacity-0 max-w-0'
         }`}>
           <SelectField
@@ -63,8 +68,8 @@ export function MailTabs({ activeTab, onTabChange, showSettings, onToggleSetting
 
         {/* 邮件类型选择 */}
         <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          showSettings 
-            ? 'opacity-100 max-w-[200px]' 
+          showSettings
+            ? 'opacity-100 max-w-[200px]'
             : 'opacity-0 max-w-0'
         }`}>
           <SelectField

@@ -7,22 +7,22 @@ export const SETTINGS_ALLOWED_KEYS = new Set([
   // 显示控制开关
   'showInvoiceReminder',
   'showStamp', // HK印章显示控制
-  
+
   // 模板配置
   'templateConfig', // 包含 headerType, stampType 等
-  
+
   // 基础字段
   'currency',
   'from',
-  
+
   // 自定义单位
   'customUnits',
-  
+
   // 支付条款
   'additionalPaymentTerms',
   'showMainPaymentTerm',
   'paymentDate',
-  
+
   // 定金和尾款功能
   'depositPercentage',
   'depositAmount',
@@ -44,7 +44,7 @@ export const isAllowedSettingsKey = (key: string): boolean => {
  * @param patch 待过滤的补丁对象
  * @returns 过滤后的对象
  */
-export const filterAllowedKeys = (patch: Record<string, any>): Record<string, any> => {
+export const filterAllowedKeys = (patch: Record<string, unknown>): Record<string, unknown> => {
   return Object.fromEntries(
     Object.entries(patch).filter(([key]) => isAllowedSettingsKey(key))
   );

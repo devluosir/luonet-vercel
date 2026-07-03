@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, AlertTriangle, Trash2, GitMerge, Wrench, Hash } from 'lucide-react';
+import { CheckCircle, Trash2, GitMerge, Wrench, Hash } from 'lucide-react';
 import type { FixReport as FixReportType } from './autofix';
 
 export function FixReport({ report }: { report: FixReportType }) {
@@ -18,38 +18,38 @@ export function FixReport({ report }: { report: FixReportType }) {
         <Wrench className="h-4 w-4" />
         自动修复完成：{report.summary}
       </div>
-      
+
       {(report.droppedRows > 0 || report.mergedRows > 0 || report.fixedUnits > 0 || report.fixedNumbers > 0) && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           {report.fixedUnits > 0 && (
-            <FixStat 
+            <FixStat
               icon={<Hash className="h-3 w-3" />}
-              label="标准化单位" 
-              value={report.fixedUnits} 
+              label="标准化单位"
+              value={report.fixedUnits}
               color="blue"
             />
           )}
           {report.fixedNumbers > 0 && (
-            <FixStat 
+            <FixStat
               icon={<Hash className="h-3 w-3" />}
-              label="清洗数值" 
-              value={report.fixedNumbers} 
+              label="清洗数值"
+              value={report.fixedNumbers}
               color="green"
             />
           )}
           {report.mergedRows > 0 && (
-            <FixStat 
+            <FixStat
               icon={<GitMerge className="h-3 w-3" />}
-              label="合并重复" 
-              value={report.mergedRows} 
+              label="合并重复"
+              value={report.mergedRows}
               color="purple"
             />
           )}
           {report.droppedRows > 0 && (
-            <FixStat 
+            <FixStat
               icon={<Trash2 className="h-3 w-3" />}
-              label="移除无效" 
-              value={report.droppedRows} 
+              label="移除无效"
+              value={report.droppedRows}
               color="red"
             />
           )}
@@ -59,12 +59,12 @@ export function FixReport({ report }: { report: FixReportType }) {
   );
 }
 
-function FixStat({ 
-  icon, 
-  label, 
-  value, 
-  color 
-}: { 
+function FixStat({
+  icon,
+  label,
+  value,
+  color
+}: {
   icon: React.ReactNode;
   label: string;
   value: number;

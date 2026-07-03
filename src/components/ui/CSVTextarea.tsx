@@ -20,9 +20,9 @@ interface CellData {
 export const CSVTextarea: React.FC<CSVTextareaProps> = ({
   value,
   onChange,
-  placeholder,
-  className = '',
-  rows = 2,
+  placeholder: _placeholder,
+  className: _className = '',
+  rows: _rows = 2,
   onPaste
 }) => {
   const [tableData, setTableData] = useState<CellData[][]>([]);
@@ -36,7 +36,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
       const parsedData = parseCSV(value);
       setTableData(parsedData);
     }
-  }, []); // 只在组件挂载时执行一次
+  }, [value]);
 
   // 自动调整文本框高度
   useEffect(() => {
@@ -50,15 +50,15 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
   // 解析CSV数据
   const parseCSV = (csvText: string): CellData[][] => {
     if (!csvText.trim()) return [];
-    
+
     // 检测分隔符类型
     const lines = csvText.split('\n').filter(line => line.trim());
     if (lines.length === 0) return [];
-    
+
     // 智能检测分隔符
     const firstLine = lines[0];
     let separator = '\t'; // 默认使用制表符
-    
+
     if (firstLine.includes('\t')) {
       separator = '\t';
     } else if (firstLine.includes(',')) {
@@ -68,22 +68,22 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
     } else if (firstLine.includes('|')) {
       separator = '|';
     }
-    
+
     // 解析原始数据
     const rawData = lines.map(line => {
       return line.split(separator).map(cell => cell.trim());
     });
-    
+
     // 检测合并单元格
     const processedData: CellData[][] = [];
-    
+
     for (let rowIndex = 0; rowIndex < rawData.length; rowIndex++) {
       const row = rawData[rowIndex];
       const processedRow: CellData[] = [];
-      
+
       for (let colIndex = 0; colIndex < row.length; colIndex++) {
         const cell = row[colIndex];
-        
+
         // 检查是否应该跳过这个单元格（被合并的）
         let shouldSkip = false;
         for (let r = 0; r < rowIndex; r++) {
@@ -98,15 +98,15 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
           }
           if (shouldSkip) break;
         }
-        
+
         if (shouldSkip) {
           continue;
         }
-        
+
         // 计算合并范围
         let rowSpan = 1;
         let colSpan = 1;
-        
+
         // 检查向下合并（包括空单元格）
         for (let r = rowIndex + 1; r < rawData.length; r++) {
           const nextCell = rawData[r][colIndex];
@@ -141,7 +141,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
             }
           }
         }
-        
+
         // 检查向右合并
         for (let c = colIndex + 1; c < row.length; c++) {
           const nextCell = row[c];
@@ -153,7 +153,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
             }
           }
         }
-        
+
         // 只有当单元格不为空或者有合并范围时才添加
         if (cell !== '' || rowSpan > 1 || colSpan > 1) {
           processedRow.push({
@@ -164,10 +164,10 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
           });
         }
       }
-      
+
       processedData.push(processedRow);
     }
-    
+
     return processedData;
   };
 
@@ -179,23 +179,23 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
   // 处理粘贴事件
   const handlePaste = (event: React.ClipboardEvent) => {
     const pastedText = event.clipboardData.getData('text');
-    
+
     // 检查是否包含制表符或逗号，说明可能是CSV数据
     if (pastedText.includes('\t') || (pastedText.includes(',') && pastedText.includes('\n'))) {
       event.preventDefault();
-      
+
       const parsedData = parseCSV(pastedText);
       if (parsedData.length > 0) {
         setTableData(parsedData);
         // 将解析后的数据转换为制表符格式
         const csvText = tableToCSV(parsedData);
         onChange(csvText);
-        
+
         // 显示成功提示
         showPasteSuccess();
       }
     }
-    
+
     // 调用原有的onPaste处理函数
     if (onPaste) {
       onPaste(event);
@@ -209,7 +209,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
     toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transform transition-all duration-300';
     toast.textContent = '表格数据已粘贴，正在显示表格视图...';
     document.body.appendChild(toast);
-    
+
     // 3秒后自动移除
     setTimeout(() => {
       toast.style.transform = 'translateX(100%)';
@@ -247,7 +247,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
     toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transform transition-all duration-300';
     toast.textContent = message;
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
       toast.style.transform = 'translateX(100%)';
       setTimeout(() => {
@@ -264,16 +264,16 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
       const textarea = event.target as HTMLTextAreaElement;
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      
+
       const newValue = value.substring(0, start) + '\t' + value.substring(end);
       onChange(newValue);
-      
+
       // 设置光标位置
       setTimeout(() => {
         textarea.selectionStart = textarea.selectionEnd = start + 1;
       }, 0);
     }
-    
+
     // Ctrl+T 切换表格视图
     if (event.ctrlKey && event.key === 't') {
       event.preventDefault();
@@ -301,7 +301,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
     }
     newData[rowIndex][colIndex].value = newValue;
     setTableData(newData);
-    
+
     // 更新文本框内容
     const csvText = tableToCSV(newData);
     onChange(csvText);
@@ -315,19 +315,19 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
   // 合并选中的单元格
   const mergeCells = () => {
     if (selectedCells.length < 2) return;
-    
+
     const newData = [...tableData];
     const minRow = Math.min(...selectedCells.map(cell => cell.row));
     const maxRow = Math.max(...selectedCells.map(cell => cell.row));
     const minCol = Math.min(...selectedCells.map(cell => cell.col));
     const maxCol = Math.max(...selectedCells.map(cell => cell.col));
-    
+
     // 合并所有选中的单元格
     const mergedValue = selectedCells
       .map(cell => newData[cell.row]?.[cell.col]?.value || '')
       .filter(v => v)
       .join(' ');
-    
+
     // 设置主单元格
     if (!newData[minRow]) newData[minRow] = [];
     newData[minRow][minCol] = {
@@ -336,7 +336,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
       colSpan: maxCol - minCol + 1,
       isMerged: true
     };
-    
+
     // 标记其他单元格为已合并
     selectedCells.forEach(cell => {
       if (cell.row !== minRow || cell.col !== minCol) {
@@ -349,10 +349,10 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
         };
       }
     });
-    
+
     setTableData(newData);
     setSelectedCells([]);
-    
+
     // 更新文本框内容
     const csvText = tableToCSV(newData);
     onChange(csvText);
@@ -361,11 +361,11 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
   // 取消合并单元格
   const unmergeCells = () => {
     if (selectedCells.length !== 1) return;
-    
+
     const cell = selectedCells[0];
     const newData = [...tableData];
     const currentCell = newData[cell.row]?.[cell.col];
-    
+
     if (currentCell && currentCell.isMerged && ((currentCell.rowSpan ?? 1) > 1 || (currentCell.colSpan ?? 1) > 1)) {
       // 恢复为普通单元格
       newData[cell.row][cell.col] = {
@@ -374,10 +374,10 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
         colSpan: 1,
         isMerged: false
       };
-      
+
       setTableData(newData);
       setSelectedCells([]);
-      
+
       // 更新文本框内容
       const csvText = tableToCSV(newData);
       onChange(csvText);
@@ -409,7 +409,7 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
   // 添加新列
   const addColumn = () => {
     const newData = tableData.map(row => [
-      ...row, 
+      ...row,
       {
         value: '',
         rowSpan: 1,
@@ -489,14 +489,14 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
                       if (cell.isMerged && ((cell.rowSpan ?? 1) === 1 && (cell.colSpan ?? 1) === 1)) {
                         return null;
                       }
-                      
+
                       const isSelected = selectedCells.some(
                         selected => selected.row === rowIndex && selected.col === colIndex
                       );
-                      
+
                       return (
-                        <td 
-                          key={colIndex} 
+                        <td
+                          key={colIndex}
                           className={`border border-gray-300 dark:border-gray-600 p-1 ${
                             isSelected ? 'bg-blue-200 dark:bg-blue-700' : ''
                           } ${cell.isMerged ? 'bg-yellow-100 dark:bg-yellow-800' : ''}`}
@@ -574,10 +574,10 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
         className="sr-only"
         rows={1}
       />
-      
 
 
-      
+
+
     </div>
   );
 };

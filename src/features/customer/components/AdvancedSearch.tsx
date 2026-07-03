@@ -1,32 +1,48 @@
 'use client';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Search, Filter, Save, Clock, X } from 'lucide-react';
 
-import { useState, useEffect, useRef } from 'react';
-import { Search, Filter, Save, Clock, X, ChevronDown, ChevronUp } from 'lucide-react';
+type SearchFilters = Record<string, string | undefined>;
 
 interface SearchQuery {
   id: string;
   name: string;
   query: string;
-  filters: Record<string, any>;
+  filters: SearchFilters;
   createdAt: string;
   lastUsed: string;
 }
 
 interface AdvancedSearchProps {
-  onSearch: (query: string, filters: Record<string, any>) => void;
-  onSaveQuery?: (name: string, query: string, filters: Record<string, any>) => void;
+  onSearch: (query: string, filters: SearchFilters) => void;
+  onSaveQuery?: (name: string, query: string, filters: SearchFilters) => void;
   placeholder?: string;
   className?: string;
 }
 
-export function AdvancedSearch({ 
-  onSearch, 
-  onSaveQuery, 
+const isSearchQuery = (value: unknown): value is SearchQuery => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.id === 'string' &&
+    typeof record.name === 'string' &&
+    typeof record.query === 'string' &&
+    typeof record.createdAt === 'string' &&
+    typeof record.lastUsed === 'string' &&
+    typeof record.filters === 'object' &&
+    record.filters !== null &&
+    !Array.isArray(record.filters)
+  );
+};
+
+export function AdvancedSearch({
+  onSearch,
+  onSaveQuery,
   placeholder = "搜索...",
-  className = "" 
+  className = ""
 }: AdvancedSearchProps) {
   const [query, setQuery] = useState('');
-  const [filters, setFilters] = useState<Record<string, any>>({});
+  const [filters, setFilters] = useState<SearchFilters>({});
   const [showFilters, setShowFilters] = useState(false);
   const [showSavedQueries, setShowSavedQueries] = useState(false);
   const [savedQueries, setSavedQueries] = useState<SearchQuery[]>([]);
@@ -39,7 +55,10 @@ export function AdvancedSearch({
     const saved = localStorage.getItem('customer_search_queries');
     if (saved) {
       try {
-        setSavedQueries(JSON.parse(saved));
+        const parsed = JSON.parse(saved) as unknown;
+        if (Array.isArray(parsed)) {
+          setSavedQueries(parsed.filter(isSearchQuery));
+        }
       } catch (error) {
         console.error('Failed to load saved queries:', error);
       }
@@ -47,14 +66,14 @@ export function AdvancedSearch({
   }, []);
 
   // 保存查询到localStorage
-  const saveQueriesToStorage = (queries: SearchQuery[]) => {
+  const saveQueriesToStorage = useCallback((queries: SearchQuery[]) => {
     localStorage.setItem('customer_search_queries', JSON.stringify(queries));
-  };
+  }, []);
 
   // 执行搜索
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     onSearch(query, filters);
-    
+
     // 更新最近使用的查询
     if (query.trim()) {
       const existingIndex = savedQueries.findIndex(q => q.query === query);
@@ -68,12 +87,12 @@ export function AdvancedSearch({
         saveQueriesToStorage(updated);
       }
     }
-  };
+  }, [filters, onSearch, query, savedQueries, saveQueriesToStorage]);
 
   // 保存当前查询
   const handleSaveQuery = () => {
     if (!saveQueryName.trim() || !query.trim()) return;
-    
+
     const newQuery: SearchQuery = {
       id: Date.now().toString(),
       name: saveQueryName.trim(),
@@ -82,14 +101,14 @@ export function AdvancedSearch({
       createdAt: new Date().toISOString(),
       lastUsed: new Date().toISOString()
     };
-    
+
     const updated = [newQuery, ...savedQueries].slice(0, 10); // 最多保存10个
     setSavedQueries(updated);
     saveQueriesToStorage(updated);
-    
+
     setSaveQueryName('');
     setShowSaveDialog(false);
-    
+
     if (onSaveQuery) {
       onSaveQuery(newQuery.name, newQuery.query, newQuery.filters);
     }
@@ -100,16 +119,16 @@ export function AdvancedSearch({
     setQuery(savedQuery.query);
     setFilters(savedQuery.filters);
     setShowSavedQueries(false);
-    
+
     // 更新最后使用时间
-    const updated = savedQueries.map(q => 
-      q.id === savedQuery.id 
+    const updated = savedQueries.map(q =>
+      q.id === savedQuery.id
         ? { ...q, lastUsed: new Date().toISOString() }
         : q
     );
     setSavedQueries(updated);
     saveQueriesToStorage(updated);
-    
+
     // 执行搜索
     onSearch(savedQuery.query, savedQuery.filters);
   };
@@ -137,7 +156,7 @@ export function AdvancedSearch({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [query, filters]);
+  }, [handleSearch]);
 
   // 格式化时间
   const formatTime = (isoString: string) => {
@@ -145,7 +164,7 @@ export function AdvancedSearch({
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
+
     if (days === 0) return '今天';
     if (days === 1) return '昨天';
     if (days < 7) return `${days}天前`;
@@ -166,35 +185,35 @@ export function AdvancedSearch({
           placeholder={placeholder}
           className="w-full pl-10 pr-20 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 transition-colors"
         />
-        
+
         {/* 操作按钮 */}
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
           {/* 筛选按钮 */}
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`p-1 rounded transition-colors ${
-              showFilters 
-                ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' 
+              showFilters
+                ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20'
                 : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
             }`}
             title="高级筛选"
           >
             <Filter className="h-4 w-4" />
           </button>
-          
+
           {/* 保存的查询按钮 */}
           <button
             onClick={() => setShowSavedQueries(!showSavedQueries)}
             className={`p-1 rounded transition-colors ${
-              showSavedQueries 
-                ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' 
+              showSavedQueries
+                ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20'
                 : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
             }`}
             title="保存的查询"
           >
             <Clock className="h-4 w-4" />
           </button>
-          
+
           {/* 保存查询按钮 */}
           {query.trim() && (
             <button

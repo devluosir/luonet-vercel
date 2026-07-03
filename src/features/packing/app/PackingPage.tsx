@@ -9,7 +9,7 @@ import { useAppUser } from '@/hooks/useAppUser';
 import { PackingForm } from '../components/PackingForm';
 import { usePackingData } from '../hooks/usePackingData';
 import { usePackingActions } from '../hooks/usePackingActions';
-import type { PackingData } from '../types';
+import type { PackingData, PackingHistory } from '../types';
 
 // 动态导入PDFPreviewModal
 const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { ssr: false });
@@ -18,7 +18,7 @@ export default function PackingPage() {
   const pathname = usePathname();
   const { user, handleLogout } = useAppUser();
   const [showPreview, setShowPreview] = useState(false);
-  const [previewItem, setPreviewItem] = useState<any>(null);
+  const [previewItem, setPreviewItem] = useState<PackingHistory | null>(null);
 
   // 使用自定义Hooks
   const {
@@ -69,7 +69,7 @@ export default function PackingPage() {
           documentType: data.documentType,
           data: data
         };
-        
+
         setPreviewItem(previewData);
         setShowPreview(true);
       }
@@ -139,7 +139,7 @@ export default function PackingPage() {
         onPreview={handlePreviewClick}
         onExportExcel={handleExportExcel}
       />
-      
+
       {/* PDF预览弹窗 */}
       <PDFPreviewModal
         isOpen={showPreview}

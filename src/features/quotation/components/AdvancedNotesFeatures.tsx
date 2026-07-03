@@ -1,27 +1,6 @@
 'use client';
-
 import React, { useState, useCallback, useMemo, useEffect, useRef, memo } from 'react';
-import { 
-  Search, 
-  Filter, 
-  Copy, 
-  Download, 
-  Upload, 
-  Wand2,
-  RefreshCw,
-  Layers,
-  Eye,
-  EyeOff,
-  ChevronDown,
-  Check,
-  X,
-  Zap,
-  Sparkles,
-  Brain,
-  History,
-  Bookmark,
-  Share,
-} from 'lucide-react';
+import { Search, Filter, Download, Upload, RefreshCw, Eye, EyeOff, ChevronDown, X, Zap, Sparkles, Brain, Bookmark } from 'lucide-react';
 import type { NoteConfig } from '../types/notes';
 
 // 🚀 智能模板建议
@@ -73,11 +52,40 @@ const SMART_TEMPLATES: TemplatePattern[] = [
 interface BatchOperation {
   id: string;
   name: string;
-  icon: React.ComponentType<any>;
+  icon: React.ElementType<{ className?: string }>;
   description: string;
   action: (notes: NoteConfig[]) => NoteConfig[];
   shortcut?: string;
 }
+
+type FilterType = 'all' | 'visible' | 'hidden' | 'custom';
+
+interface SmartSuggestionItem {
+  text: string;
+  confidence: number;
+  reasoning: string;
+}
+
+interface SmartSuggestion {
+  noteId: string;
+  originalText: string;
+  suggestions: SmartSuggestionItem[];
+}
+
+const FILTER_TYPES: FilterType[] = ['all', 'visible', 'hidden', 'custom'];
+
+const isFilterType = (value: string): value is FilterType => FILTER_TYPES.includes(value as FilterType);
+
+const isNoteConfig = (value: unknown): value is NoteConfig => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.id === 'string' &&
+    typeof record.visible === 'boolean' &&
+    typeof record.order === 'number' &&
+    (record.content === undefined || typeof record.content === 'string')
+  );
+};
 
 // 🚀 快捷键管理
 const useKeyboardShortcuts = (onAction: (actionId: string) => void) => {
@@ -126,32 +134,32 @@ const useKeyboardShortcuts = (onAction: (actionId: string) => void) => {
 // 🚀 智能建议引擎
 class SmartSuggestionEngine {
   private patterns = SMART_TEMPLATES;
-  
+
   analyzeText(text: string): Array<{ template: TemplatePattern; matches: RegExpMatchArray }> {
     return this.patterns
       .map(template => ({
         template,
         matches: text.match(template.pattern),
       }))
-      .filter((result): result is { template: TemplatePattern; matches: RegExpMatchArray } => 
+      .filter((result): result is { template: TemplatePattern; matches: RegExpMatchArray } =>
         result.matches !== null
       )
       .sort((a, b) => b.template.confidence - a.template.confidence);
   }
-  
+
   generateSuggestion(text: string, template: TemplatePattern, matches: RegExpMatchArray): string {
     let suggestion = template.suggestion;
-    
+
     // 替换占位符
     if (matches[1]) suggestion = suggestion.replace('{matched}', matches[1]);
     if (matches[1]) suggestion = suggestion.replace('{first}', matches[1]);
     if (matches[2]) suggestion = suggestion.replace('{second}', matches[2]);
     if (matches[1]) suggestion = suggestion.replace('{number}', matches[1]);
     if (matches[0]) suggestion = suggestion.replace('{matched}', matches[0]);
-    
+
     return suggestion;
   }
-  
+
   getRecommendations(notes: NoteConfig[]): Array<{
     noteId: string;
     originalText: string;
@@ -170,7 +178,7 @@ class SmartSuggestionEngine {
           confidence: template.confidence,
           reasoning: template.description,
         }));
-        
+
         return {
           noteId: note.id,
           originalText: note.content!,
@@ -184,7 +192,7 @@ class SmartSuggestionEngine {
 interface AdvancedNotesFeaturesProps {
   notes: NoteConfig[];
   onUpdateNotes: (notes: NoteConfig[]) => void;
-  onBatchUpdate: (operation: string, data?: any) => void;
+  onBatchUpdate: (operation: string, data?: unknown) => void;
 }
 
 export const AdvancedNotesFeatures = memo<AdvancedNotesFeaturesProps>(({
@@ -194,11 +202,11 @@ export const AdvancedNotesFeatures = memo<AdvancedNotesFeaturesProps>(({
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'visible' | 'hidden' | 'custom'>('all');
-  const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
-  const [smartSuggestions, setSmartSuggestions] = useState<any[]>([]);
+  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [_selectedNotes, _setSelectedNotes] = useState<Set<string>>(new Set());
+  const [smartSuggestions, setSmartSuggestions] = useState<SmartSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  
+
   const suggestionEngine = useRef(new SmartSuggestionEngine());
 
   // 🚀 批量操作定义
@@ -309,7 +317,7 @@ export const AdvancedNotesFeatures = memo<AdvancedNotesFeaturesProps>(({
     // 按搜索词过滤
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(note => 
+      filtered = filtered.filter(note =>
         note.content?.toLowerCase().includes(term) ||
         note.id.toLowerCase().includes(term)
       );
@@ -337,7 +345,7 @@ export const AdvancedNotesFeatures = memo<AdvancedNotesFeaturesProps>(({
         content: note.content,
       })),
     };
-    
+
     const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -355,9 +363,9 @@ export const AdvancedNotesFeatures = memo<AdvancedNotesFeaturesProps>(({
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const config = JSON.parse(e.target?.result as string);
-        if (config.notes && Array.isArray(config.notes)) {
-          onUpdateNotes(config.notes);
+        const config = JSON.parse(e.target?.result as string) as { notes?: unknown };
+        if (Array.isArray(config.notes)) {
+          onUpdateNotes(config.notes.filter(isNoteConfig));
         }
       } catch (error) {
         console.error('Failed to import notes config:', error);
@@ -423,7 +431,11 @@ export const AdvancedNotesFeatures = memo<AdvancedNotesFeaturesProps>(({
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <select
                 value={filterType}
-                onChange={(e) => setFilterType(e.target.value as any)}
+                onChange={(e) => {
+                  if (isFilterType(e.target.value)) {
+                    setFilterType(e.target.value);
+                  }
+                }}
                 className="w-full pl-10 pr-8 py-2 text-sm border border-gray-200 dark:border-[#3A3A3C] rounded-lg
                   bg-white dark:bg-[#1C1C1E] text-gray-700 dark:text-[#F5F5F7]
                   focus:outline-none focus:ring-2 focus:ring-[#007AFF] dark:focus:ring-[#0A84FF]"
@@ -475,7 +487,7 @@ export const AdvancedNotesFeatures = memo<AdvancedNotesFeaturesProps>(({
                 <Download className="w-3 h-3" />
                 导出配置
               </button>
-              
+
               <label className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium cursor-pointer
                 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300
                 hover:bg-green-200 dark:hover:bg-green-900/30 transition-colors">
@@ -540,7 +552,7 @@ AdvancedNotesFeatures.displayName = 'AdvancedNotesFeatures';
 
 // 🚀 智能建议面板组件
 interface SmartSuggestionsPanelProps {
-  suggestions: any[];
+  suggestions: SmartSuggestion[];
   onApplySuggestion: (noteId: string, newContent: string) => void;
   onClose: () => void;
 }
@@ -564,14 +576,14 @@ const SmartSuggestionsPanel = memo<SmartSuggestionsPanelProps>(({
         <X className="w-4 h-4 text-green-600 dark:text-green-400" />
       </button>
     </div>
-    
+
     <div className="space-y-3">
       {suggestions.map((suggestion, index) => (
         <div key={index} className="bg-white dark:bg-[#1C1C1E] rounded-lg p-3 border border-green-100 dark:border-green-800">
           <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
             原文本: {suggestion.originalText}
           </div>
-          {suggestion.suggestions.map((item: any, itemIndex: number) => (
+          {suggestion.suggestions.map((item, itemIndex) => (
             <div key={itemIndex} className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-900/10 rounded border border-green-100 dark:border-green-800">
               <div className="flex-1">
                 <div className="text-sm text-gray-800 dark:text-[#F5F5F7]">{item.text}</div>

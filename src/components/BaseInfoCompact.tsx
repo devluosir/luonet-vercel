@@ -44,14 +44,14 @@ interface BaseInfoCompactProps {
   compact?: boolean;
 }
 
-export default function BaseInfoCompact({ 
-  value, 
-  onChange, 
-  config, 
+export default function BaseInfoCompact({
+  value,
+  onChange,
+  config,
   className = '',
-  compact = true 
+  compact = true
 }: BaseInfoCompactProps) {
-  const set = (key: keyof BaseInfoCompactValue) => 
+  const set = (key: keyof BaseInfoCompactValue) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       onChange({ ...value, [key]: e.target.value });
     };
@@ -167,7 +167,6 @@ export default function BaseInfoCompact({
               label={labels.customer!}
               value={value.customer || ''}
               onChange={(newValue) => onChange({ ...value, customer: newValue })}
-              placeholder={''}
             />
           </div>
         )}
@@ -400,16 +399,14 @@ export default function BaseInfoCompact({
 }
 
 // 客户选择字段组件
-function CustomerField({ 
-  label, 
-  value, 
-  onChange, 
-  placeholder 
-}: { 
-  label: string; 
-  value: string; 
-  onChange: (value: string) => void; 
-  placeholder: string; 
+function CustomerField({
+  label,
+  value,
+  onChange
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [savedCustomers, setSavedCustomers] = useState<Array<{name: string; to: string}>>([]);

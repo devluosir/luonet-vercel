@@ -1,12 +1,10 @@
 'use client';
-
 import React, { useState, useCallback, useMemo, memo, useEffect } from 'react';
-import { Settings, Plus, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { useQuotationStore } from '../state/useQuotationStore';
 import { OptimizedNotesSection } from './OptimizedNotesSection';
 import { MobileOptimizedNotes } from './MobileOptimizedNotes';
 import { AdvancedNotesFeatures } from './AdvancedNotesFeatures';
-import { PerformantDragDrop } from './PerformantDragDrop';
 import { useNotesSelectors, useOptimizedNotesActions } from '../state/optimized-selectors';
 import type { NoteConfig } from '../types/notes';
 
@@ -52,21 +50,21 @@ export const UltimatePowerNotesSection: React.FC<UltimatePowerNotesSectionProps>
   data,
   onChange,
 }) => {
-  const { 
-    notesConfig, 
-    updateNoteVisibility, 
-    updateNoteOrder, 
-    updateNoteContent, 
-    addNote, 
+  const {
+    notesConfig,
+    updateNoteVisibility,
+    updateNoteOrder,
+    updateNoteContent,
+    addNote,
     removeNote,
     setNotesConfig,
   } = useQuotationStore();
-  
+
   const notesActions = useOptimizedNotesActions();
   const { isMobile, isTablet, isTouch } = useDeviceDetection();
-  
+
   const [viewMode, setViewMode] = useState<'auto' | 'desktop' | 'mobile' | 'advanced'>('auto');
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [_showAdvanced, _setShowAdvanced] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -76,14 +74,14 @@ export const UltimatePowerNotesSection: React.FC<UltimatePowerNotesSectionProps>
   // 🚀 自动选择最佳视图模式
   const effectiveViewMode = useMemo(() => {
     if (viewMode !== 'auto') return viewMode;
-    
+
     if (isMobile) return 'mobile';
     if (isTablet && isTouch) return 'mobile';
     return 'desktop';
   }, [viewMode, isMobile, isTablet, isTouch]);
 
   // 🚀 缓存可见Notes
-  const visibleNotes = useMemo(() => {
+  const _visibleNotes = useMemo(() => {
     return notesConfig
       .filter(note => note.visible)
       .sort((a, b) => a.order - b.order);
@@ -94,7 +92,7 @@ export const UltimatePowerNotesSection: React.FC<UltimatePowerNotesSectionProps>
     setNotesConfig(notes);
   }, [setNotesConfig]);
 
-  const handleBatchUpdate = useCallback((operation: string, data?: any) => {
+  const handleBatchUpdate = useCallback((operation: string, _data?: unknown) => {
     switch (operation) {
       case 'add_note':
         addNote();
@@ -144,7 +142,7 @@ export const UltimatePowerNotesSection: React.FC<UltimatePowerNotesSectionProps>
             {...commonProps}
           />
         );
-        
+
       case 'advanced':
         return (
           <div className="space-y-4">
@@ -153,18 +151,18 @@ export const UltimatePowerNotesSection: React.FC<UltimatePowerNotesSectionProps>
               onUpdateNotes={handleUpdateNotes}
               onBatchUpdate={handleBatchUpdate}
             />
-            <OptimizedNotesSection 
-              data={data} 
-              onChange={onChange || (() => {})} 
+            <OptimizedNotesSection
+              data={data}
+              onChange={onChange || (() => {})}
             />
           </div>
         );
-        
+
       case 'desktop':
       default:
-        return <OptimizedNotesSection 
-          data={data} 
-          onChange={onChange || (() => {})} 
+        return <OptimizedNotesSection
+          data={data}
+          onChange={onChange || (() => {})}
         />;
     }
   }, [
@@ -178,6 +176,8 @@ export const UltimatePowerNotesSection: React.FC<UltimatePowerNotesSectionProps>
     handleApplyTemplate,
     handleUpdateNotes,
     handleBatchUpdate,
+    data,
+    onChange,
   ]);
 
   // 🚀 渲染模式切换器
@@ -254,7 +254,7 @@ export const UltimatePowerNotesSection: React.FC<UltimatePowerNotesSectionProps>
             Notes
           </h3>
         </div>
-        
+
         {renderModeSelector()}
       </div>
 
@@ -273,21 +273,21 @@ export const useUltimatePowerNotes = () => {
   const store = useQuotationStore();
   const selectors = useNotesSelectors();
   const actions = useOptimizedNotesActions();
-  
+
   return {
     // 状态
     notes: store.notesConfig,
     visibleNotes: selectors.selectors.visibleNotes(),
-    
+
     // 操作
     updateNote: store.updateNoteContent,
     addNote: store.addNote,
     removeNote: store.removeNote,
     reorderNotes: store.updateNoteOrder,
-    
+
     // 批量操作
     ...actions,
-    
+
     // 统计
     stats: {
       total: store.notesConfig.length,

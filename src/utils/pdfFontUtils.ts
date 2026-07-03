@@ -5,7 +5,7 @@ import jsPDF from 'jspdf';
  * 在所有 PDF 生成器中使用，避免 "Unable to look up font label" 错误
  */
 export function setCnFont(doc: jsPDF, style: 'normal'|'bold'|'italic'|'bolditalic' = 'normal') {
-  const s = (style || 'normal').toLowerCase() as any;
+  const s = (style || 'normal').toLowerCase() as 'normal'|'bold'|'italic'|'bolditalic';
   try {
     doc.setFont('NotoSansSC', s);
   } catch (e) {

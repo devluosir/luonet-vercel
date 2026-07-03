@@ -9,8 +9,8 @@ export interface PdfOptions {
 }
 
 export const PdfService = {
-  generate: async (draft: any, opts: PdfOptions = {}) => {
+  generate: async (draft: unknown, opts: PdfOptions = {}) => {
     // 这里可挂接统一的安全字体注册/水印/印章资源注入（若已在旧工具里做了可直通）
-    return generatePurchaseOrderPDF(draft, opts.open || false);
+    return generatePurchaseOrderPDF(draft as Parameters<typeof generatePurchaseOrderPDF>[0], opts.open || false);
   }
 };

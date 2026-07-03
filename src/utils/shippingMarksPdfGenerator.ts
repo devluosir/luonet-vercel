@@ -27,7 +27,7 @@ export async function generateShippingMarksPDF(
     format: 'a4',
     putOnlyUsedFonts: true,
     floatPrecision: 16
-  }) as ExtendedJsPDF;
+  }) as unknown as ExtendedJsPDF;
 
   try {
     // 添加中文字体
@@ -48,12 +48,12 @@ export async function generateShippingMarksPDF(
 
     // 设置字号
     doc.setFontSize(fontSize);
-    
+
     // 处理文本内容，支持换行
     const maxWidth = pageWidth - (margin * 2);
     const lines = shippingMarks.split('\n');
     const lineHeight = fontSize * 0.5 + 2; // 调整行高计算，增加基础间距
-    
+
     for (const line of lines) {
       if (line.trim()) {
         // 如果行太长，自动换行
@@ -80,4 +80,4 @@ export async function generateShippingMarksPDF(
     console.error('Error generating shipping marks PDF:', error);
     throw error;
   }
-} 
+}

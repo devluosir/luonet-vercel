@@ -10,6 +10,15 @@ const STORAGE_KEYS = {
   purchase: 'purchase_history'
 };
 
+const isQuotaExceededError = (error: unknown): boolean => (
+  error instanceof DOMException &&
+  (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')
+);
+
+const getErrorMessage = (error: unknown): string => (
+  error instanceof Error ? error.message : String(error)
+);
+
 /**
  * 检查localStorage使用情况
  */
@@ -50,16 +59,16 @@ export function smartCleanup(): { cleaned: number; freed: number } {
     // 2. 草稿数据
     (key: string) => key.includes('draft') || key.includes('v2'),
     // 3. 其他非关键数据
-    (key: string) => !Object.values(STORAGE_KEYS).includes(key) && 
-                     !key.includes('quotation') && 
-                     !key.includes('invoice') && 
-                     !key.includes('packing') && 
+    (key: string) => !Object.values(STORAGE_KEYS).includes(key) &&
+                     !key.includes('quotation') &&
+                     !key.includes('invoice') &&
+                     !key.includes('packing') &&
                      !key.includes('purchase')
   ];
 
   for (const predicate of cleanupPriority) {
     const keysToClean = Object.keys(localStorage).filter(predicate);
-    
+
     for (const key of keysToClean) {
       try {
         const size = localStorage[key].length;
@@ -80,8 +89,8 @@ export function smartCleanup(): { cleaned: number; freed: number } {
  * 安全保存数据到localStorage
  */
 export function safeSaveToStorage(
-  key: string, 
-  data: any, 
+  key: string,
+  data: unknown,
   maxRetries: number = 3
 ): { success: boolean; message: string; trimmed?: boolean } {
   if (typeof window === 'undefined') {
@@ -89,15 +98,15 @@ export function safeSaveToStorage(
   }
 
   const serialized = JSON.stringify(data);
-  
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       localStorage.setItem(key, serialized);
       return { success: true, message: '保存成功' };
-    } catch (error: any) {
-      if (error?.name === 'QuotaExceededError' || error?.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+    } catch (error: unknown) {
+      if (isQuotaExceededError(error)) {
         console.warn(`存储配额超限，尝试 ${attempt + 1}/${maxRetries}...`);
-        
+
         if (attempt === 0) {
           // 第一次尝试：智能清理
           smartCleanup();
@@ -113,7 +122,7 @@ export function safeSaveToStorage(
           return compressAndSave(key, data);
         }
       } else {
-        return { success: false, message: `保存失败: ${error.message}` };
+        return { success: false, message: `保存失败: ${getErrorMessage(error)}` };
       }
     }
   }
@@ -124,7 +133,7 @@ export function safeSaveToStorage(
 /**
  * 压缩数据并保存
  */
-function compressAndSave(key: string, data: any): { success: boolean; message: string; trimmed: boolean } {
+function compressAndSave(key: string, data: unknown): { success: boolean; message: string; trimmed: boolean } {
   try {
     // 如果是数组，尝试保留更多记录
     if (Array.isArray(data)) {
@@ -145,7 +154,7 @@ function compressAndSave(key: string, data: any): { success: boolean; message: s
         }
       }
     }
-    
+
     return { success: false, message: '数据太大，无法保存', trimmed: false };
   } catch (error) {
     return { success: false, message: `压缩保存失败: ${error}`, trimmed: false };
@@ -167,7 +176,7 @@ export function getStorageStats(): { [key: string]: { size: number; count: numbe
       const size = localStorage[key].length;
       const data = JSON.parse(localStorage[key] || '[]');
       const count = Array.isArray(data) ? data.length : 1;
-      
+
       stats[key] = { size, count };
     }
   }
@@ -181,13 +190,13 @@ export function getStorageStats(): { [key: string]: { size: number; count: numbe
 export function monitorStorageUsage(): void {
   if (typeof window === 'undefined') return;
 
-  const { used, available, percentage } = checkStorageUsage();
-  
+  const { used: _used, available: _available, percentage } = checkStorageUsage();
+
   if (percentage > 80) {
     console.warn(`⚠️ localStorage使用率过高: ${percentage.toFixed(2)}%`);
     console.log('建议清理浏览器数据或减少保存的记录数量');
   }
-  
+
   if (percentage > 95) {
     console.error(`🚨 localStorage使用率严重过高: ${percentage.toFixed(2)}%`);
     console.log('自动执行清理...');

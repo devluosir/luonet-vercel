@@ -1,5 +1,5 @@
 import 'jspdf-autotable';
-import { UserOptions, RowInput, Styles } from 'jspdf-autotable';
+import { UserOptions, RowInput, Styles, CellInput } from 'jspdf-autotable';
 
 // 扩展Styles类型以支持maxCellWidth
 interface ExtendedStyles extends Partial<Styles> {
@@ -7,8 +7,6 @@ interface ExtendedStyles extends Partial<Styles> {
 }
 import { QuotationData, LineItem } from '@/types/quotation';
 import jsPDF from 'jspdf';
-import { safeSetFont, getFontName } from './pdf/ensureFont';
-
 // 扩展jsPDF类型
 interface ExtendedJsPDF extends jsPDF {
   lastAutoTable: {
@@ -28,17 +26,17 @@ interface MergedCellInfo {
 
 // 计算合并单元格信息（与 ItemsTable 中的逻辑保持一致）
 const calculateMergedCells = (
-  items: LineItem[], 
-  mode: 'auto' | 'manual' = 'auto', 
+  items: LineItem[],
+  mode: 'auto' | 'manual' = 'auto',
   column: 'remarks' | 'description' = 'remarks',
   manualMergedCells?: MergedCellInfo[]
 ): MergedCellInfo[] => {
   const mergedCells: MergedCellInfo[] = [];
-  
+
   if (items.length === 0) {
     return mergedCells;
   }
-  
+
   if (mode === 'manual') {
     // 手动模式：先创建所有独立单元格
     items.forEach((item, index) => {
@@ -49,7 +47,7 @@ const calculateMergedCells = (
         isMerged: false
       });
     });
-    
+
     // 如果有手动合并数据，应用合并
     if (manualMergedCells && manualMergedCells.length > 0) {
       // 移除被合并的独立单元格
@@ -64,10 +62,10 @@ const calculateMergedCells = (
         mergedCells.push(manualCell);
       });
     }
-    
+
     return mergedCells;
   }
-  
+
   // 自动模式：相同内容的相邻行自动合并
   let currentStart = 0;
   let currentContent = column === 'remarks' ? (items[0]?.remarks || '') : (items[0]?.description || '');
@@ -75,12 +73,12 @@ const calculateMergedCells = (
   for (let i = 1; i <= items.length; i++) {
     const currentItem = items[i];
     const prevItem = items[i - 1];
-    
+
     const prevContent = column === 'remarks' ? (prevItem.remarks || '') : (prevItem.description || '');
     const currentContentValue = currentItem ? (column === 'remarks' ? (currentItem.remarks || '') : (currentItem.description || '')) : '';
-    
+
     // 修复合并逻辑：只有相同且非空的内容才合并，空行不合并
-    const shouldEndMerge = !currentItem || 
+    const shouldEndMerge = !currentItem ||
                           (currentContentValue !== prevContent) ||
                           (prevContent === '' && currentContentValue === ''); // 空行不合并
 
@@ -133,7 +131,7 @@ const getUnitDisplay = (baseUnit: string, quantity: number, customUnits: string[
   const singularUnit = baseUnit.replace(/s$/, '');
   // 检查是否是自定义单位
   const isCustomUnit = customUnits.includes(baseUnit) || customUnits.includes(singularUnit);
-  
+
   if (defaultUnits.includes(singularUnit) && !isCustomUnit) {
     return quantity > 1 ? `${singularUnit}s` : singularUnit;
   }
@@ -152,7 +150,7 @@ const calculateColumnWidths = (
   const left = margin;
   const right = margin;
   const usable = pageWidth_mm - left - right;
-  
+
   // 定义基础权重配置 - 调整以确保某些列不会换行
   const baseWeights = {
     no: 5,           // 序号列 - 增加权重确保"No."不换行
@@ -187,60 +185,60 @@ const calculateColumnWidths = (
 
   // 返回列宽度配置，添加容错机制
   return {
-    '0': { 
-      halign: 'center' as const, 
+    '0': {
+      halign: 'center' as const,
       cellWidth: weights.no * unitWidth,
       minCellWidth: 8, // 增加最小宽度确保"No."不换行
       maxCellWidth: 12, // 添加最大宽度限制
       cellPadding: { left: 1, right: 1, top: 2, bottom: 2 }
     },
-    '1': { 
-      halign: 'center' as const, 
+    '1': {
+      halign: 'center' as const,
       cellWidth: weights.partName * unitWidth,
       minCellWidth: 40, // 品名列最小宽度
       maxCellWidth: 80, // 品名列最大宽度，防止过长
       cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
     },
     ...(showDescription ? {
-      '2': { 
-        halign: 'center' as const, 
+      '2': {
+        halign: 'center' as const,
         cellWidth: weights.description * unitWidth,
         minCellWidth: 50, // 描述列最小宽度
         maxCellWidth: 100, // 描述列最大宽度
         cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
       }
     } : {}),
-    [showDescription ? '3' : '2']: { 
-      halign: 'center' as const, 
+    [showDescription ? '3' : '2']: {
+      halign: 'center' as const,
       cellWidth: weights.qty * unitWidth,
       minCellWidth: 12, // 增加最小宽度确保"Q'TY"不换行
       maxCellWidth: 20, // 数量列最大宽度
       cellPadding: { left: 1, right: 1, top: 2, bottom: 2 }
     },
-    [showDescription ? '4' : '3']: { 
-      halign: 'center' as const, 
+    [showDescription ? '4' : '3']: {
+      halign: 'center' as const,
       cellWidth: weights.unit * unitWidth,
       minCellWidth: 12, // 确保单位列最小宽度
       maxCellWidth: 18, // 单位列最大宽度
       cellPadding: { left: 1, right: 1, top: 2, bottom: 2 }
     },
-    [showDescription ? '5' : '4']: { 
-      halign: 'center' as const, 
+    [showDescription ? '5' : '4']: {
+      halign: 'center' as const,
       cellWidth: weights.price * unitWidth,
       minCellWidth: 12, // 确保价格列最小宽度
       maxCellWidth: 25, // 价格列最大宽度
       cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
     },
-    [showDescription ? '6' : '5']: { 
-      halign: 'center' as const, 
+    [showDescription ? '6' : '5']: {
+      halign: 'center' as const,
       cellWidth: weights.amount * unitWidth,
       minCellWidth: 18, // 确保金额列最小宽度
       maxCellWidth: 30, // 金额列最大宽度
       cellPadding: { left: 2, right: 2, top: 2, bottom: 2 }
     },
     ...(showRemarks ? {
-      [showDescription ? '7' : '6']: { 
-        halign: 'center' as const, 
+      [showDescription ? '7' : '6']: {
+        halign: 'center' as const,
         cellWidth: weights.remarks * unitWidth,
         minCellWidth: 30, // 备注列最小宽度
         maxCellWidth: 60, // 备注列最大宽度
@@ -257,7 +255,7 @@ export const generateTableConfig = (
   currentY: number,
   margin: number,
   pageWidth: number,
-  mode: 'preview' | 'export' = 'export',
+  _mode: 'preview' | 'export' = 'export',
   visibleCols?: string[], // 新增可选参数：从页面列偏好读取
   descriptionMergeMode: 'auto' | 'manual' = 'auto', // Description列合并模式
   remarksMergeMode: 'auto' | 'manual' = 'auto', // Remarks列合并模式
@@ -277,13 +275,13 @@ export const generateTableConfig = (
   const adjustedMargin = margin - tableMarginReduction;
   const left = adjustedMargin;
   const right = adjustedMargin;
-  const usable = pageWidth_mm - left - right;
-  
+  const _usable = pageWidth_mm - left - right;
+
   // 确定显示的列（优先使用页面偏好，回退到数据字段）
-  const showDescription = visibleCols 
+  const showDescription = visibleCols
     ? visibleCols.includes('description')
     : (data.showDescription ?? true);
-  const showRemarks = visibleCols 
+  const showRemarks = visibleCols
     ? visibleCols.includes('remarks')
     : (data.showRemarks ?? false);
 
@@ -297,14 +295,14 @@ export const generateTableConfig = (
 
   // 计算合并单元格信息
   const mergedRemarksCells = calculateMergedCells(
-    data.items || [], 
-    remarksMergeMode, 
+    data.items || [],
+    remarksMergeMode,
     'remarks',
     manualMergedCells?.remarks
   );
   const mergedDescriptionCells = calculateMergedCells(
-    data.items || [], 
-    descriptionMergeMode, 
+    data.items || [],
+    descriptionMergeMode,
     'description',
     manualMergedCells?.description
   );
@@ -317,13 +315,13 @@ export const generateTableConfig = (
   }
 
   // 检查指定行是否应该渲染 description 单元格
-  const shouldRenderDescriptionCell = (rowIndex: number, mergedCells: MergedCellInfo[]): boolean => {
+  const _shouldRenderDescriptionCell = (_rowIndex: number, _mergedCells: MergedCellInfo[]): boolean => {
     // Description列取消合并单元格功能，始终显示所有单元格
     return true;
   };
 
   // 获取指定行的 description 合并信息
-  const getMergedDescriptionCellInfo = (rowIndex: number, mergedCells: MergedCellInfo[]): MergedCellInfo | null => {
+  const _getMergedDescriptionCellInfo = (_rowIndex: number, _mergedCells: MergedCellInfo[]): MergedCellInfo | null => {
     // Description列取消合并单元格功能，始终返回null
     return null;
   };
@@ -335,7 +333,7 @@ export const generateTableConfig = (
     body: [
       // 常规商品行（支持合并单元格）
       ...(data.items || []).map((item, index) => {
-        const row: any[] = [
+        const row: CellInput[] = [
           {
             content: (index + 1).toString(),
             styles: { halign: 'center' as const }
@@ -346,28 +344,28 @@ export const generateTableConfig = (
           },
           {
             content: item.quantity.toString(),
-            styles: { 
+            styles: {
               halign: 'center' as const,
               ...(item.highlight?.quantity ? { textColor: [255, 0, 0] } : {})
             }
           },
           {
             content: getUnitDisplay(item.unit || 'pc', item.quantity || 0, data.customUnits || []),
-            styles: { 
+            styles: {
               halign: 'center' as const,
               ...(item.highlight?.unit ? { textColor: [255, 0, 0] } : {})
             }
           },
           {
             content: item.unitPrice.toFixed(2),
-            styles: { 
+            styles: {
               halign: 'center' as const,
               ...(item.highlight?.unitPrice ? { textColor: [255, 0, 0] } : {})
             }
           },
           {
             content: item.amount.toFixed(2),
-            styles: { 
+            styles: {
               halign: 'center' as const,
               ...(item.highlight?.amount ? { textColor: [255, 0, 0] } : {})
             }
@@ -391,7 +389,7 @@ export const generateTableConfig = (
           const mergedInfo = getMergedCellInfo(index, mergedRemarksCells);
           const rowSpan = mergedInfo ? mergedInfo.endRow - mergedInfo.startRow + 1 : 1;
           const isMerged = mergedInfo?.isMerged || false;
-          
+
           row.push({
             content: mergedInfo?.content || '',
             rowSpan: isMerged ? rowSpan : undefined,
@@ -399,7 +397,7 @@ export const generateTableConfig = (
               halign: 'center' as const,
               ...(item.highlight?.remarks ? { textColor: [255, 0, 0] } : {}),
               // 移除合并单元格的特殊样式，保持与普通单元格完全一致
-              // ...(isMerged ? { 
+              // ...(isMerged ? {
               //   fillColor: [240, 248, 255], // 浅蓝色背景
               //   // 移除蓝色边框，保持与普通单元格一致的黑色边框
               //   // lineColor: [59, 130, 246],  // 蓝色边框
@@ -415,7 +413,7 @@ export const generateTableConfig = (
       }),
       // Other Fees 行
       ...(data.otherFees || []).map((fee, index) => {
-        const row: any[] = [
+        const row: CellInput[] = [
           {
             content: ((data.items?.length || 0) + index + 1).toString(), // 连续主表序号
             styles: { halign: 'center' as const }
@@ -423,7 +421,7 @@ export const generateTableConfig = (
           {
             content: fee.description,
             colSpan: showDescription ? 5 : 4, // 合并Part Name到U/Price列（不包括Amount列）
-            styles: { 
+            styles: {
               halign: 'center' as const,
               ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {})
             }
@@ -485,27 +483,27 @@ export const generateTableConfig = (
       if (fontName === 'NotoSansSC') {
         data.doc.setFont('NotoSansSC', 'normal');
       }
-      
+
       const pageHeight = data.doc.internal.pageSize.height;
       const bottomMargin = 25;
-      
-      if (data.row.index > 0 && 
-          data.cursor && 
+
+      if (data.row.index > 0 &&
+          data.cursor &&
           (data.cell.y + data.cell.height) > (pageHeight - bottomMargin)) {
         data.cursor.y = 0;
       }
-      
+
       // 对异常长词（无空格）做软断（中文一般没问题）
       if (data.cell.raw && typeof data.cell.raw === 'string') {
         data.cell.text = [data.cell.raw.replace(/(\S{24})/g, '$1\u200b')];
       }
     },
-    didDrawPage: (data) => {
+    didDrawPage: (_data) => {
       // 确保每页都使用正确的字体
       if (fontName === 'NotoSansSC') {
         doc.setFont('NotoSansSC', 'normal');
       }
-      
+
       // 清除页面底部区域，但不添加页码
       // 页码将在所有内容绘制完成后统一添加
       const pageHeight = doc.internal.pageSize.height;
@@ -516,7 +514,7 @@ export const generateTableConfig = (
       // 确保绘制所有单元格的边框
       const cell = data.cell;
       const doc = data.doc;
-      
+
       // 绘制单元格的所有边框
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.1);
@@ -533,18 +531,21 @@ export const generateTableConfig = (
  * 自动将任何顶层的overflow选项移动到styles中，避免deprecated警告
  */
 type AutoTableOptions = UserOptions;
+type AutoTableOptionsWithOverflow = AutoTableOptions & {
+  overflow?: Styles['overflow'];
+};
 
 export function normalizeAutoTableOptions(opts: AutoTableOptions): AutoTableOptions {
-  const { overflow, styles, headStyles, bodyStyles, ...rest } = opts as any;
-  
+  const { overflow, styles, headStyles, bodyStyles, ...rest } = opts as AutoTableOptionsWithOverflow;
+
   if (overflow && typeof overflow === 'string') {
     console.warn('[AutoTable] 检测到顶层overflow配置，自动移动到styles中以避免deprecated警告');
-    
+
     // 将overflow移动到各个样式配置中
     const normalizedStyles = { ...(styles || {}), overflow };
     const normalizedHeadStyles = { ...(headStyles || {}), overflow };
     const normalizedBodyStyles = { ...(bodyStyles || {}), overflow };
-    
+
     return {
       ...rest,
       styles: normalizedStyles,
@@ -552,7 +553,7 @@ export function normalizeAutoTableOptions(opts: AutoTableOptions): AutoTableOpti
       bodyStyles: normalizedBodyStyles
     };
   }
-  
+
   return opts;
 }
 
@@ -560,7 +561,7 @@ export function normalizeAutoTableOptions(opts: AutoTableOptions): AutoTableOpti
  * 安全的AutoTable调用包装函数
  * 使用此函数替代直接调用autoTable，确保配置符合最新标准
  */
-export function safeAutoTable(doc: any, options: AutoTableOptions): void {
+export function safeAutoTable(doc: ExtendedJsPDF, options: AutoTableOptions): void {
   const normalizedOptions = normalizeAutoTableOptions(options);
   doc.autoTable(normalizedOptions);
-} 
+}

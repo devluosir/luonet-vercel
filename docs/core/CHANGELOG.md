@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-07-04
+
+### Changed
+
+#### 代码质量 / Lint 清理
+- **全量 lint warning 清零**：分阶段清理 `no-unused-vars`、`no-explicit-any` 和 `react-hooks/exhaustive-deps`，从 616 条 warning 降为 0。
+- **类型安全增强**：将热点文件中的 `any` 替换为现有业务类型、局部结构类型或 `unknown` + 类型收窄；覆盖历史导入导出、PDF 表格生成、权限、Worker、报价/装箱/发票/采购模块等。
+- **Window / NextAuth 类型声明补齐**：补充装箱单、发票页面注入数据的 `Window` 全局声明，并补齐 session/user/token 的 `status` 类型。
+- **React Hooks 依赖处理**：对拖拽、弹窗定位、搜索快捷键等场景补齐稳定依赖；对一次性初始化和防循环同步场景保留局部 disable，并写明原因。
+- **PDF 插件类型边界修正**：统一 jsPDF + AutoTable 扩展对象的类型断言方式，避免生产 build 类型检查失败。
+
+### Tests
+- `npx tsc --noEmit`
+- `npx next lint`
+- `npm run build`
+
+---
+
 ## [Unreleased] - 2026-07-03
 
 ### Added

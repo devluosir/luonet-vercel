@@ -1,16 +1,32 @@
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 import { isQuotationUpgraded } from '@/utils/dashboardUtils';
 
+type DocumentRecord = {
+  type?: string;
+  id?: string;
+  createdAt?: string;
+  quotationNo?: string;
+  [key: string]: unknown;
+};
+
+const isDocumentRecord = (value: unknown): value is DocumentRecord => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
+const getHistoryRecords = (key: string): DocumentRecord[] => (
+  getLocalStorageJSON<unknown[]>(key, []).filter(isDocumentRecord)
+);
+
 // 统一的文档计数工具函数
-export const getAllDocuments = (): { type: string, id: string, createdAt: string, [key: string]: any }[] => {
+export const getAllDocuments = (): DocumentRecord[] => {
   if (typeof window === 'undefined') return [];
-  
+
   try {
     const data = [
-      ...getLocalStorageJSON('quotation_history', []),
-      ...getLocalStorageJSON('invoice_history', []),
-      ...getLocalStorageJSON('packing_history', []),
-      ...getLocalStorageJSON('purchase_history', [])
+      ...getHistoryRecords('quotation_history'),
+      ...getHistoryRecords('invoice_history'),
+      ...getHistoryRecords('packing_history'),
+      ...getHistoryRecords('purchase_history')
     ];
     return data;
   } catch (error) {
@@ -23,21 +39,21 @@ export const getAllDocuments = (): { type: string, id: string, createdAt: string
 export const getQuotationCount = (): number => {
   try {
     if (typeof window === 'undefined') return 0;
-    const quotationHistory = getLocalStorageJSON('quotation_history', []);
-    
+    const quotationHistory = getHistoryRecords('quotation_history');
+
     // 获取所有confirmation记录，用于过滤
-    const confirmationRecords = quotationHistory.filter((item: any) => 
+    const confirmationRecords = quotationHistory.filter((item) =>
       'type' in item && item.type === 'confirmation'
     );
-    
+
     // 只获取type为'quotation'且未升级的记录
-    return quotationHistory.filter((item: any) => {
+    return quotationHistory.filter((item) => {
       // 只保留type为'quotation'的记录
       if (!('type' in item) || item.type !== 'quotation') return false;
-      
+
       // 检查这个报价单是否已经升级为confirmation
       const isUpgraded = isQuotationUpgraded(item, confirmationRecords);
-      
+
       // 如果已升级，则不计入报价单数量
       return !isUpgraded;
     }).length;
@@ -50,9 +66,9 @@ export const getQuotationCount = (): number => {
 export const getConfirmationCount = (): number => {
   try {
     if (typeof window === 'undefined') return 0;
-    const quotationHistory = getLocalStorageJSON('quotation_history', []);
+    const quotationHistory = getHistoryRecords('quotation_history');
     // 只获取type为'confirmation'的记录
-    return quotationHistory.filter((item: any) => 
+    return quotationHistory.filter((item) =>
       'type' in item && item.type === 'confirmation'
     ).length;
   } catch (error) {
@@ -64,7 +80,7 @@ export const getConfirmationCount = (): number => {
 export const getInvoiceCount = (): number => {
   try {
     if (typeof window === 'undefined') return 0;
-    const invoiceHistory = getLocalStorageJSON('invoice_history', []);
+    const invoiceHistory = getHistoryRecords('invoice_history');
     return invoiceHistory.length;
   } catch (error) {
     console.error('获取发票数量失败:', error);
@@ -75,7 +91,7 @@ export const getInvoiceCount = (): number => {
 export const getPackingCount = (): number => {
   try {
     if (typeof window === 'undefined') return 0;
-    const packingHistory = getLocalStorageJSON('packing_history', []);
+    const packingHistory = getHistoryRecords('packing_history');
     return packingHistory.length;
   } catch (error) {
     console.error('获取装箱单数量失败:', error);
@@ -86,7 +102,7 @@ export const getPackingCount = (): number => {
 export const getPurchaseCount = (): number => {
   try {
     if (typeof window === 'undefined') return 0;
-    const purchaseHistory = getLocalStorageJSON('purchase_history', []);
+    const purchaseHistory = getHistoryRecords('purchase_history');
     return purchaseHistory.length;
   } catch (error) {
     console.error('获取采购订单数量失败:', error);
@@ -108,4 +124,4 @@ export const getAllDocumentCounts = () => {
 // 安全的本地存储访问工具
 export const getSafeLocalStorage = (key: string) => {
   return getLocalStorageJSON(key, []);
-}; 
+};

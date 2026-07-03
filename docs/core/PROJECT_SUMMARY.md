@@ -1,6 +1,6 @@
 # MLUONET 项目总结
 
-最后更新：2026-07-02
+最后更新：2026-07-04
 
 ## 项目定位
 
@@ -19,6 +19,14 @@ MLUONET / LC App 是 Luo & Company 内部业务管理系统，用于处理报价
 - Cloudflare Worker + D1
 - Vercel 部署
 - DeepSeek Chat API
+
+## 当前代码质量
+
+- 2026-07-04 已完成全量 lint warning 清理，`npx next lint` 为 0 warnings / 0 errors。
+- `npx tsc --noEmit` 通过。
+- `npm run build` 通过。
+- `no-explicit-any` 已清零；动态输入优先使用现有业务类型或 `unknown` + 类型收窄。
+- `react-hooks/exhaustive-deps` 已清零；保留的局部 disable 均有中文原因说明，用于一次性初始化或防循环同步。
 
 ## 核心模块
 

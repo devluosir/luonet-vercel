@@ -4,7 +4,7 @@ import { FormField } from '@/features/core';
 interface SettingsPanelProps {
   showBank: boolean;
   showStamp: boolean;
-  onUpdate: (patch: any) => void;
+  onUpdate: (patch: Partial<{ showBank: boolean; showStamp: boolean }>) => void;
   isReadOnly: boolean;
 }
 
@@ -12,7 +12,7 @@ export function SettingsPanel({ showBank, showStamp, onUpdate, isReadOnly }: Set
   return (
     <div className="space-y-4">
       <h4 className="text-md font-medium">显示设置</h4>
-      
+
       <div className="space-y-3">
         <FormField label="显示银行信息">
           <label className="flex items-center">
@@ -26,7 +26,7 @@ export function SettingsPanel({ showBank, showStamp, onUpdate, isReadOnly }: Set
             在文档中显示银行账户信息
           </label>
         </FormField>
-        
+
         <FormField label="显示印章">
           <label className="flex items-center">
             <input

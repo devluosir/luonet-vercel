@@ -11,7 +11,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [hasLoggedIn, setHasLoggedIn] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
@@ -24,9 +23,9 @@ export default function LoginPage() {
     const handleError = (event: ErrorEvent) => {
       console.error('全局错误:', event.error);
     };
-    
+
     window.addEventListener('error', handleError);
-    
+
     return () => {
       window.removeEventListener('error', handleError);
     };
@@ -64,19 +63,19 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // 防止表单进行默认的GET请求
     if (!username || !password) {
       setError('请输入用户名和密码');
       return;
     }
-    
+
     setError('');
     setLoading(true);
 
     try {
       // 不清除任何存储，让NextAuth正常管理会话
-      
+
       // 快速登录验证，只验证用户名和密码
       const result = await signIn('credentials', {
         username,
@@ -94,7 +93,7 @@ export default function LoginPage() {
         // 使用router.push进行客户端导航，避免页面刷新
         router.push(callbackUrl);
       }
-      
+
     } catch (error) {
       console.error('登录错误:', error);
       setError('登录过程中发生错误，请重试');
@@ -124,8 +123,8 @@ export default function LoginPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow-lg sm:rounded-3xl sm:px-10">
-          <form 
-            className="space-y-6" 
+          <form
+            className="space-y-6"
             onSubmit={handleSubmit}
             method="POST"
           >

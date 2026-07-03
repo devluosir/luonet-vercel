@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { useAutoResizeTextareas } from '@/hooks/useAutoResizeTextareas';
 import { getPurchaseHistory, PurchaseHistory } from '@/utils/purchaseHistory';
 import { getLocalStorageJSON, getLocalStorageString } from '@/utils/safeLocalStorage';
 
@@ -73,22 +72,22 @@ interface SavedSupplier {
 }
 
 // 供应商信息字段组件（带浮动标签的textarea和自动完成）
-function SupplierField({ 
-  label, 
-  value, 
-  onChange, 
-  placeholder 
-}: { 
-  label: string; 
-  value: string; 
-  onChange: (value: string) => void; 
-  placeholder: string; 
+function SupplierField({
+  label,
+  value,
+  onChange,
+  placeholder: _placeholder
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
 }) {
   const [savedSuppliers, setSavedSuppliers] = useState<SavedSupplier[]>([]);
   const [showSavedSuppliers, setShowSavedSuppliers] = useState(false);
   const [filteredSuppliers, setFilteredSuppliers] = useState<SavedSupplier[]>([]);
   const [hasSelectedSupplier, setHasSelectedSupplier] = useState(false);
-  
+
   // 添加 ref 用于检测点击外部区域
   const savedSuppliersRef = useRef<HTMLDivElement>(null);
 
@@ -98,18 +97,18 @@ function SupplierField({
       if (typeof window !== 'undefined') {
         // 从localStorage加载采购历史记录
         const purchaseHistory = getPurchaseHistory();
-        
+
         // 过滤掉无效的记录
         const validPurchaseHistory = purchaseHistory.filter((doc: PurchaseHistory) => {
-          const isValid = doc && 
-            typeof doc === 'object' && 
+          const isValid = doc &&
+            typeof doc === 'object' &&
             (doc.supplierName || doc.data?.attn);
           return isValid;
         });
 
         // 统计供应商数据
         const supplierMap = new Map<string, { name: string; lastUpdated: Date; documents: Array<{ id: string; type: string; number: string; date: Date }> }>();
-        
+
         // 处理所有记录
         validPurchaseHistory.forEach((doc: PurchaseHistory) => {
           if (!doc || typeof doc !== 'object') {
@@ -117,13 +116,13 @@ function SupplierField({
           }
 
           let rawSupplierName = doc.supplierName || doc.data?.attn || '未命名供应商';
-          
+
           if (!rawSupplierName || rawSupplierName === '未命名供应商') {
             return;
           }
 
           const supplierName = normalizeSupplierName(rawSupplierName);
-          
+
           if (!supplierMap.has(supplierName)) {
             supplierMap.set(supplierName, {
               name: rawSupplierName,
@@ -133,7 +132,7 @@ function SupplierField({
           }
 
           const supplier = supplierMap.get(supplierName)!;
-          
+
           // 更新最后更新时间
           const docDate = new Date(doc.updatedAt || doc.createdAt || Date.now());
           if (docDate > supplier.lastUpdated) {
@@ -157,13 +156,13 @@ function SupplierField({
         // 格式化供应商信息，提取完整的供应商信息
         const formattedSuppliers = sortedSuppliers.map((supplier) => {
           let supplierInfo = supplier.name;
-          
+
           // 尝试从历史记录中获取完整的供应商信息
           const matchingRecord = validPurchaseHistory.find((record: PurchaseHistory) => {
             const recordSupplierName = record.supplierName || record.data?.attn;
             return recordSupplierName && normalizeSupplierName(recordSupplierName) === normalizeSupplierName(supplier.name);
           });
-          
+
           if (matchingRecord) {
             // 使用data.attn字段
             if (matchingRecord.data && matchingRecord.data.attn) {
@@ -172,7 +171,7 @@ function SupplierField({
               supplierInfo = matchingRecord.supplierName;
             }
           }
-          
+
           return {
             name: (supplier.name || '').split('\n')[0].trim() || '未命名供应商', // 只取第一行作为显示名称，添加安全检查
             attn: supplierInfo || ''
@@ -194,7 +193,7 @@ function SupplierField({
   // 根据输入内容过滤供应商
   useEffect(() => {
     const attnValue = value || '';
-    
+
     if (!attnValue.trim()) {
       // 如果输入框为空，显示所有供应商
       setFilteredSuppliers(savedSuppliers);
@@ -206,11 +205,11 @@ function SupplierField({
         const inputLower = attnValue.toLowerCase();
         const nameLower = (supplier.name || '').toLowerCase();
         const attnLower = (supplier.attn || '').toLowerCase();
-        
+
         return nameLower.includes(inputLower) || attnLower.includes(inputLower);
       });
       setFilteredSuppliers(filtered);
-      
+
       // 如果有筛选结果，自动显示弹窗
       if (filtered.length > 0) {
         setShowSavedSuppliers(true);
@@ -224,10 +223,10 @@ function SupplierField({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      
+
       // 检查是否点击了保存的供应商列表弹窗外部
-      if (showSavedSuppliers && 
-          savedSuppliersRef.current && 
+      if (showSavedSuppliers &&
+          savedSuppliersRef.current &&
           !savedSuppliersRef.current.contains(target)) {
         setShowSavedSuppliers(false);
       }
@@ -291,7 +290,7 @@ function SupplierField({
 
       {/* 保存的供应商列表弹窗 */}
       {showSavedSuppliers && filteredSuppliers.length > 0 && (
-        <div 
+        <div
           ref={savedSuppliersRef}
           className="absolute z-50 right-0 top-full mt-1 w-full max-w-md
             bg-white dark:bg-[#2C2C2E] rounded-xl shadow-lg
@@ -326,15 +325,15 @@ function SupplierField({
   );
 }
 
-export default function PurchaseBaseInfo({ 
-  value, 
-  onChange, 
-  config, 
+export default function PurchaseBaseInfo({
+  value,
+  onChange,
+  config,
   className = ''
 }: PurchaseBaseInfoProps) {
-  
+
   // 使用useCallback优化set函数，避免无限循环
-  const set = useCallback((key: keyof PurchaseBaseInfoValue) => 
+  const set = useCallback((key: keyof PurchaseBaseInfoValue) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
       onChange({ ...value, [key]: e.target.value });
     }, [onChange, value]);
@@ -454,36 +453,36 @@ export default function PurchaseBaseInfo({
   // From选项 - 基于localStorage用户信息
 const getFromOptions = useCallback(() => {
   const options = ['Roger', 'Sharon', 'Emily', 'Summer', 'Nina'];
-  
+
   // 在服务器端渲染时，只返回基本选项避免水合错误
   if (typeof window === 'undefined') {
     return options;
   }
-  
+
   // 从localStorage获取当前用户名，与报价页面保持一致
   const currentUser = (() => {
     try {
       const userInfo = getLocalStorageJSON('userInfo', null) as { username?: string } | null;
       if (userInfo) return userInfo.username || '';
-      
+
       // 使用安全的字符串获取函数
       const name = getLocalStorageString('username');
       return name ? name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() : '';
-    } catch { 
-      return '' 
+    } catch {
+      return ''
     }
   })();
-  
+
   // 如果当前用户不在预设列表中，将其添加到列表开头
   if (currentUser && !options.some(option => option.toLowerCase() === currentUser.toLowerCase())) {
     options.unshift(currentUser);
   }
-  
+
   // 如果当前值不在列表中，也添加进去
   if (value.from && !options.some(option => option.toLowerCase() === value.from!.toLowerCase())) {
     options.unshift(value.from);
   }
-  
+
   return options;
 }, [value.from]);
 
@@ -495,13 +494,13 @@ const getFromOptions = useCallback(() => {
     setIsClient(true);
     const options = getFromOptions();
     setFromOptions(options);
-    
+
     // 如果当前from值是默认值（Roger），且当前用户不是Roger，则自动更新为当前用户
     if (value.from === 'Roger' && typeof window !== 'undefined') {
       try {
         const userInfo = getLocalStorageJSON('userInfo', null) as { username?: string } | null;
         const currentUser = userInfo?.username || getLocalStorageString('username');
-        
+
         if (currentUser && currentUser.toLowerCase() !== 'roger') {
           const formattedUser = currentUser.charAt(0).toUpperCase() + currentUser.slice(1).toLowerCase();
           // 调用onChange来更新from值

@@ -1,7 +1,16 @@
 // 性能监控工具
+interface PerformanceStats {
+  count: number;
+  avg: number;
+  min: number;
+  max: number;
+  latest: number;
+}
+
 export class PerformanceMonitor {
   private metrics: Map<string, number[]> = new Map();
   private thresholds: Map<string, number> = new Map();
+  private timers: Map<string, number> = new Map();
 
   constructor() {
     // 设置性能阈值
@@ -16,10 +25,10 @@ export class PerformanceMonitor {
   start(name: string): string {
     const startTime = performance.now();
     const id = `${name}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // 存储开始时间
-    (window as any)[`perf_${id}`] = startTime;
-    
+    this.timers.set(id, startTime);
+
     return id;
   }
 
@@ -27,7 +36,7 @@ export class PerformanceMonitor {
    * 结束计时并记录
    */
   end(id: string, name: string): number {
-    const startTime = (window as any)[`perf_${id}`];
+    const startTime = this.timers.get(id);
     if (!startTime) {
       console.warn(`性能监控: 未找到开始时间 ${id}`);
       return 0;
@@ -35,13 +44,13 @@ export class PerformanceMonitor {
 
     const endTime = performance.now();
     const duration = endTime - startTime;
-    
+
     // 记录指标
     if (!this.metrics.has(name)) {
       this.metrics.set(name, []);
     }
     this.metrics.get(name)!.push(duration);
-    
+
     // 检查阈值
     const threshold = this.thresholds.get(name);
     if (threshold && duration > threshold) {
@@ -49,23 +58,17 @@ export class PerformanceMonitor {
     } else {
       console.log(`[性能监控] ${name}: ${duration.toFixed(2)}ms`);
     }
-    
+
     // 清理
-    delete (window as any)[`perf_${id}`];
-    
+    this.timers.delete(id);
+
     return duration;
   }
 
   /**
    * 获取性能统计
    */
-  getStats(name: string): {
-    count: number;
-    avg: number;
-    min: number;
-    max: number;
-    latest: number;
-  } | null {
+  getStats(name: string): PerformanceStats | null {
     const values = this.metrics.get(name);
     if (!values || values.length === 0) return null;
 
@@ -82,8 +85,8 @@ export class PerformanceMonitor {
   /**
    * 获取所有统计
    */
-  getAllStats(): Record<string, any> {
-    const stats: Record<string, any> = {};
+  getAllStats(): Record<string, PerformanceStats | null> {
+    const stats: Record<string, PerformanceStats | null> = {};
     this.metrics.forEach((_, name) => {
       stats[name] = this.getStats(name);
     });
@@ -103,7 +106,7 @@ export class PerformanceMonitor {
   printReport(): void {
     console.log('=== 性能监控报告 ===');
     const stats = this.getAllStats();
-    
+
     for (const [name, stat] of Object.entries(stats)) {
       if (stat) {
         const threshold = this.thresholds.get(name);

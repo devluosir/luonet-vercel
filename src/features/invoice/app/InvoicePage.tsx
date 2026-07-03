@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  Save, 
+import {
+  Save,
   Clipboard,
   Settings,
   History,
@@ -52,7 +52,7 @@ export const InvoicePage = () => {
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { user, handleLogout } = useAppUser();
-  
+
   const {
     data,
     isEditMode,
@@ -85,28 +85,27 @@ export const InvoicePage = () => {
   // 组件挂载状态和初始化
   useEffect(() => {
     setMounted(true);
-    
+
     // 检查是否有注入的发票数据（编辑或复制模式）
-    const customWindow = window as any;
-    if (customWindow.__INVOICE_DATA__) {
+    if (window.__INVOICE_DATA__) {
       // 初始化store数据
-      const injectedData = customWindow.__INVOICE_DATA__;
-      const isEditMode = customWindow.__EDIT_MODE__ || false;
-      const editId = customWindow.__EDIT_ID__ || null;
-      
+      const injectedData = window.__INVOICE_DATA__;
+      const isEditMode = window.__EDIT_MODE__ || false;
+      const editId = window.__EDIT_ID__ || null;
+
       // 确保otherFees不为空数组（如果是编辑模式且有数据）
       if (isEditMode && injectedData.otherFees && injectedData.otherFees.length === 0) {
         injectedData.otherFees = [];
       }
-      
+
       // 初始化store
       const { initialize } = useInvoiceStore.getState();
       initialize(injectedData, isEditMode, editId);
-      
+
       // 清理注入的数据
-      customWindow.__INVOICE_DATA__ = undefined;
-      customWindow.__EDIT_MODE__ = false;
-      customWindow.__EDIT_ID__ = undefined;
+      window.__INVOICE_DATA__ = undefined;
+      window.__EDIT_MODE__ = false;
+      window.__EDIT_ID__ = undefined;
     }
   }, []);
 
@@ -261,9 +260,9 @@ export const InvoicePage = () => {
               {/* 基础信息区域 */}
               <div className="mb-8">
                 <div className="bg-gray-50/50 dark:bg-gray-800/20 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-                  <InvoiceInfoCompact 
-                    data={data} 
-                    onChange={updateData} 
+                  <InvoiceInfoCompact
+                    data={data}
+                    onChange={updateData}
                   />
                 </div>
               </div>
@@ -304,7 +303,7 @@ export const InvoicePage = () => {
                     <span>Add Other Fee</span>
                   </button>
                 </div>
-                
+
                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
                   <div className="flex items-center gap-2 relative">
                     <span className="text-sm font-medium text-gray-500">Total Amount:</span>
@@ -329,7 +328,7 @@ export const InvoicePage = () => {
                         {/* Deposit 下划线 */}
                         <div className="absolute bottom-0 left-0 right-0 h-px bg-gray-400 dark:bg-gray-500"></div>
                       </div>
-                      
+
                       {/* 当显示Balance时，也显示尾款 */}
                       {data.showBalance && (
                         <div className="flex items-center gap-2 relative">
@@ -445,9 +444,9 @@ export const InvoicePage = () => {
 
               {/* 付款条款 */}
               <div className={data.showBank ? "mb-4" : "mt-4 mb-4"}>
-                <PaymentTermsSection 
-                  data={data} 
-                  onChange={updateData} 
+                <PaymentTermsSection
+                  data={data}
+                  onChange={updateData}
                 />
               </div>
 

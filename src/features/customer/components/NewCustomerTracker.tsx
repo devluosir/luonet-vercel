@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { Users, AlertTriangle, CheckCircle, Calendar, RefreshCw } from 'lucide-react';
-import { NewCustomerService } from '../services/newCustomerService';
+import { NewCustomerService, type NewCustomerRecord } from '../services/newCustomerService';
 
 interface NewCustomerTrackerProps {
   onRefresh?: () => void;
 }
 
-export function NewCustomerTracker({ onRefresh }: NewCustomerTrackerProps) {
-  const [newCustomers, setNewCustomers] = useState<any[]>([]);
+export function NewCustomerTracker({ onRefresh: _onRefresh }: NewCustomerTrackerProps) {
+  const [newCustomers, setNewCustomers] = useState<NewCustomerRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
   // 加载新客户数据
@@ -110,7 +110,7 @@ export function NewCustomerTracker({ onRefresh }: NewCustomerTrackerProps) {
             ({newCustomers.length} 个新客户)
           </span>
         </div>
-        
+
         <button
           onClick={autoDetectNewCustomers}
           className="flex items-center space-x-1 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
@@ -131,7 +131,7 @@ export function NewCustomerTracker({ onRefresh }: NewCustomerTrackerProps) {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
             <AlertTriangle className="h-8 w-8 text-yellow-600" />
@@ -141,7 +141,7 @@ export function NewCustomerTracker({ onRefresh }: NewCustomerTrackerProps) {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
             <CheckCircle className="h-8 w-8 text-green-600" />
@@ -151,7 +151,7 @@ export function NewCustomerTracker({ onRefresh }: NewCustomerTrackerProps) {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center">
             <Calendar className="h-8 w-8 text-red-600" />
@@ -170,7 +170,7 @@ export function NewCustomerTracker({ onRefresh }: NewCustomerTrackerProps) {
             新客户列表
           </h4>
         </div>
-        
+
         {newCustomers.length === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -189,7 +189,7 @@ export function NewCustomerTracker({ onRefresh }: NewCustomerTrackerProps) {
                       {customer.source && <span>来源: {customer.source}</span>}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <span className={`px-2 py-1 text-xs rounded-full ${getStageColor(customer.followUpStage)}`}>
                       {getStageLabel(customer.followUpStage)}

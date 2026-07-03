@@ -8,25 +8,25 @@ import { calculateAmount, processUnitPlural, numberToWords } from '../utils/calc
 interface InvoiceStore extends InvoiceFormState, InvoiceFormActions {
   // 初始化状态
   initialize: (initialData?: InvoiceData, isEditMode?: boolean, editId?: string | null) => void;
-  
+
   // 重置状态
   reset: () => void;
-  
+
   // 保存发票
   saveInvoice: () => Promise<{ success: boolean; message: string }>;
-  
+
   // 生成PDF
   generatePDF: () => Promise<void>;
-  
+
   // 处理粘贴导入
   handlePasteImport: (text: string) => void;
-  
+
   // 处理双击高亮
   handleDoubleClick: (index: number, field: keyof Exclude<InvoiceData['items'][0]['highlight'], undefined>) => void;
-  
+
   // 处理其他费用双击高亮
   handleOtherFeeDoubleClick: (index: number, field: 'description' | 'amount' | 'remarks') => void;
-  
+
   // 设置自定义单位输入值
   setCustomUnit: (unit: string) => void;
 }
@@ -95,13 +95,13 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
   updateData: (updates) => {
     set((state) => {
       const newData = { ...state.data, ...updates };
-      
+
       // 当发票日期改变时，自动更新付款日期
       if (updates.date && updates.date !== state.data.date) {
         const { calculatePaymentDate } = require('../utils/calculations');
         newData.paymentDate = calculatePaymentDate(updates.date);
       }
-      
+
       return {
         data: newData
       };
@@ -113,48 +113,52 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     set((state) => {
       const newItems = [...state.data.items];
       const item = { ...newItems[index] };
-      
+
       if (field === 'quantity') {
         const quantity = Number(value);
         item.unit = processUnitPlural(quantity, item.unit, state.data.customUnits || []);
       }
-      
+
       if (field !== 'highlight') {
-        (item as any)[field] = value;
+        if (field === 'quantity' || field === 'unitPrice' || field === 'amount' || field === 'lineNo') {
+          item[field] = Number(value);
+        } else {
+          item[field] = String(value);
+        }
       }
-      
+
       if (field === 'quantity' || field === 'unitPrice') {
         item.amount = calculateAmount(
           field === 'quantity' ? Number(value) : item.quantity,
           field === 'unitPrice' ? Number(value) : item.unitPrice
         );
       }
-      
+
       newItems[index] = item;
-      
+
       // 计算新的总金额和金额大写
       const totalAmount = newItems.reduce((sum, item) => sum + item.amount, 0) +
                          (state.data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
       const amountInWords = numberToWords(totalAmount);
-      
+
       // 更新定金金额
-      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
-        ? (state.data.depositPercentage / 100) * totalAmount 
+      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0
+        ? (state.data.depositPercentage / 100) * totalAmount
         : undefined;
-      
+
       // 更新尾款金额
-      const balanceAmount = state.data.showBalance && depositAmount 
-        ? totalAmount - depositAmount 
+      const balanceAmount = state.data.showBalance && depositAmount
+        ? totalAmount - depositAmount
         : undefined;
-      
-      return { 
-        data: { 
-          ...state.data, 
+
+      return {
+        data: {
+          ...state.data,
           items: newItems,
           amountInWords,
           depositAmount,
           balanceAmount
-        } 
+        }
       };
     });
   },
@@ -174,30 +178,30 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
         remarks: '',
         highlight: {}
       }];
-      
+
       // 计算新的总金额和金额大写
       const totalAmount = newItems.reduce((sum, item) => sum + item.amount, 0) +
                          (state.data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
       const amountInWords = numberToWords(totalAmount);
-      
+
       // 更新定金金额
-      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
-        ? (state.data.depositPercentage / 100) * totalAmount 
+      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0
+        ? (state.data.depositPercentage / 100) * totalAmount
         : undefined;
-      
+
       // 更新尾款金额
-      const balanceAmount = state.data.showBalance && depositAmount 
-        ? totalAmount - depositAmount 
+      const balanceAmount = state.data.showBalance && depositAmount
+        ? totalAmount - depositAmount
         : undefined;
-      
-      return { 
-        data: { 
-          ...state.data, 
+
+      return {
+        data: {
+          ...state.data,
           items: newItems,
           amountInWords,
           depositAmount,
           balanceAmount
-        } 
+        }
       };
     });
   },
@@ -208,30 +212,30 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
       const newItems = state.data.items
         .filter((_, i) => i !== index)
         .map((item, i) => ({ ...item, lineNo: i + 1 }));
-      
+
       // 计算新的总金额和金额大写
       const totalAmount = newItems.reduce((sum, item) => sum + item.amount, 0) +
                          (state.data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
       const amountInWords = numberToWords(totalAmount);
-      
+
       // 更新定金金额
-      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
-        ? (state.data.depositPercentage / 100) * totalAmount 
+      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0
+        ? (state.data.depositPercentage / 100) * totalAmount
         : undefined;
-      
+
       // 更新尾款金额
-      const balanceAmount = state.data.showBalance && depositAmount 
-        ? totalAmount - depositAmount 
+      const balanceAmount = state.data.showBalance && depositAmount
+        ? totalAmount - depositAmount
         : undefined;
-      
-      return { 
-        data: { 
-          ...state.data, 
+
+      return {
+        data: {
+          ...state.data,
           items: newItems,
           amountInWords,
           depositAmount,
           balanceAmount
-        } 
+        }
       };
     });
   },
@@ -245,30 +249,30 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
         amount: 0,
         remarks: ''
       }];
-      
+
       // 计算新的总金额和金额大写
       const totalAmount = state.data.items.reduce((sum, item) => sum + item.amount, 0) +
                          newFees.reduce((sum, fee) => sum + fee.amount, 0);
       const amountInWords = numberToWords(totalAmount);
-      
+
       // 更新定金金额
-      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
-        ? (state.data.depositPercentage / 100) * totalAmount 
+      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0
+        ? (state.data.depositPercentage / 100) * totalAmount
         : undefined;
-      
+
       // 更新尾款金额
-      const balanceAmount = state.data.showBalance && depositAmount 
-        ? totalAmount - depositAmount 
+      const balanceAmount = state.data.showBalance && depositAmount
+        ? totalAmount - depositAmount
         : undefined;
-      
-      return { 
-        data: { 
-          ...state.data, 
+
+      return {
+        data: {
+          ...state.data,
           otherFees: newFees,
           amountInWords,
           depositAmount,
           balanceAmount
-        } 
+        }
       };
     });
   },
@@ -277,30 +281,30 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
   removeOtherFee: (id) => {
     set((state) => {
       const newFees = state.data.otherFees?.filter(f => f.id !== id) || [];
-      
+
       // 计算新的总金额和金额大写
       const totalAmount = state.data.items.reduce((sum, item) => sum + item.amount, 0) +
                          newFees.reduce((sum, fee) => sum + fee.amount, 0);
       const amountInWords = numberToWords(totalAmount);
-      
+
       // 更新定金金额
-      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
-        ? (state.data.depositPercentage / 100) * totalAmount 
+      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0
+        ? (state.data.depositPercentage / 100) * totalAmount
         : undefined;
-      
+
       // 更新尾款金额
-      const balanceAmount = state.data.showBalance && depositAmount 
-        ? totalAmount - depositAmount 
+      const balanceAmount = state.data.showBalance && depositAmount
+        ? totalAmount - depositAmount
         : undefined;
-      
-      return { 
-        data: { 
-          ...state.data, 
+
+      return {
+        data: {
+          ...state.data,
           otherFees: newFees,
           amountInWords,
           depositAmount,
           balanceAmount
-        } 
+        }
       };
     });
   },
@@ -308,33 +312,33 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
   // 更新其他费用
   updateOtherFee: (id, field, value) => {
     set((state) => {
-      const newFees = state.data.otherFees?.map(fee => 
+      const newFees = state.data.otherFees?.map(fee =>
         fee.id === id ? { ...fee, [field]: value } : fee
       ) || [];
-      
+
       // 计算新的总金额和金额大写
       const totalAmount = state.data.items.reduce((sum, item) => sum + item.amount, 0) +
                          newFees.reduce((sum, fee) => sum + fee.amount, 0);
       const amountInWords = numberToWords(totalAmount);
-      
+
       // 更新定金金额
-      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0 
-        ? (state.data.depositPercentage / 100) * totalAmount 
+      const depositAmount = state.data.depositPercentage && state.data.depositPercentage > 0
+        ? (state.data.depositPercentage / 100) * totalAmount
         : undefined;
-      
+
       // 更新尾款金额
-      const balanceAmount = state.data.showBalance && depositAmount 
-        ? totalAmount - depositAmount 
+      const balanceAmount = state.data.showBalance && depositAmount
+        ? totalAmount - depositAmount
         : undefined;
-      
-      return { 
-        data: { 
-          ...state.data, 
+
+      return {
+        data: {
+          ...state.data,
           otherFees: newFees,
           amountInWords,
           depositAmount,
           balanceAmount
-        } 
+        }
       };
     });
   },
@@ -358,7 +362,7 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
         }
         return state;
       });
-      
+
       // 2秒后隐藏成功消息
       setTimeout(() => set({ showUnitSuccess: false }), 2000);
     }
@@ -397,45 +401,45 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     const state = get();
     // 取消验证，直接保存
     // const validation = InvoiceService.validateInvoiceData(state.data);
-    // 
+    //
     // if (!validation.isValid) {
-    //   set({ 
-    //     saveSuccess: false, 
-    //     saveMessage: validation.errors[0] 
+    //   set({
+    //     saveSuccess: false,
+    //     saveMessage: validation.errors[0]
     //   });
     //   setTimeout(() => set({ saveMessage: '' }), 2000);
     //   return { success: false, message: validation.errors[0] };
     // }
 
     set({ isSaving: true });
-    
+
     try {
       const result = await InvoiceService.saveInvoice(
         state.data,
         state.isEditMode,
         state.editId
       );
-      
+
       if (result.success) {
-        set({ 
-          saveSuccess: true, 
+        set({
+          saveSuccess: true,
           saveMessage: result.message,
           isEditMode: true,
           editId: result.newEditId || state.editId
         });
       } else {
-        set({ 
-          saveSuccess: false, 
-          saveMessage: result.message 
+        set({
+          saveSuccess: false,
+          saveMessage: result.message
         });
       }
-      
+
       setTimeout(() => set({ saveMessage: '' }), 2000);
       return result;
     } catch (error) {
-      set({ 
-        saveSuccess: false, 
-        saveMessage: '保存失败' 
+      set({
+        saveSuccess: false,
+        saveMessage: '保存失败'
       });
       setTimeout(() => set({ saveMessage: '' }), 2000);
       return { success: false, message: '保存失败' };
@@ -454,16 +458,16 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
         state.isEditMode,
         state.editId
       );
-      
+
       if (saveResult.success) {
         // 更新editId（如果是新记录）
         if (saveResult.newEditId && !state.editId) {
-          set({ 
+          set({
             editId: saveResult.newEditId,
             isEditMode: true
           });
         }
-        
+
         // 生成并下载PDF
         await PDFService.downloadInvoicePDF(state.data);
         InvoiceService.recordCustomerUsage(state.data);
@@ -494,7 +498,7 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     import('../utils/importUtils').then(({ parsePastedData, processQuotationData }) => {
       const newItems = parsePastedData(text);
       const processedItems = processQuotationData(newItems);
-      
+
       set((state) => ({
         data: { ...state.data, items: processedItems }
       }));

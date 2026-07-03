@@ -1,23 +1,32 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { X, FileText, Download, ExternalLink } from 'lucide-react';
-import { supportsPDFPreview, getDeviceInfo, openPDFInNewTab, handlePDFPreview } from '@/utils/pdfHelpers';
+import { getDeviceInfo, openPDFInNewTab, handlePDFPreview } from '@/utils/pdfHelpers';
 import { generateQuotationPDF } from '@/utils/quotationPdfGenerator';
 import { generateOrderConfirmationPDF } from '@/utils/orderConfirmationPdfGenerator';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
 import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
 import { generatePackingListPDF } from '@/utils/packingPdfGenerator';
+import type { QuotationData } from '@/types/quotation';
+import type { PDFGeneratorData } from '@/types/pdf';
+import type { PurchaseOrderData } from '@/types/purchase';
+import type { PackingData } from '@/features/packing/types';
 
 interface PDFPreviewComponentProps {
   pdfUrl: string | null;
   onClose: () => void;
   title?: string;
-  data?: any;
+  data?: unknown;
   itemType?: 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
   showDownloadButton?: boolean;
   showOpenInNewTab?: boolean;
 }
+
+const getStringField = (value: unknown, field: string): string | undefined => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const fieldValue = (value as Record<string, unknown>)[field];
+  return typeof fieldValue === 'string' ? fieldValue : undefined;
+};
 
 export default function PDFPreviewComponent({
   pdfUrl,
@@ -30,10 +39,10 @@ export default function PDFPreviewComponent({
 }: PDFPreviewComponentProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
-  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [_iframeLoaded, setIframeLoaded] = useState(false);
   const [isLoadingPDF, setIsLoadingPDF] = useState(true);
   const [attemptedIframeLoad, setAttemptedIframeLoad] = useState(false);
-  
+
   const deviceInfo = getDeviceInfo();
   const previewInfo = handlePDFPreview(pdfUrl, {
     autoDetectDevice: true,
@@ -80,47 +89,47 @@ export default function PDFPreviewComponent({
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `QTN_${data.quotationNo || 'export'}.pdf`;
+        link.download = `QTN_${getStringField(data, 'quotationNo') || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       } else if (itemType === 'confirmation') {
-        const pdfBlob = await generateOrderConfirmationPDF(data, false);
+        const pdfBlob = await generateOrderConfirmationPDF(data as QuotationData, false);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `SC_${data.quotationNo || 'export'}.pdf`;
+        link.download = `SC_${getStringField(data, 'quotationNo') || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       } else if (itemType === 'invoice') {
-        const pdfBlob = await generateInvoicePDF(data);
+        const pdfBlob = await generateInvoicePDF(data as PDFGeneratorData);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `INV_${data.invoiceNo || 'export'}.pdf`;
+        link.download = `INV_${getStringField(data, 'invoiceNo') || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       } else if (itemType === 'purchase') {
-        const pdfBlob = await generatePurchaseOrderPDF(data, false);
+        const pdfBlob = await generatePurchaseOrderPDF(data as PurchaseOrderData, false);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `PO_${data.orderNo || 'export'}.pdf`;
+        link.download = `PO_${getStringField(data, 'orderNo') || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       } else if (itemType === 'packing') {
-        const pdfBlob = await generatePackingListPDF(data);
+        const pdfBlob = await generatePackingListPDF(data as PackingData);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `PL_${data.invoiceNo || 'export'}.pdf`;
+        link.download = `PL_${getStringField(data, 'invoiceNo') || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -162,7 +171,7 @@ export default function PDFPreviewComponent({
               </div>
             )}
           </div>
-          
+
           <div className="flex items-center gap-2">
             {/* 新窗口打开按钮 */}
             {showOpenInNewTab && (
@@ -174,7 +183,7 @@ export default function PDFPreviewComponent({
                 <ExternalLink className="w-5 h-5" />
               </button>
             )}
-            
+
             {/* 下载按钮 */}
             {showDownloadButton && (
               <button
@@ -186,7 +195,7 @@ export default function PDFPreviewComponent({
                 <Download className={`w-5 h-5 ${isDownloading ? 'animate-pulse' : ''}`} />
               </button>
             )}
-            
+
             {/* 关闭按钮 */}
             <button
               onClick={onClose}
@@ -209,7 +218,7 @@ export default function PDFPreviewComponent({
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
                   {previewInfo.message || '选择您偏好的PDF查看方式'}
                 </p>
-                
+
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   {/* 推荐操作按钮 */}
                   {deviceInfo.canPreviewPDF && (
@@ -221,13 +230,13 @@ export default function PDFPreviewComponent({
                       <span>新窗口打开 (推荐)</span>
                     </button>
                   )}
-                  
+
                   <button
                     onClick={handleDownload}
                     disabled={isDownloading}
                     className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors ${
-                      !deviceInfo.canPreviewPDF 
-                        ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      !deviceInfo.canPreviewPDF
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
@@ -243,7 +252,7 @@ export default function PDFPreviewComponent({
                       </>
                     )}
                   </button>
-                  
+
                   {deviceInfo.canPreviewPDF && showOpenInNewTab && (
                     <button
                       onClick={handleOpenInNewTab}
@@ -254,7 +263,7 @@ export default function PDFPreviewComponent({
                     </button>
                   )}
                 </div>
-                
+
                 {deviceInfo.isAndroid && (
                   <div className="mt-6 space-y-3">
                     <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
@@ -265,7 +274,7 @@ export default function PDFPreviewComponent({
                             安卓设备优化建议
                           </p>
                           <p className="text-xs text-amber-600 dark:text-amber-500">
-                            {deviceInfo.browser.name === 'Chrome' 
+                            {deviceInfo.browser.name === 'Chrome'
                               ? '• 点击"新窗口打开"可在Chrome中查看PDF\n• 或直接下载到本地使用PDF阅读器打开'
                               : '• 建议下载PDF文件查看\n• 或使用Chrome浏览器访问本页面'
                             }
@@ -273,7 +282,7 @@ export default function PDFPreviewComponent({
                         </div>
                       </div>
                     </div>
-                    
+
                     {deviceInfo.browser.name !== 'Chrome' && (
                       <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                         <p className="text-xs text-blue-700 dark:text-blue-400">
@@ -298,7 +307,7 @@ export default function PDFPreviewComponent({
                   </div>
                 </div>
               )}
-              
+
               <iframe
                 src={pdfUrl}
                 className="w-full h-full rounded-lg border border-gray-200 dark:border-[#3A3A3C]"
@@ -312,4 +321,4 @@ export default function PDFPreviewComponent({
       </div>
     </div>
   );
-} 
+}

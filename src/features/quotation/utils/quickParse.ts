@@ -22,6 +22,5 @@ export function quickParseTSV(ts: string): Partial<LineItem>[] {
     }
   }).filter(Boolean) as Partial<LineItem>[];
 
-  (parsed as any).skipped = skipped;
-  return parsed;
+  return Object.assign(parsed, { skipped });
 }

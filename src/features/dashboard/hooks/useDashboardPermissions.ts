@@ -4,22 +4,53 @@ import { buildPermissionMap } from '@/utils/mapPermissions';
 import { preloadManager } from '@/utils/preloadUtils';
 
 import type { PermissionMap } from '../types';
+import type { Permission } from '@/types/permissions';
 
-export const useDashboardPermissions = (session: any) => {
+type DashboardSession = {
+  user?: {
+    permissions?: Permission[];
+  };
+  status?: 'loading' | 'authenticated' | 'unauthenticated';
+} | null;
+
+interface CachedPermissionData {
+  timestamp?: number;
+  permissions?: Permission[];
+}
+
+const isPermission = (value: unknown): value is Permission => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.id === 'string' &&
+    typeof record.moduleId === 'string' &&
+    typeof record.canAccess === 'boolean'
+  );
+};
+
+const readCachedPermissionData = (raw: string): CachedPermissionData => {
+  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  return {
+    timestamp: typeof parsed.timestamp === 'number' ? parsed.timestamp : undefined,
+    permissions: Array.isArray(parsed.permissions) ? parsed.permissions.filter(isPermission) : undefined,
+  };
+};
+
+export const useDashboardPermissions = (session: DashboardSession) => {
   // 使用全局权限store
   const { user, isLoading: _permissionLoading } = usePermissionStore();
-  
+
   // 优化的权限映射 - 使用新的工具函数
   const permissionMap = useMemo(() => {
     // 获取本地缓存的权限数据
-    let cachedPermissions = [];
+    let cachedPermissions: Permission[] = [];
     if (typeof window !== 'undefined') {
       try {
         const userCache = localStorage.getItem('userCache');
         if (userCache) {
-          const cacheData = JSON.parse(userCache);
+          const cacheData = readCachedPermissionData(userCache);
           const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
-          
+
           if (isRecent) {
             cachedPermissions = cacheData.permissions || [];
           }
@@ -28,7 +59,7 @@ export const useDashboardPermissions = (session: any) => {
         console.error('恢复权限数据失败:', error);
       }
     }
-    
+
     return buildPermissionMap(
       user?.permissions,
       session?.user?.permissions,
@@ -43,38 +74,38 @@ export const useDashboardPermissions = (session: any) => {
     let lastPermissionsHash = '';
     let lastCheckTime = 0;
     const debounceMs = 2000;
-    
+
     const unsubscribe = usePermissionStore.subscribe((state) => {
       if (state.user && state.user.permissions && state.user.permissions.length > 0) {
         const now = Date.now();
-        
+
         if (now - lastCheckTime < debounceMs) {
           return;
         }
-        
+
         lastCheckTime = now;
-        
+
         const currentPermissionsHash = JSON.stringify(
           state.user.permissions
-            .filter((p: any) => p.canAccess)
-            .map((p: any) => p.moduleId)
+            .filter((p) => p.canAccess)
+            .map((p) => p.moduleId)
             .sort()
         );
-        
+
         const permissionsChanged = lastPermissionsHash !== currentPermissionsHash;
-        
+
         if (permissionsChanged) {
           // ✅ 优化：只在权限数据不为空时输出日志
           if (state.user.permissions && state.user.permissions.length > 0) {
             console.log('检测到权限变化，需要重新预加载', {
               oldHash: lastPermissionsHash,
               newHash: currentPermissionsHash,
-              permissions: state.user.permissions.map((p: any) => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
+              permissions: state.user.permissions.map((p) => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
             });
           }
-          
+
           lastPermissionsHash = currentPermissionsHash;
-          
+
           if (!hasTriggeredPreload && preloadManager.shouldPreloadBasedOnPermissions()) {
             clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
@@ -87,7 +118,7 @@ export const useDashboardPermissions = (session: any) => {
         }
       }
     });
-    
+
     return () => {
       unsubscribe();
       clearTimeout(timeoutId);

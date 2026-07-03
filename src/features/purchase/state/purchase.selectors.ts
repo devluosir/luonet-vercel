@@ -1,7 +1,5 @@
 import { useMemo } from 'react';
 import { usePurchaseStore } from './purchase.store';
-import type { PurchaseOrderData } from '@/types/purchase';
-
 // ========== 原子选择器（仅返回原始切片/原始值，绝不在这里拼对象/数组） ==========
 const useContractAmount = () => usePurchaseStore(s => s.data.contractAmount);
 const useCurrency = () => usePurchaseStore(s => s.data.currency);
@@ -12,7 +10,6 @@ const useOrderNo = () => usePurchaseStore(s => s.data.orderNo);
 const useOurRef = () => usePurchaseStore(s => s.data.ourRef);
 const useDate = () => usePurchaseStore(s => s.data.date);
 const useProjectSpecification = () => usePurchaseStore(s => s.data.projectSpecification);
-const usePaymentTerms = () => usePurchaseStore(s => s.data.paymentTerms);
 const useInvoiceRequirements = () => usePurchaseStore(s => s.data.invoiceRequirements);
 const useShowBank = () => usePurchaseStore(s => s.data.showBank);
 const useDeliveryInfo = () => usePurchaseStore(s => s.data.deliveryInfo);
@@ -21,8 +18,6 @@ const useFrom = () => usePurchaseStore(s => s.data.from);
 
 // 新格式选择器
 const useDraftItems = () => usePurchaseStore(s => s.draft.items);
-const useDraftSettings = () => usePurchaseStore(s => s.draft.settings);
-
 // UI状态原子选择器
 const useIsGenerating = () => usePurchaseStore(s => s.isGenerating);
 const useShowSettings = () => usePurchaseStore(s => s.showSettings);
@@ -42,7 +37,7 @@ function calcContractAmountNumber(contractAmount: string): number {
 // 获取合同金额数字
 export const useContractAmountNumber = () => {
   const contractAmount = useContractAmount();
-  
+
   return useMemo(() => calcContractAmountNumber(contractAmount), [contractAmount]);
 };
 
@@ -58,7 +53,7 @@ export const usePurchaseUI = () => {
   const generatingProgress = useGeneratingProgress();
   const isEditMode = useIsEditMode();
   const previewItem = usePreviewItem();
-  
+
   return useMemo(() => ({
     isGenerating,
     showSettings,
@@ -75,7 +70,7 @@ export const useSupplierInfo = () => {
   const attn = useAttn();
   const yourRef = useYourRef();
   const supplierQuoteDate = useSupplierQuoteDate();
-  
+
   return useMemo(() => ({
     attn,
     yourRef,
@@ -88,7 +83,7 @@ export const useOrderInfo = () => {
   const orderNo = useOrderNo();
   const ourRef = useOurRef();
   const date = useDate();
-  
+
   return useMemo(() => ({
     orderNo,
     ourRef,
@@ -101,7 +96,7 @@ export const useContractInfo = () => {
   const contractAmount = useContractAmount();
   const currency = useCurrency();
   const projectSpecification = useProjectSpecification();
-  
+
   return useMemo(() => ({
     contractAmount,
     currency,
@@ -113,7 +108,7 @@ export const useContractInfo = () => {
 export const useInvoiceRequirementsInfo = () => {
   const invoiceRequirements = useInvoiceRequirements();
   const showBank = useShowBank();
-  
+
   return useMemo(() => ({
     invoiceRequirements,
     showBank,
@@ -132,11 +127,11 @@ export const usePurchaserInfo = () => useFrom();
 // 获取订单汇总信息（新格式）
 export const useTotals = () => {
   const items = useDraftItems();
-  
+
   return useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + (item.qty * item.price), 0);
     const count = items.length;
-    
+
     return {
       subtotal,
       count
@@ -150,7 +145,7 @@ export const useTotals = () => {
 export const useCanGeneratePdf = () => {
   const attn = useAttn();
   const contractAmount = useContractAmount();
-  
+
   return useMemo(() => {
     const hasSupplier = attn.trim().length > 0;
     const hasAmount = parseFloat(contractAmount) > 0;
@@ -162,7 +157,7 @@ export const useCanGeneratePdf = () => {
 export const usePdfPayload = () => {
   const data = usePurchaseData();
   const contractAmountNumber = useContractAmountNumber();
-  
+
   return useMemo(() => {
     return {
       ...data,
@@ -178,22 +173,22 @@ export const useValidationState = () => {
   const attn = useAttn();
   const contractAmount = useContractAmount();
   const orderNo = useOrderNo();
-  
+
   return useMemo(() => {
     const errors: string[] = [];
-    
+
     if (!attn.trim()) {
       errors.push('供应商名称不能为空');
     }
-    
+
     if (!contractAmount || parseFloat(contractAmount) <= 0) {
       errors.push('合同金额必须大于0');
     }
-    
+
     if (!orderNo.trim()) {
       errors.push('订单号不能为空');
     }
-    
+
     return {
       isValid: errors.length === 0,
       errors

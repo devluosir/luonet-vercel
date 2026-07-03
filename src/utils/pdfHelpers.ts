@@ -73,7 +73,7 @@ export const getInvoiceTitle: InvoiceTitleGetter = (data) => {
 // 计算总金额
 export function getTotalAmount(items: PDFGeneratorData['items']) {
   return items.reduce((sum, item) => sum + item.amount, 0);
-} 
+}
 
 // 错误处理
 export const handlePdfError = (error: unknown): string => {
@@ -91,44 +91,44 @@ export type ExtendedJsPDF = jsPDF & {
 // 检测设备是否支持PDF内嵌预览
 export const supportsPDFPreview = () => {
   if (typeof window === 'undefined') return false;
-  
+
   const userAgent = navigator.userAgent;
-  
+
   // 检测是否为移动设备
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-  
+
   // 检测Android设备 - 安卓设备对PDF内嵌预览支持很差，建议直接使用fallback
   const isAndroid = /Android/i.test(userAgent);
-  
+
   // 检测iOS设备
   const isIOS = /iPad|iPhone|iPod/.test(userAgent);
-  
+
   // 检测Safari浏览器
   const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
-  
+
   // 检测Chrome浏览器
   const isChrome = /Chrome/.test(userAgent) && !/Edge/.test(userAgent);
-  
+
   // 检测Firefox浏览器
   const isFirefox = /Firefox/.test(userAgent);
-  
+
   // 检测Edge浏览器
   const isEdge = /Edge/.test(userAgent);
-  
+
   // 检测Opera浏览器
   const isOpera = /Opera|OPR/.test(userAgent);
-  
+
   // 检测版本号
   const getVersion = (browser: string) => {
     const match = userAgent.match(new RegExp(`${browser}\\/(\\d+)`));
     return match ? parseInt(match[1], 10) : 0;
   };
-  
+
   const chromeVersion = getVersion('Chrome');
   const firefoxVersion = getVersion('Firefox');
   const safariVersion = getVersion('Safari');
   const edgeVersion = getVersion('Edge');
-  
+
   // 判断是否支持PDF预览
   // 移动设备通常支持较差
   if (isMobile) {
@@ -142,14 +142,14 @@ export const supportsPDFPreview = () => {
     }
     return false;
   }
-  
+
   // 桌面设备支持较好
   if (isChrome && chromeVersion >= 60) return true;
   if (isFirefox && firefoxVersion >= 60) return true;
   if (isSafari && safariVersion >= 11) return true;
   if (isEdge && edgeVersion >= 79) return true;
   if (isOpera) return true;
-  
+
   return false;
 };
 
@@ -164,13 +164,13 @@ export const getBrowserInfo = () => {
   if (typeof window === 'undefined') {
     return { name: 'unknown', version: 0, isMobile: false };
   }
-  
+
   const userAgent = navigator.userAgent;
-  
+
   // 检测浏览器类型和版本
   let name = 'unknown';
   let version = 0;
-  
+
   if (userAgent.includes('Chrome') && !userAgent.includes('Edge')) {
     name = 'Chrome';
     const match = userAgent.match(/Chrome\/(\d+)/);
@@ -192,9 +192,9 @@ export const getBrowserInfo = () => {
     const match = userAgent.match(/(?:Opera|OPR)\/(\d+)/);
     version = match ? parseInt(match[1], 10) : 0;
   }
-  
+
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-  
+
   return { name, version, isMobile };
 };
 
@@ -213,10 +213,10 @@ export const getDeviceInfo = () => {
       browser: { name: 'unknown', version: 0, isMobile: false }
     };
   }
-  
+
   const userAgent = navigator.userAgent;
   const browser = getBrowserInfo();
-  
+
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
   const isAndroid = /Android/i.test(userAgent);
   const isIOS = /iPad|iPhone|iPod/.test(userAgent);
@@ -224,10 +224,10 @@ export const getDeviceInfo = () => {
   const isChrome = /Chrome/.test(userAgent) && !/Edge/.test(userAgent);
   const isFirefox = /Firefox/.test(userAgent);
   const isEdge = /Edge/.test(userAgent);
-  
+
   // 判断是否支持PDF预览
   let canPreviewPDF = false;
-  
+
   if (isMobile) {
     // iOS Safari 11+ 支持PDF预览
     if (isIOS && isSafari && browser.version >= 11) {
@@ -245,7 +245,7 @@ export const getDeviceInfo = () => {
     else if (isEdge && browser.version >= 79) canPreviewPDF = true;
     else if (browser.name === 'Opera') canPreviewPDF = true;
   }
-  
+
   return {
     isMobile,
     isAndroid,
@@ -270,7 +270,7 @@ export interface PDFPreviewOptions {
 
 // 处理PDF预览
 export const handlePDFPreview = (
-  pdfUrl: string | null, 
+  pdfUrl: string | null,
   options: PDFPreviewOptions = {}
 ) => {
   const {
@@ -280,9 +280,9 @@ export const handlePDFPreview = (
     autoDetectDevice = true,
     forceAndroidFallback = false
   } = options;
-  
+
   const deviceInfo = getDeviceInfo();
-  
+
   // 如果强制使用Android fallback
   if (forceAndroidFallback && deviceInfo.isAndroid) {
     return {
@@ -294,7 +294,7 @@ export const handlePDFPreview = (
       showOpenInNewTab: _showOpenInNewTab
     };
   }
-  
+
   // 如果自动检测设备
   if (autoDetectDevice) {
     // Android设备建议使用fallback
@@ -308,7 +308,7 @@ export const handlePDFPreview = (
         showOpenInNewTab: _showOpenInNewTab
       };
     }
-    
+
     // iOS设备可以尝试预览
     if (deviceInfo.isIOS) {
       return {
@@ -321,7 +321,7 @@ export const handlePDFPreview = (
       };
     }
   }
-  
+
   // 桌面设备
   if (!deviceInfo.isMobile) {
     return {
@@ -333,7 +333,7 @@ export const handlePDFPreview = (
       showOpenInNewTab: _showOpenInNewTab
     };
   }
-  
+
   // 默认情况
   return {
     canPreview: false,
@@ -356,7 +356,7 @@ const getAndroidFallbackMessage = (browser: { name: string; version: number }) =
 // 在新标签页中打开PDF
 export const openPDFInNewTab = (pdfUrl: string) => {
   if (typeof window === 'undefined') return;
-  
+
   try {
     const newWindow = window.open(pdfUrl, '_blank');
     if (!newWindow) {
@@ -373,7 +373,7 @@ export const openPDFInNewTab = (pdfUrl: string) => {
 // 创建PDF下载链接
 export const createPDFDownloadLink = (pdfBlob: Blob, filename: string) => {
   if (typeof window === 'undefined') return null;
-  
+
   try {
     const url = URL.createObjectURL(pdfBlob);
     const link = document.createElement('a');
@@ -383,12 +383,12 @@ export const createPDFDownloadLink = (pdfBlob: Blob, filename: string) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     // 清理URL
     setTimeout(() => {
       URL.revokeObjectURL(url);
     }, 100);
-    
+
     return url;
   } catch (error) {
     console.error('创建下载链接失败:', error);
@@ -414,7 +414,7 @@ export const compressImage = async (base64Image: string, maxWidth: number = 200,
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      
+
       if (!ctx) {
         reject(new Error('Canvas not supported'));
         return;
@@ -430,12 +430,12 @@ export const compressImage = async (base64Image: string, maxWidth: number = 200,
 
       // 绘制并压缩图片
       ctx.drawImage(img, 0, 0, newWidth, newHeight);
-      
+
       // 转换为base64，使用指定的质量
       const compressedBase64 = canvas.toDataURL('image/png', quality);
       resolve(compressedBase64);
     };
-    
+
     img.onerror = () => reject(new Error('Failed to load image'));
     img.src = base64Image;
   });
@@ -456,12 +456,12 @@ export const getOptimizedStampImageSimple = async (stampType: string): Promise<s
   // 在浏览器环境中，尝试使用Canvas进行简单压缩
   if (typeof window !== 'undefined') {
     try {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve, _reject) => {
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
-          
+
           if (!ctx) {
             resolve(base64Image); // 如果Canvas不可用，返回原始图片
             return;
@@ -469,7 +469,7 @@ export const getOptimizedStampImageSimple = async (stampType: string): Promise<s
 
           // 根据印章类型使用不同的压缩参数
           let maxSize, quality;
-          
+
           if (stampType === 'shanghai') {
             // 上海印章：使用更精细的压缩参数
             maxSize = 280; // 稍微减小尺寸
@@ -490,12 +490,12 @@ export const getOptimizedStampImageSimple = async (stampType: string): Promise<s
 
           // 绘制并压缩图片
           ctx.drawImage(img, 0, 0, newWidth, newHeight);
-          
+
           // 转换为base64，使用指定的质量
           const compressedBase64 = canvas.toDataURL('image/png', quality);
           resolve(compressedBase64.replace('data:image/png;base64,', ''));
         };
-        
+
         img.onerror = () => resolve(base64Image); // 如果加载失败，返回原始图片
         img.src = `data:image/png;base64,${base64Image}`;
       });
@@ -504,7 +504,7 @@ export const getOptimizedStampImageSimple = async (stampType: string): Promise<s
       return base64Image;
     }
   }
-  
+
   // 在服务器环境中，返回原始图片
   return base64Image;
 };
@@ -525,4 +525,4 @@ export const getOptimizedStampImage = async (stampType: string): Promise<string>
     }
     return '';
   }
-}; 
+};

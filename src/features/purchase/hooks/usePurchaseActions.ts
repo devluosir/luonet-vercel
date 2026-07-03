@@ -16,14 +16,14 @@ interface CustomWindow extends Window {
 // 初始化逻辑
 export const usePurchaseInit = () => {
   const { data: session } = useSession();
-  const { data, editId, init, updateData, setPageMode } = usePurchaseStore();
+  const { data, editId: _editId, init, updateData, setPageMode } = usePurchaseStore();
   const initializedRef = useRef(false);
-  
+
   // 初始化数据 - 只执行一次
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
-    
+
     // 清除旧的localStorage数据以确保使用新版本
     if (typeof window !== 'undefined') {
       try {
@@ -32,9 +32,9 @@ export const usePurchaseInit = () => {
         // 忽略错误
       }
     }
-    
+
     const win = window as CustomWindow;
-    
+
     // 优先使用全局数据（编辑模式）
     if (win.__PURCHASE_DATA__) {
       const sanitizedData: PurchaseOrderData = {
@@ -43,10 +43,10 @@ export const usePurchaseInit = () => {
         yourRef: win.__PURCHASE_DATA__.yourRef || '',
         supplierQuoteDate: win.__PURCHASE_DATA__.supplierQuoteDate || (typeof window !== 'undefined' ? new Date().toISOString().split('T')[0] : '2024-01-01'),
       };
-      
+
       init(sanitizedData);
       setPageMode('edit'); // 设置编辑模式
-      
+
       // 清理全局变量
       delete win.__PURCHASE_DATA__;
       delete win.__EDIT_ID__;
@@ -60,7 +60,7 @@ export const usePurchaseInit = () => {
         const draft = localStorage.getItem('draftPurchase');
         if (draft) {
           const parsed = JSON.parse(draft);
-          
+
           // 验证数据格式
           if (parsed && typeof parsed === 'object') {
             const sanitizedDraft: PurchaseOrderData = {
@@ -124,11 +124,11 @@ export const usePurchaseInit = () => {
         console.warn('获取用户信息失败:', error);
       }
     }
-    
+
     // 格式化用户名
     if (userName) {
       const formattedUser = userName.charAt(0).toUpperCase() + userName.slice(1).toLowerCase();
-      
+
       // 如果from字段为空或者是默认值Roger，则更新为当前用户
       if (!data.from || data.from === 'Roger') {
         updateData({ from: formattedUser });
@@ -140,30 +140,30 @@ export const usePurchaseInit = () => {
 // 自动保存逻辑
 export const usePurchaseAutoSave = () => {
   const { data, editId } = usePurchaseStore();
-  
+
   const { clearSaved } = useAutoSave({
     data,
     key: 'draftPurchase',
     delay: 2000,
     enabled: !editId
   });
-  
+
   return { clearSaved };
 };
 
 // PDF生成逻辑
 export const usePurchasePdfActions = () => {
-  const { 
-    data, 
-    editId, 
-    isGenerating, 
+  const {
+    data,
+    editId,
+    isGenerating,
     generatingProgress,
-    setIsGenerating, 
-    setGeneratingProgress, 
-    setEditId, 
-    setIsEditMode 
+    setIsGenerating,
+    setGeneratingProgress,
+    setEditId,
+    setIsEditMode
   } = usePurchaseStore();
-  
+
   const { showToast } = useToast();
   const { generate: generatePdf } = usePurchasePdfGenerator();
   const { clearSaved } = usePurchaseAutoSave();
@@ -172,7 +172,7 @@ export const usePurchasePdfActions = () => {
     setIsGenerating(true);
     setGeneratingProgress(10);
     let progressInterval: NodeJS.Timeout | undefined;
-    
+
     try {
       // 启动进度条动画
       progressInterval = setInterval(() => {
@@ -205,11 +205,11 @@ export const usePurchasePdfActions = () => {
       a.download = `PO_${data.orderNo || 'new'}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-      
+
       // 生成成功后清除草稿
       clearSaved();
       showToast('PDF生成成功', 'success');
-      
+
       // 进度条完成
       if (progressInterval) clearInterval(progressInterval);
       setGeneratingProgress(100);
@@ -226,10 +226,10 @@ export const usePurchasePdfActions = () => {
 
   const handlePreview = useCallback(async () => {
     const { setShowPreview, setPreviewItem } = usePurchaseStore.getState();
-    
+
     try {
       const contractAmountNumber = parseFloat(data.contractAmount) || 0;
-      
+
       // 准备预览数据
       const previewData = {
         id: editId || 'preview',
@@ -241,7 +241,7 @@ export const usePurchasePdfActions = () => {
         currency: data.currency,
         data: data
       };
-      
+
       setPreviewItem(previewData);
       setShowPreview(true);
     } catch (err) {
@@ -261,7 +261,7 @@ export const usePurchasePdfActions = () => {
 // 金额处理逻辑
 export const useAmountHandling = () => {
   const { updateData } = usePurchaseStore();
-  
+
   const handleAmountBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const amount = parseFloat(value);
@@ -269,6 +269,6 @@ export const useAmountHandling = () => {
       updateData({ contractAmount: amount.toFixed(2) });
     }
   }, [updateData]);
-  
+
   return { handleAmountBlur };
 };

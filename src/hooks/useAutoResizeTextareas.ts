@@ -7,7 +7,7 @@ import { useEffect } from 'react';
  */
 export function useAutoResizeTextareas(
   refs: React.RefObject<HTMLTextAreaElement>[],
-  deps: any[]
+  deps: React.DependencyList
 ) {
   useEffect(() => {
     refs.forEach(ref => {
@@ -16,5 +16,6 @@ export function useAutoResizeTextareas(
         ref.current.style.height = `${ref.current.scrollHeight}px`;
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 该通用 hook 明确由调用方传入触发依赖；refs 数组由页面创建，加入后会造成无意义重复调整。
   }, deps);
-} 
+}

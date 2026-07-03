@@ -6,11 +6,11 @@
 /**
  * 智能相等判定，根据数据类型和字段名选择合适的比较策略
  * @param a 值A
- * @param b 值B  
+ * @param b 值B
  * @param key 字段名（用于特殊处理）
  * @returns 是否相等
  */
-export const smartEqual = (a: any, b: any, key: string): boolean => {
+export const smartEqual = (a: unknown, b: unknown, key: string): boolean => {
   // null/undefined 处理
   if (a == null && b == null) return true;
   if (a == null || b == null) return false;
@@ -32,7 +32,7 @@ export const smartEqual = (a: any, b: any, key: string): boolean => {
   // 对象：特殊字段的深比较
   if (typeof a === 'object' && typeof b === 'object') {
     // templateConfig 特殊处理
-    if (key === 'templateConfig') {
+    if (key === 'templateConfig' && isRecord(a) && isRecord(b)) {
       return shallowObjectEqual(a, b);
     }
     // 其他对象按引用比较（可按需扩展）
@@ -43,22 +43,26 @@ export const smartEqual = (a: any, b: any, key: string): boolean => {
   return a === b;
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
 /**
  * 浅层对象相等比较
  * @param a 对象A
  * @param b 对象B
  * @returns 是否相等
  */
-const shallowObjectEqual = (a: Record<string, any>, b: Record<string, any>): boolean => {
+const shallowObjectEqual = (a: Record<string, unknown>, b: Record<string, unknown>): boolean => {
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);
-  
+
   if (keysA.length !== keysB.length) return false;
-  
+
   for (const key of keysA) {
     if (a[key] !== b[key]) return false;
   }
-  
+
   return true;
 };
 
@@ -69,6 +73,6 @@ const shallowObjectEqual = (a: Record<string, any>, b: Record<string, any>): boo
  * @param key 字段名
  * @returns 是否有变化
  */
-export const hasChanged = (newValue: any, oldValue: any, key: string): boolean => {
+export const hasChanged = (newValue: unknown, oldValue: unknown, key: string): boolean => {
   return !smartEqual(newValue, oldValue, key);
 };

@@ -1,14 +1,29 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+interface PackingImportRow {
+  description: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  netWeight: number;
+  grossWeight: number;
+  packageQty: number;
+  dimensions: string;
+}
+
+interface PresetParsedPackingData {
+  rows?: PackingImportRow[];
+}
+
 // 简单的数据解析函数
-const parsePackingData = (text: string) => {
+const parsePackingData = (text: string): PackingImportRow[] => {
   const lines = text.trim().split('\n');
-  const rows: any[] = [];
-  
+  const rows: PackingImportRow[] = [];
+
   for (const line of lines) {
     const columns = line.split('\t');
     if (columns.length >= 2) {
-      const row: any = {
+      const row: PackingImportRow = {
         description: columns[0]?.trim() || '',
         quantity: parseFloat(columns[1]) || 0,
         unit: columns[2]?.trim() || 'pc',
@@ -21,25 +36,25 @@ const parsePackingData = (text: string) => {
       rows.push(row);
     }
   }
-  
+
   return rows;
 };
 
-export function QuickImport({ 
+export function QuickImport({
   onInsert,
   presetRaw,
   presetParsed,
   onClosePreset,
-}: { 
-  onInsert: (items: any[], replaceMode?: boolean) => void;
-  presetRaw?: string;
-  presetParsed?: any;
-  onClosePreset?: () => void;
-}) {
+	}: {
+	  onInsert: (items: PackingImportRow[], replaceMode?: boolean) => void;
+	  presetRaw?: string;
+	  presetParsed?: PresetParsedPackingData;
+	  onClosePreset?: () => void;
+	}) {
   const [open, setOpen] = useState(false);
   const [inputText, setInputText] = useState('');
-  const [parsedData, setParsedData] = useState<any[]>([]);
-  
+  const [parsedData, setParsedData] = useState<PackingImportRow[]>([]);
+
   // 拖拽相关状态
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -47,7 +62,7 @@ export function QuickImport({
   const modalRef = useRef<HTMLDivElement>(null);
 
   const closeAll = useCallback(() => {
-    setOpen(false); 
+    setOpen(false);
     setInputText('');
     setParsedData([]);
     // 重置位置
@@ -100,7 +115,7 @@ export function QuickImport({
 
     document.addEventListener('paste', handlePaste);
     document.addEventListener('contextmenu', handleContextMenu);
-    
+
     return () => {
       document.removeEventListener('paste', handlePaste);
       document.removeEventListener('contextmenu', handleContextMenu);
@@ -217,7 +232,7 @@ export function QuickImport({
               value={inputText}
               onChange={(e) => handleTextChange(e.target.value)}
               placeholder="粘贴数据，格式：描述\t数量\t单位\t单价\t净重\t毛重\t包装数\t尺寸"
-              className="w-full h-32 p-3 border border-gray-300 dark:border-gray-600 rounded-lg 
+              className="w-full h-32 p-3 border border-gray-300 dark:border-gray-600 rounded-lg
                          bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                          focus:ring-2 focus:ring-blue-500 focus:border-transparent
                          resize-none"
@@ -266,8 +281,8 @@ export function QuickImport({
           <div className="flex justify-end gap-3 pt-4">
             <button
               onClick={closeAll}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 
-                         bg-gray-100 dark:bg-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300
+                         bg-gray-100 dark:bg-gray-600 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500
                          transition-colors"
             >
               取消
@@ -275,8 +290,8 @@ export function QuickImport({
             <button
               onClick={() => handleInsert(false)}
               disabled={parsedData.length === 0}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg 
-                         hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed 
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg
+                         hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed
                          transition-colors"
             >
               追加导入
@@ -284,8 +299,8 @@ export function QuickImport({
             <button
               onClick={() => handleInsert(true)}
               disabled={parsedData.length === 0}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg 
-                         hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed 
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg
+                         hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed
                          transition-colors"
             >
               替换导入

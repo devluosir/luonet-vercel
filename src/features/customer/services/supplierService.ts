@@ -29,9 +29,12 @@ export function checkSupplierUsage(supplierName: string): number {
   try {
     const purchaseHistory = getLocalStorageJSON<HistoryDocument[]>('purchase_history', []);
 
-    return purchaseHistory.filter((doc: any) => {
+    return purchaseHistory.filter((doc) => {
       if (!doc) return false;
-      const supplierNameInDoc = doc.supplierName || doc.data?.attn || '';
+      const data = typeof doc.data === 'object' && doc.data !== null && !Array.isArray(doc.data)
+        ? doc.data as { attn?: string }
+        : {};
+      const supplierNameInDoc = typeof doc.supplierName === 'string' ? doc.supplierName : data.attn || '';
       return supplierNameInDoc.trim() === supplierName;
     }).length;
   } catch (error) {

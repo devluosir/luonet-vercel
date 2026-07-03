@@ -36,7 +36,7 @@ export const FEATURE_FLAGS: FeatureFlags = {
     category: 'ui',
     metrics: ['timeline_events_count', 'timeline_aggregation_rate']
   },
-  
+
   savedSegments: {
     name: 'savedSegments',
     description: '保存搜索筛选片段，提升重复查询效率',
@@ -45,7 +45,7 @@ export const FEATURE_FLAGS: FeatureFlags = {
     category: 'ui',
     metrics: ['search_saved_segments_count', 'search_reuse_rate']
   },
-  
+
   dedupeSuggestions: {
     name: 'dedupeSuggestions',
     description: '客户去重建议功能，提升数据质量',
@@ -55,7 +55,7 @@ export const FEATURE_FLAGS: FeatureFlags = {
     dependencies: ['broadcastChannel'],
     metrics: ['duplicate_detection_rate', 'merge_success_rate']
   },
-  
+
   indexedDB: {
     name: 'indexedDB',
     description: '使用IndexedDB替代localStorage，支持更大数据量',
@@ -65,7 +65,7 @@ export const FEATURE_FLAGS: FeatureFlags = {
     dependencies: ['dataVersioning'],
     metrics: ['storage_performance', 'data_capacity']
   },
-  
+
   broadcastChannel: {
     name: 'broadcastChannel',
     description: '多标签页/窗口数据同步',
@@ -74,7 +74,7 @@ export const FEATURE_FLAGS: FeatureFlags = {
     category: 'data',
     metrics: ['sync_latency', 'sync_success_rate']
   },
-  
+
   dataVersioning: {
     name: 'dataVersioning',
     description: '数据版本管理和迁移',
@@ -83,7 +83,7 @@ export const FEATURE_FLAGS: FeatureFlags = {
     category: 'data',
     metrics: ['migration_success_rate', 'data_integrity']
   },
-  
+
   performanceMonitoring: {
     name: 'performanceMonitoring',
     description: '性能监控和预算控制',
@@ -92,7 +92,7 @@ export const FEATURE_FLAGS: FeatureFlags = {
     category: 'performance',
     metrics: ['inp', 'lcp', 'cls', 'error_rate']
   },
-  
+
   accessibility: {
     name: 'accessibility',
     description: '可访问性增强功能',
@@ -101,7 +101,7 @@ export const FEATURE_FLAGS: FeatureFlags = {
     category: 'ui',
     metrics: ['lighthouse_a11y_score', 'screen_reader_compatibility']
   },
-  
+
   importExport: {
     name: 'importExport',
     description: '数据导入导出功能',
@@ -110,7 +110,7 @@ export const FEATURE_FLAGS: FeatureFlags = {
     category: 'data',
     metrics: ['import_success_rate', 'export_usage_count']
   },
-  
+
   auditTrail: {
     name: 'auditTrail',
     description: '操作审计和权限控制',
@@ -300,13 +300,23 @@ export const getFeatureManager = (): FeatureFlagManager => {
 
 // 开发环境调试工具
 if (process.env.NODE_ENV === 'development') {
-  (window as any).__FEATURE_FLAGS__ = {
+  const debugWindow = window as Window & {
+    __FEATURE_FLAGS__?: {
+      manager: FeatureFlagManager;
+      isFeatureEnabled: typeof isFeatureEnabled;
+      setFeatureEnabled: typeof setFeatureEnabled;
+      getAllFlags: () => FeatureFlags;
+      getStats: () => ReturnType<FeatureFlagManager['getStats']>;
+      resetToDefault: (flagName?: keyof FeatureFlags) => void;
+    };
+  };
+  debugWindow.__FEATURE_FLAGS__ = {
     manager: FeatureFlagManager.getInstance(),
     isFeatureEnabled,
     setFeatureEnabled,
     getAllFlags: () => FeatureFlagManager.getInstance().getAllFlags(),
     getStats: () => FeatureFlagManager.getInstance().getStats(),
-    resetToDefault: (flagName?: keyof FeatureFlags) => 
+    resetToDefault: (flagName?: keyof FeatureFlags) =>
       FeatureFlagManager.getInstance().resetToDefault(flagName)
   };
 }

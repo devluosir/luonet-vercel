@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getPackingHistoryById } from '@/utils/packingHistory';
 import PackingPage from '@/features/packing/app/PackingPage';
+import { normalizePackingData } from '@/features/packing/utils/normalizePackingData';
 
 interface EditPackingPageProps {
   params: {
@@ -20,7 +21,7 @@ export default function EditPackingPage({ params }: EditPackingPageProps) {
     // 获取历史记录数据
     try {
       const historyItem = getPackingHistoryById(params.id);
-      
+
       if (!historyItem) {
         setError('装箱单记录未找到');
         return;
@@ -37,9 +38,9 @@ export default function EditPackingPage({ params }: EditPackingPageProps) {
 
       // 将数据注入到全局变量中，供 PackingPage 使用
       if (typeof window !== 'undefined') {
-        (window as any).__PACKING_DATA__ = historyItem.data;
-        (window as any).__EDIT_MODE__ = true;
-        (window as any).__EDIT_ID__ = params.id;
+        window.__PACKING_DATA__ = normalizePackingData(historyItem.data);
+        window.__EDIT_MODE__ = true;
+        window.__EDIT_ID__ = params.id;
       }
     } catch (error) {
       console.error('Error loading packing record:', error);
@@ -51,9 +52,9 @@ export default function EditPackingPage({ params }: EditPackingPageProps) {
     // 清理函数
     return () => {
       if (typeof window !== 'undefined') {
-        delete (window as any).__PACKING_DATA__;
-        delete (window as any).__EDIT_MODE__;
-        delete (window as any).__EDIT_ID__;
+        delete window.__PACKING_DATA__;
+        delete window.__EDIT_MODE__;
+        delete window.__EDIT_ID__;
       }
     };
   }, [params.id, router]);
@@ -75,4 +76,4 @@ export default function EditPackingPage({ params }: EditPackingPageProps) {
   }
 
   return <PackingPage />;
-} 
+}

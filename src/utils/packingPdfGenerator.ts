@@ -1,6 +1,6 @@
-import jsPDF from 'jspdf';
+import jsPDF, { ImageProperties } from 'jspdf';
 import 'jspdf-autotable';
-import { UserOptions, RowInput, CellInput } from 'jspdf-autotable';
+import { RowInput, CellInput, UserOptions } from 'jspdf-autotable';
 
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { safeSetCnFont } from '@/utils/pdf/ensureFont';
@@ -8,12 +8,11 @@ import { validateFontRegistration } from '@/utils/pdfFontUtils';
 import { MergedCellInfo } from '@/features/packing/types';
 import { getUnitDisplay } from '@/utils/unitUtils';
 
-// 扩展 jsPDF 类型
-interface ExtendedJsPDF extends Omit<jsPDF, 'getImageProperties' | 'setPage'> {
-  autoTable: (options: UserOptions) => void;
-  getImageProperties: (image: string) => { width: number; height: number };
+interface ExtendedJsPDF extends jsPDF {
+  autoTable: (options: UserOptions) => unknown;
   getNumberOfPages: () => number;
-  setPage: (pageNumber: number) => ExtendedJsPDF;
+  splitTextToSize: (text: string, maxWidth: number) => string[];
+  getImageProperties: (imageData: string) => ImageProperties;
 }
 
 // 箱单数据接口
@@ -136,12 +135,12 @@ export async function generatePackingListPDF(
   const packageQtyMergeMode = data.packageQtyMergeMode || 'auto';
   const dimensionsMergeMode = data.dimensionsMergeMode || 'auto';
   const marksMergeMode = data.marksMergeMode || 'auto'; // 新增marks合并模式
-  
+
   // 根据合并模式选择对应的数据源
-  const mergedPackageQtyCells = packageQtyMergeMode === 'manual' 
+  const mergedPackageQtyCells = packageQtyMergeMode === 'manual'
     ? (data.manualMergedCells?.packageQty || [])
     : (data.autoMergedCells?.packageQty || []);
-    
+
   const mergedDimensionsCells = dimensionsMergeMode === 'manual'
     ? (data.manualMergedCells?.dimensions || [])
     : (data.autoMergedCells?.dimensions || []);
@@ -170,7 +169,7 @@ export async function generatePackingListPDF(
   // 读取页面的列显示设置，判断是否需要横向模式
   let visibleCols: string[] | undefined;
   let showMarks = false;
-  
+
   // 🆕 优先使用保存时的列显示设置，如果没有则使用当前的localStorage设置
   if (savedVisibleCols) {
     visibleCols = savedVisibleCols;
@@ -197,14 +196,14 @@ export async function generatePackingListPDF(
     format: 'a4',
     putOnlyUsedFonts: true,
     floatPrecision: 16
-  }) as any;
+  }) as unknown as ExtendedJsPDF;
 
   try {
     // 确保字体在当前 doc 实例注册
-    await ensurePdfFont(doc as unknown as jsPDF);
-    
+    await ensurePdfFont(doc);
+
     // 验证字体注册
-    validateFontRegistration(doc as unknown as jsPDF, '装箱单');
+    validateFontRegistration(doc, '装箱单');
 
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
@@ -224,33 +223,33 @@ export async function generatePackingListPDF(
           const mimeType = headerFormat === 'JPEG' ? 'image/jpeg' : 'image/png';
           const headerImage = `data:${mimeType};base64,${headerImageBase64}`;
           const imgProperties = doc.getImageProperties(headerImage);
-          
+
           // 检查是否显示marks列（用于判断是否需要横向模式）
           const showMarks = visibleCols ? visibleCols.includes('marks') : false;
           const shouldUseCompactHeader = isLandscape && showMarks;
-          
+
           // 根据条件调整抬头大小和位置
           let imgWidth, imgHeight, imgX, imgY, titleFontSize, titleSpacing, titleYSpacing;
-          
+
           // 计算图片的原始宽高比
           const aspectRatio = imgProperties.width / imgProperties.height;
-          
+
           if (shouldUseCompactHeader) {
             // 横向模式且显示marks列：保持与纵向模式相同的图片尺寸
             // 使用纵向模式的标准尺寸，而不是根据横向纸张宽度缩放
             const standardWidth = 210 - 30; // A4纵向模式的宽度减去30mm边距
             const maxHeight = 40; // 与纵向模式保持一致的最大高度
-            
+
             // 使用纵向模式的标准宽度计算
             imgWidth = standardWidth;
             imgHeight = imgWidth / aspectRatio;
-            
+
             // 如果高度超出限制，则按高度计算宽度
             if (imgHeight > maxHeight) {
               imgHeight = maxHeight;
               imgWidth = imgHeight * aspectRatio;
             }
-            
+
             imgX = (pageWidth - imgWidth) / 2; // 水平居中
             imgY = 15; // 与纵向模式保持相同的上边距
             titleFontSize = 14; // 与纵向模式保持相同的字体大小
@@ -260,24 +259,24 @@ export async function generatePackingListPDF(
             // 纵向模式：保持图片比例，优化尺寸
             const maxHeight = 40; // 纵向模式下允许更大的高度
             const maxWidth = pageWidth - 30; // 左右各留15mm
-            
+
             // 先按宽度计算高度
             imgWidth = maxWidth;
             imgHeight = imgWidth / aspectRatio;
-            
+
             // 如果高度超出限制，则按高度计算宽度
             if (imgHeight > maxHeight) {
               imgHeight = maxHeight;
               imgWidth = imgHeight * aspectRatio;
             }
-            
+
             imgX = (pageWidth - imgWidth) / 2; // 水平居中
             imgY = 15; // 上边距15mm
             titleFontSize = 14;
             titleSpacing = 5;
             titleYSpacing = 10;
           }
-          
+
           doc.addImage(
             headerImage,
             headerFormat,
@@ -288,7 +287,7 @@ export async function generatePackingListPDF(
             undefined,
             'FAST'  // 使用快速压缩
           );
-          
+
           // 调整标题字体大小和位置
           doc.setFontSize(titleFontSize);
           safeSetCnFont(doc, 'bold', 'export');
@@ -318,7 +317,7 @@ export async function generatePackingListPDF(
     // }
 
     // 商品表格 - 紧跟在基本信息后
-    currentY = await renderPackingTable(doc, data, currentY, mergedPackageQtyCells, mergedDimensionsCells, mergedMarksCells, visibleCols);
+    await renderPackingTable(doc, data, currentY, mergedPackageQtyCells, mergedDimensionsCells, mergedMarksCells, visibleCols);
 
     // 备注 - 已移除，因为备注信息已在文档其他位置显示
     // currentY = renderRemarks(doc, data, currentY, pageWidth, margin);
@@ -368,11 +367,11 @@ function getPackingListTitle(data: PackingData): string {
 }
 
 // 渲染基本信息
-function renderBasicInfo(doc: any, data: PackingData, startY: number, pageWidth: number, margin: number): number {
+function renderBasicInfo(doc: ExtendedJsPDF, data: PackingData, startY: number, pageWidth: number, margin: number): number {
   let currentY = startY;
   const contentIndent = 5; // 收货人信息的缩进值
   const orderNoIndent = 15; // Order No. 内容的缩进值，设置更大的缩进
-  
+
   // 添加 SHIP'S SPARES IN TRANSIT（如果选中）- 放在Consignee上方
   if (data.remarkOptions.shipsSpares) {
     doc.setFontSize(8);
@@ -389,7 +388,7 @@ function renderBasicInfo(doc: any, data: PackingData, startY: number, pageWidth:
   safeSetCnFont(doc, 'bold', 'export');
   doc.text('Consignee:', margin, currentY);
   safeSetCnFont(doc, 'normal', 'export');
-  
+
   let leftY = currentY;
   if (data.consignee.name.trim()) {
     const consigneeLines = doc.splitTextToSize(data.consignee.name.trim(), 130);
@@ -427,7 +426,7 @@ function renderBasicInfo(doc: any, data: PackingData, startY: number, pageWidth:
   doc.text(':', colonX, rightY);
   safeSetCnFont(doc, 'bold', 'export');
   doc.setTextColor(255, 0, 0); // 设置为红色，与发票一致
-  
+
   // 处理 Invoice No. 换行
   const invoiceNoText = data.invoiceNo || '';
   const maxWidth = pageWidth - colonX - 15; // 留出右边距
@@ -464,14 +463,14 @@ function renderBasicInfo(doc: any, data: PackingData, startY: number, pageWidth:
 // }
 
 // 添加页码
-function addPageNumbers(doc: any, pageWidth: number, pageHeight: number, margin: number): void {
+function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: number, margin: number): void {
   const totalPages = doc.getNumberOfPages();
-  
+
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     doc.setFillColor(255, 255, 255);
     doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-    
+
     doc.setFontSize(8);
     safeSetCnFont(doc, 'normal', 'export');
     doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
@@ -479,7 +478,7 @@ function addPageNumbers(doc: any, pageWidth: number, pageHeight: number, margin:
 }
 
 // 处理表头错误的情况
-function handleHeaderError(doc: any, data: PackingData, margin: number, pageWidth: number): number {
+function handleHeaderError(doc: ExtendedJsPDF, data: PackingData, margin: number, pageWidth: number): number {
   doc.setFontSize(14);
   safeSetCnFont(doc, 'bold', 'export');
   const title = getPackingListTitle(data);
@@ -490,7 +489,7 @@ function handleHeaderError(doc: any, data: PackingData, margin: number, pageWidt
 }
 
 // 处理无表头的情况
-function handleNoHeader(doc: any, data: PackingData, margin: number, pageWidth: number): number {
+function handleNoHeader(doc: ExtendedJsPDF, data: PackingData, margin: number, pageWidth: number): number {
   doc.setFontSize(14);
   safeSetCnFont(doc, 'bold', 'export');
   const title = getPackingListTitle(data);
@@ -502,7 +501,7 @@ function handleNoHeader(doc: any, data: PackingData, margin: number, pageWidth: 
 
 // 渲染商品表格
 async function renderPackingTable(
-  doc: any,
+  doc: ExtendedJsPDF,
   data: PackingData,
   startY: number,
   mergedPackageQtyCells: Array<{
@@ -534,7 +533,7 @@ async function renderPackingTable(
 
   // 设置列宽度和对齐方式
   const columnStyles: Record<string, { halign: 'center' | 'left' | 'right'; cellWidth: number }> = {};
-  
+
   // 定义各列的相对宽度权重
   const baseWidths = {
     marks: isLandscape ? 8 : 7, // 进一步增加marks列宽度，横向模式8，纵向模式7
@@ -608,91 +607,91 @@ async function renderPackingTable(
 
   // 设置每列的宽度和对齐方式
   let currentColumnIndex = 0;
-  
+
   if (showMarks) {
-    columnStyles[currentColumnIndex] = { 
-      halign: 'center' as const, 
-      cellWidth: baseWidths.marks * unitWidth 
+    columnStyles[currentColumnIndex] = {
+      halign: 'center' as const,
+      cellWidth: baseWidths.marks * unitWidth
     };
     currentColumnIndex++;
   }
-  
-  columnStyles[currentColumnIndex] = { 
-    halign: 'center' as const, 
-    cellWidth: baseWidths.no * unitWidth 
+
+  columnStyles[currentColumnIndex] = {
+    halign: 'center' as const,
+    cellWidth: baseWidths.no * unitWidth
   };
   currentColumnIndex++;
-  
-  columnStyles[currentColumnIndex] = { 
-    halign: 'center' as const, 
-    cellWidth: baseWidths.description * unitWidth 
+
+  columnStyles[currentColumnIndex] = {
+    halign: 'center' as const,
+    cellWidth: baseWidths.description * unitWidth
   };
   currentColumnIndex++;
 
   if (showHsCode) {
-    columnStyles[currentColumnIndex] = { 
-      halign: 'center' as const, 
-      cellWidth: baseWidths.hsCode * unitWidth 
+    columnStyles[currentColumnIndex] = {
+      halign: 'center' as const,
+      cellWidth: baseWidths.hsCode * unitWidth
     };
     currentColumnIndex++;
   }
 
   // Quantity 和 Unit 列
-  columnStyles[currentColumnIndex] = { 
-    halign: 'center' as const, 
-    cellWidth: baseWidths.qty * unitWidth 
+  columnStyles[currentColumnIndex] = {
+    halign: 'center' as const,
+    cellWidth: baseWidths.qty * unitWidth
   };
   currentColumnIndex++;
-  columnStyles[currentColumnIndex] = { 
-    halign: 'center' as const, 
-    cellWidth: baseWidths.unit * unitWidth 
+  columnStyles[currentColumnIndex] = {
+    halign: 'center' as const,
+    cellWidth: baseWidths.unit * unitWidth
   };
   currentColumnIndex++;
 
   // Price 相关列
   if (showUnitPrice) {
-    columnStyles[currentColumnIndex] = { 
-      halign: 'center' as const, 
-      cellWidth: baseWidths.unitPrice * unitWidth 
+    columnStyles[currentColumnIndex] = {
+      halign: 'center' as const,
+      cellWidth: baseWidths.unitPrice * unitWidth
     };
     currentColumnIndex++;
   }
   if (showAmount) {
-    columnStyles[currentColumnIndex] = { 
-      halign: 'center' as const, 
-      cellWidth: baseWidths.amount * unitWidth 
+    columnStyles[currentColumnIndex] = {
+      halign: 'center' as const,
+      cellWidth: baseWidths.amount * unitWidth
     };
     currentColumnIndex++;
   }
 
   // Weight 和 Package 相关列
   if (showNetWeight) {
-    columnStyles[currentColumnIndex] = { 
-      halign: 'center' as const, 
-      cellWidth: baseWidths.netWeight * unitWidth 
+    columnStyles[currentColumnIndex] = {
+      halign: 'center' as const,
+      cellWidth: baseWidths.netWeight * unitWidth
     };
     currentColumnIndex++;
   }
   if (showGrossWeight) {
-    columnStyles[currentColumnIndex] = { 
-      halign: 'center' as const, 
-      cellWidth: baseWidths.grossWeight * unitWidth 
+    columnStyles[currentColumnIndex] = {
+      halign: 'center' as const,
+      cellWidth: baseWidths.grossWeight * unitWidth
     };
     currentColumnIndex++;
   }
   if (showPackageQty) {
-    columnStyles[currentColumnIndex] = { 
-      halign: 'center' as const, 
-      cellWidth: baseWidths.pkgs * unitWidth 
+    columnStyles[currentColumnIndex] = {
+      halign: 'center' as const,
+      cellWidth: baseWidths.pkgs * unitWidth
     };
     currentColumnIndex++;
   }
 
   // Dimensions 列
   if (showDimensions) {
-    columnStyles[currentColumnIndex] = { 
-      halign: 'center' as const, 
-      cellWidth: baseWidths.dimensions * unitWidth 
+    columnStyles[currentColumnIndex] = {
+      halign: 'center' as const,
+      cellWidth: baseWidths.dimensions * unitWidth
     };
   }
 
@@ -713,13 +712,13 @@ async function renderPackingTable(
 
   // 准备数据行（支持分组合并单元格）
   const body: RowInput[] = [];
-  
+
   // 获取合并单元格信息的辅助函数
   const getMergedCellInfo = (rowIndex: number, mergedCells: MergedCellInfo[]) => {
     return mergedCells.find(cell => rowIndex >= cell.startRow && rowIndex <= cell.endRow);
   };
 
-  const shouldRenderCell = (rowIndex: number, mergedCells: MergedCellInfo[]) => {
+  const _shouldRenderCell = (rowIndex: number, mergedCells: MergedCellInfo[]) => {
     const mergedInfo = getMergedCellInfo(rowIndex, mergedCells);
     return !mergedInfo || mergedInfo.startRow === rowIndex;
   };
@@ -729,7 +728,7 @@ async function renderPackingTable(
   let rowIndex = 0;
   data.items.forEach((item) => {
     const row: CellInput[] = [];
-    
+
     if (showMarks) {
       // 处理Marks列的合并
       const marksMergedInfo = getMergedCellInfo(rowIndex, mergedMarksCells);
@@ -739,7 +738,7 @@ async function renderPackingTable(
         isStartRow: marksMergedInfo?.startRow === rowIndex,
         isMerged: marksMergedInfo?.isMerged
       });
-      
+
       if (marksMergedInfo && marksMergedInfo.isMerged && marksMergedInfo.startRow === rowIndex) {
         // 这是合并单元格的起始行
         const rowSpan = marksMergedInfo.endRow - marksMergedInfo.startRow + 1;
@@ -763,10 +762,10 @@ async function renderPackingTable(
       }
     }
     row.push(rowIndex + 1); // 用当前序号
-    
+
     if (showDescription) row.push(item.description);
     if (showHsCode) row.push(item.hsCode);
-    
+
     console.log(`PDF生成 - Row ${rowIndex} 单位信息:`, {
       originalUnit: item.unit,
       quantity: item.quantity,
@@ -777,19 +776,19 @@ async function renderPackingTable(
         unit: item.unit
       }
     });
-    
+
     // 确保单位有默认值，并使用单复数处理
     const unit = item.unit || 'pc';
     if (showQuantity) row.push(item.quantity.toString());
     if (showUnit) row.push(getUnitDisplay(unit, item.quantity)); // 使用单复数处理函数
-    
+
     if (showUnitPrice) row.push(item.unitPrice.toFixed(2));
     if (showAmount) row.push(item.totalPrice.toFixed(2));
-    
+
     // 处理重量列
     if (showNetWeight) row.push(item.netWeight.toFixed(2));
     if (showGrossWeight) row.push(item.grossWeight.toFixed(2));
-      
+
     // 处理Package Qty列的合并
     if (showPackageQty) {
       const packageQtyMergedInfo = getMergedCellInfo(rowIndex, mergedPackageQtyCells);
@@ -799,7 +798,7 @@ async function renderPackingTable(
         isStartRow: packageQtyMergedInfo?.startRow === rowIndex,
         isMerged: packageQtyMergedInfo?.isMerged
       });
-      
+
       if (packageQtyMergedInfo && packageQtyMergedInfo.isMerged && packageQtyMergedInfo.startRow === rowIndex) {
         // 这是合并单元格的起始行
         const rowSpan = packageQtyMergedInfo.endRow - packageQtyMergedInfo.startRow + 1;
@@ -822,7 +821,7 @@ async function renderPackingTable(
         row.push(item.packageQty.toString());
       }
     }
-    
+
     if (showDimensions) {
       // 处理Dimensions列的合并
       const dimensionsMergedInfo = getMergedCellInfo(rowIndex, mergedDimensionsCells);
@@ -832,7 +831,7 @@ async function renderPackingTable(
         isStartRow: dimensionsMergedInfo?.startRow === rowIndex,
         isMerged: dimensionsMergedInfo?.isMerged
       });
-      
+
       if (dimensionsMergedInfo && dimensionsMergedInfo.isMerged && dimensionsMergedInfo.startRow === rowIndex) {
         // 这是合并单元格的起始行
         const rowSpan = dimensionsMergedInfo.endRow - dimensionsMergedInfo.startRow + 1;
@@ -855,7 +854,7 @@ async function renderPackingTable(
         row.push(item.dimensions);
       }
     }
-    
+
     console.log(`Row ${rowIndex} 最终行数据:`, row);
     body.push(row);
     rowIndex++;
@@ -876,32 +875,32 @@ async function renderPackingTable(
   if (showAmount && data.otherFees && data.otherFees.length > 0) {
     data.otherFees.forEach((fee, feeIndex) => {
       const feeRow: CellInput[] = [];
-      
+
       // 添加序号列 - 与主表格连续
       feeRow.push({
         content: (data.items.length + feeIndex + 1).toString(),
         styles: { halign: 'center' }
       });
-      
+
       // 添加描述列 - 合并所有中间列
       feeRow.push({
         content: fee.description,
         colSpan: mergeColCount - 1, // 减去序号列
-        styles: { 
+        styles: {
           halign: 'center',
           ...(fee.highlight?.description ? { textColor: [255, 0, 0] } : {})
         }
       });
-      
+
       // 添加金额列
       feeRow.push({
         content: fee.amount.toFixed(2),
-        styles: { 
+        styles: {
           halign: 'center',
           ...(fee.highlight?.amount ? { textColor: [255, 0, 0] } : {})
         }
       });
-      
+
       body.push(feeRow);
     });
   }
@@ -910,13 +909,13 @@ async function renderPackingTable(
   let netWeight = 0, grossWeight = 0, packageQty = 0, totalPrice = 0;
   const processedGroups = new Set<string>();
   const processedMergedRows = new Set<number>();
-  
+
   // 处理合并单元格，标记已合并的行
   const allMergedCells = [
     ...(mergedPackageQtyCells || []),
     ...(mergedDimensionsCells || [])
   ];
-  
+
   allMergedCells.forEach(cell => {
     if (cell.isMerged) {
       for (let i = cell.startRow; i <= cell.endRow; i++) {
@@ -924,16 +923,16 @@ async function renderPackingTable(
       }
     }
   });
-  
+
   data.items.forEach((item, index) => {
     totalPrice += item.totalPrice;
-    
+
     // 检查是否在合并单元格中且不是合并的起始行
     const isInMergedCell = processedMergedRows.has(index);
-    const isMergeStart = allMergedCells.some(cell => 
+    const isMergeStart = allMergedCells.some(cell =>
       cell.isMerged && cell.startRow === index
     );
-    
+
     // 如果不在合并单元格中，或者是合并的起始行，则计算
     if (!isInMergedCell || isMergeStart) {
       if (item.groupId) {
@@ -993,7 +992,7 @@ async function renderPackingTable(
     col: 0,
     colSpan: mergeColCount,
     rowSpan: 1,
-    styles: { 
+    styles: {
       halign: 'center', // 将 Total 文本居中显示
       font: 'NotoSansSC',
       fontStyle: 'bold'
@@ -1012,8 +1011,8 @@ async function renderPackingTable(
     columnStyles: columnStyles,
     didParseCell: function(data: { row: { index: number }; column: { index: number }; cell: { colSpan?: number; styles?: { halign?: string; valign?: string; fontStyle?: string; font?: string } } }) { // 使用具体类型以兼容 jspdf-autotable 的 CellHookData 类型
       if (data.row.index === totalRowIndex) {
-        const span = totalCellSpans.find(span => 
-          span.row === data.row.index && 
+        const span = totalCellSpans.find(span =>
+          span.row === data.row.index &&
           span.col === data.column.index
         );
         if (span) {
@@ -1026,7 +1025,7 @@ async function renderPackingTable(
             data.cell.styles.halign = 'center';
           }
         }
-        
+
         // 确保总计行的数值正确显示
         if (data.row.index === totalRowIndex && data.column.index >= mergeColCount) {
           // 数值列应该居中对齐
@@ -1051,4 +1050,4 @@ async function renderPackingTable(
   }) as unknown) as number;
 
   return finalY;
-} 
+}

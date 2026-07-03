@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Save, Download, Eye, Settings } from 'lucide-react';
-import type { DocumentAction, DocumentPermission } from '../types';
+import type { DocumentPermission } from '../types';
 
 interface DocumentLayoutProps {
   title: string;

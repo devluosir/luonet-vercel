@@ -16,7 +16,7 @@ export const baseStyles = {
       dark: 'dark:hover:bg-gray-700 dark:hover:shadow-lg'
     }
   },
-  
+
   // 按钮样式
   button: {
     primary: {
@@ -32,13 +32,13 @@ export const baseStyles = {
       dark: 'dark:border-gray-600 dark:hover:bg-gray-700 dark:text-gray-200'
     }
   },
-  
+
   // 输入框样式
   input: {
     light: 'bg-white border border-gray-300 focus:border-blue-500 focus:ring-blue-500',
     dark: 'dark:bg-gray-800 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400'
   },
-  
+
   // 文本样式
   text: {
     primary: {
@@ -68,13 +68,13 @@ export const getModuleButtonStyles = (moduleId: string, theme: ButtonTheme, mode
     history: 'pink',
     customer: 'fuchsia'
   };
-  
+
   const color = colorMap[moduleId] || 'gray';
-  
+
   if (theme === 'classic') {
     return {
-      base: mode === 'dark' 
-        ? 'bg-gray-800/80 border-gray-700/50' 
+      base: mode === 'dark'
+        ? 'bg-gray-800/80 border-gray-700/50'
         : 'bg-white/80 border-gray-200/60',
       hover: `hover:from-${color}-200 hover:to-${color}-300`,
       darkHover: `dark:hover:from-${color}-400/80 dark:hover:to-${color}-600/80`,
@@ -82,7 +82,7 @@ export const getModuleButtonStyles = (moduleId: string, theme: ButtonTheme, mode
       badge: `bg-${color}-600 dark:bg-${color}-500`
     };
   }
-  
+
   return {
     base: mode === 'dark'
       ? `from-${color}-300/70 to-${color}-500/70`
@@ -96,14 +96,14 @@ export const getModuleButtonStyles = (moduleId: string, theme: ButtonTheme, mode
 
 // 响应式样式生成器
 export const getResponsiveStyles = (breakpoint: 'sm' | 'md' | 'lg' | 'xl' | '2xl') => {
-  const breakpoints = {
+  const _breakpoints = {
     sm: '640px',
     md: '768px',
     lg: '1024px',
     xl: '1280px',
     '2xl': '1536px'
   };
-  
+
   return {
     container: `max-w-${breakpoint}`,
     grid: {
@@ -200,7 +200,7 @@ export const createModuleButtonClass = (moduleId: string, theme: ButtonTheme, mo
   );
 };
 
-export const createCardClass = (mode: ThemeMode) => {
+export const createCardClass = (_mode: ThemeMode) => {
   return combineStyles(
     baseStyles.card.light,
     baseStyles.card.dark,

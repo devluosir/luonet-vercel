@@ -28,7 +28,7 @@ interface LazyPDFGeneratorProps {
   className?: string;
 }
 
-export default function LazyPDFGenerator({ 
+export default function LazyPDFGenerator({
   pdfUrl,
   onClose,
   title = 'PDF Preview',
@@ -36,9 +36,9 @@ export default function LazyPDFGenerator({
   itemType,
   showDownloadButton = true,
   showOpenInNewTab = true,
-  className = '' 
+  className = ''
 }: LazyPDFGeneratorProps) {
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, _setIsLoaded] = useState(false);
   const [showGenerator, setShowGenerator] = useState(false);
 
   // 延迟显示PDF生成器，减少初始加载时间
@@ -86,4 +86,4 @@ export default function LazyPDFGenerator({
       )}
     </div>
   );
-} 
+}

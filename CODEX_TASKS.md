@@ -6,6 +6,28 @@
 
 ---
 
+## 2026-07-04 已完成：全量 lint warning 清理
+
+### 范围
+
+- 分阶段处理 `@typescript-eslint/no-unused-vars`、`@typescript-eslint/no-explicit-any`、`react-hooks/exhaustive-deps`。
+- 覆盖工具函数、PDF 生成、历史导入导出、权限、Worker、报价、装箱单、发票、采购、客户、邮件等模块。
+- 新增/补齐全局类型声明，减少页面级 `window as any` 和 NextAuth session/token 强转。
+
+### 结果
+
+- `npx next lint`：0 warnings / 0 errors。
+- `npx tsc --noEmit`：通过。
+- `npm run build`：通过。
+- Hooks 依赖警告已清零；保留的局部 `eslint-disable-next-line react-hooks/exhaustive-deps` 均带中文原因说明。
+
+### 后续建议
+
+- 提交前手动回归报价单、装箱单、发票增删改和历史导入导出流程。
+- 后续如开启 CI，可将 `npx tsc --noEmit`、`npx next lint`、`npm run build` 作为最低质量门禁。
+
+---
+
 ## TASK-01：从 wrangler.toml 移除明文 API_TOKEN
 
 **优先级**：🔴 紧急（安全）
@@ -8436,11 +8458,11 @@ export const usePermissionInit = () => {
           if (userCache) {
             const cacheData = JSON.parse(userCache);
             const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
-            
+
             if (isRecent && cacheData.permissions && Array.isArray(cacheData.permissions)) {
               // 使用缓存数据更新用户信息
               user.permissions = cacheData.permissions;
-              
+
               logPermission('Session无权限数据，从缓存恢复权限', {
                 permissionsCount: cacheData.permissions.length
               });
@@ -8472,11 +8494,11 @@ export const usePermissionInit = () => {
           if (userCache) {
             const cacheData = JSON.parse(userCache);
             const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
-            
+
             if (isRecent && cacheData.permissions && Array.isArray(cacheData.permissions)) {
               // 使用缓存数据更新用户信息
               user.permissions = cacheData.permissions;
-              
+
               logPermission('Session无权限数据，从缓存恢复权限', {
                 permissionsCount: cacheData.permissions.length
               });
@@ -8769,7 +8791,7 @@ git commit -m "perf: 移除外网依赖 — Google Fonts 改系统字体，清�
 
 ### 改动 1：`src/utils/d1Pull.ts` — 修复 mergeIntoStorage 使删除可传播
 
-**核心思路：** 
+**核心思路：**
 - `fetchAll` 区分"获取成功返回 0 条"和"请求失败"，用 `ok` 标记
 - `mergeIntoStorage` 在 D1 拉取成功后，移除本地有、D1 没有的记录（表示已在另一端删除）
 - 例外：本地记录在 2 分钟内刚创建的保留（为 D1 double-write 传播留窗口）
@@ -8999,8 +9021,8 @@ import { d1SyncDocument } from '@/utils/d1Sync';
               currency: data.currency,
               data: { ...existingInvoice, data, updatedAt: new Date().toISOString() },
             });
-            return { 
-              success: true, 
+            return {
+              success: true,
               message: '保存成功',
               newEditId: existingInvoice.id
             };
@@ -9022,7 +9044,7 @@ import { pullAllFromD1 } from '@/utils/d1Pull';
 ```typescript
   useEffect(() => {
     setMounted(true);
-    
+
     // 页面挂载时从 D1 拉取最新数据（跨设备同步）
     pullAllFromD1()
       .then(() => {
@@ -10195,8 +10217,8 @@ rg -n "window\.confirm|window\.alert|\bconfirm\(" src/features/customer -S
 
 **背景**
 
-`src/lib/embedded-resources.ts` 是构建时自动生成的 **28MB 文件**（两个 11MB 中文字体 + 印章图片的 base64）。  
-`src/utils/pdfHelpers.ts` 第 6 行对其做了**静态 top-level import**，导致该 28MB 依赖被打包进所有引用 `pdfHelpers` 的页面 chunk，影响的路由包括：`/quotation`、`/packing`、`/invoice`、`/purchase`、`/history`。  
+`src/lib/embedded-resources.ts` 是构建时自动生成的 **28MB 文件**（两个 11MB 中文字体 + 印章图片的 base64）。
+`src/utils/pdfHelpers.ts` 第 6 行对其做了**静态 top-level import**，导致该 28MB 依赖被打包进所有引用 `pdfHelpers` 的页面 chunk，影响的路由包括：`/quotation`、`/packing`、`/invoice`、`/purchase`、`/history`。
 用户打开任何单据页面，浏览器都必须先下载并解析这 28MB，严重拖慢首屏可交互时间。
 
 **目标**：将 `pdfHelpers.ts` 中对 `embeddedResources` 的引用改为**函数内部动态 import**，使其仅在真正生成 PDF 时才按需加载。
@@ -10502,11 +10524,11 @@ if (status === 'unauthenticated' && typeof window !== 'undefined') {
     const userInfo = localStorage.getItem('userInfo');
     const latestPermissions = localStorage.getItem('latestPermissions');
     const permissionsTimestamp = localStorage.getItem('permissionsTimestamp');
-    
+
     if (userInfo && latestPermissions && permissionsTimestamp) {
       const userData = JSON.parse(userInfo);
       const isRecent = (Date.now() - parseInt(permissionsTimestamp)) < 24 * 60 * 60 * 1000;
-      
+
       if (userData.username && isRecent) {
         router.push('/dashboard');
         return;

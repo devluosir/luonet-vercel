@@ -29,7 +29,7 @@ export function CustomEventForm({ customerId, customerName, onSubmit, onCancel }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title.trim()) {
       alert('请输入事件标题');
       return;
@@ -120,7 +120,7 @@ export function CustomEventForm({ customerId, customerName, onSubmit, onCancel }
               </label>
               <select
                 value={formData.status}
-                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as typeof formData.status }))}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
                 <option value="pending">进行中</option>

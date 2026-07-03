@@ -23,7 +23,7 @@ const currencyNames: { [key: string]: string } = {
  * 统一字体设置工具 - 确保大小写一致且带兜底
  */
 function setCnFont(doc: jsPDF, style: 'normal'|'bold'|'italic'|'bolditalic' = 'normal') {
-  const s = (style || 'normal').toLowerCase() as any;
+  const s = style || 'normal';
   try {
     doc.setFont('NotoSansSC', s);
   } catch (e) {
@@ -35,13 +35,15 @@ function setCnFont(doc: jsPDF, style: 'normal'|'bold'|'italic'|'bolditalic' = 'n
 interface AutoTableOptions {
   startY: number;
   head: string[][];
-  body: (string | number | { 
-    content: string | number | undefined; 
+  body: (string | number | {
+    content: string | number | undefined;
     colSpan?: number;
-    styles?: { 
-      halign?: string;
-      textColor?: number[];
-    }
+	    styles?: {
+	      halign?: string;
+	      textColor?: number[];
+	      fontStyle?: string;
+	      fontSize?: number;
+	    }
   } | undefined)[][];
   theme: string;
   styles: {
@@ -73,24 +75,28 @@ interface AutoTableOptions {
   margin: { left: number; right: number; bottom?: number; top?: number };
   tableWidth: string;
   showFoot?: 'everyPage' | 'lastPage' | 'never';
-  didDrawPage?: (data: { 
-    table: { 
-      body: Array<{ 
-        cells: Array<{ 
-          styles: { 
+  didDrawPage?: (data: {
+    table: {
+      body: Array<{
+        cells: Array<{
+          styles: {
             lineWidth: number;
             lineColor: number[];
-          } 
-        }> 
-      }> 
-    } 
+          }
+        }>
+      }>
+    }
   }) => void;
-  didDrawCell?: (data: { 
-    cell: { 
-      styles: { 
+  didDrawCell?: (data: {
+    cell: {
+      x?: number;
+      y?: number;
+      width?: number;
+      height?: number;
+      styles: {
         lineWidth: number;
         lineColor: number[];
-      } 
+      }
     };
     row: {
       index: number;
@@ -166,7 +172,7 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
     format: 'a4',
     putOnlyUsedFonts: true,
     floatPrecision: 16
-  }) as ExtendedJsPDF;
+  }) as unknown as ExtendedJsPDF;
 
   try {
     // 确保字体在当前 doc 实例注册（带回退保护）
@@ -226,7 +232,7 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
     // 设置字体和样式
     doc.setFontSize(8);
     setCnFont(doc, 'normal');
-    
+
     // 客户信息区域
     startY = await renderCustomerInfo(doc, data, startY, pageWidth);
 
@@ -236,24 +242,24 @@ export async function generateInvoicePDF(data: PDFGeneratorData): Promise<Blob> 
 
     // 智能分页检查：只有在真正需要时才换页
     const remainingSpace = pageHeight - finalY;
-    
+
     // 估算后续内容所需空间
     let estimatedSpaceNeeded = 0;
-    
+
     // 总金额区域估算（约20-25mm）
     estimatedSpaceNeeded += 25;
-    
+
     // 银行信息和付款条款估算（根据实际内容）
     if (data.showBank) estimatedSpaceNeeded += 30; // 银行信息约30mm
     if (data.showPaymentTerms || data.additionalPaymentTerms || data.showInvoiceReminder) {
       estimatedSpaceNeeded += 20; // 付款条款约20mm
     }
-    
+
     // 印章估算（40mm）
     if (data.templateConfig.stampType !== 'none') {
       estimatedSpaceNeeded += 40;
     }
-    
+
     // 只有在剩余空间确实不足时才换页
     if (remainingSpace < estimatedSpaceNeeded) {
       doc.addPage();
@@ -313,9 +319,9 @@ async function renderCustomerInfo(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   const rightMargin = pageWidth - 25;  // 增加右边距，向左移动
   const rightInfoY = startY;
   const colonX = rightMargin - 15;  // 冒号的固定位置
-  
+
   setCnFont(doc, 'bold');
-  
+
   // Invoice No.
   doc.text('Invoice No.', colonX - 2, rightInfoY, { align: 'right' });
   doc.text(':', colonX, rightInfoY);
@@ -337,7 +343,7 @@ async function renderCustomerInfo(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   setCnFont(doc, 'bold');
   doc.text('To:', leftMargin, currentY);
   const toTextWidth = doc.getTextWidth('To: ');
-  
+
   if (data.to.trim()) {
     const toLines = doc.splitTextToSize(data.to.trim(), maxTextWidth);
     toLines.forEach((line: string, index: number) => {
@@ -351,7 +357,7 @@ async function renderCustomerInfo(doc: ExtendedJsPDF, data: PDFGeneratorData, st
   setCnFont(doc, 'bold');
   doc.text('Order No.:', leftMargin, currentY);
   const orderNoX = leftMargin + doc.getTextWidth('Order No.: ');
-  
+
   if (data.customerPO) {
     const orderLines = doc.splitTextToSize(data.customerPO.trim(), maxTextWidth);
     orderLines.forEach((line: string, index: number) => {
@@ -490,75 +496,75 @@ function getColumnStyles(data: PDFGeneratorData, tableWidth: number): Record<str
 
   // 设置每列的宽度和对齐方式
   const columnStyles: Record<string, { halign: string; cellWidth: number }> = {};
-  
+
   // No. 列
-  columnStyles[0] = { 
-    halign: 'center', 
-    cellWidth: baseWidths.no * unitWidth 
+  columnStyles[0] = {
+    halign: 'center',
+    cellWidth: baseWidths.no * unitWidth
   };
 
   let currentColumnIndex = 1;
 
   // HS Code 列
   if (data.showHsCode) {
-    columnStyles[currentColumnIndex] = { 
-      halign: 'center', 
-      cellWidth: baseWidths.hsCode * unitWidth 
+    columnStyles[currentColumnIndex] = {
+      halign: 'center',
+      cellWidth: baseWidths.hsCode * unitWidth
     };
     currentColumnIndex++;
   }
 
   // Part Name 列
   if (data.showPartName) {
-    columnStyles[currentColumnIndex] = { 
-      halign: 'center', 
-      cellWidth: baseWidths.partName * unitWidth 
+    columnStyles[currentColumnIndex] = {
+      halign: 'center',
+      cellWidth: baseWidths.partName * unitWidth
     };
     currentColumnIndex++;
   }
 
   // Description 列
   if (data.showDescription) {
-    columnStyles[currentColumnIndex] = { 
-      halign: 'center', 
-      cellWidth: baseWidths.description * unitWidth 
+    columnStyles[currentColumnIndex] = {
+      halign: 'center',
+      cellWidth: baseWidths.description * unitWidth
     };
     currentColumnIndex++;
   }
 
   // Q'TY 列
-  columnStyles[currentColumnIndex] = { 
-    halign: 'center', 
-    cellWidth: baseWidths.qty * unitWidth 
+  columnStyles[currentColumnIndex] = {
+    halign: 'center',
+    cellWidth: baseWidths.qty * unitWidth
   };
   currentColumnIndex++;
 
   // Unit 列
-  columnStyles[currentColumnIndex] = { 
-    halign: 'center', 
-    cellWidth: baseWidths.unit * unitWidth 
+  columnStyles[currentColumnIndex] = {
+    halign: 'center',
+    cellWidth: baseWidths.unit * unitWidth
   };
   currentColumnIndex++;
 
   // Unit Price 列
-  columnStyles[currentColumnIndex] = { 
-    halign: 'center', 
-    cellWidth: baseWidths.unitPrice * unitWidth 
+  columnStyles[currentColumnIndex] = {
+    halign: 'center',
+    cellWidth: baseWidths.unitPrice * unitWidth
   };
   currentColumnIndex++;
 
   // Amount 列
-  columnStyles[currentColumnIndex] = { 
-    halign: 'center', 
-    cellWidth: baseWidths.amount * unitWidth 
+  columnStyles[currentColumnIndex] = {
+    halign: 'center',
+    cellWidth: baseWidths.amount * unitWidth
   };
   currentColumnIndex++;
 
   // Remarks 列
   if (data.showRemarks) {
-    columnStyles[currentColumnIndex] = { 
-      halign: 'center', 
-      cellWidth: baseWidths.remarks * unitWidth 
+    columnStyles[currentColumnIndex] = {
+      halign: 'center',
+      cellWidth: baseWidths.remarks * unitWidth
     };
     currentColumnIndex++;
   }
@@ -573,31 +579,31 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
   const itemsTotal = (data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0);
   const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + fee.amount, 0);
   const totalAmount = itemsTotal + feesTotal;
-  
+
   // 准备表格数据
-  const tableData: any[][] = [];
-  
+  const tableData: AutoTableOptions['body'] = [];
+
   // 添加总金额行
   const totalAmountValue = `${currencySymbols[data.currency] || '$'}${totalAmount.toFixed(2)}`;
   tableData.push([
     { content: 'Total Amount:', styles: { fontStyle: 'bold', fontSize: 9 } },
     { content: totalAmountValue, styles: { fontStyle: 'bold', fontSize: 9 } }
   ]);
-  
+
   // 添加定金和余额信息
   if (data.depositPercentage && data.depositPercentage > 0) {
     const depositAmount = data.depositAmount || (data.depositPercentage / 100) * totalAmount;
     const depositValue = `${currencySymbols[data.currency] || '$'}${depositAmount.toFixed(2)}`;
     const depositLabel = `${data.depositPercentage}% Deposit:`;
-    
+
     // 根据是否显示余额来决定定金金额的颜色
     const depositColor = data.showBalance ? [0, 0, 0] : [0, 0, 255]; // 显示余额时定金为黑色，否则为蓝色
-    
+
     tableData.push([
       { content: depositLabel, styles: { fontStyle: 'bold', fontSize: 9 } },
       { content: depositValue, styles: { fontStyle: 'bold', fontSize: 9, textColor: depositColor } }
     ]);
-    
+
     if (data.showBalance) {
       const balanceAmount = data.balanceAmount || (totalAmount - depositAmount);
       const balanceValue = `${currencySymbols[data.currency] || '$'}${balanceAmount.toFixed(2)}`;
@@ -608,11 +614,11 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
       ]);
     }
   }
-  
+
   // 计算表格宽度和位置
   const tableWidth = 58; // 表格宽度55mm
   const tableX = pageWidth - margin - tableWidth; // 右对齐
-  
+
   // 使用autoTable创建摘要表格
   doc.autoTable({
     startY: finalY + 5,
@@ -642,27 +648,27 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
     margin: { left: tableX, right: margin },
     tableWidth: tableWidth.toString(),
     showFoot: 'never',
-    didDrawCell: (data: any) => {
+    didDrawCell: (data) => {
       // 隐藏单元格边框
       if (data.cell && data.cell.styles) {
         data.cell.styles.lineWidth = 0;
         data.cell.styles.lineColor = [255, 255, 255]; // 白色，相当于隐藏
       }
-      
+
       // 为每个单元格添加下划线
       if (data.cell && data.cell.x && data.cell.y && data.cell.width) {
         const cellX = data.cell.x;
         const cellY = data.cell.y;
         const cellWidth = data.cell.width;
         const cellHeight = data.cell.height || 8; // 默认高度8mm
-        
+
         // 在单元格底部绘制下划线
         doc.setDrawColor(0, 0, 0); // 黑色
         doc.setLineWidth(0.1); // 线条宽度0.1mm
         doc.line(cellX, cellY + cellHeight - 1, cellX + cellWidth, cellY + cellHeight - 1);
       }
     },
-    willDrawCell: (data: any) => {
+    willDrawCell: (data) => {
       // 隐藏单元格边框
       if (data.cell && data.cell.styles) {
         data.cell.styles.lineWidth = 0;
@@ -670,19 +676,19 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
       }
     }
   });
-  
+
   let currentY = doc.lastAutoTable.finalY + 6;
 
   // 显示大写金额
   doc.setFontSize(8);
   setCnFont(doc, 'bold');
   doc.setTextColor(0, 0, 0); // 确保文字颜色为黑色
-  
+
   // 根据是否有定金决定显示哪个金额的大写
   let amountInWords: string;
   if (data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0) {
     const { numberToWords } = require('../features/invoice/utils/calculations');
-    
+
     if (data.showBalance) {
       // 显示尾款金额的大写
       const balanceAmount = data.balanceAmount || (totalAmount - data.depositAmount);
@@ -697,19 +703,19 @@ function renderTotalAmount(doc: ExtendedJsPDF, data: PDFGeneratorData, finalY: n
     // 显示总金额的大写
     amountInWords = `SAY TOTAL ${currencyNames[data.currency] || 'US DOLLARS'} ${data.amountInWords.dollars}${data.amountInWords.hasDecimals ? ` AND ${data.amountInWords.cents}` : ' ONLY'}`;
   }
-  
+
   const lines = doc.splitTextToSize(amountInWords, pageWidth - (margin * 2));
-  
+
   // 检查大写金额是否需要换页
   const pageHeight = doc.internal.pageSize.height;
   const pageBottom = pageHeight - margin;
   const requiredHeight = lines.length * 5 + 10; // 大写金额所需高度 + 额外间距
-  
+
   if (currentY + requiredHeight > pageBottom) {
     doc.addPage();
     currentY = margin;
   }
-  
+
   lines.forEach((line: string, index: number) => {
     doc.text(String(line), margin, currentY + (index * 5));
   });
@@ -743,8 +749,8 @@ async function renderBankAndPaymentInfo(doc: ExtendedJsPDF, data: PDFGeneratorDa
   }
 
   // 付款条款
-  if (data.showPaymentTerms || 
-      (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) || 
+  if (data.showPaymentTerms ||
+      (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) ||
       data.showInvoiceReminder) {
     currentY = await renderPaymentTerms(doc, data, currentY, pageWidth, margin);
   }
@@ -766,20 +772,20 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
 
   // 根据条款数量决定使用单数还是复数形式
   const titleText = totalTerms === 1 ? 'Payment Term: ' : 'Payment Terms:';
-  
+
     if (totalTerms === 1) {
     // 单条付款条款的情况，标题和内容在同一行
     if (data.additionalPaymentTerms && data.additionalPaymentTerms.trim()) {
       // 显示额外的付款条款
       const additionalTerm = data.additionalPaymentTerms.trim();
-      
+
       // 标题使用粗体
       setCnFont(doc, 'bold');
       doc.text(titleText, margin, currentY);
-      
+
       // 其他内容使用普通字体
       setCnFont(doc, 'normal');
-      
+
       const titleWidth = doc.getTextWidth(titleText);
       const spacing = 2; // 设置紧凑间距，与报价模块保持一致
       doc.text(additionalTerm, margin + titleWidth + spacing, currentY);
@@ -789,27 +795,27 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       const paymentDate = data.paymentDate && data.paymentDate.trim() ? data.paymentDate : 'TBD';
       const term = `Full payment not later than ${paymentDate} by telegraphic transfer (T/T).`;
       const parts = term.split(paymentDate);
-      
+
       // 标题使用粗体
       setCnFont(doc, 'bold');
       doc.text(titleText, margin, currentY);
-      
+
       // 其他内容使用普通字体
       setCnFont(doc, 'normal');
-      
+
       // 增加标题和内容之间的间距
       const titleWidth = doc.getTextWidth(titleText);
       const spacing = 2; // 设置紧凑间距，与报价模块保持一致
-      
+
       if (parts[0]) {
         doc.text(parts[0], margin + titleWidth + spacing, currentY);
         const firstWidth = doc.getTextWidth(parts[0]);
-        
+
         // 日期显示为红色
         doc.setTextColor(255, 0, 0);
         doc.text(paymentDate, margin + titleWidth + spacing + firstWidth, currentY);
         doc.setTextColor(0, 0, 0);
-        
+
         if (parts[1]) {
           const dateWidth = doc.getTextWidth(paymentDate);
           doc.text(parts[1], margin + titleWidth + spacing + firstWidth + dateWidth, currentY);
@@ -821,31 +827,31 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       const invoiceNo = data.invoiceNo && data.invoiceNo.trim() ? data.invoiceNo : 'TBD';
       const reminderPrefix = `Please state our invoice no. "`;
       const reminderSuffix = `" on your payment documents.`;
-      
+
       // 标题使用粗体
       setCnFont(doc, 'bold');
       doc.text(titleText, margin, currentY);
-      
+
       // 其他内容使用普通字体
       setCnFont(doc, 'normal');
-      
+
       // 计算各部分的宽度
       const titleWidth = doc.getTextWidth(titleText);
       const spacing = 2; // 设置紧凑间距，与报价模块保持一致
       const prefixWidth = doc.getTextWidth(reminderPrefix);
       const invoiceNoWidth = doc.getTextWidth(invoiceNo);
-      
+
       // 绘制前缀（黑色）
       doc.text(reminderPrefix, margin + titleWidth + spacing, currentY);
-      
+
       // 绘制发票号（红色）
       doc.setTextColor(255, 0, 0);
       doc.text(invoiceNo, margin + titleWidth + spacing + prefixWidth, currentY);
-      
+
       // 绘制后缀（黑色）
       doc.setTextColor(0, 0, 0);
       doc.text(reminderSuffix, margin + titleWidth + spacing + prefixWidth + invoiceNoWidth, currentY);
-      
+
       currentY += 5;
     }
   } else {
@@ -854,10 +860,10 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
     setCnFont(doc, 'bold');
     doc.text(titleText, margin, currentY);
     currentY += 5;  // 标题和第一条之间的间距
-    
+
     // 其他内容使用普通字体
     setCnFont(doc, 'normal');
-    
+
     const termRightMargin = 15;
     const numberWidth = doc.getTextWidth('1. '); // 获取序号的标准宽度
     const maxWidth = pageWidth - margin - numberWidth - termRightMargin;
@@ -890,22 +896,22 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
     if (data.showPaymentTerms) {
       // 绘制条款编号
       doc.text(`${termIndex}.`, margin, currentY);
-      
+
       // 如果有日期，使用日期；否则使用默认文本
       const paymentDate = data.paymentDate && data.paymentDate.trim() ? data.paymentDate : 'TBD';
       const term = `Full payment not later than ${paymentDate} by telegraphic transfer (T/T).`;
       const parts = term.split(paymentDate);
-      
+
       if (parts[0]) {
         // 处理长文本自动换行
         const wrappedText = doc.splitTextToSize(parts[0], maxWidth);
         doc.text(wrappedText[0], margin + numberWidth, currentY);
-        
+
         // 日期显示为红色
         doc.setTextColor(255, 0, 0);
         doc.text(paymentDate, margin + numberWidth + doc.getTextWidth(parts[0]), currentY);
         doc.setTextColor(0, 0, 0);
-        
+
         if (parts[1]) {
           const dateWidth = doc.getTextWidth(paymentDate);
           doc.text(parts[1], margin + numberWidth + doc.getTextWidth(parts[0]) + dateWidth, currentY);
@@ -920,25 +926,25 @@ async function renderPaymentTerms(doc: ExtendedJsPDF, data: PDFGeneratorData, st
       const invoiceNo = data.invoiceNo && data.invoiceNo.trim() ? data.invoiceNo : 'TBD';
       const reminderPrefix = `${termIndex}. Please state our invoice no. "`;
       const reminderSuffix = `" on your payment documents.`;
-      
+
       // 计算各部分的宽度
       const prefixWidth = doc.getTextWidth(reminderPrefix);
       const invoiceNoWidth = doc.getTextWidth(invoiceNo);
-      
+
       // 处理长文本自动换行，使用定义好的 maxWidth
       const wrappedPrefix = doc.splitTextToSize(reminderPrefix, maxWidth);
-      
+
       // 绘制前缀（黑色）
       doc.text(wrappedPrefix, margin, currentY);
-      
+
       // 绘制发票号（红色）
       doc.setTextColor(255, 0, 0);
       doc.text(invoiceNo, margin + prefixWidth, currentY);
-      
+
       // 绘制后缀（黑色）
       doc.setTextColor(0, 0, 0);
       doc.text(reminderSuffix, margin + prefixWidth + invoiceNoWidth, currentY);
-      
+
       currentY += 5;
     }
   }
@@ -952,7 +958,7 @@ async function renderStamp(doc: ExtendedJsPDF, data: PDFGeneratorData, startY: n
     try {
       // 使用优化的印章图片
       const stampImageBase64 = await getStampImage(data.templateConfig.stampType);
-      
+
       if (stampImageBase64) {
         const stampImage = `data:image/png;base64,${stampImageBase64}`;
         if (data.templateConfig.stampType === 'shanghai') {
@@ -970,14 +976,14 @@ async function renderStamp(doc: ExtendedJsPDF, data: PDFGeneratorData, startY: n
 // 添加页码
 function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: number, margin: number): void {
   const totalPages = doc.getNumberOfPages();
-  
+
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     doc.setFillColor(255, 255, 255);
     doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-    
+
     doc.setFontSize(8);
     setCnFont(doc, 'normal');
     doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
   }
-} 
+}

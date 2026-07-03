@@ -29,9 +29,12 @@ export function checkConsigneeUsage(consigneeName: string): number {
   try {
     const packingHistory = getLocalStorageJSON<HistoryDocument[]>('packing_history', []);
 
-    return packingHistory.filter((doc: any) => {
+    return packingHistory.filter((doc) => {
       if (!doc) return false;
-      const consigneeNameInDoc = doc.consigneeName || doc.data?.consignee?.name || '';
+      const data = typeof doc.data === 'object' && doc.data !== null && !Array.isArray(doc.data)
+        ? doc.data as { consignee?: { name?: string } }
+        : {};
+      const consigneeNameInDoc = typeof doc.consigneeName === 'string' ? doc.consigneeName : data.consignee?.name || '';
       return consigneeNameInDoc.trim() === consigneeName;
     }).length;
   } catch (error) {

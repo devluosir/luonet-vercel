@@ -18,40 +18,56 @@ interface User {
   permissions: Permission[];
 }
 
+interface SessionUser {
+  id?: string;
+  username?: string;
+  name?: string | null;
+  email?: string | null;
+  status?: boolean | string;
+  isAdmin?: boolean;
+  permissions?: Permission[];
+}
+
+interface BackendPermission {
+  id?: string;
+  moduleId: string;
+  canAccess?: boolean;
+}
+
 interface PermissionStore {
   user: User | null;
   isLoading: boolean;
   error: string | null;
   lastFetchTime: number | null;
   autoFetch: boolean;
-  
+
   // 基础操作
   setUser: (user: User) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearUser: () => void;
   setAutoFetch: (autoFetch: boolean) => void;
-  
+
   // ✅ 新增：从Session初始化用户信息
-  setUserFromSession: (sessionUser: any) => void;
-  
+  setUserFromSession: (sessionUser: SessionUser) => void;
+
   // 权限检查 - 统一接口
   hasPermission: (moduleId: string) => boolean;
   hasAnyPermission: (moduleIds: string[]) => boolean;
   isAdmin: () => boolean;
-  
+
   // 权限获取 - 统一从API获取
   fetchPermissions: (forceRefresh?: boolean) => Promise<void>;
-  
+
   // 初始化用户信息 - 从本地存储恢复
   initializeUserFromStorage: () => boolean;
-  
+
   // 新增：缓存清理机制
   clearExpiredCache: () => void;
-  
+
   // ✅ 新增：重置权限系统状态
   resetPermissionState: () => void;
-  
+
   // ✅ 新增：权限检查缓存
   permissionCache: Map<string, boolean>;
   clearPermissionCache: () => void;
@@ -71,7 +87,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   clearUser: () => {
     // ✅ 清理Store状态
     set({ user: null, error: null, isLoading: false, lastFetchTime: null });
-    
+
     // ✅ 清理本地缓存
     if (typeof window !== 'undefined') {
       try {
@@ -95,7 +111,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   },
 
   // ✅ 新增：从Session初始化用户信息（登录时调用）
-  setUserFromSession: (sessionUser: any) => {
+  setUserFromSession: (sessionUser: SessionUser) => {
     if (!sessionUser?.id) {
       if (process.env.NODE_ENV === 'development') {
         logPermission('Session用户数据无效，跳过初始化');
@@ -117,10 +133,10 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     const store = get();
     const sessionPermissions = sessionUser.permissions || [];
     const currentPermissions = store.user?.permissions || [];
-    
-    const permissionsChanged = sessionPermissions.length !== currentPermissions.length || 
-      JSON.stringify(sessionPermissions.map((p: any) => ({ moduleId: p.moduleId, canAccess: p.canAccess }))) !== 
-      JSON.stringify(currentPermissions.map((p: any) => ({ moduleId: p.moduleId, canAccess: p.canAccess })));
+
+    const permissionsChanged = sessionPermissions.length !== currentPermissions.length ||
+      JSON.stringify(sessionPermissions.map((p) => ({ moduleId: p.moduleId, canAccess: p.canAccess }))) !==
+      JSON.stringify(currentPermissions.map((p) => ({ moduleId: p.moduleId, canAccess: p.canAccess })));
 
     // session 是权威来源，不从 localStorage 覆盖权限
     if (permissionsChanged && process.env.NODE_ENV === 'development') {
@@ -133,18 +149,18 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
 
     // ✅ 优化：只有在用户数据真正变化时才更新Store
     const currentUser = get().user;
-    const shouldUpdate = !currentUser || 
+    const shouldUpdate = !currentUser ||
       currentUser.id !== user.id ||
       JSON.stringify(currentUser.permissions) !== JSON.stringify(user.permissions);
-    
+
     if (shouldUpdate) {
       // 清理权限检查缓存
       const state = get();
       state.permissionCache.clear();
-      
+
       // 更新Store
       set({ user, isLoading: false, error: null, lastFetchTime: Date.now() });
-      
+
       // ✅ 立即保存到本地缓存
       if (typeof window !== 'undefined') {
         try {
@@ -153,7 +169,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
             timestamp: Date.now()
           };
           localStorage.setItem('userCache', JSON.stringify(cacheData));
-          
+
           // ✅ 优化：减少日志输出
           if (process.env.NODE_ENV === 'development') {
             logPermission('登录时初始化用户信息并缓存', {
@@ -201,11 +217,11 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   resetPermissionState: () => {
     // 重置Store状态
     set({ user: null, error: null, isLoading: false, lastFetchTime: null });
-    
+
     // 清理权限检查缓存
     const state = get();
     state.permissionCache.clear();
-    
+
     // 清理本地缓存
     if (typeof window !== 'undefined') {
       try {
@@ -223,24 +239,24 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   // 初始化用户信息 - 从本地存储恢复（优化版本）
   initializeUserFromStorage: () => {
     if (typeof window === 'undefined') return false;
-    
+
     try {
       const userCache = localStorage.getItem('userCache');
       if (!userCache) return false;
-      
+
       const cacheData = JSON.parse(userCache);
       const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
-      
+
       if (!isRecent) {
         logPermission('本地缓存已过期，跳过初始化');
         return false;
       }
-      
+
       if (!cacheData.id || !cacheData.username) {
         logPermission('本地缓存数据不完整，跳过初始化');
         return false;
       }
-      
+
       const user: User = {
         id: cacheData.id,
         username: cacheData.username,
@@ -249,16 +265,16 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         isAdmin: cacheData.isAdmin || false,
         permissions: cacheData.permissions || []
       };
-      
+
       // ✅ 优化：检查是否与当前Store数据相同
       const currentUser = get().user;
-      const shouldUpdate = !currentUser || 
+      const shouldUpdate = !currentUser ||
         currentUser.id !== user.id ||
         JSON.stringify(currentUser.permissions) !== JSON.stringify(user.permissions);
-      
+
       if (shouldUpdate) {
         set({ user, isLoading: false, error: null, lastFetchTime: Date.now() });
-        
+
         // ✅ 优化：减少日志输出
         if (process.env.NODE_ENV === 'development') {
           logPermission('从本地缓存初始化用户信息', {
@@ -268,7 +284,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
             permissionsCount: user.permissions.length
           });
         }
-        
+
         return true;
       } else {
         // ✅ 优化：减少重复日志
@@ -288,19 +304,19 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     const { user, permissionCache } = get();
     if (!user) return false;
     if (user.isAdmin) return true;
-    
+
     // ✅ 优化：使用缓存机制
     const cacheKey = `${user.id}-${moduleId}`;
     if (permissionCache.has(cacheKey)) {
       return permissionCache.get(cacheKey)!;
     }
-    
+
     try {
       // 检查具体权限（管理员和普通用户使用相同的权限检查逻辑）
       if (!user.permissions) return false;
       const permission = user.permissions.find(p => p.moduleId === moduleId);
       const hasAccess = permission?.canAccess || false;
-      
+
       // ✅ 优化：只在开发环境下输出详细调试日志
       if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
         // 只输出10%的权限检查日志，避免日志过多
@@ -313,10 +329,10 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           hasAccess: hasAccess
         });
       }
-      
+
       // ✅ 缓存权限检查结果
       permissionCache.set(cacheKey, hasAccess);
-      
+
       return hasAccess;
     } catch (error) {
       logPermissionError('权限检查失败', error, { moduleId });
@@ -328,7 +344,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     const { user } = get();
     if (!user) return false;
     if (user.isAdmin) return true;
-    
+
     try {
       // 检查具体权限（管理员和普通用户使用相同的权限检查逻辑）
       if (!user.permissions) return false;
@@ -351,32 +367,32 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   fetchPermissions: async (forceRefresh = false) => {
     const state = get();
     const now = Date.now();
-    
+
     // 防重复：60秒内不重复请求
     if (!forceRefresh && state.lastFetchTime && (now - state.lastFetchTime) < 60000) {
-      logPermission('权限获取过于频繁，跳过请求', { 
+      logPermission('权限获取过于频繁，跳过请求', {
         lastFetchTime: state.lastFetchTime,
-        timeDiff: now - state.lastFetchTime 
+        timeDiff: now - state.lastFetchTime
       });
       return;
     }
-    
+
     // 防重复：正在加载时跳过
     if (state.isLoading) {
       logPermission('权限获取中，跳过重复请求', { isLoading: state.isLoading });
       return;
     }
-    
+
     // ✅ 修复：强制刷新时跳过本地缓存检查
     if (!forceRefresh) {
       if (typeof window !== 'undefined') {
         try {
           const userCache = localStorage.getItem('userCache');
-          
+
           if (userCache) {
             const cacheData = JSON.parse(userCache);
             const isRecent = cacheData.timestamp && (Date.now() - cacheData.timestamp) < 24 * 60 * 60 * 1000;
-            
+
             if (isRecent) {
               const user: User = {
                 id: cacheData.id,
@@ -386,7 +402,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
                 isAdmin: cacheData.isAdmin,
                 permissions: cacheData.permissions || []
               };
-              
+
               set({ user, isLoading: false, error: null, lastFetchTime: Date.now() });
               logPermission('使用本地缓存的权限数据', {
                 userId: user.id,
@@ -403,12 +419,12 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           localStorage.removeItem('userCache');
         }
       }
-      
+
       // 如果没有本地缓存或缓存过期，但不强制刷新，则不获取权限
       logPermission('没有本地权限缓存，需要手动刷新权限', { forceRefresh });
       return;
     }
-    
+
     // ✅ 强制刷新时，清除旧的缓存数据
     if (forceRefresh && typeof window !== 'undefined') {
       try {
@@ -418,9 +434,9 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         logPermissionError('清除本地缓存失败', error);
       }
     }
-    
+
     set({ isLoading: true, error: null });
-    
+
     try {
       // 1. 获取session信息
       const session = await getSession();
@@ -438,24 +454,25 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
 
       // 2. 优先使用session中的权限数据（仅在非强制刷新时）
       if (!forceRefresh && session.user.permissions && Array.isArray(session.user.permissions)) {
+        const sessionUser = session.user as SessionUser;
         const userData = {
-          id: session.user.id || session.user.username || '',
-          username: session.user.username || session.user.name || '',
-          email: session.user.email || null,
-          status: (session.user as any).status !== false,
-          isAdmin: session.user.isAdmin || false,
-          permissions: session.user.permissions
+          id: sessionUser.id || sessionUser.username || '',
+          username: sessionUser.username || sessionUser.name || '',
+          email: sessionUser.email || null,
+          status: sessionUser.status !== false,
+          isAdmin: sessionUser.isAdmin || false,
+          permissions: sessionUser.permissions || []
         };
-        
+
         logPermission('使用session中的权限数据', {
           userId: userData.id,
           username: userData.username,
           isAdmin: userData.isAdmin,
           permissionsCount: userData.permissions.length
         });
-        
+
         set({ user: userData, isLoading: false, error: null, lastFetchTime: Date.now() });
-        
+
         // 保存到本地存储，确保用户信息持久化
         if (typeof window !== 'undefined') {
           try {
@@ -469,7 +486,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
             logPermissionError('保存用户信息到本地存储失败', error);
           }
         }
-        
+
         return;
       }
 
@@ -489,29 +506,33 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         return;
       }
 
-      const data = await response.json();
-      
+      const data = await response.json() as {
+        success?: boolean;
+        permissions?: BackendPermission[];
+      };
+
       if (data.success) {
         // 4. 统一处理权限数据格式
-        const permissions: Permission[] = data.permissions.map((perm: any) => ({
+        const permissions: Permission[] = (data.permissions || []).map((perm) => ({
           id: perm.id || `api-${perm.moduleId}`,
           moduleId: perm.moduleId,
           canAccess: !!perm.canAccess
         }));
 
         // 5. 创建用户对象
+        const sessionUser = session.user as SessionUser;
         const user: User = {
-          id: session.user.id || session.user.username || '',
-          username: session.user.username || session.user.name || '',
-          email: session.user.email || null,
-          status: (session.user as any).status !== false,
-          isAdmin: session.user.isAdmin || false,
+          id: sessionUser.id || sessionUser.username || '',
+          username: sessionUser.username || sessionUser.name || '',
+          email: sessionUser.email || null,
+          status: sessionUser.status !== false,
+          isAdmin: sessionUser.isAdmin || false,
           permissions: permissions
         };
 
         // 6. 更新store并立即保存到本地存储
         set({ user, isLoading: false, error: null, lastFetchTime: Date.now() });
-        
+
         // ✅ 立即保存权限数据到本地存储
         if (typeof window !== 'undefined') {
           try {
@@ -528,7 +549,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
               forceRefresh: forceRefresh || false,
               permissions: permissions.map(p => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
             });
-            
+
             // ✅ 添加调试日志：检查权限数据是否正确
             console.log('权限刷新完成，最新权限数据:', {
               userId: user.id,
@@ -548,12 +569,12 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
             permissionsCount: permissions.length,
             permissions: permissions.map(p => ({ moduleId: p.moduleId, canAccess: p.canAccess }))
           });
-          
+
           // ✅ 修复：强制刷新后，需要同步更新Session
           try {
             const sessionUpdateResponse = await fetch('/api/auth/force-refresh-session', {
               method: 'POST',
-              headers: { 
+              headers: {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
@@ -570,11 +591,11 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
                 tokenNeedsRefresh: sessionUpdateData.tokenNeedsRefresh,
                 permissionsChanged: sessionUpdateData.debug?.permissionsChanged
               });
-              
+
               // ✅ 如果权限有变化，执行silent-refresh
               if (sessionUpdateData.tokenNeedsRefresh) {
                 logPermission('权限已变化，执行silent-refresh');
-                
+
                 // ✅ 清理所有缓存
                 if (typeof window !== 'undefined') {
                   try {
@@ -587,7 +608,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
                     console.error('清理缓存失败:', error);
                   }
                 }
-                
+
                 // ✅ 触发silent-refresh事件
                 if (typeof window !== 'undefined') {
                   window.dispatchEvent(new CustomEvent('silentRefreshPermissions', {
@@ -602,7 +623,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
                 }
               } else {
                 logPermission('权限无变化，跳过silent-refresh');
-                
+
                 // ✅ 即使权限无变化，也要更新Store中的权限数据
                 if (typeof window !== 'undefined') {
                   window.dispatchEvent(new CustomEvent('permissionsUpdated', {
@@ -615,7 +636,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
                 }
               }
             } else {
-              logPermission('权限刷新API失败', { 
+              logPermission('权限刷新API失败', {
                 status: sessionUpdateResponse.status,
                 statusText: sessionUpdateResponse.statusText
               });
@@ -623,7 +644,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
           } catch (sessionUpdateError) {
             logPermissionError('权限刷新API请求失败', sessionUpdateError);
           }
-          
+
           // 触发自定义事件，通知前端权限已更新
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('permissionsUpdated', {
@@ -676,6 +697,6 @@ export const initializeUserFromStorage = () => {
 };
 
 // ✅ 导出Session初始化函数
-export const setUserFromSession = (sessionUser: any) => {
+export const setUserFromSession = (sessionUser: SessionUser) => {
   return usePermissionStore.getState().setUserFromSession(sessionUser);
-}; 
+};

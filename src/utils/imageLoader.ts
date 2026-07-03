@@ -2,7 +2,7 @@
 
 // 图片版本控制
 const IMAGE_VERSION = '1.0.0';
-const IMAGE_CACHE_KEY = `PDF_IMAGE_v${IMAGE_VERSION}`;
+const _IMAGE_CACHE_KEY = `PDF_IMAGE_v${IMAGE_VERSION}`;
 
 // 全局单例Promise，只加载一次
 let imageBytesPromise: Promise<{headerImage: string; headerEnglish: string; shanghaiStamp: string; hongkongStamp: string}> | null = null;
@@ -44,15 +44,15 @@ const performanceMonitor = {
 };
 
 // 文档级WeakMap缓存，避免重复加载
-const imageCache = new WeakMap<Document, Map<string, string>>();
+const _imageCache = new WeakMap<Document, Map<string, string>>();
 
 export async function getHeaderImage(headerType: 'bilingual' | 'english'): Promise<string> {
   const imageLoading = performanceMonitor.start('获取头部图片');
-  
+
   try {
     const images = await getImageBytesOnce();
     let headerImage: string;
-    
+
     switch (headerType) {
       case 'bilingual':
         headerImage = images.headerImage;
@@ -63,7 +63,7 @@ export async function getHeaderImage(headerType: 'bilingual' | 'english'): Promi
       default:
         throw new Error(`不支持的头部类型: ${headerType}`);
     }
-    
+
     performanceMonitor.end(imageLoading);
     return headerImage;
   } catch (error) {
@@ -79,11 +79,11 @@ export function getHeaderImageFormat(headerType: 'bilingual' | 'english'): 'JPEG
 
 export async function getStampImage(stampType: 'shanghai' | 'hongkong'): Promise<string> {
   const stampLoading = performanceMonitor.start('获取印章图片');
-  
+
   try {
     const images = await getImageBytesOnce();
     let stampImage: string;
-    
+
     switch (stampType) {
       case 'shanghai':
         stampImage = images.shanghaiStamp;
@@ -94,7 +94,7 @@ export async function getStampImage(stampType: 'shanghai' | 'hongkong'): Promise
       default:
         throw new Error(`不支持的印章类型: ${stampType}`);
     }
-    
+
     performanceMonitor.end(stampLoading);
     return stampImage;
   } catch (error) {

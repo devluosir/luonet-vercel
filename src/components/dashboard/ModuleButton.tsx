@@ -48,15 +48,15 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
   const showBadge = count > 0;
 
   // 获取当前主题的颜色配置
-  const c = getModuleColors(module.id, buttonTheme);
+  const _c = getModuleColors(module.id, buttonTheme);
 
-  const explicitIconColorByModule: Record<string, string> = {
+  const _explicitIconColorByModule: Record<string, string> = {
     confirmation: 'text-emerald-600 dark:text-emerald-500',
     history: 'text-pink-600 dark:text-pink-500',
   };
 
   // 徽章背景颜色兜底，避免某些构建情况下动态类名未被捕获
-  const fallbackBadgeBgByModule: Record<string, string> = {
+  const _fallbackBadgeBgByModule: Record<string, string> = {
     quotation: 'bg-blue-600 dark:bg-blue-500',
     confirmation: 'bg-emerald-600 dark:bg-emerald-500',
     packing: 'bg-cyan-600 dark:bg-cyan-500',
@@ -70,7 +70,7 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
   // 验证CSS变量是否存在，如果不存在则使用默认值
   const getCSSVariableWithFallback = (variableName: string, fallback: string): string => {
     if (typeof window === 'undefined') return fallback;
-    
+
     const value = getComputedStyle(document.documentElement).getPropertyValue(variableName);
     return value.trim() || fallback;
   };

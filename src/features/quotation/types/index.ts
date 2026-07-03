@@ -1,4 +1,4 @@
-import type { BaseDocument, BaseCustomer, BaseLineItem, BaseSettings } from '@/features/core';
+import type { BaseDocument, BaseCustomer, BaseLineItem } from '@/features/core';
 
 // 报价单特有字段
 export interface QuotationData extends BaseDocument {
@@ -6,29 +6,29 @@ export interface QuotationData extends BaseDocument {
   inquiryNo: string;
   quotationNo: string;
   contractNo: string;
-  
+
   // 客户信息
   to: BaseCustomer;
   from: BaseCustomer;
-  
+
   // 商品信息
   items: LineItem[];
   otherFees: OtherFee[];
-  
+
   // 条款信息
   notes: NoteItem[];
   notesConfig: NotesConfig;
-  
+
   // 支付信息
   paymentTerms: string;
   deliveryTerms: string;
   validity: string;
   paymentDate: string;
-  
+
   // 显示设置
   showBank: boolean;
   showStamp: boolean;
-  
+
   // 金额信息
   amountInWords: {
     dollars: string;
@@ -36,7 +36,7 @@ export interface QuotationData extends BaseDocument {
     hasDecimals: boolean;
   };
   additionalPaymentTerms: string;
-  
+
   // 定金和尾款功能
   depositPercentage?: number;
   depositAmount?: number;
@@ -48,7 +48,7 @@ export interface QuotationData extends BaseDocument {
 export interface LineItem extends BaseLineItem {
   // 继承基础字段
   // id, name, description, quantity, unit, unitPrice, totalPrice
-  
+
   // 报价单特有字段
   model?: string;
   brand?: string;
@@ -74,7 +74,7 @@ export interface NoteItem {
 }
 
 // 条款类型
-export type NoteType = 
+export type NoteType =
   | 'quality'
   | 'warranty'
   | 'delivery'
@@ -102,16 +102,16 @@ export interface QuotationState {
   isSaving: boolean;
   isGenerating: boolean;
   error: string | null;
-  
+
   // 报价单特有状态
   activeTab: 'quotation' | 'confirmation';
   showSettings: boolean;
   showPreview: boolean;
   isPasteDialogOpen: boolean;
-  previewItem: any;
+  previewItem: unknown;
   generatingProgress: number;
   previewProgress: number;
-  
+
   // 操作状态
   isDirty: boolean;
   lastSaved: string | null;
@@ -124,26 +124,26 @@ export interface QuotationActions {
   reset: () => void;
   save: () => Promise<void>;
   load: (id: string) => Promise<void>;
-  
+
   // 报价单特有操作
   setTab: (tab: 'quotation' | 'confirmation') => void;
   setShowSettings: (show: boolean) => void;
   setShowPreview: (show: boolean) => void;
   setPasteDialogOpen: (open: boolean) => void;
-  setPreviewItem: (item: any) => void;
+  setPreviewItem: (item: unknown) => void;
   setGenerating: (generating: boolean) => void;
   setGeneratingProgress: (progress: number) => void;
   setPreviewing: (previewing: boolean) => void;
   setPreviewProgress: (progress: number) => void;
-  
+
   // 商品操作
   updateItems: (items: LineItem[]) => void;
   updateOtherFees: (fees: OtherFee[]) => void;
-  
+
   // 条款操作
   updateNotes: (notes: NoteItem[]) => void;
   updateNotesConfig: (config: NotesConfig) => void;
-  
+
   // 高级操作
   generatePDF: () => Promise<void>;
   previewPDF: () => Promise<void>;

@@ -40,7 +40,7 @@ const getCurrencyName = (currency: 'USD' | 'CNY' | 'EUR') => {
 import dynamic from 'next/dynamic';
 
 // 动态导入PDF预览组件
-const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { 
+const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), {
   ssr: false,
   loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg h-64"></div>,
   suspense: false
@@ -69,7 +69,7 @@ export default function QuotationPage() {
   const pathname = usePathname();
   const { user, handleLogout } = useAppUser();
   const { showToast } = useToast();
-  
+
   // 性能调试开关（开发模式）
   if (process.env.NODE_ENV === 'development') {
     // 可选：启用why-did-you-render
@@ -77,7 +77,7 @@ export default function QuotationPage() {
     //   wdyr(React, { trackAllPureComponents: true });
     // });
   }
-  
+
   // 使用选择器工具带，简洁且类型安全
   // 状态 selectors
   const activeTab = useQuotationStore(sel.tab);
@@ -90,11 +90,11 @@ export default function QuotationPage() {
   const isPasteDialogOpen = useQuotationStore(sel.isPasteDialogOpen);
   const previewItem = useQuotationStore(sel.previewItem);
   const notesConfig = useQuotationStore(sel.notesConfig);
-  
+
   // 原子字段 selectors（用于优化依赖）
   const from = useQuotationStore(sel.from);
   const currency = useQuotationStore(sel.currency);
-  
+
   // Action selectors（actions是稳定引用）
   const setTab = useQuotationStore(sel.setTab);
   const setEditId = useQuotationStore(sel.setEditId);
@@ -113,7 +113,7 @@ export default function QuotationPage() {
   const _updateCurrency = useQuotationStore(sel.updateCurrency);
   const updateFromField = useQuotationStore(sel.updateFromField);
   const updateCurrency = useMemo(() => _updateCurrency ?? (() => {}), [_updateCurrency]); // 空函数兜底
-  
+
   // 页面级白名单：覆盖Items & CustomerInfo & AutoSave等所有入口
   const PAGE_ALLOWED_KEYS = useMemo(() => {
     const pageKeys = new Set<string>([
@@ -130,10 +130,10 @@ export default function QuotationPage() {
       // 显示控制字段
       'showBank', 'showStamp'
     ]);
-    
+
     // 合并 SETTINGS_ALLOWED_KEYS
     SETTINGS_ALLOWED_KEYS.forEach(key => pageKeys.add(key));
-    
+
     return pageKeys;
   }, []);
 
@@ -150,11 +150,11 @@ export default function QuotationPage() {
       const originalKeys = Object.keys(patch);
       const filteredKeys = Object.keys(filtered);
       const dropped = originalKeys.filter(k => !PAGE_ALLOWED_KEYS.has(k as keyof QuotationData));
-      
+
       if (dropped.length > 0) {
         console.warn('[Guard] Dropped unknown page patch keys:', dropped);
       }
-      
+
       if (filteredKeys.length > 8) {
         console.warn('[Guard] Large patch at page adapter (after filtering)', {
           originalKeys,
@@ -180,15 +180,15 @@ export default function QuotationPage() {
     } else {
       updateItems(nextItems);
     }
-    
+
     if (process.env.NODE_ENV === 'development') {
-      console.log('[handleItemsChange] 更新items数组', { 
-        count: Array.isArray(nextItems) ? nextItems.length : 'function' 
+      console.log('[handleItemsChange] 更新items数组', {
+        count: Array.isArray(nextItems) ? nextItems.length : 'function'
       });
     }
   }, [data.items, updateItems]);
 
-  // OtherFees表格专用适配器：拒绝整包，只写otherFees字段  
+  // OtherFees表格专用适配器：拒绝整包，只写otherFees字段
   const handleOtherFeesChange = useCallback((
     nextFees: OtherFee[] | ((prev: OtherFee[]) => OtherFee[])
   ) => {
@@ -200,45 +200,45 @@ export default function QuotationPage() {
     } else {
       updateOtherFees(nextFees);
     }
-    
+
     if (process.env.NODE_ENV === 'development') {
-      console.log('[handleOtherFeesChange] 更新otherFees数组', { 
-        count: Array.isArray(nextFees) ? nextFees.length : 'function' 
+      console.log('[handleOtherFeesChange] 更新otherFees数组', {
+        count: Array.isArray(nextFees) ? nextFees.length : 'function'
       });
     }
   }, [data.otherFees, updateOtherFees]);
-  
+
   // 初始化
   useInitQuotation();
-  
+
   // 客户端渲染时更新from字段
   useEffect(() => {
     if (typeof window !== 'undefined') {
       updateFromField();
     }
   }, [updateFromField]);
-  
+
   // PDF生成服务
   const { generatePdf } = useGenerateService();
-  
+
   // PDF预热（自动执行，无需手动调用）
   usePdfWarmup();
-  
+
   // 使用选择器工具带的派生选择器，避免重复计算
   const itemsTotal = useQuotationStore(sel.itemsTotal);
   const feesTotal = useQuotationStore(sel.feesTotal);
-  const totalAmount = useMemo(() => 
-    itemsTotal + feesTotal, 
+  const totalAmount = useMemo(() =>
+    itemsTotal + feesTotal,
     [itemsTotal, feesTotal]
   );
-  const currencySymbol = useMemo(() => 
-    currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '¥', 
+  const currencySymbol = useMemo(() =>
+    currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '¥',
     [currency]
   );
-  
+
   // 剪贴板导入
   const { handleClipboardButtonClick, handleGlobalPaste } = useClipboardImport();
-  
+
   // 自动保存 - 传序列化后的数据，避免引用抖动
   const { clearSaved: clearAutoSave } = useAutoSave({
     data: JSON.stringify({
@@ -249,7 +249,7 @@ export default function QuotationPage() {
     delay: 2000,
     enabled: !editId
   });
-  
+
   // 处理标签切换 - 同值不set，减少无谓渲染
   const handleTabChange = useCallback((tab: 'quotation' | 'confirmation') => {
     if (activeTab === tab) return;
@@ -259,7 +259,7 @@ export default function QuotationPage() {
   // 去重限频的notes警告
   const warnedNotesRef = useRef(false);
   const pendingPatchRef = useRef<Partial<QuotationData> | null>(null);
-  
+
   // 清理notes并发出警告（去重限频）
   const guardNotes = useCallback((patch: Partial<QuotationData>) => {
     if (!('notes' in patch)) return;
@@ -273,7 +273,7 @@ export default function QuotationPage() {
   // 单帧合并的补丁刷新
   const flushPendingPatch = useCallback(() => {
     if (!pendingPatchRef.current) return;
-    
+
     const patch = pendingPatchRef.current;
     pendingPatchRef.current = null;
 
@@ -291,7 +291,7 @@ export default function QuotationPage() {
       }
       updateFrom(patch.from);
     }
-    
+
     if (patch.currency && !smartEqual(patch.currency, currency, 'currency')) {
       if (process.env.NODE_ENV === 'development') {
         console.log('[updateCurrency]', patch.currency);
@@ -304,7 +304,7 @@ export default function QuotationPage() {
     const restFiltered = Object.fromEntries(
       Object.entries(rest)
         .filter(([key]) => isAllowedSettingsKey(key))
-        .filter(([key, value]) => hasChanged(value, (data as any)[key], key))
+        .filter(([key, value]) => hasChanged(value, (data as unknown as Record<string, unknown>)[key], key))
     );
 
     if (Object.keys(restFiltered).length > 0) {
@@ -329,13 +329,13 @@ export default function QuotationPage() {
 
     // 合并到单帧队列
     pendingPatchRef.current = { ...(pendingPatchRef.current || {}), ...patch };
-    
+
     // 用rAF汇聚多次onChange，配合React批处理
     requestAnimationFrame(() => {
       batch(() => flushPendingPatch());
     });
   }, [flushPendingPatch]);
-  
+
   // 处理保存
   const handleSave = async () => {
     if (!data) return;
@@ -343,7 +343,7 @@ export default function QuotationPage() {
     try {
       // 使用正确的保存服务，确保notesConfig被保存
       const result = await saveOrUpdate(activeTab, data, notesConfig, editId);
-      
+
       if (result) {
         if (result.id && !editId) {
           setEditId(result.id);
@@ -358,10 +358,10 @@ export default function QuotationPage() {
       showToast('保存失败，请重试', 'error');
     }
   };
-  
+
   // 合并模式状态 - Description列已取消合并功能
   const [remarksMergeMode, setRemarksMergeMode] = useState<'auto' | 'manual'>('auto');
-  
+
   // 手动合并数据状态
   const [manualMergedCells, setManualMergedCells] = useState<{
     description: Array<{
@@ -382,7 +382,7 @@ export default function QuotationPage() {
   });
 
   // 调试日志：监听手动合并数据变化 - 添加去重逻辑
-  const lastMergeRef = useRef<{remarks: any[]; description: any[]}>({remarks:[], description:[]});
+  const lastMergeRef = useRef<typeof manualMergedCells>({remarks:[], description:[]});
 
   const handleManualMergeChange = useCallback((next: typeof manualMergedCells) => {
     const prev = lastMergeRef.current;
@@ -406,7 +406,7 @@ export default function QuotationPage() {
       console.log(`[PDF生成] 开始保存数据，editId: ${editId}`);
       // 使用正确的保存服务，确保notesConfig被保存
       const saveResult = await saveOrUpdate(activeTab, data, notesConfig, editId);
-      
+
       if (!saveResult) {
         showToast('数据保存失败，无法生成PDF', 'error');
         return;
@@ -421,15 +421,15 @@ export default function QuotationPage() {
       setProgress(30);
 
       // 生成PDF
-      const pdfBlob = await generatePdf(activeTab, data, notesConfig, setProgress, { 
-        mode: 'final', 
+      const pdfBlob = await generatePdf(activeTab, data, notesConfig, setProgress, {
+        mode: 'final',
         remarksMergeMode,
         manualMergedCells
       });
 
       // 记录使用情况
-      const documentNo = activeTab === 'confirmation' 
-        ? (data.contractNo || data.quotationNo) 
+      const documentNo = activeTab === 'confirmation'
+        ? (data.contractNo || data.quotationNo)
         : data.quotationNo;
       if (documentNo) {
         recordCustomerUsage(data.to.split('\n')[0].trim(), activeTab, documentNo);
@@ -449,7 +449,7 @@ export default function QuotationPage() {
       setProgress(0);
     }
   };
-  
+
   // 处理预览
   const handlePreview = async () => {
     if (!data) return;
@@ -460,32 +460,32 @@ export default function QuotationPage() {
     try {
       setPreviewProgress(10); // 开始准备资源
       console.log('开始预览PDF生成...');
-      
+
       let pdfUrl: string;
-      
+
       // 第一阶段：PDF生成核心（service层已包含监控，避免重复）
       const blob = await generatePdf(activeTab, data, notesConfig, (progress) => {
         // 将生成进度映射到预览进度（10-80%）
         const mappedProgress = 10 + (progress * 0.7);
         setPreviewProgress(mappedProgress);
-      }, { 
-        mode: 'preview', 
+      }, {
+        mode: 'preview',
         remarksMergeMode,
         manualMergedCells
       });
-      
+
       setPreviewProgress(80); // PDF生成完成，开始挂载预览
-      
+
       // 第二阶段：预览挂载（独立监控，阈值1200ms）
       const { monitorPreviewMount } = await import('@/utils/performance');
       await monitorPreviewMount('setup', async () => {
         // 先清空预览状态，避免布局抖动
         setPreviewItem(null);
         setShowPreview(false);
-        
+
         // 创建预览URL
         pdfUrl = URL.createObjectURL(blob);
-        
+
         // 使用requestAnimationFrame优化UI更新
         await new Promise<void>(resolve => {
           requestAnimationFrame(() => {
@@ -493,14 +493,14 @@ export default function QuotationPage() {
               ...buildPreviewPayload(activeTab, data, editId, totalAmount),
               pdfUrl // 使用URL而不是blob，避免大对象传递
             };
-            
+
             setPreviewItem(previewData);
             setShowPreview(true);
             resolve();
           });
         });
       });
-      
+
       setPreviewProgress(100); // 完成
       showToast('预览生成成功', 'success');
     } catch (error) {
@@ -511,11 +511,11 @@ export default function QuotationPage() {
       setPreviewProgress(0);
     }
   };
-  
+
   // 处理Excel导出
   const handleExportExcel = () => {
     if (!data) return;
-    
+
     try {
       if (activeTab === 'confirmation') {
         exportSalesConfirmationToExcel(data);
@@ -569,7 +569,7 @@ export default function QuotationPage() {
   ];
 
 
-  
+
   // 守卫：等待数据初始化完成
   if (!data || Object.keys(data).length === 0) {
     return (
@@ -589,13 +589,13 @@ export default function QuotationPage() {
       <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-3 sm:py-6">
           {/* 标签切换 */}
           <div className="flex justify-center gap-1.5 sm:gap-3 mt-3 sm:mt-4 mb-4 sm:mb-6">
-            <TabButton 
+            <TabButton
               active={activeTab === 'quotation'}
               onClick={() => handleTabChange('quotation')}
             >
               Quotation
             </TabButton>
-            <TabButton 
+            <TabButton
               active={activeTab === 'confirmation'}
               onClick={() => handleTabChange('confirmation')}
             >
@@ -660,7 +660,7 @@ export default function QuotationPage() {
               {/* 设置面板 */}
               {showSettings && (
                 <div className="overflow-hidden transition-all duration-300 ease-in-out opacity-100 px-4 sm:px-6 py-3 mb-4">
-                  <SettingsPanel 
+                  <SettingsPanel
                     data={data}
                     onChange={handleSettingsChange}
                     activeTab={activeTab}
@@ -672,7 +672,7 @@ export default function QuotationPage() {
               <div className={`px-4 sm:px-6 ${
                 showSettings ? 'py-2' : 'py-4'
               }`}>
-                <CustomerInfoCompact 
+                <CustomerInfoCompact
                   data={data}
                   onChange={updateData}
                   type={activeTab}
@@ -685,8 +685,8 @@ export default function QuotationPage() {
                   <div className="px-4 sm:px-0">
                     <ImportDataButton onImport={updateItems} />
                   </div>
-                            <ItemsTable 
-                  data={data} 
+                            <ItemsTable
+                  data={data}
                   onItemsChange={handleItemsChange}
                   onOtherFeesChange={handleOtherFeesChange}
 
@@ -762,7 +762,7 @@ export default function QuotationPage() {
                           {currencySymbol}{totalAmount.toFixed(2)}
                         </div>
                       </div>
-                      
+
                       {/* 定金显示 */}
                       {data.depositPercentage && data.depositPercentage > 0 && data.depositAmount && data.depositAmount > 0 && (
                         <>
@@ -774,7 +774,7 @@ export default function QuotationPage() {
                               {currencySymbol}{data.depositAmount.toFixed(2)}
                             </span>
                           </div>
-                          
+
                           {/* 尾款显示 */}
                           {data.showBalance && (
                             <div className="flex items-center gap-2">
@@ -878,7 +878,7 @@ export default function QuotationPage() {
               {/* Notes 部分 */}
               <div className="px-4 sm:px-6 py-4 border-t border-gray-100 dark:border-[#3A3A3C]">
                 <div className="space-y-6">
-                  <NotesSection 
+                  <NotesSection
                     data={data}
                     onChange={updateData}
                   />

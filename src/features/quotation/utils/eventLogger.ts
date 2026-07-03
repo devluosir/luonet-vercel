@@ -14,7 +14,7 @@ class EventSampler {
   private timer: NodeJS.Timeout | null = null;
   private readonly flushInterval = 500; // 500ms内合并输出
 
-  public log(action: string, data: any) {
+  public log(action: string, data: unknown) {
     if (process.env.NODE_ENV !== 'development') return;
 
     const keys = data && typeof data === 'object' ? Object.keys(data) : [];
@@ -50,11 +50,11 @@ class EventSampler {
           lastTime: log.timestamp,
         };
       }
-      
+
       acc[log.action].count++;
       log.keys.forEach(key => acc[log.action].keys.add(key));
       acc[log.action].lastTime = log.timestamp;
-      
+
       return acc;
     }, {} as Record<string, {
       count: number;
@@ -68,7 +68,7 @@ class EventSampler {
     Object.entries(grouped).forEach(([action, stats]) => {
       const duration = stats.lastTime - stats.firstTime;
       const keysArray = Array.from(stats.keys);
-      
+
       console.log(`${action}:`, {
         count: stats.count,
         duration: `${duration}ms`,

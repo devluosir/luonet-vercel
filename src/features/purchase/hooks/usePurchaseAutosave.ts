@@ -10,13 +10,13 @@ export function usePurchaseAutosave(wait = 300) {
     timer.current = setTimeout(() => {
       try {
         localStorage.setItem('purchase-autosave', JSON.stringify(data));
-      } catch (e: any) {
+      } catch {
         // 兜底：配额不足时尝试轻量保存关键字段
         try {
-          const slim = { 
-            attn: data.attn, 
-            orderNo: data.orderNo, 
-            contractAmount: data.contractAmount 
+          const slim = {
+            attn: data.attn,
+            orderNo: data.orderNo,
+            contractAmount: data.contractAmount
           };
           localStorage.setItem('purchase-autosave-slim', JSON.stringify(slim));
         } catch {}

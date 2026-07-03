@@ -5,10 +5,10 @@ import { LineItem } from '../types';
  */
 export const parsePastedData = (text: string): LineItem[] => {
   const rows = text.split('\n');
-  
+
   const newItems: LineItem[] = rows.map((row, index) => {
     const cells = row.split('\t').map(cell => cell.trim());
-    
+
     let partname = '', description = '', quantity = '0', unit = 'pc', unitPrice = '0';
 
     if (cells.length >= 5) {
@@ -17,7 +17,7 @@ export const parsePastedData = (text: string): LineItem[] => {
       const isSecondNumber = !isNaN(Number(cells[1]));
       const isFourthNumber = !isNaN(Number(cells[3]));
       const isFourthEmpty = cells[3] === '' || cells[3] === '0';
-      
+
       if (isSecondNumber && (isFourthNumber || isFourthEmpty)) {
         [partname, quantity, unit, unitPrice] = cells;
       } else {
@@ -64,10 +64,11 @@ export const parsePastedData = (text: string): LineItem[] => {
  */
 export const processQuotationData = (items: LineItem[]): LineItem[] => {
   return items.map(item => {
-    if ((item as any).partName && !item.partname) {
+    const quotationItem = item as LineItem & { partName?: string };
+    if (quotationItem.partName && !item.partname) {
       return {
         ...item,
-        partname: (item as any).partName,
+        partname: quotationItem.partName,
         partName: undefined
       };
     }
@@ -94,7 +95,7 @@ export const createManualInputModal = (
   input.style.border = '2px solid #007AFF';
   input.style.borderRadius = '8px';
   input.placeholder = '请将数据粘贴到这里...';
-  
+
   const overlay = document.createElement('div');
   overlay.style.position = 'fixed';
   overlay.style.top = '0';
@@ -103,7 +104,7 @@ export const createManualInputModal = (
   overlay.style.bottom = '0';
   overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
   overlay.style.zIndex = '9998';
-  
+
   const confirmBtn = document.createElement('button');
   confirmBtn.textContent = '确认';
   confirmBtn.style.position = 'fixed';
@@ -117,13 +118,13 @@ export const createManualInputModal = (
   confirmBtn.style.border = 'none';
   confirmBtn.style.borderRadius = '6px';
   confirmBtn.style.cursor = 'pointer';
-  
+
   const cleanup = () => {
     document.body.removeChild(input);
     document.body.removeChild(overlay);
     document.body.removeChild(confirmBtn);
   };
-  
+
   confirmBtn.onclick = () => {
     const text = input.value;
     if (text) {
@@ -131,15 +132,15 @@ export const createManualInputModal = (
     }
     cleanup();
   };
-  
+
   overlay.onclick = () => {
     onCancel();
     cleanup();
   };
-  
+
   document.body.appendChild(overlay);
   document.body.appendChild(input);
   document.body.appendChild(confirmBtn);
-  
+
   input.focus();
 };

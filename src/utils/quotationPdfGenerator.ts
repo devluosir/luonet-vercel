@@ -1,23 +1,23 @@
-import jsPDF from 'jspdf';
+import jsPDF, { ImageProperties } from 'jspdf';
 import 'jspdf-autotable';
+import { UserOptions } from 'jspdf-autotable';
 import { QuotationData } from '@/types/quotation';
 import { fastRegisterFonts } from './globalFontRegistry';
 import { getHeaderImage, getHeaderImageFormat } from './imageLoader';
 import { startTimer, endTimer } from './performanceMonitor';
-import { safeSetFont, safeSetCnFont, getFontName } from './pdf/ensureFont';
+import { safeSetCnFont } from './pdf/ensureFont';
 import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 
 // 使用统一的安全字体工具，原有setCnFont函数已移至 pdf/ensureFont.ts
 
 // 扩展jsPDF类型以支持autotable
-interface ExtendedJsPDF extends Omit<jsPDF, 'getFont' | 'getImageProperties'> {
-  autoTable: (options: any) => void;
+interface ExtendedJsPDF extends jsPDF {
+  autoTable: (options: UserOptions) => void;
   lastAutoTable: {
     finalY: number;
   };
-  getFont: () => { fontName: string; fontStyle: string };
   getNumberOfPages: () => number;
-  getImageProperties: (image: string) => { width: number; height: number };
+  getImageProperties: (image: string) => ImageProperties;
 }
 
 // 货币符号映射
@@ -28,8 +28,8 @@ const currencySymbols: { [key: string]: string } = {
 };
 
 export const generateQuotationPDF = async (
-  rawData: unknown, 
-  mode: 'preview' | 'export' = 'export', 
+  rawData: unknown,
+  mode: 'preview' | 'export' = 'export',
   descriptionMergeMode: 'auto' | 'manual' = 'auto',
   remarksMergeMode: 'auto' | 'manual' = 'auto',
   manualMergedCells?: {
@@ -49,7 +49,7 @@ export const generateQuotationPDF = async (
   savedVisibleCols?: string[] // 🆕 新增：保存时的列显示设置
 ): Promise<Blob> => {
   const totalId = startTimer('pdf-generation');
-  
+
   try {
     // 数据验证和准备
     const dataValidationId = startTimer('data-validation');
@@ -57,29 +57,29 @@ export const generateQuotationPDF = async (
       throw new Error('无效的数据格式');
     }
     const data = rawData as QuotationData;
-    
+
     // 读取页面列显示偏好，与页面表格保持一致
     let visibleCols: string[] | undefined;
-    
+
     // 🆕 优先使用保存时的列显示设置，如果没有则使用当前的localStorage设置
     if (savedVisibleCols) {
       visibleCols = savedVisibleCols;
     } else if (typeof window !== 'undefined') {
       visibleCols = getLocalStorageJSON('qt.visibleCols', []);
     }
-    
+
     endTimer(dataValidationId, 'data-validation');
 
     // 创建PDF文档
     const docCreationId = startTimer('doc-creation');
-    const doc = new jsPDF() as any;
+    const doc = new jsPDF() as unknown as ExtendedJsPDF;
     endTimer(docCreationId, 'doc-creation');
 
     // 字体策略：预览和导出都使用中文字体，确保中文正常显示
     const fontLoadingId = startTimer('font-loading');
     try {
       await fastRegisterFonts(doc);
-      
+
       // 验证字体注册是否成功
       const fontList = doc.getFontList();
       const notoSansSC = fontList['NotoSansSC'];
@@ -118,7 +118,7 @@ export const generateQuotationPDF = async (
         const normalizedHeaderType = headerType as 'bilingual' | 'english';
         const headerImage = await getHeaderImage(normalizedHeaderType);
         const headerFormat = getHeaderImageFormat(normalizedHeaderType);
-        
+
         // 直接使用base64数据，不创建Image对象避免HTTP请求
         const imgProperties = doc.getImageProperties(headerImage);
         const aspectRatio = imgProperties.width / imgProperties.height;
@@ -126,12 +126,12 @@ export const generateQuotationPDF = async (
         const maxHeight = 40;
         let imgWidth = maxWidth;
         let imgHeight = imgWidth / aspectRatio;
-        
+
         if (imgHeight > maxHeight) {
           imgHeight = maxHeight;
           imgWidth = imgHeight * aspectRatio;
         }
-        
+
         const xPosition = margin + (contentWidth - imgWidth) / 2;
         doc.addImage(headerImage, headerFormat, xPosition, yPosition, imgWidth, imgHeight);
         yPosition += imgHeight + 10;
@@ -157,7 +157,7 @@ export const generateQuotationPDF = async (
     const customerInfoId = startTimer('customer-info');
     doc.setFontSize(8);
     safeSetCnFont(doc, 'normal', mode);
-    
+
     let currentY = yPosition;
     const startY = yPosition; // 保存起始Y位置作为基准
 
@@ -165,16 +165,16 @@ export const generateQuotationPDF = async (
     const rightMargin = pageWidth - 20;
     const rightInfoY = startY;
     const colonX = rightMargin - 20;  // 冒号的固定位置，向左移5px
-    
+
     safeSetCnFont(doc, 'bold', mode);
-    
+
     // Quotation No.
     doc.text('Quotation No.', colonX - 2, rightInfoY, { align: 'right' });
     doc.text(':', colonX, rightInfoY);
     doc.setTextColor(255, 0, 0); // 设置文字颜色为红色
     doc.text(data.quotationNo || '', colonX + 3, rightInfoY);
     doc.setTextColor(0, 0, 0); // 恢复文字颜色为黑色
-    
+
     // Date
     doc.text('Date', colonX - 2, rightInfoY + 5, { align: 'right' });
     doc.text(':', colonX, rightInfoY + 5);
@@ -184,7 +184,7 @@ export const generateQuotationPDF = async (
     doc.text('From', colonX - 2, rightInfoY + 10, { align: 'right' });
     doc.text(':', colonX, rightInfoY + 10);
     doc.text(data.from || '', colonX + 3, rightInfoY + 10);
-    
+
     // Currency
     doc.text('Currency', colonX - 2, rightInfoY + 15, { align: 'right' });
     doc.text(':', colonX, rightInfoY + 15);
@@ -192,11 +192,11 @@ export const generateQuotationPDF = async (
 
     // 客户信息区域
     const leftMargin = 20;
-    
+
     // To: 区域
     doc.text('To:', leftMargin, currentY);
     const toTextWidth = doc.getTextWidth('To: ');
-    
+
     // 处理To字段的多行文本
     const toLines = (data.to || '').split('\n');
     toLines.forEach((line, index) => {
@@ -219,7 +219,7 @@ export const generateQuotationPDF = async (
 
     // 确保表格与感谢语有3mm的固定间距
     currentY += 3;
-    
+
     yPosition = currentY;
     endTimer(customerInfoId, 'customer-info');
 
@@ -229,18 +229,18 @@ export const generateQuotationPDF = async (
       // 使用共享的表格配置
       const { generateTableConfig } = await import('./pdfTableGenerator');
       const tableConfig = generateTableConfig(
-        data, 
-        doc, 
-        yPosition, 
-        margin, 
-        pageWidth, 
-        mode, 
-        visibleCols, 
+        data,
+        doc,
+        yPosition,
+        margin,
+        pageWidth,
+        mode,
+        visibleCols,
         descriptionMergeMode,
         remarksMergeMode,
         manualMergedCells
       );
-      
+
       doc.autoTable(tableConfig);
       yPosition = doc.lastAutoTable.finalY + 10;
     }
@@ -252,7 +252,7 @@ export const generateQuotationPDF = async (
       const itemsTotal = data.items.reduce((sum, item) => sum + (item.amount || 0), 0);
       const feesTotal = (data.otherFees || []).reduce((sum, fee) => sum + (fee.amount || 0), 0);
       const totalAmount = itemsTotal + feesTotal;
-      
+
 
 
       // 显示总金额
@@ -275,7 +275,7 @@ export const generateQuotationPDF = async (
       // 分页检查函数 - 确保内容不被页码区域截断
       // 页码区域占用15mm（从pageHeight - 15开始），预留空间检查设为10mm
       const FOOTER_HEIGHT = 10; // 预留空间检查
-      
+
       const checkAndAddPage = (y: number, needed = 20) => {
         // 预留足够空间给页码区域
         const availableHeight = pageHeight - y - FOOTER_HEIGHT;
@@ -290,13 +290,13 @@ export const generateQuotationPDF = async (
       safeSetCnFont(doc, 'bold', mode);
       doc.text('Notes:', margin, yPosition);
       yPosition += 5;
-      
+
       // 设置普通字体用于条款内容
       safeSetCnFont(doc, 'normal', mode);
-      
+
       const numberWidth = doc.getTextWidth('10.'); // 预留序号宽度
       const contentMaxWidth = pageWidth - margin - margin - numberWidth - 5; // 内容最大宽度
-      
+
       // 显示所有有效条款，在条款间进行分页检查
       data.notes.forEach((note, index) => {
         // 确保note是有效的字符串
@@ -304,22 +304,22 @@ export const generateQuotationPDF = async (
         if (noteText) {
           // 处理长文本自动换行
           const wrappedText = doc.splitTextToSize(noteText, contentMaxWidth);
-          
+
           // 估算当前条款所需空间：序号行 + 内容行数 * 行高 + 间距（最小化额外间距）
           const estimatedHeight = 1 + (wrappedText.length * 4) + 1;
-          
+
           // 检查是否需要换页（在条款开始前检查，确保整个条款能完整显示）
           yPosition = checkAndAddPage(yPosition, estimatedHeight);
-          
+
           // 显示序号
           doc.text(`${index + 1}.`, margin, yPosition);
-          
+
           // 渲染内容行
           wrappedText.forEach((line: string, lineIndex: number) => {
             const lineY = yPosition + (lineIndex * 4);
             doc.text(line, margin + numberWidth, lineY);
           });
-          
+
           // 更新Y坐标，确保下一条款在当前条款所有行之后
           yPosition += (wrappedText.length - 1) * 4 + 5; // 添加条款间距
         }
@@ -349,15 +349,15 @@ export const generateQuotationPDF = async (
 // 添加页码函数
 function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: number, margin: number, mode: 'preview' | 'export'): void {
   const totalPages = doc.getNumberOfPages();
-  
+
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     doc.setFillColor(255, 255, 255);
     doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
-    
+
     doc.setFontSize(8);
     // 使用类型断言来解决类型兼容性问题
-    safeSetCnFont(doc as any, 'normal', mode);
+    safeSetCnFont(doc, 'normal', mode);
     doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
   }
-} 
+}

@@ -1,5 +1,14 @@
 # 发布前检查清单 - MLUONET V1.2.0
 
+## 2026-07-04 代码质量复检
+
+- ✅ `npx tsc --noEmit`：通过，0 TypeScript 错误
+- ✅ `npx next lint`：0 warnings / 0 errors
+- ✅ `npm run build`：通过，生产构建完成
+- ✅ 全量 lint warning 清零：`no-explicit-any`、`no-unused-vars`、`react-hooks/exhaustive-deps` 均已处理
+- ✅ Hooks 局部 disable 均附中文说明，仅用于一次性初始化或防循环同步场景
+- ⚠️ 提交前建议继续手动回归报价单、装箱单、发票增删改与历史导入导出流程
+
 ## ✅ 已完成检查项目
 
 ### 1. 项目结构分析
@@ -99,7 +108,7 @@
 
 ---
 
-**状态**: ✅ 发布就绪  
-**版本**: V1.2.0  
-**检查日期**: 2025-01-30  
+**状态**: ✅ 发布就绪
+**版本**: V1.2.0
+**检查日期**: 2026-07-04
 **检查人员**: AI Assistant

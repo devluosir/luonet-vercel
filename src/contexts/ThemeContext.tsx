@@ -14,7 +14,7 @@ interface ThemeContextType {
   toggleButtonTheme: () => void;
   setMode: (mode: ThemeMode) => void;
   setButtonTheme: (buttonTheme: ButtonTheme) => void;
-  getModuleColors: (moduleId: string, theme?: ButtonTheme) => any;
+  getModuleColors: (moduleId: string, theme?: ButtonTheme) => ReturnType<typeof themeManager.getModuleColors>;
   isDark: boolean;
   isLight: boolean;
   isColorful: boolean;
@@ -32,7 +32,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // 监听主题变化
   useEffect(() => {
     // 调试日志已关闭
-    
+
     const unsubscribe = themeManager.addListener((newConfig) => {
       // 调试日志已关闭
       setConfig(newConfig);
@@ -113,7 +113,7 @@ export function useThemeContext() {
 // 简化的主题Hook
 export function useTheme() {
   const { config, isLoading, mode, buttonTheme, isDark, isLight, isColorful, isClassic } = useThemeContext();
-  
+
   return {
     theme: config,
     isLoading,
@@ -129,7 +129,7 @@ export function useTheme() {
 // 主题切换Hook
 export function useThemeToggle() {
   const { toggleMode, toggleButtonTheme, setMode, setButtonTheme } = useThemeContext();
-  
+
   return {
     toggleMode,
     toggleButtonTheme,

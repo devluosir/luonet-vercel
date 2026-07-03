@@ -1,16 +1,20 @@
 import bcrypt from 'bcryptjs';
 
 // 定义D1数据库接口
+interface D1PreparedStatement {
+  first: <T>() => Promise<T | null>;
+  all: <T>() => Promise<{ results: T[] }>;
+  run: () => Promise<{ meta: { changes: number } }>;
+}
+
+interface D1PrepareResult {
+  bind: (...args: unknown[]) => D1PreparedStatement;
+  all: <T>() => Promise<{ results: T[] }>;
+}
+
 interface D1Database {
-  prepare: (sql: string) => {
-    bind: (...args: any[]) => {
-      first: <T>() => Promise<T | null>;
-      all: <T>() => Promise<{ results: T[] }>;
-      run: () => Promise<{ meta: { changes: number } }>;
-    };
-    all: <T>() => Promise<{ results: T[] }>;
-  };
-  batch: (statements: any[]) => Promise<void>;
+  prepare: (sql: string) => D1PrepareResult;
+  batch: (statements: D1PreparedStatement[]) => Promise<void>;
 }
 
 export interface D1User {
@@ -40,17 +44,17 @@ export class D1UserClient {
     try {
       const id = crypto.randomUUID();
       const now = new Date().toISOString();
-      
+
       console.log('D1UserClient.createUser - 开始创建用户:', { id, username: user.username });
-      
+
       const sql = `
         INSERT INTO User (id, username, password, email, status, isAdmin, lastLoginAt, createdAt, updatedAt)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
-      
+
       console.log('执行SQL:', sql);
       console.log('参数:', [id, user.username, user.password, user.email, user.status ? 1 : 0, user.isAdmin ? 1 : 0, user.lastLoginAt, now, now]);
-      
+
       const result = await this.db.prepare(sql).bind(
         id,
         user.username,
@@ -67,9 +71,9 @@ export class D1UserClient {
 
       const createdUser = { ...user, id, createdAt: now, updatedAt: now };
       console.log('创建的用户对象:', createdUser);
-      
+
       return createdUser;
-      
+
     } catch (error) {
       console.error('D1UserClient.createUser - 创建用户失败:', error);
       throw new Error(`创建用户失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -92,7 +96,7 @@ export class D1UserClient {
 
   async getUserByUsername(username: string): Promise<D1User | null> {
     console.log('D1UserClient.getUserByUsername - 查询用户名:', username);
-    
+
     const result = await this.db.prepare(`
       SELECT * FROM User WHERE username = ?
     `).bind(username).first<D1User>();
@@ -106,15 +110,15 @@ export class D1UserClient {
       status: Boolean(result.status),
       isAdmin: Boolean(result.isAdmin)
     };
-    
+
     console.log('D1UserClient.getUserByUsername - 返回用户对象:', user);
-    
+
     return user;
   }
 
   async updateUser(id: string, updates: Partial<D1User>): Promise<D1User | null> {
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
     Object.entries(updates).forEach(([key, value]) => {
       if (key !== 'id' && key !== 'createdAt' && key !== 'updatedAt') {
@@ -131,7 +135,7 @@ export class D1UserClient {
 
     values.push(id);
     const sql = `UPDATE User SET ${fields.join(', ')}, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`;
-    
+
     await this.db.prepare(sql).bind(...values).run();
 
     return this.getUserById(id);
@@ -160,7 +164,7 @@ export class D1UserClient {
   // 权限相关操作
   async createPermission(permission: Omit<D1Permission, 'id'>): Promise<D1Permission> {
     const id = crypto.randomUUID();
-    
+
     await this.db.prepare(`
       INSERT INTO Permission (id, userId, moduleId, canAccess)
       VALUES (?, ?, ?, ?)
@@ -272,4 +276,4 @@ export class D1UserClient {
       return false;
     }
   }
-} 
+}

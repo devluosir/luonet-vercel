@@ -15,11 +15,11 @@ export const API_ENDPOINTS = {
     PERMISSIONS: (id: string) => `/api/admin/users/${id}/permissions`,
     BATCH_PERMISSIONS: (id: string) => `/api/admin/users/${id}/permissions/batch`,
   },
-  
+
   AUTH: {
     SIGNOUT: `${API_BASE_URL}/api/auth/signout`,
   },
-  
+
   // 其他API
   GENERATE: '/api/generate',
 };
@@ -32,7 +32,7 @@ export async function getUserInfo() {
       const username = localStorage.getItem('username');
       const userId = localStorage.getItem('userId');
       const isAdmin = localStorage.getItem('isAdmin') === 'true';
-      
+
       if (username && userId) {
         return {
           id: userId,
@@ -40,7 +40,7 @@ export async function getUserInfo() {
           isAdmin: isAdmin
         };
       }
-      
+
       // 如果localStorage没有，尝试从session获取
       const session = await getSession();
       if (session?.user) {
@@ -80,15 +80,23 @@ export async function apiRequest(
 
 // 带错误处理的API请求
 export async function apiRequestWithError(
-  url: string, 
+  url: string,
+  options?: RequestInit
+): Promise<unknown>;
+export async function apiRequestWithError<T>(
+  url: string,
+  options?: RequestInit
+): Promise<T>;
+export async function apiRequestWithError<T = unknown>(
+  url: string,
   options: RequestInit = {}
-): Promise<any> {
+): Promise<T> {
   const response = await apiRequest(url, options);
-  
+
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    const errorData = await response.json().catch(() => ({})) as { error?: string };
     throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
   }
-  
-  return response.json();
-} 
+
+  return response.json() as Promise<T>;
+}

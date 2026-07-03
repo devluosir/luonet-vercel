@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Search, Download, Upload, RefreshCw, X } from 'lucide-react';
-import { useHistoryActions } from '../hooks/useHistoryActions';
 import { useHistorySelectedCount, useHistoryFilters } from '../state/history.selectors';
 import { useHistoryStore } from '../state/history.store';
 
@@ -112,7 +111,7 @@ export function HistoryHeader({
                 onClick={onBatchDelete}
                 disabled={isDeleting}
                 className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ 
+                style={{
                   backgroundColor: isDeleting ? '#9ca3af' : '#dc2626',
                   color: 'white'
                 }}

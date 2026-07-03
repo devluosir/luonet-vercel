@@ -153,10 +153,10 @@ export class ThemeManager {
    */
   private initializeTheme(): void {
     if (this.isInitialized) return;
-    
+
     this.applyTheme();
     this.isInitialized = true;
-    
+
     // 确保在DOM准备好后再次应用主题
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
@@ -181,17 +181,17 @@ export class ThemeManager {
    * 更新主题配置
    */
   updateConfig(updates: Partial<ThemeConfig>): void {
-    const oldConfig = { ...this.config };
+    const _oldConfig = { ...this.config };
     this.config = { ...this.config, ...updates };
-    
+
     // 检查配置是否真的发生了变化
     const newConfigString = JSON.stringify(this.config);
     if (newConfigString === this.lastAppliedConfig) {
       return; // 配置没有变化，跳过更新
     }
-    
+
     // 调试日志已关闭
-    
+
     this.saveToStorage();
     this.debouncedApplyTheme();
     this.notifyListeners();
@@ -204,7 +204,7 @@ export class ThemeManager {
     if (this.applyThemeDebounceTimer) {
       clearTimeout(this.applyThemeDebounceTimer);
     }
-    
+
     this.applyThemeDebounceTimer = setTimeout(() => {
       this.applyTheme();
       this.applyThemeDebounceTimer = null;
@@ -249,14 +249,14 @@ export class ThemeManager {
 
     const root = document.documentElement;
     const configString = JSON.stringify(this.config);
-    
+
     // 检查是否已经应用了相同的配置
     if (configString === this.lastAppliedConfig) {
       return;
     }
-    
+
     // 调试日志已关闭
-    
+
     // 应用深色模式类
     if (this.config.mode === 'dark') {
       root.classList.add('dark');
@@ -277,7 +277,7 @@ export class ThemeManager {
 
     // 设置CSS变量
     this.setCSSVariables();
-    
+
     // 记录已应用的配置
     this.lastAppliedConfig = configString;
     // 调试日志已关闭
@@ -290,12 +290,12 @@ export class ThemeManager {
     if (typeof window === 'undefined') return;
 
     const root = document.documentElement;
-    
+
     // 设置主色调
     if (this.config.primaryColor) {
       root.style.setProperty('--primary-color', this.config.primaryColor);
     }
-    
+
     if (this.config.accentColor) {
       root.style.setProperty('--accent-color', this.config.accentColor);
     }
@@ -333,42 +333,42 @@ export class ThemeManager {
     // 为每个模块设置CSS变量
     Object.entries(moduleColors).forEach(([moduleId, colors]) => {
       const color = isDark ? colors.dark : colors.light;
-      
+
       if (isClassic) {
         // 经典主题：白色/灰色背景，彩色悬停
         const fromColor = isDark ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)';
         const toColor = isDark ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)';
         const hoverFromColor = isDark ? 'rgba(59, 130, 246, 0.8)' : 'rgba(219, 234, 254, 1)';
         const hoverToColor = isDark ? 'rgba(37, 99, 235, 0.8)' : 'rgba(191, 219, 254, 1)';
-        
+
         root.style.setProperty(`--${moduleId}-from`, fromColor);
         root.style.setProperty(`--${moduleId}-to`, toColor);
         root.style.setProperty(`--${moduleId}-hover-from`, hoverFromColor);
         root.style.setProperty(`--${moduleId}-hover-to`, hoverToColor);
-        
+
         // 调试日志已关闭
       } else {
         // 彩色主题：清除之前设置的CSS变量，让globals.css中的定义生效
         const propertiesToRemove = [
           `--${moduleId}-from`,
-          `--${moduleId}-to`, 
+          `--${moduleId}-to`,
           `--${moduleId}-hover-from`,
           `--${moduleId}-hover-to`
         ];
-        
+
         propertiesToRemove.forEach(prop => {
           root.style.removeProperty(prop);
         });
-        
+
         // 调试日志已关闭
       }
-      
+
       // 设置图标和徽章颜色
       root.style.setProperty(`--${moduleId}-icon-color`, color);
       root.style.setProperty(`--${moduleId}-badge-bg`, color);
       // 调试日志已关闭
     });
-    
+
     // 强制重新计算样式
     this.forceStyleRecalculation();
   }
@@ -378,10 +378,10 @@ export class ThemeManager {
    */
   private forceStyleRecalculation(): void {
     if (typeof window === 'undefined') return;
-    
+
     // 触发重排以强制重新计算样式
     document.body.offsetHeight;
-    
+
     // 调试日志已关闭
   }
 
@@ -394,7 +394,7 @@ export class ThemeManager {
     try {
       const stored = localStorage.getItem('theme-config');
       // 调试日志已关闭
-      
+
       if (stored) {
         const parsed = JSON.parse(stored);
         // 调试日志已关闭
@@ -419,7 +419,7 @@ export class ThemeManager {
       const configString = JSON.stringify(this.config);
       // 调试日志已关闭
       localStorage.setItem('theme-config', configString);
-      
+
       // 调试日志已关闭
     } catch (error) {
       console.error('🔄 保存主题配置失败:', error);
@@ -440,7 +440,7 @@ export class ThemeManager {
   private notifyListeners(): void {
     console.log('🔄 通知监听器，当前配置:', this.config);
     console.log('🔄 监听器数量:', this.listeners.size);
-    
+
     this.listeners.forEach((listener, index) => {
       try {
         listener(this.config);
@@ -457,7 +457,7 @@ export class ThemeManager {
   getModuleColors(moduleId: string, theme: ButtonTheme = 'colorful') {
     const colorKey = this.getColorKeyForModule(moduleId);
     const colorConfig = THEME_COLORS[colorKey];
-    
+
     if (!colorConfig) {
       return this.getDefaultColors(theme);
     }
@@ -511,7 +511,7 @@ export class ThemeManager {
       history: 'pink',
       customer: 'fuchsia',
     };
-    
+
     return colorMap[moduleId] || 'gray';
   }
 

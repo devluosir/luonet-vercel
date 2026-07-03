@@ -63,7 +63,7 @@ export const PerformantDragDrop = memo<PerformantDragDropProps>(({
 }) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  
+
   // 🚀 使用useRef缓存计算结果，避免重复计算
   const notesMapRef = useRef<Map<string, { note: NoteConfig; index: number }>>(new Map());
   const noteIdsRef = useRef<string[]>([]);
@@ -94,7 +94,7 @@ export const PerformantDragDrop = memo<PerformantDragDropProps>(({
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as string);
     setIsDragging(true);
-    
+
     // 性能监控
     if (process.env.NODE_ENV === 'development') {
       console.time('drag-operation');
@@ -103,12 +103,12 @@ export const PerformantDragDrop = memo<PerformantDragDropProps>(({
 
   // 🚀 拖拽过程处理 - 使用节流减少频繁更新
   const dragOverTimeoutRef = useRef<NodeJS.Timeout>();
-  const handleDragOver = useCallback((event: DragOverEvent) => {
+  const handleDragOver = useCallback((_event: DragOverEvent) => {
     // 使用requestAnimationFrame进行性能优化
     if (dragOverTimeoutRef.current) {
       clearTimeout(dragOverTimeoutRef.current);
     }
-    
+
     dragOverTimeoutRef.current = setTimeout(() => {
       // 这里可以添加拖拽过程中的视觉反馈逻辑
       // 例如高亮drop zone等
@@ -118,10 +118,10 @@ export const PerformantDragDrop = memo<PerformantDragDropProps>(({
   // 🚀 拖拽结束处理 - 优化批量更新
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     setActiveId(null);
     setIsDragging(false);
-    
+
     if (dragOverTimeoutRef.current) {
       clearTimeout(dragOverTimeoutRef.current);
     }
@@ -129,7 +129,7 @@ export const PerformantDragDrop = memo<PerformantDragDropProps>(({
     if (over && active.id !== over.id) {
       const activeData = notesMapRef.current.get(active.id as string);
       const overData = notesMapRef.current.get(over.id as string);
-      
+
       if (activeData && overData) {
         // 使用React的批量更新机制
         React.startTransition(() => {
@@ -137,7 +137,7 @@ export const PerformantDragDrop = memo<PerformantDragDropProps>(({
         });
       }
     }
-    
+
     // 性能监控
     if (process.env.NODE_ENV === 'development') {
       console.timeEnd('drag-operation');
@@ -170,7 +170,7 @@ export const PerformantDragDrop = memo<PerformantDragDropProps>(({
             ))}
           </div>
         </SortableContext>
-        
+
         {/* 🚀 拖拽覆盖层 - 只在拖拽时渲染 */}
         <DragOverlay dropAnimation={DROP_ANIMATION}>
           {activeNote && (
@@ -209,10 +209,10 @@ const SortableNoteItem = memo<SortableNoteItemProps>(({
     transform,
     transition,
     isDragging,
-  } = useSortable({ 
+  } = useSortable({
     id: note.id,
     // 🚀 优化动画配置
-    animateLayoutChanges: ({ isSorting, wasDragging }) => 
+    animateLayoutChanges: ({ isSorting, wasDragging }) =>
       isSorting || wasDragging ? false : true,
   });
 
@@ -231,17 +231,17 @@ const SortableNoteItem = memo<SortableNoteItemProps>(({
   const itemClassName = useMemo(() => {
     const baseClasses = 'relative';
     const dragClasses = [];
-    
+
     if (isDragging) {
       dragClasses.push('opacity-50', 'scale-105', 'z-50');
     } else if (isDraggingAny) {
       dragClasses.push('transition-transform', 'duration-200');
     }
-    
+
     if (isBeingDragged) {
       dragClasses.push('shadow-2xl');
     }
-    
+
     return [baseClasses, ...dragClasses].join(' ');
   }, [isDragging, isDraggingAny, isBeingDragged]);
 
@@ -262,12 +262,14 @@ const SortableNoteItem = memo<SortableNoteItemProps>(({
 SortableNoteItem.displayName = 'SortableNoteItem';
 
 // 🚀 独立的拖拽句柄组件
+type DragListeners = ReturnType<typeof useSortable>['listeners'];
+
 interface DragHandleProps {
-  listeners?: any;
+  listeners?: DragListeners;
 }
 
 const DragHandle = memo<DragHandleProps>(({ listeners }) => (
-  <div 
+  <div
     {...listeners}
     className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 dark:hover:bg-[#3A3A3C] rounded z-10"
     title="拖拽排序"
@@ -312,12 +314,12 @@ export const useDragPerformance = () => {
 // 🚀 拖拽防抖hook
 export const useDragDebounce = (delay = 16) => {
   const timeoutRef = useRef<NodeJS.Timeout>();
-  
+
   return useCallback((callback: () => void) => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
+
     timeoutRef.current = setTimeout(callback, delay);
   }, [delay]);
 };

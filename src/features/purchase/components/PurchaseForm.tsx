@@ -5,13 +5,14 @@ import { BankInfoSection } from '@/components/purchase/BankInfoSection';
 import PurchaseBaseInfo from '@/components/purchase/PurchaseBaseInfo';
 import { usePurchaseStore } from '../state/purchase.store';
 import { useAutoResizeTextareas } from '@/hooks/useAutoResizeTextareas';
+import type { PurchaseOrderData } from '@/types/purchase';
 
 export default function PurchaseForm() {
-  const { 
-    data, 
-    showSettings, 
-    updateData, 
-    toggleBank, 
+  const {
+    data,
+    showSettings,
+    updateData,
+    toggleBank,
     changeCurrency,
     pageMode,
     updateFromField
@@ -38,7 +39,7 @@ export default function PurchaseForm() {
   }, [updateFromField]);
 
   // 使用useCallback优化onChange回调，避免无限循环
-  const handleBaseInfoChange = useCallback((value: any) => {
+  const handleBaseInfoChange = useCallback((value: Partial<PurchaseOrderData>) => {
     updateData({
       attn: value.attn,
       yourRef: value.yourRef,
@@ -54,11 +55,11 @@ export default function PurchaseForm() {
   const inputClass =
     'w-full px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm';
 
-  const dateInputClass =
+  const _dateInputClass =
     'w-full min-w-0 px-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm';
 
-  const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2';
-  const subheadingClass = 'block text-lg font-semibold text-gray-800 dark:text-gray-200 pt-6 pb-3';
+  const _labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2';
+  const _subheadingClass = 'block text-lg font-semibold text-gray-800 dark:text-gray-200 pt-6 pb-3';
 
 
 
@@ -81,9 +82,9 @@ export default function PurchaseForm() {
         ${showSettings ? 'opacity-100 px-4 sm:px-6 py-6 h-auto' : 'opacity-0 px-0 py-0 h-0'}`}>
         <SettingsPanel data={data} onDataChange={updateData} />
       </div>
-      
 
-      
+
+
 
 
       {/* 主内容区域 */}
@@ -183,7 +184,7 @@ export default function PurchaseForm() {
                 <button
                   onClick={toggleBank}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                    data.showBank 
+                    data.showBank
                       ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-300 dark:border-gray-700'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
@@ -261,7 +262,7 @@ export default function PurchaseForm() {
                     type="button"
                     onClick={() => updateData({ ...data, stampType: option.value as 'none' | 'shanghai' | 'hongkong' })}
                     className={`px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 ${
-                      data.stampType === option.value 
+                      data.stampType === option.value
                         ? 'bg-blue-500 text-white shadow-md'
                         : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
                     }`}

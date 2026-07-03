@@ -1,6 +1,5 @@
 'use client';
-
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 
 /**
  * 简化的客户端初始化组件

@@ -3,10 +3,12 @@
  * 用于收集用户行为、性能指标和错误信息
  */
 
+type AnalyticsProperties = Record<string, unknown>;
+
 export interface AnalyticsEvent {
   name: string;
   category: 'user_action' | 'performance' | 'error' | 'feature_usage';
-  properties?: Record<string, any>;
+  properties?: AnalyticsProperties;
   timestamp: number;
   sessionId: string;
   userId?: string;
@@ -17,7 +19,7 @@ export interface PerformanceMetric {
   value: number;
   unit: string;
   timestamp: number;
-  context?: Record<string, any>;
+  context?: AnalyticsProperties;
 }
 
 export interface ErrorEvent {
@@ -27,6 +29,24 @@ export interface ErrorEvent {
   action?: string;
   timestamp: number;
   sessionId: string;
+}
+
+interface AnalyticsBatch {
+  events: AnalyticsEvent[];
+  performanceMetrics: PerformanceMetric[];
+  errors: ErrorEvent[];
+  sessionId: string;
+  userId?: string;
+  timestamp: number;
+}
+
+interface InteractionPerformanceEntry extends PerformanceEntry {
+  duration: number;
+}
+
+interface LayoutShiftPerformanceEntry extends PerformanceEntry {
+  hadRecentInput: boolean;
+  value: number;
 }
 
 // 埋点事件类型定义
@@ -45,7 +65,7 @@ export const ANALYTICS_EVENTS = {
     SAVE_SEGMENT: 'save_segment',
     USE_SAVED_SEGMENT: 'use_saved_segment'
   },
-  
+
   // 性能指标
   PERFORMANCE: {
     PAGE_LOAD: 'page_load',
@@ -57,7 +77,7 @@ export const ANALYTICS_EVENTS = {
     CLS: 'cls', // Cumulative Layout Shift
     FID: 'fid'  // First Input Delay
   },
-  
+
   // 错误事件
   ERRORS: {
     API_ERROR: 'api_error',
@@ -66,7 +86,7 @@ export const ANALYTICS_EVENTS = {
     RENDER_ERROR: 'render_error',
     FEATURE_ERROR: 'feature_error'
   },
-  
+
   // 功能使用事件
   FEATURE_USAGE: {
     TIMELINE_AGGREGATION: 'timeline_aggregation',
@@ -121,7 +141,7 @@ export class AnalyticsManager {
   trackEvent(
     name: string,
     category: AnalyticsEvent['category'] = 'user_action',
-    properties?: Record<string, any>
+    properties?: AnalyticsProperties
   ): void {
     if (!this.isEnabled) return;
 
@@ -143,7 +163,7 @@ export class AnalyticsManager {
     name: string,
     value: number,
     unit: string = 'ms',
-    context?: Record<string, any>
+    context?: AnalyticsProperties
   ): void {
     if (!this.isEnabled) return;
 
@@ -200,7 +220,7 @@ export class AnalyticsManager {
   private flush(): void {
     if (!this.isEnabled) return;
 
-    const data = {
+    const data: AnalyticsBatch = {
       events: [...this.events],
       performanceMetrics: [...this.performanceMetrics],
       errors: [...this.errors],
@@ -219,7 +239,7 @@ export class AnalyticsManager {
   }
 
   // 发送数据到后端或分析服务
-  private sendData(data: any): void {
+  private sendData(data: AnalyticsBatch): void {
     // 开发环境：输出到控制台
     if (process.env.NODE_ENV === 'development') {
       console.group('📊 Analytics Data');
@@ -243,17 +263,17 @@ export class AnalyticsManager {
   }
 
   // 发送到分析服务（暂未配置外部分析服务，数据仅保存到本地）
-  private sendToAnalyticsService(_data: any): void {
+  private sendToAnalyticsService(_data: AnalyticsBatch): void {
     // 内部工具，暂不集成外部分析服务
     // 如需接入，在此处实现（注意：Google Analytics 在国内不可用）
   }
 
   // 保存到本地存储
-  private saveToLocalStorage(data: any): void {
+  private saveToLocalStorage(data: AnalyticsBatch): void {
     try {
       const key = `analytics_${Date.now()}`;
       localStorage.setItem(key, JSON.stringify(data));
-      
+
       // 清理旧数据（保留最近100条）
       this.cleanupOldAnalytics();
     } catch (error) {
@@ -347,12 +367,12 @@ export class PerformanceMonitor {
         const observer = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
             if (entry.entryType === 'interaction') {
-              const interactionEntry = entry as any;
+              const interactionEntry = entry as InteractionPerformanceEntry;
               analytics.trackPerformance('inp', interactionEntry.duration);
             }
           }
         });
-        
+
         observer.observe({ entryTypes: ['interaction'] });
         this.observers.set('interaction', observer);
       } catch (error) {
@@ -371,7 +391,7 @@ export class PerformanceMonitor {
           let clsValue = 0;
           for (const entry of list.getEntries()) {
             if (entry.entryType === 'layout-shift') {
-              const layoutShiftEntry = entry as any;
+              const layoutShiftEntry = entry as LayoutShiftPerformanceEntry;
               if (!layoutShiftEntry.hadRecentInput) {
                 clsValue += layoutShiftEntry.value;
               }
@@ -379,7 +399,7 @@ export class PerformanceMonitor {
           }
           analytics.trackPerformance('cls', clsValue);
         });
-        
+
         observer.observe({ entryTypes: ['layout-shift'] });
         this.observers.set('layout-shift', observer);
       } catch (error) {
@@ -401,7 +421,7 @@ export class PerformanceMonitor {
             }
           }
         });
-        
+
         observer.observe({ entryTypes: ['largest-contentful-paint'] });
         this.observers.set('largest-contentful-paint', observer);
       } catch (error) {
@@ -416,7 +436,7 @@ export class PerformanceMonitor {
       console.warn('Performance monitoring is already running');
       return;
     }
-    
+
     try {
       this.monitorPageLoad();
       this.monitorInteraction();
@@ -455,15 +475,16 @@ export class ErrorMonitor {
       console.warn('Error monitoring is already running');
       return;
     }
-    
+
     if (typeof window === 'undefined') return;
 
     try {
       // 全局错误处理
       const errorHandler = (event: globalThis.ErrorEvent) => {
+        const errorStack = event.error instanceof Error ? event.error.stack : undefined;
         analytics.trackError(
           event.message,
-          (event as any).error?.stack,
+          errorStack,
           'global',
           'unhandled_error'
         );
@@ -481,7 +502,7 @@ export class ErrorMonitor {
 
       window.addEventListener('error', errorHandler);
       window.addEventListener('unhandledrejection', rejectionHandler);
-      
+
       this.listeners = { error: errorHandler, unhandledrejection: rejectionHandler };
       this.isMonitoring = true;
     } catch (error) {
@@ -492,12 +513,12 @@ export class ErrorMonitor {
   // 停止错误监控
   stopMonitoring(): void {
     if (!this.isMonitoring || !this.listeners) return;
-    
+
     if (typeof window !== 'undefined') {
       window.removeEventListener('error', this.listeners.error);
       window.removeEventListener('unhandledrejection', this.listeners.unhandledrejection);
     }
-    
+
     this.listeners = null;
     this.isMonitoring = false;
   }
@@ -509,20 +530,20 @@ export function initializeAnalytics(): void {
 
   try {
     // 初始化分析管理器
-    const analyticsManager = AnalyticsManager.getInstance();
-    
+    const _analyticsManager = AnalyticsManager.getInstance();
+
     // 初始化性能监控
     const performanceMonitor = PerformanceMonitor.getInstance();
     if (!performanceMonitor.isMonitoring) {
       performanceMonitor.startMonitoring();
     }
-    
+
     // 初始化错误监控
     const errorMonitor = ErrorMonitor.getInstance();
     if (!errorMonitor.isMonitoring) {
       errorMonitor.startMonitoring();
     }
-    
+
     // 开发环境调试信息
     if (process.env.NODE_ENV === 'development') {
       console.log('Analytics system initialized successfully');
@@ -533,8 +554,19 @@ export function initializeAnalytics(): void {
 }
 
 // 开发环境调试工具
+declare global {
+  interface Window {
+    __ANALYTICS__?: {
+      analytics: AnalyticsManager;
+      performanceMonitor: PerformanceMonitor;
+      errorMonitor: ErrorMonitor;
+      initializeAnalytics: typeof initializeAnalytics;
+    };
+  }
+}
+
 if (process.env.NODE_ENV === 'development') {
-  (window as any).__ANALYTICS__ = {
+  window.__ANALYTICS__ = {
     analytics,
     performanceMonitor: PerformanceMonitor.getInstance(),
     errorMonitor: ErrorMonitor.getInstance(),

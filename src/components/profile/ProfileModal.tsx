@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { 
-  X, 
-  Mail, 
+import {
+  X,
+  Mail,
   User,
   Shield,
   Edit,
@@ -10,7 +10,7 @@ import {
   Palette
 } from 'lucide-react';
 import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
-import { useThemeSettings, ButtonTheme } from '@/hooks/useThemeSettings';
+import { useThemeSettings } from '@/hooks/useThemeSettings';
 
 interface Permission {
   id: string;
@@ -63,8 +63,8 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
     try {
       const userId = localStorage.getItem('userId');
       if (!userId) return;
-      
-      const userInfo = await apiRequestWithError(API_ENDPOINTS.USERS.GET(userId), {
+
+      const userInfo = await apiRequestWithError<ProfileModalProps['user']>(API_ENDPOINTS.USERS.GET(userId), {
         method: 'GET',
       });
       setCurrentUser(userInfo);
@@ -135,7 +135,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
         setError('无法获取用户ID');
         return;
       }
-      
+
       await apiRequestWithError(API_ENDPOINTS.USERS.UPDATE(userId), {
         method: 'PUT',
         body: JSON.stringify({
@@ -179,7 +179,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
         setError('无法获取用户ID');
         return;
       }
-      
+
       await apiRequestWithError(API_ENDPOINTS.USERS.UPDATE(userId), {
         method: 'PUT',
         body: JSON.stringify({ email: emailValue }),
@@ -208,15 +208,15 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        
+
         {/* Header */}
         <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600">
           <div className="flex items-center justify-between">
@@ -247,14 +247,14 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
               </div>
               <span className="text-sm font-medium text-gray-900 dark:text-white">{currentUser.username}</span>
             </div>
-            
+
             {/* 邮箱 */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Mail className="w-4 h-4 text-gray-500" />
                 <span className="text-sm text-gray-700 dark:text-gray-300">邮箱</span>
               </div>
-              
+
               {editingEmail ? (
                 <div className="flex items-center space-x-1">
                   <input
@@ -299,7 +299,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
                 <Palette className="w-4 h-4 text-gray-500" />
                 <span className="text-sm text-gray-700 dark:text-gray-300">按钮主题</span>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setButtonTheme('colorful')}
@@ -311,7 +311,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
                 >
                   彩色渐变
                 </button>
-                
+
                 <button
                   onClick={() => setButtonTheme('classic')}
                   className={`px-3 py-2 text-xs rounded border transition-colors ${
@@ -339,7 +339,7 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
                   {showChangePassword ? '取消' : '修改'}
                 </button>
               </div>
-              
+
               {showChangePassword && (
                 <form onSubmit={handleChangePassword} className="space-y-3">
                   <div>
@@ -444,4 +444,4 @@ export function ProfileModal({ isOpen, onClose, user }: ProfileModalProps) {
       </div>
     </div>
   );
-} 
+}

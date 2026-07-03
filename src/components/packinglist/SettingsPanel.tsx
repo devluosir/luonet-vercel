@@ -12,6 +12,21 @@ interface SettingsPanelProps {
   onCustomUnitsChange: (units: string[]) => void;
 }
 
+type PackingDocumentType = SettingsPanelProps['documentType'];
+type HeaderType = SettingsPanelProps['headerType'];
+
+const DOCUMENT_TYPE_OPTIONS = [
+  { value: 'proforma', label: 'PI' },
+  { value: 'packing', label: 'PL' },
+  { value: 'both', label: 'Both' }
+] satisfies Array<{ value: PackingDocumentType; label: string }>;
+
+const HEADER_TYPE_OPTIONS = [
+  { value: 'none', label: 'None' },
+  { value: 'bilingual', label: 'CN+EN' },
+  { value: 'english', label: 'EN' }
+] satisfies Array<{ value: HeaderType; label: string }>;
+
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   isVisible,
   documentType,
@@ -44,26 +59,22 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     <div className={`overflow-hidden transition-all duration-300 ease-in-out
       ${isVisible ? 'opacity-100 px-4 sm:px-6 py-2 h-auto' : 'opacity-0 px-0 py-0 h-0'}`}>
       <div>
-        
+
         {/* 响应式布局容器 */}
         <div className="flex flex-wrap items-center gap-3 text-xs">
-          
+
           {/* 第一组：文档类型 */}
           <div className="flex items-center gap-1.5">
             <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Type:</span>
             <div className="flex gap-1">
-              {[
-                { value: 'proforma', label: 'PI' },
-                { value: 'packing', label: 'PL' },
-                { value: 'both', label: 'Both' }
-              ].map((option) => (
+              {DOCUMENT_TYPE_OPTIONS.map((option) => (
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => onDocumentTypeChange(option.value as any)}
+                  onClick={() => onDocumentTypeChange(option.value)}
                   className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
-                    documentType === option.value 
-                      ? 'bg-[#007AFF] text-white shadow-sm' 
+                    documentType === option.value
+                      ? 'bg-[#007AFF] text-white shadow-sm'
                       : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
                   }`}
                 >
@@ -80,11 +91,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           <div className="flex items-center gap-1.5">
             <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Header:</span>
             <div className="flex gap-1">
-              {[
-                { value: 'none', label: 'None' },
-                { value: 'bilingual', label: 'CN+EN' },
-                { value: 'english', label: 'EN' }
-              ].map((option) => (
+              {HEADER_TYPE_OPTIONS.map((option) => (
                 <button
                   key={option.value}
                   type="button"
@@ -93,7 +100,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       ? 'bg-[#007AFF] text-white shadow-sm'
                       : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
                   }`}
-                  onClick={() => onHeaderTypeChange(option.value as any)}
+                  onClick={() => onHeaderTypeChange(option.value)}
                 >
                   {option.label}
                 </button>
@@ -114,8 +121,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 type="button"
                 onClick={() => onDimensionUnitChange('cm')}
                 className={`text-[9px] px-1 py-0.5 rounded font-medium ${
-                  dimensionUnit === 'cm' 
-                    ? 'bg-[#007AFF] text-white' 
+                  dimensionUnit === 'cm'
+                    ? 'bg-[#007AFF] text-white'
                     : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-300'
                 }`}
               >
@@ -125,8 +132,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 type="button"
                 onClick={() => onDimensionUnitChange('mm')}
                 className={`text-[9px] px-1 py-0.5 rounded font-medium ${
-                  dimensionUnit === 'mm' 
-                    ? 'bg-[#007AFF] text-white' 
+                  dimensionUnit === 'mm'
+                    ? 'bg-[#007AFF] text-white'
                     : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-300'
                 }`}
               >
@@ -144,7 +151,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           {/* 第四组：自定义单位 */}
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Units:</span>
-            
+
             {/* 自定义单位输入 */}
             <div className="flex items-center gap-2">
               <div className="relative">
@@ -216,4 +223,4 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       </div>
     </div>
   );
-}; 
+};

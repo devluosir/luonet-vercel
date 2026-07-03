@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useHistoryActiveTab, useHistoryFilters } from '../state/history.selectors';
-import { useHistoryStore, getAvailableTabs } from '../state/history.store';
+import { getAvailableTabs } from '../state/history.store';
 import { useHistoryTabCount } from '../hooks/useHistoryTabCount';
 import type { HistoryType } from '../types';
 
@@ -61,7 +61,7 @@ export function HistoryTabs({ onTabChange }: HistoryTabsProps) {
     if (hasSearchResults && filters.search.trim() !== '') {
       return 'text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-900/50';
     }
-    
+
     // 否则使用原来的颜色样式
     switch (tabId) {
       case 'quotation':
@@ -124,7 +124,7 @@ export function HistoryTabs({ onTabChange }: HistoryTabsProps) {
             const isActive = activeTab === tab.id;
             const hasSearchResults = filters.search.trim() !== '' && count > 0;
             const badgeStyle = getBadgeStyle(tab.id, hasSearchResults);
-            
+
             return (
               <button
                 key={tab.id}
@@ -145,7 +145,7 @@ export function HistoryTabs({ onTabChange }: HistoryTabsProps) {
                   <span className="hidden sm:inline">{tab.name}</span>
                   <span className="sm:hidden">{tab.shortName}</span>
                 </div>
-                
+
                 {/* 添加纸张质感效果 */}
                 {isActive && (
                   <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent dark:from-gray-800/30 rounded-t-xl pointer-events-none"></div>

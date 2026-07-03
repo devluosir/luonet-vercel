@@ -14,7 +14,7 @@ interface CustomWindow extends Window {
 
 // 保存或更新报价数据
 export async function saveOrUpdate(
-  tab: 'quotation' | 'confirmation', 
+  tab: 'quotation' | 'confirmation',
   data: QuotationData,
   notesConfig: NoteConfig[],
   editId?: string
@@ -22,21 +22,21 @@ export async function saveOrUpdate(
   try {
     // 使用局部副本，避免直接修改传入的data
     let workingData = data;
-    
+
     // confirmation 自动补合同号
     if (tab === 'confirmation' && !data.contractNo) {
-      workingData = { 
-        ...data, 
-        contractNo: data.quotationNo || `SC${Date.now()}` 
+      workingData = {
+        ...data,
+        contractNo: data.quotationNo || `SC${Date.now()}`
       };
     }
-    
+
     // 保存时包含notesConfig
     const dataWithConfig = {
       ...workingData,
       notesConfig
     };
-    
+
     const result = await saveQuotationHistory(tab, dataWithConfig, editId);
     return result;
   } catch (error) {
@@ -143,62 +143,66 @@ export function getTabFromSearchParams(searchParams?: URLSearchParams): 'quotati
 export class QuotationService {
   private baseUrl: string = '/api/quotation';
 
-  async create(data: any): Promise<any> {
+  async create<TResponse = unknown>(data: QuotationData): Promise<TResponse> {
     const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       throw new Error('创建报价单失败');
     }
-    
-    return response.json();
+
+    return response.json() as Promise<TResponse>;
   }
 
-  async update(id: string, data: any): Promise<any> {
+  async update<TResponse = unknown>(id: string, data: Partial<QuotationData>): Promise<TResponse> {
     const response = await fetch(`${this.baseUrl}/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       throw new Error('更新报价单失败');
     }
-    
-    return response.json();
+
+    return response.json() as Promise<TResponse>;
   }
 
   async delete(id: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/${id}`, {
       method: 'DELETE',
     });
-    
+
     if (!response.ok) {
       throw new Error('删除报价单失败');
     }
   }
 
-  async getById(id: string): Promise<any> {
+  async getById<TResponse = unknown>(id: string): Promise<TResponse> {
     const response = await fetch(`${this.baseUrl}/${id}`);
-    
+
     if (!response.ok) {
       throw new Error('获取报价单失败');
     }
-    
-    return response.json();
+
+    return response.json() as Promise<TResponse>;
   }
 
-  async list(params?: any): Promise<any> {
-    const searchParams = new URLSearchParams(params);
+  async list<TResponse = unknown>(params?: Record<string, string | number | boolean | undefined>): Promise<TResponse> {
+    const searchParams = new URLSearchParams(
+      Object.entries(params ?? {})
+        .filter((entry): entry is [string, string | number | boolean] => entry[1] !== undefined)
+        .map(([key, value]) => [key, String(value)])
+    );
     const response = await fetch(`${this.baseUrl}?${searchParams}`);
-    
+
     if (!response.ok) {
       throw new Error('获取报价单列表失败');
     }
-    
-    return response.json();
+
+    return response.json() as Promise<TResponse>;
   }
 }

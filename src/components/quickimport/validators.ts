@@ -16,10 +16,6 @@ export interface ValidationWarning {
   rowIndex: number;
   field?: keyof ParsedRow;
 }
-
-// 复用quickSmartParse中的类型定义
-import type { ParsedRow as SmartParseRow } from '../../features/quotation/utils/quickSmartParse';
-
 export interface ParsedRow {
   partName: string;
   description?: string;
@@ -30,9 +26,9 @@ export interface ParsedRow {
 }
 
 const UNIT_MAP: Record<string, string> = {
-  pc: 'pc', pcs: 'pc', piece: 'pc', pieces: 'pc', 
+  pc: 'pc', pcs: 'pc', piece: 'pc', pieces: 'pc',
   set: 'set', sets: 'set',
-  kg: 'kg', g: 'g', lb: 'lb', 
+  kg: 'kg', g: 'g', lb: 'lb',
   m: 'm', mm: 'mm', cm: 'cm', inch: 'inch', ft: 'ft',
   l: 'l', ml: 'ml', gal: 'gal',
   box: 'box', boxes: 'box',
@@ -83,14 +79,14 @@ export function detectCurrencyPrefix(text?: string): string | null {
 export function cleanNumberLike(text: string | number): number {
   if (typeof text === 'number') return text;
   let s = text.trim();
-  
+
   // 去除货币符号和千分位逗号、空格
   s = s.replace(/[,$€£¥\s]/g, '');
   // 去除货币代码前缀
   s = s.replace(/^(USD|EUR|CNY|GBP|HKD|SGD|AUD|CAD|RMB)\s*/i, '');
   // 处理开头的小数点
   s = s.replace(/^\./, '0.');
-  
+
   const n = Number(s);
   return Number.isFinite(n) ? n : NaN;
 }
@@ -102,91 +98,91 @@ export function validateRows(rows: ParsedRow[], cfg: ValidatorConfig = DEFAULT_V
 
   rows.forEach((r, i) => {
     const unitNorm = normalizeUnit(r.unit || '');
-    
+
     // 单位相关检查
     if (cfg.requireUnit && !unitNorm) {
-      warns.push({ 
-        type: 'MISSING_UNIT', 
-        message: `第 ${i+1} 行缺少单位`, 
-        rowIndex: i, 
-        field: 'unit' 
+      warns.push({
+        type: 'MISSING_UNIT',
+        message: `第 ${i+1} 行缺少单位`,
+        rowIndex: i,
+        field: 'unit'
       });
     }
     if (unitNorm && SUSPICIOUS_UNITS.has(unitNorm.toLowerCase())) {
-      warns.push({ 
-        type: 'SUSPICIOUS_UNIT', 
-        message: `第 ${i+1} 行单位可疑：${r.unit}`, 
-        rowIndex: i, 
-        field: 'unit' 
+      warns.push({
+        type: 'SUSPICIOUS_UNIT',
+        message: `第 ${i+1} 行单位可疑：${r.unit}`,
+        rowIndex: i,
+        field: 'unit'
       });
     }
-    
+
     // 数量检查
     if (!r.quantity || r.quantity <= 0) {
-      warns.push({ 
-        type: 'QTY_ZERO', 
-        message: `第 ${i+1} 行数量为0或缺失`, 
-        rowIndex: i, 
-        field: 'quantity' 
+      warns.push({
+        type: 'QTY_ZERO',
+        message: `第 ${i+1} 行数量为0或缺失`,
+        rowIndex: i,
+        field: 'quantity'
       });
     } else if (r.quantity > cfg.largeQty) {
-      warns.push({ 
-        type: 'LARGE_QTY', 
-        message: `第 ${i+1} 行数量异常大（${r.quantity.toLocaleString()}）`, 
-        rowIndex: i, 
-        field: 'quantity' 
+      warns.push({
+        type: 'LARGE_QTY',
+        message: `第 ${i+1} 行数量异常大（${r.quantity.toLocaleString()}）`,
+        rowIndex: i,
+        field: 'quantity'
       });
     }
-    
+
     // 价格检查
     if (r.unitPrice === 0) {
-      warns.push({ 
-        type: 'PRICE_ZERO', 
-        message: `第 ${i+1} 行单价为0`, 
-        rowIndex: i, 
-        field: 'unitPrice' 
+      warns.push({
+        type: 'PRICE_ZERO',
+        message: `第 ${i+1} 行单价为0`,
+        rowIndex: i,
+        field: 'unitPrice'
       });
     } else if (r.unitPrice > 0 && r.unitPrice < cfg.tinyPrice) {
-      warns.push({ 
-        type: 'TINY_PRICE', 
-        message: `第 ${i+1} 行单价过小（${r.unitPrice}）`, 
-        rowIndex: i, 
-        field: 'unitPrice' 
+      warns.push({
+        type: 'TINY_PRICE',
+        message: `第 ${i+1} 行单价过小（${r.unitPrice}）`,
+        rowIndex: i,
+        field: 'unitPrice'
       });
     }
-    
+
     // 名称检查
     if (!r.partName || r.partName.trim().length < cfg.minNameLen) {
-      warns.push({ 
-        type: 'NAME_TOO_SHORT', 
-        message: `第 ${i+1} 行名称过短`, 
-        rowIndex: i, 
-        field: 'partName' 
+      warns.push({
+        type: 'NAME_TOO_SHORT',
+        message: `第 ${i+1} 行名称过短`,
+        rowIndex: i,
+        field: 'partName'
       });
     }
-    
+
     // 收集重名和货币信息
     const key = r.partName?.trim().toLowerCase();
     if (key) (nameIndex[key] ??= []).push(i);
-    
+
     if (r.currency) {
       currencies.add(r.currency);
     }
   });
 
   // 重名检测
-  Object.entries(nameIndex).forEach(([name, indices]) => {
+  Object.entries(nameIndex).forEach(([_name, indices]) => {
     if (indices.length > 1) {
       indices.forEach((rowIndex) => {
-        warns.push({ 
-          type: 'DUPLICATE_NAME', 
-          message: `名称重复（将被合并）：${rows[rowIndex].partName}`, 
-          rowIndex 
+        warns.push({
+          type: 'DUPLICATE_NAME',
+          message: `名称重复（将被合并）：${rows[rowIndex].partName}`,
+          rowIndex
         });
       });
     }
   });
-  
+
   // 混合货币检测
   if (currencies.size > 1) {
     const currencyList = Array.from(currencies).join(', ');

@@ -2,7 +2,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ItemsTableEnhanced } from './ItemsTableEnhanced';
 import { useTablePrefsHydrated } from '../state/useTablePrefs';
-import { ItemsTableSectionProps } from '../types';
+import { ItemsTableSectionProps, MergedCellInfo, PackingItem } from '../types';
+
+type ImportedPackingRow = Partial<Pick<
+  PackingItem,
+  'description' | 'hsCode' | 'quantity' | 'unit' | 'unitPrice' | 'netWeight' | 'grossWeight' | 'packageQty' | 'dimensions'
+>>;
 
 export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
   editingUnitPriceIndex: number | null;
@@ -13,26 +18,26 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
   setEditingUnitPrice: (value: string) => void;
   setEditingFeeIndex: (index: number | null) => void;
   setEditingFeeAmount: (value: string) => void;
-}> = ({ 
-  data, 
-  onDataChange, 
+}> = ({
+  data,
+  onDataChange,
   totals,
-  editingUnitPriceIndex,
-  editingUnitPrice,
+  editingUnitPriceIndex: _editingUnitPriceIndex,
+  editingUnitPrice: _editingUnitPrice,
   editingFeeIndex,
   editingFeeAmount,
-  setEditingUnitPriceIndex,
-  setEditingUnitPrice,
+  setEditingUnitPriceIndex: _setEditingUnitPriceIndex,
+  setEditingUnitPrice: _setEditingUnitPrice,
   setEditingFeeIndex,
   setEditingFeeAmount
 }) => {
-  const { visibleCols, isHydrated } = useTablePrefsHydrated();
+  const { visibleCols: _visibleCols, isHydrated: _isHydrated } = useTablePrefsHydrated();
 
   // 合并模式状态管理 - 从主数据初始化
   const [packageQtyMergeMode, setPackageQtyMergeMode] = useState<'auto' | 'manual'>(data.packageQtyMergeMode || 'auto');
   const [dimensionsMergeMode, setDimensionsMergeMode] = useState<'auto' | 'manual'>(data.dimensionsMergeMode || 'auto');
   const [marksMergeMode, setMarksMergeMode] = useState<'auto' | 'manual'>(data.marksMergeMode || 'auto'); // 新增marks合并模式
-  
+
   // 手动合并数据状态 - 从主数据初始化
   const [manualMergedCells, setManualMergedCells] = useState<{
     packageQty: Array<{
@@ -92,20 +97,27 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
   }, [onDataChange, data]);
 
   // 处理导入数据
-  const handleImport = (newItems: any[]) => {
-    const processed = newItems.map((item, index) => ({
-      ...item,
+  const handleImport = (newItems: ImportedPackingRow[]) => {
+    const processed: PackingItem[] = newItems.map((item, index) => ({
       id: Date.now() + index,
       serialNo: (data.items.length + index + 1).toString(),
-      totalPrice: item.quantity * item.unitPrice,
+      description: item.description || '',
+      hsCode: item.hsCode || '',
+      quantity: Number(item.quantity) || 0,
       unit: item.unit || 'pc', // 确保导入的数据有默认单位
+      unitPrice: Number(item.unitPrice) || 0,
+      totalPrice: (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0),
+      netWeight: Number(item.netWeight) || 0,
+      grossWeight: Number(item.grossWeight) || 0,
+      packageQty: Number(item.packageQty) || 0,
+      dimensions: item.dimensions || '',
     }));
-    
+
     onDataChange({ ...data, items: [...data.items, ...processed] });
   };
 
   // 处理插入导入数据
-  const handleInsertImported = (rows: any[], replaceMode = false) => {
+  const handleInsertImported = (rows: ImportedPackingRow[], replaceMode = false) => {
     const mapped = rows.map((r, index) => ({
       id: Date.now() + index,
       serialNo: replaceMode ? (index + 1).toString() : (data.items.length + index + 1).toString(),
@@ -120,37 +132,37 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
       packageQty: Number(r.packageQty) || 0,
       dimensions: r.dimensions || '',
     }));
-    
+
     const finalItems = replaceMode ? mapped : [...data.items, ...mapped];
     onDataChange({ ...data, items: finalItems });
   };
 
   // 计算自动合并数据
   const autoMergedCells = useMemo(() => {
-    const calculateAutoMergedCells = (items: any[], column: 'packageQty' | 'dimensions' | 'marks') => {
-      const mergedCells: any[] = [];
+    const calculateAutoMergedCells = (items: PackingItem[], column: 'packageQty' | 'dimensions' | 'marks'): MergedCellInfo[] => {
+      const mergedCells: MergedCellInfo[] = [];
       if (!items || items.length === 0) return mergedCells;
 
       let currentStart = 0;
-      let currentContent = column === 'packageQty' ? items[0]?.packageQty.toString() : 
-                          column === 'dimensions' ? items[0]?.dimensions : 
+      let currentContent = column === 'packageQty' ? items[0]?.packageQty.toString() :
+                          column === 'dimensions' ? items[0]?.dimensions :
                           items[0]?.marks || '';
 
       for (let i = 1; i <= items.length; i++) {
         const currentItem = items[i];
         const prevItem = items[i - 1];
 
-        const prevContent = column === 'packageQty' ? prevItem?.packageQty.toString() : 
-                           column === 'dimensions' ? prevItem?.dimensions : 
+        const prevContent = column === 'packageQty' ? prevItem?.packageQty.toString() :
+                           column === 'dimensions' ? prevItem?.dimensions :
                            prevItem?.marks || '';
         const currentContentValue = currentItem
-          ? column === 'packageQty' ? currentItem.packageQty.toString() : 
-            column === 'dimensions' ? currentItem.dimensions : 
+          ? column === 'packageQty' ? currentItem.packageQty.toString() :
+            column === 'dimensions' ? currentItem.dimensions :
             currentItem.marks || ''
           : '';
 
         // 合并逻辑：相同内容合并，但排除0和空值
-        const shouldEndMerge = !currentItem || 
+        const shouldEndMerge = !currentItem ||
           (currentContentValue !== prevContent) ||
           // 排除无意义的合并（所有列都排除空值）
           (prevContent === '0' || prevContent === '') ||
@@ -167,7 +179,7 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
             // 单行，不合并
             mergedCells.push({ startRow: currentStart, endRow: currentStart, content: currentContent, isMerged: false });
           }
-          
+
           if (currentItem) {
             currentStart = i;
             currentContent = currentContentValue;
@@ -188,8 +200,8 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
   const handleManualMergeChange = (newManualMergedCells: typeof manualMergedCells) => {
     setManualMergedCells(newManualMergedCells);
     // 同时保存到主数据中，确保PDF生成时能获取到
-    onDataChange({ 
-      ...data, 
+    onDataChange({
+      ...data,
       manualMergedCells: newManualMergedCells,
       autoMergedCells, // 添加自动合并数据
       packageQtyMergeMode,
@@ -200,14 +212,15 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
 
   // 当数据变更时，确保自动合并数据也被更新
   useEffect(() => {
-    onDataChange({ 
-      ...data, 
+    onDataChange({
+      ...data,
       autoMergedCells,
       manualMergedCells,
       packageQtyMergeMode,
       dimensionsMergeMode,
       marksMergeMode
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 这里只同步合并单元格派生字段；加入整个 data/onDataChange 会因父级重建对象触发重复写入。
   }, [autoMergedCells, manualMergedCells, packageQtyMergeMode, dimensionsMergeMode, marksMergeMode, data.items]);
 
   return (
@@ -249,14 +262,14 @@ export const ItemsTableSection: React.FC<ItemsTableSectionProps & {
         onItemChange={(index, field, value) => {
           const newItems = [...data.items];
           const item = { ...newItems[index], [field]: value };
-          
+
           // 当quantity或unitPrice改变时，自动计算totalPrice
           if (field === 'quantity' || field === 'unitPrice') {
             const quantity = field === 'quantity' ? Number(value) : item.quantity;
             const unitPrice = field === 'unitPrice' ? Number(value) : item.unitPrice;
             item.totalPrice = quantity * unitPrice;
           }
-          
+
           newItems[index] = item;
           onDataChange({ ...data, items: newItems });
         }}

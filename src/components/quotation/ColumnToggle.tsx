@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Columns, ChevronLeft } from 'lucide-react';
+import { Columns } from 'lucide-react';
 import { useTablePrefsHydrated } from '@/features/quotation/state/useTablePrefs';
 
-const ALL_COLS: { key: any; label: string }[] = [
+const _ALL_COLS: { key: 'description' | 'remarks'; label: string }[] = [
   { key: 'description', label: 'Description' },
   { key: 'remarks', label: 'Remarks' },
 ];
@@ -12,7 +12,7 @@ interface ColumnToggleProps {
   onRemarksMergeModeChange?: (mode: 'auto' | 'manual') => void;
 }
 
-export function ColumnToggle({ 
+export function ColumnToggle({
   remarksMergeMode = 'auto',
   onRemarksMergeModeChange
 }: ColumnToggleProps) {
@@ -41,7 +41,7 @@ export function ColumnToggle({
           >
             Description
           </button>
-          
+
           {/* Remarks 按钮组 - 包含Remarks和合并按钮 */}
           <div className="flex items-center">
             {/* Remarks 按钮 */}
@@ -56,7 +56,7 @@ export function ColumnToggle({
             >
               Remarks
             </button>
-            
+
             {/* 合并模式切换按钮 - 紧贴Remarks按钮 */}
             {visibleCols.includes('remarks') && (
               <button
@@ -70,10 +70,10 @@ export function ColumnToggle({
                 title={remarksMergeMode === 'auto' ? '切换到手动合并模式' : '切换到自动合并模式'}
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
                     d="M8 6l4-2 4 2M8 18l4 2 4-2M12 4v16"
                   />
                 </svg>
@@ -85,12 +85,12 @@ export function ColumnToggle({
       )}
 
       {/* 列切换开关按钮 */}
-      <button 
+      <button
         type="button"
-        className="relative inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E] 
-                   bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 
+        className="relative inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-[#E5E5EA] dark:border-[#2C2C2E]
+                   bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20
                    text-sm font-medium text-blue-700 dark:text-blue-300
-                   hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30 
+                   hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-800/30 dark:hover:to-indigo-800/30
                    hover:border-blue-300 dark:hover:border-blue-600
                    transition-all duration-200 shadow-sm hover:shadow-md"
         onClick={()=>setOpen(o=>!o)}

@@ -2,16 +2,18 @@ import { D1UserClient } from './lib/d1-client';
 import bcrypt from 'bcryptjs';
 
 // 定义D1数据库接口
+interface D1PreparedStatement {
+  first: <T>() => Promise<T | null>;
+  all: <T>() => Promise<{ results: T[] }>;
+  run: () => Promise<{ meta: { changes: number } }>;
+}
+
 interface D1Database {
   prepare: (sql: string) => {
-    bind: (...args: any[]) => {
-      first: <T>() => Promise<T | null>;
-      all: <T>() => Promise<{ results: T[] }>;
-      run: () => Promise<{ meta: { changes: number } }>;
-    };
+    bind: (...args: unknown[]) => D1PreparedStatement;
     all: <T>() => Promise<{ results: T[] }>;
   };
-  batch: (statements: any[]) => Promise<void>;
+  batch: (statements: D1PreparedStatement[]) => Promise<void>;
 }
 
 export interface Env {
@@ -19,6 +21,53 @@ export interface Env {
   DB: D1Database;
   API_TOKEN: string;
 }
+
+interface PermissionPayload {
+  id?: string;
+  moduleId?: string;
+  canAccess?: boolean;
+}
+
+interface ExistingPermissionUpdate {
+  id: string;
+  canAccess: boolean;
+}
+
+interface NewPermissionPayload {
+  moduleId: string;
+  canAccess: boolean;
+}
+
+interface ContactPayload {
+  id?: string;
+  name: string;
+  short_name?: string;
+  shortName?: string;
+  email?: string;
+  phone?: string;
+  is_primary?: boolean;
+  isPrimary?: boolean;
+  sort_order?: string | number;
+  sortOrder?: string | number;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
+const isPermissionPayload = (value: unknown): value is PermissionPayload => isRecord(value);
+
+const isExistingPermissionUpdate = (permission: PermissionPayload): permission is ExistingPermissionUpdate => (
+  typeof permission.id === 'string'
+);
+
+const isNewPermissionPayload = (permission: PermissionPayload): permission is NewPermissionPayload => (
+  !permission.id && typeof permission.moduleId === 'string'
+);
+
+const isContactPayload = (value: unknown): value is ContactPayload => (
+  isRecord(value) && typeof value.name === 'string' && value.name.trim().length > 0
+);
 
 // CORS 配置
 const corsHeaders = {
@@ -179,8 +228,8 @@ function serializeCustomer(row: CustomerRow, contacts: ContactRow[] = []) {
   };
 }
 
-export default {
-  async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
+const worker = {
+  async fetch(request: Request, env: Env, _ctx: unknown): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -290,29 +339,31 @@ export default {
       return handleUpdateUser(request, env);
     }
 
-    return new Response('Not Found', { 
+    return new Response('Not Found', {
       status: 404,
       headers: corsHeaders
     });
   }
 };
 
+export default worker;
+
 async function handleUserAuth(request: Request, env: Env): Promise<Response> {
   try {
     const { username, password } = await request.json();
-    
+
     console.log('handleUserAuth - 开始验证:', { username, password: password ? '***' : 'empty' });
-    
+
     if (!username || !password) {
       console.log('handleUserAuth - 用户名或密码为空');
       return new Response(
         JSON.stringify({ error: '用户名和密码不能为空' }),
-        { 
-          status: 400, 
-          headers: { 
+        {
+          status: 400,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
@@ -324,12 +375,12 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
       console.log('handleUserAuth - 用户不存在:', username);
       return new Response(
         JSON.stringify({ error: '用户不存在' }),
-        { 
-          status: 401, 
-          headers: { 
+        {
+          status: 401,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
@@ -346,27 +397,27 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
       console.log('handleUserAuth - 用户已被禁用:', username);
       return new Response(
         JSON.stringify({ error: '用户已被禁用' }),
-        { 
-          status: 401, 
-          headers: { 
+        {
+          status: 401,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
 
     // 验证密码 - 安全且实用的验证
     let passwordValid = false;
-    
-    console.log('开始密码验证:', { 
-      username, 
+
+    console.log('开始密码验证:', {
+      username,
       inputPassword: password ? '***' : 'empty',
       storedPasswordType: user.password ? (user.password.startsWith('$2') ? 'bcrypt' : 'plaintext') : 'empty',
       storedPasswordLength: user.password ? user.password.length : 0,
       inputPasswordLength: password ? password.length : 0
     });
-    
+
     // 验证逻辑：
     // 1. 如果存储的密码是明文，直接比较
     // 2. 如果存储的密码是bcrypt格式，使用bcrypt.compare验证
@@ -414,16 +465,16 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
       console.log('handleUserAuth - 密码验证失败，拒绝登录');
       return new Response(
         JSON.stringify({ error: '密码错误' }),
-        { 
-          status: 401, 
-          headers: { 
+        {
+          status: 401,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
-    
+
     console.log('handleUserAuth - 密码验证成功，允许登录');
 
     // 更新最后登录时间
@@ -449,23 +500,23 @@ async function handleUserAuth(request: Request, env: Env): Promise<Response> {
           canAccess: p.canAccess
         }))
       }),
-      { 
-        headers: { 
+      {
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
 
   } catch (error) {
     return new Response(
       JSON.stringify({ error: '服务器错误' }),
-      { 
-        status: 500, 
-        headers: { 
+      {
+        status: 500,
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
   }
@@ -476,44 +527,44 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
     if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
-        { 
-          status: 401, 
-          headers: { 
+        {
+          status: 401,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
 
     const url = new URL(request.url);
     const username = url.searchParams.get('username');
-    
+
     const d1Client = new D1UserClient(env.USERS_DB);
-    
+
     // 如果提供了username参数，则查询单个用户
     if (username) {
       console.log('handleGetUsers - 查询用户:', username);
       const user = await d1Client.getUserByUsername(username);
       console.log('handleGetUsers - 查询结果:', user);
-      
+
       if (!user) {
         return new Response(
           JSON.stringify({ error: '用户不存在' }),
-          { 
-            status: 404, 
-            headers: { 
+          {
+            status: 404,
+            headers: {
               'Content-Type': 'application/json',
               ...corsHeaders
-            } 
+            }
           }
         );
       }
-      
+
       // 获取用户权限
       const permissions = await d1Client.getUserPermissions(user.id);
       console.log('handleGetUsers - 用户权限:', permissions);
-      
+
       const responseData = {
         id: user.id,
         username: user.username,
@@ -526,16 +577,16 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
           canAccess: p.canAccess
         }))
       };
-      
+
       console.log('handleGetUsers - 返回数据:', responseData);
-      
+
       return new Response(
         JSON.stringify(responseData),
-        { 
-          headers: { 
+        {
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
@@ -560,23 +611,23 @@ async function handleGetUsers(request: Request, env: Env): Promise<Response> {
 
     return new Response(
       JSON.stringify({ users: usersWithPermissions }),
-      { 
-        headers: { 
+      {
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
 
   } catch (error) {
     return new Response(
       JSON.stringify({ error: '服务器错误' }),
-      { 
-        status: 500, 
-        headers: { 
+      {
+        status: 500,
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
   }
@@ -587,39 +638,39 @@ async function handleGetUser(request: Request, env: Env): Promise<Response> {
     if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
-        { 
-          status: 401, 
-          headers: { 
+        {
+          status: 401,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
-    
+
 
 
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4]; // 从路径中提取用户ID
-    
+
     const d1Client = new D1UserClient(env.USERS_DB);
     const user = await d1Client.getUserById(userId);
-    
+
     if (!user) {
       return new Response(
         JSON.stringify({ error: '用户不存在' }),
-        { 
-          status: 404, 
-          headers: { 
+        {
+          status: 404,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
 
     const permissions = await d1Client.getUserPermissions(userId);
-    
+
 
 
     return new Response(
@@ -631,23 +682,23 @@ async function handleGetUser(request: Request, env: Env): Promise<Response> {
           canAccess: p.canAccess
         }))
       }),
-      { 
-        headers: { 
+      {
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
 
   } catch (error) {
     return new Response(
       JSON.stringify({ error: '服务器错误' }),
-      { 
-        status: 500, 
-        headers: { 
+      {
+        status: 500,
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
   }
@@ -658,12 +709,12 @@ async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
     if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
-        { 
-          status: 401, 
-          headers: { 
+        {
+          status: 401,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
@@ -671,7 +722,7 @@ async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4];
     const updates = await request.json();
-    
+
     const d1Client = new D1UserClient(env.USERS_DB);
 
     // 检查是否是密码修改请求
@@ -681,12 +732,12 @@ async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
       if (!isValidPassword) {
         return new Response(
           JSON.stringify({ error: '当前密码错误' }),
-          { 
-            status: 400, 
-            headers: { 
+          {
+            status: 400,
+            headers: {
               'Content-Type': 'application/json',
               ...corsHeaders
-            } 
+            }
           }
         );
       }
@@ -696,12 +747,12 @@ async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
       if (!passwordUpdated) {
         return new Response(
           JSON.stringify({ error: '密码更新失败' }),
-          { 
-            status: 500, 
-            headers: { 
+          {
+            status: 500,
+            headers: {
               'Content-Type': 'application/json',
               ...corsHeaders
-            } 
+            }
           }
         );
       }
@@ -719,27 +770,27 @@ async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
             canAccess: p.canAccess
           }))
         }),
-        { 
-          headers: { 
+        {
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
 
     // 普通用户信息更新
     const updatedUser = await d1Client.updateUser(userId, updates);
-    
+
     if (!updatedUser) {
       return new Response(
         JSON.stringify({ error: '用户不存在' }),
-        { 
-          status: 404, 
-          headers: { 
+        {
+          status: 404,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
@@ -755,23 +806,23 @@ async function handleUpdateUser(request: Request, env: Env): Promise<Response> {
           canAccess: p.canAccess
         }))
       }),
-      { 
-        headers: { 
+      {
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
 
   } catch (error) {
     return new Response(
       JSON.stringify({ error: '服务器错误' }),
-      { 
-        status: 500, 
-        headers: { 
+      {
+        status: 500,
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
   }
@@ -782,64 +833,67 @@ async function handleUpdatePermissions(request: Request, env: Env): Promise<Resp
     if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
-        { 
-          status: 401, 
-          headers: { 
+        {
+          status: 401,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
 
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4];
-    const { permissions } = await request.json();
+    const body = await request.json() as { permissions?: unknown[] };
+    const permissions = Array.isArray(body.permissions)
+      ? body.permissions.filter(isPermissionPayload)
+      : [];
 
     console.log('更新权限 - 用户ID:', userId);
     console.log('接收到的权限数据:', permissions);
 
     const d1Client = new D1UserClient(env.USERS_DB);
-    
+
     // 使用与批量更新相同的逻辑
     // 分离已存在的权限和新权限
-    const existingPermissions = permissions.filter((p: any) => p.id);
-    const newPermissions = permissions.filter((p: any) => !p.id && p.moduleId);
-    
+    const existingPermissions = permissions.filter(isExistingPermissionUpdate);
+    const newPermissions = permissions.filter(isNewPermissionPayload);
+
     // 批量更新已存在的权限
     if (existingPermissions.length > 0) {
       await d1Client.batchUpdatePermissions(existingPermissions);
     }
-    
+
     // 创建新权限
     if (newPermissions.length > 0) {
       for (const permission of newPermissions) {
         await d1Client.createPermission({
           userId: userId,
           moduleId: permission.moduleId,
-          canAccess: permission.canAccess
+          canAccess: !!permission.canAccess
         });
       }
     }
     return new Response(
       JSON.stringify({ success: true }),
-      { 
-        headers: { 
+      {
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
 
   } catch (error) {
     return new Response(
       JSON.stringify({ error: '服务器错误' }),
-      { 
-        status: 500, 
-        headers: { 
+      {
+        status: 500,
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
   }
@@ -850,129 +904,132 @@ async function handleBatchUpdatePermissions(request: Request, env: Env): Promise
     if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
-        { 
-          status: 401, 
-          headers: { 
+        {
+          status: 401,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
-    
+
 
 
     const url = new URL(request.url);
     const userId = url.pathname.split('/')[4];
-    const { permissions } = await request.json();
+    const body = await request.json() as { permissions?: unknown[] };
+    const permissions = Array.isArray(body.permissions)
+      ? body.permissions.filter(isPermissionPayload)
+      : [];
 
 
 
     const d1Client = new D1UserClient(env.USERS_DB);
-    
+
     // 分离已存在的权限和新权限
-    const existingPermissions = permissions.filter((p: any) => p.id);
-    const newPermissions = permissions.filter((p: any) => !p.id && p.moduleId);
-    
+    const existingPermissions = permissions.filter(isExistingPermissionUpdate);
+    const newPermissions = permissions.filter(isNewPermissionPayload);
+
     // 批量更新已存在的权限
     if (existingPermissions.length > 0) {
       await d1Client.batchUpdatePermissions(existingPermissions);
     }
-    
+
     // 创建新权限
     if (newPermissions.length > 0) {
       for (const permission of newPermissions) {
         await d1Client.createPermission({
           userId: userId,
           moduleId: permission.moduleId,
-          canAccess: permission.canAccess
+          canAccess: !!permission.canAccess
         });
       }
     }
     return new Response(
       JSON.stringify({ success: true }),
-      { 
-        headers: { 
+      {
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
 
   } catch (error) {
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: '服务器错误',
         details: error instanceof Error ? error.message : '未知错误'
       }),
-      { 
-        status: 500, 
-        headers: { 
+      {
+        status: 500,
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
   }
-} 
+}
 
 async function handleCreateUser(request: Request, env: Env): Promise<Response> {
   try {
     if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
-        { 
-          status: 401, 
-          headers: { 
+        {
+          status: 401,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
 
     const { username, password, email, isAdmin: newUserIsAdmin } = await request.json();
-    
+
     console.log('创建用户数据:', { username, email, isAdmin: newUserIsAdmin });
-    
+
     if (!username || !password) {
       return new Response(
         JSON.stringify({ error: '用户名和密码不能为空' }),
-        { 
-          status: 400, 
-          headers: { 
+        {
+          status: 400,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
 
     const d1Client = new D1UserClient(env.USERS_DB);
-    
+
     // 检查用户是否已存在
     console.log('检查用户是否已存在:', username);
     const existingUser = await d1Client.getUserByUsername(username);
     if (existingUser) {
       return new Response(
         JSON.stringify({ error: '用户名已存在' }),
-        { 
-          status: 400, 
-          headers: { 
+        {
+          status: 400,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
 
     // 创建新用户
     console.log('开始创建新用户...');
-    
+
     // 使用bcrypt加密密码
     const hashedPassword = await bcrypt.hash(password, 10);
     console.log('密码已加密:', { originalLength: password.length, hashedLength: hashedPassword.length });
-    
+
     const newUser = await d1Client.createUser({
       username,
       password: hashedPassword, // 使用加密后的密码
@@ -995,54 +1052,54 @@ async function handleCreateUser(request: Request, env: Env): Promise<Response> {
           status: newUser.status
         }
       }),
-      { 
-        headers: { 
+      {
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
 
   } catch (error) {
     console.error('创建用户时发生错误:', error);
-    
+
     // 提供更详细的错误信息
     let errorMessage = '服务器错误';
     let errorDetails = '';
-    
+
     if (error instanceof Error) {
       errorMessage = error.message;
       errorDetails = error.stack || '';
     }
-    
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: errorMessage,
         details: errorDetails,
         timestamp: new Date().toISOString()
       }),
-      { 
-        status: 500, 
-        headers: { 
+      {
+        status: 500,
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
   }
-} 
+}
 
 async function handleDeleteUser(request: Request, env: Env): Promise<Response> {
   try {
     if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
-        { 
-          status: 401, 
-          headers: { 
+        {
+          status: 401,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
@@ -1051,44 +1108,44 @@ async function handleDeleteUser(request: Request, env: Env): Promise<Response> {
     const userId = url.pathname.split('/')[4];
 
     const d1Client = new D1UserClient(env.USERS_DB);
-    
+
     // 先获取用户信息
     const user = await d1Client.getUserById(userId);
     if (!user) {
       return new Response(
         JSON.stringify({ error: '用户不存在' }),
-        { 
-          status: 404, 
-          headers: { 
+        {
+          status: 404,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
 
     // 删除用户权限
     await d1Client.deleteUserPermissions(userId);
-    
+
     // 删除用户
     const deleted = await d1Client.deleteUser(userId);
 
     if (!deleted) {
       return new Response(
         JSON.stringify({ error: '删除用户失败' }),
-        { 
-          status: 500, 
-          headers: { 
+        {
+          status: 500,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: '用户删除成功',
         user: {
           id: user.id,
@@ -1098,42 +1155,42 @@ async function handleDeleteUser(request: Request, env: Env): Promise<Response> {
           status: user.status
         }
       }),
-      { 
-        headers: { 
+      {
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
 
   } catch (error) {
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: '服务器错误',
         details: error instanceof Error ? error.message : '未知错误'
       }),
-      { 
-        status: 500, 
-        headers: { 
+      {
+        status: 500,
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
   }
-} 
+}
 
 async function handleDeletePermission(request: Request, env: Env): Promise<Response> {
   try {
     if (!verifyBearerToken(request, env)) {
       return new Response(
         JSON.stringify({ error: '未授权访问' }),
-        { 
-          status: 401, 
-          headers: { 
+        {
+          status: 401,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
@@ -1142,18 +1199,18 @@ async function handleDeletePermission(request: Request, env: Env): Promise<Respo
     const permissionId = url.pathname.split('/')[4]; // 从路径中提取权限ID
 
     const d1Client = new D1UserClient(env.USERS_DB);
-    
+
     // 先获取权限信息
     const permission = await d1Client.getPermissionById(permissionId);
     if (!permission) {
       return new Response(
         JSON.stringify({ error: '权限不存在' }),
-        { 
-          status: 404, 
-          headers: { 
+        {
+          status: 404,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
@@ -1164,19 +1221,19 @@ async function handleDeletePermission(request: Request, env: Env): Promise<Respo
     if (!deleted) {
       return new Response(
         JSON.stringify({ error: '删除权限失败' }),
-        { 
-          status: 500, 
-          headers: { 
+        {
+          status: 500,
+          headers: {
             'Content-Type': 'application/json',
             ...corsHeaders
-          } 
+          }
         }
       );
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: '权限删除成功',
         permission: {
           id: permission.id,
@@ -1185,30 +1242,30 @@ async function handleDeletePermission(request: Request, env: Env): Promise<Respo
           canAccess: permission.canAccess
         }
       }),
-      { 
-        headers: { 
+      {
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
 
   } catch (error) {
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: '服务器错误',
         details: error instanceof Error ? error.message : '未知错误'
       }),
-      { 
-        status: 500, 
-        headers: { 
+      {
+        status: 500,
+        headers: {
           'Content-Type': 'application/json',
           ...corsHeaders
-        } 
+        }
       }
     );
   }
-} 
+}
 
 async function handleListDocuments(request: Request, env: Env): Promise<Response> {
   try {
@@ -1916,7 +1973,7 @@ async function handleReplaceCustomerContacts(request: Request, env: Env): Promis
 
     const url = new URL(request.url);
     const customerId = url.pathname.split('/')[3];
-    const body = await request.json();
+    const body = await request.json() as { contacts?: unknown };
     const contacts = Array.isArray(body.contacts) ? body.contacts : null;
 
     if (!contacts) {
@@ -1932,8 +1989,8 @@ async function handleReplaceCustomerContacts(request: Request, env: Env): Promis
     const statements = [
       env.USERS_DB.prepare('DELETE FROM Contact WHERE customer_id = ?').bind(customerId),
       ...contacts
-        .filter((contact: any) => typeof contact?.name === 'string' && contact.name.trim())
-        .map((contact: any, index: number) => env.USERS_DB.prepare(`
+        .filter(isContactPayload)
+        .map((contact, index: number) => env.USERS_DB.prepare(`
           INSERT INTO Contact (
             id, customer_id, name, short_name, email, phone, is_primary, sort_order, status
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')

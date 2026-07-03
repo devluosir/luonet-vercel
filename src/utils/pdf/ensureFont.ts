@@ -12,22 +12,22 @@ import jsPDF from 'jspdf';
  * @param mode 模式：preview 强制 Helvetica，export 尝试指定字体
  */
 export function safeSetFont(
-  doc: jsPDF, 
-  name: string, 
-  style: string, 
-  mode: 'preview' | 'export'
+  doc: jsPDF,
+  name: string,
+  style: string,
+  _mode: 'preview' | 'export'
 ): void {
   // 预览和导出模式都尝试使用指定字体，确保中文正常显示
   try {
     const list = doc.getFontList?.() as Record<string, string[]> | undefined;
     const available = !!list && list[name]?.includes(style);
-    
+
     if (!available) {
       console.warn(`[PDF] font "${name}" (${style}) not available, fallback to helvetica`);
       doc.setFont('helvetica', style === 'bold' ? 'bold' : 'normal');
       return;
     }
-    
+
     doc.setFont(name, style);
   } catch (error) {
     console.warn(`[PDF] Failed to set font "${name}" (${style}):`, error);
@@ -42,8 +42,8 @@ export function safeSetFont(
  * @param mode 模式
  */
 export function safeSetCnFont(
-  doc: jsPDF, 
-  style: 'normal' | 'bold' | 'italic' | 'bolditalic' = 'normal', 
+  doc: jsPDF,
+  style: 'normal' | 'bold' | 'italic' | 'bolditalic' = 'normal',
   mode: 'preview' | 'export' = 'export'
 ): void {
   safeSetFont(doc, 'NotoSansSC', style, mode);

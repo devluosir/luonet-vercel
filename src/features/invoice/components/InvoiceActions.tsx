@@ -14,11 +14,11 @@ export const InvoiceActions = React.memo(() => {
     data,
     isEditMode,
     isSaving,
-    saveSuccess,
-    saveMessage,
-    showPreview,
-    previewItem,
-    saveInvoice,
+    saveSuccess: _saveSuccess,
+    saveMessage: _saveMessage,
+    showPreview: _showPreview,
+    previewItem: _previewItem,
+    saveInvoice: _saveInvoice,
     generatePDF,
     previewPDF,
     togglePreview,
@@ -40,7 +40,7 @@ export const InvoiceActions = React.memo(() => {
     try {
       // 使用新的预览方法
       const previewUrl = await previewPDF();
-      
+
       // 准备预览数据，包装成历史记录格式
       const previewData = {
         id: 'preview',
@@ -53,7 +53,7 @@ export const InvoiceActions = React.memo(() => {
         data: data,
         pdfUrl: previewUrl // 添加PDF URL
       };
-      
+
       setPreviewItem(previewData);
       togglePreview();
     } catch (error) {

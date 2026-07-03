@@ -18,8 +18,28 @@ interface BenchmarkResult {
     userAgent: string;
     memory?: number;
     hardwareConcurrency: number;
-    connection?: any;
+    connection?: NetworkConnectionInfo;
   };
+}
+
+interface PerformanceWithMemory extends Performance {
+  memory?: {
+    usedJSHeapSize?: number;
+  };
+}
+
+interface NavigatorWithConnection extends Navigator {
+  connection?: NetworkConnectionInfo;
+}
+
+type NetworkConnectionInfo = Record<string, unknown>;
+
+interface BenchmarkImprovement {
+  metric: string;
+  baselineValue: number;
+  optimizedValue: number;
+  improvement: number;
+  improvementPercent: number;
 }
 
 class NotesPerformanceBenchmark {
@@ -67,7 +87,7 @@ class NotesPerformanceBenchmark {
     };
 
     const threshold = thresholds[name] || value;
-    const status: PerformanceMetric['status'] = 
+    const status: PerformanceMetric['status'] =
       value <= threshold ? 'good' :
       value <= threshold * 1.5 ? 'warning' : 'critical';
 
@@ -91,7 +111,9 @@ class NotesPerformanceBenchmark {
   // 🚀 开始性能测试
   async startBenchmark(componentName: string): Promise<() => BenchmarkResult> {
     const startTime = performance.now();
-    const startMemory = (performance as any).memory?.usedJSHeapSize || 0;
+    const perf = performance as PerformanceWithMemory;
+    const nav = navigator as NavigatorWithConnection;
+    const startMemory = perf.memory?.usedJSHeapSize || 0;
 
     // 标记开始
     performance.mark(`${componentName}-start`);
@@ -106,7 +128,7 @@ class NotesPerformanceBenchmark {
       );
 
       const endTime = performance.now();
-      const endMemory = (performance as any).memory?.usedJSHeapSize || 0;
+      const endMemory = perf.memory?.usedJSHeapSize || 0;
 
       const metrics: PerformanceMetric[] = [
         this.recordMetric('total-time', endTime - startTime, 'ms'),
@@ -127,9 +149,9 @@ class NotesPerformanceBenchmark {
         timestamp: Date.now(),
         deviceInfo: {
           userAgent: navigator.userAgent,
-          memory: (performance as any).memory?.usedJSHeapSize,
+          memory: perf.memory?.usedJSHeapSize,
           hardwareConcurrency: navigator.hardwareConcurrency,
-          connection: (navigator as any).connection,
+          connection: nav.connection,
         },
       };
 
@@ -148,7 +170,7 @@ class NotesPerformanceBenchmark {
 
     for (let i = 0; i < iterations; i++) {
       const endBenchmark = await this.startBenchmark(`${componentName}-render-${i}`);
-      
+
       await new Promise(resolve => {
         // 使用 requestAnimationFrame 确保在下一帧测量
         requestAnimationFrame(() => {
@@ -184,14 +206,14 @@ class NotesPerformanceBenchmark {
     dragFn: () => Promise<void>
   ): Promise<PerformanceMetric[]> {
     const endBenchmark = await this.startBenchmark(`${componentName}-drag`);
-    
+
     const startTime = performance.now();
     await dragFn();
     const endTime = performance.now();
-    
+
     const result = endBenchmark();
     const dragTime = endTime - startTime;
-    
+
     return [
       this.recordMetric('drag-operation-time', dragTime, 'ms'),
       ...result.metrics,
@@ -200,21 +222,15 @@ class NotesPerformanceBenchmark {
 
   // 🚀 对比分析
   compareResults(baseline: BenchmarkResult[], optimized: BenchmarkResult[]): {
-    improvements: Array<{
-      metric: string;
-      baselineValue: number;
-      optimizedValue: number;
-      improvement: number;
-      improvementPercent: number;
-    }>;
+    improvements: BenchmarkImprovement[];
     summary: {
       totalImprovements: number;
       averageImprovement: number;
       significantImprovements: number;
     };
   } {
-    const improvements: any[] = [];
-    
+    const improvements: BenchmarkImprovement[] = [];
+
     baseline.forEach(baselineResult => {
       const optimizedResult = optimized.find(r => r.componentName === baselineResult.componentName);
       if (!optimizedResult) return;
@@ -326,26 +342,26 @@ class NotesPerformanceBenchmark {
 // 🚀 性能测试工具函数
 export const createNotesPerformanceTest = () => {
   const benchmark = new NotesPerformanceBenchmark();
-  
+
   return {
     // 测试渲染性能
     testRender: (componentName: string, renderFn: () => void, iterations = 10) =>
       benchmark.benchmarkRender(componentName, renderFn, iterations),
-    
+
     // 测试拖拽性能
     testDrag: (componentName: string, dragFn: () => Promise<void>) =>
       benchmark.benchmarkDragOperation(componentName, dragFn),
-    
+
     // 开始测试
     start: (componentName: string) => benchmark.startBenchmark(componentName),
-    
+
     // 对比结果
     compare: (baseline: BenchmarkResult[], optimized: BenchmarkResult[]) =>
       benchmark.compareResults(baseline, optimized),
-    
+
     // 生成报告
     report: () => benchmark.generateReport(),
-    
+
     // 清理
     cleanup: () => benchmark.cleanup(),
   };
@@ -403,19 +419,19 @@ export const testScenarios = {
     name: 'Notes基础渲染',
     test: (renderFn: () => void) => notesPerformanceTester.testRender('BasicNotes', renderFn),
   },
-  
+
   // 大量Notes渲染测试
   heavyRender: {
     name: 'Notes大量条目渲染',
     test: (renderFn: () => void) => notesPerformanceTester.testRender('HeavyNotes', renderFn, 5),
   },
-  
+
   // 拖拽性能测试
   dragPerformance: {
     name: 'Notes拖拽性能',
     test: (dragFn: () => Promise<void>) => notesPerformanceTester.testDrag('DragNotes', dragFn),
   },
-  
+
   // 移动端触摸测试
   mobileTouch: {
     name: 'Notes移动端触摸',

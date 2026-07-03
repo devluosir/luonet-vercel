@@ -27,7 +27,7 @@ export async function gunzip(compressed: Uint8Array): Promise<Uint8Array> {
 
   // 路径2：优先用 pako.ungzip（动态导入）
   try {
-    const pako: any = await import('pako');
+    const pako = await import('pako');
     const ungzip = pako?.ungzip ?? pako?.default?.ungzip;
     if (typeof ungzip === 'function') {
       const result = ungzip(compressed);

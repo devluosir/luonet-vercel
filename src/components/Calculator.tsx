@@ -1,7 +1,7 @@
 'use client'
 
 import { Calculator as CalculatorIcon, X, Move, ChevronUp, History } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 
 interface CalculatorProps {
   isOpen: boolean;
@@ -47,7 +47,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           setHistory(parsedHistory);
         }
       }
-      
+
       // 加载位置偏好
       const savedPosition = localStorage.getItem('calculator-position');
       if (savedPosition) {
@@ -94,7 +94,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       setJustCalculated(false);
       return;
     }
-    
+
     if (display === '0' || currentNumber === '0') {
       setDisplay(digit);
       setCurrentNumber(digit);
@@ -126,7 +126,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       setJustCalculated(false);
       return;
     }
-    
+
     if (display.indexOf('.') === -1) {
       const newDisplay = display + '.';
       setDisplay(newDisplay);
@@ -156,11 +156,11 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
 
   // 括号相关状态
   const [openBrackets, setOpenBrackets] = useState(0);
-  const [inBrackets, setInBrackets] = useState(false);
+  const [, setInBrackets] = useState(false);
 
   const performOperation = (nextOperation: string) => {
     const inputValue = parseFloat(display);
-    
+
     // 如果刚完成计算，使用结果作为新算式的开始
     if (justCalculated) {
       setPreviousValue(inputValue);
@@ -178,7 +178,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       setOperation(nextOperation);
       setExpression(expression + ' ' + nextOperation);
     }
-    
+
     setCurrentNumber('0');
   };
 
@@ -216,20 +216,20 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       setCurrentNumber(formattedValue);
       return;
     }
-    
+
     // 如果当前显示为0，不做任何操作
     if (display === '0') {
       return;
     }
-    
+
     // 获取当前数字的负值
     const currentValue = parseFloat(display);
     const negatedValue = -currentValue;
     const formattedValue = formatDisplayValue(negatedValue);
-    
+
     setDisplay(formattedValue);
     setCurrentNumber(formattedValue);
-    
+
     // 更新表达式中的当前数字
     if (expression === '' || expression === display) {
       // 如果表达式为空或等于当前显示值，直接设置为新值
@@ -256,7 +256,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   // 处理百分号
   const handlePercentage = () => {
     const currentValue = parseFloat(display);
-    
+
     // 如果刚完成计算，将结果转换为百分比
     if (justCalculated) {
       const percentValue = currentValue / 100;
@@ -266,11 +266,11 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       setCurrentNumber(formattedValue);
       return;
     }
-    
+
     // 如果有前一个值和运算符，说明是在运算中使用百分号
     if (previousValue !== null && operation) {
       let percentResult: number;
-      
+
       // 智能百分比计算
       switch (operation) {
         case '+':
@@ -288,11 +288,11 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         default:
           percentResult = currentValue / 100;
       }
-      
+
       const formattedResult = formatDisplayValue(percentResult);
       setDisplay(formattedResult);
       setCurrentNumber(formattedResult);
-      
+
       // 在表达式中显示百分号，而不是计算后的值
       const parts = expression.split(' ');
       if (parts.length > 0) {
@@ -305,7 +305,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       const formattedValue = formatDisplayValue(percentValue);
       setDisplay(formattedValue);
       setCurrentNumber(formattedValue);
-      
+
       // 在表达式中显示百分号
       if (expression === '' || expression === display) {
         setExpression(display + '%');
@@ -328,7 +328,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         // 回到计算前的算式
         const originalExpression = parts[0];
         setExpression(originalExpression);
-        
+
         // 解析最后的数字作为显示值
         const tokens = originalExpression.split(' ');
         const lastToken = tokens[tokens.length - 1];
@@ -336,12 +336,12 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           setDisplay(lastToken);
           setCurrentNumber(lastToken);
         }
-        
+
         setJustCalculated(false);
         return;
       }
     }
-    
+
     // 如果表达式为空，只删除当前数字
     if (expression === '') {
       if (display.length > 1) {
@@ -356,19 +356,19 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       }
       return;
     }
-    
+
     // 删除表达式中的最后一个字符/标记
     const parts = expression.split(' ');
-    
+
     if (parts.length === 0) {
       setDisplay('0');
       setCurrentNumber('0');
       setExpression('');
       return;
     }
-    
+
     const lastPart = parts[parts.length - 1];
-    
+
     // 如果最后一部分是数字且当前正在输入数字
     if (!isNaN(parseFloat(lastPart)) && currentNumber !== '0') {
       if (lastPart.length > 1) {
@@ -421,7 +421,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           setCurrentNumber('0');
         }
       }
-      
+
       // 处理括号状态
       if (lastPart === '(') {
         setOpenBrackets(Math.max(0, openBrackets - 1));
@@ -434,22 +434,22 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const calculate = (firstValue: number, secondValue: number, operation: string) => {
     let result: number;
     switch (operation) {
-      case '+': 
+      case '+':
         result = firstValue + secondValue;
         break;
-      case '-': 
+      case '-':
         result = firstValue - secondValue;
         break;
-      case '×': 
+      case '×':
         result = firstValue * secondValue;
         break;
-      case '÷': 
+      case '÷':
         result = firstValue / secondValue;
         break;
-      default: 
+      default:
         result = secondValue;
     }
-    
+
     // 处理精度问题，避免浮点数误差
     return Math.round(result * 1000000000000) / 1000000000000;
   };
@@ -457,22 +457,21 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const calculateResult = () => {
     if (!previousValue || !operation) return;
 
-    const inputValue = parseFloat(display);
     const fullExpression = expression;
-    
+
     // 计算完整表达式
     const result = evaluateExpression(fullExpression);
-    
+
     let formattedResult: string;
     if (isNaN(result) || !isFinite(result)) {
       formattedResult = 'Error';
     } else {
       formattedResult = formatDisplayValue(result);
     }
-    
+
     // 添加到历史记录
     addToHistory(fullExpression, formattedResult);
-    
+
     setDisplay(formattedResult);
     setExpression(fullExpression + ' = ' + formattedResult);
     setPreviousValue(null);
@@ -489,7 +488,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         const tokens = expression.split(' ').filter(token => token !== '');
         const numbers: number[] = [];
         const operators: string[] = [];
-        
+
         for (let i = 0; i < tokens.length; i++) {
           const token = tokens[i];
           if (token === '(') {
@@ -501,7 +500,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
               if (tokens[j] === ')') bracketCount--;
               j++;
             }
-            
+
             // 递归计算括号内的表达式
             const bracketExpr = tokens.slice(i + 1, j - 1).join(' ');
             const bracketResult = evaluateWithBrackets(bracketExpr);
@@ -518,7 +517,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
             if (token.endsWith('%')) {
               const percentValue = parseFloat(token.slice(0, -1));
               if (isNaN(percentValue)) return NaN;
-              
+
               // 根据前面的运算符决定如何处理百分比
               if (operators.length > 0) {
                 const lastOperator = operators[operators.length - 1];
@@ -542,11 +541,11 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
             }
           }
         }
-        
+
         // 检查数字和运算符的数量是否匹配
         if (numbers.length === 0) return 0;
         if (numbers.length !== operators.length + 1) return NaN;
-        
+
         // 先处理乘除（优先级高）
         for (let i = 0; i < operators.length; i++) {
           if (operators[i] === '×' || operators[i] === '÷') {
@@ -558,19 +557,19 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
             i--;
           }
         }
-        
+
         // 再处理加减（优先级低）
         let result = numbers[0];
         if (isNaN(result)) return NaN;
-        
+
         for (let i = 0; i < operators.length; i++) {
           result = calculate(result, numbers[i + 1], operators[i]);
           if (isNaN(result) || !isFinite(result)) return NaN;
         }
-        
+
         return result;
       };
-      
+
       const result = evaluateWithBrackets(expr);
       return result;
     } catch (error) {
@@ -584,13 +583,13 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     if (Number.isInteger(value)) {
       return value.toString();
     }
-    
+
     // 如果是小数，限制小数位数
     const decimalPlaces = value.toString().split('.')[1]?.length || 0;
     if (decimalPlaces > 8) {
       return value.toFixed(8).replace(/\.?0+$/, '');
     }
-    
+
     return value.toString();
   };
 
@@ -600,7 +599,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       expression,
       result
     };
-    
+
     setHistory(prev => {
       const newHistory = [newHistoryItem, ...prev.slice(0, 49)]; // 保留最近50条记录，超出时可通过滚动查看
       saveHistoryToStorage(newHistory); // 保存新的历史记录到localStorage
@@ -616,19 +615,19 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
 
 
   // 计算弹窗位置
-  const calculatePopupPosition = () => {
+  const calculatePopupPosition = useCallback(() => {
     if (!triggerRef.current) return;
 
     const buttonRect = triggerRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const isMobile = viewportWidth < 768;
-    
+
     // 响应式尺寸 - 主弹窗保持固定宽度，历史记录作为独立浮窗
-    const popupWidth = isMobile 
-      ? Math.min(viewportWidth - 20, 320) 
+    const popupWidth = isMobile
+      ? Math.min(viewportWidth - 20, 320)
       : 320; // 桌面端固定宽度，不再根据历史记录状态调整
-    const estimatedPopupHeight = isMobile 
+    const estimatedPopupHeight = isMobile
       ? Math.min(400, viewportHeight - 80) // 移动端使用更合理的高度
       : 450; // 桌面端估算高度（用于位置计算）
     const margin = isMobile ? 10 : 10; // 边距
@@ -668,23 +667,23 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     }
 
     setPopupPosition({ top, left });
-  };
+  }, [triggerRef]);
 
   // 拖动相关函数
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!popupRef.current) return;
-    
+
     // 检查点击的目标元素，如果是按钮、显示屏或历史记录内容区域，则不开始拖动
     const target = e.target as HTMLElement;
-    if (target.tagName === 'BUTTON' || 
-        target.closest('.calc-display') || 
-        target.closest('.calc-buttons') || 
+    if (target.tagName === 'BUTTON' ||
+        target.closest('.calc-display') ||
+        target.closest('.calc-buttons') ||
         target.closest('.calc-history-content') || // 只排除历史记录内容区域
         target.closest('button') ||
         target.closest('[data-no-drag]')) {
       return;
     }
-    
+
     const rect = popupRef.current.getBoundingClientRect();
     setDragOffset({
       x: e.clientX - rect.left,
@@ -695,18 +694,18 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!popupRef.current) return;
-    
+
     // 检查触摸的目标元素，如果是按钮、显示屏或历史记录内容区域，则不开始拖动
     const target = e.target as HTMLElement;
-    if (target.tagName === 'BUTTON' || 
-        target.closest('.calc-display') || 
-        target.closest('.calc-buttons') || 
+    if (target.tagName === 'BUTTON' ||
+        target.closest('.calc-display') ||
+        target.closest('.calc-buttons') ||
         target.closest('.calc-history-content') || // 只排除历史记录内容区域
         target.closest('button') ||
         target.closest('[data-no-drag]')) {
       return;
     }
-    
+
     const touch = e.touches[0];
     const rect = popupRef.current.getBoundingClientRect();
     setDragOffset({
@@ -716,7 +715,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     setIsDragging(true);
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging || !popupRef.current) return;
 
     const viewportWidth = window.innerWidth;
@@ -741,11 +740,11 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
 
     setPopupPosition({ top: newTop, left: newLeft });
     setHasBeenDragged(true); // 标记已经拖动过
-  };
+  }, [dragOffset.x, dragOffset.y, isDragging]);
 
-  const handleTouchMove = (e: TouchEvent) => {
+  const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!isDragging || !popupRef.current) return;
-    
+
     e.preventDefault(); // 防止页面滚动
     const touch = e.touches[0];
 
@@ -771,23 +770,23 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
 
     setPopupPosition({ top: newTop, left: newLeft });
     setHasBeenDragged(true); // 标记已经拖动过
-  };
+  }, [dragOffset.x, dragOffset.y, isDragging]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     // 保存当前位置偏好
     if (hasBeenDragged) {
       savePositionToStorage(popupPosition);
     }
-  };
+  }, [hasBeenDragged, popupPosition]);
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(() => {
     setIsDragging(false);
     // 保存当前位置偏好
     if (hasBeenDragged) {
       savePositionToStorage(popupPosition);
     }
-  };
+  }, [hasBeenDragged, popupPosition]);
 
   // 监听鼠标和触摸移动和释放
   useEffect(() => {
@@ -796,7 +795,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       document.addEventListener('mouseup', handleMouseUp);
       document.addEventListener('touchmove', handleTouchMove, { passive: false });
       document.addEventListener('touchend', handleTouchEnd);
-      
+
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
@@ -804,7 +803,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         document.removeEventListener('touchend', handleTouchEnd);
       };
     }
-  }, [isDragging, dragOffset]);
+  }, [isDragging, dragOffset, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
   // 监听窗口大小变化，重新计算位置
   useEffect(() => {
@@ -816,7 +815,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
-  }, [isOpen]);
+  }, [isOpen, calculatePopupPosition]);
 
   // 点击外部关闭弹窗
   useEffect(() => {
@@ -831,7 +830,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, triggerRef]);
 
   // 当弹窗打开时计算位置
   useEffect(() => {
@@ -843,26 +842,26 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       }
     }
     // 移除弹窗关闭时重置拖动标记的逻辑，让位置保持记忆
-  }, [isOpen, hasBeenDragged]);
+  }, [isOpen, hasBeenDragged, calculatePopupPosition]);
 
   // 计算历史记录面板位置，确保与计算器主体同高且对称
-  const updateHistoryPanelPosition = () => {
+  const updateHistoryPanelPosition = useCallback(() => {
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 768;
     const isMobileCheck = viewportWidth < 768;
-    
+
     if (isOpen && !isMobileCheck && isHistoryExpanded && calculatorBodyRef.current) {
-      const calculatorBody = calculatorBodyRef.current;
+      const _calculatorBody = calculatorBodyRef.current;
       const popupRect = popupRef.current?.getBoundingClientRect();
-      
+
                     if (popupRect) {
           // 历史记录面板应该与整个计算器窗口同高同宽，在右边拼接
           // popupRect 是整个弹窗的尺寸，包括标题栏和内容区域
-          
+
           // 历史记录面板应该与计算器显示区域顶部对齐，但与整个计算器窗口同高
           // 精确计算位置
           const headerHeight = -65; // 微调向上偏移量
           const gap = 5; // 增加间距，让两个面板更美观
-          
+
           setHistoryPanelPosition({
             top: headerHeight, // 与计算器显示区域顶部对齐
             left: 300 + gap, // 弹窗宽度 + 间距
@@ -870,14 +869,14 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
           });
         }
     }
-  };
+  }, [isHistoryExpanded, isOpen]);
 
   useEffect(() => {
     if (isOpen && isHistoryExpanded) {
       // 延迟执行以确保DOM完全渲染
       setTimeout(updateHistoryPanelPosition, 10);
     }
-  }, [isOpen, isHistoryExpanded]);
+  }, [isOpen, isHistoryExpanded, updateHistoryPanelPosition]);
 
   // 监听窗口大小变化，重新计算历史记录面板位置
   useEffect(() => {
@@ -889,7 +888,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
-  }, [isOpen, isHistoryExpanded]);
+  }, [isOpen, isHistoryExpanded, updateHistoryPanelPosition]);
 
   if (!isOpen) return null;
 
@@ -897,7 +896,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const isMobile = viewportWidth < 768;
 
   return (
-    <div 
+    <div
       ref={popupRef}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
@@ -909,8 +908,8 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         left: `${popupPosition.left}px`,
         transform: 'translateZ(0)', // 启用硬件加速
         userSelect: isDragging ? 'none' : 'auto',
-        width: isMobile 
-          ? `${Math.min(viewportWidth - 20, 320)}px` 
+        width: isMobile
+          ? `${Math.min(viewportWidth - 20, 320)}px`
           : '320px', // 桌面端固定宽度
         height: 'auto', // 根据内容自动调整高度
         maxWidth: isMobile ? 'calc(100vw - 20px)' : 'none',
@@ -918,7 +917,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       }}
     >
       {/* 弹窗头部 - 可拖动区域 */}
-      <div 
+      <div
         ref={headerRef}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
@@ -977,7 +976,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       {/* 主要内容区域 - 计算器主体 */}
       <div className={`${isMobile ? 'h-auto' : 'h-fit'} relative`}>
         {/* 计算器部分 */}
-        <div 
+        <div
           ref={calculatorBodyRef}
           className={`${isMobile ? 'w-full' : 'w-full'} ${!isMobile ? 'h-fit' : ''}`}
         >
@@ -1010,7 +1009,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
             </button>
             <button onClick={handleCloseBracket} disabled={openBrackets === 0} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} rounded-lg transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600 ${
               openBrackets === 0
-                ? 'bg-gray-50 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                ? 'bg-gray-50 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                 : 'bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-500'
             }`} data-no-drag>
               )
@@ -1109,7 +1108,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
                 </button>
               </div>
             </div>
-            
+
             {/* 移动端历史记录内容区域 */}
             <div className="max-h-48 overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
               {history.length === 0 ? (
@@ -1120,8 +1119,8 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
               ) : (
                 <div className="space-y-1">
                   {history.map((item, index) => (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       onClick={() => {
                         setDisplay(item.result);
                         setCurrentNumber(item.result);
@@ -1152,7 +1151,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
 
         {/* 右侧历史记录浮窗 - 只在桌面端显示，与计算器主体对称且大小相同 */}
         {!isMobile && isHistoryExpanded && (
-          <div 
+          <div
             className="calc-history absolute bg-gray-50 dark:bg-gray-800 border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-2xl z-10 flex flex-col"
             onMouseDown={handleMouseDown}
             onTouchStart={handleTouchStart}
@@ -1189,7 +1188,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
                 </button>
               </div>
             </div>
-            
+
             {/* 历史记录内容区域 - 与计算器显示屏样式保持一致 */}
             <div className="calc-history-content flex-1 p-3 overflow-y-auto bg-gray-50 dark:bg-gray-900 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
               {history.length === 0 ? (
@@ -1200,8 +1199,8 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
               ) : (
                 <div className="space-y-1">
                   {history.map((item, index) => (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       onClick={() => {
                         setDisplay(item.result);
                         setCurrentNumber(item.result);
@@ -1231,4 +1230,4 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       </div>
     </div>
   );
-} 
+}

@@ -14,21 +14,21 @@ export const usePasteImport = () => {
       const text = await navigator.clipboard.readText();
       if (text) {
         const newItems = parsePastedData(text);
-        const processedItems = processQuotationData(newItems);
-        
+        const _processedItems = processQuotationData(newItems);
+
         // 通过store更新数据
         handlePasteImport(text);
       }
     } catch (err) {
       console.error('Failed to handle paste:', err);
-      
+
       // 如果剪贴板访问失败，显示手动输入框
       createManualInputModal(
         (text: string) => {
           if (text) {
             const newItems = parsePastedData(text);
-            const processedItems = processQuotationData(newItems);
-            
+            const _processedItems = processQuotationData(newItems);
+
             // 通过store更新数据
             handlePasteImport(text);
           }

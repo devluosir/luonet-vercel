@@ -5,7 +5,7 @@ import type { LineItem, OtherFee } from '../types';
 interface ItemsTableSectionProps {
   items: LineItem[];
   otherFees: OtherFee[];
-  onUpdate: (patch: any) => void;
+  onUpdate: (patch: Partial<{ items: LineItem[]; otherFees: OtherFee[] }>) => void;
   isReadOnly: boolean;
 }
 
@@ -23,10 +23,10 @@ export function ItemsTableSection({ items, otherFees, onUpdate, isReadOnly }: It
     onUpdate({ items: [...items, newItem] });
   };
 
-  const updateItem = (index: number, field: keyof LineItem, value: any) => {
+  const updateItem = <K extends keyof LineItem>(index: number, field: K, value: LineItem[K]) => {
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
-    
+
     // 自动计算总价
     if (field === 'quantity' || field === 'unitPrice') {
       const item = updatedItems[index];
@@ -35,7 +35,7 @@ export function ItemsTableSection({ items, otherFees, onUpdate, isReadOnly }: It
         totalPrice: item.quantity * item.unitPrice,
       };
     }
-    
+
     onUpdate({ items: updatedItems });
   };
 

@@ -9,16 +9,16 @@ interface InvoiceInfoCompactProps {
 }
 
 // 客户选择字段组件
-function CustomerField({ 
-  label, 
-  value, 
-  onChange, 
-  placeholder 
-}: { 
-  label: string; 
-  value: string; 
-  onChange: (value: string) => void; 
-  placeholder: string; 
+function CustomerField({
+  label,
+  value,
+  onChange,
+  placeholder: _placeholder
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
 }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [savedCustomers, setSavedCustomers] = useState<Array<{name: string; to: string}>>([]);
@@ -204,7 +204,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export const InvoiceInfoCompact = React.memo(({ data, onChange }: InvoiceInfoCompactProps) => {
-  const set = (key: keyof InvoiceData) => 
+  const set = (key: keyof InvoiceData) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       onChange({ [key]: e.target.value });
     };

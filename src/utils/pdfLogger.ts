@@ -30,45 +30,45 @@ const LOG_CONFIG: PDFLogConfig = {
 class PDFLogger {
   private shouldLog(level: LogLevel, key?: string): boolean {
     if (!LOG_CONFIG.enabled) return false;
-    
+
     const levels: LogLevel[] = ['debug', 'info', 'warn', 'error'];
     const currentLevel = levels.indexOf(LOG_CONFIG.level);
     const targetLevel = levels.indexOf(level);
-    
+
     if (targetLevel < currentLevel) return false;
-    
+
     // 关键日志始终保留
     if (key && LOG_CONFIG.preserveKeys.includes(key)) return true;
-    
+
     return true;
   }
 
-  debug(key: string, message: string, ...args: any[]) {
+  debug(key: string, message: string, ...args: unknown[]) {
     if (this.shouldLog('debug', key)) {
       console.log(`[PDF:${key}] ${message}`, ...args);
     }
   }
 
-  info(key: string, message: string, ...args: any[]) {
+  info(key: string, message: string, ...args: unknown[]) {
     if (this.shouldLog('info', key)) {
       console.log(`[PDF:${key}] ${message}`, ...args);
     }
   }
 
-  warn(key: string, message: string, ...args: any[]) {
+  warn(key: string, message: string, ...args: unknown[]) {
     if (this.shouldLog('warn', key)) {
       console.warn(`[PDF:${key}] ${message}`, ...args);
     }
   }
 
-  error(key: string, message: string, ...args: any[]) {
+  error(key: string, message: string, ...args: unknown[]) {
     if (this.shouldLog('error', key)) {
       console.error(`[PDF:${key}] ${message}`, ...args);
     }
   }
 
   // 性能日志（始终保留关键指标）
-  performance(operation: string, duration: number, metadata?: Record<string, any>) {
+  performance(operation: string, duration: number, metadata?: Record<string, unknown>) {
     if (this.shouldLog('info', 'performance')) {
       const meta = metadata ? ` | ${JSON.stringify(metadata)}` : '';
       console.log(`[PDF:performance] ${operation}: ${duration.toFixed(2)}ms${meta}`);
@@ -113,7 +113,7 @@ export const logCacheMiss = (key: string, loadTime: number) => pdfLogger.cacheMi
 export const logFontRegistered = (duration: number) => pdfLogger.fontRegistered(1, duration);
 export const logFontFallback = (reason: string) => pdfLogger.fontFallback(reason);
 export const logPdfGenerated = (size: number, duration: number) => pdfLogger.pdfGenerated(size, duration);
-export const logHealthcheck = (status: 'pass' | 'warn' | 'fail', duration: number, details: string) => 
+export const logHealthcheck = (status: 'pass' | 'warn' | 'fail', duration: number, details: string) =>
   pdfLogger.healthcheck(status, duration, details);
-export const logPerformance = (operation: string, duration: number, metadata?: Record<string, any>) => 
+export const logPerformance = (operation: string, duration: number, metadata?: Record<string, unknown>) =>
   pdfLogger.performance(operation, duration, metadata);

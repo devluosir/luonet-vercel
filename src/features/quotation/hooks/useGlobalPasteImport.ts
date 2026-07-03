@@ -12,13 +12,13 @@ type Opts = {
 };
 
 export function useGlobalPasteImport(opts: Opts = {}) {
-  const { 
-    enabled = true, 
-    maxDirectInsert = 80, 
+  const {
+    enabled = true,
+    maxDirectInsert = 80,
     minConfidence = 0.7,
-    onFallbackPreview 
+    onFallbackPreview
   } = opts;
-  
+
   const updateItems = useQuotationStore(s => s.updateItems);
   const updateFromParse = useQuotationStore(s => s.updateFromParse);
   const items = useQuotationStore(s => s.data.items);
@@ -32,12 +32,12 @@ export function useGlobalPasteImport(opts: Opts = {}) {
       const ae = document.activeElement as HTMLElement | null;
       if (ae) {
         const tag = ae.tagName?.toLowerCase();
-        const isEditable = (ae as any).isContentEditable;
+        const isEditable = ae.isContentEditable;
         const isInput = tag === 'input' || tag === 'textarea' || isEditable;
-        
+
         // 特殊情况：如果是我们自己的快速导入文本框，也放行
         const isQuickImportTextarea = ae.closest('.quick-import-textarea');
-        
+
         if (isInput && !isQuickImportTextarea) return;
       }
 
@@ -60,7 +60,7 @@ export function useGlobalPasteImport(opts: Opts = {}) {
 
       if (smallEnough) {
         e.preventDefault(); // 阻止默认粘贴到页面
-        
+
         let maxId = items.reduce((m, it) => Math.max(m, it.id), 0);
 
         const mapped = parsed.rows.map(r => {
@@ -106,7 +106,7 @@ export function useGlobalPasteImport(opts: Opts = {}) {
         const action = replace ? '已替换' : '已追加';
         const summary = `${action} ${mapped.length} 行${parsed.skipped ? `，跳过 ${parsed.skipped} 行` : ''}`;
         const formatInfo = parsed.detectedFormat ? ` (${parsed.detectedFormat})` : '';
-        
+
         showToast(summary + formatInfo, 'success');
 
         if (process.env.NODE_ENV === 'development') {
@@ -121,7 +121,7 @@ export function useGlobalPasteImport(opts: Opts = {}) {
         // 不够自信或数据太多，回退到预览模式
         e.preventDefault();
         onFallbackPreview(text, parsed);
-        
+
         if (process.env.NODE_ENV === 'development') {
           console.log('[Global Paste] Fallback to preview', {
             smallEnough,
@@ -133,5 +133,5 @@ export function useGlobalPasteImport(opts: Opts = {}) {
 
     document.addEventListener('paste', handler);
     return () => document.removeEventListener('paste', handler);
-  }, [enabled, maxDirectInsert, minConfidence, onFallbackPreview, items, updateItems, showToast]);
+  }, [enabled, maxDirectInsert, minConfidence, onFallbackPreview, items, updateItems, updateFromParse, showToast]);
 }

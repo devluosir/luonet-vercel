@@ -1,30 +1,36 @@
 import { InvoiceHistory } from '@/types/invoice-history';
+import type { InvoiceData } from '@/features/invoice';
 import { d1SyncDocument } from './d1Sync';
 
 const STORAGE_KEY = 'invoice_history';
 
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
 // 数据清理函数 - 确保所有字段都有正确的默认值
-const sanitizeInvoiceHistoryItem = (item: any): InvoiceHistory => {
+const sanitizeInvoiceHistoryItem = (item: unknown): InvoiceHistory => {
+  const record = isRecord(item) ? item : {};
   return {
-    id: item.id || '',
-    createdAt: item.createdAt || new Date().toISOString(),
-    updatedAt: item.updatedAt || new Date().toISOString(),
-    customerName: item.customerName || '',
-    invoiceNo: item.invoiceNo || '',
-    totalAmount: typeof item.totalAmount === 'number' ? item.totalAmount : (parseFloat(item.totalAmount) || 0),
-    currency: item.currency || 'USD',
-    data: item.data || {}
+    id: typeof record.id === 'string' ? record.id : '',
+    createdAt: typeof record.createdAt === 'string' ? record.createdAt : new Date().toISOString(),
+    updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : new Date().toISOString(),
+    customerName: typeof record.customerName === 'string' ? record.customerName : '',
+    invoiceNo: typeof record.invoiceNo === 'string' ? record.invoiceNo : '',
+    totalAmount: typeof record.totalAmount === 'number' ? record.totalAmount : (parseFloat(String(record.totalAmount ?? '')) || 0),
+    currency: record.currency === 'CNY' || record.currency === 'EUR' || record.currency === 'USD' ? record.currency : 'USD',
+    data: isRecord(record.data) ? record.data as unknown as InvoiceData : {} as InvoiceData
   };
 };
 
 // 获取历史记录
 export const getInvoiceHistory = (): InvoiceHistory[] => {
   if (typeof window === 'undefined') return [];
-  
+
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     const rawHistory = data ? JSON.parse(data) : [];
-    
+
     // 清理所有数据，确保字段完整性
     return rawHistory.map(sanitizeInvoiceHistoryItem);
   } catch (error) {
@@ -37,14 +43,14 @@ export const getInvoiceHistory = (): InvoiceHistory[] => {
 export const saveInvoiceHistory = (history: InvoiceHistory[]): boolean => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-    
+
     // 触发自定义事件，通知Dashboard页面更新
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('customStorageChange', {
         detail: { key: STORAGE_KEY }
       }));
     }
-    
+
     return true;
   } catch (error) {
     console.error('Error saving invoice history:', error);
@@ -130,12 +136,12 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
         return false;
       }
     }
-    
+
     if (!Array.isArray(data)) {
       console.error('Invalid data format: expected an array');
       return false;
     }
-    
+
     // 处理导入的数据
     const processedData = data.map(item => {
       // 基本验证：确保item是对象且有id
@@ -143,26 +149,26 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
         console.warn('Skipping invalid item:', item);
         return null;
       }
-      
+
       // 确保有 updatedAt 字段，如果没有则使用 createdAt
       const itemWithUpdatedAt = {
         ...item,
         updatedAt: item.updatedAt || item.createdAt
       };
-      
+
       // 检查是否是发票数据（通过检查特有字段判断）
       const isInvoiceData = item.data && (
-        item.data.invoiceNo !== undefined || 
+        item.data.invoiceNo !== undefined ||
         item.data.customerPO !== undefined ||
         (item.data.items && item.data.items.length > 0 && item.data.items[0].partname !== undefined)
       );
-      
+
       // 如果是发票数据，直接返回，不进行转换
       if (isInvoiceData) {
         console.log('检测到发票数据，直接导入:', item.id);
         return itemWithUpdatedAt;
       }
-      
+
       // 如果是报价单数据，进行转换
       if (item.data && item.data.items) {
         // 确保items数组存在且有效
@@ -170,7 +176,7 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
           console.warn('Invalid items array in quotation data:', item);
           return itemWithUpdatedAt; // 返回原始项，不进行转换
         }
-        
+
         const convertedItems = item.data.items.map((lineItem: { partName?: string; id?: number; description?: string; quantity: number; unit: string; unitPrice: number; amount: number }) => {
           if (lineItem.partName && !('partname' in lineItem)) {
             return {
@@ -205,26 +211,26 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
       }
       return itemWithUpdatedAt;
     }).filter(Boolean); // 过滤掉null项
-    
+
     // 确保至少有一条有效记录
     if (processedData.length === 0) {
       console.error('No valid records found in imported data');
       return false;
     }
-    
+
     try {
       const history = getInvoiceHistory();
       const merged = [...processedData, ...history];
       const uniqueHistory = Array.from(new Map(merged.map(item => [item.id, item])).values());
-      
+
       return saveInvoiceHistory(uniqueHistory);
     } catch (storageError) {
       console.error('Error saving to localStorage:', storageError);
       // 尝试分块保存（如果数据太大）
       if (
-        typeof storageError === 'object' && 
-        storageError !== null && 
-        'name' in storageError && 
+        typeof storageError === 'object' &&
+        storageError !== null &&
+        'name' in storageError &&
         (storageError.name === 'QuotaExceededError' || storageError.name === 'NS_ERROR_DOM_QUOTA_REACHED')
       ) {
         console.warn('Storage quota exceeded, trying to free up space...');
@@ -236,7 +242,7 @@ export const importInvoiceHistory = (jsonData: string): boolean => {
           const trimmedHistory = existingHistory.slice(-50);
           saveInvoiceHistory(trimmedHistory);
           console.log('Successfully trimmed history to make space');
-          
+
           // 再次尝试保存导入的数据
           return importInvoiceHistory(jsonData);
         } catch (e) {

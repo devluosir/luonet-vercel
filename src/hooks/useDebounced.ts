@@ -2,7 +2,7 @@
  * 防抖Hook - 减少高频输入导致的状态更新
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 
 /**
  * 对值进行防抖处理
@@ -32,21 +32,24 @@ export function useDebounced<T>(value: T, delay = 250): T {
  * @param delay 延迟时间（毫秒）
  * @returns 防抖后的值对象
  */
-export function useDebouncedObject<T extends Record<string, any>>(
-  values: T, 
+export function useDebouncedObject<T extends Record<string, unknown>>(
+  values: T,
   delay = 250
 ): T {
   const [debouncedValues, setDebouncedValues] = useState<T>(values);
+  const latestValuesRef = useRef(values);
+  latestValuesRef.current = values;
+  const serializedValues = useMemo(() => JSON.stringify(values), [values]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedValues(values);
+      setDebouncedValues(latestValuesRef.current);
     }, delay);
 
     return () => {
       clearTimeout(timer);
     };
-  }, [JSON.stringify(values), delay]); // 使用JSON.stringify进行深度比较
+  }, [serializedValues, delay]); // 使用序列化结果进行深度比较
 
   return debouncedValues;
 }

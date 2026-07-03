@@ -6,7 +6,7 @@ import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { safeSetCnFont } from './pdf/ensureFont';
 
 /** ------------ 基础类型定义 ------------ */
-type RGB = [number, number, number];
+type _RGB = [number, number, number];
 
 /**
  * 统一字体设置工具 - 使用安全的字体设置函数
@@ -68,7 +68,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4'
-  }) as ExtendedJsPDF;
+  }) as unknown as ExtendedJsPDF;
 
   // 添加中文字体
   await ensurePdfFont(doc);
@@ -136,7 +136,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     // 设置字体和样式
     doc.setFontSize(9);
     setCnFont(doc, 'normal');
-    
+
     let currentY = startY;
     const leftMargin = 20;
     const maxWidth = pageWidth - 2 * margin;
@@ -164,7 +164,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       doc.setTextColor(0, 0, 0);
       doc.text(item.label, leftMargin, leftY);
       const labelWidth = doc.getTextWidth(item.label);
-      
+
       setCnFont(doc, 'normal');
       doc.setTextColor(0, 0, 0);
       doc.text(item.value || '', leftMargin + labelWidth + 2, leftY);
@@ -175,12 +175,12 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     let rightY = currentY;
     const rightStartX = pageWidth * 0.65; // 右侧信息起始位置
     const colonX = rightStartX + 30; // 冒号位置
-    
+
     rightInfoItems.forEach((item) => {
       setCnFont(doc, 'bold');
       doc.setTextColor(0, 0, 0);
       doc.text(item.label, colonX - 2, rightY, { align: 'right' });
-      
+
       setCnFont(doc, 'normal');
       // Order No. 使用红色，其他使用黑色
       if (item.label === 'Order No.:') {
@@ -246,7 +246,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     const specText = data.projectSpecification || '';
     if (specText.trim()) {
       console.log('规格描述文本:', specText); // 调试信息
-      
+
       // 普通文本渲染，使用蓝色
       const wrappedSpecText = doc.splitTextToSize(specText, contentMaxWidth);
       if (wrappedSpecText.length > 0) {
@@ -254,7 +254,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
         doc.setTextColor(0, 0, 255); // 设置蓝色
         wrappedSpecText.forEach((line: string) => {
           doc.text(line, contentMargin, currentY);
-          currentY += 4; 
+          currentY += 4;
         });
         doc.setTextColor(0, 0, 0); // 恢复黑色
         currentY += 5; // 调整为8px间距
@@ -271,7 +271,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     const paymentTitle = '2. 付款条件：';
     doc.text(paymentTitle, leftMargin, currentY);
     const paymentTitleWidth = doc.getTextWidth(paymentTitle);
-    
+
     setCnFont(doc, 'normal');
     const paymentText = data.paymentTerms || '交货后30天；';
     const paymentContentX = leftMargin + paymentTitleWidth;
@@ -288,7 +288,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     const invoiceTitle = '3. 发票要求：';
     doc.text(invoiceTitle, leftMargin, currentY);
     const invoiceTitleWidth = doc.getTextWidth(invoiceTitle);
-    
+
     setCnFont(doc, 'normal');
     const invoiceText = data.invoiceRequirements || '请在发票开具前与我司财务确认；';
     const invoiceContentX = leftMargin + invoiceTitleWidth;
@@ -300,9 +300,9 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     if (data.showBank) {
       const bankInfo = getBankInfo();
       currentY = checkAndAddPage(currentY, bankInfo.length * 4);
-      
+
       doc.setFontSize(9);
-      
+
       bankInfo.forEach((line, index) => {
         if (index === 0) {
           setCnFont(doc, 'bold');
@@ -323,7 +323,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     doc.setTextColor(0, 0, 0);
     doc.text('4. 关于交货：', leftMargin, currentY);
     currentY += 5; // 标题与内容之间的间距
-    
+
 
 
     // 交货信息（多行文本框）
@@ -345,7 +345,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     doc.setTextColor(0, 0, 0);
     doc.text('5. 客户的订单号码如下，请在交货时写在交货文件中和包装箱外部：', leftMargin, currentY);
     currentY += 5; // 标题与内容之间的间距
-    
+
     setCnFont(doc, 'normal');
     doc.setTextColor(0, 0, 255);
     const orderNumbersText = data.orderNumbers || 'TBD';
@@ -361,12 +361,12 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
     // 结尾确认语和印章
     const confirmationText = '上述订单，烦请确认！';
     const textHeight = 4; // 9pt字体大约4mm高
-    
+
     // 检查分页，为印章和文字预留空间
     const stampHeight = data.stampType === 'shanghai' ? 40 : 34;
     const requiredHeight = data.stampType !== 'none' ? stampHeight + 5 : textHeight + 5;
     let confirmationY = checkAndAddPage(currentY, requiredHeight);
-    
+
     const textY = confirmationY + 0; // 定义文字的Y坐标
 
     // 1. 添加印章（如果启用），先绘制
@@ -374,7 +374,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
       try {
         // 使用优化的印章图片
         const stampImageBase64 = await getStampImage(data.stampType);
-        
+
         if (stampImageBase64 && stampImageBase64.trim()) {
           const stampImage = `data:image/png;base64,${stampImageBase64}`;
           const stampWidth = data.stampType === 'shanghai' ? 40 : 73;
@@ -398,7 +398,7 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
         // 如果印章加载失败，继续执行，不中断PDF生成
       }
     }
-    
+
     // 2. 结尾确认语，后绘制（使其位于上层）
     setCnFont(doc, 'bold');
     doc.setTextColor(0, 0, 0);
@@ -430,4 +430,4 @@ export const generatePurchaseOrderPDF = async (data: PurchaseOrderData, preview 
   }
 
   return doc.output('blob');
-}; 
+};

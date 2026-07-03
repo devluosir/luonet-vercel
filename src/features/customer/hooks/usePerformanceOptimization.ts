@@ -74,7 +74,7 @@ export function useDataCache<T>(
     } finally {
       setLoading(false);
     }
-  }, [data, isExpired, fetcher, ttl]);
+  }, [data, isExpired, fetcher]);
 
   const invalidate = useCallback(() => {
     setData(null);

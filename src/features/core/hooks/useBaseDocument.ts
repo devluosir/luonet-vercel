@@ -1,11 +1,25 @@
 import { useCallback, useMemo } from 'react';
 import { useToast } from '@/components/ui/Toast';
 import type { BaseDocument, DocumentAction, DocumentPermission } from '../types';
-import type { BaseDocumentState } from '../state/useBaseDocumentStore';
+
+interface BaseDocumentRuntimeStore<T extends BaseDocument> {
+  getState: () => {
+    data: T;
+    isLoading: boolean;
+    isSaving: boolean;
+    isGenerating: boolean;
+    error: string | null;
+    setData: (patch: Partial<T> | { isGenerating: boolean }) => void;
+    setSaving: (saving: boolean) => void;
+  };
+  setData: (patch: { isGenerating: boolean }) => void;
+  generatePDF: () => Promise<void>;
+  previewPDF: () => Promise<void>;
+}
 
 // 通用单据管理Hook
 export function useBaseDocument<T extends BaseDocument>(
-  store: any,
+  store: BaseDocumentRuntimeStore<T>,
   permissions: DocumentPermission
 ) {
   const { showToast } = useToast();
@@ -34,7 +48,7 @@ export function useBaseDocument<T extends BaseDocument>(
       showToast('没有编辑权限', 'error');
       return;
     }
-    
+
     try {
       store.getState().setData(patch);
     } catch (error) {
@@ -110,13 +124,13 @@ export function useBaseDocument<T extends BaseDocument>(
     canExport,
     canPreview,
     canPerformAction,
-    
+
     // 安全操作
     safeUpdateData,
     safeSave,
     safeGeneratePDF,
     safePreviewPDF,
-    
+
       // 状态代理
   data: store.getState().data,
   isLoading: store.getState().isLoading,

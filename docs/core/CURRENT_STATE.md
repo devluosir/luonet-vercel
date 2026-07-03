@@ -1,6 +1,6 @@
 # Current State
 
-最后更新：2026-07-03
+最后更新：2026-07-04
 当前分支：`main`
 当前提交：以 `git log -1 --oneline` 为准
 应用版本：`1.2.0`（`package.json`）
@@ -19,6 +19,17 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 - 用户和权限服务：Cloudflare Worker + D1，自定义域 `https://udb.luocompany.net`。
 - AI 邮件：DeepSeek Chat API，通过 `/api/generate` 调用。
 - PDF/Excel：前端生成；字体、头图、印章资源由 `scripts/embed-resources.js` 在构建时嵌入到 `src/lib/embedded-resources.ts`。
+
+## 代码质量现状
+
+截至 2026-07-04，已完成一轮全量 lint warning 清理：
+
+- `@typescript-eslint/no-unused-vars`：清零。
+- `@typescript-eslint/no-explicit-any`：清零；动态数据入口改为复用现有类型或 `unknown` + 类型收窄。
+- `react-hooks/exhaustive-deps`：清零；一次性初始化和防循环同步场景使用局部 `eslint-disable-next-line` 并附中文原因说明。
+- `npx tsc --noEmit`：通过。
+- `npx next lint`：0 warnings / 0 errors。
+- `npm run build`：通过。构建会重新生成 `src/lib/embedded-resources.ts`，该文件仍不应手工编辑。
 
 ## 路由与模块
 

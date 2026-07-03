@@ -4,12 +4,30 @@ import { Search, X, ChevronDown, ChevronUp, Archive } from 'lucide-react';
 import { FileText, Package, Receipt, ShoppingCart } from 'lucide-react';
 import { DocumentWithType } from '@/utils/dashboardUtils';
 
+type DocumentTypeFilter = 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase';
+
+type DocumentFieldData = {
+  quotationNo?: string;
+  contractNo?: string;
+  invoiceNo?: string;
+  orderNo?: string;
+  customerName?: string;
+  supplierName?: string;
+  consigneeName?: string;
+};
+
+type DocumentTypeOption = {
+  label: string;
+  value: DocumentTypeFilter;
+  color: string;
+};
+
 interface RecentDocumentsListProps {
   documents: DocumentWithType[];
   timeFilter: 'today' | '3days' | 'week' | 'month';
-  typeFilter: 'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase';
+  typeFilter: 'all' | DocumentTypeFilter;
   onTimeFilterChange: (filter: 'today' | '3days' | 'week' | 'month') => void;
-  onTypeFilterChange: (filter: 'all' | 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase') => void;
+  onTypeFilterChange: (filter: 'all' | DocumentTypeFilter) => void;
   showAllFilters: boolean;
   onShowAllFiltersChange: (show: boolean) => void;
   permissionMap?: {
@@ -22,6 +40,21 @@ interface RecentDocumentsListProps {
     };
   };
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
+const getDocumentData = (doc: DocumentWithType): DocumentFieldData => (
+  isRecord(doc.data) ? doc.data : {}
+);
+
+const firstString = (...values: unknown[]): string => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return '';
+};
 
 export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
   documents,
@@ -37,7 +70,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
 
   // 获取有权限的文档类型
-  const getAvailableDocumentTypes = () => {
+  const getAvailableDocumentTypes = (): DocumentTypeOption[] => {
     if (!permissionMap?.documentTypePermissions) {
       // 如果没有权限映射，返回所有类型
       return [
@@ -49,7 +82,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       ];
     }
 
-    const availableTypes = [];
+    const availableTypes: DocumentTypeOption[] = [];
     const { documentTypePermissions } = permissionMap;
 
     if (documentTypePermissions.quotation) {
@@ -73,25 +106,25 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
   // 获取文档编号
   const getDocumentNumber = (doc: DocumentWithType) => {
-    const data = doc.data as any; // 使用any类型避免类型转换错误
+    const data = getDocumentData(doc);
     let num = '';
     switch (doc.type) {
-      case 'quotation': 
-        num = (doc as any).quotationNo || (data?.quotationNo as string) || '';
+      case 'quotation':
+        num = firstString(doc.quotationNo, data.quotationNo);
         break;
-      case 'confirmation': 
-        num = (doc as any).contractNo || (data?.contractNo as string) || (doc as any).quotationNo || (data?.quotationNo as string) || '';
+      case 'confirmation':
+        num = firstString(doc.contractNo, data.contractNo, doc.quotationNo, data.quotationNo);
         break;
-      case 'invoice': 
-        num = (doc as any).invoiceNo || (data?.invoiceNo as string) || '';
+      case 'invoice':
+        num = firstString(doc.invoiceNo, data.invoiceNo);
         break;
-      case 'purchase': 
-        num = (doc as any).orderNo || (data?.orderNo as string) || '';
+      case 'purchase':
+        num = firstString(doc.orderNo, data.orderNo);
         break;
-      case 'packing': 
-        num = (doc as any).invoiceNo || (data?.invoiceNo as string) || (doc as any).orderNo || (data?.orderNo as string) || '';
+      case 'packing':
+        num = firstString(doc.invoiceNo, data.invoiceNo, doc.orderNo, data.orderNo);
         break;
-      default: 
+      default:
         num = doc.id;
     }
     return num || doc.id;
@@ -99,18 +132,18 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
 
   // 获取文档名称
   const getDocumentName = (doc: DocumentWithType) => {
-    const data = doc.data as any; // 使用any类型避免类型转换错误
+    const data = getDocumentData(doc);
     let name = '';
-    
+
     // 尝试从不同字段获取名称
     if (doc.type === 'purchase') {
-      name = (doc as any).supplierName || (data?.supplierName as string) || '未命名供应商';
+      name = firstString(doc.supplierName, data.supplierName) || '未命名供应商';
     } else if (doc.type === 'packing') {
-      name = (doc as any).consigneeName || (data?.consigneeName as string) || '未命名收货人';
+      name = firstString(doc.consigneeName, data.consigneeName) || '未命名收货人';
     } else {
-      name = (doc as any).customerName || (data?.customerName as string) || '未命名客户';
+      name = firstString(doc.customerName, data.customerName) || '未命名客户';
     }
-    
+
     // 处理多行文本，取第一行
     return name.split('\n')[0]?.trim() || name;
   };
@@ -150,15 +183,15 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       filtered = filtered.filter(doc => {
         try {
           // 获取搜索文本 - 用于搜索功能
-          const data = doc.data as any; // 使用any类型避免类型转换错误
+          const data = getDocumentData(doc);
           const documentNumber = getDocumentNumber(doc);
           const documentName = getDocumentName(doc);
-          
+
           // 扩展搜索范围，包括data字段中的信息
-          const customerName = (doc as any).customerName || (data?.customerName as string) || '';
-          const supplierName = (doc as any).supplierName || (data?.supplierName as string) || '';
-          const consigneeName = (doc as any).consigneeName || (data?.consigneeName as string) || '';
-          
+          const customerName = firstString(doc.customerName, data.customerName);
+          const supplierName = firstString(doc.supplierName, data.supplierName);
+          const consigneeName = firstString(doc.consigneeName, data.consigneeName);
+
           const searchText = `${documentNumber} ${documentName} ${customerName} ${supplierName} ${consigneeName}`.toLowerCase();
           return searchText.includes(searchLower);
         } catch (error) {
@@ -210,11 +243,11 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
   // 高亮搜索词
   const highlightText = (text: string, searchTerm: string) => {
     if (!searchTerm.trim()) return text;
-    
+
     const regex = new RegExp(`(${searchTerm})`, 'gi');
     const parts = text.split(regex);
-    
-    return parts.map((part, index) => 
+
+    return parts.map((part, index) =>
       regex.test(part) ? (
         <mark key={index} className="bg-yellow-200 dark:bg-yellow-800/50 px-0.5 rounded">
           {part}
@@ -231,7 +264,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       'week': '最近一周',
       'month': '最近一个月'
     }[timeFilter];
-    
+
     const typeText = {
       'all': '所有类型',
       'quotation': 'QTN',
@@ -240,11 +273,11 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
       'invoice': 'INV',
       'purchase': 'PO'
     }[typeFilter];
-    
+
     if (searchTerm.trim()) {
       return `没有找到包含"${searchTerm}"的${typeText === '所有类型' ? '' : typeText + ' '}文档`;
     }
-    
+
     return `${timeText}暂无 ${typeText} 文档`;
   };
 
@@ -312,7 +345,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
                 {getAvailableDocumentTypes().map(({ label, value, color }) => (
                   <button
                     key={value}
-                    onClick={() => onTypeFilterChange(value as 'quotation' | 'confirmation' | 'packing' | 'invoice' | 'purchase')}
+                    onClick={() => onTypeFilterChange(value)}
                     className={`px-1.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 ${
                       typeFilter === value
                         ? `bg-${color}-100 dark:bg-${color}-900/30 text-${color}-700 dark:text-${color}-300`
@@ -389,7 +422,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
             const { Icon, bgColor, textColor } = getDocumentTypeInfo(doc.type);
             const documentNumber = getDocumentNumber(doc);
             const documentName = getDocumentName(doc);
-            
+
             return (
               <div
                 key={`${doc.type}-${doc.id}-${doc.updatedAt || doc.createdAt}`}
@@ -403,7 +436,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
                   <div className={`flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center ${bgColor}`}>
                     <Icon className={`w-4 h-4 md:w-5 md:h-5 ${textColor}`} />
                   </div>
-                  
+
                   {/* 文档信息 */}
                   <div className="flex-1 min-w-0">
                     <div className={`text-sm font-medium text-gray-900 dark:text-white md:truncate
@@ -415,7 +448,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
                       {highlightText(documentName, searchTerm)}
                     </div>
                   </div>
-                  
+
                   {/* 添加一个微妙的箭头指示器（小屏隐藏以节省空间） */}
                   <div className="hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
                     <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">

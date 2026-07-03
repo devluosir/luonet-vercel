@@ -12,6 +12,11 @@ interface PerformanceMetrics {
   windowLoad: number; // Window Load
 }
 
+interface LayoutShiftEntry extends PerformanceEntry {
+  hadRecentInput?: boolean;
+  value?: number;
+}
+
 export default function PerformanceMonitor() {
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -71,9 +76,10 @@ export default function PerformanceMonitor() {
         let clsValue = 0;
         const clsObserver = new PerformanceObserver((list) => {
           const entries = list.getEntries();
-          entries.forEach((entry: any) => {
-            if (!entry.hadRecentInput) {
-              clsValue += entry.value;
+          entries.forEach((entry) => {
+            const layoutShiftEntry = entry as LayoutShiftEntry;
+            if (!layoutShiftEntry.hadRecentInput) {
+              clsValue += layoutShiftEntry.value || 0;
             }
           });
           newMetrics.cls = clsValue;
@@ -161,4 +167,4 @@ export default function PerformanceMonitor() {
       </div>
     </div>
   );
-} 
+}

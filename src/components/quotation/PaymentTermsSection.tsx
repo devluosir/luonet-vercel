@@ -44,8 +44,8 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
     paymentDate = '',
     additionalPaymentTerms = '',
     showInvoiceReminder = false,
-    showBank = false,
-    showStamp = false,
+    showBank: _showBank = false,
+    showStamp: _showStamp = false,
     contractNo = '',
     date = '' // 报价日期作为基准
   } = data;
@@ -95,16 +95,16 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
 
   const preview = useMemo(() => {
     const items: { index: number; content: React.ReactNode }[] = [];
-    
+
     // 计算条款总数
     let totalTerms = 0;
     if (showMainTerm && dateISO && dateISO.trim()) totalTerms++;
     if (additionalTermsArray.length > 0) totalTerms += additionalTermsArray.length;
     if (showInvoiceReminder) totalTerms++;
-    
+
     // 根据条款数量决定使用单数还是复数形式
     const titleText = totalTerms === 1 ? 'Payment Term: ' : 'Payment Terms:';
-    
+
     if (totalTerms === 1) {
       // 单条付款条款的情况，标题和内容在同一行
       if (additionalTermsArray.length > 0) {
@@ -115,7 +115,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
       } else if (showMainTerm && dateISO && dateISO.trim()) {
         // 将日期部分高亮为红色
         const mainWithRedDate = main.replace(
-          dateISO, 
+          dateISO,
           `<span style="color: #ef4444">${dateISO}</span>`
         );
         items.push({
@@ -136,7 +136,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
     } else {
       // 多条付款条款的情况，使用编号列表格式
       let termIndex = 1;
-      
+
       // 1. 附加条款（按行拆分，每行一个条款）
       additionalTermsArray.forEach(term => {
         if (term.trim()) {
@@ -147,12 +147,12 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
           termIndex++;
         }
       });
-      
+
       // 2. 主条款（与PDF逻辑保持一致）
       if (showMainTerm && dateISO && dateISO.trim()) {
         // 将日期部分高亮为红色
         const mainWithRedDate = main.replace(
-          dateISO, 
+          dateISO,
           `<span style="color: #ef4444">${dateISO}</span>`
         );
         items.push({
@@ -161,7 +161,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
         });
         termIndex++;
       }
-      
+
       // 3. 合同号提醒（合同号显示为红色）
       if (showInvoiceReminder) {
         const displayContractNo = contractNoExternal?.trim() || 'TBD';
@@ -175,7 +175,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
         });
       }
     }
-    
+
     return items;
   }, [showMainTerm, main, dateISO, additionalTermsArray, contractHint, contractNoExternal, showInvoiceReminder]);
 
@@ -201,7 +201,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
             Bank
           </button>
         </div>
-      
+
       {/* 内容框 */}
       <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 md:p-4 space-y-3">
         {/* 行1：附加条款 + 预设 */}
@@ -239,7 +239,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
             {showPresets && (
               <div className="absolute right-0 z-10 mt-2 w-72 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-1 shadow-md">
                 {PRESETS.map(p => (
-                  <button 
+                  <button
                     key={p}
                     type="button"
                     className="w-full truncate text-left text-xs px-2 py-1 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200"
@@ -259,13 +259,13 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
         {!!additionalTermsArray.length && (
           <div className="flex flex-wrap gap-2">
             {additionalTermsArray.map((t, i) => (
-              <span 
-                key={i} 
+              <span
+                key={i}
                 className="group inline-flex items-center gap-1 rounded-full border border-blue-300 dark:border-blue-600 px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 flex-shrink-0"></span>
                 {t}
-                <button 
+                <button
                   type="button"
                   className="opacity-60 group-hover:opacity-100 hover:text-red-500 ml-1"
                   onClick={() => {
@@ -299,7 +299,7 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
           />
           <div className="inline-flex overflow-hidden rounded border border-gray-300 dark:border-gray-600">
             {[3, 7, 30].map(d => (
-              <button 
+              <button
                 key={d}
                 type="button"
                 className="border-r border-gray-300 dark:border-gray-600 px-2 py-1.5 text-xs last:border-r-0 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"

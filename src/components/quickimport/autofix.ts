@@ -37,6 +37,11 @@ export interface FixReport {
   summary: string;
 }
 
+type ParsedRowWithRawNumbers = ParsedRow & {
+  _rawQuantity?: unknown;
+  _rawUnitPrice?: unknown;
+};
+
 export function generateAutoFixes(rows: ParsedRow[], opts: AutoFixOptions = DEFAULT_AUTOFIX): { patches: FixPatch[], report: FixReport } {
   const patches: FixPatch[] = [];
   let droppedRows = 0;
@@ -51,9 +56,10 @@ export function generateAutoFixes(rows: ParsedRow[], opts: AutoFixOptions = DEFA
 
     // 清洗数量/单价（如果有原始字符串数据）
     if (opts.cleanNumbers) {
-      const rawQty = (r as any)._rawQuantity;
-      const rawPrice = (r as any)._rawUnitPrice;
-      
+      const rawRow = r as ParsedRowWithRawNumbers;
+      const rawQty = rawRow._rawQuantity;
+      const rawPrice = rawRow._rawUnitPrice;
+
       if (typeof rawQty === 'string') {
         const q = cleanNumberLike(rawQty);
         if (Number.isFinite(q) && q !== r.quantity) {
@@ -62,7 +68,7 @@ export function generateAutoFixes(rows: ParsedRow[], opts: AutoFixOptions = DEFA
           fixedNumbers++;
         }
       }
-      
+
       if (typeof rawPrice === 'string') {
         const p = cleanNumberLike(rawPrice);
         if (Number.isFinite(p) && p !== r.unitPrice) {
@@ -111,8 +117,8 @@ export function generateAutoFixes(rows: ParsedRow[], opts: AutoFixOptions = DEFA
     const finalQty = next.quantity ?? r.quantity;
     const finalPrice = next.unitPrice ?? r.unitPrice;
     const finalName = (next.partName ?? r.partName)?.trim();
-    
-    if (!finalName || 
+
+    if (!finalName ||
         !Number.isFinite(finalQty) || finalQty <= 0 ||
         !Number.isFinite(finalPrice) || finalPrice < 0) {
       patches.push({ rowIndex: i, dropRow: true });
@@ -150,7 +156,7 @@ function generateSummary(dropped: number, merged: number, units: number, numbers
   if (numbers > 0) parts.push(`清洗${numbers}个数值`);
   if (merged > 0) parts.push(`合并${merged}个重复项`);
   if (dropped > 0) parts.push(`移除${dropped}个无效行`);
-  
+
   return parts.length > 0 ? parts.join('，') : '无需修复';
 }
 
@@ -158,27 +164,27 @@ function generateSummary(dropped: number, merged: number, units: number, numbers
 function mergeDuplicateRows(rows: ParsedRow[], existingPatches: FixPatch[]): FixPatch[] {
   const byName = new Map<string, number[]>();
   const toBeDropped = new Set(existingPatches.filter(p => p.dropRow).map(p => p.rowIndex));
-  
+
   rows.forEach((r, i) => {
     if (toBeDropped.has(i)) return; // 跳过将被删除的行
-    
+
     const key = r.partName?.trim().toLowerCase();
     if (!key) return;
-    
+
     const arr = byName.get(key) ?? [];
     arr.push(i);
     byName.set(key, arr);
   });
 
   const patches: FixPatch[] = [];
-  
+
   byName.forEach((indices) => {
     if (indices.length <= 1) return;
-    
+
     indices.sort((a, b) => a - b);
     const keepIndex = indices[0];
     let totalQty = 0;
-    
+
     // 计算总数量
     indices.forEach((idx) => {
       const existingReplace = existingPatches.find(p => p.rowIndex === idx)?.replace;
@@ -187,29 +193,29 @@ function mergeDuplicateRows(rows: ParsedRow[], existingPatches: FixPatch[]): Fix
     });
 
     // 更新保留行的数量
-    patches.push({ 
-      rowIndex: keepIndex, 
-      replace: { quantity: totalQty } 
+    patches.push({
+      rowIndex: keepIndex,
+      replace: { quantity: totalQty }
     });
-    
+
     // 标记其他行为删除
     indices.slice(1).forEach((idx) => {
       patches.push({ rowIndex: idx, dropRow: true });
     });
   });
-  
+
   return patches;
 }
 
 /** 应用修复补丁 */
 export function applyFixes(rows: ParsedRow[], patches: FixPatch[]): ParsedRow[] {
   const result = rows.map((r) => ({ ...r }));
-  
+
   // 按rowIndex排序，确保稳定的处理顺序
-  const sortedPatches = [...patches].sort((a, b) => 
+  const sortedPatches = [...patches].sort((a, b) =>
     (a.rowIndex ?? -1) - (b.rowIndex ?? -1)
   );
-  
+
   // 应用替换操作
   sortedPatches.forEach((patch) => {
     if (patch.rowIndex === undefined) return;
@@ -217,14 +223,14 @@ export function applyFixes(rows: ParsedRow[], patches: FixPatch[]): ParsedRow[] 
       result[patch.rowIndex] = { ...result[patch.rowIndex], ...patch.replace };
     }
   });
-  
+
   // 过滤掉要删除的行
   const indicesToDrop = new Set(
     sortedPatches
       .filter(p => p.dropRow && p.rowIndex !== undefined)
       .map(p => p.rowIndex!)
   );
-  
+
   return result.filter((_, index) => !indicesToDrop.has(index));
 }
 
@@ -243,10 +249,10 @@ export function previewFixes(rows: ParsedRow[], patches: FixPatch[]): {
     action: 'modify' | 'drop' | 'merge';
     details: string;
   }> = [];
-  
+
   patches.forEach((patch) => {
     if (patch.rowIndex === undefined) return;
-    
+
     if (patch.dropRow) {
       changes.push({
         rowIndex: patch.rowIndex,
@@ -264,7 +270,7 @@ export function previewFixes(rows: ParsedRow[], patches: FixPatch[]): {
       });
     }
   });
-  
+
   return {
     original: [...rows],
     fixed: applyFixes(rows, patches),

@@ -19,6 +19,11 @@ export interface PurchaseHistoryFilters {
 
 const STORAGE_KEY = 'purchase_history';
 
+const isQuotaExceededError = (error: unknown): boolean => (
+  error instanceof DOMException &&
+  (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')
+);
+
 // 生成唯一ID
 const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -47,19 +52,19 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
           data
         };
         history[index] = updatedHistory;
-        
+
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-        } catch (storageError: any) {
+        } catch (storageError: unknown) {
           // 处理配额超限错误
-          if (storageError?.name === 'QuotaExceededError' || storageError?.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+          if (isQuotaExceededError(storageError)) {
             console.warn('存储配额超限，尝试清理后重试...');
             // 清理旧数据
-            const keysToClean = Object.keys(localStorage).filter(k => 
+            const keysToClean = Object.keys(localStorage).filter(k =>
               k.includes('purchase') || k.includes('draft') || k.includes('v2')
             );
             keysToClean.forEach(k => localStorage.removeItem(k));
-            
+
             // 只保留最近的50条记录
             const trimmedHistory = history.slice(-50);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
@@ -67,7 +72,7 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
             throw storageError;
           }
         }
-        
+
         // 触发自定义事件，通知Dashboard页面更新
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('customStorageChange', {
@@ -87,7 +92,7 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
           updated_at: updatedHistory.updatedAt,
           data,
         });
-        
+
         return updatedHistory;
       }
     }
@@ -106,19 +111,19 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
     };
 
     history.unshift(newHistory);
-    
+
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-    } catch (storageError: any) {
+    } catch (storageError: unknown) {
       // 处理配额超限错误
-      if (storageError?.name === 'QuotaExceededError' || storageError?.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      if (isQuotaExceededError(storageError)) {
         console.warn('存储配额超限，尝试清理后重试...');
         // 清理旧数据
-        const keysToClean = Object.keys(localStorage).filter(k => 
+        const keysToClean = Object.keys(localStorage).filter(k =>
           k.includes('purchase') || k.includes('draft') || k.includes('v2')
         );
         keysToClean.forEach(k => localStorage.removeItem(k));
-        
+
         // 只保留最近的50条记录
         const trimmedHistory = history.slice(-50);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmedHistory));
@@ -126,7 +131,7 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
         throw storageError;
       }
     }
-    
+
     // 触发自定义事件，通知Dashboard页面更新
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('customStorageChange', {
@@ -146,7 +151,7 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
       updated_at: newHistory.updatedAt,
       data,
     });
-    
+
     return newHistory;
   } catch (error) {
     console.error('Error saving purchase history:', error);
@@ -163,7 +168,7 @@ export const getPurchaseHistory = (filters?: PurchaseHistoryFilters): PurchaseHi
       // 搜索
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
-        history = history.filter((item: PurchaseHistory) => 
+        history = history.filter((item: PurchaseHistory) =>
           item.supplierName.toLowerCase().includes(searchLower) ||
           item.orderNo.toLowerCase().includes(searchLower)
         );
@@ -227,7 +232,7 @@ export const importPurchaseHistory = (jsonData: string): boolean => {
     }
 
     const importedHistory = JSON.parse(cleanJsonData);
-    
+
     if (!Array.isArray(importedHistory)) {
       console.error('Invalid data format: expected an array');
       return false;

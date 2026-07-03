@@ -73,7 +73,7 @@ function applyStyle(doc: jsPDF, s: PdfInlineStyle) {
     s.fontBold && s.fontItalic ? 'bolditalic' :
     s.fontBold ? 'bold' :
     s.fontItalic ? 'italic' : 'normal';
-  doc.setFont(font, style as any);
+  doc.setFont(font, style);
   doc.setFontSize(s.fontSize || 12);
   const [r,g,b] = s.color ?? [0,0,0];
   doc.setTextColor(r,g,b);
@@ -95,7 +95,7 @@ function layoutLines(
   text: string,
   innerWidth: number,
   fontStyle: PdfInlineStyle,
-  lineHeight: number
+  _lineHeight: number
 ): string[] {
   const widthOf = (s: string) => doc.getTextWidth(s) * 1.01; // 1% buffer，抗抖
   applyStyle(doc, fontStyle);

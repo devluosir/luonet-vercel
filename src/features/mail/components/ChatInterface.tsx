@@ -3,20 +3,19 @@ import { useMailGeneration } from '../hooks/useMailGeneration';
 import { useMailStore } from '../state/mail.store';
 import { useCanGenerateMail, useGeneratedContent, useIsLoading } from '../state/mail.selectors';
 import { TextAreaField } from './TextAreaField';
-import { SelectField } from './SelectField';
 import { GenerateButton } from './GenerateButton';
 import { CopyButton } from './CopyButton';
-import { LANGUAGE_OPTIONS, MAIL_TYPE_OPTIONS, FORM_LABELS, PLACEHOLDERS } from '../utils/constants';
+import { FORM_LABELS, PLACEHOLDERS } from '../utils/constants';
 
 interface ChatInterfaceProps {
   showSettings: boolean;
   onToggleSettings: () => void;
 }
 
-export function ChatInterface({ showSettings, onToggleSettings }: ChatInterfaceProps) {
+export function ChatInterface({ showSettings: _showSettings, onToggleSettings: _onToggleSettings }: ChatInterfaceProps) {
   const { field } = useMailForm();
   const { generateMail, isLoading } = useMailGeneration();
-  const { mailType, setMailType, activeTab } = useMailStore();
+  const { mailType: _mailType, setMailType: _setMailType, activeTab } = useMailStore();
   const canGenerate = useCanGenerateMail();
   const generatedContent = useGeneratedContent();
   const isGenerating = useIsLoading();
@@ -27,27 +26,27 @@ export function ChatInterface({ showSettings, onToggleSettings }: ChatInterfaceP
     return (
       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
         <div className={`max-w-[80%] rounded-3xl p-6 ${
-          isUser 
-            ? 'bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 text-white shadow-xl' 
+          isUser
+            ? 'bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 text-white shadow-xl'
             : 'bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-gray-800 dark:via-gray-700 dark:to-gray-600 text-gray-900 dark:text-gray-100 shadow-lg border border-gray-200 dark:border-gray-600'
         }`}>
           <div className="whitespace-pre-wrap text-sm leading-relaxed">
             {content.split('\n\n').map((paragraph, index) => (
               <div key={index} className={`
-                ${paragraph.startsWith('[Subject]') || paragraph.startsWith('[主题]') 
-                  ? 'text-base font-bold tracking-tight mb-3' 
+                ${paragraph.startsWith('[Subject]') || paragraph.startsWith('[主题]')
+                  ? 'text-base font-bold tracking-tight mb-3'
                   : paragraph.startsWith('[English]') || paragraph.startsWith('[中文]')
                     ? 'text-sm font-semibold border-b border-gray-300 dark:border-gray-600 pb-2 mb-3'
                     : paragraph.trim().length === 0
                       ? 'hidden'
                       : 'text-sm leading-relaxed'
                 }
-                ${(paragraph.startsWith('[English]') || paragraph.startsWith('[中文]')) 
-                  ? 'mt-3 first:mt-0' 
+                ${(paragraph.startsWith('[English]') || paragraph.startsWith('[中文]'))
+                  ? 'mt-3 first:mt-0'
                   : ''
                 }
               `}>
-                {paragraph.startsWith('[') && paragraph.endsWith(']') 
+                {paragraph.startsWith('[') && paragraph.endsWith(']')
                   ? paragraph.slice(1, -1) // 移除方括号
                   : paragraph
                 }
@@ -82,7 +81,7 @@ export function ChatInterface({ showSettings, onToggleSettings }: ChatInterfaceP
                 </div>
               </div>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                {activeTab === 'mail' 
+                {activeTab === 'mail'
                   ? '请告诉我您想要写什么邮件，我会帮您生成专业的邮件内容。'
                   : '请粘贴需要回复的邮件内容，我会帮您生成合适的回复。'
                 }
@@ -139,7 +138,7 @@ export function ChatInterface({ showSettings, onToggleSettings }: ChatInterfaceP
               rows={4}
             />
           </div>
-          
+
           {/* 操作按钮区域 - 放在输入框下方，右对齐 */}
           <div className="flex justify-end items-center gap-3">
             {/* 生成按钮 - 主要操作按钮 */}

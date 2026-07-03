@@ -10,8 +10,8 @@ export interface PermissionLogData {
   permissionsCount?: number;
   moduleId?: string;
   action?: string;
-  error?: any;
-  [key: string]: any;
+  error?: unknown;
+  [key: string]: unknown;
 }
 
 /**
@@ -26,9 +26,9 @@ export const logPermission = (action: string, data: PermissionLogData = {}) => {
     action,
     ...data
   };
-  
+
   console.log(`[权限系统] ${action}`, logData);
-  
+
   // 在开发环境下，可以添加更详细的日志
   if (process.env.NODE_ENV === 'development') {
     console.group(`[权限系统] ${action}`);
@@ -44,7 +44,7 @@ export const logPermission = (action: string, data: PermissionLogData = {}) => {
  * @param error 错误信息
  * @param context 上下文数据
  */
-export const logPermissionError = (action: string, error: any, context: PermissionLogData = {}) => {
+export const logPermissionError = (action: string, error: unknown, context: PermissionLogData = {}) => {
   const timestamp = new Date().toISOString();
   const logData = {
     timestamp,
@@ -53,9 +53,9 @@ export const logPermissionError = (action: string, error: any, context: Permissi
     stack: error instanceof Error ? error.stack : undefined,
     ...context
   };
-  
+
   console.warn(`[权限系统] ${action} - 错误`, logData);
-  
+
   // 在开发环境下，显示完整错误信息
   if (process.env.NODE_ENV === 'development') {
     console.group(`[权限系统] ${action} - 错误详情`);
@@ -77,11 +77,11 @@ export const logPermissionPerformance = (action: string, startTime: number, data
     duration: `${duration}ms`,
     ...data
   };
-  
+
   if (duration > 1000) {
     // 超过1秒的操作记录为警告
     console.warn(`[权限系统] ${action} - 性能警告`, logData);
   } else {
     logPermission(`${action} - 完成`, logData);
   }
-}; 
+};

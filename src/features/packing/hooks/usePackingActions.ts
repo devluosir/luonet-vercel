@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { PackingData } from '../types';
-import { calculatePackingTotals } from '../utils/calculations';
 import { formatExcelFileName } from '../utils/formatters';
 import { savePackingHistory } from '../services/packingHistoryService';
 import { downloadPdf, previewPdf } from '../services/packingPdfService';
@@ -18,10 +17,10 @@ export const usePackingActions = (data: PackingData, editId?: string) => {
     try {
       // 获取编辑 ID（从 URL 或 state）
       const existingId = editId || (pathname?.startsWith('/packing/edit/') ? pathname.split('/').pop() : undefined);
-      
+
       // 保存记录
-      const saveResult = await savePackingHistory(data, existingId);
-      
+      const _saveResult = await savePackingHistory(data, existingId);
+
       // 生成PDF
       await downloadPdf(data);
     } catch (error) {
@@ -49,10 +48,10 @@ export const usePackingActions = (data: PackingData, editId?: string) => {
     try {
       // 获取编辑 ID（从 URL 或 state）
       const existingId = editId || (pathname?.startsWith('/packing/edit/') ? pathname.split('/').pop() : undefined);
-      
+
       // 保存记录
       const saveResult = await savePackingHistory(data, existingId);
-      
+
       if (saveResult) {
         setSaveMessage('保存成功');
         // 如果是新记录，更新 editId
@@ -82,14 +81,14 @@ export const usePackingActions = (data: PackingData, editId?: string) => {
         if (!value || isNaN(value)) return '';
         return Number(value.toFixed(2)).toString();
       };
-      
+
       // 准备Excel数据
       const excelData = [];
-      
+
       // 添加标题行
       const headers = ['No.', 'Description', 'HS Code', 'Quantity', 'Unit', 'Unit Price', 'Total Price', 'Net Weight', 'Gross Weight', 'Package Qty', 'Dimensions'];
       excelData.push(headers);
-      
+
       // 添加商品数据
       data.items.forEach((item) => {
         const row = [
@@ -107,7 +106,7 @@ export const usePackingActions = (data: PackingData, editId?: string) => {
         ];
         excelData.push(row);
       });
-      
+
       // 添加其他费用（如果显示价格）
       if (data.showPrice && data.otherFees && data.otherFees.length > 0) {
         excelData.push([]); // 空行
@@ -116,12 +115,12 @@ export const usePackingActions = (data: PackingData, editId?: string) => {
           excelData.push([fee.description, '', '', '', '', '', formatNumber(fee.amount)]);
         });
       }
-      
+
       // 转换为CSV格式
-      const csvContent = excelData.map(row => 
+      const csvContent = excelData.map(row =>
         row.map(cell => `"${cell || ''}"`).join(',')
       ).join('\n');
-      
+
       // 创建并下载文件
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');

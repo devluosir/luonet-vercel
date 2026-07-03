@@ -36,6 +36,12 @@ interface ItemsTableProps {
   onChange?: (data: QuotationData) => void; // legacy
 }
 
+type ImportedQuotationRow = Partial<Pick<LineItem, 'partName' | 'description' | 'quantity' | 'unit' | 'unitPrice' | 'remarks'>>;
+
+type CaretStyle = CSSStyleDeclaration & {
+  webkitCaretColor?: string;
+};
+
 const highlightClass = 'text-red-500 dark:text-red-400 font-medium';
 
 const iosCaretStyle = { caretColor: '#007AFF' } as React.CSSProperties;
@@ -83,8 +89,8 @@ const calculateMergedCells = (
       : '';
 
     // 修复合并逻辑：只有相同且非空的内容才合并，空行不合并
-    const shouldEndMerge = !currentItem || 
-      (currentContentValue !== prevContent) || 
+    const shouldEndMerge = !currentItem ||
+      (currentContentValue !== prevContent) ||
       (prevContent === '' && currentContentValue === ''); // 空行不合并
 
     if (shouldEndMerge) {
@@ -114,12 +120,12 @@ const getMergedCellInfo = (rowIndex: number, merged: MergedCellInfo[]) => {
   return merged.find((cell) => cell.startRow === rowIndex) || null;
 };
 
-const shouldRenderDescriptionCell = (rowIndex: number, merged: MergedCellInfo[]) => {
+const _shouldRenderDescriptionCell = (_rowIndex: number, _merged: MergedCellInfo[]) => {
   // Description列取消合并单元格功能，始终显示所有单元格
   return true;
 };
 
-const getMergedDescriptionCellInfo = (rowIndex: number, merged: MergedCellInfo[]) => {
+const _getMergedDescriptionCellInfo = (_rowIndex: number, _merged: MergedCellInfo[]) => {
   // Description列取消合并单元格功能，始终返回null
   return null;
 };
@@ -310,8 +316,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   onChange,
 }) => {
   // safe getters
-  const getDesc = (it: any) => (it.description ?? it.partName ?? '').trim();
-  const getRemark = (it: any) => (it.remarks ?? it.remark ?? '').trim();
+  const getDesc = (it: Partial<LineItem>) => (it.description ?? it.partName ?? '').trim();
+  const getRemark = (it: Partial<LineItem> & { remark?: string }) => (it.remarks ?? it.remark ?? '').trim();
 
   const { visibleCols, isHydrated } = useTablePrefsHydrated();
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -335,12 +341,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   useEffect(() => onRemarksMergeModeChange?.(remarksMergeMode), [remarksMergeMode, onRemarksMergeModeChange]);
 
   const effectiveVisibleCols = isHydrated ? visibleCols : ['partName', 'quantity', 'unit', 'unitPrice', 'amount', 'remarks'];
-  
+
   // 使用统一的单位处理hook
-  const { 
-    handleItemChange: handleUnitItemChange, 
-    getDisplayUnit, 
-    allUnits 
+  const {
+    handleItemChange: handleUnitItemChange,
+    getDisplayUnit: _getDisplayUnit,
+    allUnits: _allUnits
   } = useUnitHandler(data.customUnits || []);
 
   const updateItems = useCallback(
@@ -385,9 +391,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   // 用于首次渲染检测的refs
   const isFirstRenderRef = useRef(true);
   const isFirstRenderRemarksRef = useRef(true);
+  const mergedRemarksLength = mergedRemarks?.length ?? 0;
+  const mergedDescriptionsLength = mergedDescriptions?.length ?? 0;
+  const itemsLength = data.items?.length ?? 0;
 
   // 只在开发环境且首次渲染且有解析器合并信息时显示调试信息
-  if (process.env.NODE_ENV === 'development' && ((mergedRemarks?.length ?? 0) > 0 || (mergedDescriptions?.length ?? 0) > 0)) {
+  if (process.env.NODE_ENV === 'development' && (mergedRemarksLength > 0 || mergedDescriptionsLength > 0)) {
     if (isFirstRenderRef.current) {
       console.info('[IT] props merges:', mergedRemarks?.length, mergedDescriptions?.length);
       console.info('[IT] items[0].remarks]:', getRemark(data.items[0] ?? {}));
@@ -398,30 +407,30 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
   // 只在有解析器合并信息时才计算合并键
   const remarksKey = useMemo(() => {
-    if ((mergedRemarks?.length ?? 0) > 0) {
+    if (mergedRemarksLength > 0) {
       return buildMergeKey(data.items, 'remarks');
     }
     return '';
-  }, [mergedRemarks?.length ?? 0, data.items]);
-  
-  const descKey = useMemo(() => {
-    if ((mergedDescriptions?.length ?? 0) > 0) {
+  }, [mergedRemarksLength, data.items]);
+
+  const _descKey = useMemo(() => {
+    if (mergedDescriptionsLength > 0) {
       return buildMergeKey(data.items, 'description');
     }
     return '';
-  }, [mergedDescriptions?.length ?? 0, data.items]);
+  }, [mergedDescriptionsLength, data.items]);
 
   const mergedRemarksCells = useMemo(() => {
     // 只在有解析器合并信息时才进行合并检测
-    if ((mergedRemarks?.length ?? 0) > 0) {
+    if (mergedRemarksLength > 0) {
       if (process.env.NODE_ENV === 'development') console.log('[ItemsTable] 使用解析器合并:', mergedRemarks);
       return mergedRemarks.map((m) => ({ startRow: m.startRow, endRow: m.endRow, content: m.content, isMerged: true }));
     }
-    
+
     // 如果没有解析器合并信息，根据合并模式进行处理
     const items = data.items || [];
     if (items.length === 0) return [];
-    
+
     if (remarksMergeMode === 'manual') {
       const result = items.map((it, idx) => ({ startRow: idx, endRow: idx, content: it.remarks || '', isMerged: false }));
       manualMergedCells.remarks.forEach((cell) => {
@@ -434,15 +443,15 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       // 保持顺序
       return result.sort((a, b) => a.startRow - b.startRow);
     }
-    
+
     // 自动模式下，使用calculateMergedCells函数进行合并检测
     return calculateMergedCells(items, 'auto', 'remarks');
-  }, [mergedRemarks?.length ?? 0, remarksKey, remarksMergeMode, manualMergedCells.remarks, data.items]);
+  }, [mergedRemarksLength, mergedRemarks, remarksMergeMode, manualMergedCells.remarks, data.items]);
 
   const mergedDescriptionCells = useMemo(() => {
     // 暂时禁用description列的合并单元格功能
     // 只在有解析器合并信息时才显示日志
-    if (process.env.NODE_ENV === 'development' && (mergedDescriptions?.length ?? 0) > 0) {
+    if (process.env.NODE_ENV === 'development' && mergedDescriptionsLength > 0) {
       if (isFirstRenderRef.current) {
         console.log('[ItemsTable] 检测到Description解析器合并信息:', mergedDescriptions);
         console.log('[ItemsTable] Description合并单元格功能已禁用');
@@ -450,11 +459,11 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       }
     }
     return [];
-  }, [mergedDescriptions?.length ?? 0, data.items]);
+  }, [mergedDescriptionsLength, mergedDescriptions]);
 
   // 只在有解析器合并信息时才执行useEffect
   useEffectOncePerChange(`${remarksKey}|${remarksMergeMode}`, () => {
-    if ((mergedRemarks?.length ?? 0) > 0) {
+    if (mergedRemarksLength > 0) {
       if (process.env.NODE_ENV === 'development' && isFirstRenderRemarksRef.current) {
         console.log('[ItemsTable] 检测到解析器合并信息:', mergedRemarks);
         console.log('[ItemsTable] Remarks合并单元格:', mergedRemarksCells);
@@ -496,10 +505,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       const h = Math.max(28, Math.min(ta.scrollHeight, 200));
       ta.style.height = `${h}px`;
     });
-  }, [data.items?.length ?? 0, mergedRemarksCells, mergedDescriptionCells]);
+  }, [itemsLength, mergedRemarksCells, mergedDescriptionCells]);
 
   const onFocusIOS = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const el = e.target as HTMLElement & { style: any };
+    const el = e.target as HTMLElement & { style: CaretStyle };
     el.style.caretColor = isDarkMode ? '#0A84FF' : '#007AFF';
     el.style.webkitCaretColor = isDarkMode ? '#0A84FF' : '#007AFF';
   };
@@ -513,7 +522,8 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
     if (field === 'quantity' || field === 'unitPrice') {
       const num = Number(value);
-      (updated as any)[field] = num;
+      const numericUpdate = { ...updated, [field]: num } as LineItem;
+      Object.assign(updated, numericUpdate);
       updated.amount = (updated.quantity ?? 0) * (updated.unitPrice ?? 0);
       if (field === 'quantity' && typeof updated.unit === 'string') {
         // 使用统一的单位处理逻辑
@@ -521,7 +531,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
         updated.unit = result.unit;
       }
     } else {
-      (updated as any)[field] = value as any;
+      Object.assign(updated, { [field]: value } as Partial<LineItem>);
     }
 
     newItems[index] = updated;
@@ -626,12 +636,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
     const collect = (col: 'description' | 'remarks') => {
       let start = 0;
-      let cur = (processed[0] as any)?.[col] || '';
+      let cur = processed[0]?.[col] || '';
       for (let i = 1; i <= processed.length; i++) {
         const currentItem = processed[i];
         const prevItem = processed[i - 1];
-        const prevVal = (prevItem as any)?.[col] || '';
-        const curVal = currentItem ? ((currentItem as any)?.[col] || '') : '';
+        const prevVal = prevItem?.[col] || '';
+        const curVal = currentItem ? (currentItem[col] || '') : '';
         const shouldEnd = !currentItem || curVal !== prevVal || !curVal || !prevVal;
         if (shouldEnd) {
           if (i - 1 > start && `${cur}`.trim()) {
@@ -655,7 +665,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     }
   };
 
-  const handleInsertImported = (rows: any[], replaceMode = false) => {
+  const handleInsertImported = (rows: ImportedQuotationRow[], replaceMode = false) => {
     let maxId = replaceMode ? 0 : (data.items || []).reduce((m, it) => Math.max(m, it.id), 0);
     const mapped: LineItem[] = rows.map((r, index) => {
       const quantity = Number(r.quantity) || 0;
@@ -714,14 +724,14 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     if (column === 'description') {
       return;
     }
-    
+
     if (startRow === endRow) return;
     const field = column;
     const contents: string[] = [];
     for (let i = startRow; i <= endRow; i++) {
       const item = data.items?.[i];
       if (!item) continue;
-      const content = ((item as any)?.[field] || '').trim();
+      const content = (item?.[field] || '').trim();
       if (content) contents.push(content);
     }
     const mergedContent = contents.length > 1 ? contents.join('\n') : (contents[0] || '');
@@ -732,12 +742,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
   const splitMergedCell = (rowIndex: number) => {
     const column = contextMenu?.column || 'remarks';
-    
+
     // 暂时禁用description列的拆分功能
     if (column === 'description') {
       return;
     }
-    
+
     // 由于description列已禁用，这里只处理remarks列
     const mergedInfo = getMergedCellInfo(rowIndex, mergedRemarksCells);
     if (!mergedInfo || !mergedInfo.isMerged) return;
@@ -751,12 +761,12 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
 
   const mergeToRow = (startRow: number, endRow: number) => {
     const column = contextMenu?.column || 'remarks';
-    
+
     // 暂时禁用description列的合并功能
     if (column === 'description') {
       return;
     }
-    
+
     const rowIndex = contextMenu?.rowIndex ?? 0;
     const existing = findContainingMergedCell(rowIndex, column);
     if (existing) {
@@ -786,7 +796,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
   const qtyInputProps = (index: number) => {
     const item = data.items?.[index];
     if (!item) return { value: '', onChange: () => {}, onFocus: () => {}, onBlur: () => {} };
-    
+
     return {
       value: editingQtyIndex === index ? editingQtyAmount : String(item.quantity),
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -892,7 +902,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
           }
 
           // Description列已取消合并功能，不再需要合并信息
-          const descIsMerged = false;
+          const _descIsMerged = false;
 
           const remarkMergedInfo = getMergedCellInfo(index, mergedRemarksCells);
           const remarkIsMerged = !!remarkMergedInfo?.isMerged;
@@ -1159,7 +1169,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 <tbody className="bg-white/90 dark:bg-[#1C1C1E]/90">
                   {(data.items || []).map((item, index) => {
                     // Description列已取消合并功能，不再需要合并信息
-                    const descIsMerged = false;
+                    const _descIsMerged = false;
 
                     const remarkMergedInfo = getMergedCellInfo(index, mergedRemarksCells);
                     const remarkRowSpan = remarkMergedInfo ? remarkMergedInfo.endRow - remarkMergedInfo.startRow + 1 : 1;

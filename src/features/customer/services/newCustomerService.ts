@@ -1,9 +1,12 @@
 import { FollowUpService } from './timelineService';
-import type { Customer } from '../types';
-
 const NEW_CUSTOMER_STORAGE_KEY = 'new_customer_tracking';
 
-interface NewCustomerRecord {
+interface CustomerHistoryRecord {
+  customerName?: string;
+  consigneeName?: string;
+}
+
+export interface NewCustomerRecord {
   customerId: string;
   customerName: string;
   firstContactDate: string;
@@ -59,7 +62,7 @@ export class NewCustomerService {
   // 添加新客户记录
   static addNewCustomer(customerName: string, source?: string): NewCustomerRecord {
     const allCustomers = this.getAllNewCustomers();
-    
+
     // 检查是否已存在
     const existingCustomer = allCustomers.find(c => c.customerName === customerName);
     if (existingCustomer) {
@@ -90,15 +93,15 @@ export class NewCustomerService {
   static updateNewCustomer(customerName: string, updates: Partial<NewCustomerRecord>): NewCustomerRecord | null {
     const allCustomers = this.getAllNewCustomers();
     const index = allCustomers.findIndex(c => c.customerName === customerName);
-    
+
     if (index === -1) return null;
-    
+
     allCustomers[index] = {
       ...allCustomers[index],
       ...updates,
       updatedAt: new Date().toISOString()
     };
-    
+
     setLocalStorageJSON(NEW_CUSTOMER_STORAGE_KEY, allCustomers);
     return allCustomers[index];
   }
@@ -107,9 +110,9 @@ export class NewCustomerService {
   static getCustomersNeedingFollowUp(): NewCustomerRecord[] {
     const allCustomers = this.getAllNewCustomers();
     const now = new Date();
-    
+
     return allCustomers
-      .filter(customer => 
+      .filter(customer =>
         customer.followUpStage !== 'closed' &&
         (!customer.nextFollowUpDate || new Date(customer.nextFollowUpDate) <= now)
       )
@@ -142,10 +145,10 @@ export class NewCustomerService {
       // 从报价单历史记录中识别新客户
       const { getQuotationHistory } = require('@/utils/quotationHistory');
       const quotationHistory = getQuotationHistory();
-      
+
       const newCustomers: NewCustomerRecord[] = [];
-      
-      quotationHistory.forEach((item: any) => {
+
+      quotationHistory.forEach((item: CustomerHistoryRecord) => {
         if (item.customerName && !this.isNewCustomer(item.customerName)) {
           const newCustomer = this.addNewCustomer(item.customerName, 'quotation_history');
           newCustomers.push(newCustomer);
@@ -155,8 +158,8 @@ export class NewCustomerService {
       // 从装箱单历史记录中识别新客户
       const { getPackingHistory } = require('@/utils/packingHistory');
       const packingHistory = getPackingHistory();
-      
-      packingHistory.forEach((item: any) => {
+
+      packingHistory.forEach((item: CustomerHistoryRecord) => {
         if (item.consigneeName && !this.isNewCustomer(item.consigneeName)) {
           const newCustomer = this.addNewCustomer(item.consigneeName, 'packing_history');
           newCustomers.push(newCustomer);
@@ -166,8 +169,8 @@ export class NewCustomerService {
       // 从发票历史记录中识别新客户
       const { getInvoiceHistory } = require('@/utils/invoiceHistory');
       const invoiceHistory = getInvoiceHistory();
-      
-      invoiceHistory.forEach((item: any) => {
+
+      invoiceHistory.forEach((item: CustomerHistoryRecord) => {
         if (item.customerName && !this.isNewCustomer(item.customerName)) {
           const newCustomer = this.addNewCustomer(item.customerName, 'invoice_history');
           newCustomers.push(newCustomer);
@@ -185,14 +188,14 @@ export class NewCustomerService {
   static getNewCustomerStats() {
     const allCustomers = this.getAllNewCustomers();
     const now = new Date();
-    
+
     const stats = {
       total: allCustomers.length,
       active: allCustomers.filter(c => c.followUpStage !== 'closed').length,
       closed: allCustomers.filter(c => c.followUpStage === 'closed').length,
-      overdue: allCustomers.filter(c => 
-        c.followUpStage !== 'closed' && 
-        c.nextFollowUpDate && 
+      overdue: allCustomers.filter(c =>
+        c.followUpStage !== 'closed' &&
+        c.nextFollowUpDate &&
         new Date(c.nextFollowUpDate) < now
       ).length,
       thisWeek: allCustomers.filter(c => {

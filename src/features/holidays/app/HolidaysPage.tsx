@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -7,10 +6,7 @@ import { Globe, ChevronDown, Info } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { usePermissionStore } from '@/lib/permissions';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
-import {
-  HOLIDAYS_2026, CATEGORY_LABEL, RELIGION_LABEL,
-  type Holiday, type HolidayCategory, type HolidayReligion,
-} from '../data/holidays2026';
+import { HOLIDAYS_2026, CATEGORY_LABEL, type Holiday, type HolidayCategory } from '../data/holidays2026';
 
 // ── 工具函数 ──────────────────────────────────────────────────────────────────
 
