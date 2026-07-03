@@ -70,6 +70,8 @@ export async function migrateAllToD1(
     customer_name?: string;
     total_amount?: number;
     currency?: string;
+    created_at?: string;
+    updated_at?: string;
     data: unknown;
   };
 
@@ -81,6 +83,8 @@ export async function migrateAllToD1(
       customer_name: q.customerName,
       total_amount: q.totalAmount,
       currency: q.currency,
+      created_at: q.createdAt,
+      updated_at: q.updatedAt,
       data: q.data,
     })),
     ...invoices.map((i) => ({
@@ -90,6 +94,8 @@ export async function migrateAllToD1(
       customer_name: i.customerName,
       total_amount: i.totalAmount,
       currency: i.currency,
+      created_at: i.createdAt,
+      updated_at: i.updatedAt,
       data: i,
     })),
     ...packings.map((p) => ({
@@ -99,6 +105,8 @@ export async function migrateAllToD1(
       customer_name: p.consigneeName,
       total_amount: p.totalAmount,
       currency: p.currency,
+      created_at: p.createdAt,
+      updated_at: p.updatedAt,
       data: p.data,
     })),
     ...purchases.map((p) => ({
@@ -108,6 +116,8 @@ export async function migrateAllToD1(
       customer_name: p.supplierName,
       total_amount: p.totalAmount,
       currency: p.currency,
+      created_at: p.createdAt,
+      updated_at: p.updatedAt,
       data: p.data,
     })),
   ];

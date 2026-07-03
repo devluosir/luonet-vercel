@@ -51,6 +51,8 @@ export const savePackingHistory = (data: PackingData, existingId?: string): Pack
           customer_name: data.consignee.name,
           total_amount: totalAmount,
           currency: data.currency,
+          created_at: updatedHistory.createdAt,
+          updated_at: updatedHistory.updatedAt,
           data,
         });
         return updatedHistory;
@@ -94,6 +96,8 @@ export const savePackingHistory = (data: PackingData, existingId?: string): Pack
             customer_name: data.consignee.name,
             total_amount: totalAmount,
             currency: data.currency,
+            created_at: updated.createdAt,
+            updated_at: updated.updatedAt,
             data,
           });
         }
@@ -125,6 +129,8 @@ export const savePackingHistory = (data: PackingData, existingId?: string): Pack
       customer_name: data.consignee.name,
       total_amount: totalAmount,
       currency: data.currency,
+      created_at: newHistory.createdAt,
+      updated_at: newHistory.updatedAt,
       data,
     });
     return newHistory;

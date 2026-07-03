@@ -77,6 +77,33 @@ function getNumber(value: unknown): number {
   return typeof value === 'number' ? value : 0;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function normalizeTimestamp(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+
+  const trimmed = value.trim();
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)
+    ? `${trimmed.replace(' ', 'T')}Z`
+    : trimmed;
+
+  return Number.isNaN(new Date(normalized).getTime()) ? undefined : normalized;
+}
+
+function getDocumentTimestamp(doc: D1Doc, key: 'createdAt' | 'updatedAt', dbKey: 'created_at' | 'updated_at'): string {
+  const data = asRecord(doc.data);
+  const nestedData = asRecord(data.data);
+
+  return normalizeTimestamp(data[key])
+    ?? normalizeTimestamp(nestedData[key])
+    ?? normalizeTimestamp(doc[dbKey])
+    ?? new Date().toISOString();
+}
+
 /**
  * 将本地各类型单据历史中 D1 尚未收录的记录推送到 D1。
  * 参照 inquiryService.pushLocalToD1 模式。
@@ -127,6 +154,8 @@ async function pushLocalDocsToD1(deletedIds: Set<string>): Promise<void> {
       customer_name: getString(item.customerName),
       total_amount: getNumber(item.totalAmount),
       currency: getString(item.currency) || 'USD',
+      created_at: getString(item.createdAt),
+      updated_at: getString(item.updatedAt),
       data: item.data,
     });
   }
@@ -142,6 +171,8 @@ async function pushLocalDocsToD1(deletedIds: Set<string>): Promise<void> {
       customer_name: getString(item.customerName),
       total_amount: getNumber(item.totalAmount),
       currency: getString(item.currency) || 'USD',
+      created_at: getString(item.createdAt),
+      updated_at: getString(item.updatedAt),
       data: item,
     });
   }
@@ -157,6 +188,8 @@ async function pushLocalDocsToD1(deletedIds: Set<string>): Promise<void> {
       customer_name: getString(item.consigneeName),
       total_amount: getNumber(item.totalAmount),
       currency: getString(item.currency) || 'USD',
+      created_at: getString(item.createdAt),
+      updated_at: getString(item.updatedAt),
       data: item.data,
     });
   }
@@ -172,6 +205,8 @@ async function pushLocalDocsToD1(deletedIds: Set<string>): Promise<void> {
       customer_name: getString(item.supplierName),
       total_amount: getNumber(item.totalAmount),
       currency: getString(item.currency) || 'USD',
+      created_at: getString(item.createdAt),
+      updated_at: getString(item.updatedAt),
       data: item.data,
     });
   }
@@ -226,8 +261,8 @@ function docToQuotationHistory(doc: D1Doc) {
     customerName: doc.customer_name || '',
     totalAmount: doc.total_amount || 0,
     currency: doc.currency || 'USD',
-    createdAt: doc.created_at,
-    updatedAt: doc.updated_at,
+    createdAt: getDocumentTimestamp(doc, 'createdAt', 'created_at'),
+    updatedAt: getDocumentTimestamp(doc, 'updatedAt', 'updated_at'),
     data: doc.data,
   };
 }
@@ -241,8 +276,8 @@ function docToInvoiceHistory(doc: D1Doc) {
     customerName: doc.customer_name || '',
     totalAmount: doc.total_amount || 0,
     currency: doc.currency || 'USD',
-    createdAt: doc.created_at,
-    updatedAt: doc.updated_at,
+    createdAt: getDocumentTimestamp(doc, 'createdAt', 'created_at'),
+    updatedAt: getDocumentTimestamp(doc, 'updatedAt', 'updated_at'),
     data: nestedData ?? doc.data,
   };
 }
@@ -260,8 +295,8 @@ function docToPackingHistory(doc: D1Doc) {
     totalAmount: doc.total_amount || 0,
     currency: doc.currency || 'USD',
     documentType,
-    createdAt: doc.created_at,
-    updatedAt: doc.updated_at,
+    createdAt: getDocumentTimestamp(doc, 'createdAt', 'created_at'),
+    updatedAt: getDocumentTimestamp(doc, 'updatedAt', 'updated_at'),
     data: doc.data,
   };
 }
@@ -273,8 +308,8 @@ function docToPurchaseHistory(doc: D1Doc) {
     orderNo: doc.doc_no || '',
     totalAmount: doc.total_amount || 0,
     currency: doc.currency || 'USD',
-    createdAt: doc.created_at,
-    updatedAt: doc.updated_at,
+    createdAt: getDocumentTimestamp(doc, 'createdAt', 'created_at'),
+    updatedAt: getDocumentTimestamp(doc, 'updatedAt', 'updated_at'),
     data: doc.data,
   };
 }

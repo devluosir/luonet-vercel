@@ -61,6 +61,28 @@ function parseJsonData<T>(value: string | null, fallback: T): T {
   }
 }
 
+function normalizeTimestamp(value: unknown): string | null {
+  if (typeof value !== 'string' || !value.trim()) return null;
+
+  const trimmed = value.trim();
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)
+    ? `${trimmed.replace(' ', 'T')}Z`
+    : trimmed;
+  const timestamp = new Date(normalized);
+
+  return Number.isNaN(timestamp.getTime()) ? null : timestamp.toISOString();
+}
+
+function getBodyTimestamp(body: Record<string, unknown>, snakeKey: string, camelKey: string): string | null {
+  const data = body.data && typeof body.data === 'object' && !Array.isArray(body.data)
+    ? body.data as Record<string, unknown>
+    : {};
+
+  return normalizeTimestamp(body[snakeKey])
+    ?? normalizeTimestamp(body[camelKey])
+    ?? normalizeTimestamp(data[camelKey]);
+}
+
 type DocumentRow = {
   id: string;
   user_id: string;
@@ -1273,9 +1295,11 @@ async function handleCreateDocument(request: Request, env: Env): Promise<Respons
     }
 
     const id = body.id || crypto.randomUUID();
+    const now = new Date().toISOString();
+    const createdAt = getBodyTimestamp(body, 'created_at', 'createdAt') || now;
+    const updatedAt = getBodyTimestamp(body, 'updated_at', 'updatedAt') || createdAt;
     const dataText = typeof data === 'string' ? data : JSON.stringify(data);
 
-    const now = new Date().toISOString();
     await env.USERS_DB.prepare(`
       INSERT OR REPLACE INTO Document (
         id, user_id, type, doc_no, customer_name, customer_id, contact_id, total_amount, currency, status, data,
@@ -1293,8 +1317,8 @@ async function handleCreateDocument(request: Request, env: Env): Promise<Respons
       body.currency || 'USD',
       body.status || 'active',
       dataText,
-      body.created_at || now,
-      now
+      createdAt,
+      updatedAt
     ).run();
 
     const created = await env.USERS_DB.prepare(`
@@ -1320,6 +1344,8 @@ async function handleUpdateDocument(request: Request, env: Env): Promise<Respons
     const userId = body.user_id;
     if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
 
+    const updatedAt = getBodyTimestamp(body, 'updated_at', 'updatedAt') || new Date().toISOString();
+    const createdAt = getBodyTimestamp(body, 'created_at', 'createdAt');
     const fields: string[] = [];
     const values: Array<string | number | null> = [];
     const updatableFields = [
@@ -1344,14 +1370,19 @@ async function handleUpdateDocument(request: Request, env: Env): Promise<Respons
       }
     }
 
+    if (createdAt) {
+      fields.push('created_at = ?');
+      values.push(createdAt);
+    }
+
     if (fields.length === 0) {
       return jsonResponse({ error: '没有可更新字段' }, 400);
     }
 
-    values.push(userId, documentId);
+    values.push(updatedAt, userId, documentId);
     const result = await env.USERS_DB.prepare(`
       UPDATE Document
-      SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+      SET ${fields.join(', ')}, updated_at = ?
       WHERE user_id = ? AND id = ?
     `).bind(...values).run();
 

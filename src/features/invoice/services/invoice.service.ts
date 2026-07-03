@@ -50,6 +50,8 @@ export class InvoiceService {
               customer_name: data.to,
               total_amount: totalAmount,
               currency: data.currency,
+              created_at: updatedItem.createdAt,
+              updated_at: updatedItem.updatedAt,
               data: updatedItem,
             });
           }
@@ -63,6 +65,7 @@ export class InvoiceService {
         
         if (existingInvoice) {
           // 如果存在相同发票号，更新现有记录
+          const nextUpdatedAt = new Date().toISOString();
           const updatedHistory = history.map(item => {
             if (item.id === existingInvoice.id) {
               return {
@@ -72,7 +75,7 @@ export class InvoiceService {
                 totalAmount: totalAmount,
                 currency: data.currency,
                 data: data,
-                updatedAt: new Date().toISOString()
+                updatedAt: nextUpdatedAt
               };
             }
             return item;
@@ -81,15 +84,20 @@ export class InvoiceService {
           const saved = saveInvoiceHistory(updatedHistory);
           if (saved) {
             // D1 双写（fire-and-forget）
-            d1SyncDocument('update', {
-              id: existingInvoice.id,
-              type: 'invoice',
-              doc_no: data.invoiceNo,
-              customer_name: data.to,
-              total_amount: totalAmount,
-              currency: data.currency,
-              data: { ...existingInvoice, data, updatedAt: new Date().toISOString() },
-            });
+            const updatedItem = updatedHistory.find(item => item.id === existingInvoice.id);
+            if (updatedItem) {
+              d1SyncDocument('update', {
+                id: existingInvoice.id,
+                type: 'invoice',
+                doc_no: data.invoiceNo,
+                customer_name: data.to,
+                total_amount: totalAmount,
+                currency: data.currency,
+                created_at: updatedItem.createdAt,
+                updated_at: updatedItem.updatedAt,
+                data: updatedItem,
+              });
+            }
             return { 
               success: true, 
               message: '保存成功',

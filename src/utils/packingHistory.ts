@@ -132,6 +132,8 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
           customer_name: updatedHistory.consigneeName,
           total_amount: totalAmount,
           currency: data.currency,
+          created_at: updatedHistory.createdAt,
+          updated_at: updatedHistory.updatedAt,
           data: dataWithVisibleCols,
         });
         
@@ -193,15 +195,20 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
         }
 
         // D1 双写（fire-and-forget）
-        d1SyncDocument('update', {
-          id: existingPacking.id,
-          type: 'packing',
-          doc_no: data.invoiceNo || data.orderNo || '',
-          customer_name: data.consignee.name,
-          total_amount: totalAmount,
-          currency: data.currency,
-          data: dataWithVisibleCols,
-        });
+        const updated = updatedHistory.find(item => item.id === existingPacking.id);
+        if (updated) {
+          d1SyncDocument('update', {
+            id: updated.id,
+            type: 'packing',
+            doc_no: data.invoiceNo || data.orderNo || '',
+            customer_name: data.consignee.name,
+            total_amount: totalAmount,
+            currency: data.currency,
+            created_at: updated.createdAt,
+            updated_at: updated.updatedAt,
+            data: dataWithVisibleCols,
+          });
+        }
         
         return updatedHistory.find(item => item.id === existingPacking.id) || null;
       }
@@ -259,6 +266,8 @@ export const savePackingHistory = (data: PackingData, existingId?: string) => {
       customer_name: newHistory.consigneeName,
       total_amount: totalAmount,
       currency: data.currency,
+      created_at: newHistory.createdAt,
+      updated_at: newHistory.updatedAt,
       data: dataWithVisibleCols,
     });
     

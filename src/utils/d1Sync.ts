@@ -21,6 +21,8 @@ export interface D1DocumentPayload {
   contact_id?: string;
   total_amount?: number;
   currency?: string;
+  created_at?: string;
+  updated_at?: string;
   data: unknown;
 }
 

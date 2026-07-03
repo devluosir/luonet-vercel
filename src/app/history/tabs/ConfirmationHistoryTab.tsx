@@ -202,7 +202,7 @@ export default function ConfirmationHistoryTab({
             className="xl:flex w-40 flex-shrink-0 font-semibold pl-2 text-left hover:text-green-600 dark:hover:text-green-400 transition-colors items-center group whitespace-nowrap text-gray-900 dark:text-white hidden"
           >
             创建时间
-            <span className="ml-1 flex items-center">{renderSortIcon('updatedAt')}</span>
+            <span className="ml-1 flex items-center">{renderSortIcon('createdAt')}</span>
           </button>
           <div className="w-10 sm:w-32 flex-shrink-0 flex items-center justify-center font-semibold text-gray-900 dark:text-white">
             操作
@@ -251,12 +251,12 @@ export default function ConfirmationHistoryTab({
                 </div>
                 <div className="hidden lg:block w-40 flex-shrink-0">
                   <div className="text-sm text-gray-900 dark:text-white">
-                    {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
+                    {format(new Date(item.updatedAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                   </div>
                 </div>
                 <div className="hidden xl:block w-40 flex-shrink-0">
                   <div className="text-sm text-gray-900 dark:text-white">
-                    {format(new Date(item.updatedAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
+                    {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                   </div>
                 </div>
                 <div className="w-10 sm:w-32 flex-shrink-0 flex items-center justify-center">

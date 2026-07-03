@@ -66,6 +66,8 @@ export const addInvoiceHistory = (data: InvoiceHistory): boolean => {
         customer_name: data.customerName,
         total_amount: data.totalAmount,
         currency: data.currency,
+        created_at: data.createdAt,
+        updated_at: data.updatedAt,
         data,
       });
     }

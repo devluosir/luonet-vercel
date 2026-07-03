@@ -246,12 +246,12 @@ export default function QuotationHistoryTab({
                 </div>
                 <div className="hidden lg:block w-40 flex-shrink-0">
                   <div className="text-sm text-gray-900 dark:text-white">
-                    {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
+                    {format(new Date(item.updatedAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                   </div>
                 </div>
                 <div className="hidden xl:block w-40 flex-shrink-0">
                   <div className="text-sm text-gray-900 dark:text-white">
-                    {format(new Date(item.updatedAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
+                    {format(new Date(item.createdAt), 'yyyy-MM-dd HH:mm', { locale: zhCN })}
                   </div>
                 </div>
                 <div className="w-10 sm:w-32 flex-shrink-0 flex items-center justify-center">

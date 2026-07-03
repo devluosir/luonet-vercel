@@ -103,6 +103,8 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
           customer_name: updatedHistory.customerName,
           total_amount: totalAmount,
           currency: data.currency,
+          created_at: updatedHistory.createdAt,
+          updated_at: updatedHistory.updatedAt,
           data: dataWithVisibleCols,
         });
         
@@ -177,6 +179,8 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
       customer_name: newHistory.customerName,
       total_amount: totalAmount,
       currency: data.currency,
+      created_at: newHistory.createdAt,
+      updated_at: newHistory.updatedAt,
       data: dataWithVisibleCols,
     });
     

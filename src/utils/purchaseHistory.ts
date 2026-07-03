@@ -83,6 +83,8 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
           customer_name: updatedHistory.supplierName,
           total_amount: totalAmount,
           currency: data.currency,
+          created_at: updatedHistory.createdAt,
+          updated_at: updatedHistory.updatedAt,
           data,
         });
         
@@ -140,6 +142,8 @@ export const savePurchaseHistory = (data: PurchaseOrderData, existingId?: string
       customer_name: newHistory.supplierName,
       total_amount: totalAmount,
       currency: data.currency,
+      created_at: newHistory.createdAt,
+      updated_at: newHistory.updatedAt,
       data,
     });
     
