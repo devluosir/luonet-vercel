@@ -13423,4 +13423,189 @@ TASK-83 把活动列表精简成"询价号、描述/客户询价编号、详情"
 
 - Markdown 文件数量从 218 份降到 177 份。
 - `docs/core/` 只保留核心入口和必要历史摘要。
+
+---
+
+## TASK-93：修复单据历史 createdAt/updatedAt 乱跳、编辑保存不下来的问题（已完成）
+
+**优先级**：🔴 高（数据正确性问题，影响所有单据类型）
+**风险**：中。改动涉及 `src/utils/d1Pull.ts`（前端合并逻辑）和 `src/worker.ts`（服务端 UPDATE 逻辑），后者需要 `npx wrangler deploy`（或走 CI 的 `deploy-worker` job）才会生效。
+
+### 背景（Roger 反馈）
+
+单据历史模块里，创建时间/修改时间会“乱跳”，而且有时候编辑保存后的内容在历史列表里又变回旧的——怀疑是 D1 同步过程影响了这些字段。
+
+排查后确认是两个独立但会相互放大的 bug，根因都在同步链路上，不是某个具体表单页面的问题。
+
+### 根因 1：`mergeIntoStorage` 对已存在于 D1 的记录不比较时间戳，无条件用远端覆盖本地
+
+`src/utils/d1Pull.ts` 第 215-254 行：
+
+```ts
+function mergeIntoStorage<T extends LocalStorageItem>(...): void {
+  if (!d1Ok) return;
+  const raw = localStorage.getItem(storageKey);
+  const existing: T[] = raw ? JSON.parse(raw) : [];
+  const activeIncoming = incoming.filter((item) => !deletedIds.has(item.id));
+  const incomingIds = new Set(activeIncoming.map((item) => item.id));
+  const map = new Map<string, T>(activeIncoming.map((item) => [item.id, item])); // D1 直接铺底
+
+  for (const item of existing) {
+    if (deletedIds.has(item.id)) continue;
+    if (incomingIds.has(item.id)) continue; // ← D1 有这条，直接跳过，本地版本被丢弃，不比较 updated_at
+    if (pendingIds.has(item.id)) {
+      map.set(item.id, item);
+    } else {
+      recordDeletedDocId(item.id);
+    }
+  }
+  ...
+}
+```
+
+`pullAllFromD1()` 会在 History 页面 mount、切回浏览器标签页（`visibilitychange`）、点击手动刷新按钮时触发（`src/features/history/app/HistoryPage.tsx` 第 98/137/147-150 行）。`d1SyncDocument` 的写入是 fire-and-forget（`src/utils/d1Sync.ts` 里 `enqueue` + 异步 `fetch`，调用方不等待），只要保存动作和下一次 `pullAllFromD1()` 之间存在时间差（比如保存后立刻跳转到历史页、切标签页、或另一个标签页同时在拉取），GET 请求就可能先于/无关于这次 PUT 落地，拿到的还是这条记录的旧快照。
+
+而 `mergeIntoStorage` 只要判断出“D1 里有这个 id”，就无条件用 D1 版本覆盖本地，完全不管这条记录是不是还有未确认的写入（`pendingIds` 目前只保护“D1 完全没有的记录”这一种情况）——于是刚保存的编辑被旧快照盖掉，表现为“改了但没存住”；下次同步成功后又会变回新值，表现为“时间/内容跳来跳去”。
+
+对照 `CODEX_TASKS.md` 里最早的设计说明（TASK-13 附近）：
+
+> 合并策略：D1 的记录若比 localStorage 中的更新（`updated_at` 更新），则覆盖；本地更新的保留
+
+现在的实现已经不再比较 `updated_at` 了，这是一个回归（regression），需要修复。
+
+### 根因 2：`handleUpdateDocument` 每次 PUT 都可能覆盖 `created_at`
+
+`src/worker.ts` 第 1337-1402 行：
+
+```ts
+const updatedAt = getBodyTimestamp(body, 'updated_at', 'updatedAt') || new Date().toISOString();
+const createdAt = getBodyTimestamp(body, 'created_at', 'createdAt');
+...
+if (createdAt) {
+  fields.push('created_at = ?');
+  values.push(createdAt);
+}
+```
+
+`created_at` 应该在 `INSERT` 之后就不可变，但这里只要 PUT 请求体带了 `created_at`/`createdAt`（客户端每次保存都会带，见 `quotationHistory.ts`/`invoiceHistory.ts`/`packingHistory.ts`/`purchaseHistory.ts` 里 `d1SyncDocument('update', { created_at: ... })`），就会用它覆盖数据库列。
+
+正常情况下这个值是客户端保留的原始 `createdAt`，覆盖是幂等的、无害的。但一旦本地 `createdAt` 因为根因 1 被污染（本地记录被一次错误的 merge 覆盖成别的时间），下次用户编辑保存时，这个被污染的值会被当作“正确的 createdAt”写回服务端——形成“本地脏数据 → 写回服务端 → 污染其他设备下次同步”的闭环，导致创建时间在多端之间反复跳变，且不会自愈。
+
+### 修复方案
+
+**改动 1：`src/utils/d1Pull.ts` —— `mergeIntoStorage` 按 `updated_at` 比较，且用 `pendingIds` 保护"D1 已有但本地有未确认写入"的记录**
+
+```ts
+function mergeIntoStorage<T extends LocalStorageItem>(
+  storageKey: string,
+  incoming: T[],
+  d1Ok: boolean,
+  pendingIds: Set<string>,
+  deletedIds: Set<string>,
+): void {
+  // D1 请求失败时不动 localStorage，避免误删本地数据
+  if (!d1Ok) return;
+
+  const raw = localStorage.getItem(storageKey);
+  const existing: T[] = raw ? JSON.parse(raw) : [];
+  const existingById = new Map(existing.map((item) => [item.id, item]));
+  const activeIncoming = incoming.filter((item) => !deletedIds.has(item.id));
+
+  const map = new Map<string, T>();
+
+  for (const remote of activeIncoming) {
+    const local = existingById.get(remote.id);
+
+    if (local && pendingIds.has(remote.id)) {
+      // 本地这条记录还有未确认落地的写入（PUT 可能仍在途或刚失败等重试），
+      // 这次 GET 拿到的 D1 快照不可信，保留本地版本，等队列重试成功后下次 pull 再对齐。
+      map.set(remote.id, local);
+      continue;
+    }
+
+    if (local) {
+      const localTime = new Date(local.updatedAt ?? local.updated_at ?? 0).getTime();
+      const remoteTime = new Date(remote.updatedAt ?? remote.updated_at ?? 0).getTime();
+      // 远端不比本地新（时间戳相等或更旧）时保留本地，避免把刚保存的编辑冲掉
+      map.set(remote.id, remoteTime > localTime ? remote : local);
+    } else {
+      map.set(remote.id, remote);
+    }
+  }
+
+  for (const item of existing) {
+    if (deletedIds.has(item.id)) continue;
+    if (map.has(item.id)) continue; // 上面已经处理过
+
+    if (pendingIds.has(item.id)) {
+      // 仍在待提交队列（本轮 flush 失败）→ 保留本地，等下次重试
+      map.set(item.id, item);
+    } else {
+      // 不在队列且 D1 没有 → 视为已在其他设备删除，不保留
+      recordDeletedDocId(item.id);
+    }
+  }
+
+  const merged = Array.from(map.values()).sort((a, b) => {
+    const ta = new Date(a.createdAt ?? a.created_at ?? 0).getTime();
+    const tb = new Date(b.createdAt ?? b.created_at ?? 0).getTime();
+    return tb - ta;
+  });
+
+  localStorage.setItem(storageKey, JSON.stringify(merged));
+}
+```
+
+**改动 2：`src/worker.ts` —— `handleUpdateDocument` 不再允许 UPDATE 修改 `created_at`**
+
+删掉 `createdAt` 相关的读取和拼接逻辑：
+
+```ts
+const updatedAt = getBodyTimestamp(body, 'updated_at', 'updatedAt') || new Date().toISOString();
+// created_at 是不可变列，UPDATE 不应该修改它——历史上这里会用请求体里的
+// created_at 覆盖数据库列，一旦客户端本地 createdAt 被脏数据污染（见 mergeIntoStorage
+// 的修复），就会把错误值写回服务端，导致创建时间在多端之间反复跳变且无法自愈。
+const fields: string[] = [];
+const values: Array<string | number | null> = [];
+```
+
+并删除下面这一段：
+
+```ts
+if (createdAt) {
+  fields.push('created_at = ?');
+  values.push(createdAt);
+}
+```
+
+客户端各 `d1SyncDocument('update', { created_at: ... })` 调用不用改，继续传 `created_at` 也没关系，服务端会忽略它。
+
+**改动 3（可选，不阻塞本次修复，作为后续优化记录）**：`created_at`/`updatedAt` 目前有三处潜在来源（D1 列、payload 顶层字段、payload.data 内嵌字段），`getDocumentTimestamp`（`d1Pull.ts`）和 `getBodyTimestamp`（`worker.ts`）都做了"任意一处有值就用"的兜底链。长期应该只以 D1 列为权威来源，`data` JSON 里不再重复存这两个字段，减少多来源不一致的可能性。这次先不动，避免一次改动范围过大。
+
+### 涉及文件
+
+| 文件 | 操作 |
+|------|------|
+| `src/utils/d1Pull.ts` | 修改 `mergeIntoStorage` 函数 |
+| `src/worker.ts` | 修改 `handleUpdateDocument` 函数，去掉 `created_at` 覆盖逻辑 |
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npm run build
+npx wrangler deploy   # worker.ts 改动需要部署才生效；CI 的 deploy-worker job 会在合并后自动跑
+```
+
+### 手工验证
+
+1. 编辑一个报价单（或任意单据类型）并保存，立刻跳转到 `/history` 页面（History 页面 mount 会触发 `pullAllFromD1`），确认刚才修改的字段和 `updatedAt` 保持不变，不会回退成保存前的旧值。
+2. 开两个标签页：标签页 A 打开表单编辑并保存，标签页 B 停留在历史页并切到前台（触发 `visibilitychange` → `pullAllFromD1`），确认标签页 B 看到的是最新数据。
+3. 同一份单据反复编辑保存 5 次以上，确认 D1 `Document` 表里这条记录的 `created_at` 全程不变（可在 Cloudflare D1 Dashboard 执行 `SELECT id, created_at, updated_at FROM Document WHERE id = '<id>'` 核对）。
+
+### 验收标准
+
+- 单据历史列表中不再出现"编辑保存后内容/时间又变回旧值"的情况。
+- 同一单据的创建时间在多次编辑、多端同步后保持不变。
+- 现有的多设备同步（A 设备创建，B 设备登录后自动出现）、删除同步、待提交队列重试等行为不受影响。
 - 后续维护以 `CURRENT_STATE.md` 作为最新事实源，避免继续新增零散过程文档。
