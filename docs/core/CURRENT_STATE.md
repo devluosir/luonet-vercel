@@ -1,9 +1,9 @@
 # Current State
 
-最后更新：2026-07-02  
-当前分支：`main`  
-当前提交：`81c65e8d`  
-应用版本：`1.2.0`（`package.json`）  
+最后更新：2026-07-03
+当前分支：`main`
+当前提交：以 `git log -1 --oneline` 为准
+应用版本：`1.2.0`（`package.json`）
 最近发布 tag：`v1.2.0`
 
 ## 定位
@@ -136,12 +136,16 @@ theme-settings
 - 分类备注保存在 `Customer.data.categoryNote`，分类保存在 `Customer.data.category`，未新增 D1 字段。
 - 客户页支持列表/卡片视图、分类筛选、搜索、详情页。
 - 客户详情活动列表显示该客户全部联络人的询价记录。
+- 客户详情活动列表会区分询价订单附加状态：辙销显示「已辙销」、悬挂显示「已悬挂」、善后显示「善后」；若询价记录带 `orderSubStatusRemark`，活动描述会追加该情况备注。
 - 询价编辑弹窗的客户/联络人显示以客户资料为准，不信任旧记录里的历史文本。
 - `CustomerContactPicker` 在多个联络人标签退化为同一公司简称时只保留一项，优先主联络人。
 
 ## 询报价与订单状态现状
 
 - 询报价记录已支持 `customerId`、`contactId` 结构化关联。
+- 询价成单后支持 `orderSubStatus` 标记：`cancelled`（辙销C）、`suspended`（悬挂P）、`followup`（善后S）。
+- 编辑询价时选择 C/P/S 标记会出现单行「情况备注」，保存到 `orderSubStatusRemark`；取消标记或清空订单编号会清空该备注。
+- 询价 Excel 导入导出包含 `订单标记`、`订单备注` 两列；D1 仍通过 `Document.data` JSON 透传，无需 schema 迁移。
 - 新增询价要求选择客户/联络人；旧记录可保留文本继续编辑。
 - 批量关联客户会写入 `customerId`、`contactId` 和规范化 `inquirer`。
 - 订单状态表可通过 `quoteStatus=has_order` 从客户详情跳转到“已成单”筛选。

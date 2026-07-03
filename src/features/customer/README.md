@@ -1,6 +1,6 @@
 # Customer Feature
 
-最后更新：2026-07-02
+最后更新：2026-07-03
 
 本模块是客户、供应商、收货人资料库的实现代码。面向业务维护的说明见 `docs/features/customer/README.md`，当前系统事实见 `docs/core/CURRENT_STATE.md`。
 
@@ -45,6 +45,7 @@ types/
 - 客户页支持客户/供应商/收货人 tab，列表/卡片视图，搜索和客户分类筛选。
 - 客户详情页显示资料、联络人、统计、活动列表和跟进。
 - 活动列表按 `customerId`、`contactId`、旧 `inquirer` 文本兜底匹配该客户全部联络人的询价。
+- 活动列表会区分询价订单附加状态：`cancelled` 显示「已辙销」、`suspended` 显示「已悬挂」、`followup` 显示「善后」；`orderSubStatusRemark` 会追加到活动描述中。
 - `CustomerContactPicker` 是询报价新增、编辑、批量关联共用的客户/联络人选择器。
 - 同一客户多个联络人标签退化为相同公司简称时，选择器只保留一项，优先主联络人。
 

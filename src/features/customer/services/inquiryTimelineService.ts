@@ -3,13 +3,19 @@ import { getDateInputValueFromInquiryNo } from '@/features/inquiry/utils/inquiry
 import type { CustomerTimelineEvent } from '../types';
 
 export interface InquiryQuoteStatusBadge {
-  label: '未报价' | '已报价' | '无法报价' | '已成单' | '已辙销';
+  label: '未报价' | '已报价' | '无法报价' | '已成单' | '已辙销' | '已悬挂' | '善后';
   className: string;
 }
 
 export function getInquiryQuoteStatusBadge(record: InquiryRecord): InquiryQuoteStatusBadge {
   if (record.orderSubStatus === 'cancelled') {
     return { label: '已辙销', className: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300' };
+  }
+  if (record.orderSubStatus === 'suspended') {
+    return { label: '已悬挂', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' };
+  }
+  if (record.orderSubStatus === 'followup') {
+    return { label: '善后', className: 'bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300' };
   }
   if (record.orderNo?.trim()) {
     return { label: '已成单', className: 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300' };
@@ -21,6 +27,13 @@ export function getInquiryQuoteStatusBadge(record: InquiryRecord): InquiryQuoteS
     return { label: '已报价', className: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' };
   }
   return { label: '未报价', className: 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' };
+}
+
+function buildInquiryActivityDescription(record: InquiryRecord): string {
+  const description = record.description || `客户询价编号：${record.customerNo}`;
+  const remark = record.orderSubStatusRemark?.trim();
+  if (!record.orderSubStatus || !remark) return description;
+  return `${description}｜${remark}`;
 }
 
 export function buildInquiryTimelineEvents(
@@ -45,7 +58,7 @@ export function buildInquiryTimelineEvents(
       customerId,
       type: 'inquiry' as const,
       title: record.inquiryNo,
-      description: record.description || `客户询价编号：${record.customerNo}`,
+      description: buildInquiryActivityDescription(record),
       date: getDateInputValueFromInquiryNo(record.inquiryNo) || record.inquiryDate,
       status: record.orderSubStatus === 'cancelled'
         ? 'cancelled' as const

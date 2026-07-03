@@ -110,6 +110,14 @@ type InquiryRecordPayload = {
   [key: string]: unknown;
 };
 
+const INQUIRY_CLEARABLE_FIELDS = [
+  'orderNo',
+  'orderSubStatus',
+  'orderSubStatusRemark',
+  'customerId',
+  'contactId',
+] as const;
+
 function serializeDocument(row: DocumentRow) {
   return {
     ...row,
@@ -1512,7 +1520,15 @@ async function handleInquiryRequest(
       ).bind(id).first<{ created_at: string; data: string | null }>();
       const createdAt = existingRow?.created_at ?? now;
       const existingData = parseJsonData<InquiryRecordPayload>(existingRow?.data ?? null, {});
-      const mergedData = { ...existingData, ...body, id, updatedAt: now };
+      const mergedData: InquiryRecordPayload = { ...existingData, ...body, id, updatedAt: now };
+      const isFullInquiryRecord = typeof body.inquiryNo === 'string'
+        && Array.isArray(body.supplierStatuses)
+        && Array.isArray(body.quotedStatuses);
+      if (isFullInquiryRecord) {
+        for (const field of INQUIRY_CLEARABLE_FIELDS) {
+          if (!(field in body)) delete mergedData[field];
+        }
+      }
       const inquiryNo = typeof mergedData.inquiryNo === 'string' ? mergedData.inquiryNo : '';
       const customerNo = typeof mergedData.customerNo === 'string' ? mergedData.customerNo : '';
       const customerId = typeof mergedData.customerId === 'string' && mergedData.customerId ? mergedData.customerId : null;

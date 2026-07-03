@@ -1,6 +1,6 @@
 # 客户管理模块
 
-最后更新：2026-07-02
+最后更新：2026-07-03
 
 ## 当前定位
 
@@ -90,6 +90,14 @@ data.categoryNote
 1. `customerId` 精确匹配。
 2. `contactId` 属于该客户任一联络人。
 3. 旧记录按规范化 `inquirer` 文本兜底匹配。
+
+活动列表中的询价状态来自 `InquiryRecord`：
+
+- 普通成单显示「已成单」。
+- `orderSubStatus = cancelled` 显示「已辙销」。
+- `orderSubStatus = suspended` 显示「已悬挂」。
+- `orderSubStatus = followup` 显示「善后」。
+- 若询价编辑弹窗填写了 `orderSubStatusRemark`，活动描述会追加该情况备注，便于在客户详情页直接看到撤销、悬挂或善后原因。
 
 ## 与询报价的关系
 

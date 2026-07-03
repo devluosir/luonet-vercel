@@ -34,6 +34,8 @@ export interface InquiryRecord {
   orderNo?: string;
   /** 辙销C / 悬挂P / 善后S — 仅在有订单编号时有意义 */
   orderSubStatus?: OrderSubStatus;
+  /** 订单附加标记的情况备注 — 仅在 orderSubStatus 存在时有意义 */
+  orderSubStatusRemark?: string;
 
   // ── 订单状态表追踪字段（仅在有 orderNo 时使用，无需 D1 迁移）──────────
   /** 交货日期，[m.D] 格式，如 [7.15] */
@@ -71,6 +73,7 @@ export type InquiryBasicInput = Pick<
   | 'description'
   | 'orderNo'
   | 'orderSubStatus'
+  | 'orderSubStatusRemark'
 >;
 
 export type InquiryRecordDraft = Omit<InquiryRecord, 'id' | 'createdAt' | 'updatedAt'>;

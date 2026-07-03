@@ -1,7 +1,7 @@
 # 询报价登记模块
 
 > 状态：**已实现 / 维护中**
-> 最后更新：2026-06-26
+> 最后更新：2026-07-03
 
 ---
 
@@ -58,6 +58,7 @@ interface InquiryRecord {
   description: string;       // 内容简述
   orderNo?: string;          // 订单编号（成单后填写）
   orderSubStatus?: OrderSubStatus; // 辙销C / 悬挂P / 善后S
+  orderSubStatusRemark?: string; // C/P/S 情况备注，显示到客户活动列表
 
   // ── 订单状态表追踪字段（有 orderNo 时使用）──────────────────
   orderDeliveryDate?: string;      // 交货日期 [m.D]
@@ -185,6 +186,13 @@ interface CustomerQuoteStatus {
 | 悬挂P | `suspended` | 订单编号后红色粗体 **P**，边框变红 | 保留在「已成单」 |
 | 善后S | `followup` | 订单编号后红色粗体 **S**，边框变红 | 「善后」筛选 |
 
+当选择任意 C/P/S 标记时，编辑弹窗会显示「情况备注」单行输入框，用于记录客户撤销、订单悬挂或善后处理的简短原因。保存规则：
+
+- 只有 `orderNo` 有值且 `orderSubStatus` 已选择时，才保存 `orderSubStatusRemark`。
+- 取消 C/P/S 标记或清空订单编号时，备注随保存一并清空。
+- 客户详情活动列表会把 C/P/S 显示为「已辙销 / 已悬挂 / 善后」状态，并将备注拼接到活动描述中。
+- Excel 导入导出包含 `订单标记` 和 `订单备注` 两列，避免跨文件流转时丢失。
+
 ---
 
 ## 存储 & 同步
@@ -192,6 +200,7 @@ interface CustomerQuoteStatus {
 - **主存储**: `localStorage` key = `inquiry_records`
 - **D1 同步**: Cloudflare Worker `udb.luocompany.net/api/inquiry`
   - 全量 JSON 存入 `Document.data` 列（无需 schema 迁移即可扩展字段）
+  - `orderNo`、`orderSubStatus`、`orderSubStatusRemark`、`customerId`、`contactId` 是可清空字段；完整记录 PUT 时若字段缺失，Worker 会从旧 JSON 中移除，避免远端保留旧值
   - 新增 → `POST /api/inquiry`
   - 更新 → `PUT /api/inquiry/:id`
   - 删除 → `DELETE /api/inquiry/:id`（软删除）

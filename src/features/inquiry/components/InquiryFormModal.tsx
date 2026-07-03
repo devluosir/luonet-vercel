@@ -99,6 +99,7 @@ export function InquiryFormModal({
   const [description, setDescription] = useState('');
   const [orderNo, setOrderNo] = useState('');
   const [orderSubStatus, setOrderSubStatus] = useState<OrderSubStatus | undefined>(undefined);
+  const [orderSubStatusRemark, setOrderSubStatusRemark] = useState('');
   const [isInquiryNoManual, setIsInquiryNoManual] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
 
@@ -138,6 +139,7 @@ export function InquiryFormModal({
     setDescription(record?.description ?? '');
     setOrderNo(record?.orderNo ?? '');
     setOrderSubStatus(record?.orderSubStatus);
+    setOrderSubStatusRemark(record?.orderSubStatusRemark ?? '');
     setIsInquiryNoManual(mode === 'edit');
     setIsUrgent(urgent);
     // 新增模式：初始化两个默认供应商；编辑模式：从记录读取
@@ -299,6 +301,9 @@ export function InquiryFormModal({
       description: description.trim(),
       orderNo: orderNo.trim() || undefined,
       orderSubStatus: orderNo.trim() ? orderSubStatus : undefined,
+      orderSubStatusRemark: orderNo.trim() && orderSubStatus
+        ? orderSubStatusRemark.trim() || undefined
+        : undefined,
     };
     if (!payload.inquiryNo || !payload.inquirer || !payload.customerNo) return;
 
@@ -533,6 +538,24 @@ export function InquiryFormModal({
                     </button>
                   ))}
                 </div>}
+                {orderNo.trim() && orderSubStatus && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="shrink-0 text-xs font-medium text-gray-400 dark:text-gray-500">
+                      情况备注
+                    </span>
+                    <input
+                      value={orderSubStatusRemark}
+                      onChange={(e) => setOrderSubStatusRemark(e.target.value)}
+                      className={
+                        'min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm ' +
+                        'text-gray-700 outline-none placeholder:text-gray-300 ' +
+                        'focus:border-red-300 focus:ring-1 focus:ring-red-100 ' +
+                        'dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-600 dark:focus:border-red-700'
+                      }
+                      placeholder="简要说明当前情况，例如客户暂缓、等待确认、需善后处理"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>

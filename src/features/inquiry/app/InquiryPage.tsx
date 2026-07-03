@@ -19,6 +19,21 @@ import { InquiryTable } from '../components/InquiryTable';
 import { BatchLinkCustomerModal } from '../components/BatchLinkCustomerModal';
 
 // ── Excel 辅助 ────────────────────────────────────────
+const ORDER_SUB_STATUS_LABEL = {
+  cancelled: '辙销C',
+  suspended: '悬挂P',
+  followup: '善后S',
+} as const;
+
+function parseOrderSubStatus(value: unknown): InquiryRecord['orderSubStatus'] {
+  const text = String(value ?? '').trim();
+  if (!text) return undefined;
+  if (text === 'cancelled' || text.includes('辙销') || text.includes('撤销') || text.toUpperCase() === 'C') return 'cancelled';
+  if (text === 'suspended' || text.includes('悬挂') || text.toUpperCase() === 'P') return 'suspended';
+  if (text === 'followup' || text.includes('善后') || text.toUpperCase() === 'S') return 'followup';
+  return undefined;
+}
+
 const SUPPLIER_STATUS_LABEL: Record<string, string> = {
   pending: '待报价',
   quoted: '已报价',
@@ -43,6 +58,8 @@ function recordToRow(r: InquiryRecord) {
     '客户编号': r.customerNo,
     '内容简述': r.description ?? '',
     '订单编号': r.orderNo ?? '',
+    '订单标记': r.orderSubStatus ? ORDER_SUB_STATUS_LABEL[r.orderSubStatus] : '',
+    '订单备注': r.orderSubStatusRemark ?? '',
     '供应商报价': supplierText,
     '已报客户': quotedText,
     '无法报价': unavailable,
@@ -64,6 +81,10 @@ function rowToRecord(row: Record<string, unknown>): InquiryRecord | null {
   try { supplierStatuses = JSON.parse(String(row['_供应商JSON'] ?? '[]')); } catch { /* keep empty */ }
   try { quotedStatuses = JSON.parse(String(row['_报价JSON'] ?? '[]')); } catch { /* keep empty */ }
 
+  const orderNo = String(row['订单编号'] ?? '').trim();
+  const orderSubStatus = orderNo ? parseOrderSubStatus(row['订单标记']) : undefined;
+  const orderSubStatusRemark = orderSubStatus ? String(row['订单备注'] ?? '').trim() : '';
+
   return {
     id,
     inquiryNo,
@@ -71,7 +92,9 @@ function rowToRecord(row: Record<string, unknown>): InquiryRecord | null {
     inquirer: String(row['询价人'] ?? ''),
     customerNo: String(row['客户编号'] ?? ''),
     description: String(row['内容简述'] ?? ''),
-    orderNo: String(row['订单编号'] ?? '') || undefined,
+    orderNo: orderNo || undefined,
+    orderSubStatus,
+    orderSubStatusRemark: orderSubStatusRemark || undefined,
     supplierStatuses,
     quotedStatuses,
     createdAt: String(row['创建时间'] ?? new Date().toISOString()),
