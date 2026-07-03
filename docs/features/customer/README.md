@@ -97,7 +97,9 @@ data.categoryNote
 - `orderSubStatus = cancelled` 显示「已辙销」。
 - `orderSubStatus = suspended` 显示「已悬挂」。
 - `orderSubStatus = followup` 显示「善后」。
+- 若列表中存在 C/P/S 订单，活动列表标题右侧会显示对应筛选按钮；点击同一按钮可取消筛选。
 - 若询价编辑弹窗填写了 `orderSubStatusRemark`，活动描述会追加该情况备注，便于在客户详情页直接看到撤销、悬挂或善后原因。
+- 备注文字按状态着色：辙销红色、悬挂绿色、善后蓝色；普通内容简述仍使用默认灰色。
 
 ## 与询报价的关系
 

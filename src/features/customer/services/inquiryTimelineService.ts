@@ -1,4 +1,4 @@
-import type { InquiryRecord } from '@/features/inquiry/types';
+import type { InquiryRecord, OrderSubStatus } from '@/features/inquiry/types';
 import { getDateInputValueFromInquiryNo } from '@/features/inquiry/utils/inquiryUtils';
 import type { CustomerTimelineEvent } from '../types';
 
@@ -6,6 +6,18 @@ export interface InquiryQuoteStatusBadge {
   label: '未报价' | '已报价' | '无法报价' | '已成单' | '已辙销' | '已悬挂' | '善后';
   className: string;
 }
+
+export interface InquiryActivityDescription {
+  base: string;
+  remark?: string;
+  remarkClassName?: string;
+}
+
+const ORDER_SUB_STATUS_REMARK_CLASS: Record<OrderSubStatus, string> = {
+  cancelled: 'text-red-600 dark:text-red-400',
+  suspended: 'text-green-600 dark:text-green-400',
+  followup: 'text-blue-600 dark:text-blue-400',
+};
 
 export function getInquiryQuoteStatusBadge(record: InquiryRecord): InquiryQuoteStatusBadge {
   if (record.orderSubStatus === 'cancelled') {
@@ -29,11 +41,15 @@ export function getInquiryQuoteStatusBadge(record: InquiryRecord): InquiryQuoteS
   return { label: '未报价', className: 'bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300' };
 }
 
-function buildInquiryActivityDescription(record: InquiryRecord): string {
-  const description = record.description || `客户询价编号：${record.customerNo}`;
+export function buildInquiryActivityDescription(record: InquiryRecord): InquiryActivityDescription {
+  const base = record.description || `客户询价编号：${record.customerNo}`;
   const remark = record.orderSubStatusRemark?.trim();
-  if (!record.orderSubStatus || !remark) return description;
-  return `${description}｜${remark}`;
+  if (!record.orderSubStatus || !remark) return { base };
+  return {
+    base,
+    remark,
+    remarkClassName: ORDER_SUB_STATUS_REMARK_CLASS[record.orderSubStatus],
+  };
 }
 
 export function buildInquiryTimelineEvents(
@@ -53,22 +69,25 @@ export function buildInquiryTimelineEvents(
       if (record.contactId && contactIdSet.has(record.contactId)) return true;
       return Boolean(record.inquirer && inquirerAliasSet.has(record.inquirer));
     })
-    .map((record) => ({
-      id: `inquiry-${record.id}`,
-      customerId,
-      type: 'inquiry' as const,
-      title: record.inquiryNo,
-      description: buildInquiryActivityDescription(record),
-      date: getDateInputValueFromInquiryNo(record.inquiryNo) || record.inquiryDate,
-      status: record.orderSubStatus === 'cancelled'
-        ? 'cancelled' as const
-        : record.orderNo?.trim()
-          ? 'completed' as const
-          : 'pending' as const,
-      documentId: record.id,
-      documentNo: record.inquiryNo,
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt,
-    }))
+    .map((record) => {
+      const description = buildInquiryActivityDescription(record);
+      return {
+        id: `inquiry-${record.id}`,
+        customerId,
+        type: 'inquiry' as const,
+        title: record.inquiryNo,
+        description: description.remark ? `${description.base}｜${description.remark}` : description.base,
+        date: getDateInputValueFromInquiryNo(record.inquiryNo) || record.inquiryDate,
+        status: record.orderSubStatus === 'cancelled'
+          ? 'cancelled' as const
+          : record.orderNo?.trim()
+            ? 'completed' as const
+            : 'pending' as const,
+        documentId: record.id,
+        documentNo: record.inquiryNo,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+      };
+    })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }

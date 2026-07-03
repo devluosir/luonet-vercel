@@ -5,6 +5,7 @@ jest.mock('@/features/inquiry/utils/inquiryUtils', () => ({
 }));
 
 import {
+  buildInquiryActivityDescription,
   buildInquiryTimelineEvents,
   getInquiryQuoteStatusBadge,
 } from '../services/inquiryTimelineService';
@@ -45,5 +46,28 @@ describe('inquiryTimelineService', () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].description).toBe('轴承2项｜客户要求先等现场确认');
+  });
+
+  it('returns colored remark parts for order sub status descriptions', () => {
+    expect(buildInquiryActivityDescription(createInquiryRecord({
+      orderSubStatus: 'cancelled',
+      orderSubStatusRemark: '客户取消计划',
+    }))).toMatchObject({
+      base: '轴承2项',
+      remark: '客户取消计划',
+      remarkClassName: 'text-red-600 dark:text-red-400',
+    });
+    expect(buildInquiryActivityDescription(createInquiryRecord({
+      orderSubStatus: 'suspended',
+      orderSubStatusRemark: '等待客户确认',
+    }))).toMatchObject({
+      remarkClassName: 'text-green-600 dark:text-green-400',
+    });
+    expect(buildInquiryActivityDescription(createInquiryRecord({
+      orderSubStatus: 'followup',
+      orderSubStatusRemark: '需要继续善后',
+    }))).toMatchObject({
+      remarkClassName: 'text-blue-600 dark:text-blue-400',
+    });
   });
 });

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### 询报价登记 / 客户活动列表
 - **C/P/S 情况备注**：编辑询价时，订单编号存在且选中「辙销C / 悬挂P / 善后S」后显示单行「情况备注」，保存到 `InquiryRecord.orderSubStatusRemark`；取消标记或清空订单编号时同步清空备注。
 - **客户活动状态同步**：客户详情活动列表现在区分显示「已辙销 / 已悬挂 / 善后」，并将 C/P/S 情况备注追加到活动描述，便于直接看到撤销、悬挂或善后原因。
+- **客户活动筛选**：客户详情活动列表右侧会在存在对应订单时显示「已辙销 / 已悬挂 / 善后」筛选按钮；C/P/S 备注文字分别使用红色、绿色、蓝色。
 - **Excel 兼容**：询报价导入导出新增 `订单标记` 和 `订单备注` 两列，避免 C/P/S 状态备注在文件流转中丢失。
 
 ### Changed
@@ -20,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **可清空字段处理**：Worker 对完整询价记录 PUT 增加 `orderNo`、`orderSubStatus`、`orderSubStatusRemark`、`customerId`、`contactId` 的清空同步，避免远端 `Document.data` 保留旧值；无需 D1 schema 迁移。
 
 ### Tests
-- 新增 `src/features/customer/__tests__/inquiryTimelineService.test.ts`，覆盖 C/P/S 活动状态 badge 和情况备注描述拼接。
+- 新增并扩展 `src/features/customer/__tests__/inquiryTimelineService.test.ts`，覆盖 C/P/S 活动状态 badge、情况备注描述拼接和备注颜色映射。
 
 ---
 

@@ -6,9 +6,15 @@ import { buildCustomerContactLabel } from '@/features/customer/components/Custom
 import type { Customer } from '@/features/customer/types';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { inquiryService } from '@/features/inquiry/services/inquiry.service';
-import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '@/features/inquiry/types';
+import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, OrderSubStatus, SupplierQuoteStatus } from '@/features/inquiry/types';
 import { InquiryFormModal } from '@/features/inquiry/components/InquiryFormModal';
-import { buildInquiryTimelineEvents, getInquiryQuoteStatusBadge, type InquiryQuoteStatusBadge } from '../services/inquiryTimelineService';
+import {
+  buildInquiryActivityDescription,
+  buildInquiryTimelineEvents,
+  getInquiryQuoteStatusBadge,
+  type InquiryActivityDescription,
+  type InquiryQuoteStatusBadge,
+} from '../services/inquiryTimelineService';
 
 interface CustomerActivityFeedProps {
   customer: Customer;
@@ -18,9 +24,36 @@ interface ActivityItem {
   id: string;
   title: string;
   description?: string;
+  descriptionParts?: InquiryActivityDescription;
   relatedInquiry?: InquiryRecord;
   badge?: InquiryQuoteStatusBadge;
 }
+
+const ORDER_SUB_STATUS_FILTERS: Array<{
+  value: OrderSubStatus;
+  label: string;
+  className: string;
+  activeClassName: string;
+}> = [
+  {
+    value: 'cancelled',
+    label: '已辙销',
+    className: 'border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/60 dark:text-red-300 dark:hover:bg-red-950/30',
+    activeClassName: 'border-red-500 bg-red-500 text-white dark:border-red-500 dark:bg-red-500 dark:text-white',
+  },
+  {
+    value: 'suspended',
+    label: '已悬挂',
+    className: 'border-green-200 text-green-600 hover:bg-green-50 dark:border-green-900/60 dark:text-green-300 dark:hover:bg-green-950/30',
+    activeClassName: 'border-green-600 bg-green-600 text-white dark:border-green-600 dark:bg-green-600 dark:text-white',
+  },
+  {
+    value: 'followup',
+    label: '善后',
+    className: 'border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-900/60 dark:text-blue-300 dark:hover:bg-blue-950/30',
+    activeClassName: 'border-blue-600 bg-blue-600 text-white dark:border-blue-600 dark:bg-blue-600 dark:text-white',
+  },
+];
 
 function buildInquirerAliases(customer: Customer) {
   const aliases = new Set<string>();
@@ -41,6 +74,7 @@ export function CustomerActivityFeed({ customer }: CustomerActivityFeedProps) {
   const updateRecord = useInquiryStore((state) => state.updateRecord);
   const [editingInquiryRecord, setEditingInquiryRecord] = useState<InquiryRecord | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [activeSubStatusFilter, setActiveSubStatusFilter] = useState<OrderSubStatus | null>(null);
 
   const inquiryById = useMemo(
     () => new Map(inquiryRecords.map((record) => [record.id, record])),
@@ -72,15 +106,41 @@ export function CustomerActivityFeed({ customer }: CustomerActivityFeedProps) {
   const activities = useMemo<ActivityItem[]>(() => {
     return buildInquiryTimelineEvents(customer.id, inquiryRecords, { contactIds, inquirerAliases }).map((event) => {
       const relatedInquiry = event.documentId ? inquiryById.get(event.documentId) : undefined;
+      const descriptionParts = relatedInquiry ? buildInquiryActivityDescription(relatedInquiry) : undefined;
       return {
         id: event.id,
         title: event.title,
-        description: event.description,
+        description: descriptionParts?.base ?? event.description,
+        descriptionParts,
         relatedInquiry,
         badge: relatedInquiry ? getInquiryQuoteStatusBadge(relatedInquiry) : undefined,
       };
     });
   }, [contactIds, customer.id, inquirerAliases, inquiryById, inquiryRecords]);
+
+  const subStatusCounts = useMemo(() => {
+    const counts: Record<OrderSubStatus, number> = {
+      cancelled: 0,
+      suspended: 0,
+      followup: 0,
+    };
+    for (const activity of activities) {
+      const status = activity.relatedInquiry?.orderSubStatus;
+      if (status) counts[status] += 1;
+    }
+    return counts;
+  }, [activities]);
+
+  useEffect(() => {
+    if (activeSubStatusFilter && subStatusCounts[activeSubStatusFilter] === 0) {
+      setActiveSubStatusFilter(null);
+    }
+  }, [activeSubStatusFilter, subStatusCounts]);
+
+  const filteredActivities = useMemo(() => {
+    if (!activeSubStatusFilter) return activities;
+    return activities.filter((activity) => activity.relatedInquiry?.orderSubStatus === activeSubStatusFilter);
+  }, [activeSubStatusFilter, activities]);
 
   const handleRefresh = () => {
     void syncInquiryRecords();
@@ -106,20 +166,40 @@ export function CustomerActivityFeed({ customer }: CustomerActivityFeedProps) {
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-gray-600 dark:text-gray-300" />
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">活动列表</h3>
-          <span className="text-xs text-gray-500 dark:text-gray-400">({activities.length} 条)</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">({filteredActivities.length} 条)</span>
         </div>
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={isSyncing}
-          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
-        >
-          <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          {isSyncing ? '刷新中' : '刷新'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {ORDER_SUB_STATUS_FILTERS.map((filter) => {
+            const count = subStatusCounts[filter.value];
+            if (count === 0) return null;
+            const active = activeSubStatusFilter === filter.value;
+            return (
+              <button
+                key={filter.value}
+                type="button"
+                onClick={() => setActiveSubStatusFilter((current) => (current === filter.value ? null : filter.value))}
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                  active ? filter.activeClassName : filter.className
+                }`}
+              >
+                <span>{filter.label}</span>
+                <span>{count}</span>
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isSyncing}
+            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+          >
+            <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? '刷新中' : '刷新'}
+          </button>
+        </div>
       </div>
 
-      {activities.length === 0 ? (
+      {filteredActivities.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 bg-white px-5 py-9 text-center text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
           <Calendar className="mx-auto mb-3 h-10 w-10 opacity-50" />
           <p>暂无询价记录</p>
@@ -127,7 +207,7 @@ export function CustomerActivityFeed({ customer }: CustomerActivityFeedProps) {
         </div>
       ) : (
         <div className="space-y-2">
-          {activities.map((activity) => (
+          {filteredActivities.map((activity) => (
             <div
               key={activity.id}
               className="flex flex-col gap-1 rounded-lg border border-gray-100 bg-white px-3 py-2 shadow-sm dark:border-gray-700 dark:bg-gray-800 md:flex-row md:items-center md:gap-3"
@@ -141,7 +221,18 @@ export function CustomerActivityFeed({ customer }: CustomerActivityFeedProps) {
                 </span>
               )}
               <span className="min-w-0 flex-1 truncate text-sm text-gray-600 dark:text-gray-400">
-                {activity.description}
+                {activity.descriptionParts ? (
+                  <>
+                    <span>{activity.descriptionParts.base}</span>
+                    {activity.descriptionParts.remark && (
+                      <span className={activity.descriptionParts.remarkClassName}>
+                        ｜{activity.descriptionParts.remark}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  activity.description
+                )}
               </span>
               {activity.relatedInquiry && (
                 <button
