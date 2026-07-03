@@ -1345,7 +1345,8 @@ async function handleUpdateDocument(request: Request, env: Env): Promise<Respons
     if (!userId) return jsonResponse({ error: '缺少 user_id' }, 400);
 
     const updatedAt = getBodyTimestamp(body, 'updated_at', 'updatedAt') || new Date().toISOString();
-    const createdAt = getBodyTimestamp(body, 'created_at', 'createdAt');
+    // created_at 是不可变列，UPDATE 不允许用客户端请求体覆盖。
+    // 否则一旦本地 createdAt 被旧快照污染，会被写回 D1 并影响其他设备同步。
     const fields: string[] = [];
     const values: Array<string | number | null> = [];
     const updatableFields = [
@@ -1368,11 +1369,6 @@ async function handleUpdateDocument(request: Request, env: Env): Promise<Respons
           : body[field];
         values.push(value ?? null);
       }
-    }
-
-    if (createdAt) {
-      fields.push('created_at = ?');
-      values.push(createdAt);
     }
 
     if (fields.length === 0) {

@@ -1,7 +1,8 @@
 /**
  * 从 D1 API 拉取数据并合并到 localStorage。
- * 合并规则：D1 为权威来源；D1 请求成功后，本地缺失的远端记录会补入，
- * 远端已删除的本地旧记录会移除，待提交队列中的记录临时保留。
+ * 合并规则：D1 请求成功后，本地缺失的远端记录会补入；同 id 记录按
+ * updatedAt/updated_at 取较新版本，待提交队列中的记录临时保留。
+ * 远端已删除的本地旧记录会移除。
  * 仅在用户已登录时通过 /api/documents 和 /api/customers 代理调用。
  */
 
@@ -224,16 +225,33 @@ function mergeIntoStorage<T extends LocalStorageItem>(
 
   const raw = localStorage.getItem(storageKey);
   const existing: T[] = raw ? JSON.parse(raw) : [];
+  const existingById = new Map(existing.map((item) => [item.id, item]));
   const activeIncoming = incoming.filter((item) => !deletedIds.has(item.id));
-  const incomingIds = new Set(activeIncoming.map((item) => item.id));
 
-  // D1 为权威来源，先放入远端 active 记录；本机已删除 id 优先过滤，避免远端删除延迟时被拉回。
-  const map = new Map<string, T>(activeIncoming.map((item) => [item.id, item]));
+  const map = new Map<string, T>();
+
+  for (const remote of activeIncoming) {
+    const local = existingById.get(remote.id);
+
+    if (local && pendingIds.has(remote.id)) {
+      // 本地这条记录还有未确认落地的写入，当前 GET 快照可能落后于本地保存。
+      map.set(remote.id, local);
+      continue;
+    }
+
+    if (local) {
+      const localTime = new Date(local.updatedAt ?? local.updated_at ?? 0).getTime();
+      const remoteTime = new Date(remote.updatedAt ?? remote.updated_at ?? 0).getTime();
+      map.set(remote.id, remoteTime > localTime ? remote : local);
+    } else {
+      map.set(remote.id, remote);
+    }
+  }
 
   for (const item of existing) {
     if (deletedIds.has(item.id)) continue;
 
-    if (incomingIds.has(item.id)) continue; // D1 已有，以 D1 版本为准
+    if (map.has(item.id)) continue;
 
     if (pendingIds.has(item.id)) {
       // 仍在待提交队列（本轮 flush 失败）→ 保留本地，等下次重试
