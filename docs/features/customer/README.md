@@ -93,6 +93,7 @@ data.categoryNote
 
 活动列表中的询价状态来自 `InquiryRecord`：
 
+- 左侧编号优先显示 `orderNo`；没有订单编号时显示 `inquiryNo`。
 - 普通成单显示「已成单」。
 - `orderSubStatus = cancelled` 显示「已辙销」。
 - `orderSubStatus = suspended` 显示「已悬挂」。

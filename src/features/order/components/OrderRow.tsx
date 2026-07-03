@@ -34,6 +34,13 @@ function getRowTextClass(record: InquiryRecord): string {
   return 'text-gray-700 dark:text-gray-300';
 }
 
+function getOrderSubStatusRemarkClass(record: InquiryRecord): string {
+  if (record.orderSubStatus === 'cancelled') return 'text-red-600 dark:text-red-400';
+  if (record.orderSubStatus === 'suspended') return 'text-green-600 dark:text-green-400';
+  if (record.orderSubStatus === 'followup') return 'text-blue-600 dark:text-blue-400';
+  return 'text-gray-500 dark:text-gray-400';
+}
+
 // ── 可编辑字段类型 ────────────────────────────────────────────────────────────
 
 type EditField =
@@ -482,6 +489,7 @@ export function OrderRow({ record, bp, canViewFinancials, onUpdate }: OrderRowPr
   const activate = (f: EditField) => setActiveField(f);
   const cancel = () => setActiveField(null);
   const rowTextClass = getRowTextClass(record);
+  const orderSubStatusRemark = record.orderSubStatusRemark?.trim();
 
   // 客户订单号的 fallback：自动将 RFQ 显示/输入替换为 PO
   const customerNoFallback = record.customerNo.replace(/RFQ/g, 'PO');
@@ -545,7 +553,7 @@ export function OrderRow({ record, bp, canViewFinancials, onUpdate }: OrderRowPr
             />
           </td>
           <td className="max-w-0 overflow-hidden px-2 py-2">
-            <div className="min-w-0">
+            <div className="flex min-w-0 flex-col gap-0.5">
               <EditableCell field="customerNo" activeField={activeField}
                 value={record.orderCustomerNo}
                 fallback={customerNoFallback}
@@ -555,6 +563,14 @@ export function OrderRow({ record, bp, canViewFinancials, onUpdate }: OrderRowPr
                 onSave={saveCustomerNo}
                 onCancel={cancel}
               />
+              {record.orderSubStatus && orderSubStatusRemark && (
+                <span
+                  className={`block truncate px-0.5 text-[10px] leading-4 ${getOrderSubStatusRemarkClass(record)}`}
+                  title={orderSubStatusRemark}
+                >
+                  {orderSubStatusRemark}
+                </span>
+              )}
             </div>
           </td>
         </>

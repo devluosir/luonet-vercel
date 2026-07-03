@@ -23,6 +23,7 @@ interface CustomerActivityFeedProps {
 interface ActivityItem {
   id: string;
   title: string;
+  displayNo: string;
   description?: string;
   descriptionParts?: InquiryActivityDescription;
   relatedInquiry?: InquiryRecord;
@@ -110,6 +111,7 @@ export function CustomerActivityFeed({ customer }: CustomerActivityFeedProps) {
       return {
         id: event.id,
         title: event.title,
+        displayNo: relatedInquiry?.orderNo?.trim() || event.title,
         description: descriptionParts?.base ?? event.description,
         descriptionParts,
         relatedInquiry,
@@ -213,7 +215,7 @@ export function CustomerActivityFeed({ customer }: CustomerActivityFeedProps) {
               className="flex flex-col gap-1 rounded-lg border border-gray-100 bg-white px-3 py-2 shadow-sm dark:border-gray-700 dark:bg-gray-800 md:flex-row md:items-center md:gap-3"
             >
               <span className="shrink-0 font-mono text-sm font-semibold text-gray-900 dark:text-white">
-                {activity.title}
+                {activity.displayNo}
               </span>
               {activity.badge && (
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${activity.badge.className}`}>
