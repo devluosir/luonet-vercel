@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Building2, CalendarDays, MapPin, Package, Search, Users } from 'lucide-react';
-import { getPrimaryContact } from '../services/customerService';
+import { getConsigneeDisplayName, getPrimaryContact } from '../services/customerService';
 import type { Consignee, Customer, Supplier, TabType } from '../types';
 import { CategoryBadge, getProfileTitle, PrimaryContactSummary, ProfileShortName, RowActionMenu } from './ProfileListParts';
 
@@ -94,6 +94,7 @@ interface ProfileCardGridProps {
   loading: boolean;
   searchQuery: string;
   type: TabType;
+  orderCountsByConsignee?: ReadonlyMap<string, number>;
   onEdit: (item: ProfileCardItem) => void;
   onDelete: (item: ProfileCardItem) => void;
   onViewDetail: (item: ProfileCardItem) => void;
@@ -104,6 +105,7 @@ export function ProfileCardGrid({
   loading,
   searchQuery,
   type,
+  orderCountsByConsignee,
   onEdit,
   onDelete,
   onViewDetail,
@@ -150,6 +152,9 @@ export function ProfileCardGrid({
         const title = getProfileTitle(item);
         const initial = title.charAt(0).toUpperCase() || config.fallbackInitial;
         const hasAddress = Boolean(item.address?.trim());
+        const orderCount = type === 'consignees'
+          ? orderCountsByConsignee?.get(getConsigneeDisplayName(item)) ?? 0
+          : 0;
 
         return (
           <div
@@ -181,8 +186,20 @@ export function ProfileCardGrid({
 
             <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
               <div>
-                <p className="mb-1 text-[11px] font-medium text-gray-400 dark:text-gray-500">主联络人</p>
-                <PrimaryContactSummary item={item} />
+                <p className="mb-1 text-[11px] font-medium text-gray-400 dark:text-gray-500">
+                  {type === 'consignees' ? '收货订单' : '主联络人'}
+                </p>
+                {type === 'consignees' ? (
+                  <span className={`inline-flex rounded-full px-2 py-0.5 font-medium ${
+                    orderCount > 0
+                      ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300'
+                      : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
+                  }`}>
+                    {orderCount} 单
+                  </span>
+                ) : (
+                  <PrimaryContactSummary item={item} />
+                )}
               </div>
               {hasAddress && (
                 <div className="flex items-start gap-1.5">
@@ -196,7 +213,7 @@ export function ProfileCardGrid({
                   {fmtDate(item.createdAt)}
                 </span>
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-300">
-                  {item.contacts.length} 位联络人
+                  {type === 'consignees' ? `${orderCount} 单` : `${item.contacts.length} 位联络人`}
                 </span>
               </div>
             </div>

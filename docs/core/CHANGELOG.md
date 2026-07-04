@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **详情页行内编辑**：客户/供应商/收货人详情卡片移除右上角整卡「编辑」按钮，名称和地址旁的修改图标改为当前页面内行内编辑，使用勾号保存、叉号取消，不再打开 `CustomerModal`。
 - **收货人详情简化**：收货人详情页隐藏联络人区块；订单区域标题改为「收货订单」，空状态为「暂无收货订单」。
 - **行内地址编辑比例优化**：地址编辑框改为横向展开的固定高度输入区，保存/取消按钮放在输入区下方右侧，避免窄高比例影响录入。
+- **收货人列表订单统计**：收货人管理的列表/卡片视图不再显示主联络人摘要，改为显示对应收货人的收货订单数量，统计口径与收货人详情页一致，均基于 `orderDeliveryConsignee` 精确匹配。
 
 #### 代码质量 / Lint 清理
 - **全量 lint warning 清零**：分阶段清理 `no-unused-vars`、`no-explicit-any` 和 `react-hooks/exhaustive-deps`，从 616 条 warning 降为 0。

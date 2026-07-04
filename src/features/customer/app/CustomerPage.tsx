@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Building2, LayoutGrid, List as ListIcon, Package, Plus, Search, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { useAppUser } from '@/hooks/useAppUser';
 import { useCustomerData, useCustomerActions, useCustomerForm } from '../hooks';
+import { getConsigneeDisplayName } from '../services/customerService';
 import { CustomerList, SupplierList, ConsigneeList, CustomerModal, ProfileCardGrid } from '../components';
 import type { Customer, CustomerCategory, Supplier, Consignee, TabType } from '../types';
 
@@ -32,6 +34,8 @@ type ConfirmState = {
 
 type ViewMode = 'list' | 'card';
 
+const LABEL: Record<TabType, string> = { customers: '客户', suppliers: '供应商', consignees: '收货人' };
+
 export default function CustomerPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -48,6 +52,7 @@ export default function CustomerPage() {
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
 
   const { customers, suppliers, consignees, isLoading, refreshData } = useCustomerData();
+  const inquiryRecords = useInquiryStore((s) => s.records);
 
   const showConfirm = useCallback((opts: {
     title: string;
@@ -74,6 +79,31 @@ export default function CustomerPage() {
     if (status === 'unauthenticated') router.push('/');
   }, [status, router]);
 
+  useEffect(() => {
+    useInquiryStore.getState().init();
+  }, []);
+
+  const consigneeOrderCounts = useMemo(() => {
+    const knownConsigneeNames = new Set(consignees.map(getConsigneeDisplayName));
+    const counts = new Map<string, number>();
+
+    for (const record of inquiryRecords) {
+      const consigneeName = record.orderDeliveryConsignee?.trim();
+      if (
+        record.status === 'deleted' ||
+        !record.orderNo?.trim() ||
+        !consigneeName ||
+        !knownConsigneeNames.has(consigneeName)
+      ) {
+        continue;
+      }
+
+      counts.set(consigneeName, (counts.get(consigneeName) ?? 0) + 1);
+    }
+
+    return counts;
+  }, [consignees, inquiryRecords]);
+
   // ── Early returns ───────────────────────────────────────────────
   if (status === 'loading') {
     return (
@@ -86,8 +116,6 @@ export default function CustomerPage() {
   if (!session) return null;
 
   // ── Helpers ─────────────────────────────────────────────────────
-  const LABEL: Record<TabType, string> = { customers: '客户', suppliers: '供应商', consignees: '收货人' };
-
   const clearEditing = () => {
     setEditingCustomer(null);
     setEditingSupplier(null);
@@ -315,6 +343,7 @@ export default function CustomerPage() {
               loading={isLoading}
               searchQuery={search}
               type={activeTab}
+              orderCountsByConsignee={activeTab === 'consignees' ? consigneeOrderCounts : undefined}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onViewDetail={(item) => handleViewDetail(item, activeTab)}
@@ -342,6 +371,7 @@ export default function CustomerPage() {
               consignees={consignees}
               loading={isLoading}
               searchQuery={search}
+              orderCountsByConsignee={consigneeOrderCounts}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onViewDetail={(consignee) => handleViewDetail(consignee, 'consignees')}

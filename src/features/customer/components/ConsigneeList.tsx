@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { Package, Search } from 'lucide-react';
 import type { Customer, Supplier, Consignee } from '../types';
-import { getPrimaryContact } from '../services/customerService';
-import { getProfileTitle, PrimaryContactSummary, ProfileShortName, RowActionMenu } from './ProfileListParts';
+import { getConsigneeDisplayName, getPrimaryContact } from '../services/customerService';
+import { getProfileTitle, ProfileShortName, RowActionMenu } from './ProfileListParts';
 
 const AVATAR_COLORS = [
   'bg-violet-500',
@@ -42,12 +42,21 @@ interface ConsigneeListProps {
   consignees: Consignee[];
   loading: boolean;
   searchQuery: string;
+  orderCountsByConsignee?: ReadonlyMap<string, number>;
   onEdit: (consignee: Customer | Supplier | Consignee) => void;
   onDelete: (consignee: Customer | Supplier | Consignee) => void;
   onViewDetail: (consignee: Consignee) => void;
 }
 
-export function ConsigneeList({ consignees, loading, searchQuery, onEdit, onDelete, onViewDetail }: ConsigneeListProps) {
+export function ConsigneeList({
+  consignees,
+  loading,
+  searchQuery,
+  orderCountsByConsignee,
+  onEdit,
+  onDelete,
+  onViewDetail,
+}: ConsigneeListProps) {
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return consignees;
     const q = searchQuery.toLowerCase();
@@ -99,7 +108,7 @@ export function ConsigneeList({ consignees, loading, searchQuery, onEdit, onDele
       <div className="hidden items-center gap-4 border-b border-gray-100 bg-gray-50/80 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/40 sm:flex">
         <div className="w-9 shrink-0" />
         <span className="flex-1 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">名称</span>
-        <span className="hidden w-44 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 sm:block">主联络人</span>
+        <span className="hidden w-44 shrink-0 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 sm:block">收货订单</span>
         <span className="hidden w-28 shrink-0 text-right text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 md:block">创建时间</span>
         <div className="w-12 shrink-0" />
       </div>
@@ -109,6 +118,7 @@ export function ConsigneeList({ consignees, loading, searchQuery, onEdit, onDele
         {filtered.map((consignee) => {
           const title = getProfileTitle(consignee);
           const initial = title.charAt(0).toUpperCase() || '收';
+          const orderCount = orderCountsByConsignee?.get(getConsigneeDisplayName(consignee)) ?? 0;
 
           return (
             <div
@@ -135,9 +145,15 @@ export function ConsigneeList({ consignees, loading, searchQuery, onEdit, onDele
                 <ProfileShortName value={consignee.shortName} />
               </div>
 
-              {/* 主联络人 */}
+              {/* 收货订单 */}
               <div className="hidden w-44 shrink-0 truncate text-xs text-gray-500 dark:text-gray-400 sm:block">
-                <PrimaryContactSummary item={consignee} />
+                <span className={`inline-flex rounded-full px-2 py-0.5 font-medium ${
+                  orderCount > 0
+                    ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300'
+                    : 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500'
+                }`}>
+                  {orderCount} 单
+                </span>
               </div>
 
               {/* 创建时间 */}
