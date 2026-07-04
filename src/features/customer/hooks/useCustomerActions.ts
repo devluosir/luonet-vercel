@@ -131,6 +131,7 @@ export function useCustomerActions(showConfirm: ShowConfirm) {
         code: consigneeData.code?.trim() || undefined,
         address: consigneeData.address,
         contacts: normalizeContacts(consigneeData),
+        relatedOrdersNote: consigneeData.relatedOrdersNote?.trim() || undefined,
         createdAt: editingConsignee ? editingConsignee.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

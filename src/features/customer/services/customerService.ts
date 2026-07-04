@@ -26,6 +26,7 @@ export interface CustomerProfileInput {
   contacts?: Contact[];
   category?: CustomerCategory;
   categoryNote?: string;
+  relatedOrdersNote?: string;
   createdAt?: string;
 }
 
@@ -162,6 +163,7 @@ function normalizeProfile(row: D1Customer): Customer {
     contacts: normalizeContacts((row.contacts ?? []).map(toContact)),
     category: toCustomerCategory(data.category),
     categoryNote: typeof data.categoryNote === 'string' && data.categoryNote.trim() ? data.categoryNote : undefined,
+    relatedOrdersNote: typeof data.relatedOrdersNote === 'string' && data.relatedOrdersNote.trim() ? data.relatedOrdersNote : undefined,
     createdAt,
     updatedAt,
   };
@@ -236,6 +238,8 @@ function buildBasePayload(profile: CustomerProfileInput) {
   if (profile.category) data.category = profile.category;
   const categoryNote = profile.categoryNote?.trim();
   if (categoryNote) data.categoryNote = categoryNote;
+  const relatedOrdersNote = profile.relatedOrdersNote?.trim();
+  if (relatedOrdersNote) data.relatedOrdersNote = relatedOrdersNote;
 
   return {
     type: profile.type,
