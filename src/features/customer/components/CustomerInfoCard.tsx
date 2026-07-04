@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Edit, Mail, MapPin, Phone, UserRound } from 'lucide-react';
+import { Check, Edit, Mail, MapPin, Phone, UserRound, X } from 'lucide-react';
+import { useState } from 'react';
 import type { Customer } from '../types';
 import type { CustomerStats } from '../services/customerService';
 import { CategoryBadge } from './ProfileListParts';
@@ -14,7 +15,7 @@ interface ContactHrefInput {
 
 interface CustomerInfoCardProps {
   customer: Customer;
-  onEdit: () => void;
+  onSaveField?: (field: 'name' | 'address', value: string) => Promise<boolean>;
   hideContacts?: boolean;
   isCustomerDetail?: boolean;
   stats?: CustomerStats | null;
@@ -23,6 +24,8 @@ interface CustomerInfoCardProps {
   buildOrderHref?: () => string;
   buildContactHref?: (contact: ContactHrefInput) => string;
 }
+
+type EditableField = 'name' | 'address';
 
 function getDisplayName(customer: Customer) {
   return customer.name.split('\n')[0] || customer.name;
@@ -45,7 +48,7 @@ function formatAddressForDisplay(address: string) {
 
 export function CustomerInfoCard({
   customer,
-  onEdit,
+  onSaveField,
   hideContacts = false,
   isCustomerDetail = false,
   stats,
@@ -55,8 +58,44 @@ export function CustomerInfoCard({
   buildContactHref,
 }: CustomerInfoCardProps) {
   const contacts = customer.contacts;
+  const [editingField, setEditingField] = useState<EditableField | null>(null);
+  const [draftValue, setDraftValue] = useState('');
+  const [inlineError, setInlineError] = useState('');
+  const [savingField, setSavingField] = useState<EditableField | null>(null);
   const showEmptyStatsHint =
     isCustomerDetail && !isLoadingStats && Boolean(stats) && stats!.totals.inquiries === 0 && stats!.totals.orders === 0;
+
+  const startEditing = (field: EditableField) => {
+    setEditingField(field);
+    setDraftValue(field === 'name' ? customer.name : customer.address);
+    setInlineError('');
+  };
+
+  const cancelEditing = () => {
+    setEditingField(null);
+    setDraftValue('');
+    setInlineError('');
+  };
+
+  const saveEditing = async () => {
+    if (!editingField || !onSaveField) return;
+
+    const nextValue = draftValue.trim();
+    if (editingField === 'name' && !nextValue) {
+      setInlineError('名称不能为空');
+      return;
+    }
+
+    setSavingField(editingField);
+    setInlineError('');
+    const success = await onSaveField(editingField, editingField === 'name' ? nextValue : draftValue);
+    setSavingField(null);
+    if (success) {
+      cancelEditing();
+      return;
+    }
+    setInlineError('保存失败，请重试');
+  };
 
   return (
     <div className="mb-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -67,18 +106,56 @@ export function CustomerInfoCard({
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="whitespace-pre-wrap break-words text-lg font-semibold leading-snug text-gray-900 dark:text-white">
-                {customer.name}
-              </h1>
-              <button
-                type="button"
-                onClick={onEdit}
-                title="修改名称"
-                aria-label="修改名称"
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-              >
-                <Edit className="h-4 w-4" />
-              </button>
+              {editingField === 'name' ? (
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <input
+                      value={draftValue}
+                      onChange={(event) => setDraftValue(event.target.value)}
+                      className="h-9 min-w-0 flex-1 rounded-md border border-blue-300 px-2.5 text-lg font-semibold text-gray-900 outline-none ring-2 ring-blue-100 focus:border-blue-500 dark:border-blue-700 dark:bg-gray-900 dark:text-white dark:ring-blue-950/50"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={saveEditing}
+                      disabled={savingField === 'name'}
+                      title="保存名称"
+                      aria-label="保存名称"
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditing}
+                      disabled={savingField === 'name'}
+                      title="取消修改名称"
+                      aria-label="取消修改名称"
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {inlineError && <p className="text-xs text-red-500">{inlineError}</p>}
+                </div>
+              ) : (
+                <>
+                  <h1 className="whitespace-pre-wrap break-words text-lg font-semibold leading-snug text-gray-900 dark:text-white">
+                    {customer.name}
+                  </h1>
+                  {onSaveField && (
+                    <button
+                      type="button"
+                      onClick={() => startEditing('name')}
+                      title="修改名称"
+                      aria-label="修改名称"
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                  )}
+                </>
+              )}
               <CategoryBadge category={customer.category} note={customer.categoryNote} />
             </div>
             {customer.shortName && (
@@ -93,18 +170,59 @@ export function CustomerInfoCard({
             )}
             <div className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
-              <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
-                {formatAddressForDisplay(customer.address)}
-              </span>
-              <button
-                type="button"
-                onClick={onEdit}
-                title="修改地址"
-                aria-label="修改地址"
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-              >
-                <Edit className="h-4 w-4" />
-              </button>
+              {editingField === 'address' ? (
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-2">
+                    <textarea
+                      value={draftValue}
+                      onChange={(event) => setDraftValue(event.target.value)}
+                      rows={4}
+                      className="min-h-24 min-w-0 flex-1 rounded-md border border-blue-300 px-2.5 py-2 text-sm leading-relaxed text-gray-900 outline-none ring-2 ring-blue-100 focus:border-blue-500 dark:border-blue-700 dark:bg-gray-900 dark:text-white dark:ring-blue-950/50"
+                      autoFocus
+                    />
+                    <div className="flex shrink-0 flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={saveEditing}
+                        disabled={savingField === 'address'}
+                        title="保存地址"
+                        aria-label="保存地址"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEditing}
+                        disabled={savingField === 'address'}
+                        title="取消修改地址"
+                        aria-label="取消修改地址"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  {inlineError && <p className="mt-1 text-xs text-red-500">{inlineError}</p>}
+                </div>
+              ) : (
+                <>
+                  <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+                    {formatAddressForDisplay(customer.address)}
+                  </span>
+                  {onSaveField && (
+                    <button
+                      type="button"
+                      onClick={() => startEditing('address')}
+                      title="修改地址"
+                      aria-label="修改地址"
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

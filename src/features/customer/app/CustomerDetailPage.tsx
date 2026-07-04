@@ -11,13 +11,12 @@ import { useAppUser } from '@/hooks/useAppUser';
 import {
   CustomerActivityFeed,
   CustomerInfoCard,
-  CustomerModal,
 } from '../components';
-import { useCustomerActions, useCustomerForm } from '../hooks';
+import { useCustomerActions } from '../hooks';
 import { customerService, getConsigneeDisplayName } from '../services/customerService';
 import { supplierService } from '../services/supplierService';
 import type { CustomerProfileType, CustomerStats } from '../services/customerService';
-import type { Customer, TabType } from '../types';
+import type { Customer, CustomerFormData } from '../types';
 
 type DetailType = CustomerProfileType;
 type ConfirmState = {
@@ -34,12 +33,6 @@ function getCustomerTitle(customer: Customer) {
 
 function parseDetailType(value: string | null | undefined): DetailType {
   return value === 'supplier' || value === 'consignee' ? value : 'customer';
-}
-
-function toTabType(type: DetailType): TabType {
-  if (type === 'supplier') return 'suppliers';
-  if (type === 'consignee') return 'consignees';
-  return 'customers';
 }
 
 function getTypeLabel(type: DetailType) {
@@ -88,6 +81,19 @@ async function findCustomerFromUrl(customerId: string, type: DetailType, custome
   }) ?? null;
 }
 
+function toFormData(customer: Customer, changes: Partial<Pick<CustomerFormData, 'name' | 'address'>>): CustomerFormData {
+  return {
+    name: customer.name,
+    shortName: customer.shortName ?? '',
+    code: customer.code ?? '',
+    address: customer.address,
+    contacts: customer.contacts,
+    category: customer.category,
+    categoryNote: customer.categoryNote ?? '',
+    ...changes,
+  };
+}
+
 export default function CustomerDetailPage() {
   const { data: session } = useSession();
   const { user, handleLogout } = useAppUser();
@@ -95,7 +101,6 @@ export default function CustomerDetailPage() {
   const customerId = searchParams?.get('id');
   const customerName = searchParams?.get('name');
   const detailType = parseDetailType(searchParams?.get('type'));
-  const detailTabType = toTabType(detailType);
   const isCustomerDetail = detailType === 'customer';
   const inquiryRecords = useInquiryStore((s) => s.records);
 
@@ -103,7 +108,6 @@ export default function CustomerDetailPage() {
   const [stats, setStats] = useState<CustomerStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isLoadingCustomer, setIsLoadingCustomer] = useState(true);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
 
   const showConfirm = useCallback((opts: {
@@ -123,7 +127,6 @@ export default function CustomerDetailPage() {
   }, []);
 
   const { saveCustomer, saveSupplier, saveConsignee } = useCustomerActions(showConfirm);
-  const { formData, resetForm, setFormDataForEdit, handleInputChange, validateForm } = useCustomerForm();
 
   const reloadCustomer = useCallback(() => {
     if (!customerId) {
@@ -175,32 +178,22 @@ export default function CustomerDetailPage() {
     };
   }, [customer?.id, isCustomerDetail]);
 
-  const handleOpenEdit = () => {
-    if (!customer) return;
-    setFormDataForEdit(customer);
-    setShowEditModal(true);
-  };
+  const handleSaveProfileField = async (field: 'name' | 'address', value: string) => {
+    if (!customer) return false;
 
-  const handleCloseEdit = () => {
-    setShowEditModal(false);
-    resetForm();
-  };
+    const currentValue = field === 'name' ? customer.name : customer.address;
+    if (value === currentValue) return true;
 
-  const handleSubmitEdit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!customer) return;
-
-    if (!validateForm(detailTabType)) return;
-
+    const nextFormData = toFormData(customer, { [field]: value });
     let success = false;
-    if (detailType === 'supplier') success = await saveSupplier(formData, customer);
-    else if (detailType === 'consignee') success = await saveConsignee(formData, customer);
-    else success = await saveCustomer(formData, customer);
-    if (!success) return;
+    if (detailType === 'supplier') success = await saveSupplier(nextFormData, customer);
+    else if (detailType === 'consignee') success = await saveConsignee(nextFormData, customer);
+    else success = await saveCustomer(nextFormData, customer);
+    if (!success) return false;
 
-    setShowEditModal(false);
-    resetForm();
+    setCustomer((prev) => prev ? { ...prev, [field]: value, updatedAt: new Date().toISOString() } : prev);
     reloadCustomer();
+    return true;
   };
 
   const handleConfirmCancel = useCallback(() => {
@@ -271,7 +264,7 @@ export default function CustomerDetailPage() {
           <>
             <CustomerInfoCard
               customer={customer}
-              onEdit={handleOpenEdit}
+              onSaveField={handleSaveProfileField}
               hideContacts={detailType === 'consignee'}
               isCustomerDetail={isCustomerDetail}
               stats={stats}
@@ -338,18 +331,6 @@ export default function CustomerDetailPage() {
           </div>
         )}
       </div>
-
-      {customer && (
-        <CustomerModal
-          isOpen={showEditModal}
-          onClose={handleCloseEdit}
-          formData={formData}
-          onInputChange={handleInputChange}
-          onSubmit={handleSubmitEdit}
-          isEditing
-          activeTab={detailTabType}
-        />
-      )}
 
       <ConfirmDialog
         open={Boolean(confirmState?.open)}
