@@ -272,6 +272,7 @@ export default function CustomerDetailPage() {
             <CustomerInfoCard
               customer={customer}
               onEdit={handleOpenEdit}
+              hideContacts={detailType === 'consignee'}
               isCustomerDetail={isCustomerDetail}
               stats={stats}
               isLoadingStats={isLoadingStats}
@@ -301,9 +302,9 @@ export default function CustomerDetailPage() {
                     <FileText className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-sm font-semibold text-gray-900 dark:text-white">关联订单</h2>
+                    <h2 className="text-sm font-semibold text-gray-900 dark:text-white">收货订单</h2>
                     {relatedOrders.length === 0 ? (
-                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">暂无关联订单</p>
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">暂无收货订单</p>
                     ) : (
                       <div className="mt-2 space-y-1">
                         {relatedOrders.map((record) => (
