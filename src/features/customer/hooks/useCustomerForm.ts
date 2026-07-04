@@ -10,7 +10,6 @@ function createEmptyFormData(): CustomerFormData {
     contacts: [{ id: `primary-contact-${Date.now()}`, name: '', isPrimary: true }],
     category: 'New',
     categoryNote: '',
-    relatedOrdersNote: '',
   };
 }
 
@@ -44,7 +43,6 @@ export function useCustomerForm() {
       contacts: normalizeContacts(item.contacts),
       category: item.category,
       categoryNote: item.categoryNote ?? '',
-      relatedOrdersNote: item.relatedOrdersNote ?? '',
     });
   };
 

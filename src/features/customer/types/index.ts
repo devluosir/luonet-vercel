@@ -20,7 +20,6 @@ export interface CustomerProfile {
   contacts: Contact[];
   category?: CustomerCategory;
   categoryNote?: string;
-  relatedOrdersNote?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -37,7 +36,6 @@ export interface CustomerFormData {
   contacts: Contact[];
   category?: CustomerCategory;
   categoryNote?: string;
-  relatedOrdersNote?: string;
 }
 
 export type TabType = 'customers' | 'suppliers' | 'consignees';

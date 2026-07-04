@@ -16,7 +16,6 @@ export async function saveConsignee(consignee: Consignee, isNew = false): Promis
     code: consignee.code,
     address: consignee.address,
     contacts: consignee.contacts,
-    relatedOrdersNote: consignee.relatedOrdersNote,
     createdAt: consignee.createdAt,
   });
   return saved;

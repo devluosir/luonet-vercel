@@ -145,23 +145,46 @@ export function CustomerForm({
         <legend className="px-1 text-sm font-semibold text-gray-800 dark:text-gray-100">
           公司信息
         </legend>
-        <div className="mt-3 grid gap-4 md:grid-cols-3">
-          <FormField
-            id="name"
-            label={entityType === 'suppliers' ? '供应商全称' : entityType === 'consignees' ? '收货人全称' : '客户公司全称'}
-            value={formData.name}
-            onInputChange={onInputChange}
-            required
-            className="md:col-span-2"
-          />
-          <FormField
-            id="shortName"
-            label="简称"
-            value={formData.shortName ?? ''}
-            onInputChange={onInputChange}
-            placeholder="如：LC"
-          />
-          {entityType !== 'consignees' && (
+        {entityType === 'consignees' ? (
+          <div className="mt-3 space-y-4">
+            <FormField
+              id="name"
+              label="收货人全称"
+              value={formData.name}
+              onInputChange={onInputChange}
+              required
+            />
+            <div>
+              <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                地址
+              </label>
+              <textarea
+                id="address"
+                value={formData.address}
+                onChange={(e) => onInputChange('address', e.target.value)}
+                className={TEXTAREA_CLASS}
+                rows={4}
+                placeholder="可分多行填写地址、电话、邮箱、税号等信息"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="mt-3 grid gap-4 md:grid-cols-3">
+            <FormField
+              id="name"
+              label={entityType === 'suppliers' ? '供应商全称' : '客户公司全称'}
+              value={formData.name}
+              onInputChange={onInputChange}
+              required
+              className="md:col-span-2"
+            />
+            <FormField
+              id="shortName"
+              label="简称"
+              value={formData.shortName ?? ''}
+              onInputChange={onInputChange}
+              placeholder="如：LC"
+            />
             <FormField
               id="code"
               label="编号"
@@ -169,82 +192,58 @@ export function CustomerForm({
               onInputChange={onInputChange}
               placeholder="可选"
             />
-          )}
-          {entityType === 'customers' && (
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                客户分类
-                <span className="ml-1 text-xs font-normal text-gray-400">人为评定，可随时调整</span>
+            {entityType === 'customers' && (
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  客户分类
+                  <span className="ml-1 text-xs font-normal text-gray-400">人为评定，可随时调整</span>
+                </label>
+                <select
+                  id="category"
+                  value={formData.category ?? 'New'}
+                  onChange={(e) => onInputChange('category', e.target.value as CustomerCategory)}
+                  className={FIELD_CLASS}
+                >
+                  {CATEGORY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {entityType === 'customers' && (
+              <div className="md:col-span-3">
+                <label htmlFor="categoryNote" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  分类备注
+                  <span className="ml-1 text-xs font-normal text-gray-400">简述评定理由，如订单量、回款情况等</span>
+                </label>
+                <input
+                  type="text"
+                  id="categoryNote"
+                  value={formData.categoryNote ?? ''}
+                  onChange={(e) => onInputChange('categoryNote', e.target.value)}
+                  className={FIELD_CLASS}
+                  placeholder="可选，如：月均3单，回款及时"
+                />
+              </div>
+            )}
+            <div className="md:col-span-2">
+              <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                地址
               </label>
-              <select
-                id="category"
-                value={formData.category ?? 'New'}
-                onChange={(e) => onInputChange('category', e.target.value as CustomerCategory)}
-                className={FIELD_CLASS}
-              >
-                {CATEGORY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {entityType === 'customers' && (
-            <div className="md:col-span-3">
-              <label htmlFor="categoryNote" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                分类备注
-                <span className="ml-1 text-xs font-normal text-gray-400">简述评定理由，如订单量、回款情况等</span>
-              </label>
-              <input
-                type="text"
-                id="categoryNote"
-                value={formData.categoryNote ?? ''}
-                onChange={(e) => onInputChange('categoryNote', e.target.value)}
-                className={FIELD_CLASS}
-                placeholder="可选，如：月均3单，回款及时"
+              <textarea
+                id="address"
+                value={formData.address}
+                onChange={(e) => onInputChange('address', e.target.value)}
+                className={TEXTAREA_CLASS}
+                rows={4}
+                placeholder="可分多行填写地址、电话、邮箱、税号等信息"
               />
             </div>
-          )}
-          <div className="md:col-span-2">
-            <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              地址
-            </label>
-            <textarea
-              id="address"
-              value={formData.address}
-              onChange={(e) => onInputChange('address', e.target.value)}
-              className={TEXTAREA_CLASS}
-              rows={4}
-              placeholder="可分多行填写地址、电话、邮箱、税号等信息"
-            />
           </div>
-        </div>
+        )}
       </fieldset>
-
-      {entityType === 'consignees' && (
-        <fieldset className={SECTION_CLASS}>
-          <legend className="px-1 text-sm font-semibold text-gray-800 dark:text-gray-100">
-            相关订单
-          </legend>
-          <div className="mt-3">
-            <label htmlFor="relatedOrdersNote" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              相关订单
-            </label>
-            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-              记录该收货人关联的订单号/箱单号，便于查找
-            </p>
-            <textarea
-              id="relatedOrdersNote"
-              value={formData.relatedOrdersNote ?? ''}
-              onChange={(e) => onInputChange('relatedOrdersNote', e.target.value)}
-              className={TEXTAREA_CLASS}
-              rows={4}
-              placeholder="可选"
-            />
-          </div>
-        </fieldset>
-      )}
 
       {entityType !== 'consignees' && (
         <fieldset className={SECTION_CLASS}>
