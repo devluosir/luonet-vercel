@@ -336,10 +336,14 @@ export function checkCustomerUsage(customerName: string): number {
   }
 }
 
+export function getConsigneeDisplayName(customer: Pick<Customer, 'shortName' | 'name'>): string {
+  return customer.shortName?.trim() || customer.name.split('\n')[0] || customer.name;
+}
+
 function toDropdownItems(customers: Customer[]): SavedCustomer[] {
   return customers.map((customer) => {
     const primaryContact = getPrimaryContact(customer);
-    const title = customer.shortName || customer.name.split('\n')[0] || customer.name;
+    const title = getConsigneeDisplayName(customer);
     const lines = [
       customer.name,
       customer.address,
@@ -370,5 +374,6 @@ export const customerService = {
   deleteCustomer,
   fetchCustomerStats,
   checkCustomerUsage,
+  getConsigneeDisplayName,
   getCustomersForDropdown,
 };

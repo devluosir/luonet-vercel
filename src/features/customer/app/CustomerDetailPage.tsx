@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { FileText } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { useAppUser } from '@/hooks/useAppUser';
 import {
   CustomerActivityFeed,
@@ -13,8 +14,7 @@ import {
   CustomerModal,
 } from '../components';
 import { useCustomerActions, useCustomerForm } from '../hooks';
-import { customerService } from '../services/customerService';
-import { consigneeService } from '../services/consigneeService';
+import { customerService, getConsigneeDisplayName } from '../services/customerService';
 import { supplierService } from '../services/supplierService';
 import type { CustomerProfileType, CustomerStats } from '../services/customerService';
 import type { Customer, TabType } from '../types';
@@ -51,9 +51,6 @@ function getTypeLabel(type: DetailType) {
 function getUsageText(type: DetailType, customer: Customer) {
   if (type === 'supplier') {
     return `在 ${supplierService.checkSupplierUsage(customer.name)} 张采购单中被使用过`;
-  }
-  if (type === 'consignee') {
-    return `在 ${consigneeService.checkConsigneeUsage(customer.name)} 张箱单中被用作收货人`;
   }
   return '';
 }
@@ -100,6 +97,7 @@ export default function CustomerDetailPage() {
   const detailType = parseDetailType(searchParams?.get('type'));
   const detailTabType = toTabType(detailType);
   const isCustomerDetail = detailType === 'customer';
+  const inquiryRecords = useInquiryStore((s) => s.records);
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [stats, setStats] = useState<CustomerStats | null>(null);
@@ -147,6 +145,10 @@ export default function CustomerDetailPage() {
   useEffect(() => {
     reloadCustomer();
   }, [reloadCustomer]);
+
+  useEffect(() => {
+    useInquiryStore.getState().init();
+  }, []);
 
   useEffect(() => {
     if (!customer?.id || !isCustomerDetail) {
@@ -239,6 +241,15 @@ export default function CustomerDetailPage() {
 
   const displayName = customer ? getCustomerTitle(customer) : customerName || `${getTypeLabel(detailType)}详情`;
   const usageText = customer ? getUsageText(detailType, customer) : '';
+  const consigneeName = customer && detailType === 'consignee' ? getConsigneeDisplayName(customer) : '';
+  const relatedOrders = detailType === 'consignee' && consigneeName
+    ? inquiryRecords.filter(
+      (record) =>
+        record.status !== 'deleted' &&
+        Boolean(record.orderNo?.trim()) &&
+        record.orderDeliveryConsignee?.trim() === consigneeName
+    )
+    : [];
 
   return (
     <AppLayout
@@ -269,7 +280,7 @@ export default function CustomerDetailPage() {
               buildContactHref={(contact) => buildInquiryFilterHref(customer, contact)}
             />
 
-            {!isCustomerDetail && (
+            {detailType === 'supplier' && (
               <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3.5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-900 dark:text-gray-300">
@@ -278,6 +289,38 @@ export default function CustomerDetailPage() {
                   <div>
                     <h2 className="text-sm font-semibold text-gray-900 dark:text-white">使用情况</h2>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{usageText}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {detailType === 'consignee' && (
+              <div className="mb-4 rounded-lg border border-gray-200 bg-white p-3.5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-900 dark:text-gray-300">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-sm font-semibold text-gray-900 dark:text-white">关联订单</h2>
+                    {relatedOrders.length === 0 ? (
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">暂无关联订单</p>
+                    ) : (
+                      <div className="mt-2 space-y-1">
+                        {relatedOrders.map((record) => (
+                          <div
+                            key={record.id}
+                            className="flex min-w-0 items-center gap-2 text-sm text-gray-600 dark:text-gray-300"
+                          >
+                            <span className="shrink-0 font-mono font-semibold text-gray-900 dark:text-gray-100">
+                              {record.orderNo}
+                            </span>
+                            <span className="truncate text-gray-500 dark:text-gray-400">
+                              {record.orderDeliveryStatus?.trim() || '—'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
