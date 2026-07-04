@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CalendarDays } from 'lucide-react';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { stripDateBrackets, normalizeShortDateInput } from '@/features/inquiry/utils/inquiryUtils';
@@ -370,33 +370,86 @@ function AmountCell({ field, activeField, value, textClassName, onActivate, onSa
 
 const STATUS_PRESETS = [
   { label: '备货', value: '备货', immediate: true },
-  { label: '交货', value: '交货', immediate: true },
+  { label: '交货', value: '交货', immediate: false },
   { label: '发票', value: '发票', immediate: false },
 ] as const;
 
 interface DeliveryStatusCellProps {
   activeField: EditField;
   value: string | undefined;
+  consigneeValue: string | undefined;
+  consigneeOptions: string[];
   textClassName?: string;
   onActivate: () => void;
-  onSave: (val: string | undefined) => void;
+  onSave: (status: string | undefined, consignee: string | undefined) => void;
   onCancel: () => void;
 }
 
-function DeliveryStatusCell({ activeField, value, textClassName, onActivate, onSave, onCancel }: DeliveryStatusCellProps) {
+function DeliveryStatusCell({
+  activeField,
+  value,
+  consigneeValue,
+  consigneeOptions,
+  textClassName,
+  onActivate,
+  onSave,
+  onCancel,
+}: DeliveryStatusCellProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const editContainerRef = useRef<HTMLDivElement>(null);
+  const pointerDownInsideRef = useRef(false);
   const editing = activeField === 'deliveryStatus';
   const displayStr = value != null ? String(value).trim() || null : null;
+  const displayConsignee = consigneeValue?.trim() || null;
+  const shouldShowConsignee = Boolean(displayStr?.startsWith('交货') && displayConsignee);
+  const [editStatus, setEditStatus] = useState('');
+  const [editConsignee, setEditConsignee] = useState('');
+
+  useEffect(() => {
+    if (!editing) return;
+    setEditStatus(displayStr ?? '');
+    setEditConsignee(displayConsignee ?? '');
+  }, [displayConsignee, displayStr, editing]);
+
+  const isDeliveryStatus = editStatus.trim().startsWith('交货');
+
+  const saveCurrent = (status: string, consignee: string) => {
+    const nextStatus = status.trim() || undefined;
+    const nextConsignee = nextStatus?.startsWith('交货') ? consignee.trim() || undefined : undefined;
+    onSave(nextStatus, nextConsignee);
+  };
+
+  const updateEditStatus = (status: string) => {
+    setEditStatus(status);
+    if (!status.trim().startsWith('交货')) {
+      setEditConsignee('');
+    }
+  };
 
   if (editing) {
     return (
-      <div className="flex flex-col gap-1">
+      <div
+        ref={editContainerRef}
+        className="flex flex-col gap-1"
+        onMouseDownCapture={() => {
+          pointerDownInsideRef.current = true;
+          window.setTimeout(() => {
+            pointerDownInsideRef.current = false;
+          }, 0);
+        }}
+        onBlur={(e) => {
+          if (pointerDownInsideRef.current) return;
+          const nextTarget = e.relatedTarget;
+          if (nextTarget instanceof Node && editContainerRef.current?.contains(nextTarget)) return;
+          saveCurrent(editStatus, editConsignee);
+        }}
+      >
         <input ref={inputRef} autoFocus type="text"
-          defaultValue={displayStr ?? ''}
+          value={editStatus}
+          onChange={(e) => updateEditStatus(e.target.value)}
           placeholder="自由输入或选预设"
-          onBlur={(e) => onSave(e.target.value.trim() || undefined)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') e.currentTarget.blur();
+            if (e.key === 'Enter') saveCurrent(editStatus, editConsignee);
             if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
           }}
           className="w-full rounded border border-blue-300 bg-white px-1.5 py-0.5 text-xs outline-none
@@ -408,10 +461,10 @@ function DeliveryStatusCell({ activeField, value, textClassName, onActivate, onS
               onMouseDown={(e) => {
                 e.preventDefault();
                 if (p.immediate) {
-                  onSave(p.value);
+                  onSave(p.value, undefined);
                 } else {
+                  updateEditStatus(p.value);
                   if (inputRef.current) {
-                    inputRef.current.value = p.value;
                     inputRef.current.focus();
                     const len = p.value.length;
                     inputRef.current.setSelectionRange(len, len);
@@ -427,7 +480,7 @@ function DeliveryStatusCell({ activeField, value, textClassName, onActivate, onS
           ))}
           {displayStr && (
             <button type="button"
-              onMouseDown={(e) => { e.preventDefault(); onSave(undefined); }}
+              onMouseDown={(e) => { e.preventDefault(); onSave(undefined, undefined); }}
               className="ml-auto rounded-full border border-red-200 px-2 py-0.5 text-[10px] font-semibold
                 text-red-400 hover:border-red-400 hover:text-red-600
                 dark:border-red-800 dark:text-red-500 dark:hover:border-red-600"
@@ -436,20 +489,49 @@ function DeliveryStatusCell({ activeField, value, textClassName, onActivate, onS
             </button>
           )}
         </div>
+        {isDeliveryStatus && (
+          <select
+            value={editConsignee}
+            onChange={(e) => {
+              const nextConsignee = e.target.value;
+              setEditConsignee(nextConsignee);
+              saveCurrent(editStatus, nextConsignee);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+            }}
+            className="w-full rounded border border-blue-200 bg-white px-1.5 py-0.5 text-xs text-gray-700 outline-none
+              focus:ring-1 focus:ring-blue-200 dark:border-blue-700 dark:bg-gray-900 dark:text-gray-100"
+          >
+            <option value="">选择收货人</option>
+            {consigneeOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
     );
   }
 
   return (
-    <span role="button" tabIndex={0}
+    <span
+      role="button"
+      tabIndex={0}
       onClick={onActivate}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onActivate(); }}
-      title={displayStr ?? undefined}
+      title={[displayStr, shouldShowConsignee ? displayConsignee : null].filter(Boolean).join('\n') || undefined}
       className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-xs
         hover:bg-black/5 dark:hover:bg-white/5
         ${displayStr ? textClassName ?? 'text-gray-800 dark:text-gray-100' : 'text-gray-200 dark:text-gray-700'}`}
     >
-      {displayStr ?? '执行情况'}
+      <span className="block truncate">{displayStr ?? '执行情况'}</span>
+      {shouldShowConsignee && (
+        <span className="block truncate text-blue-600 dark:text-blue-400">
+          {displayConsignee}
+        </span>
+      )}
     </span>
   );
 }
@@ -478,10 +560,11 @@ interface OrderRowProps {
   record: InquiryRecord;
   bp: OrderTableBreakpoint;
   canViewFinancials: boolean;
+  consigneeOptions: string[];
   onUpdate: (patch: Partial<InquiryRecord>) => void;
 }
 
-export function OrderRow({ record, bp, canViewFinancials, onUpdate }: OrderRowProps) {
+export function OrderRow({ record, bp, canViewFinancials, consigneeOptions, onUpdate }: OrderRowProps) {
   const customerCol = showCustomerCol(bp);
   const lgCols = showLgCols(bp);
   const adminCols = showAdminCols(bp, canViewFinancials);
@@ -500,9 +583,9 @@ export function OrderRow({ record, bp, canViewFinancials, onUpdate }: OrderRowPr
     onUpdate({ orderCustomerNo: trimmed || undefined });
   };
 
-  const saveDeliveryStatus = (val: string | undefined) => {
+  const saveDeliveryStatus = (status: string | undefined, consignee: string | undefined) => {
     setActiveField(null);
-    onUpdate({ orderDeliveryStatus: val });
+    onUpdate({ orderDeliveryStatus: status, orderDeliveryConsignee: consignee });
   };
 
   return (
@@ -582,6 +665,8 @@ export function OrderRow({ record, bp, canViewFinancials, onUpdate }: OrderRowPr
           <DeliveryStatusCell
             activeField={activeField}
             value={record.orderDeliveryStatus}
+            consigneeValue={record.orderDeliveryConsignee}
+            consigneeOptions={consigneeOptions}
             textClassName={rowTextClass}
             onActivate={() => setActiveField('deliveryStatus')}
             onSave={saveDeliveryStatus}

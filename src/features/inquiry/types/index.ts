@@ -46,6 +46,8 @@ export interface InquiryRecord {
   orderCustomerNo?: string;
   /** 交货执行情况，自由文本 */
   orderDeliveryStatus?: string;
+  /** 交货收货人，仅在 orderDeliveryStatus 以'交货'开头时有意义，无需 D1 迁移 */
+  orderDeliveryConsignee?: string;
   /** 订单金额（需要 order.financials 权限），含币种符号自由录入，如 ¥120000 / $15000 */
   orderAmount?: string;
   /** 回款月份，m 或 m.D 格式（需要 order.financials 权限） */

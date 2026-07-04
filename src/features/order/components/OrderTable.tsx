@@ -50,6 +50,7 @@ interface OrderTableProps {
   canViewFinancials: boolean;
   sortField: SortField;
   sortDir: 'asc' | 'desc';
+  consigneeOptions: string[];
   onSortToggle: (field: SortField) => void;
   onUpdate: (id: string, patch: Partial<InquiryRecord>) => void;
 }
@@ -61,7 +62,15 @@ function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: 
     : <ChevronDown className="h-3 w-3 shrink-0" />;
 }
 
-export function OrderTable({ records, canViewFinancials, sortField, sortDir, onSortToggle, onUpdate }: OrderTableProps) {
+export function OrderTable({
+  records,
+  canViewFinancials,
+  sortField,
+  sortDir,
+  consigneeOptions,
+  onSortToggle,
+  onUpdate,
+}: OrderTableProps) {
   const bp = useBreakpoint();
   const colWidths = getVisibleColWidths(bp, canViewFinancials);
   const customerCol = showCustomerCol(bp);
@@ -158,6 +167,7 @@ export function OrderTable({ records, canViewFinancials, sortField, sortDir, onS
               record={record}
               bp={bp}
               canViewFinancials={canViewFinancials}
+              consigneeOptions={consigneeOptions}
               onUpdate={(patch) => onUpdate(record.id, patch)}
             />
           ))}

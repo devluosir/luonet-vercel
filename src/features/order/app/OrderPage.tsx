@@ -7,6 +7,7 @@ import { AppLayout } from '@/components/layout';
 import { MonthRangeNav } from '@/components/MonthRangeNav';
 import { useAppUser } from '@/hooks/useAppUser';
 import { usePermissionStore } from '@/lib/permissions';
+import { getCustomersForDropdown } from '@/features/customer/services/customerService';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { inquiryService } from '@/features/inquiry/services/inquiry.service';
 import type { InquiryRecord, OrderSubStatus } from '@/features/inquiry/types';
@@ -122,6 +123,7 @@ export function OrderPage() {
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>('all');
   const [keyword, setKeyword] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
+  const [consigneeOptions, setConsigneeOptions] = useState<string[]>([]);
   // 默认按交货日期降序排列
   const [sortField, setSortField] = useState<SortField>('deliveryDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -151,6 +153,30 @@ export function OrderPage() {
         });
       }
     });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadConsigneeOptions() {
+      try {
+        const consignees = await getCustomersForDropdown('consignee');
+        if (cancelled) return;
+        const options = Array.from(
+          new Set(consignees.map((consignee) => consignee.name.trim()).filter(Boolean))
+        ).sort((a, b) => a.localeCompare(b, 'zh-CN'));
+        setConsigneeOptions(options);
+      } catch (error) {
+        console.warn('[OrderPage] 加载收货人选项失败', error);
+        if (!cancelled) setConsigneeOptions([]);
+      }
+    }
+
+    void loadConsigneeOptions();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -434,6 +460,7 @@ export function OrderPage() {
           canViewFinancials={hasFinancialsPermission}
           sortField={sortField}
           sortDir={sortDir}
+          consigneeOptions={consigneeOptions}
           onSortToggle={(field) => {
             if (field === sortField) {
               setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'));
