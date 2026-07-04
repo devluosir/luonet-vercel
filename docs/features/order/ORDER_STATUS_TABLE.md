@@ -1,7 +1,7 @@
 # 订单状态表
 
 > 状态：**已实现 / 维护中**
-> 最后更新：2026-06-26
+> 最后更新：2026-07-04
 
 ---
 
@@ -47,6 +47,7 @@ src/features/order/
 | `orderConfirmDate` | `string?` | 确认日，[m.D] 格式 |
 | `orderCustomerNo` | `string?` | 客户方订单号；为空时界面显示 `customerNo` |
 | `orderDeliveryStatus` | `string?` | 交货执行情况，自由文本 |
+| `orderDeliveryConsignee` | `string?` | 订单关联收货人；在执行情况为「交货」时选择，但关联跟随订单本身持续保存 |
 | `orderAmount` | `string?` | 订单金额（**仅管理员可见**），含币种符号，如 `¥120000` / `$15000` |
 | `orderPaymentDate` | `string?` | 回款月份，m 或 m.D 格式（**仅管理员可见**） |
 | `orderReceivedAmount` | `string?` | 到账金额（**仅管理员可见**），含币种符号，如 `¥120000` / `$15000` |
@@ -61,7 +62,7 @@ src/features/order/
 |----|------|------|
 | 订单编号 | `orderNo` + C/P/S 标识 | 订单编号为粗体文本；C/P/S 为红色粗体字母，无底框 |
 | 客户/简述 | `inquirer` + `description` | 两行显示 |
-| 执行情况 | `orderDeliveryStatus` | 单行截断 |
+| 执行情况 | `orderDeliveryStatus` + `orderDeliveryConsignee` | 状态单行截断；有收货人时第二行蓝字显示 |
 
 ### 桌面端（md 及以上）—— 完整列
 
@@ -73,7 +74,7 @@ src/features/order/
 | 4 | 内容简述 | `description` | ✗ | 全员 |
 | 5 | 确认日 | `orderConfirmDate` | ✓ | 全员 |
 | 6 | 客户订单号 | `orderCustomerNo` ?? `customerNo` | ✓ | 全员 |
-| 7 | 交货执行情况 | `orderDeliveryStatus` | ✓ | 全员 |
+| 7 | 交货执行情况 | `orderDeliveryStatus` + `orderDeliveryConsignee` | ✓ | 全员 |
 | 8 | 订单金额 | `orderAmount` | ✓ | **Admin** |
 | 9 | 回款(m) | `orderPaymentDate` | ✓ | **Admin** |
 | 10 | 到账金额 | `orderReceivedAmount` | ✓ | **Admin** |
@@ -110,6 +111,21 @@ src/features/order/
 - 金额字段：数字输入，保存为带币种符号的 `string`
 - 文本字段：自由输入
 - 客户订单号：空值时 fallback 展示 `customerNo`，保存后覆盖到 `orderCustomerNo`；若记录带 C/P/S 情况备注，备注显示在客户订单号下方
+- 执行情况：支持「备货 / 交货 / 发票」预设，也支持自由文本；执行情况为空时显示占位「执行情况」
+
+### 执行情况与收货人关联
+
+`orderDeliveryConsignee` 是订单级关联字段，不是某一次状态文字的附属字段。
+
+- 收货人下拉框只在编辑态且当前执行情况文本以「交货」开头时显示，用于在交货动作下选择收货人。
+- 保存执行情况时会保留当前 `orderDeliveryConsignee`，不再因为状态文本不是「交货」开头而自动清空。
+- 点击「备货」即时预设时，会带上当前已选收货人，避免把订单关联冲掉。
+- 非编辑态只要 `orderDeliveryConsignee` 有值，就在执行情况下方显示收货人蓝字；不要求当前状态仍是「交货」。
+- 只有两类用户主动动作会解除收货人关联：
+  - 点击执行情况单元格里的「清除」按钮，保存 `orderDeliveryStatus = undefined`、`orderDeliveryConsignee = undefined`。
+  - 在「交货」编辑态下把收货人下拉框选回空白，保存 `orderDeliveryConsignee = undefined`。
+
+收货人详情页的「收货订单」按 `record.orderDeliveryConsignee` 精确匹配收货人显示名称。因此订单从「交货」切换为「发票」或「备货」后，仍应继续出现在对应收货人的收货订单列表中。
 
 ---
 

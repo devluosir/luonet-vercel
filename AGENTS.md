@@ -1,10 +1,10 @@
 # AGENTS.md
 
-本文件给后续维护代理使用。范围覆盖整个仓库。最后更新：2026-07-02（main 快照：81c65e8d）
+本文件给后续维护代理使用。范围覆盖整个仓库。最后更新：2026-07-04（main 快照以 `git log -1 --oneline` 为准）
 
 ## 项目定位
 
-这是 Luo & Company 的 LC App / MLUONET 企业业务管理系统。它不是展示站，而是内部业务工具，核心功能是：单据创建（报价/发票/装箱单/采购单）、PDF/Excel 导出、历史记录管理、客户资料维护、权限管理和 AI 邮件助手。
+这是 Luo & Company 的 LC App / MLUONET 企业业务管理系统。它不是展示站，而是内部业务工具，核心功能是：单据创建（报价/发票/装箱单/采购单）、询报价登记、订单状态跟踪、PDF/Excel 导出、历史记录管理、客户资料维护、权限管理和 AI 邮件助手。
 
 **最高优先级**：业务稳定 > 数据兼容 > PDF 输出正确。不要为了重构而重构。
 
@@ -51,8 +51,10 @@ src/
 │   ├── customer/     # 客户/供应商/收货人/时间轴/跟进
 │   ├── dashboard/    # 首页和快捷入口
 │   ├── history/      # 历史记录管理
+│   ├── inquiry/      # 询报价登记
 │   ├── invoice/      # 财务发票
 │   ├── mail/         # AI 邮件助手
+│   ├── order/        # 订单状态表
 │   ├── packing/      # 装箱单
 │   ├── purchase/     # 采购订单
 │   └── quotation/    # 报价单 + 销售确认
@@ -88,8 +90,11 @@ utils/      模块内部工具
 | `/packing` | 装箱单，可从销售确认导入 | `packing_history`、`pk.visibleCols` |
 | `/invoice` | 财务发票 | `invoice_history` |
 | `/purchase` | 采购订单，支持自动保存草稿 | `purchase_history`、`draftPurchase`、`purchase-autosave` |
+| `/inquiry` | 询报价登记，支持客户/联络人关联、订单标记和批量关联 | D1 `Document` |
+| `/order` | 订单状态表，复用询报价记录，支持执行情况、收货人关联和金额权限 | D1 `Document.data` |
 | `/history` | 全部历史记录搜索/导入导出 | 全部历史 key |
-| `/customer` | 客户/供应商/收货人/时间轴/跟进 | `customer_management`、`supplier_management`、`consignee_management`、`customer_timeline_events`、`customer_followups`、`new_customer_tracking` |
+| `/customer` | 客户/供应商/收货人管理，支持分类、列表/卡片和详情 | `customer_management`、`supplier_management`、`consignee_management`、`customer_timeline_events`、`customer_followups`、`new_customer_tracking` |
+| `/customer/detail` | 客户/供应商/收货人详情；名称/地址行内编辑；收货人详情显示收货订单 | D1 `Customer` / `Contact` + D1 `Document.data.orderDeliveryConsignee` |
 | `/mail` | AI 邮件助手（DeepSeek Chat API） | 无持久化 |
 | `/admin` | 用户管理、权限分配 | Cloudflare D1 |
 
@@ -102,6 +107,8 @@ utils/      模块内部工具
 - **User**：id、username、password（bcrypt hash）、email、status、isAdmin、lastLoginAt、createdAt、updatedAt
 - **Permission**：id、userId、moduleId、canAccess — 用户到模块权限的映射
 - **quotation_history**：旧表，保留兼容，主站历史**目前不走这个表**
+- **Document**：统一业务单据表，当前询报价登记和订单状态表使用 `data` JSON 保存业务字段（含 `orderDeliveryConsignee`）
+- **Customer / Contact**：客户、供应商、收货人及其联络人资料
 
 Worker 入口：`src/worker.ts`，D1 客户端：`src/lib/d1-client.ts`，配置：`wrangler.toml`。
 线上 API 基地址：`https://udb.luocompany.net`

@@ -27,7 +27,7 @@ git@github.com:devluosir/luonet-vercel.git
 | 财务发票 | `/invoice` | `invoice_history` | 导入报价数据、PDF、Excel、复制、编辑 |
 | 采购订单 | `/purchase` | `purchase_history`、`draftPurchase` | 供应商、银行信息、PDF、自动草稿保存 |
 | 历史管理 | `/history` | 全部历史记录 | 搜索、筛选、批量删除、导入导出 JSON |
-| 客户管理 | `/customer`、`/customer/detail` | 客户/供应商/收货人、联络人、分类、活动、跟进 | 统一公司信息 + 联络人数组结构，支持客户分类、卡片/列表视图、详情活动列表 |
+| 客户管理 | `/customer`、`/customer/detail` | 客户/供应商/收货人、联络人、分类、活动、跟进、收货订单 | 统一公司信息 + 联络人数组结构，支持客户分类、卡片/列表视图、详情行内编辑；收货人详情显示收货订单 |
 | AI 邮件助手 | `/mail` | DeepSeek API（无持久化） | 撰写、回复、多语言、多语气风格 |
 | 管理后台 | `/admin`、`/admin/users/[id]` | D1 User、Permission | 用户创建、账户状态、管理员状态、模块权限 |
 | IMPA 物料 | 外部链接 | `impa` 权限 | 左侧工具入口，新窗口打开 `https://impa.luocompany.com` |

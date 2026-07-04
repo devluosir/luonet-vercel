@@ -65,6 +65,7 @@ interface InquiryRecord {
   orderConfirmDate?: string;       // 确认日 [m.D]
   orderCustomerNo?: string;        // 客户方订单号（可覆盖 customerNo）
   orderDeliveryStatus?: string;    // 交货执行情况（自由文本）
+  orderDeliveryConsignee?: string; // 订单关联收货人，供收货人详情页收货订单匹配
   orderAmount?: string;            // 订单金额（管理员可见），含币种符号
   orderPaymentDate?: string;       // 回款月份，m 或 m.D 格式（管理员可见）
   orderReceivedAmount?: string;    // 到账金额（管理员可见），含币种符号

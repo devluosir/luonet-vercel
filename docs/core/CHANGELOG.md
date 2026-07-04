@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - 2026-07-04
 
+### Fixed
+
+#### 订单状态表 / 收货人关联
+- **执行情况切换不再误删收货人**：`DeliveryStatusCell` 中的 `orderDeliveryConsignee` 不再和 `orderDeliveryStatus` 是否以「交货」开头强绑定；订单从「交货」改为「发票」或「备货」时会保留已选收货人。
+- **主动解绑路径保留**：「清除」按钮仍会同时清空执行情况和收货人；在「交货」编辑态下把收货人下拉框选回空白仍会解除收货人关联。
+- **非编辑态显示修正**：只要订单记录存在 `orderDeliveryConsignee`，执行情况单元格第二行就显示收货人蓝字，不再受当前状态文字影响。
+
 ### Changed
+
+#### 客户管理 / 收货人详情
+- **详情页行内编辑**：客户/供应商/收货人详情卡片移除右上角整卡「编辑」按钮，名称和地址旁的修改图标改为当前页面内行内编辑，使用勾号保存、叉号取消，不再打开 `CustomerModal`。
+- **收货人详情简化**：收货人详情页隐藏联络人区块；订单区域标题改为「收货订单」，空状态为「暂无收货订单」。
+- **行内地址编辑比例优化**：地址编辑框改为横向展开的固定高度输入区，保存/取消按钮放在输入区下方右侧，避免窄高比例影响录入。
 
 #### 代码质量 / Lint 清理
 - **全量 lint warning 清零**：分阶段清理 `no-unused-vars`、`no-explicit-any` 和 `react-hooks/exhaustive-deps`，从 616 条 warning 降为 0。
@@ -20,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `npx tsc --noEmit`
 - `npx next lint`
 - `npm run build`
+- `npx eslint src/features/order`
+- `npm run test -- src/features/customer/__tests__`
 
 ---
 
