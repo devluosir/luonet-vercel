@@ -100,14 +100,14 @@ export function CustomerInfoCard({
   return (
     <div className="mb-4 rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="flex min-w-0 gap-3">
+        <div className="flex min-w-0 flex-1 gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600 text-lg font-bold text-white">
             {getInitial(customer)}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               {editingField === 'name' ? (
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <div className="flex w-full max-w-3xl flex-col gap-1">
                   <div className="flex min-w-0 items-center gap-2">
                     <input
                       value={draftValue}
@@ -172,15 +172,15 @@ export function CustomerInfoCard({
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
               {editingField === 'address' ? (
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-start gap-2">
+                  <div className="max-w-5xl">
                     <textarea
                       value={draftValue}
                       onChange={(event) => setDraftValue(event.target.value)}
-                      rows={4}
-                      className="min-h-24 min-w-0 flex-1 rounded-md border border-blue-300 px-2.5 py-2 text-sm leading-relaxed text-gray-900 outline-none ring-2 ring-blue-100 focus:border-blue-500 dark:border-blue-700 dark:bg-gray-900 dark:text-white dark:ring-blue-950/50"
+                      rows={5}
+                      className="h-36 w-full resize-none rounded-md border border-blue-300 px-3 py-2 text-sm leading-relaxed text-gray-900 outline-none ring-2 ring-blue-100 focus:border-blue-500 dark:border-blue-700 dark:bg-gray-900 dark:text-white dark:ring-blue-950/50"
                       autoFocus
                     />
-                    <div className="flex shrink-0 flex-col gap-1">
+                    <div className="mt-2 flex justify-end gap-1">
                       <button
                         type="button"
                         onClick={saveEditing}
