@@ -401,7 +401,7 @@ function DeliveryStatusCell({
   const editing = activeField === 'deliveryStatus';
   const displayStr = value != null ? String(value).trim() || null : null;
   const displayConsignee = consigneeValue?.trim() || null;
-  const shouldShowConsignee = Boolean(displayStr?.startsWith('交货') && displayConsignee);
+  const shouldShowConsignee = Boolean(displayConsignee);
   const [editStatus, setEditStatus] = useState('');
   const [editConsignee, setEditConsignee] = useState('');
 
@@ -415,15 +415,12 @@ function DeliveryStatusCell({
 
   const saveCurrent = (status: string, consignee: string) => {
     const nextStatus = status.trim() || undefined;
-    const nextConsignee = nextStatus?.startsWith('交货') ? consignee.trim() || undefined : undefined;
+    const nextConsignee = consignee.trim() || undefined;
     onSave(nextStatus, nextConsignee);
   };
 
   const updateEditStatus = (status: string) => {
     setEditStatus(status);
-    if (!status.trim().startsWith('交货')) {
-      setEditConsignee('');
-    }
   };
 
   if (editing) {
@@ -461,7 +458,7 @@ function DeliveryStatusCell({
               onMouseDown={(e) => {
                 e.preventDefault();
                 if (p.immediate) {
-                  onSave(p.value, undefined);
+                  onSave(p.value, editConsignee.trim() || undefined);
                 } else {
                   updateEditStatus(p.value);
                   if (inputRef.current) {
