@@ -314,12 +314,12 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
     <div className="mb-8">
       {/* ✅ 筛选器区域 */}
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-4">
-        {/* ✅ 搜索框：中大屏可见，中屏时收缩 */}
-        <div className="relative hidden md:block w-full lg:max-w-xs md:max-w-xs xl:max-w-sm">
+        {/* ✅ 搜索框：小屏独占一行，中大屏与筛选器同行 */}
+        <div className="relative w-full md:max-w-xs lg:max-w-xs xl:max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="搜索 单据号 或 客户名称..."
+            placeholder="搜索单据号或名称..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-10 py-2 text-sm bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:focus:ring-blue-400"
