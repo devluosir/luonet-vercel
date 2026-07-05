@@ -11,6 +11,7 @@ import { useAppUser } from '@/hooks/useAppUser';
 import { useCustomerData, useCustomerActions, useCustomerForm } from '../hooks';
 import { getConsigneeDisplayName } from '../services/customerService';
 import { CustomerList, SupplierList, ConsigneeList, CustomerModal, ProfileCardGrid } from '../components';
+import type { CustomerProfileType } from '../services/customerService';
 import type { Customer, CustomerCategory, Supplier, Consignee, TabType } from '../types';
 
 type CategoryFilter = CustomerCategory | 'all';
@@ -43,6 +44,12 @@ function parseTabParam(value: string | null): TabType {
   return 'customers';
 }
 
+function tabToProfileType(tab: TabType): CustomerProfileType {
+  if (tab === 'suppliers') return 'supplier';
+  if (tab === 'consignees') return 'consignee';
+  return 'customer';
+}
+
 export default function CustomerPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -60,7 +67,9 @@ export default function CustomerPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
 
-  const { customers, suppliers, consignees, isLoading, refreshData } = useCustomerData();
+  const activeProfileType = tabToProfileType(activeTab);
+  const { customers, suppliers, consignees, loadingByType, refreshData } = useCustomerData(activeProfileType);
+  const currentTabLoading = loadingByType[activeProfileType];
   const inquiryRecords = useInquiryStore((s) => s.records);
 
   const showConfirm = useCallback((opts: {
@@ -161,11 +170,10 @@ export default function CustomerPage() {
 
   const handleViewDetail = (item: Customer | Supplier | Consignee, type: TabType) => {
     const name = item.name.split('\n')[0] || item.name;
-    const detailType = type === 'customers' ? 'customer' : type === 'suppliers' ? 'supplier' : 'consignee';
     const params = new URLSearchParams({
       id: item.id,
       name,
-      type: detailType,
+      type: tabToProfileType(type),
     });
     router.push(`/customer/detail?${params.toString()}`);
   };
@@ -354,7 +362,7 @@ export default function CustomerPage() {
           {viewMode === 'card' ? (
             <ProfileCardGrid
               items={activeTab === 'customers' ? displayedCustomers : activeTab === 'suppliers' ? suppliers : consignees}
-              loading={isLoading}
+              loading={currentTabLoading}
               searchQuery={search}
               type={activeTab}
               orderCountsByConsignee={activeTab === 'consignees' ? consigneeOrderCounts : undefined}
@@ -365,7 +373,7 @@ export default function CustomerPage() {
           ) : activeTab === 'customers' ? (
             <CustomerList
               customers={displayedCustomers}
-              loading={isLoading}
+              loading={loadingByType.customer}
               searchQuery={search}
               onEdit={handleEdit}
               onDelete={handleDelete}
@@ -374,7 +382,7 @@ export default function CustomerPage() {
           ) : activeTab === 'suppliers' ? (
             <SupplierList
               suppliers={suppliers}
-              loading={isLoading}
+              loading={loadingByType.supplier}
               searchQuery={search}
               onEdit={handleEdit}
               onDelete={handleDelete}
@@ -383,7 +391,7 @@ export default function CustomerPage() {
           ) : (
             <ConsigneeList
               consignees={consignees}
-              loading={isLoading}
+              loading={loadingByType.consignee}
               searchQuery={search}
               orderCountsByConsignee={consigneeOrderCounts}
               onEdit={handleEdit}

@@ -1,14 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Customer, Supplier, Consignee } from '../types';
+import type { Customer, Supplier, Consignee } from '../types';
 import { customerService } from '../services/customerService';
+import type { CustomerProfileType } from '../services/customerService';
 import { supplierService } from '../services/supplierService';
 import { consigneeService } from '../services/consigneeService';
 
-export function useCustomerData() {
+const INITIAL_LOADING_BY_TYPE: Record<CustomerProfileType, boolean> = {
+  customer: true,
+  supplier: true,
+  consignee: true,
+};
+
+export function useCustomerData(priorityType: CustomerProfileType = 'customer') {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [consignees, setConsignees] = useState<Consignee[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loadingByType, setLoadingByType] = useState<Record<CustomerProfileType, boolean>>(INITIAL_LOADING_BY_TYPE);
   const [error, setError] = useState<string | null>(null);
   const [isStale, setIsStale] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -27,6 +34,8 @@ export function useCustomerData() {
     } catch (err) {
       console.error('Failed to load customers:', err);
       setError('Failed to load customers.');
+    } finally {
+      setLoadingByType((current) => ({ ...current, customer: false }));
     }
   }, [isClient]);
 
@@ -38,6 +47,8 @@ export function useCustomerData() {
     } catch (err) {
       console.error('Failed to load suppliers:', err);
       setError('Failed to load suppliers.');
+    } finally {
+      setLoadingByType((current) => ({ ...current, supplier: false }));
     }
   }, [isClient]);
 
@@ -49,18 +60,21 @@ export function useCustomerData() {
     } catch (err) {
       console.error('Failed to load consignees:', err);
       setError('Failed to load consignees.');
+    } finally {
+      setLoadingByType((current) => ({ ...current, consignee: false }));
     }
   }, [isClient]);
 
   // 加载所有数据
-  const loadAllData = useCallback(async () => {
+  const loadAllData = useCallback(() => {
     if (typeof window === 'undefined' || !isClient) return;
 
-    setIsLoading(true);
+    setLoadingByType(INITIAL_LOADING_BY_TYPE);
     setError(null);
     setIsStale(false);
-    await Promise.all([loadCustomers(), loadSuppliers(), loadConsignees()]);
-    setIsLoading(false);
+    void loadCustomers();
+    void loadSuppliers();
+    void loadConsignees();
   }, [loadCustomers, loadSuppliers, loadConsignees, isClient]);
 
   useEffect(() => {
@@ -75,5 +89,7 @@ export function useCustomerData() {
     }
   }, [loadAllData, isClient]);
 
-  return { customers, suppliers, consignees, isLoading, error, isStale, refreshData, isClient };
+  const isLoading = loadingByType[priorityType];
+
+  return { customers, suppliers, consignees, isLoading, loadingByType, error, isStale, refreshData, isClient };
 }
