@@ -1,6 +1,6 @@
 # 权限系统现状
 
-最后更新：2026-07-05
+最后更新：2026-07-06
 
 ## 当前结论
 
@@ -41,8 +41,10 @@ src/constants/permissionModules.ts
 - 权限注册表：`src/constants/permissionModules.ts`
 - 客户端权限 store：`src/lib/permissions.ts`
 - 权限初始化：`src/hooks/usePermissionInit.ts`
-- 权限刷新：`src/hooks/usePermissionRefresh.ts`
+- 权限刷新：`src/hooks/usePermissionRefresh.ts` + `src/components/PermissionRefreshButton.tsx`
 - API 权限校验示例：`src/app/api/inquiry/[[...path]]/route.ts`
+
+手动刷新入口位于用户菜单的个人信息子菜单「账户工具」，以紧凑图标按钮呈现。刷新流程调用 `/api/auth/force-refresh-session`，成功后通过全局 Toast 提示并刷新页面。
 
 ## 最近变更
 
@@ -50,6 +52,7 @@ src/constants/permissionModules.ts
 - `impa` 已加入模块权限。
 - 生产 D1 已执行 `migrations/007_grant_default_impa_permission.sql`。
 - 复查结果：`impa_permissions = 8`，`enabled_permissions = 8`。
+- 权限刷新入口已从用户菜单独立行调整为个人信息子菜单中的图标按钮；旧的未使用刷新权限实现已删除。
 
 ## 维护注意
 

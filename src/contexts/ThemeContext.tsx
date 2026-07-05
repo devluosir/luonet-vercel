@@ -1,97 +1,54 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { themeManager, ThemeConfig, ThemeMode, ButtonTheme } from '@/utils/themeUtils';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { themeManager, type ThemeConfig, type ThemeMode } from '@/utils/themeUtils';
 
-// 主题上下文接口
 interface ThemeContextType {
   config: ThemeConfig;
   isLoading: boolean;
   mode: ThemeMode;
-  buttonTheme: ButtonTheme;
   updateConfig: (updates: Partial<ThemeConfig>) => void;
   toggleMode: () => void;
-  toggleButtonTheme: () => void;
   setMode: (mode: ThemeMode) => void;
-  setButtonTheme: (buttonTheme: ButtonTheme) => void;
-  getModuleColors: (moduleId: string, theme?: ButtonTheme) => ReturnType<typeof themeManager.getModuleColors>;
   isDark: boolean;
   isLight: boolean;
-  isColorful: boolean;
-  isClassic: boolean;
 }
 
-// 创建上下文
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// 主题提供者组件
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<ThemeConfig>(themeManager.getConfig());
   const [isLoading, setIsLoading] = useState(true);
 
-  // 监听主题变化
   useEffect(() => {
-    // 调试日志已关闭
-
     const unsubscribe = themeManager.addListener((newConfig) => {
-      // 调试日志已关闭
       setConfig(newConfig);
     });
-
-    // 初始化完成
     setIsLoading(false);
-
-    return () => {
-      // 调试日志已关闭
-      unsubscribe();
-    };
+    return unsubscribe;
   }, []);
 
-  // 更新主题配置
   const updateConfig = useCallback((updates: Partial<ThemeConfig>) => {
     themeManager.updateConfig(updates);
   }, []);
 
-  // 切换主题模式
   const toggleMode = useCallback(() => {
     themeManager.toggleMode();
   }, []);
 
-  // 切换按钮主题
-  const toggleButtonTheme = useCallback(() => {
-    themeManager.toggleButtonTheme();
-  }, []);
-
-  // 设置主题模式
   const setMode = useCallback((mode: ThemeMode) => {
     themeManager.setMode(mode);
   }, []);
-
-  // 设置按钮主题
-  const setButtonTheme = useCallback((buttonTheme: ButtonTheme) => {
-    themeManager.setButtonTheme(buttonTheme);
-  }, []);
-
-  // 获取模块颜色
-  const getModuleColors = useCallback((moduleId: string, theme?: ButtonTheme) => {
-    return themeManager.getModuleColors(moduleId, theme || config.buttonTheme);
-  }, [config.buttonTheme]);
 
   const contextValue: ThemeContextType = {
     config,
     isLoading,
     mode: config.mode,
-    buttonTheme: config.buttonTheme,
     updateConfig,
     toggleMode,
-    toggleButtonTheme,
     setMode,
-    setButtonTheme,
-    getModuleColors,
     isDark: config.mode === 'dark',
     isLight: config.mode === 'light',
-    isColorful: config.buttonTheme === 'colorful',
-    isClassic: config.buttonTheme === 'classic',
   };
 
   return (
@@ -101,7 +58,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// 使用主题的Hook
 export function useThemeContext() {
   const context = useContext(ThemeContext);
   if (context === undefined) {
@@ -110,30 +66,23 @@ export function useThemeContext() {
   return context;
 }
 
-// 简化的主题Hook
 export function useTheme() {
-  const { config, isLoading, mode, buttonTheme, isDark, isLight, isColorful, isClassic } = useThemeContext();
+  const { config, isLoading, mode, isDark, isLight } = useThemeContext();
 
   return {
     theme: config,
     isLoading,
     mode,
-    buttonTheme,
     isDark,
     isLight,
-    isColorful,
-    isClassic,
   };
 }
 
-// 主题切换Hook
 export function useThemeToggle() {
-  const { toggleMode, toggleButtonTheme, setMode, setButtonTheme } = useThemeContext();
+  const { toggleMode, setMode } = useThemeContext();
 
   return {
     toggleMode,
-    toggleButtonTheme,
     setMode,
-    setButtonTheme,
   };
 }

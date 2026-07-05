@@ -30,7 +30,7 @@ export function AppTopBar({ breadcrumbs, onMenuClick, topBarSlot }: AppTopBarPro
   const currentBreadcrumb = breadcrumbs[breadcrumbs.length - 1];
 
   return (
-    <header className="sticky top-0 z-40 h-12 bg-white shadow-sm dark:bg-[#1c1c1e] dark:shadow-gray-800/30">
+    <header className="sticky top-0 z-40 h-12 bg-white shadow-sm dark:bg-app-dark-base dark:shadow-black/30">
       <div className="flex h-full items-center gap-2 px-3 sm:px-4 lg:px-5">
         {/* 移动端汉堡按钮 */}
         {onMenuClick && (

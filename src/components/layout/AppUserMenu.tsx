@@ -218,7 +218,7 @@ export function AppUserMenu({
       {/* 下拉面板 */}
       {showDropdown && (
         <div
-          className={`absolute z-[9999] w-auto min-w-[11rem] rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 animate-in fade-in-0 zoom-in-95 dark:bg-[#2c2c2e] dark:ring-white/10 ${dropdownPos}`}
+          className={`absolute z-[9999] w-auto min-w-[11rem] rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 animate-in fade-in-0 zoom-in-95 dark:bg-app-dark-surface dark:ring-white/10 ${dropdownPos}`}
           onMouseLeave={scheduleCloseProfileSubmenu}
           onMouseEnter={() => { if (openSubmenu) openProfileSubmenu(); }}
         >
@@ -245,7 +245,7 @@ export function AppUserMenu({
               <div
                 onMouseEnter={openProfileSubmenu}
                 onMouseLeave={scheduleCloseProfileSubmenu}
-                className={`absolute w-auto min-w-[14rem] rounded-xl bg-white p-3 shadow-xl ring-1 ring-black/5 dark:bg-[#2c2c2e] dark:ring-white/10 ${submenuPos}`}
+                className={`absolute w-auto min-w-[14rem] rounded-xl bg-white p-3 shadow-xl ring-1 ring-black/5 dark:bg-app-dark-surface dark:ring-white/10 ${submenuPos}`}
               >
                 <div className="space-y-2.5">
                   <div>
@@ -332,21 +332,20 @@ export function AppUserMenu({
                   </div>
 
                   <div className="border-t border-gray-200 pt-1 dark:border-gray-700">
-                    <div className="mb-1.5 flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
+                    <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
                       <div className="flex items-center">
                         <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />
-                        <span>主题设置</span>
+                        <span>账户工具</span>
                       </div>
-                      <ThemeCompactToggle />
+                      <div className="flex items-center gap-1">
+                        <PermissionRefreshButton variant="icon" />
+                        <ThemeCompactToggle />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
-
-            <div className="px-1 py-1">
-              <PermissionRefreshButton />
-            </div>
 
             {/* 预加载资源 */}
             <div className="relative">

@@ -4,6 +4,29 @@
 
 执行前请先阅读 `AGENTS.md` 了解项目规范。每个任务完成后运行指定的验证命令，确认通过再提交。
 
+> 注意：下方 `TASK-*` 段落包含历史任务规格原文，可能保留当时的背景假设。当前事实以 `docs/core/CURRENT_STATE.md`、`docs/core/CHANGELOG.md`、`README.md` 和 `AGENTS.md` 为准。
+
+---
+
+## 2026-07-06 已完成：反馈、主题、权限刷新入口和预加载排雷
+
+### 范围
+
+- 全局 Toast 支持 success / error / warning / info / loading，补齐进入 / 退出动画、hover 暂停、Esc 关闭、堆叠上限和已有 toast 更新能力。
+- 纯提示类 `alert` 迁移为 Toast，需要用户决策的 `window.confirm` 迁移为全局 ConfirmDialog。
+- 深色模式统一为 `#1c1c1e` 应用背景和 `#2c2c2e` 弹层表面，Dashboard 模块卡片改为静态 Tailwind 颜色类。
+- 退休 `classic` / `colorful` 按钮主题和 `buttonTheme` API，只保留 light / dark。
+- 权限刷新入口移入用户菜单个人信息子菜单「账户工具」，以紧凑图标按钮呈现，并使用 Toast 反馈。
+- 预加载进度缩减为真实两阶段：静态资源 50%、PDF 字体 100%。
+- 同步更新 `README.md`、`AGENTS.md`、`docs/core/*`、`docs/technical/theme/theme_system.md`、`docs/features/PRELOAD_FEATURE.md` 和权限专题文档。
+
+### 结果
+
+- `npx tsc --noEmit`：通过。
+- `npm run lint`：通过。
+- `npm run build`：通过。
+- 全仓库搜索确认旧主题 API、旧权限刷新路径、原生 alert / confirm 和旧 Toast 调用无残留业务引用。
+
 ---
 
 ## 2026-07-04 已完成：全量 lint warning 清理

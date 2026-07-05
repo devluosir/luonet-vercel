@@ -23,18 +23,13 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                var themeConfig = localStorage.getItem('themeConfig');
+                var themeConfig = localStorage.getItem('theme-config') || localStorage.getItem('themeConfig');
                 if (themeConfig) {
                   var config = JSON.parse(themeConfig);
                   if (config.mode === 'dark') {
                     document.documentElement.classList.add('dark');
                   } else {
                     document.documentElement.classList.remove('dark');
-                  }
-                  if (config.buttonTheme === 'classic') {
-                    document.documentElement.classList.add('classic-theme');
-                  } else {
-                    document.documentElement.classList.remove('classic-theme');
                   }
                 }
               } catch (e) {

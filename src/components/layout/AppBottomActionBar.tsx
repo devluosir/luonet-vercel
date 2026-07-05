@@ -30,7 +30,7 @@ export function AppBottomActionBar({ actions, leftSlot }: AppBottomActionBarProp
   if (actions.length === 0 && !leftSlot) return null;
 
   return (
-    <div className="sticky bottom-0 z-30 border-t border-gray-200 bg-white pb-12 dark:border-gray-700 dark:bg-[#1c1c1e] md:pb-0">
+    <div className="sticky bottom-0 z-30 border-t border-gray-200 bg-white pb-12 dark:border-gray-700 dark:bg-app-dark-base md:pb-0">
       <div className="flex h-14 items-center justify-between gap-3 px-3 sm:px-4 lg:px-6">
         <div className="min-w-0 flex-1 text-sm text-gray-500 dark:text-gray-400">{leftSlot}</div>
         <div className="flex shrink-0 items-center gap-2 overflow-x-auto">

@@ -1,6 +1,6 @@
 # MLUONET 项目总结
 
-最后更新：2026-07-05
+最后更新：2026-07-06
 
 ## 项目定位
 
@@ -27,6 +27,7 @@ MLUONET / LC App 是 Luo & Company 内部业务管理系统，用于处理报价
 - `npm run build` 通过。
 - `no-explicit-any` 已清零；动态输入优先使用现有业务类型或 `unknown` + 类型收窄。
 - `react-hooks/exhaustive-deps` 已清零；保留的局部 disable 均有中文原因说明，用于一次性初始化或防循环同步。
+- 2026-07-06 已统一全局 Toast / ConfirmDialog、深色模式层级和主题系统；`npm run lint`、`npx tsc --noEmit`、`npm run build` 通过。
 
 ## 核心模块
 
@@ -81,7 +82,7 @@ ai-email, impa, clock, holidays, rmb
 1. Worker 管理接口仍依赖客户端 `X-User-*` 请求头，存在伪造风险。
 2. `wrangler.toml` 仍有明文 token，应迁移到 Cloudflare secret 并轮换。
 3. 多数业务历史仍在 `localStorage`，有容量和多设备同步风险。
-4. `check:production` 脚本路径仍需修复。
+4. `src/lib/d1-client.ts` 的 `validatePassword` bcrypt 分支和 `silent-refresh` 仍需后续处理。
 5. `src/components` 与 `src/features` 仍有迁移中的重复边界。
 
 更完整现状见 [CURRENT_STATE.md](CURRENT_STATE.md)。

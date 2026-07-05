@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-07-06
+
+### Added
+
+#### 全局反馈 / Toast
+- **统一 Toast 组件**：全局支持 `success`、`error`、`warning`、`info`、`loading` 五种状态，使用真实右侧滑入 / 滑出动画。
+- **Toast 交互补全**：支持 hover 暂停自动关闭、Esc 关闭最新一条、最多同时显示 4 条，超出后顶掉最早一条。
+- **状态更新能力**：`showToast` 返回 id，新增 `updateToast` 和 promise-style 流程，支持 loading 平滑更新为 success / error。
+- **确认弹窗统一**：纯提示类原生 `alert` 迁移为 Toast；需要用户决策的 `window.confirm` 迁移为全局 `ConfirmDialog`。
+
+### Changed
+
+#### 主题 / 深色模式
+- **深色层级统一**：应用主背景统一为 `#1c1c1e`，弹层 / 用户菜单表面统一为 `#2c2c2e`，并在 Tailwind 中提供 `app.dark.base` / `app.dark.surface` 语义色。
+- **模块卡片静态化**：Dashboard 模块卡片改为静态 Tailwind 颜色类，移除运行时 CSS 变量注入和 `.module-button` / `.dashboard-module-button` 的 `!important` 覆盖。
+- **退休双主题开关**：移除 `classic` / `colorful` 按钮主题、`buttonTheme` API 和相关调色盘入口；`ThemeToggle` 只负责明暗模式，图标语义改为显示当前状态。
+
+#### 权限 / 用户菜单
+- **刷新权限入口优化**：权限刷新按钮移入用户菜单的个人信息子菜单「账户工具」，使用紧凑图标按钮和全局 Toast 反馈。
+- **权限刷新实现收敛**：保留 `usePermissionRefresh.ts` + `/api/auth/force-refresh-session` 主流程，删除未使用刷新权限实现，减少后续误接风险。
+
+#### 预加载
+- **进度口径收敛**：预加载只保留真实执行的两阶段：静态资源 50%、PDF 字体 100%；移除空实现阶段，避免虚假的 100%。
+
+### Removed
+
+- 删除未使用的采购模块旧 Toast、主题调试器、旧颜色映射、旧主题样式工具和 `useThemeManager`。
+
+### Tests
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npm run build`
+- 全仓库搜索确认旧 Toast、原生 alert / confirm、旧主题 API 和旧权限刷新路径无残留调用。
+
 ## [Unreleased] - 2026-07-05
 
 ### Changed

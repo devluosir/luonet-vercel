@@ -1,7 +1,5 @@
 import React from 'react';
-import { useThemeContext } from '@/contexts/ThemeContext';
 
-// 定义模块接口
 interface Module {
   id: string;
   name: string;
@@ -20,6 +18,55 @@ interface ModuleButtonProps {
   purchaseCount?: number;
 }
 
+const MODULE_STYLES: Record<string, { card: string; icon: string; badge: string }> = {
+  quotation: {
+    card: 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/15',
+    icon: 'text-blue-600 dark:text-blue-400',
+    badge: 'bg-blue-600 dark:bg-blue-500',
+  },
+  confirmation: {
+    card: 'bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/15',
+    icon: 'text-emerald-600 dark:text-emerald-400',
+    badge: 'bg-emerald-600 dark:bg-emerald-500',
+  },
+  packing: {
+    card: 'bg-cyan-50 hover:bg-cyan-100 dark:bg-cyan-500/10 dark:hover:bg-cyan-500/15',
+    icon: 'text-cyan-600 dark:text-cyan-400',
+    badge: 'bg-cyan-600 dark:bg-cyan-500',
+  },
+  invoice: {
+    card: 'bg-violet-50 hover:bg-violet-100 dark:bg-violet-500/10 dark:hover:bg-violet-500/15',
+    icon: 'text-violet-600 dark:text-violet-400',
+    badge: 'bg-violet-600 dark:bg-violet-500',
+  },
+  purchase: {
+    card: 'bg-orange-50 hover:bg-orange-100 dark:bg-orange-500/10 dark:hover:bg-orange-500/15',
+    icon: 'text-orange-600 dark:text-orange-400',
+    badge: 'bg-orange-600 dark:bg-orange-500',
+  },
+  'ai-email': {
+    card: 'bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/15',
+    icon: 'text-indigo-600 dark:text-indigo-400',
+    badge: 'bg-indigo-600 dark:bg-indigo-500',
+  },
+  history: {
+    card: 'bg-pink-50 hover:bg-pink-100 dark:bg-pink-500/10 dark:hover:bg-pink-500/15',
+    icon: 'text-pink-600 dark:text-pink-400',
+    badge: 'bg-pink-600 dark:bg-pink-500',
+  },
+  customer: {
+    card: 'bg-fuchsia-50 hover:bg-fuchsia-100 dark:bg-fuchsia-500/10 dark:hover:bg-fuchsia-500/15',
+    icon: 'text-fuchsia-600 dark:text-fuchsia-400',
+    badge: 'bg-fuchsia-600 dark:bg-fuchsia-500',
+  },
+};
+
+const DEFAULT_STYLE = {
+  card: 'bg-gray-50 hover:bg-gray-100 dark:bg-white/5 dark:hover:bg-white/10',
+  icon: 'text-gray-600 dark:text-gray-300',
+  badge: 'bg-gray-600 dark:bg-gray-500',
+};
+
 export const ModuleButton: React.FC<ModuleButtonProps> = ({
   module,
   onClick,
@@ -28,10 +75,10 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
   confirmationCount = 0,
   invoiceCount = 0,
   packingCount = 0,
-  purchaseCount = 0
+  purchaseCount = 0,
 }) => {
-  const { buttonTheme, getModuleColors } = useThemeContext();
   const Icon = module.icon;
+  const style = MODULE_STYLES[module.id] ?? DEFAULT_STYLE;
 
   const getCountForModule = (moduleId: string): number => {
     switch (moduleId) {
@@ -45,71 +92,30 @@ export const ModuleButton: React.FC<ModuleButtonProps> = ({
   };
 
   const count = getCountForModule(module.id);
-  const showBadge = count > 0;
-
-  // 获取当前主题的颜色配置
-  const _c = getModuleColors(module.id, buttonTheme);
-
-  const _explicitIconColorByModule: Record<string, string> = {
-    confirmation: 'text-emerald-600 dark:text-emerald-500',
-    history: 'text-pink-600 dark:text-pink-500',
-  };
-
-  // 徽章背景颜色兜底，避免某些构建情况下动态类名未被捕获
-  const _fallbackBadgeBgByModule: Record<string, string> = {
-    quotation: 'bg-blue-600 dark:bg-blue-500',
-    confirmation: 'bg-emerald-600 dark:bg-emerald-500',
-    packing: 'bg-cyan-600 dark:bg-cyan-500',
-    invoice: 'bg-violet-600 dark:bg-violet-500',
-    purchase: 'bg-orange-600 dark:bg-orange-500',
-    'ai-email': 'bg-indigo-600 dark:bg-indigo-500',
-    history: 'bg-pink-600 dark:bg-pink-500',
-    customer: 'bg-fuchsia-600 dark:bg-fuchsia-500',
-  };
-
-  // 验证CSS变量是否存在，如果不存在则使用默认值
-  const getCSSVariableWithFallback = (variableName: string, fallback: string): string => {
-    if (typeof window === 'undefined') return fallback;
-
-    const value = getComputedStyle(document.documentElement).getPropertyValue(variableName);
-    return value.trim() || fallback;
-  };
-
-  // 构建CSS变量对象，包含错误处理
-  const cssVariables = {
-    '--bg-gradient': `linear-gradient(135deg, ${getCSSVariableWithFallback(`--${module.id}-from`, 'rgba(59, 130, 246, 0.08)')}, ${getCSSVariableWithFallback(`--${module.id}-to`, 'rgba(59, 130, 246, 0.12)')})`,
-    '--bg-gradient-hover': `linear-gradient(135deg, ${getCSSVariableWithFallback(`--${module.id}-hover-from`, 'rgba(59, 130, 246, 0.12)')}, ${getCSSVariableWithFallback(`--${module.id}-hover-to`, 'rgba(59, 130, 246, 0.18)')})`,
-    '--text-color': getCSSVariableWithFallback('--text-primary', '#171717'),
-    '--icon-color': getCSSVariableWithFallback(`--${module.id}-icon-color`, '#2563eb'),
-    '--badge-bg': getCSSVariableWithFallback(`--${module.id}-badge-bg`, '#2563eb'),
-    '--badge-text': getCSSVariableWithFallback('--badge-text-color', '#ffffff'),
-  };
-
-  // 开发环境下调试CSS变量
-  if (process.env.NODE_ENV === 'development') {
-    // 调试日志已关闭
-  }
 
   return (
     <button
-      className="module-button dashboard-module-button flex items-center justify-start gap-3 sm:gap-4 px-4 sm:px-5 py-4 sm:py-5 h-[96px] w-full relative group cursor-pointer"
-      style={cssVariables as React.CSSProperties}
+      className={`
+        group relative flex h-24 w-full cursor-pointer items-center justify-start gap-3 rounded-2xl
+        border border-white/70 px-4 py-4 text-left text-gray-900 shadow-sm backdrop-blur-sm
+        transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md active:translate-y-0
+        dark:border-white/10 dark:text-white dark:shadow-black/20
+        sm:gap-4 sm:px-5 sm:py-5
+        ${style.card}
+      `}
       onClick={() => onClick(module)}
       onMouseEnter={() => onHover?.(module)}
     >
-      {/* 图标容器 */}
-      <div className="icon-container w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 flex items-center justify-center flex-shrink-0">
-        <Icon className="icon w-5 h-5 sm:w-5.5 sm:h-5.5 md:w-6 md:h-6" />
+      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/55 ring-1 ring-white/70 transition-transform duration-200 group-hover:scale-105 dark:bg-white/5 dark:ring-white/10 ${style.icon}`}>
+        <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
       </div>
 
-      {/* 文字标题 */}
-      <div className="text-sm sm:text-base md:text-base font-semibold leading-tight truncate flex-1 min-w-0 text-left pl-0">
+      <div className="min-w-0 flex-1 truncate text-sm font-semibold leading-tight sm:text-base">
         {module.name}
       </div>
 
-      {/* 数量徽章 */}
-      {showBadge && (
-        <div className="badge absolute top-2 right-2 sm:top-2.5 sm:right-2.5 md:top-3 md:right-3 min-w-[18px] h-4.5 sm:min-w-[20px] sm:h-5 md:min-w-[22px] md:h-5.5 px-1.5 sm:px-2 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] md:text-[11px] font-bold tracking-wide z-10">
+      {count > 0 && (
+        <div className={`absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold leading-none text-white shadow-sm sm:right-2.5 sm:top-2.5 ${style.badge}`}>
           <span>{count > 9999 ? '9999+' : count}</span>
         </div>
       )}

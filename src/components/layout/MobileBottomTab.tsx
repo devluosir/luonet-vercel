@@ -45,7 +45,7 @@ export function MobileBottomTab() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 grid h-12 border-t border-gray-200 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.04)] dark:border-gray-700 dark:bg-[#1c1c1e] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid h-12 border-t border-gray-200 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.04)] dark:border-gray-700 dark:bg-app-dark-base md:hidden"
       style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}
     >
       {visibleTabs.map((item) => {

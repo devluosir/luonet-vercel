@@ -48,12 +48,12 @@ export function formatDocumentStatus(status: string): string {
 
 // 获取文档状态颜色
 export function getDocumentStatusColor(status: string): string {
-  const colorMap: Record<string, string> = {
+  const statusClassMap: Record<string, string> = {
     draft: 'text-gray-500 bg-gray-100',
     confirmed: 'text-blue-600 bg-blue-100',
     completed: 'text-green-600 bg-green-100',
     cancelled: 'text-red-600 bg-red-100',
   };
   
-  return colorMap[status] || 'text-gray-500 bg-gray-100';
+  return statusClassMap[status] || 'text-gray-500 bg-gray-100';
 }

@@ -1,6 +1,6 @@
 # Current State
 
-最后更新：2026-07-05
+最后更新：2026-07-06
 当前分支：`main`
 当前提交：以 `git log -1 --oneline` 为准
 应用版本：`1.2.0`（`package.json`）
@@ -134,10 +134,20 @@ draftPurchase
 qt.visibleCols
 pk.visibleCols
 themeConfig
-theme-settings
+theme-config
 ```
 
 注意：浏览器存储约 5MB 上限仍是架构风险。新增长文本、图片或大批量历史时需要评估配额。
+
+## 前端交互与主题现状
+
+- 全局反馈入口为 `src/components/ui/Toast.tsx`，支持 success / error / warning / info / loading、更新已有 toast、promise-style 流程、hover 暂停、Esc 关闭最新一条和最多 4 条堆叠。
+- 全局二次确认入口为 `src/components/ui/ConfirmDialog.tsx`。纯提示类反馈使用 Toast，需要用户决策的危险操作使用 ConfirmDialog。
+- 主题系统只保留明暗模式，不再提供 `classic` / `colorful` 按钮主题；配置写入 `theme-config`，并兼容旧 `themeConfig`。
+- 深色模式层级：应用主背景为 `#1c1c1e`，弹层 / 用户菜单表面为 `#2c2c2e`；Tailwind 语义色为 `app.dark.base` 和 `app.dark.surface`。
+- Dashboard 模块卡片使用静态 Tailwind 背景类（浅色 `bg-*-50`，深色 `dark:bg-*-500/10`），不再依赖运行时 CSS 变量注入或 `!important` 覆盖。
+- 用户菜单个人信息子菜单的「账户工具」包含主题紧凑切换和权限刷新图标按钮；权限刷新通过 `usePermissionRefresh.ts` 调用 `/api/auth/force-refresh-session`。
+- 预加载只保留真实阶段：静态资源到 50%，PDF 字体到 100%；空实现的表单页 / 脚本样式阶段已移除。
 
 ## 客户管理现状
 
@@ -182,6 +192,6 @@ theme-settings
 1. Worker 管理接口仍依赖客户端传入 `X-User-*` 请求头，存在伪造风险，应迁移到 HMAC/JWT 或服务端 session 校验。
 2. `wrangler.toml` 中仍存在明文 token，应迁移到 Cloudflare secret 并轮换。
 3. 业务历史仍大量依赖 `localStorage`，有容量和多设备同步风险。
-4. `check:production` 指向不存在的 `scripts/pre-production-check.js`，发布前使用 `check:selectors` 或修正脚本路径。
-5. `src/lib/d1-client.ts` 的 `validatePassword` bcrypt 分支存在已知问题，修改密码相关功能需谨慎验证。
+4. `src/lib/d1-client.ts` 的 `validatePassword` bcrypt 分支存在已知问题，修改密码相关功能需谨慎验证。
+5. `silent-refresh` 服务端分支依赖浏览器缓存，仍不可作为可靠刷新机制。
 6. `src/components` 与 `src/features` 仍有迁移中的重复边界，修改前必须确认实际 import 路径。

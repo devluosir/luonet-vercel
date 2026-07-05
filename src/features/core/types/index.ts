@@ -32,7 +32,6 @@ export interface BaseSettings {
   showBank: boolean;
   showStamp: boolean;
   language: 'zh' | 'en';
-  theme: 'colorful' | 'classic';
 }
 
 // 单据操作类型

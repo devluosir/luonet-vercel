@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本文件给后续维护代理使用。范围覆盖整个仓库。最后更新：2026-07-04（main 快照以 `git log -1 --oneline` 为准）
+本文件给后续维护代理使用。范围覆盖整个仓库。最后更新：2026-07-06（main 快照以 `git log -1 --oneline` 为准）
 
 ## 项目定位
 
@@ -21,7 +21,7 @@
 - 最新发布 tag：`v1.2.0`
 - 主框架：Next.js 14、React 18、TypeScript 5、Tailwind CSS 3
 - 部署目标：Vercel 主站（香港 hkg1 区域）+ Cloudflare Worker + D1
-- 已知问题：`check:production` 脚本指向 `scripts/pre-production-check.js`，但实际文件是 `scripts/pre-release-check.js`，使用前先修复或用 `check:selectors` 代替。
+- `check:production` / `check:production:full` 均指向 `scripts/pre-release-check.js`。
 
 ## 常用命令
 
@@ -132,7 +132,7 @@ Worker 入口：`src/worker.ts`，D1 客户端：`src/lib/d1-client.ts`，配置
 | `userCache`、`userInfo` | 登录用户信息缓存 |
 | `latestPermissions`、`permissionsTimestamp` | 权限本地缓存 |
 | `qt.visibleCols`、`pk.visibleCols` | 报价/装箱单列显示设置 |
-| `themeConfig`、`theme-settings` | 主题和按钮风格 |
+| `theme-config`、`themeConfig` | 主题明暗模式（兼容旧 key） |
 | `draftQuotation`、`draftPurchase` | 草稿暂存 |
 
 配额监控：`src/utils/storageQuotaManager.ts`。新增字段、图片、长文本或大批量历史时，必须评估 5MB 上限影响。
@@ -271,7 +271,7 @@ GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git f
 2. **数据持久化**：业务历史数据从 `localStorage` 迁移到服务端数据库（Cloudflare D1 扩展 schema 或独立数据库），解决多设备同步和 5MB 配额问题。
 3. **测试覆盖**：补 Playwright 关键路径集成测试（登录、权限、创建单据、PDF 生成、导入导出）。
 4. **代码清理**：分批消除 `src/components` 与 `src/features` 的重复实现，让每个业务模块自包含。
-5. **修复已知问题**：`check:production` 脚本路径、`validatePassword` bcrypt 分支、`silent-refresh` 服务端不可用问题。
+5. **修复已知问题**：`validatePassword` bcrypt 分支、`silent-refresh` 服务端不可用问题。
 6. **构建质量**：恢复 `eslint.ignoreDuringBuilds = false`，在 CI 中强制执行 lint。
 
 ## 文档索引

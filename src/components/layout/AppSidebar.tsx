@@ -169,7 +169,7 @@ export function AppSidebar({
 
   return (
     <aside
-      className={`fixed left-0 top-0 z-30 flex h-screen flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-[#1c1c1e] ${widthClass} ${className}`}
+      className={`fixed left-0 top-0 z-30 flex h-screen flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-app-dark-base ${widthClass} ${className}`}
     >
       {/* ── 头部 ── */}
       <div className="flex h-14 shrink-0 items-center border-b border-gray-200 dark:border-gray-700"

@@ -95,7 +95,7 @@ Worker 入口：`src/worker.ts`。配置：`wrangler.toml`（Worker 名 `mluonet
 | `new_customer_tracking` | 新客户跟踪 | 低 |
 | `userCache`、`userInfo`、`latestPermissions` | 登录和权限缓存 | 低 |
 | `qt.visibleCols`、`pk.visibleCols` | 列显示偏好 | 极低 |
-| `themeConfig`、`theme-settings` | 主题设置 | 极低 |
+| `theme-config`、`themeConfig` | 主题明暗模式（兼容旧 key） | 极低 |
 | `draftQuotation`、`draftPurchase` | 草稿暂存 | 低 |
 
 配额监控：`src/utils/storageQuotaManager.ts`（5MB 上限估算，超出时触发清理）。
@@ -188,7 +188,7 @@ npm run check:autotable    # 检查废弃 AutoTable 用法
 npm run pre-release        # 发布前全量检查（check:selectors + test + lint）
 ```
 
-注意：`check:production` 指向不存在的 `scripts/pre-production-check.js`，用 `check:selectors` 替代。
+注意：`check:production` 和 `check:production:full` 当前均指向 `scripts/pre-release-check.js`。
 
 构建配置当前设置 `eslint.ignoreDuringBuilds = true`，构建通过不代表无 lint 问题。
 
@@ -250,7 +250,7 @@ GIT_SSH_COMMAND="ssh -i ~/.ssh/imac26_ed25519 -o StrictHostKeyChecking=no" git f
 2. **数据持久化**：业务历史从 `localStorage` 迁移到服务端，解决多设备同步和 5MB 配额。
 3. **测试**：补 Playwright 关键路径集成测试（登录、PDF、导入导出）。
 4. **代码整合**：消除 `src/components` 与 `src/features` 之间的重复实现。
-5. **已知缺陷修复**：`check:production` 脚本路径、`validatePassword` bcrypt 分支、`silent-refresh` 服务端失效。
+5. **已知缺陷修复**：`validatePassword` bcrypt 分支、`silent-refresh` 服务端失效。
 6. **构建质量**：恢复 ESLint 构建检查，建立 CI 流程。
 
 ## 文档索引
