@@ -466,7 +466,7 @@ export const RecentDocumentsList: React.FC<RecentDocumentsListProps> = ({
             {getEmptyStateText()}
           </div>
           <div className="text-xs text-gray-400 dark:text-gray-500">
-            {searchTerm.trim() ? '可尝试按“单据号”或“名称”搜索' : '支持按“单据号”或“名称”搜索，例如 2024-001'}
+            {searchTerm.trim() ? '可尝试按“单据号”或“名称”搜索' : '支持按“单据号”或“名称”搜索，例如 C260101F'}
           </div>
         </div>
       )}
