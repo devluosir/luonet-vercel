@@ -36,7 +36,7 @@ export const PERMISSION_MODULES: PermissionModuleDef[] = [
   { moduleId: 'customer', label: '客户管理', icon: '👥', category: 'management' },
   { moduleId: 'ai-email', label: 'AI 邮件', icon: '🤖', category: 'tool' },
   { moduleId: 'impa', label: 'IMPA 物料', icon: '🔎', category: 'tool' },
-  { moduleId: 'clock', label: '世界时钟', icon: '🕐', category: 'tool' },
+  { moduleId: 'clock', label: '时区汇率', icon: '🕐', category: 'tool' },
   { moduleId: 'holidays', label: '全球假日', icon: '📅', category: 'tool' },
   { moduleId: 'rmb', label: 'RMB 大写', icon: '💴', category: 'tool' },
 ];

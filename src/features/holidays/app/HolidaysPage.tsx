@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Globe, ChevronDown, Info } from 'lucide-react';
@@ -227,10 +227,13 @@ export function HolidaysPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
+  const hasPositionedCurrentMonth = useRef(false);
 
   const [catFilter, setCatFilter] = useState<CategoryFilter>('all');
   const [subFilter, setSubFilter] = useState<string>('all');
   const [expandedHolidayKey, setExpandedHolidayKey] = useState<string | null>(null);
+  const currentMonthKey = useMemo(() => todayStr().slice(0, 7), []);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -292,6 +295,25 @@ export function HolidaysPage() {
     }
     return Array.from(groups.entries()).map(([key, items]) => ({ key, items }));
   }, [catFilter, subFilter]);
+
+  const initialScrollTargetKey = useMemo(() => {
+    if (grouped.length === 0) return null;
+    return grouped.find((group) => group.key >= currentMonthKey)?.key ?? grouped[0].key;
+  }, [currentMonthKey, grouped]);
+
+  useEffect(() => {
+    if (!mounted || hasPositionedCurrentMonth.current || !initialScrollTargetKey) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const monthElement = listRef.current?.querySelector<HTMLElement>(`[data-month="${initialScrollTargetKey}"]`);
+      if (!monthElement) return;
+
+      hasPositionedCurrentMonth.current = true;
+      monthElement.scrollIntoView({ block: 'start', behavior: 'auto' });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [mounted, initialScrollTargetKey]);
 
   if (!mounted || status === 'unauthenticated') return null;
 
@@ -371,7 +393,7 @@ export function HolidaysPage() {
             <p className="text-sm">没有符合条件的假日</p>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div ref={listRef} className="space-y-5">
             {grouped.map(({ key, items }) => (
               <div key={key} data-month={key} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 {/* 月份标题 */}

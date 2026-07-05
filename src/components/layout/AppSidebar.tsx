@@ -76,7 +76,7 @@ export const NAV_ITEMS: SidebarItem[] = [
   { id: 'history',      label: '单据历史',  path: '/history',                 icon: Archive,          permissionKey: 'canViewHistory' },
   { id: 'customer',     label: '客户管理',  path: '/customer',                icon: Users,     permissionKey: 'canManageCustomers' },
   { id: 'impa',         label: 'IMPA物料', path: 'https://impa.luocompany.com', icon: PackageSearch, permissionKey: 'canUseImpa', external: true },
-  { id: 'clock',        label: '世界时钟', path: '/clock',                   icon: Clock,    permissionKey: 'canUseClock' },
+  { id: 'clock',        label: '时区汇率', path: '/clock',                   icon: Clock,    permissionKey: 'canUseClock' },
   { id: 'holidays',     label: '全球假日', path: '/holidays',                icon: CalendarDays, permissionKey: 'canUseHolidays' },
   { id: 'rmb',          label: 'RMB大写',  path: '/rmb',                     icon: Banknote, permissionKey: 'canUseRmb' },
   { id: 'mail',         label: 'AI 邮件',  path: '/mail',                    icon: Mail,      permissionKey: 'canUseAiEmail' },
@@ -107,7 +107,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: 'tools',
     label: '工具',
-    items: NAV_ITEMS.slice(10),    // AI 邮件、世界时钟…
+    items: NAV_ITEMS.slice(10),    // AI 邮件、时区汇率…
   },
 ];
 

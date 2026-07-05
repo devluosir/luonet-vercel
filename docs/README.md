@@ -1,6 +1,6 @@
 # MLUONET 文档索引
 
-最后更新：2026-07-04
+最后更新：2026-07-05
 
 ## 先看这里
 
@@ -33,6 +33,7 @@
 - [发票模块](features/invoice/)
 - [AI 邮件](features/mail/)
 - [管理后台](features/admin/)
+- [工具模块：时区汇率 / 全球假日](modules-world-clock-holidays.md)
 
 ### 技术专题
 

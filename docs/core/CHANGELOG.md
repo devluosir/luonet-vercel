@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-07-05
+
+### Changed
+
+#### 工具模块 / 时区汇率
+- **世界时钟更名为时区汇率**：`/clock` 页面标题、面包屑、左侧导航和权限模块名称统一为「时区汇率」。
+- **时区汇率页重构**：页面包含「时间 / 汇率」两个 Tab；时间 Tab 保留城市时间轴联动，汇率 Tab 支持外币兑人民币快速换算、关注货币、手动刷新和 7 天 / 1 个月走势查看。
+
+#### 工具模块 / 全球假日
+- **假日详情完善**：假日行可展开查看「假期背景」「假期表现与商务影响」「禁忌与注意事项」，重点节日使用专属文案，其他节日按分类生成通用说明。
+- **详情区域布局优化**：展开内容取消左侧额外缩进，与假日内容列对齐，减少大屏空白。
+- **当前月份定位调整**：进入 `/holidays` 后即时定位到当前月份；定位不使用平滑滚动动画，展开 / 收起详情不再触发页面滚动。
+
+### Tests
+- `npm run build`
+
 ## [Unreleased] - 2026-07-04
 
 ### Fixed
@@ -117,8 +133,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### 工具模块
 - **RMB大写转换**（`/rmb`）：人民币大写转换工具，支持中文银行大写和英文金额（SAY USD … ONLY）两种格式；5个快捷预设金额；附带规则说明折叠面板
-- **世界时钟**（`/clock`）：8个默认城市（含上海），实时时间，旗帜 Emoji 可拖拽时间轴同步所有城市时区，顶部实时刷新按钮
-- **全球假日**（`/holidays`）：三类假日 Tab（中国法定 / 全球 / 宗教），移动端优化，过去假日不置灰，自动滚动到今天
+- **时区汇率**（`/clock`）：时间 / 汇率双 Tab；8个默认城市（含上海），时间轴同步所有城市时区；支持外币兑人民币快速换算、关注货币和走势查看
+- **全球假日**（`/holidays`）：三类假日 Tab（中国法定 / 全球 / 宗教），移动端优化，过去假日不置灰，进入后即时定位当前月份，假日行支持详情展开
 
 #### 询报价登记优化
 - **筛选面板常驻**：移除筛选展开/收起 Toggle，FilterBar 始终可见，标题行去掉，减少操作层级
@@ -133,7 +149,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### 左侧导航
 - 新增 RMB大写（`/rmb`，Banknote 图标）
-- 首页大磁贴：移除世界时钟、全球假日、人民币大写三个入口，避免重复
+- 首页大磁贴：移除时区汇率、全球假日、人民币大写三个入口，避免重复
 
 ### Changed
 - `QuoteStatusFilter` 类型新增 `'cancelled'` 和 `'followup'`

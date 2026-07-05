@@ -1,6 +1,6 @@
 # 权限系统现状
 
-最后更新：2026-07-02
+最后更新：2026-07-05
 
 ## 当前结论
 
@@ -27,7 +27,7 @@ src/constants/permissionModules.ts
 | `customer` | 客户管理 |
 | `ai-email` | AI 邮件 |
 | `impa` | IMPA 物料外部工具 |
-| `clock` | 世界时钟 |
+| `clock` | 时区汇率 |
 | `holidays` | 全球假日 |
 | `rmb` | RMB 大写 |
 
@@ -46,6 +46,7 @@ src/constants/permissionModules.ts
 
 ## 最近变更
 
+- `clock` 模块显示名称已从“世界时钟”统一为“时区汇率”，左侧导航、权限注册表和页面面包屑保持一致。
 - `impa` 已加入模块权限。
 - 生产 D1 已执行 `migrations/007_grant_default_impa_permission.sql`。
 - 复查结果：`impa_permissions = 8`，`enabled_permissions = 8`。

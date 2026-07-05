@@ -925,7 +925,7 @@ export function ClockPage() {
 
   return (
     <AppLayout
-      breadcrumbs={[{ label: '首页', path: '/dashboard' }, { label: '世界时钟' }]}
+      breadcrumbs={[{ label: '首页', path: '/dashboard' }, { label: '时区汇率' }]}
       user={{
         name: session?.user?.username || session?.user?.name || '用户',
         isAdmin: session?.user?.isAdmin ?? false,
@@ -939,7 +939,7 @@ export function ClockPage() {
             <div>
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-blue-600" />
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">时区·汇率</h1>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">时区汇率</h1>
               </div>
               <p className="mt-0.5 text-xs text-gray-400">
                 {tab === 'clock' ? '拖动时间轴，各城市同步联动' : '实时汇率，快速换算'}
