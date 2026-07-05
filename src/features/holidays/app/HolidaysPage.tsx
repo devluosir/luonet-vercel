@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Globe, ChevronDown, Info } from 'lucide-react';
@@ -232,9 +232,6 @@ export function HolidaysPage() {
   const [subFilter, setSubFilter] = useState<string>('all');
   const [expandedHolidayKey, setExpandedHolidayKey] = useState<string | null>(null);
 
-  const today = useMemo(() => todayStr(), []);
-  const listRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => { setMounted(true); }, []);
 
   const handleLogout = useCallback(async () => {
@@ -295,26 +292,6 @@ export function HolidaysPage() {
     }
     return Array.from(groups.entries()).map(([key, items]) => ({ key, items }));
   }, [catFilter, subFilter]);
-
-  // 当月或最近有假日的月份 key，用于自动滚动
-  const scrollTargetKey = useMemo(() => {
-    const todayMk = today.slice(0, 7);
-    // 优先找当月或之后第一个含未来/进行中假日的月份
-    const target = grouped.find(g =>
-      g.key >= todayMk && g.items.some(({ diff, holiday }) => diff >= 0 || (diff < 0 && diff > -(holiday.days ?? 1)))
-    );
-    return target?.key ?? grouped.find(g => g.key >= todayMk)?.key ?? null;
-  }, [grouped, today]);
-
-  // 挂载后自动滚动到目标月份
-  useEffect(() => {
-    if (!mounted || !scrollTargetKey) return;
-    const timer = setTimeout(() => {
-      const el = listRef.current?.querySelector(`[data-month="${scrollTargetKey}"]`);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [mounted, scrollTargetKey]);
 
   if (!mounted || status === 'unauthenticated') return null;
 
@@ -394,7 +371,7 @@ export function HolidaysPage() {
             <p className="text-sm">没有符合条件的假日</p>
           </div>
         ) : (
-          <div ref={listRef} className="space-y-5">
+          <div className="space-y-5">
             {grouped.map(({ key, items }) => (
               <div key={key} data-month={key} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                 {/* 月份标题 */}
