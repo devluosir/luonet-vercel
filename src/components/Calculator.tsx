@@ -1,6 +1,6 @@
 'use client'
 
-import { Calculator as CalculatorIcon, X, Move, ChevronUp, History } from 'lucide-react';
+import { Calculator as CalculatorIcon, X, Move, ChevronUp, History, Copy, Check } from 'lucide-react';
 import { useCallback, useEffect, useState, useRef } from 'react';
 
 interface CalculatorProps {
@@ -12,6 +12,148 @@ interface CalculatorProps {
 interface HistoryItem {
   expression: string;
   result: string;
+}
+
+interface KeyboardHandlers {
+  inputDigit: (digit: string) => void;
+  inputDecimal: () => void;
+  performOperation: (operation: string) => void;
+  handleOpenBracket: () => void;
+  handleCloseBracket: () => void;
+  calculateResult: () => void;
+  handleBackspace: () => void;
+  canCalculate: boolean;
+  onClose: () => void;
+}
+
+const OPERATOR_TOKENS = ['+', '-', '×', '÷'];
+const DIVISION_BY_ZERO_MESSAGE = '不能除以0';
+const DESKTOP_POPUP_WIDTH = 320;
+const HISTORY_PANEL_WIDTH = 320;
+const VIEWPORT_MARGIN = 10;
+
+function isOperatorToken(token: string) {
+  return OPERATOR_TOKENS.includes(token);
+}
+
+function getExpressionTokens(value: string) {
+  return value.trim().split(/\s+/).filter(Boolean);
+}
+
+function hasTrailingOperator(value: string) {
+  const tokens = getExpressionTokens(value);
+  return tokens.length > 0 && isOperatorToken(tokens[tokens.length - 1]);
+}
+
+function appendOrReplaceTrailingOperator(value: string, nextOperation: string) {
+  const tokens = getExpressionTokens(value);
+  if (tokens.length === 0) return nextOperation;
+  if (isOperatorToken(tokens[tokens.length - 1])) {
+    tokens[tokens.length - 1] = nextOperation;
+    return tokens.join(' ');
+  }
+  return `${value} ${nextOperation}`;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function clampRectToViewport({
+  top,
+  left,
+  width,
+  height,
+  margin = VIEWPORT_MARGIN,
+}: {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  margin?: number;
+}) {
+  const maxLeft = Math.max(margin, window.innerWidth - width - margin);
+  const maxTop = Math.max(margin, window.innerHeight - height - margin);
+  return {
+    top: clamp(top, margin, maxTop),
+    left: clamp(left, margin, maxLeft),
+  };
+}
+
+function CalculatorHistoryContent({
+  history,
+  onSelect,
+  onClear,
+  onClose,
+  isMobile,
+}: {
+  history: HistoryItem[];
+  onSelect: (item: HistoryItem) => void;
+  onClear: () => void;
+  onClose: () => void;
+  isMobile: boolean;
+}) {
+  return (
+    <>
+      <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+        <div className="flex items-center space-x-2">
+          <History className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          <h4 className="text-sm font-medium text-gray-900 dark:text-white">历史记录</h4>
+        </div>
+        <div className="flex items-center space-x-2">
+          {history.length > 0 && (
+            <button
+              onClick={onClear}
+              className="text-xs text-red-500 hover:text-red-600 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+              data-no-drag
+            >
+              清空
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            title="隐藏历史记录"
+            data-no-drag
+          >
+            <ChevronUp className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+          </button>
+        </div>
+      </div>
+
+      <div className={`${isMobile ? 'max-h-48' : 'flex-1'} calc-history-content overflow-y-auto p-3 bg-gray-50 dark:bg-gray-900 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800`}>
+        {history.length === 0 ? (
+          <div className={`text-center text-sm text-gray-500 dark:text-gray-400 ${isMobile ? 'py-4' : 'py-8'}`}>
+            <History className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} mx-auto mb-2 text-gray-300 dark:text-gray-600`} />
+            <div>暂无历史记录</div>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {history.map((item, index) => (
+              <div
+                key={`${item.expression}-${item.result}-${index}`}
+                onClick={() => onSelect(item)}
+                className={`p-2 rounded-lg cursor-pointer transition-all duration-200 group border border-transparent hover:border-gray-200 dark:hover:border-gray-700 ${
+                  isMobile
+                    ? 'hover:bg-gray-50 dark:hover:bg-gray-600'
+                    : 'hover:bg-white dark:hover:bg-gray-800'
+                }`}
+                title="点击使用此结果"
+                data-no-drag
+              >
+                <div className="text-sm font-mono break-words leading-tight flex items-center justify-between">
+                  <span className="text-gray-500 dark:text-gray-400 flex-1 mr-2">{item.expression}</span>
+                  <span className="text-gray-900 dark:text-white font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors whitespace-nowrap">
+                    = {item.result}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
 }
 
 export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
@@ -29,12 +171,15 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const calculatorBodyRef = useRef<HTMLDivElement>(null); // 计算器主体的引用
+  const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const keyboardHandlersRef = useRef<KeyboardHandlers | null>(null);
 
   // 重新设计：使用更简单的状态管理
   const [currentNumber, setCurrentNumber] = useState('0');
   const [operation, setOperation] = useState<string | null>(null);
   const [previousValue, setPreviousValue] = useState<number | null>(null);
   const [justCalculated, setJustCalculated] = useState(false); // 跟踪是否刚完成计算
+  const [isCopied, setIsCopied] = useState(false);
 
   // 从localStorage加载历史记录和位置偏好
   useEffect(() => {
@@ -171,12 +316,12 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       // 第一次输入运算符
       setPreviousValue(inputValue);
       setOperation(nextOperation);
-      setExpression(expression + ' ' + nextOperation);
+      setExpression(expression ? appendOrReplaceTrailingOperator(expression, nextOperation) : `${display} ${nextOperation}`);
     } else if (operation) {
-      // 只添加运算符到表达式，当前数字已经在表达式中了
+      // 已存在运算符时，如果表达式末尾也是运算符，则替换最后一个 token
       setPreviousValue(inputValue);
       setOperation(nextOperation);
-      setExpression(expression + ' ' + nextOperation);
+      setExpression(appendOrReplaceTrailingOperator(expression, nextOperation));
     }
 
     setCurrentNumber('0');
@@ -444,6 +589,9 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         result = firstValue * secondValue;
         break;
       case '÷':
+        if (secondValue === 0) {
+          throw new Error(DIVISION_BY_ZERO_MESSAGE);
+        }
         result = firstValue / secondValue;
         break;
       default:
@@ -455,15 +603,17 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   };
 
   const calculateResult = () => {
-    if (!previousValue || !operation) return;
+    if (previousValue === null || !operation || hasTrailingOperator(expression)) return;
 
     const fullExpression = expression;
 
     // 计算完整表达式
-    const result = evaluateExpression(fullExpression);
+    const { value: result, error } = evaluateExpression(fullExpression);
 
     let formattedResult: string;
-    if (isNaN(result) || !isFinite(result)) {
+    if (error) {
+      formattedResult = error;
+    } else if (isNaN(result) || !isFinite(result)) {
       formattedResult = 'Error';
     } else {
       formattedResult = formatDisplayValue(result);
@@ -481,7 +631,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
   };
 
   // 计算完整表达式的函数（用于处理优先级和括号）
-  const evaluateExpression = (expr: string): number => {
+  const evaluateExpression = (expr: string): { value: number; error?: string } => {
     try {
       // 处理括号的递归函数
       const evaluateWithBrackets = (expression: string): number => {
@@ -570,10 +720,12 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         return result;
       };
 
-      const result = evaluateWithBrackets(expr);
-      return result;
+      return { value: evaluateWithBrackets(expr) };
     } catch (error) {
-      return NaN;
+      if (error instanceof Error && error.message === DIVISION_BY_ZERO_MESSAGE) {
+        return { value: NaN, error: DIVISION_BY_ZERO_MESSAGE };
+      }
+      return { value: NaN };
     }
   };
 
@@ -595,6 +747,8 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
 
   // 历史记录功能
   const addToHistory = (expression: string, result: string) => {
+    if (result === 'Error' || result === DIVISION_BY_ZERO_MESSAGE) return;
+
     const newHistoryItem: HistoryItem = {
       expression,
       result
@@ -612,7 +766,35 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     saveHistoryToStorage([]); // 清空后也保存到localStorage
   };
 
+  const selectHistoryItem = (item: HistoryItem) => {
+    setDisplay(item.result);
+    setCurrentNumber(item.result);
+    setExpression(item.result);
+    setPreviousValue(null);
+    setOperation(null);
+    setJustCalculated(false);
+  };
 
+  const copyDisplayToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(display);
+      setIsCopied(true);
+      if (copyResetTimerRef.current) {
+        clearTimeout(copyResetTimerRef.current);
+      }
+      copyResetTimerRef.current = setTimeout(() => setIsCopied(false), 1200);
+    } catch (error) {
+      console.error('复制计算结果失败:', error);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimerRef.current) {
+        clearTimeout(copyResetTimerRef.current);
+      }
+    };
+  }, []);
 
   // 计算弹窗位置
   const calculatePopupPosition = useCallback(() => {
@@ -630,7 +812,7 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     const estimatedPopupHeight = isMobile
       ? Math.min(400, viewportHeight - 80) // 移动端使用更合理的高度
       : 450; // 桌面端估算高度（用于位置计算）
-    const margin = isMobile ? 10 : 10; // 边距
+    const margin = VIEWPORT_MARGIN; // 边距
 
     let top, left;
 
@@ -654,19 +836,13 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
       }
     }
 
-    // 确保左右不超出边界
-    if (left < margin) {
-      left = margin;
-    } else if (left + popupWidth > viewportWidth - margin) {
-      left = viewportWidth - popupWidth - margin;
-    }
-
-    // 确保顶部不超出边界
-    if (top < margin) {
-      top = margin;
-    }
-
-    setPopupPosition({ top, left });
+    setPopupPosition(clampRectToViewport({
+      top,
+      left,
+      width: popupWidth,
+      height: estimatedPopupHeight,
+      margin,
+    }));
   }, [triggerRef]);
 
   // 拖动相关函数
@@ -719,26 +895,18 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     if (!isDragging || !popupRef.current) return;
 
     const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
     const isMobile = viewportWidth < 768;
-    const popupWidth = isMobile ? Math.min(viewportWidth - 20, 320) : 320;
+    const popupWidth = isMobile ? Math.min(viewportWidth - 20, DESKTOP_POPUP_WIDTH) : DESKTOP_POPUP_WIDTH;
     const popupHeight = popupRef.current.offsetHeight; // 使用实际高度
-    const margin = 10;
 
-    let newLeft = e.clientX - dragOffset.x;
-    let newTop = e.clientY - dragOffset.y;
+    const nextPosition = clampRectToViewport({
+      top: e.clientY - dragOffset.y,
+      left: e.clientX - dragOffset.x,
+      width: popupWidth,
+      height: popupHeight,
+    });
 
-    // 边界检查
-    if (newLeft < margin) newLeft = margin;
-    if (newLeft + popupWidth > viewportWidth - margin) {
-      newLeft = viewportWidth - popupWidth - margin;
-    }
-    if (newTop < margin) newTop = margin;
-    if (newTop + popupHeight > viewportHeight - margin) {
-      newTop = viewportHeight - popupHeight - margin;
-    }
-
-    setPopupPosition({ top: newTop, left: newLeft });
+    setPopupPosition(nextPosition);
     setHasBeenDragged(true); // 标记已经拖动过
   }, [dragOffset.x, dragOffset.y, isDragging]);
 
@@ -749,26 +917,18 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     const touch = e.touches[0];
 
     const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
     const isMobile = viewportWidth < 768;
-    const popupWidth = isMobile ? Math.min(viewportWidth - 20, 320) : 320;
+    const popupWidth = isMobile ? Math.min(viewportWidth - 20, DESKTOP_POPUP_WIDTH) : DESKTOP_POPUP_WIDTH;
     const popupHeight = popupRef.current.offsetHeight; // 使用实际高度
-    const margin = 10;
 
-    let newLeft = touch.clientX - dragOffset.x;
-    let newTop = touch.clientY - dragOffset.y;
+    const nextPosition = clampRectToViewport({
+      top: touch.clientY - dragOffset.y,
+      left: touch.clientX - dragOffset.x,
+      width: popupWidth,
+      height: popupHeight,
+    });
 
-    // 边界检查
-    if (newLeft < margin) newLeft = margin;
-    if (newLeft + popupWidth > viewportWidth - margin) {
-      newLeft = viewportWidth - popupWidth - margin;
-    }
-    if (newTop < margin) newTop = margin;
-    if (newTop + popupHeight > viewportHeight - margin) {
-      newTop = viewportHeight - popupHeight - margin;
-    }
-
-    setPopupPosition({ top: newTop, left: newLeft });
+    setPopupPosition(nextPosition);
     setHasBeenDragged(true); // 标记已经拖动过
   }, [dragOffset.x, dragOffset.y, isDragging]);
 
@@ -844,51 +1004,154 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
     // 移除弹窗关闭时重置拖动标记的逻辑，让位置保持记忆
   }, [isOpen, hasBeenDragged, calculatePopupPosition]);
 
-  // 计算历史记录面板位置，确保与计算器主体同高且对称
+  // 计算历史记录面板位置，使用实测尺寸并做 viewport clamping
   const updateHistoryPanelPosition = useCallback(() => {
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 768;
     const isMobileCheck = viewportWidth < 768;
 
-    if (isOpen && !isMobileCheck && isHistoryExpanded && calculatorBodyRef.current) {
-      const _calculatorBody = calculatorBodyRef.current;
-      const popupRect = popupRef.current?.getBoundingClientRect();
+    if (isOpen && !isMobileCheck && isHistoryExpanded && calculatorBodyRef.current && popupRef.current) {
+      const bodyRect = calculatorBodyRef.current.getBoundingClientRect();
+      const popupRect = popupRef.current.getBoundingClientRect();
+      const headerHeight = headerRef.current?.getBoundingClientRect().height ?? 0;
+      const bodyOffsetFromPopup = bodyRect.top - popupRect.top;
+      const relativeTopOffset = Math.max(headerHeight, bodyOffsetFromPopup);
+      const gap = 8;
+      const panelHeight = popupRect.height;
 
-                    if (popupRect) {
-          // 历史记录面板应该与整个计算器窗口同高同宽，在右边拼接
-          // popupRect 是整个弹窗的尺寸，包括标题栏和内容区域
+      let panelViewportLeft = popupRect.right + gap;
+      if (panelViewportLeft + HISTORY_PANEL_WIDTH > window.innerWidth - VIEWPORT_MARGIN) {
+        panelViewportLeft = popupRect.left - HISTORY_PANEL_WIDTH - gap;
+      }
 
-          // 历史记录面板应该与计算器显示区域顶部对齐，但与整个计算器窗口同高
-          // 精确计算位置
-          const headerHeight = -65; // 微调向上偏移量
-          const gap = 5; // 增加间距，让两个面板更美观
+      const clampedPanelPosition = clampRectToViewport({
+        top: popupRect.top,
+        left: panelViewportLeft,
+        width: HISTORY_PANEL_WIDTH,
+        height: panelHeight,
+      });
 
-          setHistoryPanelPosition({
-            top: headerHeight, // 与计算器显示区域顶部对齐
-            left: 300 + gap, // 弹窗宽度 + 间距
-            height: 488 // 与整个计算器窗口同高
-          });
-        }
+      setHistoryPanelPosition({
+        top: clampedPanelPosition.top - popupRect.top - relativeTopOffset,
+        left: clampedPanelPosition.left - bodyRect.left,
+        height: panelHeight,
+      });
     }
   }, [isHistoryExpanded, isOpen]);
 
   useEffect(() => {
     if (isOpen && isHistoryExpanded) {
-      // 延迟执行以确保DOM完全渲染
-      setTimeout(updateHistoryPanelPosition, 10);
+      updateHistoryPanelPosition();
     }
-  }, [isOpen, isHistoryExpanded, updateHistoryPanelPosition]);
+  }, [isOpen, isHistoryExpanded, popupPosition.left, popupPosition.top, updateHistoryPanelPosition]);
 
-  // 监听窗口大小变化，重新计算历史记录面板位置
+  // 监听计算器主体尺寸变化，长算式换行时同步历史面板
   useEffect(() => {
-    if (isOpen && isHistoryExpanded) {
-      const handleResize = () => {
-        updateHistoryPanelPosition();
-      };
+    if (!isOpen || !isHistoryExpanded || typeof ResizeObserver === 'undefined') return;
+    if (!calculatorBodyRef.current) return;
 
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
+    const observer = new ResizeObserver(() => {
+      updateHistoryPanelPosition();
+    });
+    observer.observe(calculatorBodyRef.current);
+    if (popupRef.current) {
+      observer.observe(popupRef.current);
     }
+    if (headerRef.current) {
+      observer.observe(headerRef.current);
+    }
+
+    return () => observer.disconnect();
   }, [isOpen, isHistoryExpanded, updateHistoryPanelPosition]);
+
+  const canCalculate = previousValue !== null && Boolean(operation) && !hasTrailingOperator(expression);
+  keyboardHandlersRef.current = {
+    inputDigit,
+    inputDecimal,
+    performOperation,
+    handleOpenBracket,
+    handleCloseBracket,
+    calculateResult,
+    handleBackspace,
+    canCalculate,
+    onClose,
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+
+      const key = event.key;
+      const handlers = keyboardHandlersRef.current;
+      if (!handlers) return;
+
+      if (/^\d$/.test(key)) {
+        event.preventDefault();
+        handlers.inputDigit(key);
+        return;
+      }
+
+      if (key === '.') {
+        event.preventDefault();
+        handlers.inputDecimal();
+        return;
+      }
+
+      if (key === '+' || key === '-') {
+        event.preventDefault();
+        handlers.performOperation(key);
+        return;
+      }
+
+      if (key === '*' || key.toLowerCase() === 'x' || key === '×') {
+        event.preventDefault();
+        handlers.performOperation('×');
+        return;
+      }
+
+      if (key === '/') {
+        event.preventDefault();
+        handlers.performOperation('÷');
+        return;
+      }
+
+      if (key === '(') {
+        event.preventDefault();
+        handlers.handleOpenBracket();
+        return;
+      }
+
+      if (key === ')') {
+        event.preventDefault();
+        handlers.handleCloseBracket();
+        return;
+      }
+
+      if (key === 'Enter' || key === '=') {
+        event.preventDefault();
+        if (handlers.canCalculate) {
+          handlers.calculateResult();
+        }
+        return;
+      }
+
+      if (key === 'Backspace') {
+        event.preventDefault();
+        handlers.handleBackspace();
+        return;
+      }
+
+      if (key === 'Escape') {
+        event.preventDefault();
+        handlers.onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -909,8 +1172,8 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         transform: 'translateZ(0)', // 启用硬件加速
         userSelect: isDragging ? 'none' : 'auto',
         width: isMobile
-          ? `${Math.min(viewportWidth - 20, 320)}px`
-          : '320px', // 桌面端固定宽度
+          ? `${Math.min(viewportWidth - 20, DESKTOP_POPUP_WIDTH)}px`
+          : `${DESKTOP_POPUP_WIDTH}px`, // 桌面端固定宽度
         height: 'auto', // 根据内容自动调整高度
         maxWidth: isMobile ? 'calc(100vw - 20px)' : 'none',
         maxHeight: isMobile ? 'calc(100vh - 40px)' : 'none'
@@ -987,8 +1250,19 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
               {expression || '\u00A0'}
             </div>
             {/* 当前数值显示 */}
-            <div className={`text-right ${isMobile ? 'text-lg' : 'text-xl'} font-mono text-gray-900 dark:text-white overflow-hidden`}>
-              {display}
+            <div className="flex items-center justify-end gap-2 overflow-hidden">
+              <button
+                type="button"
+                onClick={copyDisplayToClipboard}
+                className="shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-blue-600 dark:hover:bg-gray-600 dark:hover:text-blue-300"
+                title="复制结果"
+                data-no-drag
+              >
+                {isCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              </button>
+              <div className={`min-w-0 truncate text-right ${isMobile ? 'text-lg' : 'text-xl'} font-mono text-gray-900 dark:text-white`}>
+                {display}
+              </div>
             </div>
           </div>
 
@@ -1073,7 +1347,16 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
             <button onClick={handlePlusMinus} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors text-sm shadow-sm border border-gray-200 dark:border-gray-600`} data-no-drag>
               ±
             </button>
-            <button onClick={calculateResult} className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} bg-orange-400 text-white rounded-lg hover:bg-orange-500 transition-colors text-sm shadow-sm`} data-no-drag>
+            <button
+              onClick={calculateResult}
+              disabled={!canCalculate}
+              className={`${isMobile ? 'py-2.5 px-2' : 'p-2.5'} rounded-lg transition-colors text-sm shadow-sm ${
+                canCalculate
+                  ? 'bg-orange-400 text-white hover:bg-orange-500'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500'
+              }`}
+              data-no-drag
+            >
               =
             </button>
           </div>
@@ -1082,70 +1365,13 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
         {/* 移动端历史记录抽屉 - 只在移动端显示 */}
         {isMobile && isMobileHistoryOpen && (
           <div className="mt-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 shadow-lg">
-            {/* 移动端历史记录标题栏 */}
-            <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-600">
-              <div className="flex items-center space-x-2">
-                <History className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white">历史记录</h4>
-              </div>
-              <div className="flex items-center space-x-2">
-                {history.length > 0 && (
-                  <button
-                    onClick={clearHistory}
-                    className="text-xs text-red-500 hover:text-red-600 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
-                    data-no-drag
-                  >
-                    清空
-                  </button>
-                )}
-                <button
-                  onClick={() => setIsMobileHistoryOpen(false)}
-                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  title="隐藏历史记录"
-                  data-no-drag
-                >
-                  <ChevronUp className="h-3 w-3 text-gray-500 dark:text-gray-400" />
-                </button>
-              </div>
-            </div>
-
-            {/* 移动端历史记录内容区域 */}
-            <div className="max-h-48 overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
-              {history.length === 0 ? (
-                <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-4">
-                  <History className="h-6 w-6 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-                  <div>暂无历史记录</div>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {history.map((item, index) => (
-                    <div
-                      key={index}
-                      onClick={() => {
-                        setDisplay(item.result);
-                        setCurrentNumber(item.result);
-                        setExpression(item.result);
-                        setPreviousValue(null);
-                        setOperation(null);
-                        setJustCalculated(false);
-                        // 移除自动关闭，让用户手动控制历史记录区域的开关
-                      }}
-                      className="p-2 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-200 group border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
-                      title="点击使用此结果"
-                      data-no-drag
-                    >
-                      {/* 算式和结果在同一行显示，更紧凑 */}
-                      <div className="text-sm font-mono break-words leading-tight flex items-center justify-between">
-                        <span className="text-gray-500 dark:text-gray-400 flex-1 mr-2">{item.expression}</span>
-                        <span className="text-gray-900 dark:text-white font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors whitespace-nowrap">
-                          = {item.result}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <CalculatorHistoryContent
+              history={history}
+              onSelect={selectHistoryItem}
+              onClear={clearHistory}
+              onClose={() => setIsMobileHistoryOpen(false)}
+              isMobile
+            />
           </div>
         )}
 
@@ -1158,73 +1384,17 @@ export function Calculator({ isOpen, onClose, triggerRef }: CalculatorProps) {
             style={{
               top: `${historyPanelPosition.top}px`,
               left: `${historyPanelPosition.left}px`,
-              width: '320px', // 与计算器主体相同的宽度
+              width: `${HISTORY_PANEL_WIDTH}px`, // 与计算器主体相同的宽度
               height: `${historyPanelPosition.height}px`, // 动态匹配计算器主体高度
             }}
           >
-            {/* 历史记录标题栏 - 与计算器头部样式保持一致 */}
-            <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-              <div className="flex items-center space-x-2">
-                <History className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white">历史记录</h4>
-              </div>
-              <div className="flex items-center space-x-2">
-                {history.length > 0 && (
-                  <button
-                    onClick={clearHistory}
-                    className="text-xs text-red-500 hover:text-red-600 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
-                    data-no-drag
-                  >
-                    清空
-                  </button>
-                )}
-                <button
-                  onClick={() => setIsHistoryExpanded(false)}
-                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                  title="隐藏历史记录"
-                  data-no-drag
-                >
-                  <ChevronUp className="h-3 w-3 text-gray-500 dark:text-gray-400" />
-                </button>
-              </div>
-            </div>
-
-            {/* 历史记录内容区域 - 与计算器显示屏样式保持一致 */}
-            <div className="calc-history-content flex-1 p-3 overflow-y-auto bg-gray-50 dark:bg-gray-900 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
-              {history.length === 0 ? (
-                <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">
-                  <History className="h-8 w-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-                  <div>暂无历史记录</div>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {history.map((item, index) => (
-                    <div
-                      key={index}
-                      onClick={() => {
-                        setDisplay(item.result);
-                        setCurrentNumber(item.result);
-                        setExpression(item.result);
-                        setPreviousValue(null);
-                        setOperation(null);
-                        setJustCalculated(false);
-                      }}
-                      className="p-2 rounded-lg cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-all duration-200 group border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
-                      title="点击使用此结果"
-                      data-no-drag
-                    >
-                      {/* 算式和结果在同一行显示，更紧凑 */}
-                      <div className="text-sm font-mono break-words leading-tight flex items-center justify-between">
-                        <span className="text-gray-500 dark:text-gray-400 flex-1 mr-2">{item.expression}</span>
-                        <span className="text-gray-900 dark:text-white font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors whitespace-nowrap">
-                          = {item.result}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <CalculatorHistoryContent
+              history={history}
+              onSelect={selectHistoryItem}
+              onClear={clearHistory}
+              onClose={() => setIsHistoryExpanded(false)}
+              isMobile={false}
+            />
           </div>
         )}
       </div>
