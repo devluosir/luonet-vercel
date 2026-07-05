@@ -6,7 +6,7 @@ import { Globe, ChevronDown, Info } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { usePermissionStore } from '@/lib/permissions';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
-import { HOLIDAYS_2026, CATEGORY_LABEL, type Holiday, type HolidayCategory } from '../data/holidays2026';
+import { HOLIDAYS_2026, CATEGORY_LABEL, getHolidayDetail, type Holiday, type HolidayCategory } from '../data/holidays2026';
 
 // ── 工具函数 ──────────────────────────────────────────────────────────────────
 
@@ -109,7 +109,31 @@ function DaysBadge({ diff, days }: { diff: number; days: number }) {
 
 // ── HolidayRow ────────────────────────────────────────────────────────────────
 
-function HolidayRow({ holiday, diff }: { holiday: Holiday; diff: number }) {
+function DetailSection({ icon, title, content }: { icon: string; title: string; content: string }) {
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200">
+        <span>{icon}</span>
+        <span>{title}</span>
+      </div>
+      <p className="whitespace-pre-line text-xs leading-relaxed text-gray-600 dark:text-gray-300">
+        {content}
+      </p>
+    </div>
+  );
+}
+
+function HolidayRow({
+  holiday,
+  diff,
+  expanded,
+  onToggle,
+}: {
+  holiday: Holiday;
+  diff: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   const days = holiday.days ?? 1;
   const isOngoing = diff <= 0 && diff > -days;
   const startMD = formatDateMD(holiday.dateStart);
@@ -117,54 +141,72 @@ function HolidayRow({ holiday, diff }: { holiday: Holiday; diff: number }) {
   const weekday = formatWeekday(holiday.dateStart);
   const dot = CAT_DOT[holiday.category];
   const badge = CAT_BADGE[holiday.category];
+  const detail = getHolidayDetail(holiday);
 
   return (
-    <div className={`flex items-start gap-3 py-3.5 px-4 border-b border-gray-50 dark:border-gray-700/40 last:border-0 transition-colors ${
-      isOngoing ? 'bg-emerald-50/50 dark:bg-emerald-900/10' :
-      diff >= 0 && diff <= 7 ? 'bg-amber-50/40 dark:bg-amber-900/10' : ''
-    }`}>
+    <div className="border-b border-gray-50 transition-colors last:border-0 dark:border-gray-700/40">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className={`flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-700/30 ${
+          isOngoing ? 'bg-emerald-50/50 dark:bg-emerald-900/10' :
+          diff >= 0 && diff <= 7 ? 'bg-amber-50/40 dark:bg-amber-900/10' : ''
+        }`}
+      >
 
-      {/* 日期列 */}
-      <div className="shrink-0 w-14 pt-0.5">
-        {endMD ? (
-          <>
-            <div className="text-sm font-bold font-mono leading-none text-gray-900 dark:text-white">{startMD}–</div>
-            <div className="text-sm font-bold font-mono leading-none mt-0.5 text-gray-900 dark:text-white">{endMD}</div>
-            <div className="text-[10px] text-gray-400 mt-1">{weekday}</div>
-            <div className="text-[10px] text-gray-400">共 {days} 天</div>
-          </>
-        ) : (
-          <>
-            <div className="text-sm font-bold font-mono leading-none text-gray-900 dark:text-white">{startMD}</div>
-            <div className="text-[10px] text-gray-400 mt-1">{weekday}</div>
-          </>
-        )}
-      </div>
+        {/* 日期列 */}
+        <div className="w-14 shrink-0 pt-0.5">
+          {endMD ? (
+            <>
+              <div className="font-mono text-sm font-bold leading-none text-gray-900 dark:text-white">{startMD}–</div>
+              <div className="mt-0.5 font-mono text-sm font-bold leading-none text-gray-900 dark:text-white">{endMD}</div>
+              <div className="mt-1 text-[10px] text-gray-400">{weekday}</div>
+              <div className="text-[10px] text-gray-400">共 {days} 天</div>
+            </>
+          ) : (
+            <>
+              <div className="font-mono text-sm font-bold leading-none text-gray-900 dark:text-white">{startMD}</div>
+              <div className="mt-1 text-[10px] text-gray-400">{weekday}</div>
+            </>
+          )}
+        </div>
 
-      {/* 分类彩点 */}
-      <div className={`shrink-0 w-2 h-2 rounded-full mt-1.5 ${dot}`} />
+        {/* 分类彩点 */}
+        <div className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dot}`} />
 
-      {/* 名称区域 */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          {holiday.emoji && <span className="text-base leading-none">{holiday.emoji}</span>}
-          <span className="text-sm font-semibold leading-snug text-gray-900 dark:text-white">
-            {holiday.nameCN}
+        {/* 名称区域 */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            {holiday.emoji && <span className="text-base leading-none">{holiday.emoji}</span>}
+            <span className="text-sm font-semibold leading-snug text-gray-900 dark:text-white">
+              {holiday.nameCN}
+            </span>
+          </div>
+          <div className="mt-0.5 text-xs text-gray-400">
+            {holiday.nameEN}
+          </div>
+        </div>
+
+        {/* 右侧：分类徽章 + 倒计时 + 箭头 */}
+        <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
+          <DaysBadge diff={diff} days={days} />
+          <span className={`hidden rounded-full border px-2 py-0.5 text-[10px] font-medium sm:inline ${badge}`}>
+            {CATEGORY_LABEL[holiday.category]}
           </span>
+          <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-gray-300 transition-transform dark:text-gray-600 ${expanded ? 'rotate-180' : ''}`} />
         </div>
-        <div className="text-xs mt-0.5 text-gray-400">
-          {holiday.nameEN}
-        </div>
-      </div>
+      </button>
 
-      {/* 右侧：分类徽章 + 倒计时 + 箭头 */}
-      <div className="shrink-0 flex items-center gap-1.5 pt-0.5">
-        <DaysBadge diff={diff} days={days} />
-        <span className={`hidden sm:inline text-[10px] px-2 py-0.5 rounded-full border font-medium ${badge}`}>
-          {CATEGORY_LABEL[holiday.category]}
-        </span>
-        <ChevronDown className="w-3.5 h-3.5 text-gray-300 dark:text-gray-600 shrink-0" />
-      </div>
+      {expanded && (
+        <div className="border-t border-gray-100 bg-gray-50/70 px-4 pb-4 pt-3 dark:border-gray-700 dark:bg-gray-900/30">
+          <div className="ml-0 space-y-4 sm:ml-[5.75rem]">
+            <DetailSection icon="🏛️" title="假期背景" content={detail.background} />
+            <DetailSection icon="📋" title="假期表现与商务影响" content={detail.businessImpact} />
+            <DetailSection icon="⚠️" title="禁忌与注意事项" content={detail.notes} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -188,6 +230,7 @@ export function HolidaysPage() {
 
   const [catFilter, setCatFilter] = useState<CategoryFilter>('all');
   const [subFilter, setSubFilter] = useState<string>('all');
+  const [expandedHolidayKey, setExpandedHolidayKey] = useState<string | null>(null);
 
   const today = useMemo(() => todayStr(), []);
   const listRef = useRef<HTMLDivElement>(null);
@@ -210,6 +253,7 @@ export function HolidaysPage() {
   const handleCatChange = useCallback((cat: CategoryFilter) => {
     setCatFilter(cat);
     setSubFilter('all');
+    setExpandedHolidayKey(null);
   }, []);
 
   const subChipsConfig = useMemo(() => {
@@ -370,7 +414,13 @@ export function HolidaysPage() {
                 {/* 假日行 */}
                 <div>
                   {items.map(({ holiday, diff }) => (
-                    <HolidayRow key={holiday.id} holiday={holiday} diff={diff} />
+                    <HolidayRow
+                      key={holiday.id}
+                      holiday={holiday}
+                      diff={diff}
+                      expanded={expandedHolidayKey === holiday.id}
+                      onToggle={() => setExpandedHolidayKey((current) => current === holiday.id ? null : holiday.id)}
+                    />
                   ))}
                 </div>
               </div>
