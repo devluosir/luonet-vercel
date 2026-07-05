@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { PERMISSION_MODULES } from '@/constants/permissionModules';
+import { PERMISSION_MODULES, getAllPermissionModules } from '@/constants/permissionModules';
 import { Permission } from '../types';
 
 export const MODULE_PERMISSIONS = PERMISSION_MODULES.map(({ moduleId, label, icon }) => ({
@@ -7,6 +7,18 @@ export const MODULE_PERMISSIONS = PERMISSION_MODULES.map(({ moduleId, label, ico
   name: label,
   icon,
 }));
+
+function normalizePermissions(userPermissions: Permission[], defaultCanAccess = false): Permission[] {
+  return getAllPermissionModules().map((moduleId) => {
+    const existing = userPermissions.find((permission) => permission.moduleId === moduleId);
+
+    return {
+      id: existing?.id ?? '',
+      moduleId,
+      canAccess: existing?.canAccess ?? defaultCanAccess,
+    };
+  });
+}
 
 export function usePermissions() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -18,7 +30,7 @@ export function usePermissions() {
 
   // 初始化权限数据
   const initializePermissions = useCallback((userPermissions: Permission[], userIsAdmin: boolean, userIsActive: boolean) => {
-    const perms = userPermissions || [];
+    const perms = normalizePermissions(userPermissions || [], userIsAdmin);
     setPermissions(perms);
     setOriginalPermissions(perms);
     setIsAdmin(userIsAdmin);

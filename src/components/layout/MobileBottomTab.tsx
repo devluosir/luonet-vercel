@@ -39,10 +39,8 @@ export function MobileBottomTab() {
   const visibleTabs = MOBILE_TABS.filter((item) => {
     if (!item.moduleId) return true;
     if (isLoading || !permissionUser) return false;
-    if (permissionUser.isAdmin) return true;
-    return permissionUser.permissions?.some(
-      (permission) => permission.moduleId === item.moduleId && permission.canAccess
-    ) ?? false;
+    const permission = permissionUser.permissions?.find((p) => p.moduleId === item.moduleId);
+    return permission?.canAccess ?? permissionUser.isAdmin;
   });
 
   return (

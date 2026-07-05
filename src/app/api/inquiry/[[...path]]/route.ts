@@ -25,21 +25,15 @@ async function proxyInquiryRequest(
 
   const isAdmin = session.user.isAdmin === true;
   const permissions = session.user.permissions ?? [];
-  const hasInquiryPermission =
-    isAdmin ||
-    (session.user.permissions ?? []).some(
-      (permission) => permission.moduleId === 'inquiry' && permission.canAccess
-    );
+  const inquiryPermission = permissions.find((permission) => permission.moduleId === 'inquiry');
+  const hasInquiryPermission = inquiryPermission?.canAccess ?? isAdmin;
 
   if (!hasInquiryPermission) {
     return NextResponse.json({ error: '无询报价权限' }, { status: 403 });
   }
 
-  const hasFinancialsPermission =
-    isAdmin ||
-    permissions.some(
-      (permission) => permission.moduleId === 'order.financials' && permission.canAccess
-    );
+  const financialsPermission = permissions.find((permission) => permission.moduleId === 'order.financials');
+  const hasFinancialsPermission = financialsPermission?.canAccess ?? isAdmin;
 
   const url = new URL(request.url);
   const workerPath = pathSegments.length > 0

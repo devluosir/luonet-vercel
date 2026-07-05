@@ -1,6 +1,7 @@
 'use client';
 
 import { Clock, ChevronRight } from 'lucide-react';
+import { getAllPermissionModules } from '@/constants/permissionModules';
 import type { User } from '../types';
 
 function fmtDate(iso: string | null): string {
@@ -17,7 +18,10 @@ interface UserCardProps {
 
 export function UserCard({ user, onEdit }: UserCardProps) {
   const initial = user.username.charAt(0).toUpperCase();
-  const enabledModules = user.permissions.filter((p) => p.canAccess).length;
+  const enabledModules = getAllPermissionModules().filter((moduleId) => {
+    const permission = user.permissions.find((p) => p.moduleId === moduleId);
+    return permission?.canAccess ?? user.isAdmin;
+  }).length;
 
   return (
     <div
@@ -66,7 +70,7 @@ export function UserCard({ user, onEdit }: UserCardProps) {
       {/* 权限数量 */}
       <div className="hidden shrink-0 text-right sm:block">
         <span className="text-xs text-gray-400 dark:text-gray-500">
-          {user.isAdmin ? '全部权限' : `${enabledModules} 个模块`}
+          {enabledModules} 个模块
         </span>
       </div>
 

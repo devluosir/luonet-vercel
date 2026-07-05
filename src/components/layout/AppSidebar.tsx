@@ -159,12 +159,10 @@ export function AppSidebar({
   function isVisible(item: SidebarItem) {
     if (!item.permissionKey) return true;
     if (isLoading || !permissionUser) return false;
-    if (permissionUser.isAdmin) return true;
     const moduleId = PERMISSION_MODULE_MAP[item.permissionKey];
     if (!moduleId) return true;
-    return permissionUser.permissions?.some(
-      (p) => p.moduleId === moduleId && p.canAccess
-    ) ?? false;
+    const permission = permissionUser.permissions?.find((p) => p.moduleId === moduleId);
+    return permission?.canAccess ?? permissionUser.isAdmin;
   }
 
   const widthClass = isMobile ? 'w-[220px]' : 'app-sidebar';

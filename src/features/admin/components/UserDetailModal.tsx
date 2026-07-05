@@ -199,7 +199,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
             </div>
             {isAdmin && (
               <p className="mb-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
-                管理员默认拥有全部模块权限，以下开关仅对普通用户生效
+                管理员身份只控制后台管理入口，业务模块仍按以下开关授权
               </p>
             )}
             <div className="space-y-3">
@@ -224,9 +224,9 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                               moduleId={module.moduleId}
                               name={module.label}
                               icon={module.icon}
-                              isEnabled={isAdmin || parentEnabled}
+                              isEnabled={parentEnabled}
                               onToggle={togglePermission}
-                              disabled={isBusy || isAdmin}
+                              disabled={isBusy}
                             />
                             {hasAdvanced && (
                               <div className="mt-1 space-y-1 border-l-2 border-gray-100 pl-3 dark:border-gray-800">
@@ -238,9 +238,9 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                                       moduleId={feature.moduleId}
                                       name={feature.label}
                                       icon={feature.icon}
-                                      isEnabled={isAdmin || (featurePerm?.canAccess ?? false)}
+                                      isEnabled={featurePerm?.canAccess ?? false}
                                       onToggle={togglePermission}
-                                      disabled={isBusy || isAdmin || !parentEnabled}
+                                      disabled={isBusy || !parentEnabled}
                                     />
                                   );
                                 })}

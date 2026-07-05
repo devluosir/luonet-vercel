@@ -17,6 +17,7 @@ export async function POST(_request: NextRequest) {
     // 优先从后端API获取最新权限
     let permissions: Permission[] = [];
     let userEmail: string | null = null;
+    let didLoadBackendPermissions = false;
     
     try {
       // 从后端API获取最新用户数据（包含权限）
@@ -50,6 +51,7 @@ export async function POST(_request: NextRequest) {
         }
         
         if (userData && userData.permissions && Array.isArray(userData.permissions)) {
+          didLoadBackendPermissions = true;
           // 转换后端权限格式
           permissions = userData.permissions
             .map((perm: Record<string, unknown>) => ({
@@ -77,8 +79,8 @@ export async function POST(_request: NextRequest) {
       // 后端API调用失败，继续尝试从session获取
     }
     
-    // 如果后端获取失败，尝试从session获取权限
-    if (permissions.length === 0) {
+    // 如果后端没有取到权限字段，才尝试从 session 兜底；后端返回空数组表示确实无模块权限。
+    if (!didLoadBackendPermissions) {
       try {
         if (session?.user?.permissions) {
           if (Array.isArray(session.user.permissions)) {

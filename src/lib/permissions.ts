@@ -303,7 +303,6 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   hasPermission: (moduleId: string) => {
     const { user, permissionCache } = get();
     if (!user) return false;
-    if (user.isAdmin) return true;
 
     // ✅ 优化：使用缓存机制
     const cacheKey = `${user.id}-${moduleId}`;
@@ -315,7 +314,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       // 检查具体权限（管理员和普通用户使用相同的权限检查逻辑）
       if (!user.permissions) return false;
       const permission = user.permissions.find(p => p.moduleId === moduleId);
-      const hasAccess = permission?.canAccess || false;
+      const hasAccess = permission?.canAccess ?? user.isAdmin;
 
       // ✅ 优化：只在开发环境下输出详细调试日志
       if (process.env.NODE_ENV === 'development' && Math.random() < 0.1) {
@@ -343,14 +342,13 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
   hasAnyPermission: (moduleIds: string[]) => {
     const { user } = get();
     if (!user) return false;
-    if (user.isAdmin) return true;
 
     try {
       // 检查具体权限（管理员和普通用户使用相同的权限检查逻辑）
       if (!user.permissions) return false;
       return moduleIds.some(moduleId => {
         const permission = user.permissions.find(p => p.moduleId === moduleId);
-        return permission?.canAccess || false;
+        return permission?.canAccess ?? user.isAdmin;
       });
     } catch (error) {
       logPermissionError('权限检查失败', error, { moduleIds });

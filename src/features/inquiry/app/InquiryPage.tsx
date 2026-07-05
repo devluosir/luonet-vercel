@@ -128,10 +128,8 @@ export function InquiryPage() {
 
   const hasInquiryAccess = useMemo(() => {
     if (!session?.user) return false;
-    if (session.user.isAdmin) return true;
-    return (session.user.permissions ?? []).some(
-      (permission) => permission.moduleId === 'inquiry' && permission.canAccess
-    );
+    const permission = (session.user.permissions ?? []).find((item) => item.moduleId === 'inquiry');
+    return permission?.canAccess ?? session.user.isAdmin;
   }, [session]);
 
   useEffect(() => {
