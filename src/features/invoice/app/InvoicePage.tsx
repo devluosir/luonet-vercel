@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { AppLayout, type ActionButton } from '@/components/layout';
 import { useAppUser } from '@/hooks/useAppUser';
+import { useToast } from '@/components/ui/Toast';
 import { ItemsTable } from '../components/ItemsTable';
 import PDFPreviewModal from '@/components/history/PDFPreviewModal';
 import { useInvoiceStore } from '../state/invoice.store';
@@ -52,6 +53,7 @@ export const InvoicePage = () => {
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { user, handleLogout } = useAppUser();
+  const { showToast } = useToast();
 
   const {
     data,
@@ -114,7 +116,7 @@ export const InvoicePage = () => {
       await generatePDF();
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('生成PDF时出错');
+      showToast('生成PDF时出错', 'error');
     }
   };
 
@@ -137,7 +139,7 @@ export const InvoicePage = () => {
       togglePreview();
     } catch (error) {
       console.error('Error previewing PDF:', error);
-      alert('预览PDF时出错');
+      showToast('预览PDF时出错', 'error');
     }
   };
 
@@ -146,7 +148,7 @@ export const InvoicePage = () => {
       exportInvoiceToExcel(data);
     } catch (error) {
       console.error('Error exporting Excel:', error);
-      alert('导出Excel时出错');
+      showToast('导出Excel时出错', 'error');
     }
   };
 

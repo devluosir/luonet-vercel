@@ -4,9 +4,11 @@ import { PackingData } from '../types';
 import { formatExcelFileName } from '../utils/formatters';
 import { savePackingHistory } from '../services/packingHistoryService';
 import { downloadPdf, previewPdf } from '../services/packingPdfService';
+import { useToast } from '@/components/ui/Toast';
 
 export const usePackingActions = (data: PackingData, editId?: string) => {
   const pathname = usePathname();
+  const { showToast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
@@ -25,11 +27,11 @@ export const usePackingActions = (data: PackingData, editId?: string) => {
       await downloadPdf(data);
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Failed to generate packing list. Please try again.');
+      showToast('装箱单PDF生成失败，请重试', 'error');
     } finally {
       setIsGenerating(false);
     }
-  }, [data, editId, pathname]);
+  }, [data, editId, pathname, showToast]);
 
   // 预览功能
   const handlePreview = useCallback(async () => {
@@ -38,9 +40,9 @@ export const usePackingActions = (data: PackingData, editId?: string) => {
       return blob;
     } catch (error) {
       console.error('Preview failed:', error);
-      alert('Failed to generate preview. Please try again.');
+      showToast('装箱单预览生成失败，请重试', 'error');
     }
-  }, [data]);
+  }, [data, showToast]);
 
   // 独立保存功能
   const handleSave = useCallback(async () => {
@@ -54,6 +56,7 @@ export const usePackingActions = (data: PackingData, editId?: string) => {
 
       if (saveResult) {
         setSaveMessage('保存成功');
+        showToast('保存成功', 'success');
         // 如果是新记录，更新 editId
         if (!existingId && saveResult.id) {
           // 这里可以通过回调函数更新 editId
@@ -61,16 +64,18 @@ export const usePackingActions = (data: PackingData, editId?: string) => {
         }
       } else {
         setSaveMessage('保存失败');
+        showToast('保存失败，请重试', 'error');
       }
     } catch (error) {
       console.error('Error saving packing data:', error);
       setSaveMessage('保存失败');
+      showToast('保存失败，请重试', 'error');
     } finally {
       setIsSaving(false);
       // 3秒后清除消息
       setTimeout(() => setSaveMessage(''), 3000);
     }
-  }, [data, editId, pathname]);
+  }, [data, editId, pathname, showToast]);
 
   // 导出Excel功能
   const handleExportExcel = useCallback(() => {
@@ -133,9 +138,9 @@ export const usePackingActions = (data: PackingData, editId?: string) => {
       document.body.removeChild(link);
     } catch (error) {
       console.error('Error exporting Excel:', error);
-      alert('Failed to export Excel file. Please try again.');
+      showToast('Excel导出失败，请重试', 'error');
     }
-  }, [data]);
+  }, [data, showToast]);
 
   return {
     isGenerating,

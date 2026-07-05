@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Clock, Plus, AlertTriangle, CheckCircle, Calendar, Trash2 } from 'lucide-react';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { getInquiryQuoteStatusBadge } from '../services/inquiryTimelineService';
 import { useCustomerFollowUp } from '../hooks/useCustomerFollowUp';
@@ -26,6 +28,8 @@ function buildInquiryHref(customerId: string, customerName: string, record: Inqu
 }
 
 export function FollowUpManager({ customerId, customerName }: FollowUpManagerProps) {
+  const { showToast } = useToast();
+  const confirm = useConfirm();
   const inquiryRecords = useInquiryStore((state) => state.records);
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -91,10 +95,17 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
   };
 
   const handleDeleteFollowUp = async (followUp: CustomerFollowUp) => {
-    if (!window.confirm(`确定删除跟进「${followUp.title}」吗？`)) return;
+    const confirmed = await confirm({
+      title: '删除跟进',
+      description: `确定删除跟进「${followUp.title}」吗？`,
+      confirmLabel: '删除',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+
     const success = await deleteFollowUp(followUp.id);
     if (!success) {
-      alert('删除跟进失败');
+      showToast('删除跟进失败', 'error');
     }
   };
 
@@ -198,7 +209,7 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
     e.preventDefault();
     
     if (!formData.title || !formData.description || !formData.dueDate) {
-      alert('请填写完整信息');
+      showToast('请填写完整信息', 'warning');
       return;
     }
 
@@ -226,7 +237,7 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
       setShowAddForm(false);
     } catch (error) {
       console.error('添加跟进失败:', error);
-      alert('添加跟进失败');
+      showToast('添加跟进失败', 'error');
     }
   };
 

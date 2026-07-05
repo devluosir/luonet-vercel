@@ -10,8 +10,10 @@ import {
   setFeatureEnabled,
   FEATURE_FLAGS
 } from '../config/featureFlags';
+import { useToast } from '@/components/ui/Toast';
 
 export function FeatureFlagManager() {
+  const { showToast } = useToast();
   const [isVisible, setIsVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [flags, setFlags] = useState(FEATURE_FLAGS);
@@ -49,7 +51,7 @@ export function FeatureFlagManager() {
       const missingDeps = flag.dependencies.filter(dep => !isFeatureEnabled(dep as keyof typeof FEATURE_FLAGS));
       if (missingDeps.length > 0 && newValue) {
         console.warn(`功能开关 ${flagName} 需要先启用依赖: ${missingDeps.join(', ')}`);
-        alert(`需要先启用依赖功能: ${missingDeps.join(', ')}`);
+        showToast(`需要先启用依赖功能: ${missingDeps.join(', ')}`, 'warning');
         return;
       }
     }

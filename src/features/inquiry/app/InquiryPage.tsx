@@ -7,6 +7,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppLayout, type ActionButton } from '@/components/layout';
 import { useAppUser } from '@/hooks/useAppUser';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { usePermissionStore } from '@/lib/permissions';
 import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '../types';
 import { useInquiryActions } from '../hooks/useInquiryActions';
@@ -107,6 +109,8 @@ export function InquiryPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, handleLogout } = useAppUser();
+  const { showToast } = useToast();
+  const confirm = useConfirm();
   const records = useInquiryStore((state) => state.records);
   const { createRecord, removeRecord } = useInquiryActions();
   const updateRecord = useInquiryStore((state) => state.updateRecord);
@@ -275,12 +279,18 @@ export function InquiryPage() {
     });
   }, []);
 
-  const handleBatchDelete = useCallback(() => {
+  const handleBatchDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
-    if (!window.confirm(`确定删除选中的 ${selectedIds.size} 条记录吗？此操作不可撤销。`)) return;
+    const confirmed = await confirm({
+      title: '删除询报价记录',
+      description: `确定删除选中的 ${selectedIds.size} 条记录吗？此操作不可撤销。`,
+      confirmLabel: '删除',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     Array.from(selectedIds).forEach((id) => removeRecord(id));
     setSelectedIds(new Set());
-  }, [selectedIds, removeRecord]);
+  }, [selectedIds, removeRecord, confirm]);
 
   const handleBatchLinkCustomer = useCallback((customerId: string, contactId: string, inquirer: string) => {
     const ids = Array.from(selectedIds);
@@ -301,15 +311,21 @@ export function InquiryPage() {
     router.replace('/inquiry');
   }, [filter, router, setFilter]);
 
-  const handleDeleteRecord = (recordId: string) => {
-    if (window.confirm('确定删除这条询报价记录吗？')) {
-      removeRecord(recordId);
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(recordId);
-        return next;
-      });
-    }
+  const handleDeleteRecord = async (recordId: string) => {
+    const confirmed = await confirm({
+      title: '删除询报价记录',
+      description: '确定删除这条询报价记录吗？',
+      confirmLabel: '删除',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+
+    removeRecord(recordId);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(recordId);
+      return next;
+    });
   };
 
   // ── 导出（Excel） ────────────────────────────────────
@@ -375,9 +391,9 @@ export function InquiryPage() {
       );
       inquiryService.save(merged);
       useInquiryStore.setState({ records: merged });
-      alert(`导入完成：新增 ${added} 条，更新 ${updated} 条`);
+      showToast(`导入完成：新增 ${added} 条，更新 ${updated} 条`, 'success');
     },
-    []
+    [showToast]
   );
 
   const handleFileChange = useCallback(
@@ -402,7 +418,7 @@ export function InquiryPage() {
           const text = await file.text();
           const imported = JSON.parse(text) as unknown;
           if (!Array.isArray(imported)) {
-            alert('格式错误：JSON 文件应为记录数组');
+            showToast('格式错误：JSON 文件应为记录数组', 'error');
             return;
           }
           const records = (imported as Partial<InquiryRecord>[])
@@ -411,13 +427,13 @@ export function InquiryPage() {
           mergeRecords(records);
         }
       } catch {
-        alert('导入失败：请检查文件格式（支持 .xlsx / .json）');
+        showToast('导入失败：请检查文件格式（支持 .xlsx / .json）', 'error');
       } finally {
         setIsImporting(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     },
-    [mergeRecords]
+    [mergeRecords, showToast]
   );
 
   const toggleEditMode = useCallback(() => {

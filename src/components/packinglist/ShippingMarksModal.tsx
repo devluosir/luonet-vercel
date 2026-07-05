@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Download, FileText } from 'lucide-react';
 import { generateShippingMarksPDF } from '@/utils/shippingMarksPdfGenerator';
+import { useToast } from '@/components/ui/Toast';
 
 interface ShippingMarksModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
   value,
   onChange
 }) => {
+  const { showToast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string>('');
@@ -48,7 +50,8 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      alert('PDF生成失败，请重试');
+      console.error('Shipping marks PDF generation failed:', error);
+      showToast('PDF生成失败，请重试', 'error');
     } finally {
       setIsGenerating(false);
     }
@@ -64,7 +67,8 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
       setPdfPreviewUrl(previewUrl);
       setShowPDFPreview(true);
     } catch (error) {
-      alert('PDF预览生成失败，请重试');
+      console.error('Shipping marks PDF preview failed:', error);
+      showToast('PDF预览生成失败，请重试', 'error');
     } finally {
       setIsGeneratingPreview(false);
     }

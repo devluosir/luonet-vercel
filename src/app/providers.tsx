@@ -4,6 +4,7 @@ import { SessionProvider } from 'next-auth/react';
 import { usePermissionInit } from '@/hooks/usePermissionInit';
 import { useD1Sync } from '@/hooks/useD1Sync';
 import { ToastProvider } from '@/components/ui/Toast';
+import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog';
 import { SidebarCollapseProvider } from '@/contexts/SidebarCollapseContext';
 import { DesktopSidebarHost } from '@/components/layout/DesktopSidebarHost';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -28,12 +29,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <ThemeProvider>
         <SidebarCollapseProvider>
-          <ToastProvider>
-            <PermissionInitializer />
-            <D1SyncInitializer />
-            <DesktopSidebarHost />
-            {children}
-          </ToastProvider>
+          <ConfirmDialogProvider>
+            <ToastProvider>
+              <PermissionInitializer />
+              <D1SyncInitializer />
+              <DesktopSidebarHost />
+              {children}
+            </ToastProvider>
+          </ConfirmDialogProvider>
         </SidebarCollapseProvider>
       </ThemeProvider>
     </SessionProvider>

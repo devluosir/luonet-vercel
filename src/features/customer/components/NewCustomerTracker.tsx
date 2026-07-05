@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react';
 import { Users, AlertTriangle, CheckCircle, Calendar, RefreshCw } from 'lucide-react';
 import { NewCustomerService, type NewCustomerRecord } from '../services/newCustomerService';
+import { useToast } from '@/components/ui/Toast';
 
 interface NewCustomerTrackerProps {
   onRefresh?: () => void;
 }
 
 export function NewCustomerTracker({ onRefresh: _onRefresh }: NewCustomerTrackerProps) {
+  const { showToast } = useToast();
   const [newCustomers, setNewCustomers] = useState<NewCustomerRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -32,13 +34,13 @@ export function NewCustomerTracker({ onRefresh: _onRefresh }: NewCustomerTracker
       const detectedCustomers = NewCustomerService.autoDetectNewCustomers();
       loadNewCustomers();
       if (detectedCustomers.length > 0) {
-        alert(`成功识别 ${detectedCustomers.length} 个新客户`);
+        showToast(`成功识别 ${detectedCustomers.length} 个新客户`, 'success');
       } else {
-        alert('未发现新的客户');
+        showToast('未发现新的客户', 'info');
       }
     } catch (error) {
       console.error('自动识别新客户失败:', error);
-      alert('自动识别新客户失败');
+      showToast('自动识别新客户失败', 'error');
     } finally {
       setLoading(false);
     }

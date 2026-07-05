@@ -4,12 +4,13 @@ import { usePurchaseStore } from '../state/purchase.store';
 import { PurchaseService } from '../services/purchase.service';
 import { usePurchasePdf } from '../hooks/usePurchasePdf';
 import { usePurchaseValidation } from '../hooks/usePurchaseValidation';
-import { showToast } from './Toast';
+import { useToast } from '@/components/ui/Toast';
 
 export default function QuickActions() {
   const data = usePurchaseStore(s => s.data);
   const { isValid } = usePurchaseValidation();
   const { generatePdf, canGenerate } = usePurchasePdf();
+  const { showToast } = useToast();
   const [busy, setBusy] = useState(false);
 
   const onSave = useCallback(async () => {
@@ -25,7 +26,7 @@ export default function QuickActions() {
     } finally {
       setBusy(false);
     }
-  }, [data]);
+  }, [data, showToast]);
 
   const onExport = useCallback(async () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });

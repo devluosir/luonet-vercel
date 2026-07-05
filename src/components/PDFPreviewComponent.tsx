@@ -11,6 +11,7 @@ import type { QuotationData } from '@/types/quotation';
 import type { PDFGeneratorData } from '@/types/pdf';
 import type { PurchaseOrderData } from '@/types/purchase';
 import type { PackingData } from '@/features/packing/types';
+import { useToast } from '@/components/ui/Toast';
 
 interface PDFPreviewComponentProps {
   pdfUrl: string | null;
@@ -37,6 +38,7 @@ export default function PDFPreviewComponent({
   showDownloadButton = true,
   showOpenInNewTab = true
 }: PDFPreviewComponentProps) {
+  const { showToast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
   const [_iframeLoaded, setIframeLoaded] = useState(false);
@@ -136,7 +138,8 @@ export default function PDFPreviewComponent({
         URL.revokeObjectURL(url);
       }
     } catch (error) {
-      alert('PDF下载失败，请重试');
+      console.error('PDF download failed:', error);
+      showToast('PDF下载失败，请重试', 'error');
     } finally {
       setIsDownloading(false);
     }

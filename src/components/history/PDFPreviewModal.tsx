@@ -10,6 +10,7 @@ import type { NoteConfig } from '@/features/quotation/types/notes';
 import type { InvoiceData } from '@/features/invoice/types';
 import type { PurchaseOrderData } from '@/types/purchase';
 import type { PackingData } from '@/features/packing/types';
+import { useToast } from '@/components/ui/Toast';
 
 interface PreviewHistoryItem {
   data: unknown;
@@ -51,6 +52,7 @@ type QuotationPreviewData = QuotationData & {
 };
 
 export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDFPreviewModalProps) {
+  const { showToast } = useToast();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [showDownloadFallback, setShowDownloadFallback] = useState(false);
@@ -189,7 +191,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
   const downloadPDF = async () => {
     if (!item || !item.data) {
       console.warn('下载数据不完整');
-      alert('PDF下载失败，数据不完整');
+      showToast('PDF下载失败，数据不完整', 'error');
       return;
     }
 
@@ -268,7 +270,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('PDF下载失败:', error);
-      alert('PDF下载失败，请重试');
+      showToast('PDF下载失败，请重试', 'error');
     } finally {
       setIsGeneratingPdf(false);
     }

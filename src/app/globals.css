@@ -1135,6 +1135,28 @@ html.dark, html.dark body {
   }
 }
 
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
 .animate-in {
   animation-fill-mode: both;
 }
@@ -1149,6 +1171,14 @@ html.dark, html.dark body {
   animation-name: zoomIn;
   animation-duration: 0.3s;
   animation-timing-function: ease-out;
+}
+
+.toast-slide-in {
+  animation: slideInRight 0.22s ease-out both;
+}
+
+.toast-slide-out {
+  animation: slideOutRight 0.2s ease-in both;
 }
 
 /* BaseInfoCompact 紧凑模式样式 */
@@ -1438,7 +1468,6 @@ html.dark button.mail-generate-button-compact:hover {
     margin-left: 0;
   }
 }
-
 
 
 

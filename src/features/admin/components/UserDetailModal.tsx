@@ -6,6 +6,7 @@ import { PERMISSION_MODULES, type ModuleCategory } from '@/constants/permissionM
 import type { User as UserType, Permission } from '../types';
 import { usePermissions } from '../hooks/usePermissions';
 import { PermissionToggle } from './PermissionToggle';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 interface UserDetailModalProps {
   user: UserType | null;
@@ -52,6 +53,7 @@ const CATEGORY_LABELS: Record<ModuleCategory, string> = {
 const CATEGORY_ORDER: ModuleCategory[] = ['document', 'registration', 'management', 'tool'];
 
 export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, currentUserId }: UserDetailModalProps) {
+  const confirm = useConfirm();
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +88,12 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
   const handleDelete = async () => {
     if (!user) return;
 
-    const confirmed = window.confirm(`确定要删除用户「${user.username}」吗？此操作无法撤销。`);
+    const confirmed = await confirm({
+      title: '删除用户',
+      description: `确定要删除用户「${user.username}」吗？此操作无法撤销。`,
+      confirmLabel: '删除',
+      variant: 'danger',
+    });
     if (!confirmed) return;
 
     setDeleting(true);

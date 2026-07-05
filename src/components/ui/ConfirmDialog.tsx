@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -11,6 +11,19 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
 }
+
+interface ConfirmOptions {
+  title: string;
+  description: string;
+  confirmLabel?: string;
+  variant?: 'danger' | 'default';
+}
+
+interface ConfirmState extends ConfirmOptions {
+  resolve: (value: boolean) => void;
+}
+
+const ConfirmDialogContext = createContext<((options: ConfirmOptions) => Promise<boolean>) | null>(null);
 
 export function ConfirmDialog({
   open,
@@ -42,6 +55,7 @@ export function ConfirmDialog({
 
   return (
     <div
+      data-confirm-dialog="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
       onClick={onCancel}
       role="presentation"
@@ -78,4 +92,51 @@ export function ConfirmDialog({
       </div>
     </div>
   );
+}
+
+export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<ConfirmState | null>(null);
+
+  const confirm = useCallback((options: ConfirmOptions) => {
+    return new Promise<boolean>((resolve) => {
+      setState({ ...options, resolve });
+    });
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    setState((current) => {
+      current?.resolve(true);
+      return null;
+    });
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    setState((current) => {
+      current?.resolve(false);
+      return null;
+    });
+  }, []);
+
+  return (
+    <ConfirmDialogContext.Provider value={confirm}>
+      {children}
+      <ConfirmDialog
+        open={Boolean(state)}
+        title={state?.title ?? ''}
+        description={state?.description ?? ''}
+        confirmLabel={state?.confirmLabel}
+        variant={state?.variant ?? 'default'}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
+    </ConfirmDialogContext.Provider>
+  );
+}
+
+export function useConfirm() {
+  const confirm = useContext(ConfirmDialogContext);
+  if (!confirm) {
+    throw new Error('useConfirm must be used within a ConfirmDialogProvider');
+  }
+  return confirm;
 }

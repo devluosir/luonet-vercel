@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Contact, CustomerFormData, Customer, Supplier, Consignee, TabType } from '../types';
+import { useToast } from '@/components/ui/Toast';
 
 function createEmptyFormData(): CustomerFormData {
   return {
@@ -26,6 +27,7 @@ function normalizeContacts(contacts: Contact[]): Contact[] {
 }
 
 export function useCustomerForm() {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState<CustomerFormData>(createEmptyFormData);
 
   // 重置表单
@@ -60,11 +62,11 @@ export function useCustomerForm() {
   // 验证表单
   const validateForm = (entityType: TabType = 'customers'): boolean => {
     if (!formData.name.trim()) {
-      alert('请输入名称');
+      showToast('请输入名称', 'warning');
       return false;
     }
     if (entityType === 'customers' && !formData.contacts.some((contact) => contact.name.trim())) {
-      alert('请至少填写一个联络人');
+      showToast('请至少填写一个联络人', 'warning');
       return false;
     }
     return true;

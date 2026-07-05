@@ -4,11 +4,13 @@ import { useCallback, useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { usePermissionStore } from '@/lib/permissions';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
+import { useToast } from '@/components/ui/Toast';
 
 export function useAppUser() {
   const permUser = usePermissionStore((state) => state.user);
   const { data: session } = useSession();
   const [logoutError, setLogoutError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const user = {
     name: permUser?.username || session?.user?.name || session?.user?.username || '用户',
@@ -28,11 +30,9 @@ export function useAppUser() {
     } catch (error) {
       const message = error instanceof Error ? error.message : '退出登录失败，请稍后重试';
       setLogoutError(message);
-      if (typeof window !== 'undefined') {
-        window.alert(message);
-      }
+      showToast(message, 'error');
     }
-  }, []);
+  }, [showToast]);
 
   return { user, handleLogout, logoutError };
 }

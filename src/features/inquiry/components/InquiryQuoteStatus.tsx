@@ -13,6 +13,7 @@ import {
 } from '../utils/inquiryUtils';
 import { SupplierStatusTag } from './SupplierStatusTag';
 import { QuotedStatusList } from './QuotedStatusList';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 interface InquiryQuoteStatusProps {
   record: InquiryRecord;
@@ -53,6 +54,7 @@ const INPUT_CLS =
 const ROW_LABEL = 'mt-1 w-12 shrink-0 text-xs text-gray-400 dark:text-gray-500';
 
 export function InquiryQuoteStatus({ record, onSuppliersChange, onQuotedChange }: InquiryQuoteStatusProps) {
+  const confirm = useConfirm();
   const [activeForm, setActiveForm] = useState<ActiveForm>(null);
   const [supplierForm, setSupplierForm] = useState<SupplierFormState>({
     supplierShortName: '',
@@ -118,11 +120,17 @@ export function InquiryQuoteStatus({ record, onSuppliersChange, onQuotedChange }
     setActiveForm(null);
   };
 
-  const handleRemoveSupplier = (supplierId: string) => {
+  const handleRemoveSupplier = async (supplierId: string) => {
     const s = record.supplierStatuses.find((item) => item.id === supplierId);
-    if (window.confirm(`确定删除供应商「${s?.supplierShortName ?? '该供应商'}」吗？`)) {
-      onSuppliersChange(record.supplierStatuses.filter((item) => item.id !== supplierId));
-    }
+    const confirmed = await confirm({
+      title: '删除供应商状态',
+      description: `确定删除供应商「${s?.supplierShortName ?? '该供应商'}」吗？`,
+      confirmLabel: '删除',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+
+    onSuppliersChange(record.supplierStatuses.filter((item) => item.id !== supplierId));
   };
 
   // ── 已报价 CRUD ──────────────────────────────────────
@@ -163,14 +171,20 @@ export function InquiryQuoteStatus({ record, onSuppliersChange, onQuotedChange }
     setActiveForm(null);
   };
 
-  const handleRemoveQuoted = (qsId: string) => {
+  const handleRemoveQuoted = async (qsId: string) => {
     const qs = record.quotedStatuses.find((s) => s.id === qsId);
     const label = qs
       ? `${stripDateBrackets(qs.quoteDate)} ${qs.supplierShortName} ${qs.version}`
       : '该记录';
-    if (window.confirm(`确定删除「${label}」吗？`)) {
-      onQuotedChange(record.quotedStatuses.filter((s) => s.id !== qsId));
-    }
+    const confirmed = await confirm({
+      title: '删除已报价状态',
+      description: `确定删除「${label}」吗？`,
+      confirmLabel: '删除',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+
+    onQuotedChange(record.quotedStatuses.filter((s) => s.id !== qsId));
   };
 
   // ── 已补充信息 toggle ─────────────────────────────────

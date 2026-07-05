@@ -4,10 +4,12 @@ import { PurchaseService } from '../services/purchase.service';
 import { usePurchaseStore } from '../state/purchase.store';
 import type { PurchaseOrderData } from '@/types/purchase';
 import { format } from 'date-fns';
+import { useToast } from '@/components/ui/Toast';
 
 type PurchaseHistorySummary = Awaited<ReturnType<typeof PurchaseService.list>>[number];
 
 export default function HistoryDrawer() {
+  const { showToast } = useToast();
   const [list, setList] = useState<PurchaseHistorySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
@@ -64,11 +66,11 @@ export default function HistoryDrawer() {
         };
         init(converted);
       } else {
-        alert('加载失败：未找到数据');
+        showToast('加载失败：未找到数据', 'error');
       }
     } catch (error) {
       console.error('加载单据失败:', error);
-      alert('加载失败，请重试');
+      showToast('加载失败，请重试', 'error');
     }
   };
 

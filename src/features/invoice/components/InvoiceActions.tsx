@@ -5,11 +5,13 @@ import { useInvoiceStore } from '../state/invoice.store';
 import { getTotalAmount } from '../utils/calculations';
 import { Download, FileSpreadsheet } from 'lucide-react';
 import { exportInvoiceToExcel } from '../services/excel.service';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * 发票操作按钮组件
  */
 export const InvoiceActions = React.memo(() => {
+  const { showToast } = useToast();
   const {
     data,
     isEditMode,
@@ -32,7 +34,7 @@ export const InvoiceActions = React.memo(() => {
       await generatePDF();
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('生成PDF时出错');
+      showToast('生成PDF时出错', 'error');
     }
   };
 
@@ -58,7 +60,7 @@ export const InvoiceActions = React.memo(() => {
       togglePreview();
     } catch (error) {
       console.error('Error previewing PDF:', error);
-      alert('预览PDF时出错');
+      showToast('预览PDF时出错', 'error');
     }
   };
 
@@ -67,7 +69,7 @@ export const InvoiceActions = React.memo(() => {
       exportInvoiceToExcel(data);
     } catch (error) {
       console.error('Error exporting Excel:', error);
-      alert('导出Excel时出错');
+      showToast('导出Excel时出错', 'error');
     }
   };
 

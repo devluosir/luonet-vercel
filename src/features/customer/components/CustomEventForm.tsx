@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, Calendar, FileText } from 'lucide-react';
 import type { TimelineEventType } from '../types';
+import { useToast } from '@/components/ui/Toast';
 
 interface CustomEventFormProps {
   customerId: string;
@@ -19,6 +20,7 @@ interface CustomEventFormProps {
 }
 
 export function CustomEventForm({ customerId, customerName, onSubmit, onCancel }: CustomEventFormProps) {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -31,12 +33,12 @@ export function CustomEventForm({ customerId, customerName, onSubmit, onCancel }
     e.preventDefault();
 
     if (!formData.title.trim()) {
-      alert('请输入事件标题');
+      showToast('请输入事件标题', 'warning');
       return;
     }
 
     if (!formData.date) {
-      alert('请选择事件日期');
+      showToast('请选择事件日期', 'warning');
       return;
     }
 

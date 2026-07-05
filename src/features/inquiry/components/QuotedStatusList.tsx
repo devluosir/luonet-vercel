@@ -4,6 +4,7 @@ import { Fragment } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import type { CustomerQuoteStatus } from '../types';
 import { stripDateBrackets, type InquiryColorClass } from '../utils/inquiryUtils';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 interface QuotedStatusListProps {
   statuses: CustomerQuoteStatus[];
@@ -20,6 +21,8 @@ export function QuotedStatusList({
   onAddRequest,
   onRemove,
 }: QuotedStatusListProps) {
+  const confirm = useConfirm();
+
   return (
     <Fragment>
       {statuses.map((status) => {
@@ -40,10 +43,14 @@ export function QuotedStatusList({
             </button>
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm(`确定删除「${tagLabel}」吗？`)) {
-                  onRemove(status.id);
-                }
+              onClick={async () => {
+                const confirmed = await confirm({
+                  title: '删除已报价状态',
+                  description: `确定删除「${tagLabel}」吗？`,
+                  confirmLabel: '删除',
+                  variant: 'danger',
+                });
+                if (confirmed) onRemove(status.id);
               }}
               className="rounded-r-full border-l border-blue-100 px-1.5 py-1 text-gray-400 hover:text-red-500 dark:border-blue-900"
               title="删除"

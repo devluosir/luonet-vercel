@@ -6,8 +6,12 @@ import type { HistoryType, HistoryItem } from '../types';
 import { convertConfirmationToPacking, hasMergedCells, getMergedCellsInfo } from '@/utils/convertConfirmationToPacking';
 import { savePackingHistory } from '@/utils/packingHistory';
 import { getQuotationHistory } from '@/utils/quotationHistory';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 export function useHistoryActions() {
   const router = useRouter();
+  const { showToast } = useToast();
+  const confirm = useConfirm();
   const {
     setActiveTab,
     setShowExportModal,
@@ -130,7 +134,7 @@ export function useHistoryActions() {
   }, [setPreviewItem, setShowPreview]);
 
   // 转换操作（仅用于confirmation转换为packing）
-  const handleConvert = useCallback((id: string) => {
+  const handleConvert = useCallback(async (id: string) => {
     try {
       // 获取并验证订单确认记录
       const confirmationItem = getQuotationHistory().find(item => item.id === id && item.type === 'confirmation');
@@ -148,7 +152,12 @@ export function useHistoryActions() {
           '- Part Name 和 Description 将合并到 Description 列\n\n' +
           '是否继续转换？';
 
-        if (!window.confirm(confirmMessage)) {
+        const confirmed = await confirm({
+          title: '转换订单确认',
+          description: confirmMessage,
+          confirmLabel: '继续转换',
+        });
+        if (!confirmed) {
           return;
         }
       }
@@ -167,9 +176,9 @@ export function useHistoryActions() {
 
     } catch (error) {
       console.error('转换订单确认为装箱单时出错:', error);
-      alert('转换失败: ' + (error instanceof Error ? error.message : '未知错误'));
+      showToast('转换失败: ' + (error instanceof Error ? error.message : '未知错误'), 'error');
     }
-  }, [router]);
+  }, [router, confirm, showToast]);
 
   // 导出操作
   const handleExport = useCallback(() => {

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Calendar, FileText, Package, Receipt, RefreshCw, ShoppingCart, Plus, Filter, Search } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
 import { useCustomerTimeline } from '../hooks/useCustomerTimeline';
 import { CustomEventForm } from './CustomEventForm';
 import type { CustomerTimelineEvent, TimelineEventStatus } from '../types';
@@ -39,6 +40,7 @@ const statusColors = {
 };
 
 export function CustomerTimeline({ customerId, customerName }: CustomerTimelineProps) {
+  const { showToast } = useToast();
   const [showFilters, setShowFilters] = useState(false);
   const [showCustomEventForm, setShowCustomEventForm] = useState(false);
   const customerAliases = useMemo(() => [customerName], [customerName]);
@@ -87,7 +89,7 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
       setShowCustomEventForm(false);
     } catch (error) {
       console.error('添加自定义事件失败:', error);
-      alert('添加自定义事件失败');
+      showToast('添加自定义事件失败', 'error');
     }
   };
 
