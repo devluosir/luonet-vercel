@@ -666,11 +666,15 @@ function TimeGrid({
   const homeCity = getCity(homeCityId) ?? getCity(HOME_CITY_ID) ?? ALL_CITIES[0];
   const homeTime = getTimeParts(currentUtcMs, homeCity.timezone);
   const currentMinuteOfDay = homeTime.hour * 60 + homeTime.minute;
-  const span = isMobile ? 3 : 6;
+  const span = isMobile ? 1 : 6;
   const columns = useMemo(() => {
     const currentHomeHourStartUtc = currentUtcMs - homeTime.minute * 60_000 - homeTime.second * 1000;
     return Array.from({ length: span * 2 + 1 }, (_, index) => currentHomeHourStartUtc + (index - span) * 3_600_000);
   }, [currentUtcMs, homeTime.minute, homeTime.second, span]);
+  const cityColumnWidth = isMobile ? 104 : 150;
+  const hourMinWidth = isMobile ? 58 : 52;
+  const gridMinWidth = isMobile ? '100%' : '760px';
+  const gridTemplateColumns = `${cityColumnWidth}px repeat(${columns.length}, minmax(${hourMinWidth}px, 1fr))`;
 
   const orderedCityIds = useMemo(() => [
     homeCityId,
@@ -693,18 +697,18 @@ function TimeGrid({
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
+    <div className="space-y-4 sm:space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-2 sm:flex-wrap sm:gap-3">
           <div className="relative">
             <button
               type="button"
               onClick={() => setShowHomeSelect((value) => !value)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300"
+              className="inline-flex max-w-[190px] items-center justify-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300 sm:max-w-none sm:px-3"
             >
               <span>📍</span>
-              <span>{homeCity.flag} {homeCity.nameCN}</span>
-              <span className="text-xs text-blue-400">· 我的城市</span>
+              <span className="truncate">{homeCity.flag} {homeCity.nameCN}</span>
+              <span className="hidden text-xs text-blue-400 xs:inline">· 我的城市</span>
               <ChevronDown className="h-3 w-3" />
             </button>
             {showHomeSelect && (
@@ -737,14 +741,14 @@ function TimeGrid({
             )}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:ml-0">
             <button type="button" onClick={() => shiftDay(-1)} className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">‹</button>
-            <span className="w-32 text-center text-sm font-medium text-gray-700 dark:text-gray-200">{getDateLabel(currentUtcMs, homeCity.timezone)}</span>
+            <span className="w-[108px] text-center text-sm font-medium text-gray-700 dark:text-gray-200 sm:w-32">{getDateLabel(currentUtcMs, homeCity.timezone)}</span>
             <button type="button" onClick={() => shiftDay(1)} className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">›</button>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-2 sm:justify-end sm:gap-3">
           <div className="hidden items-center gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2 text-xs text-gray-500 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:flex">
             <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-6 rounded-sm bg-emerald-400" />工作时间</span>
             <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-6 rounded-sm bg-amber-300" />边缘时间</span>
@@ -767,9 +771,9 @@ function TimeGrid({
         </div>
       </div>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div className="mb-3 flex items-center gap-3">
-          <span className="w-10 text-right text-xs tabular-nums text-gray-400">00:00</span>
+      <section className="rounded-2xl border border-gray-200 bg-white px-3 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className="w-9 text-right text-xs tabular-nums text-gray-400 sm:w-10">00:00</span>
           <div className="relative flex-1">
             <input
               type="range"
@@ -789,17 +793,17 @@ function TimeGrid({
               </span>
             </div>
           </div>
-          <span className="w-10 text-xs text-gray-400">23:59</span>
+          <span className="w-9 text-xs text-gray-400 sm:w-10">23:59</span>
         </div>
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <div className="overflow-x-auto">
           <div
-            className="grid min-w-[760px] border-b border-gray-100 dark:border-gray-700"
-            style={{ gridTemplateColumns: `150px repeat(${columns.length}, minmax(52px, 1fr))` }}
+            className="grid border-b border-gray-100 dark:border-gray-700"
+            style={{ gridTemplateColumns, minWidth: gridMinWidth }}
           >
-            <div className="border-r border-dashed border-gray-200 px-4 py-2 text-center text-xs font-medium text-gray-500 dark:border-gray-700">城市</div>
+            <div className="border-r border-dashed border-gray-200 px-2 py-2 text-center text-xs font-medium text-gray-500 dark:border-gray-700 sm:px-4">城市</div>
             {columns.map((utcMs, index) => (
               <div
                 key={utcMs}
@@ -823,11 +827,11 @@ function TimeGrid({
             return (
               <div
                 key={id}
-                className={`grid min-w-[760px] border-b border-gray-50 last:border-0 hover:bg-gray-50/60 dark:border-gray-700 dark:hover:bg-gray-700/30 ${isHome ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}`}
-                style={{ gridTemplateColumns: `150px repeat(${columns.length}, minmax(52px, 1fr))` }}
+                className={`grid border-b border-gray-50 last:border-0 hover:bg-gray-50/60 dark:border-gray-700 dark:hover:bg-gray-700/30 ${isHome ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}`}
+                style={{ gridTemplateColumns, minWidth: gridMinWidth }}
               >
-                <div className="flex items-center gap-2 border-r border-dashed border-gray-200 px-3 py-3 dark:border-gray-700">
-                  <span className="text-base">{city.flag}</span>
+                <div className="flex items-center gap-1.5 border-r border-dashed border-gray-200 px-2 py-2.5 dark:border-gray-700 sm:gap-2 sm:px-3 sm:py-3">
+                  <span className="text-sm sm:text-base">{city.flag}</span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-gray-900 dark:text-white">{city.nameCN}</div>
                     <div className="mt-0.5 flex items-center gap-1">
@@ -841,7 +845,7 @@ function TimeGrid({
                     </div>
                   </div>
                   {!isHome && (
-                    <button type="button" onClick={() => onRemoveCity(id)} className="text-gray-300 hover:text-red-400" title="移除">
+                    <button type="button" onClick={() => onRemoveCity(id)} className="shrink-0 text-gray-300 hover:text-red-400" title="移除">
                       <X className="h-3.5 w-3.5" />
                     </button>
                   )}
@@ -855,11 +859,11 @@ function TimeGrid({
                     <div
                       key={utcMs}
                       title={`${city.nameCN} - ${pad2(parts.hour)}:${pad2(parts.minute)} - ${STATUS_LABEL[status]}`}
-                      className={`flex flex-col items-center justify-center border-r border-dashed px-2 py-3 last:border-r-0 dark:border-gray-700 ${
+                      className={`flex flex-col items-center justify-center border-r border-dashed px-1.5 py-2.5 last:border-r-0 dark:border-gray-700 sm:px-2 sm:py-3 ${
                         isReference ? 'border-blue-200 bg-blue-50/80 ring-2 ring-inset ring-blue-400 dark:bg-blue-950/40' : ''
                       }`}
                     >
-                      <div className={`h-3.5 w-5/6 rounded-sm ${STATUS_CLASS[status]} ${isReference ? '' : 'opacity-70'}`} />
+                      <div className={`h-3 w-5/6 rounded-sm sm:h-3.5 ${STATUS_CLASS[status]} ${isReference ? '' : 'opacity-70'}`} />
                       {isReference && (
                         <div className="mt-1 font-mono text-xs font-bold tabular-nums text-blue-700 dark:text-blue-300">
                           {pad2(cityTime.hour)}:{pad2(cityTime.minute)}
@@ -933,34 +937,32 @@ export function ClockPage() {
       }}
       onLogout={handleLogout}
     >
-      <div className="w-full px-3 py-6 sm:px-6">
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-end gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-blue-600" />
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">时区汇率</h1>
-              </div>
-              <p className="mt-0.5 text-xs text-gray-400">
-                {tab === 'clock' ? '拖动时间轴，各城市同步联动' : '实时汇率，快速换算'}
-              </p>
+      <div className="w-full px-3 py-5 sm:px-6 sm:py-6">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">时区汇率</h1>
             </div>
-            <div className="mb-0.5 flex items-center gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
-              {(['clock', 'currency'] as const).map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setTab(item)}
-                  className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${
-                    tab === item
-                      ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-700 dark:text-blue-300'
-                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                  }`}
-                >
-                  {item === 'clock' ? '时间' : '汇率'}
-                </button>
-              ))}
-            </div>
+            <p className="mt-0.5 text-xs text-gray-400">
+              {tab === 'clock' ? '拖动时间轴，各城市同步联动' : '实时汇率，快速换算'}
+            </p>
+          </div>
+          <div className="flex items-center gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800">
+            {(['clock', 'currency'] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setTab(item)}
+                className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${
+                  tab === item
+                    ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-700 dark:text-blue-300'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+              >
+                {item === 'clock' ? '时间' : '汇率'}
+              </button>
+            ))}
           </div>
         </div>
 
