@@ -200,7 +200,7 @@ function HolidayRow({
 
       {expanded && (
         <div className="border-t border-gray-100 bg-gray-50/70 px-4 pb-4 pt-3 dark:border-gray-700 dark:bg-gray-900/30">
-          <div className="ml-0 space-y-4 sm:ml-[5.75rem]">
+          <div className="space-y-4">
             <DetailSection icon="🏛️" title="假期背景" content={detail.background} />
             <DetailSection icon="📋" title="假期表现与商务影响" content={detail.businessImpact} />
             <DetailSection icon="⚠️" title="禁忌与注意事项" content={detail.notes} />
