@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sun, Moon, Palette, Settings } from 'lucide-react';
+import { Sun, Moon, Repeat2, Settings } from 'lucide-react';
 import { useThemeContext } from '@/contexts/ThemeContext';
 
 interface ThemeToggleProps {
@@ -129,7 +129,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
                       }
                     `}
                   >
-                    <Palette className="w-4 h-4" />
+                    <Repeat2 className="w-4 h-4" />
                     彩色主题
                   </button>
                   <button
@@ -191,7 +191,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         `}
         title={`切换到${isColorful ? '经典' : '彩色'}主题`}
       >
-        <Palette className="w-4 h-4" />
+        <Repeat2 className="w-4 h-4" />
       </button>
     </div>
   );

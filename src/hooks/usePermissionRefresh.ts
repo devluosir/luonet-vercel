@@ -51,12 +51,7 @@ export function usePermissionRefresh() {
       logPermission('权限刷新API响应', {
         success: data.success,
         tokenNeedsRefresh: data.tokenNeedsRefresh,
-        permissionsCount: data.permissions?.length || 0,
-        // ✅ 新增：显示具体的权限数据
-        permissions: data.permissions?.map((p) => ({
-          moduleId: p.moduleId,
-          canAccess: p.canAccess
-        })) || []
+        permissionsCount: data.permissions?.length || 0
       });
 
       // 🧹 2. 清除本地缓存（Zustand + localStorage）
@@ -68,7 +63,6 @@ export function usePermissionRefresh() {
           localStorage.removeItem('user_permissions');
           localStorage.removeItem('latestPermissions');
           localStorage.removeItem('permissionsTimestamp');
-          console.log('已清理所有权限相关缓存');
         } catch (error) {
           console.error('清理缓存失败:', error);
         }
@@ -92,9 +86,6 @@ export function usePermissionRefresh() {
           };
           localStorage.setItem('userInfo', JSON.stringify(userInfo));
           localStorage.setItem('username', data.user.username);
-
-          console.log('权限数据已保存到缓存:', cacheData);
-          console.log('用户信息已保存:', userInfo);
         } catch (error) {
           console.error('保存权限数据到缓存失败:', error);
         }

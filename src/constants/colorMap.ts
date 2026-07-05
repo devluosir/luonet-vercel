@@ -1,6 +1,6 @@
 // 模块颜色映射配置 - 支持多主题
 
-import { ButtonTheme } from '@/hooks/useThemeSettings';
+import type { ButtonTheme } from '@/utils/themeUtils';
 
 // 类型定义
 interface ThemeGradientConfig {

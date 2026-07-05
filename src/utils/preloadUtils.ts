@@ -36,7 +36,6 @@ export class PreloadManager {
 
   // 更新进度
   private updateProgress(progress: number, stage?: string) {
-    console.log('更新进度:', progress, stage, '回调数量:', this.preloadCallbacks.length);
     this.preloadProgress = progress;
     this.preloadCallbacks.forEach(callback => callback(progress, stage));
   }
@@ -71,25 +70,11 @@ export class PreloadManager {
       }
       
       if (this.lastPermissionsHash === currentHash) {
-        // ✅ 优化：进一步减少重复日志
-        if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) { // 降低到1%
-          console.log('权限未发生变化，跳过预加载');
-        }
-        
         // 缓存结果
         this.permissionCheckCache.set(cacheKey, { result: false, timestamp: now });
         return false;
       }
-      
-      // ✅ 优化：只在真正变化时输出日志
-      if (process.env.NODE_ENV === 'development') {
-        console.log('检测到权限变化，需要重新预加载', {
-          oldHash: this.lastPermissionsHash,
-          newHash: currentHash,
-          formPages
-        });
-      }
-      
+
       this.lastPermissionsHash = currentHash;
       
       // 缓存结果
@@ -124,19 +109,11 @@ export class PreloadManager {
     this.updateProgress(0, '开始预加载...');
 
     try {
-      // 1. 预加载静态资源（25%）
+      // 1. 预加载静态资源（50%）
       await this.preloadStaticAssets();
-      this.updateProgress(25);
+      this.updateProgress(50);
 
-      // 2. 预加载表单页面（45%）
-      await this.preloadFormPages();
-      this.updateProgress(45);
-
-      // 3. 预加载CSS和JS资源（65%）
-      await this.preloadScriptsAndStyles();
-      this.updateProgress(65);
-
-      // 4. 预加载PDF字体（最后一步）
+      // 2. 预加载PDF字体（最后一步）
       await this.preloadFonts();
       this.updateProgress(100, '预加载完成');
 
@@ -171,7 +148,6 @@ export class PreloadManager {
     }
 
     this.preloadTriggered = true;
-    console.log('触发延迟预加载，检查权限数据...');
     
     // 等待一小段时间，确保权限数据已加载
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -179,10 +155,8 @@ export class PreloadManager {
     // 检查是否有权限数据
     const formPages = this.getFormPagesByPermissions();
     if (formPages.length > 0) {
-      console.log('检测到权限数据，开始延迟预加载');
       await this.preloadAllResources();
     } else {
-      console.log('仍未检测到权限数据，跳过延迟预加载');
       this.preloadTriggered = false; // 重置触发状态，允许后续重试
     }
   }
@@ -267,8 +241,6 @@ export class PreloadManager {
       return;
     }
     
-    console.log(`有PDF功能权限，预加载字体。表单页面: ${formPages.join(', ')}`);
-    
     try {
       // 确保字体CSS已加载，浏览器会自动处理字体加载
       if (!document.querySelector('link[href*="pdf-fonts.css"]')) {
@@ -303,12 +275,6 @@ export class PreloadManager {
     }
   }
 
-  // 预加载表单页面
-  // fetch 整页 HTML 对 Next.js 路由无益且增加服务器负担，已停用
-  private async preloadFormPages(): Promise<void> {
-    return;
-  }
-
   // ✅ 优化：根据权限获取表单页面（添加缓存）
   private getFormPagesByPermissions(): string[] {
     const now = Date.now();
@@ -334,10 +300,6 @@ export class PreloadManager {
             const cacheData = JSON.parse(userCache);
             if (cacheData.permissions && Array.isArray(cacheData.permissions)) {
               permissions = cacheData.permissions;
-              // ✅ 优化：进一步减少重复日志
-              if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
-                console.log('从userCache获取权限数据进行预加载');
-              }
             }
           }
         } catch (error) {
@@ -351,10 +313,6 @@ export class PreloadManager {
           const latestPermissions = localStorage.getItem('latestPermissions');
           if (latestPermissions) {
             permissions = JSON.parse(latestPermissions);
-            // ✅ 优化：进一步减少重复日志
-            if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
-              console.log('从latestPermissions获取权限数据进行预加载');
-            }
           }
         } catch (error) {
           console.error('从latestPermissions获取权限数据失败:', error);
@@ -366,10 +324,6 @@ export class PreloadManager {
         const globalPermissions = (window as { __SESSION_PERMISSIONS__?: unknown }).__SESSION_PERMISSIONS__;
         if (globalPermissions && Array.isArray(globalPermissions)) {
           permissions = globalPermissions;
-          // ✅ 优化：进一步减少重复日志
-          if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
-            console.log('从全局变量获取权限数据进行预加载');
-          }
         }
       }
       
@@ -380,10 +334,6 @@ export class PreloadManager {
           const store = usePermissionStore.getState();
           if (store.user?.permissions) {
             permissions = store.user.permissions;
-            // ✅ 优化：进一步减少重复日志
-            if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
-              console.log('从Store获取权限数据进行预加载');
-            }
           }
         } catch (error) {
           console.error('从Store获取权限数据失败:', error);
@@ -422,90 +372,6 @@ export class PreloadManager {
     } catch (error) {
       console.error('获取表单页面失败:', error);
       return [];
-    }
-  }
-
-  // 使用多种方法预加载页面
-  private async preloadPageWithMultipleMethods(path: string): Promise<void> {
-    try {
-      // 方法1: 使用GET请求预加载完整页面内容
-      const response = await fetch(path, {
-        method: 'GET',
-        cache: 'force-cache',
-        headers: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Cache-Control': 'max-age=3600'
-        }
-      });
-      
-      if (response.ok) {
-        // 只检查响应状态，不读取完整内容以避免延迟
-        console.log(`页面预加载成功: ${path} (状态: ${response.status})`);
-        // ✅ 新增：将页面路径添加到预加载资源集合
-        this.preloadedResources.add(path);
-      } else {
-        console.warn(`页面预加载失败: ${path} (状态: ${response.status})`);
-      }
-    } catch (error) {
-      console.warn(`页面预加载出错: ${path}`, error);
-    }
-  }
-
-  // 预加载页面相关的API端点
-  private async preloadPageAPIs(_path: string): Promise<void> {
-    // 暂时跳过API端点预加载，因为所有API都只支持POST请求
-    // 避免405 Method Not Allowed错误
-    console.log('跳过API端点预加载，避免405错误');
-    return;
-  }
-
-  // 预加载页面相关的CSS和JS资源
-  private async preloadPageResources(path: string, content: string): Promise<void> {
-    try {
-      // 从页面内容中提取CSS和JS资源链接
-      const cssMatches = content.match(/href="([^"]*\.css[^"]*)"/g);
-      const jsMatches = content.match(/src="([^"]*\.js[^"]*)"/g);
-      
-      const resources: string[] = [];
-      
-      if (cssMatches) {
-        cssMatches.forEach(match => {
-          const href = match.match(/href="([^"]*)"/)?.[1];
-          if (href && !href.startsWith('http')) {
-            resources.push(href);
-          }
-        });
-      }
-      
-      if (jsMatches) {
-        jsMatches.forEach(match => {
-          const src = match.match(/src="([^"]*)"/)?.[1];
-          if (src && !src.startsWith('http')) {
-            resources.push(src);
-          }
-        });
-      }
-      
-      // 预加载这些资源
-      const resourcePromises = resources.map(async (resource) => {
-        try {
-          const response = await fetch(resource, {
-            method: 'GET',
-            cache: 'force-cache'
-          });
-          
-          if (response.ok) {
-            console.log(`页面资源预加载成功: ${resource}`);
-            this.preloadedResources.add(resource);
-          }
-        } catch (error) {
-          console.warn(`页面资源预加载失败: ${resource}`, error);
-        }
-      });
-      
-      await Promise.all(resourcePromises);
-    } catch (error) {
-      console.warn('预加载页面资源时出错:', error);
     }
   }
 
@@ -550,105 +416,6 @@ export class PreloadManager {
     });
 
     await Promise.all(assetPromises);
-  }
-
-  // 获取用户权限列表
-  private getUserPermissions(): string[] {
-    if (typeof window === 'undefined') return [];
-
-    try {
-      const latestPermissions = localStorage.getItem('latestPermissions');
-      if (!latestPermissions) {
-        return [];
-      }
-
-      const permissions = JSON.parse(latestPermissions);
-      const userPermissions: string[] = [];
-
-      permissions.forEach((perm: { moduleId: string; canAccess: boolean }) => {
-        if (perm.canAccess) {
-          switch (perm.moduleId) {
-            case 'quotation':
-              userPermissions.push('报价单');
-              break;
-            case 'packing':
-              userPermissions.push('装箱单');
-              break;
-            case 'invoice':
-              userPermissions.push('发票');
-              break;
-            case 'purchase':
-              userPermissions.push('采购单');
-              break;
-            case 'history':
-              userPermissions.push('历史记录');
-              break;
-            case 'customer':
-              userPermissions.push('客户管理');
-              break;
-            case 'ai-email':
-              userPermissions.push('AI邮件');
-              break;
-    
-              userPermissions.push('日期工具');
-              break;
-          }
-        }
-      });
-
-      return userPermissions;
-    } catch (error) {
-      console.error('解析权限数据失败:', error);
-      return [];
-    }
-  }
-
-  // 预加载CSS和JS资源
-  private async preloadScriptsAndStyles(): Promise<void> {
-    console.log('预加载CSS和JS资源...');
-    
-    // 暂时跳过CSS预加载，避免MIME类型错误
-    const scriptAndStyleUrls: string[] = [];
-
-    const resourcePromises = scriptAndStyleUrls.map(url => {
-      return new Promise<void>((resolve) => {
-        // 检查是否已经预加载过
-        if (this.preloadedResources.has(url)) {
-          console.log(`资源已预加载: ${url}`);
-          resolve();
-          return;
-        }
-
-        // 直接尝试预加载，不进行HEAD检查
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.as = 'style';
-        link.href = url;
-        
-        // 设置超时，避免长时间等待
-        const timeout = setTimeout(() => {
-          console.log(`CSS资源预加载超时: ${url}`);
-          resolve();
-        }, 3000);
-        
-        link.onload = () => {
-          clearTimeout(timeout);
-          console.log(`资源预加载成功: ${url}`);
-          this.preloadedResources.add(url);
-          resolve();
-        };
-        
-        link.onerror = () => {
-          clearTimeout(timeout);
-          console.log(`资源预加载失败: ${url}`);
-          resolve(); // 即使失败也继续
-        };
-        
-        document.head.appendChild(link);
-      });
-    });
-
-    await Promise.all(resourcePromises);
   }
 
   // 获取预加载状态
@@ -743,7 +510,6 @@ export class PreloadManager {
   // 获取预加载统计信息
   getPreloadStats() {
     return {
-      totalResources: this.isPreloaded() ? '100%' : '0%',
       isPreloading: this.isPreloading,
       progress: this.preloadProgress,
       isCompleted: this.isPreloaded()

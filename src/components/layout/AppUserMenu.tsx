@@ -7,8 +7,8 @@ import {
   ChevronUp,
   Download,
   LogOut,
-  Palette,
   Settings,
+  SlidersHorizontal,
   User,
 } from 'lucide-react';
 import { Avatar } from '@/components/Avatar';
@@ -334,7 +334,7 @@ export function AppUserMenu({
                   <div className="border-t border-gray-200 pt-1 dark:border-gray-700">
                     <div className="mb-1.5 flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
                       <div className="flex items-center">
-                        <Palette className="mr-1.5 h-3.5 w-3.5" />
+                        <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />
                         <span>主题设置</span>
                       </div>
                       <ThemeCompactToggle />
