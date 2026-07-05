@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Building2, LayoutGrid, List as ListIcon, Package, Plus, Search, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
@@ -36,8 +36,17 @@ type ViewMode = 'list' | 'card';
 
 const LABEL: Record<TabType, string> = { customers: '客户', suppliers: '供应商', consignees: '收货人' };
 
+function parseTabParam(value: string | null): TabType {
+  if (value === 'customers' || value === 'suppliers' || value === 'consignees') {
+    return value;
+  }
+  return 'customers';
+}
+
 export default function CustomerPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams?.get('tab') ?? null;
   const { data: session, status } = useSession();
   const { user, handleLogout } = useAppUser();
 
@@ -78,6 +87,11 @@ export default function CustomerPage() {
     if (status === 'loading') return;
     if (status === 'unauthenticated') router.push('/');
   }, [status, router]);
+
+  useEffect(() => {
+    const nextTab = parseTabParam(tabParam);
+    setActiveTab((currentTab) => (currentTab === nextTab ? currentTab : nextTab));
+  }, [tabParam]);
 
   useEffect(() => {
     useInquiryStore.getState().init();

@@ -16,7 +16,7 @@ import { useCustomerActions } from '../hooks';
 import { customerService, getConsigneeDisplayName } from '../services/customerService';
 import { supplierService } from '../services/supplierService';
 import type { CustomerProfileType, CustomerStats } from '../services/customerService';
-import type { Customer, CustomerFormData } from '../types';
+import type { Customer, CustomerFormData, TabType } from '../types';
 
 type DetailType = CustomerProfileType;
 type ConfirmState = {
@@ -39,6 +39,12 @@ function getTypeLabel(type: DetailType) {
   if (type === 'supplier') return '供应商';
   if (type === 'consignee') return '收货人';
   return '客户';
+}
+
+function detailTypeToTab(type: DetailType): TabType {
+  if (type === 'supplier') return 'suppliers';
+  if (type === 'consignee') return 'consignees';
+  return 'customers';
 }
 
 function getUsageText(type: DetailType, customer: Customer) {
@@ -248,7 +254,7 @@ export default function CustomerDetailPage() {
     <AppLayout
       breadcrumbs={[
         { label: '首页', path: '/dashboard' },
-        { label: '客户管理', path: '/customer' },
+        { label: '客户管理', path: `/customer?tab=${detailTypeToTab(detailType)}` },
         { label: displayName },
       ]}
       user={user}
