@@ -222,7 +222,7 @@ function CurrencySelect({
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="shrink-0 rounded-xl border border-gray-200 bg-white px-2.5 py-2 text-xs font-medium text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+      className="w-full min-w-0 rounded-xl border border-gray-200 bg-white px-2.5 py-2 text-xs font-medium text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 sm:w-auto sm:shrink-0"
     >
       {CURRENCIES.map((currency) => (
         <option key={currency.code} value={currency.code}>
@@ -254,8 +254,8 @@ function RateChart({ points, currency }: { points: RatePoint[]; currency: string
   const last = points[points.length - 1];
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-100 bg-gray-50/60 dark:border-gray-700 dark:bg-gray-900/30">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-40 w-full" role="img" aria-label={`${currency} 兑人民币汇率走势`}>
+    <div className="max-w-full overflow-hidden rounded-xl border border-gray-100 bg-gray-50/60 dark:border-gray-700 dark:bg-gray-900/30">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-36 w-full sm:h-40" role="img" aria-label={`${currency} 兑人民币汇率走势`}>
         <line x1={padding.left} y1={padding.top} x2={padding.left} y2={height - padding.bottom} stroke="#e5e7eb" />
         <line x1={padding.left} y1={height - padding.bottom} x2={width - padding.right} y2={height - padding.bottom} stroke="#e5e7eb" />
         {[0, 0.5, 1].map((ratio) => {
@@ -399,11 +399,11 @@ function CurrencyPanel() {
   const availableToAdd = CURRENCIES.filter((currency) => !watchedCurrencies.includes(currency.code));
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
-      <div className="space-y-5">
-        <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+    <div className="grid min-w-0 gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
+      <div className="min-w-0 space-y-4 sm:space-y-5">
+        <section className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-4">
           <p className="mb-3 text-xs font-medium text-gray-500 dark:text-gray-400">快速换算</p>
-          <div className="mb-2 flex items-center gap-2">
+          <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center">
             <input
               type="number"
               min="0"
@@ -428,9 +428,9 @@ function CurrencyPanel() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2">
+        <section className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-4">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-start">
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400">今日汇率（兑人民币）</p>
               {availableToAdd.length > 0 && (
                 <select
@@ -439,7 +439,7 @@ function CurrencyPanel() {
                     if (event.target.value) addCurrency(event.target.value);
                   }}
                   title="添加货币"
-                  className="h-7 rounded-full border border-blue-100 bg-blue-50 px-2 text-xs text-blue-600 focus:outline-none dark:border-blue-900/60 dark:bg-blue-950/30"
+                  className="h-7 max-w-[150px] rounded-full border border-blue-100 bg-blue-50 px-2 text-xs text-blue-600 focus:outline-none dark:border-blue-900/60 dark:bg-blue-950/30 sm:max-w-none"
                 >
                   <option value="">+ 添加</option>
                   {availableToAdd.map((currency) => (
@@ -451,7 +451,7 @@ function CurrencyPanel() {
             <button
               type="button"
               onClick={() => setRefreshSeq((value) => value + 1)}
-              className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-2 py-1 text-[10px] text-gray-500 hover:border-blue-200 hover:text-blue-600 dark:border-gray-700 dark:text-gray-400"
+              className="inline-flex w-fit items-center gap-1 rounded-full border border-gray-200 px-2 py-1 text-[10px] text-gray-500 hover:border-blue-200 hover:text-blue-600 dark:border-gray-700 dark:text-gray-400"
             >
               <RefreshCw className="h-3 w-3" />
               刷新
@@ -466,7 +466,7 @@ function CurrencyPanel() {
               <button onClick={() => setRefreshSeq((value) => value + 1)} className="text-xs text-blue-500 underline underline-offset-2">重试</button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
               {watchedCurrencies.map((code) => {
                 const currency = CURRENCIES.find((item) => item.code === code);
                 const active = selectedCurrency === code;
@@ -475,7 +475,7 @@ function CurrencyPanel() {
                     <button
                       type="button"
                       onClick={() => setSelectedCurrency(code)}
-                      className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                      className={`flex w-full min-w-0 items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors ${
                         active
                           ? 'border-blue-300 bg-blue-50 ring-1 ring-blue-200 dark:border-blue-700 dark:bg-blue-950/40 dark:ring-blue-900'
                           : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50'
@@ -485,7 +485,7 @@ function CurrencyPanel() {
                         <span className="text-base leading-none">{currency?.flag}</span>
                         <span className="min-w-0">
                           <span className={`text-xs font-semibold ${active ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>{code}</span>
-                          <span className="ml-1 text-[10px] text-gray-400">{currency?.name}</span>
+                          <span className="ml-1 truncate text-[10px] text-gray-400">{currency?.name}</span>
                         </span>
                       </span>
                       <span className={`shrink-0 text-sm font-medium tabular-nums ${active ? 'text-blue-600 dark:text-blue-300' : 'text-gray-800 dark:text-gray-100'}`}>
@@ -508,8 +508,8 @@ function CurrencyPanel() {
         </section>
       </div>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div className="mb-3 flex items-center justify-between gap-3">
+      <section className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-4">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <div className="flex min-w-0 items-center gap-1.5">
             <p className="text-xs font-medium text-gray-500 dark:text-gray-400">汇率走势</p>
             <span className="rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
