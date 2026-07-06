@@ -201,7 +201,7 @@ export const InvoicePage = () => {
           <PageCard padding="md">
             <form onSubmit={handleSubmit}>
               {/* 标题和工具栏 */}
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between -mx-4 md:-mx-8 px-4 md:px-8 pb-6 mb-6 border-b border-gray-100 dark:border-[#3A3A3C]">
                 <div className="flex items-center gap-4">
                   <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
                     Invoice Generator
