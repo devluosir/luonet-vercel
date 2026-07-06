@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Check, Edit, Mail, MapPin, Phone, UserRound, X } from 'lucide-react';
 import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
 import type { Customer } from '../types';
 import type { CustomerStats } from '../services/customerService';
 import { CategoryBadge } from './ProfileListParts';
@@ -115,16 +116,17 @@ export function CustomerInfoCard({
                       className="h-9 min-w-0 flex-1 rounded-md border border-blue-300 px-2.5 text-lg font-semibold text-gray-900 outline-none ring-2 ring-blue-100 focus:border-blue-500 dark:border-blue-700 dark:bg-gray-900 dark:text-white dark:ring-blue-950/50"
                       autoFocus
                     />
-                    <button
+                    <Button
                       type="button"
                       onClick={saveEditing}
                       disabled={savingField === 'name'}
                       title="保存名称"
                       aria-label="保存名称"
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      size="xs"
+                      className="h-8 w-8 shrink-0 rounded-md p-0"
                     >
                       <Check className="h-4 w-4" />
-                    </button>
+                    </Button>
                     <button
                       type="button"
                       onClick={cancelEditing}
@@ -181,16 +183,17 @@ export function CustomerInfoCard({
                       autoFocus
                     />
                     <div className="mt-2 flex justify-end gap-1">
-                      <button
+                      <Button
                         type="button"
                         onClick={saveEditing}
                         disabled={savingField === 'address'}
                         title="保存地址"
                         aria-label="保存地址"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        size="xs"
+                        className="h-8 w-8 rounded-md p-0"
                       >
                         <Check className="h-4 w-4" />
-                      </button>
+                      </Button>
                       <button
                         type="button"
                         onClick={cancelEditing}

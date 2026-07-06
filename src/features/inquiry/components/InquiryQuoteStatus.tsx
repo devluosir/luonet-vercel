@@ -14,6 +14,7 @@ import {
 import { SupplierStatusTag } from './SupplierStatusTag';
 import { QuotedStatusList } from './QuotedStatusList';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { Button } from '@/components/ui/Button';
 
 interface InquiryQuoteStatusProps {
   record: InquiryRecord;
@@ -342,13 +343,14 @@ export function InquiryQuoteStatus({ record, onSuppliersChange, onQuotedChange }
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
-          <button
+          <Button
             type="button"
             onClick={submitSupplier}
-            className="inline-flex h-7 items-center gap-1 rounded bg-blue-600 px-2 text-xs font-medium text-white hover:bg-blue-700"
+            size="xs"
+            className="h-7 gap-1 rounded px-2"
           >
             <Save className="h-3 w-3" />确认
-          </button>
+          </Button>
           <button
             type="button"
             onClick={() => setActiveForm(null)}
@@ -410,13 +412,14 @@ export function InquiryQuoteStatus({ record, onSuppliersChange, onQuotedChange }
             className={`${INPUT_CLS} w-10`}
             placeholder="版本"
           />
-          <button
+          <Button
             type="button"
             onClick={submitQuoted}
-            className="inline-flex h-7 items-center gap-1 rounded bg-blue-600 px-2 text-xs font-medium text-white hover:bg-blue-700"
+            size="xs"
+            className="h-7 gap-1 rounded px-2"
           >
             <Save className="h-3 w-3" />确认
-          </button>
+          </Button>
           <button
             type="button"
             onClick={() => setActiveForm(null)}

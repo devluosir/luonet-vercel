@@ -10,6 +10,7 @@ import { usePermissionStore } from '@/lib/permissions';
 import { getCustomersForDropdown } from '@/features/customer/services/customerService';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { inquiryService } from '@/features/inquiry/services/inquiry.service';
+import { Button } from '@/components/ui/Button';
 import type { InquiryRecord, OrderSubStatus } from '@/features/inquiry/types';
 import { OrderTable, type SortField } from '../components/OrderTable';
 
@@ -312,13 +313,13 @@ export function OrderPage() {
           <div className="mb-4 text-6xl text-red-600 dark:text-red-400">🚫</div>
           <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">权限不足</h1>
           <p className="mb-6 text-gray-600 dark:text-gray-400">您没有订单状态表的访问权限</p>
-          <button
+          <Button
             type="button"
             onClick={() => router.push('/dashboard')}
-            className="rounded-lg bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700"
+            size="lg"
           >
             返回首页
-          </button>
+          </Button>
         </div>
       </div>
     );

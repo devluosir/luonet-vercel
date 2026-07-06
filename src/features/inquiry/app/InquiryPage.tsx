@@ -9,6 +9,7 @@ import { AppLayout, type ActionButton } from '@/components/layout';
 import { useAppUser } from '@/hooks/useAppUser';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { Button } from '@/components/ui/Button';
 import { usePermissionStore } from '@/lib/permissions';
 import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '../types';
 import { useInquiryActions } from '../hooks/useInquiryActions';
@@ -472,12 +473,12 @@ export function InquiryPage() {
           <div className="mb-4 text-6xl text-red-600 dark:text-red-400">🚫</div>
           <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">权限不足</h1>
           <p className="mb-6 text-gray-600 dark:text-gray-400">您没有询报价登记的访问权限</p>
-          <button
+          <Button
             onClick={() => router.push('/dashboard')}
-            className="rounded-lg bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700"
+            size="lg"
           >
             返回首页
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -525,15 +526,16 @@ export function InquiryPage() {
                 filteredCount={filteredAndSorted.length}
               />
             </div>
-            <button
+            <Button
               type="button"
               onClick={openCreateModal}
-              className="mt-1 inline-flex shrink-0 items-center justify-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-blue-700 xl:mt-0"
+              size="sm"
+              className="mt-1 shrink-0 gap-1 px-2.5 xl:mt-0"
             >
               <Plus className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">新增询价</span>
               <span className="sm:hidden">新增</span>
-            </button>
+            </Button>
           </div>
         </div>
 

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, Eye, EyeOff, Shield } from 'lucide-react';
 import { API_ENDPOINTS, apiRequestWithError } from '@/lib/api-config';
+import { Button } from '@/components/ui/Button';
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -161,10 +162,10 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUserModalP
             >
               取消
             </button>
-            <button
+            <Button
               type="submit"
               disabled={loading || !form.username.trim() || !form.password.trim()}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              size="sm"
             >
               {loading ? (
                 <>
@@ -172,7 +173,7 @@ export function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUserModalP
                   创建中…
                 </>
               ) : '创建用户'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

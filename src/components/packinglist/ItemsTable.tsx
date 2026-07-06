@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { OtherFeesTable } from './OtherFeesTable';
 import { ColumnToggle } from '../../features/packing/components/ColumnToggle';
+import { Button } from '@/components/ui/Button';
 
 // 表格输入框基础样式
 const baseInputClassName = `w-full px-2 py-1.5 rounded-lg
@@ -368,7 +369,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
               {data.isInGroupMode ? 'Exit Group' : 'Add Group'}
             </button>
 
-            <button
+            <Button
               type="button"
               onClick={() => {
                 const newItem = {
@@ -389,10 +390,11 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
                 };
                 onDataChange?.({ ...data, items: [...data.items, newItem] });
               }}
-              className="px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40 text-xs font-medium transition-all duration-200"
+              variant="soft"
+              size="sm"
             >
               Add Item
-            </button>
+            </Button>
 
             {data.showPrice && (
               <button

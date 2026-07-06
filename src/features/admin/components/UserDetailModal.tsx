@@ -7,6 +7,7 @@ import type { User as UserType, Permission } from '../types';
 import { usePermissions } from '../hooks/usePermissions';
 import { PermissionToggle } from './PermissionToggle';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { Button } from '@/components/ui/Button';
 
 interface UserDetailModalProps {
   user: UserType | null;
@@ -287,10 +288,11 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
             >
               取消
             </button>
-            <button
+            <Button
               onClick={handleSave}
               disabled={isBusy || !hasChanges}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              size="sm"
+              className="gap-1.5"
             >
               {saving ? (
                 <>
@@ -303,7 +305,7 @@ export function UserDetailModal({ user, isOpen, onClose, onSave, onDelete, curre
                   保存
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

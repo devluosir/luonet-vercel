@@ -5,6 +5,7 @@ import { PurchaseService } from '../services/purchase.service';
 import { usePurchasePdf } from '../hooks/usePurchasePdf';
 import { usePurchaseValidation } from '../hooks/usePurchaseValidation';
 import { useToast } from '@/components/ui/Toast';
+import { Button } from '@/components/ui/Button';
 
 export default function QuickActions() {
   const data = usePurchaseStore(s => s.data);
@@ -54,13 +55,13 @@ export default function QuickActions() {
     <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
       <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7] mb-4">快捷操作</h3>
       <div className="grid grid-cols-1 gap-3">
-        <button 
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        <Button
           onClick={onSave} 
           disabled={!isValid || busy}
+          fullWidth
         >
           {busy ? '保存中...' : '保存 (Ctrl+S)'}
-        </button>
+        </Button>
         <button 
           className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={() => generatePdf({ open: true })} 

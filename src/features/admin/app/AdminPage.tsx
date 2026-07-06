@@ -10,6 +10,7 @@ import { useUsers } from '../hooks/useUsers';
 import { UserList } from '../components/UserList';
 import { CreateUserModal } from '../components/CreateUserModal';
 import { UserDetailModal } from '../components/UserDetailModal';
+import { Button } from '@/components/ui/Button';
 import type { User } from '../types';
 
 export default function AdminPage() {
@@ -66,12 +67,11 @@ export default function AdminPage() {
           <div className="mb-4 text-5xl">🚫</div>
           <h1 className="mb-2 text-lg font-bold text-gray-900 dark:text-white">权限不足</h1>
           <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">您没有管理员权限</p>
-          <button
+          <Button
             onClick={() => router.push('/dashboard')}
-            className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
             返回首页
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -103,13 +103,13 @@ export default function AdminPage() {
               </p>
             )}
           </div>
-          <button
+          <Button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+            size="sm"
           >
             <UserPlus className="h-4 w-4" />
             添加用户
-          </button>
+          </Button>
         </div>
 
         {/* ── 错误提示 ── */}

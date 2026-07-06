@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { Button } from '@/components/ui/Button';
 
 interface IOSFileInputProps {
   onFileSelect: (content: string) => void;
@@ -134,13 +135,14 @@ const IOSFileInput: React.FC<IOSFileInputProps> = ({
                   className="hidden"
                 />
                 
-                <button
+                <Button
                   onClick={handleButtonClick}
-                  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-base font-medium"
+                  fullWidth
+                  size="lg"
                   disabled={isLoading}
                 >
                   {isLoading ? '正在读取...' : '从文件导入'}
-                </button>
+                </Button>
 
                 <button
                   onClick={() => setShowTextInput(true)}
@@ -185,13 +187,13 @@ const IOSFileInput: React.FC<IOSFileInputProps> = ({
                 </div>
 
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     onClick={handleTextSubmit}
-                    className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                    className="flex-1"
                     disabled={!jsonText.trim()}
                   >
                     确认导入
-                  </button>
+                  </Button>
                   <button
                     onClick={() => {
                       setShowTextInput(false);

@@ -6,6 +6,7 @@ import { Clock, Plus, AlertTriangle, CheckCircle, Calendar, Trash2 } from 'lucid
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { Button } from '@/components/ui/Button';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import { getInquiryQuoteStatusBadge } from '../services/inquiryTimelineService';
 import { useCustomerFollowUp } from '../hooks/useCustomerFollowUp';
@@ -263,13 +264,14 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
           </span>
         </div>
         
-        <button
+        <Button
           onClick={() => setShowAddForm(true)}
-          className="flex items-center space-x-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          size="sm"
+          className="space-x-1 rounded-md py-2"
         >
           <Plus className="h-4 w-4" />
           <span>添加跟进</span>
-        </button>
+        </Button>
       </div>
 
       {/* 添加跟进表单 */}
@@ -380,12 +382,12 @@ export function FollowUpManager({ customerId, customerName }: FollowUpManagerPro
               >
                 取消
               </button>
-              <button
+              <Button
                 type="submit"
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="rounded-md"
               >
                 添加跟进
-              </button>
+              </Button>
             </div>
           </form>
         </div>

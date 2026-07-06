@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Package
 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 interface ConfirmationHistory {
   id: string;
@@ -261,13 +262,15 @@ export default function ConfirmationHistoryTab({
                 </div>
                 <div className="w-10 sm:w-32 flex-shrink-0 flex items-center justify-center">
                   <div className="flex items-center justify-end space-x-0.5 sm:space-x-1">
-                    <button
+                    <Button
                       onClick={() => onPreview(item.id)}
-                      className="p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-all duration-200"
+                      variant="ghost"
+                      size="xs"
+                      className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 sm:p-2"
                       title="预览"
                     >
                       <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </button>
+                    </Button>
                     <button
                       onClick={() => onConvert(item.id)}
                       className="p-1.5 sm:p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:text-purple-400 dark:hover:bg-purple-900/20 rounded-lg transition-all duration-200"

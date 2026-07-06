@@ -6,6 +6,7 @@ import {
   CustomerContactPicker,
   type CustomerContactOption,
 } from '@/features/customer/components/CustomerContactPicker';
+import { Button } from '@/components/ui/Button';
 import type { Customer } from '@/features/customer/types';
 import { customerService } from '@/features/customer/services/customerService';
 
@@ -102,18 +103,18 @@ export function BatchLinkCustomerModal({
           >
             取消
           </button>
-          <button
+          <Button
             type="button"
             disabled={!selected || count === 0}
             onClick={() => {
               if (!selected) return;
               onConfirm(selected.customerId, selected.contactId, selected.label);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700"
+            className="gap-1.5 disabled:bg-gray-300 dark:disabled:bg-gray-700"
           >
             <Link2 className="h-4 w-4" />
             确认关联
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, Filter, Save, Clock, X } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 type SearchFilters = Record<string, string | undefined>;
 
@@ -300,15 +301,16 @@ export function AdvancedSearch({
               >
                 取消
               </button>
-              <button
+              <Button
                 onClick={() => {
                   handleSearch();
                   setShowFilters(false);
                 }}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                size="xs"
+                className="rounded"
               >
                 应用筛选
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -376,13 +378,13 @@ export function AdvancedSearch({
               >
                 取消
               </button>
-              <button
+              <Button
                 onClick={handleSaveQuery}
                 disabled={!saveQueryName.trim()}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded"
               >
                 保存
-              </button>
+              </Button>
             </div>
           </div>
         </div>

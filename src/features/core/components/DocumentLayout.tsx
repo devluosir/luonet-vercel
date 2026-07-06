@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Save, Download, Eye, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import type { DocumentPermission } from '../types';
 
 interface DocumentLayoutProps {
@@ -52,14 +53,14 @@ export function DocumentLayout({
             {/* 右侧：操作按钮 */}
             <div className="flex items-center space-x-2">
               {permissions.canEdit && actions.onSave && (
-                <button
+                <Button
                   onClick={actions.onSave}
                   disabled={loading || saving}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-md"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   {saving ? '保存中...' : '保存'}
-                </button>
+                </Button>
               )}
 
               {permissions.canPreview && actions.onPreview && (

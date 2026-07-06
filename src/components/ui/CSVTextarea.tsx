@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/Button';
 
 interface CSVTextareaProps {
   value: string;
@@ -445,18 +446,18 @@ export const CSVTextarea: React.FC<CSVTextareaProps> = ({
               >
                 📋 粘贴表格
               </button>
-              <button
+              <Button
                 onClick={addRow}
-                className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
+                size="xs"
               >
                 ➕ 添加行
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={addColumn}
-                className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
+                size="xs"
               >
                 ➕ 添加列
-              </button>
+              </Button>
             </div>
             <div className="flex items-center gap-2">
               <button

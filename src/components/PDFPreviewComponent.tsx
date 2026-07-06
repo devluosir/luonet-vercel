@@ -12,6 +12,7 @@ import type { PDFGeneratorData } from '@/types/pdf';
 import type { PurchaseOrderData } from '@/types/purchase';
 import type { PackingData } from '@/features/packing/types';
 import { useToast } from '@/components/ui/Toast';
+import { Button } from '@/components/ui/Button';
 
 interface PDFPreviewComponentProps {
   pdfUrl: string | null;
@@ -178,13 +179,15 @@ export default function PDFPreviewComponent({
           <div className="flex items-center gap-2">
             {/* 新窗口打开按钮 */}
             {showOpenInNewTab && (
-              <button
+              <Button
                 onClick={handleOpenInNewTab}
-                className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                variant="ghost"
+                size="xs"
+                className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
                 title={deviceInfo.isAndroid ? "在新窗口打开（推荐）" : "在新窗口打开"}
               >
                 <ExternalLink className="w-5 h-5" />
-              </button>
+              </Button>
             )}
 
             {/* 下载按钮 */}
@@ -225,23 +228,20 @@ export default function PDFPreviewComponent({
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   {/* 推荐操作按钮 */}
                   {deviceInfo.canPreviewPDF && (
-                    <button
+                    <Button
                       onClick={handleOpenInNewTab}
-                      className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      size="lg"
                     >
                       <ExternalLink className="w-4 h-4" />
                       <span>新窗口打开 (推荐)</span>
-                    </button>
+                    </Button>
                   )}
 
-                  <button
+                  <Button
                     onClick={handleDownload}
                     disabled={isDownloading}
-                    className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors ${
-                      !deviceInfo.canPreviewPDF
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    variant={!deviceInfo.canPreviewPDF ? 'primary' : 'secondary'}
+                    size="lg"
                   >
                     {isDownloading ? (
                       <>
@@ -254,16 +254,17 @@ export default function PDFPreviewComponent({
                         <span>下载PDF {!deviceInfo.canPreviewPDF ? '(推荐)' : ''}</span>
                       </>
                     )}
-                  </button>
+                  </Button>
 
                   {deviceInfo.canPreviewPDF && showOpenInNewTab && (
-                    <button
+                    <Button
                       onClick={handleOpenInNewTab}
-                      className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      variant="secondary"
+                      size="lg"
                     >
                       <ExternalLink className="w-4 h-4" />
                       <span>新窗口打开</span>
-                    </button>
+                    </Button>
                   )}
                 </div>
 

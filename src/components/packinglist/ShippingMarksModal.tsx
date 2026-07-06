@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Download, FileText } from 'lucide-react';
 import { generateShippingMarksPDF } from '@/utils/shippingMarksPdfGenerator';
 import { useToast } from '@/components/ui/Toast';
+import { Button } from '@/components/ui/Button';
 
 interface ShippingMarksModalProps {
   isOpen: boolean;
@@ -169,10 +170,9 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
                 PDF预览
               </button>
               
-              <button
+              <Button
                 onClick={handleExportPDF}
                 disabled={!value.trim() || isGenerating}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {isGenerating ? (
                   <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -183,7 +183,7 @@ export const ShippingMarksModal: React.FC<ShippingMarksModalProps> = ({
                   <Download className="w-4 h-4" />
                 )}
                 导出PDF
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -226,12 +226,11 @@ Order No: ORD-2024-001"
           >
             取消
           </button>
-          <button
+          <Button
             onClick={handleSaveAndClose}
-            className="px-6 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
           >
             保存并关闭
-          </button>
+          </Button>
         </div>
       </div>
       
@@ -252,10 +251,9 @@ Order No: ORD-2024-001"
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
+                <Button
                   onClick={handleExportPDF}
                   disabled={isGenerating}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
                 >
                   {isGenerating ? (
                     <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -266,7 +264,7 @@ Order No: ORD-2024-001"
                     <Download className="w-4 h-4" />
                   )}
                   {isGenerating ? '下载中...' : '下载PDF'}
-                </button>
+                </Button>
                 <button
                   onClick={closePDFPreview}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"

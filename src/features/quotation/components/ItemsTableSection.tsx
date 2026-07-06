@@ -1,5 +1,6 @@
 import React from 'react';
 import { FormField } from '@/features/core';
+import { Button } from '@/components/ui/Button';
 import type { LineItem, OtherFee } from '../types';
 
 interface ItemsTableSectionProps {
@@ -51,12 +52,12 @@ export function ItemsTableSection({ items, otherFees, onUpdate, isReadOnly }: It
         <div className="flex justify-between items-center mb-4">
           <h4 className="text-md font-medium">商品列表</h4>
           {!isReadOnly && (
-            <button
+            <Button
               onClick={addItem}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="rounded-md"
             >
               添加商品
-            </button>
+            </Button>
           )}
         </div>
 

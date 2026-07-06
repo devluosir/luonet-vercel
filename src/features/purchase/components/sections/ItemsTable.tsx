@@ -3,6 +3,7 @@ import React, { useCallback, memo, useMemo } from 'react';
 import { usePurchaseStore } from '../../state/purchase.store';
 import { usePurchaseValidation } from '../../hooks/usePurchaseValidation';
 import ErrorBadge from '../ErrorBadge';
+import { Button } from '@/components/ui/Button';
 import type { PurchaseItem } from '../../utils/types';
 
 // 顶部：列枚举（描述=1、Qty=2、Unit=3、Price=4）
@@ -48,12 +49,11 @@ export default function ItemsTable() {
     <div className="bg-gray-50 dark:bg-[#3A3A3C] p-4 rounded-xl border border-gray-200 dark:border-gray-600">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-800 dark:text-[#F5F5F7]">商品列表</h3>
-        <button
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+        <Button
           onClick={handleAdd}
         >
           添加商品
-        </button>
+        </Button>
       </div>
 
       <div className="overflow-x-auto">

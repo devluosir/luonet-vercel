@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, Calendar, FileText } from 'lucide-react';
 import type { TimelineEventType } from '../types';
 import { useToast } from '@/components/ui/Toast';
+import { Button } from '@/components/ui/Button';
 
 interface CustomEventFormProps {
   customerId: string;
@@ -140,13 +141,13 @@ export function CustomEventForm({ customerId, customerName, onSubmit, onCancel }
             >
               取消
             </button>
-            <button
+            <Button
               type="submit"
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-1"
+              className="space-x-1 rounded-md"
             >
               <FileText className="h-4 w-4" />
               <span>添加事件</span>
-            </button>
+            </Button>
           </div>
         </form>
       </div>

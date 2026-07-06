@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Building2, LayoutGrid, List as ListIcon, Package, Plus, Search, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Button } from '@/components/ui/Button';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { useAppUser } from '@/hooks/useAppUser';
 import { useCustomerData, useCustomerActions, useCustomerForm } from '../hooks';
@@ -243,13 +244,14 @@ export default function CustomerPage() {
         {/* ── 页头 ── */}
         <div className="mb-3 flex items-center justify-between">
           <h1 className="text-base font-semibold text-gray-900 dark:text-white">客户管理</h1>
-          <button
+          <Button
             onClick={handleAddNew}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+            size="sm"
+            className="gap-1.5"
           >
             <Plus className="h-4 w-4" />
             新增{LABEL[activeTab]}
-          </button>
+          </Button>
         </div>
 
         {/* ── 主内容卡片 ── */}

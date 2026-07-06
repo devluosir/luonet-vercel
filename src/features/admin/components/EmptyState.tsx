@@ -1,4 +1,5 @@
 import { Users, UserPlus } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 interface EmptyStateProps {
   searchTerm: string;
@@ -21,13 +22,12 @@ export function EmptyState({ searchTerm, statusFilter, onCreateUser }: EmptyStat
           : '点击添加用户按钮创建第一个用户'
         }
       </div>
-      <button
+      <Button
         onClick={onCreateUser}
-        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
       >
         <UserPlus className="w-4 h-4 mr-2" />
         添加用户
-      </button>
+      </Button>
     </div>
   );
 }

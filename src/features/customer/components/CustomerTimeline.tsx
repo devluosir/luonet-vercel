@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Calendar, FileText, Package, Receipt, RefreshCw, ShoppingCart, Plus, Filter, Search } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { Button } from '@/components/ui/Button';
 import { useCustomerTimeline } from '../hooks/useCustomerTimeline';
 import { CustomEventForm } from './CustomEventForm';
 import type { CustomerTimelineEvent, TimelineEventStatus } from '../types';
@@ -116,13 +117,14 @@ export function CustomerTimeline({ customerId, customerName }: CustomerTimelineP
         </div>
         
         <div className="flex items-center space-x-2">
-          <button
+          <Button
             onClick={() => setShowCustomEventForm(true)}
-            className="flex items-center space-x-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            size="sm"
+            className="space-x-1 rounded-md py-2"
           >
             <Plus className="h-4 w-4" />
             <span>添加事件</span>
-          </button>
+          </Button>
           <button
             onClick={syncHistory}
             className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"

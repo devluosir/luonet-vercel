@@ -7,6 +7,7 @@ import {
   CustomerContactPicker,
   type CustomerContactOption,
 } from '@/features/customer/components/CustomerContactPicker';
+import { Button } from '@/components/ui/Button';
 import type { Contact, Customer } from '@/features/customer/types';
 import { customerService, getPrimaryContact } from '@/features/customer/services/customerService';
 import type {
@@ -448,14 +449,15 @@ export function InquiryFormModal({
                     >
                       取消
                     </button>
-                    <button
+                    <Button
                       type="button"
                       onClick={createInlineCustomer}
                       disabled={isCreatingCustomer || !newCustomerName.trim()}
-                      className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700"
+                      size="xs"
+                      className="rounded-md px-2.5"
                     >
                       {isCreatingCustomer ? '新建中...' : '确认新建'}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -569,12 +571,12 @@ export function InquiryFormModal({
             >
               取消
             </button>
-            <button
+            <Button
               type="submit"
-              className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 active:bg-blue-800"
+              className="px-5"
             >
               {mode === 'edit' ? '保存修改' : '新增询价'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

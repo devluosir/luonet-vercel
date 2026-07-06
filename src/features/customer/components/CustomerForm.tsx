@@ -1,6 +1,7 @@
 'use client';
 
 import { type FormEvent } from 'react';
+import { Button } from '@/components/ui/Button';
 import { Contact, CustomerCategory, CustomerFormData } from '../types';
 
 const CATEGORY_OPTIONS: Array<{ value: CustomerCategory; label: string }> = [
@@ -373,12 +374,11 @@ export function CustomerForm({
         >
           取消
         </button>
-        <button
+        <Button
           type="submit"
-          className="rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
           {isEditing ? '更新' : '保存'}
-        </button>
+        </Button>
       </div>
     </form>
   );

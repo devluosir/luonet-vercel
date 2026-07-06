@@ -1,4 +1,5 @@
 import { Filter, RefreshCw, Plus, Download, Upload, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import { TabType } from '../types';
 
 interface CustomerToolbarProps {
@@ -83,13 +84,13 @@ export function CustomerToolbar({
           </button>
 
           {/* 添加新项目按钮 */}
-          <button
+          <Button
             onClick={onAddNew}
-            className="flex items-center space-x-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-colors shadow-sm"
+            className="space-x-2 shadow-sm"
           >
             <Plus className="h-4 w-4" />
             <span>添加{getTabLabel(activeTab)}</span>
-          </button>
+          </Button>
         </div>
       </div>
 

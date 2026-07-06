@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
 
 export default function NotFound() {
   const router = useRouter();
@@ -10,12 +11,12 @@ export default function NotFound() {
       <div className="text-center">
         <h1 className="text-6xl font-bold text-gray-900 dark:text-white mb-4">404</h1>
         <p className="text-xl text-gray-600 dark:text-gray-400 mb-8">页面未找到</p>
-        <button
+        <Button
           onClick={() => router.push('/')}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          size="lg"
         >
           返回首页
-        </button>
+        </Button>
       </div>
     </div>
   );

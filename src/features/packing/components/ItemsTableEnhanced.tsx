@@ -5,6 +5,7 @@ import { ColumnToggle } from './ColumnToggle';
 import { OtherFeesTable } from '../../../components/packinglist/OtherFeesTable';
 import { ImportDataButton } from './ImportDataButton';
 import { QuickImport } from './QuickImport';
+import { Button } from '@/components/ui/Button';
 
 // 导入Col类型
 type Col = 'marks'|'hsCode'|'description'|'quantity'|'unit'|'unitPrice'|'amount'|'netWeight'|'grossWeight'|'packageQty'|'dimensions';
@@ -791,7 +792,7 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
               {data.isInGroupMode ? '退出分组' : '添加分组'}
             </button>
 
-            <button
+            <Button
               type="button"
               onClick={() => {
                 const newItem = {
@@ -811,10 +812,11 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                 };
                 onDataChange?.({ ...data, items: [...data.items, newItem] });
               }}
-              className="px-3 py-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40 text-xs font-medium transition-all duration-200"
+              variant="soft"
+              size="sm"
             >
               添加商品
-            </button>
+            </Button>
 
             {data.showPrice && (
               <button

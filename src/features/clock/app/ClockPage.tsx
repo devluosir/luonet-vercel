@@ -5,6 +5,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Clock, Plus, RefreshCw, Search, X } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
+import { Button } from '@/components/ui/Button';
 import { usePermissionStore } from '@/lib/permissions';
 import { clearD1DocumentLocalState } from '@/utils/d1Sync';
 
@@ -760,14 +761,14 @@ function TimeGrid({
               实时
             </span>
           ) : (
-            <button type="button" onClick={resetNow} className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-600 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-300">
+            <Button type="button" onClick={resetNow} variant="soft" size="xs" className="rounded-full">
               回到现在
-            </button>
+            </Button>
           )}
-          <button type="button" onClick={onAddCityClick} className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 px-3 py-1.5 text-sm text-blue-600 transition-colors hover:bg-blue-50 dark:border-blue-800 dark:hover:bg-blue-950/40">
+          <Button type="button" onClick={onAddCityClick} variant="soft" size="sm" className="gap-1.5 rounded-xl">
             <Plus className="h-4 w-4" />
             添加城市
-          </button>
+          </Button>
         </div>
       </div>
 
