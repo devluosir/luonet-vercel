@@ -641,9 +641,9 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
     onItemChange(index, 'unit', result.unit);
   };
 
-  // 处理数量变更（确保只接受整数）
+  // 处理数量变更（支持小数）
   const handleQuantityChange = (index: number, value: string | number) => {
-    const quantity = typeof value === 'string' ? parseInt(value) || 0 : Math.floor(Number(value));
+    const quantity = typeof value === 'string' ? parseFloat(value) || 0 : Number(value);
     const item = data.items[index];
     const result = handleUnitItemChange(item, 'quantity', quantity);
 
@@ -1100,14 +1100,25 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                         <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
                         <input
                           type="text"
-                          inputMode="numeric"
-                          value={item.quantity.toString()}
+                          inputMode="decimal"
+                          value={editingQtyIndex === index ? editingQtyAmount : item.quantity.toString()}
                           onChange={(e) => {
                             const value = e.target.value;
-                            if (/^\d*$/.test(value)) {
-                              const quantity = value === '' ? 0 : parseInt(value);
+                            if (/^\d*\.?\d*$/.test(value)) {
+                              setEditingQtyAmount(value);
+                              const quantity = value === '' ? 0 : parseFloat(value);
                               handleQuantityChange(index, quantity);
                             }
+                          }}
+                          onFocus={(e) => {
+                            setEditingQtyIndex(index);
+                            setEditingQtyAmount(item.quantity.toString());
+                            e.target.select();
+                            handleIOSInputFocus(e);
+                          }}
+                          onBlur={() => {
+                            setEditingQtyIndex(null);
+                            setEditingQtyAmount('');
                           }}
                           className="w-full px-3 py-2 bg-transparent border border-[#E5E5EA] dark:border-[#2C2C2E] rounded-lg
                             focus:outline-none focus:ring-[3px] focus:ring-[#0066CC]/30 dark:focus:ring-[#0A84FF]/30
@@ -1537,14 +1548,14 @@ export const ItemsTableEnhanced: React.FC<ItemsTableEnhancedProps> = ({
                       <td className="py-2 px-4 text-center text-sm">
                         <input
                           type="text"
-                          inputMode="numeric"
+                          inputMode="decimal"
                           value={editingQtyIndex === index ? editingQtyAmount : item.quantity.toString()}
                           onChange={(e) => {
                             const value = e.target.value;
-                            if (/^\d*$/.test(value)) {
+                            if (/^\d*\.?\d*$/.test(value)) {
                               setEditingQtyAmount(value);
                               // 只在输入过程中更新数量，不触发单位更新
-                              const quantity = value === '' ? 0 : parseInt(value);
+                              const quantity = value === '' ? 0 : parseFloat(value);
                               onItemChange(index, 'quantity', quantity);
                             }
                           }}

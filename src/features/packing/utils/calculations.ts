@@ -137,8 +137,8 @@ export const updateItemUnitDisplay = (item: PackingItem, quantity: number): Pack
   return {
     ...item,
     unit: newUnit,
-    quantity: Math.floor(quantity),
-    totalPrice: calculateTotalPrice(Math.floor(quantity), item.unitPrice)
+    quantity,
+    totalPrice: calculateTotalPrice(quantity, item.unitPrice)
   };
 };
 

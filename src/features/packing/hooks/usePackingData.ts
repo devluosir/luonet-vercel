@@ -99,7 +99,7 @@ export const usePackingData = () => {
           : value.toString();
       } else if (field === 'quantity') {
         // 更新数量时，同时更新单位的单复数
-        const updatedItem = updateItemUnitDisplay(item, typeof value === 'string' ? parseInt(value) || 0 : Math.floor(Number(value)));
+        const updatedItem = updateItemUnitDisplay(item, typeof value === 'string' ? parseFloat(value) || 0 : Number(value));
         newItems[index] = updatedItem;
         return { ...prev, items: newItems };
       } else if (field === 'unitPrice') {

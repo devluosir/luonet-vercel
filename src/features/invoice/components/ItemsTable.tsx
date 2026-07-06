@@ -268,10 +268,10 @@ export const ItemsTable = React.memo(() => {
       value: editingQtyIndex === index ? editingQtyAmount : String(item.quantity),
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
         const v = e.target.value;
-        if (/^\d*$/.test(v)) {
+        if (/^\d*\.?\d*$/.test(v)) {
           setEditingQtyAmount(v);
           // 只在输入过程中更新数量，不触发单位更新
-          const quantity = v === '' ? 0 : parseInt(v);
+          const quantity = v === '' ? 0 : parseFloat(v);
           updateLineItem(index, 'quantity', quantity);
         }
       },
@@ -449,7 +449,7 @@ export const ItemsTable = React.memo(() => {
                     <label className="block text-xs font-medium text-[#86868B] dark:text-[#86868B] mb-1">Quantity</label>
                   <input
                       type="text"
-                      inputMode="numeric"
+                      inputMode="decimal"
                       {...qtyInputProps(index)}
                       onDoubleClick={() => handleDoubleClick(index, 'quantity')}
                       className={`w-full px-3 py-2 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
@@ -726,7 +726,7 @@ export const ItemsTable = React.memo(() => {
                       <td className="w-24 px-2 py-2">
                         <input
                           type="text"
-                          inputMode="numeric"
+                          inputMode="decimal"
                           {...qtyInputProps(index)}
                           onDoubleClick={() => handleDoubleClick(index, 'quantity')}
                           className={`w-full px-3 py-1.5 bg-transparent border border-transparent focus:outline-none focus:ring-[3px]
