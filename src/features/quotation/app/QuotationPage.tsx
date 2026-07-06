@@ -26,6 +26,7 @@ import { exportQuotationToExcel, exportSalesConfirmationToExcel } from '../servi
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { usePdfWarmup } from '@/hooks/usePdfWarmup';
 import { PageCard } from '@/components/ui/PageCard';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 
 // 货币名称辅助函数
 const getCurrencyName = (currency: 'USD' | 'CNY' | 'EUR') => {
@@ -659,15 +660,16 @@ export default function QuotationPage() {
               </div>
 
               {/* 设置面板 */}
-              {showSettings && (
-                <div className="overflow-hidden transition-all duration-300 ease-in-out opacity-100 px-4 sm:px-6 py-3 mb-4">
-                  <SettingsPanel
-                    data={data}
-                    onChange={handleSettingsChange}
-                    activeTab={activeTab}
-                  />
-                </div>
-              )}
+              <CollapsibleSection
+                isOpen={showSettings}
+                contentClassName="px-4 sm:px-6 py-3 mb-4"
+              >
+                <SettingsPanel
+                  data={data}
+                  onChange={handleSettingsChange}
+                  activeTab={activeTab}
+                />
+              </CollapsibleSection>
 
               {/* 客户信息区域 */}
               <div className={`px-4 sm:px-6 ${

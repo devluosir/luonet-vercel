@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 
 interface SettingsPanelProps {
   isVisible: boolean;
@@ -56,8 +57,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   };
 
   return (
-    <div className={`overflow-hidden transition-all duration-300 ease-in-out
-      ${isVisible ? 'opacity-100 px-4 sm:px-6 py-2 h-auto' : 'opacity-0 px-0 py-0 h-0'}`}>
+    <CollapsibleSection
+      isOpen={isVisible}
+      contentClassName="px-4 sm:px-6 py-2"
+    >
       <div>
 
         {/* 响应式布局容器 */}
@@ -221,6 +224,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </CollapsibleSection>
   );
 };

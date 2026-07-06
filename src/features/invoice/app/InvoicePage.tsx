@@ -23,6 +23,7 @@ import { usePasteImport } from '../hooks/usePasteImport';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { numberToWords } from '../utils/calculations';
 import { PageCard } from '@/components/ui/PageCard';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 
 // 货币符号和名称辅助函数
 const getCurrencySymbol = (currency: 'USD' | 'CNY' | 'EUR') => {
@@ -256,9 +257,12 @@ export const InvoicePage = () => {
               </div>
 
               {/* 设置面板 */}
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showSettings ? 'opacity-100 px-4 sm:px-6 py-2 h-auto mb-8' : 'opacity-0 px-0 py-0 h-0'}`}>
+              <CollapsibleSection
+                isOpen={showSettings}
+                contentClassName="px-4 sm:px-6 py-2 mb-8"
+              >
                 <SettingsPanel />
-              </div>
+              </CollapsibleSection>
 
               {/* 基础信息区域 */}
               <div className="mb-8">

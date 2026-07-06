@@ -5,6 +5,7 @@ import { BankInfoSection } from '@/components/purchase/BankInfoSection';
 import PurchaseBaseInfo from '@/components/purchase/PurchaseBaseInfo';
 import { usePurchaseStore } from '../state/purchase.store';
 import { useAutoResizeTextareas } from '@/hooks/useAutoResizeTextareas';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import type { PurchaseOrderData } from '@/types/purchase';
 
 export default function PurchaseForm() {
@@ -78,10 +79,12 @@ export default function PurchaseForm() {
   return (
     <>
       {/* 设置面板 */}
-      <div className={`overflow-hidden transition-all duration-300 ease-in-out
-        ${showSettings ? 'opacity-100 px-4 sm:px-6 py-6 h-auto' : 'opacity-0 px-0 py-0 h-0'}`}>
+      <CollapsibleSection
+        isOpen={showSettings}
+        contentClassName="px-4 sm:px-6 py-6"
+      >
         <SettingsPanel data={data} onDataChange={updateData} />
-      </div>
+      </CollapsibleSection>
 
 
 
