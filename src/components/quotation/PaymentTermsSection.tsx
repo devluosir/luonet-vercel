@@ -318,18 +318,20 @@ export function PaymentTermsSection({ data, onChange }: PaymentTermsSectionProps
 
       {/* 行3：合同提醒（只读展示合同号） */}
       <div className="space-y-2">
-        <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <div className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
           <input
             type="checkbox"
             checked={showInvoiceReminder}
             onChange={(e) => updateData({ showInvoiceReminder: e.target.checked })}
-            className="h-4 w-4 accent-black dark:accent-white"
+            className="h-4 w-4 mt-0.5 flex-shrink-0 accent-black dark:accent-white"
           />
-          <span>Please state our contract no. &quot;</span>
-          <span className="font-medium text-orange-600 dark:text-orange-400">
-            {contractNoExternal?.trim() || 'TBD'}
+          <span>
+            Please state our contract no. &quot;
+            <span className="font-medium text-orange-600 dark:text-orange-400">
+              {contractNoExternal?.trim() || 'TBD'}
+            </span>
+            &quot; on your payment documents.
           </span>
-          <span>&quot; on your payment documents.</span>
         </div>
       </div>
 
