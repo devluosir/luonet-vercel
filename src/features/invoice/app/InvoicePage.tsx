@@ -22,6 +22,7 @@ import { useInvoiceForm } from '../hooks/useInvoiceForm';
 import { usePasteImport } from '../hooks/usePasteImport';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { numberToWords } from '../utils/calculations';
+import { PageCard } from '@/components/ui/PageCard';
 
 // 货币符号和名称辅助函数
 const getCurrencySymbol = (currency: 'USD' | 'CNY' | 'EUR') => {
@@ -196,7 +197,7 @@ export const InvoicePage = () => {
     >
       <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
           {/* 主卡片容器 */}
-          <div className="bg-white/90 dark:bg-[#1C1C1E]/90 backdrop-blur-xl rounded-3xl shadow-lg dark:shadow-2xl shadow-black/5 dark:shadow-black/20 border border-black/5 dark:border-white/10 p-4 md:p-8">
+          <PageCard padding="md">
             <form onSubmit={handleSubmit}>
               {/* 标题和工具栏 */}
               <div className="flex items-center justify-between mb-6">
@@ -453,7 +454,7 @@ export const InvoicePage = () => {
               </div>
 
             </form>
-          </div>
+          </PageCard>
       </div>
 
       {/* PDF预览弹窗 */}

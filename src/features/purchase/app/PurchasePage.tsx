@@ -10,6 +10,7 @@ import PurchaseForm from '../components/PurchaseForm';
 import { usePurchaseInit, usePurchasePdfActions } from '../hooks/usePurchaseActions';
 import { useRenderLoopGuard } from '@/debug/useRenderLoopGuard';
 import { usePurchaseStore } from '../state/purchase.store';
+import { PageCard } from '@/components/ui/PageCard';
 
 // 动态导入PDFPreviewModal
 const PDFPreviewModal = dynamic(() => import('@/components/history/PDFPreviewModal'), { 
@@ -61,10 +62,10 @@ export default function PurchasePage() {
       bottomActions={bottomActions}
     >
       <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
-        <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl sm:rounded-3xl shadow-lg">
+        <PageCard>
           <PurchaseHeader />
           <PurchaseForm />
-        </div>
+        </PageCard>
       </div>
 
       {/* PDF预览弹窗 */}

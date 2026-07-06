@@ -8,6 +8,7 @@ import { BasicInfoSection } from './BasicInfoSection';
 import { ItemsTableSection } from './ItemsTableSection';
 import { RemarksSection } from './RemarksSection';
 import { SettingsPanel } from '../../../components/packinglist/SettingsPanel';
+import { PageCard } from '@/components/ui/PageCard';
 
 import { calculatePackingTotals } from '../utils/calculations';
 
@@ -76,7 +77,7 @@ export const PackingForm: React.FC<PackingFormProps> = ({
 
   return (
     <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4 sm:py-8">
-          <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl sm:rounded-3xl shadow-lg">
+          <PageCard>
             <form>
               {/* 标题和设置按钮 */}
               <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 dark:border-[#3A3A3C]">
@@ -157,7 +158,7 @@ export const PackingForm: React.FC<PackingFormProps> = ({
               </div>
 
             </form>
-          </div>
+          </PageCard>
     </div>
   );
 };

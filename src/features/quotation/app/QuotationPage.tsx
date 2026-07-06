@@ -25,6 +25,7 @@ import { buildPreviewPayload } from '../services/preview.service';
 import { exportQuotationToExcel, exportSalesConfirmationToExcel } from '../services/excel.service';
 import { recordCustomerUsage } from '@/utils/customerUsageTracker';
 import { usePdfWarmup } from '@/hooks/usePdfWarmup';
+import { PageCard } from '@/components/ui/PageCard';
 
 // 货币名称辅助函数
 const getCurrencyName = (currency: 'USD' | 'CNY' | 'EUR') => {
@@ -604,7 +605,7 @@ export default function QuotationPage() {
           </div>
 
           {/* 主卡片容器 */}
-          <div className="bg-white dark:bg-[#2C2C2E] rounded-2xl sm:rounded-3xl shadow-lg">
+          <PageCard>
             <form onSubmit={handleSubmit}>
               {/* 标题和设置按钮 */}
               <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-100 dark:border-[#3A3A3C]">
@@ -910,7 +911,7 @@ export default function QuotationPage() {
               </div>
 
             </form>
-          </div>
+          </PageCard>
       </div>
 
       {/* PDF预览弹窗 */}
