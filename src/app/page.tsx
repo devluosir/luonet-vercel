@@ -5,6 +5,7 @@ import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { LOGO_CONFIG } from '@/lib/logo-config';
+import { Button } from '@/components/ui/Button';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -102,7 +103,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="relative">
@@ -116,13 +117,13 @@ export default function LoginPage() {
             />
           </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
+        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-[#F5F5F7]">
           LC App
         </h2>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow-lg sm:rounded-3xl sm:px-10">
+        <div className="bg-[var(--bg-secondary)] py-8 px-4 shadow-lg rounded-2xl sm:rounded-3xl sm:px-10">
           <form
             className="space-y-6"
             onSubmit={handleSubmit}
@@ -140,7 +141,7 @@ export default function LoginPage() {
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="appearance-none block w-full px-3 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white text-base"
+                  className="fi h-12 text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                   placeholder="请输入用户名"
                   autoComplete="username"
                 />
@@ -159,7 +160,7 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white text-base"
+                  className="fi h-12 text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                   placeholder="请输入密码"
                   autoComplete="current-password"
                 />
@@ -177,10 +178,12 @@ export default function LoginPage() {
             )}
 
             <div>
-              <button
+              <Button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-base font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700 transition-colors duration-200"
+                fullWidth
+                size="lg"
+                className="rounded-xl shadow-sm"
               >
                 {loading ? (
                   <div className="flex items-center">
@@ -190,7 +193,7 @@ export default function LoginPage() {
                 ) : (
                   '登录 →'
                 )}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
