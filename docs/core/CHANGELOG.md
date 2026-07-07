@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-07-07
+
+### Changed
+
+#### 用户菜单
+- **预加载状态收敛**：预加载完成后菜单项直接隐藏，不再展示无法交互的「资源已预加载 (100%)」文案。
+- **移动端子菜单防溢出**：个人信息子菜单在 <640px 屏幕下改为按钮下方原地展开（此前固定向右弹出，在 220px 宽的移动端侧边栏上会超出屏幕），`sm` 及以上保持原有向右弹出。
+
+### Fixed
+
+#### 移动端布局
+- **侧边栏“沉底”问题**：侧边栏与整体布局容器由 `h-screen`（100vh）改为 `.app-h-dvh`（`100vh` 回退 + `100dvh` 覆盖），修复移动浏览器地址栏显示时固定侧边栏底部（含用户菜单）被压到可视区域外的问题。
+
+### Tests
+- `npx tsc --noEmit`
+- `npx eslint`（AppUserMenu.tsx / AppSidebar.tsx / AppLayout.tsx）
+
 ## [Unreleased] - 2026-07-06
 
 ### Added
