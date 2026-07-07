@@ -13654,3 +13654,225 @@ npx wrangler deploy   # worker.ts 改动需要部署才生效；CI 的 deploy-wo
 - 同一单据的创建时间在多次编辑、多端同步后保持不变。
 - 现有的多设备同步（A 设备创建，B 设备登录后自动出现）、删除同步、待提交队列重试等行为不受影响。
 - 后续维护以 `CURRENT_STATE.md` 作为最新事实源，避免继续新增零散过程文档。
+
+---
+
+## TASK-94：询报价登记表 / 订单状态表两页面 UI 一致性整改
+
+### 背景
+
+"登记表"分组下的两个页面——`/inquiry`（询报价登记，`InquiryPage.tsx`）和 `/order`（订单状态表，`OrderPage.tsx`）——是同一批数据（`InquiryRecord`）的两种视图，侧边栏放在同一组下，用户会在两者之间频繁切换。逐文件比对后发现两页面存在多处**视觉语言不统一**且**代码重复/漂移**的问题，均为纯前端表现层问题，不涉及数据结构或后端。逐项列出问题、方案、验收标准，可分别独立执行、独立验证。
+
+---
+
+### 问题 1：月份导航器代码重复（`InquiryFilterBar.tsx` 内联复制了一份，未复用已抽出的共享组件）
+
+`src/components/MonthRangeNav.tsx` 已经是抽出来的共享组件（注释里写着"与询报价登记表一致"），`OrderPage.tsx` 正确地引用了它。但 `InquiryFilterBar.tsx` 第 144-189 行是**手写的另一份几乎逐字相同的实现**（`navRef` / `‹ 选月 › ` 按钮 / `MonthPickerPopover` 弹层），没有改用共享组件。两份代码目前样式一致是巧合，以后任何一处改动（比如调整月份导航器的 padding 或颜色）都可能只改到一份，导致两页面出现新的不一致。
+
+**改动**：`src/features/inquiry/components/InquiryFilterBar.tsx`
+
+删除第 144-189 行（`<div ref={navRef} ...>` 整块，即手写的月份导航器 + 角标 + `MonthPickerPopover`），改为：
+
+```tsx
+<MonthRangeNav
+  range={filter.timeRange as MonthTimeRange}
+  onChange={(r) => setFilter({ ...filter, timeRange: r })}
+  badge={isCustomMonth ? filteredCount : undefined}
+/>
+```
+
+文件顶部加 import：
+
+```ts
+import { MonthRangeNav, type MonthTimeRange } from '@/components/MonthRangeNav';
+```
+
+注意 `MonthRangeNav` 的 `range` 类型是 `'3months' | 'all' | \`month:${string}\``，和 `InquiryFilterState['timeRange']`（`TimeRange`，来自 `useInquiryFilter.ts`）需确认结构一致后再做类型断言或直接改成同一个类型别名，避免出现两个名字不同但结构相同的 `TimeRange` 类型。若类型不完全一致，优先把 `useInquiryFilter.ts` 里的 `TimeRange` 改为从 `MonthRangeNav.tsx` 导入，而不是新增断言掩盖类型不一致。
+
+顺带删除现在已不再需要的 `MonthPickerPopover` 相关 import（`shiftMonth` / `todayMonth` / `fmtMonth` 等，如果这个文件里没有其他地方用到）。
+
+---
+
+### 问题 2：筛选 Chip 组件两页面各写一份，视觉不一致
+
+`InquiryFilterBar.tsx`（第 60-86 行）和 `OrderPage.tsx`（第 86-107 行）各自定义了一个名字相同、职责相同、但样式细节不同的 `Chip` 组件：
+
+| | `InquiryFilterBar.tsx` 的 `Chip` | `OrderPage.tsx` 的 `Chip` |
+|---|---|---|
+| 内边距 | `px-2 py-0.5` | `px-3 py-0.5` |
+| 未激活态背景 | `border border-gray-200 bg-white`（描边风格） | `bg-gray-100`（实心灰底，无描边） |
+| 计数角标 | 仅激活时显示，绝对定位在右上角小圆点 | 始终显示（有值时），内嵌在文字右侧 |
+
+用户在两个页面之间切换时，"近3月/全部"这类看起来应该是同一控件的筛选 Chip，实际观感是两套设计语言，属于本次整改优先级最高的一项。
+
+**改动**：抽取共享组件 `src/components/FilterChip.tsx`，以 `InquiryFilterBar.tsx` 的版本为基准（描边风格 + 角标仅激活态显示，更克制，且已用于更多状态色），统一未激活态、内边距、角标展现方式。`OrderPage.tsx` 内的 `Chip`（含"进行中/正常/辙销/悬挂/善后"状态芯片）和 `InquiryFilterBar.tsx` 内的 `Chip` 都改为引用这个共享组件并删除各自的本地定义。
+
+组件接口保持现有两者的并集：
+
+```tsx
+interface FilterChipProps {
+  label: string;
+  active: boolean;
+  activeColor?: string;      // 默认 'bg-blue-600 text-white'
+  badge?: number;
+  badgeColor?: string;       // 默认 'bg-blue-600'，仅激活态生效
+  onClick: () => void;
+}
+```
+
+角标展示方式统一采用 `InquiryFilterBar.tsx` 当前的"仅激活时显示、绝对定位右上角小圆点"方案（`OrderPage.tsx` 里"全部/进行中/正常"等 Chip 目前是未激活时也常驻显示角标，需要确认这个"未选中也看得到计数"的行为是否是有意的产品需求——如果 Roger 认为"不选中也要看到各分类数量"是必须保留的功能，则改成让共享组件同时支持"角标常驻"和"角标仅激活态"两种模式，通过一个 `badgeAlwaysVisible?: boolean` 开关区分，`OrderPage.tsx` 传 `true`，`InquiryFilterBar.tsx` 保持默认 `false`，而不是强行让其中一个页面失去现有的可用性）。
+
+---
+
+### 问题 3：筛选面板容器内边距叠加方式不一致
+
+`InquiryPage.tsx` 第 514 行外层容器是 `px-4 py-2`，内部 `InquiryFilterBar.tsx` 又包了一层 `py-2`（第 123 行），两层 padding 叠加；`OrderPage.tsx` 第 348 行外层容器是 `px-4 py-3`，内部筛选内容 `div` 没有额外 padding。结果是两个"登记表"页面筛选面板的实际高度和留白比例不同，肉眼可辨。
+
+**改动**：统一为"外层容器 `px-4 py-3`，内部筛选行不再单独加纵向 padding"这一种模式（即采用 `OrderPage.tsx` 现有方案）。具体：
+- `InquiryFilterBar.tsx` 第 123 行的 `py-2` 从最外层 `<div>` 的 className 里删除。
+- `InquiryPage.tsx` 第 514 行的 `px-4 py-2` 改为 `px-4 py-3`，与 `OrderPage.tsx` 第 348 行保持一致。
+
+---
+
+### 问题 4：表格空状态（Empty State）视觉层级不统一
+
+`InquiryTable.tsx`（第 96-101 行）：虚线边框 `border-dashed border-gray-300`，标题用 `<h2 className="text-base font-semibold">` + 副标题 `<p className="text-sm text-gray-500">`，视觉上有明确的"空状态卡片"设计感。
+
+`OrderTable.tsx`（第 99-106 行）：实线边框（和有数据时的表格容器边框相同，视觉上不像专门设计过的空状态），只有两行纯文本 `<p className="text-sm text-gray-400">` + `<p className="text-xs text-gray-300">`，没有标题层级，观感比询报价登记表的空状态弱很多。
+
+**改动**：`OrderTable.tsx` 的空状态改为与 `InquiryTable.tsx` 同一套结构（虚线边框容器 + `<h2>` 标题 + `<p>` 副标题），文案沿用现有的"暂无订单记录" / "在询报价登记中填写订单编号后，记录会自动显示在这里"，只改容器和文字层级，不改文案内容。可以进一步把这个空状态容器抽成共享的 `<EmptyTableState title subtitle />` 组件放在 `src/components/`，两个表格都调用它，避免以后第三个列表页面又手写第三版。
+
+---
+
+### 问题 5：加载态缺失——`OrderPage.tsx` 在权限校验期间白屏，`InquiryPage.tsx` 有 spinner
+
+`InquiryPage.tsx` 第 461-467 行：`status === 'loading'` 期间渲染一个带旋转动画的加载态（`animate-spin` 圆环，居中显示）。
+
+`OrderPage.tsx` 第 307 行：`if (status === 'loading' || !user || !permissionUser) return null;`——同样的等待场景，直接返回 `null`，用户看到的是空白页面，没有任何反馈。这是两页面里唯一一个不只是"风格不同"、而是"体验倒退"的问题（白屏容易被用户误认为页面卡死或加载失败）。
+
+**改动**：把 `InquiryPage.tsx` 第 462-466 行的 loading 区块抽成共享组件（例如 `src/components/layout/FullScreenSpinner.tsx`，无 props 或只接受可选文案），`InquiryPage.tsx` 和 `OrderPage.tsx` 都改为渲染这个组件而不是 `return null` 或本地内联 JSX：
+
+```tsx
+if (!permissionChecked || status === 'loading') {
+  return <FullScreenSpinner />;
+}
+```
+
+`OrderPage.tsx` 对应位置：
+
+```tsx
+if (status === 'loading' || !user || !permissionUser) {
+  return <FullScreenSpinner />;
+}
+```
+
+---
+
+### 问题 6：排序图标语言不一致（Arrow 系 vs Chevron 系）
+
+`InquiryTable.tsx` 排序按钮（第 126-138 行）用 `ArrowDown` / `ArrowUp`（lucide "箭头"图标），按钮固定是蓝底高亮样式（因为只有一列可排序，永远处于"当前排序列"状态）。
+
+`OrderTable.tsx` 的 `thSort`（第 80-96 行）用 `ChevronUp` / `ChevronDown` / `ChevronsUpDown`（lucide "尖角"图标），且区分"当前排序列"（蓝底）和"未激活列"（灰色 `ChevronsUpDown` 中性态），因为它有两个可切换的排序字段（订单编号 / 交货日期）。
+
+两者都是"点击表头切换排序方向"的同一交互，却用了两套不同的图标语义系统，用户在两个页面看到的"排序中"视觉提示长得不一样。
+
+**改动**：统一采用 `OrderTable.tsx` 的图标方案（Chevron 系列 + 中性态 `ChevronsUpDown`），因为它的设计更完整（即使 `InquiryTable.tsx` 目前只有一列可排序，也应该用同一套图标语言，为将来询报价登记表可能增加第二个可排序列做准备，也让两个页面视觉一致）。`InquiryTable.tsx` 第 4 行 `ArrowDown, ArrowUp` 改为 `ChevronDown, ChevronUp`，第 133-137 行的图标渲染逻辑改为直接用 `sortDir === 'desc' ? <ChevronDown ... /> : <ChevronUp ... />`（因为询报价登记表目前只有一个排序字段，不需要 `ChevronsUpDown` 中性态）。
+
+---
+
+### 问题 7：权限不足拦截页用 emoji 图标，且两页面代码逐字重复
+
+`InquiryPage.tsx`（第 469-485 行）和 `OrderPage.tsx`（第 309-326 行）的"权限不足"页面是**逐字重复的代码**（只有提示文案"您没有询报价登记的访问权限" / "您没有订单状态表的访问权限"不同），且视觉主体用了 `<div className="text-6xl">🚫</div>` 这样的 emoji，是全站唯一用 emoji 而不是 `lucide-react` 图标做主视觉的地方（两个页面本身就大量引入了 lucide 图标，风格上明显跳脱）。
+
+**改动**：抽成共享组件 `src/components/PermissionDenied.tsx`：
+
+```tsx
+'use client';
+
+import { ShieldAlert } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
+
+export function PermissionDenied({ message }: { message: string }) {
+  const router = useRouter();
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-black">
+      <div className="rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-900">
+        <ShieldAlert className="mx-auto mb-4 h-14 w-14 text-red-500 dark:text-red-400" />
+        <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">权限不足</h1>
+        <p className="mb-6 text-gray-600 dark:text-gray-400">{message}</p>
+        <Button onClick={() => router.push('/dashboard')} size="lg">返回首页</Button>
+      </div>
+    </div>
+  );
+}
+```
+
+`InquiryPage.tsx` 第 469-485 行替换为：
+
+```tsx
+if (!hasInquiryAccess) {
+  return <PermissionDenied message="您没有询报价登记的访问权限" />;
+}
+```
+
+`OrderPage.tsx` 第 309-326 行同理替换为：
+
+```tsx
+if (!hasOrderAccess) {
+  return <PermissionDenied message="您没有订单状态表的访问权限" />;
+}
+```
+
+（其他页面如果有类似的重复"权限不足"代码块，可以一并排查替换，但本次任务范围只要求覆盖这两个页面，不强制排查全站。）
+
+---
+
+### 问题 8（低优先级，可选）：表格表头样式常量重复定义
+
+`InquiryTable.tsx` 第 8-22 行和 `OrderTable.tsx` 第 19-30 行定义了几乎完全相同的 `headerRowClass` / `headerCellClass` / `headerCellRightClass` 常量（渐变背景、边框、字号）。目前两者数值一致，属于"巧合一致"而非"结构保证一致"，和问题 1 是同一类风险。
+
+**改动（可选，风险最低，可放在本任务最后单独提交一个小 commit）**：抽到 `src/components/table/tableHeaderStyles.ts`，导出这几个常量，两个表格文件都改为从这里 import，删除各自的本地定义。
+
+---
+
+### 涉及文件
+
+| 文件 | 操作 |
+|------|------|
+| `src/features/inquiry/components/InquiryFilterBar.tsx` | 问题 1（改用 `MonthRangeNav`）、问题 2（改用共享 `FilterChip`）、问题 3（去掉多余 `py-2`） |
+| `src/features/order/app/OrderPage.tsx` | 问题 2（改用共享 `FilterChip`）、问题 3（外层 padding 改 `py-3`）、问题 5（改用 `FullScreenSpinner`）、问题 7（改用 `PermissionDenied`） |
+| `src/features/inquiry/app/InquiryPage.tsx` | 问题 3（外层 padding 改 `py-3`）、问题 5（改用 `FullScreenSpinner`）、问题 7（改用 `PermissionDenied`） |
+| `src/features/inquiry/components/InquiryTable.tsx` | 问题 4（空状态改版）、问题 6（排序图标改 Chevron 系）、问题 8（可选，表头常量外置） |
+| `src/features/order/components/OrderTable.tsx` | 问题 4（空状态改版）、问题 8（可选，表头常量外置） |
+| `src/components/FilterChip.tsx`（新增） | 问题 2 |
+| `src/components/layout/FullScreenSpinner.tsx`（新增） | 问题 5 |
+| `src/components/PermissionDenied.tsx`（新增） | 问题 7 |
+| `src/components/table/tableHeaderStyles.ts`（新增，可选） | 问题 8 |
+
+### 执行建议
+
+8 个问题彼此独立，不要求一次性全部完成；建议按 1 → 7 → 5 → 2 → 3 → 4 → 6 → 8 的顺序（先解决"两份代码一处改另一处忘改"的重复风险，再做纯样式统一），每完成 1-2 项就跑一次验证命令，方便出问题时定位是哪一步引入的。
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npx eslint src/features/inquiry src/features/order src/components/FilterChip.tsx src/components/PermissionDenied.tsx src/components/layout/FullScreenSpinner.tsx
+npm run build
+```
+
+### 手工验证
+
+1. 分别打开 `/inquiry` 和 `/order`，对比筛选面板（Chip 外观、月份导航器、容器留白）是否已看不出差异。
+2. 清空浏览器 cookie 或用无权限账号登录，确认两个页面的"权限不足"提示图标、文案、按钮行为一致（图标应为 `ShieldAlert`，不再是 🚫）。
+3. 用 Chrome DevTools Network 面板节流成 Slow 3G，刷新 `/order`，确认权限校验期间能看到旋转 loading，不再是白屏。
+4. 分别把两个表格筛选到无结果状态，对比空状态卡片是否已是同一套视觉（虚线边框 + 标题 + 副标题）。
+5. 询报价登记表点击"询价编号"表头排序，确认图标已变为 `ChevronUp`/`ChevronDown`，方向切换正常。
+
+### 验收标准
+
+- 两页面筛选栏 Chip、月份导航器、容器留白、表格空状态、排序图标、权限不足页在视觉上一致，且底层是同一份组件代码（不是数值恰好抄一致）。
+- `OrderPage.tsx` 权限校验期间不再白屏。
+- 现有筛选/排序/权限逻辑行为不变，只改表现层，不改数据流转、不改 D1/Worker 相关代码。
+- `MonthRangeNav` / `FilterChip` / `PermissionDenied` / `FullScreenSpinner` 后续如果第三个页面需要类似 UI，可直接复用，不再新增第三份重复实现。

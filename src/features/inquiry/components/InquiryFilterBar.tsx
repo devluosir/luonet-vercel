@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
+import { FilterChip } from '@/components/FilterChip';
+import { MonthRangeNav } from '@/components/MonthRangeNav';
 import type { InquiryRecord } from '../types';
 import type {
   InquiryFilterState,
   QuoteStatusFilter,
-  TimeRange,
 } from '../hooks/useInquiryFilter';
-import { MonthPickerPopover, shiftMonth, todayMonth, fmtMonth } from '@/components/MonthPickerPopover';
 
 interface InquiryFilterBarProps {
   id?: string;
@@ -56,35 +56,6 @@ const statusOptions: Array<{
   { label: '善后',     value: 'followup',          activeColor: 'bg-orange-500 text-white', badgeColor: 'bg-orange-500' },
 ];
 
-// ── Chip ─────────────────────────────────────────────────
-function Chip({
-  label, active, onClick,
-  activeColor = 'bg-blue-600 text-white',
-  badge, badgeColor = 'bg-blue-600',
-}: {
-  label: string; active: boolean; onClick: () => void;
-  activeColor?: string; badge?: number; badgeColor?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`relative rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
-        active
-          ? activeColor
-          : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-      }`}
-    >
-      {label}
-      {active && badge !== undefined && (
-        <span className={`absolute -right-1.5 -top-1.5 min-w-4 rounded-full px-1 text-[10px] font-semibold leading-4 text-white ${badgeColor}`}>
-          {badge}
-        </span>
-      )}
-    </button>
-  );
-}
-
 // ── 主组件 ────────────────────────────────────────────────
 export function InquiryFilterBar({
   id,
@@ -97,18 +68,8 @@ export function InquiryFilterBar({
   records,
   filteredCount,
 }: InquiryFilterBarProps) {
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const navRef = useRef<HTMLDivElement>(null);
   const unlinkedCount = records.filter((record) => !record.customerId).length;
   const shouldShowUnlinkedFilter = unlinkedCount > 0;
-
-  const isCustomMonth = filter.timeRange.startsWith('month:');
-  const navMonth = isCustomMonth ? filter.timeRange.slice(6) : todayMonth();
-  const canGoNext = navMonth < todayMonth();
-
-  const setMonth = (ym: string) =>
-    setFilter({ ...filter, timeRange: `month:${ym}` as TimeRange });
-
   const divider = <span className="select-none text-gray-200 dark:text-gray-700">·</span>;
 
   useEffect(() => {
@@ -120,79 +81,38 @@ export function InquiryFilterBar({
   return (
     <div
       id={id}
-      className="flex flex-col gap-2.5 py-2 xl:flex-row xl:items-center xl:justify-between xl:gap-4"
+      className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between xl:gap-4"
     >
 
       {/* 时间范围 + 状态筛选芯片 */}
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-        <Chip
+        <FilterChip
           label="近3月"
           active={filter.timeRange === '3months'}
-          onClick={() => { setFilter({ ...filter, timeRange: '3months' }); setIsPickerOpen(false); }}
+          onClick={() => setFilter({ ...filter, timeRange: '3months' })}
           badge={filteredCount}
           badgeColor="bg-blue-800"
         />
-        <Chip
+        <FilterChip
           label="全部"
           active={filter.timeRange === 'all'}
-          onClick={() => { setFilter({ ...filter, timeRange: 'all' }); setIsPickerOpen(false); }}
+          onClick={() => setFilter({ ...filter, timeRange: 'all' })}
           badge={filteredCount}
           badgeColor="bg-blue-800"
         />
 
         {/* 月份导航器：‹ [选月/M月] › */}
-        <div ref={navRef} className="relative inline-flex items-center overflow-visible">
-          <div className="inline-flex items-center overflow-hidden rounded-full border border-gray-200 bg-white text-xs dark:border-gray-700 dark:bg-gray-800">
-            <button
-              type="button"
-              onClick={() => { setMonth(shiftMonth(navMonth, -1)); setIsPickerOpen(false); }}
-              className="px-2 py-0.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-              aria-label="上一个月"
-            >‹</button>
-            <button
-              type="button"
-              onClick={() => setIsPickerOpen((o) => !o)}
-              className={`min-w-[3.25rem] border-x border-gray-100 px-2 py-0.5 text-center font-medium transition-colors dark:border-gray-700 ${
-                isCustomMonth
-                  ? 'text-blue-600 dark:text-blue-400'
-                  : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
-              }`}
-              title={isCustomMonth ? '点击更换月份' : '选择特定月份'}
-            >
-              {isCustomMonth ? fmtMonth(navMonth) : '选月'}
-            </button>
-            <button
-              type="button"
-              onClick={canGoNext ? () => { setMonth(shiftMonth(navMonth, 1)); setIsPickerOpen(false); } : undefined}
-              disabled={!canGoNext}
-              className={`px-2 py-0.5 transition-colors ${
-                canGoNext
-                  ? 'text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200'
-                  : 'cursor-not-allowed text-gray-200 dark:text-gray-700'
-              }`}
-              aria-label="下一个月"
-            >›</button>
-          </div>
-          {isCustomMonth && filteredCount !== undefined && (
-            <span className="pointer-events-none absolute -right-1.5 -top-1.5 z-10 min-w-4 rounded-full bg-blue-800 px-1 text-[10px] font-semibold leading-4 text-white">
-              {filteredCount}
-            </span>
-          )}
-          {isPickerOpen && (
-            <MonthPickerPopover
-              value={isCustomMonth ? navMonth : ''}
-              onSelect={(ym) => setMonth(ym)}
-              onClose={() => setIsPickerOpen(false)}
-              anchorRef={navRef}
-            />
-          )}
-        </div>
+        <MonthRangeNav
+          range={filter.timeRange}
+          onChange={(timeRange) => setFilter({ ...filter, timeRange })}
+          badge={filter.timeRange.startsWith('month:') ? filteredCount : undefined}
+        />
 
         {divider}
 
         {shouldShowUnlinkedFilter && (
           <>
-            <Chip
+            <FilterChip
               label="待关联客户"
               active={filter.linkStatus === 'unlinked'}
               activeColor="bg-slate-700 text-white"
@@ -212,7 +132,7 @@ export function InquiryFilterBar({
 
         {/* 报价状态 chips */}
         {statusOptions.map((opt) => (
-          <Chip
+          <FilterChip
             key={opt.value}
             label={opt.label}
             active={filter.quoteStatus === opt.value}

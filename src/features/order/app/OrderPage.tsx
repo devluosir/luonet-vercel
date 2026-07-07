@@ -4,19 +4,21 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout';
-import { MonthRangeNav } from '@/components/MonthRangeNav';
+import { FilterChip } from '@/components/FilterChip';
+import { MonthRangeNav, type MonthTimeRange } from '@/components/MonthRangeNav';
+import { PermissionDenied } from '@/components/PermissionDenied';
+import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { useAppUser } from '@/hooks/useAppUser';
 import { usePermissionStore } from '@/lib/permissions';
 import { getCustomersForDropdown } from '@/features/customer/services/customerService';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
 import { inquiryService } from '@/features/inquiry/services/inquiry.service';
-import { Button } from '@/components/ui/Button';
 import type { InquiryRecord, OrderSubStatus } from '@/features/inquiry/types';
 import { OrderTable, type SortField } from '../components/OrderTable';
 
 // ── 时间范围类型 ──────────────────────────────────────────────────────────────
 
-type TimeRange = '3months' | 'all' | `month:${string}`;
+type TimeRange = MonthTimeRange;
 
 /** 判断记录是否在指定时间范围内（按询价编号的日期） */
 function matchesTimeRange(record: InquiryRecord, range: TimeRange, now: Date): boolean {
@@ -71,39 +73,6 @@ function matchesKeyword(record: InquiryRecord, keyword: string): boolean {
     record.customerNo,
     record.orderDeliveryStatus,
   ].some((value) => String(value ?? '').toLowerCase().includes(q));
-}
-
-// ── 简单芯片组件 ──────────────────────────────────────────────────────────────
-
-interface ChipProps {
-  label: string;
-  active: boolean;
-  activeColor?: string;
-  badge?: number;
-  onClick: () => void;
-}
-
-function Chip({ label, active, activeColor = 'bg-blue-600 text-white', badge, onClick }: ChipProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`relative inline-flex items-center rounded-full px-3 py-0.5 text-xs font-semibold transition-colors ${
-        active
-          ? activeColor
-          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
-      }`}
-    >
-      {label}
-      {badge !== undefined && badge >= 0 && (
-        <span className={`ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none ${
-          active ? 'bg-white/30 text-white' : 'bg-gray-400/20 text-gray-500 dark:bg-gray-600 dark:text-gray-300'
-        }`}>
-          {badge}
-        </span>
-      )}
-    </button>
-  );
 }
 
 // ── OrderPage ─────────────────────────────────────────────────────────────────
@@ -304,25 +273,12 @@ export function OrderPage() {
     [baseFiltered, orderStatusFilter, sortField, sortDir]
   );
 
-  if (status === 'loading' || !user || !permissionUser) return null;
+  if (status === 'loading' || !user || !permissionUser) {
+    return <FullScreenSpinner />;
+  }
 
   if (!hasOrderAccess) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-black">
-        <div className="rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-900">
-          <div className="mb-4 text-6xl text-red-600 dark:text-red-400">🚫</div>
-          <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">权限不足</h1>
-          <p className="mb-6 text-gray-600 dark:text-gray-400">您没有订单状态表的访问权限</p>
-          <Button
-            type="button"
-            onClick={() => router.push('/dashboard')}
-            size="lg"
-          >
-            返回首页
-          </Button>
-        </div>
-      </div>
-    );
+    return <PermissionDenied message="您没有订单状态表的访问权限" />;
   }
 
   const topBarSlot = lastSyncedAt ? (
@@ -349,13 +305,13 @@ export function OrderPage() {
           <div className="flex flex-col gap-2.5 overflow-visible xl:flex-row xl:items-center xl:justify-between xl:gap-4">
             {/* 时间范围 + 订单状态筛选 */}
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 overflow-visible">
-              <Chip
+              <FilterChip
                 label="近3月"
                 active={timeRange === '3months'}
                 badge={timeRange === '3months' ? filteredRecords.length : undefined}
                 onClick={() => setTimeRange('3months')}
               />
-              <Chip
+              <FilterChip
                 label="全部"
                 active={timeRange === 'all'}
                 badge={timeRange === 'all' ? filteredRecords.length : undefined}
@@ -370,17 +326,19 @@ export function OrderPage() {
               <span className="select-none text-gray-200 dark:text-gray-700">·</span>
 
               {/* 订单状态芯片 */}
-              <Chip
+              <FilterChip
                 label="全部"
                 active={orderStatusFilter === 'all'}
                 badge={countByStatus.all}
+                badgeColor="bg-blue-600"
                 onClick={() => setOrderStatusFilter('all')}
               />
-              <Chip
+              <FilterChip
                 label="进行中"
                 active={orderStatusFilter === 'inProgress'}
                 activeColor="bg-blue-600 text-white"
                 badge={countByStatus.inProgress}
+                badgeColor="bg-blue-600"
                 onClick={() => {
                   setTimeRange('all');
                   setOrderStatusFilter('inProgress');
@@ -388,31 +346,35 @@ export function OrderPage() {
                   setSortDir('desc');
                 }}
               />
-              <Chip
+              <FilterChip
                 label="正常"
                 active={orderStatusFilter === 'normal'}
                 badge={countByStatus.normal}
+                badgeColor="bg-blue-600"
                 onClick={() => setOrderStatusFilter('normal')}
               />
-              <Chip
+              <FilterChip
                 label="辙销C"
                 active={orderStatusFilter === 'cancelled'}
                 activeColor="bg-red-500 text-white"
                 badge={countByStatus.cancelled}
+                badgeColor="bg-red-500"
                 onClick={() => setOrderStatusFilter('cancelled')}
               />
-              <Chip
+              <FilterChip
                 label="悬挂P"
                 active={orderStatusFilter === 'suspended'}
                 activeColor="bg-orange-400 text-white"
                 badge={countByStatus.suspended}
+                badgeColor="bg-orange-400"
                 onClick={() => setOrderStatusFilter('suspended')}
               />
-              <Chip
+              <FilterChip
                 label="善后S"
                 active={orderStatusFilter === 'followup'}
                 activeColor="bg-orange-500 text-white"
                 badge={countByStatus.followup}
+                badgeColor="bg-orange-500"
                 onClick={() => setOrderStatusFilter('followup')}
               />
             </div>

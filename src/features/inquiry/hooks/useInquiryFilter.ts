@@ -1,13 +1,9 @@
 import { useMemo, useState } from 'react';
+import type { MonthTimeRange } from '@/components/MonthRangeNav';
 import type { InquiryRecord } from '../types';
 import { getDateInputValueFromInquiryNo } from '../utils/inquiryUtils';
 
-export type TimeRange =
-  | 'all'          // 全部
-  | 'this_month'   // 本月
-  | 'last_month'   // 上月
-  | '3months'      // 近3月（默认）
-  | `month:${string}`; // 指定月份，格式 month:YYYY-MM
+export type TimeRange = MonthTimeRange;
 
 export type QuoteStatusFilter =
   | 'all'
@@ -59,16 +55,6 @@ function matchesTimeRange(record: InquiryRecord, timeRange: TimeRange, now: Date
   const rMonth = recordDate.getMonth(); // 0-indexed
   const nowYear = now.getFullYear();
   const nowMonth = now.getMonth();
-
-  if (timeRange === 'this_month') {
-    return rYear === nowYear && rMonth === nowMonth;
-  }
-
-  if (timeRange === 'last_month') {
-    const lm = nowMonth === 0 ? 11 : nowMonth - 1;
-    const ly = nowMonth === 0 ? nowYear - 1 : nowYear;
-    return rYear === ly && rMonth === lm;
-  }
 
   if (timeRange === '3months') {
     // 当前月 + 前两个月，例如 6月 → 4/5/6月

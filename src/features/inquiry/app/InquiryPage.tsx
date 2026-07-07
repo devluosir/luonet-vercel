@@ -6,6 +6,8 @@ import { Download, Link2, Pencil, Plus, Trash2, Upload, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppLayout, type ActionButton } from '@/components/layout';
+import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
+import { PermissionDenied } from '@/components/PermissionDenied';
 import { useAppUser } from '@/hooks/useAppUser';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -459,29 +461,11 @@ export function InquiryPage() {
 
 
   if (!permissionChecked || status === 'loading') {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-black">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
-      </div>
-    );
+    return <FullScreenSpinner />;
   }
 
   if (!hasInquiryAccess) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-black">
-        <div className="rounded-xl bg-white p-8 text-center shadow-lg dark:bg-gray-900">
-          <div className="mb-4 text-6xl text-red-600 dark:text-red-400">🚫</div>
-          <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-white">权限不足</h1>
-          <p className="mb-6 text-gray-600 dark:text-gray-400">您没有询报价登记的访问权限</p>
-          <Button
-            onClick={() => router.push('/dashboard')}
-            size="lg"
-          >
-            返回首页
-          </Button>
-        </div>
-      </div>
-    );
+    return <PermissionDenied message="您没有询报价登记的访问权限" />;
   }
 
   return (
@@ -511,7 +495,7 @@ export function InquiryPage() {
       )}
 
       <div className="w-full max-w-none px-3 py-3 sm:px-5 lg:px-6">
-        <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-2 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
+        <div className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
           <div className="flex items-start gap-3 xl:items-center">
             <div className="min-w-0 flex-1">
               <InquiryFilterBar

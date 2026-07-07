@@ -1,25 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  headerCellCenterClass,
+  headerCellClass,
+  headerCellRightClass,
+  headerRowClass,
+} from '@/components/table/tableHeaderStyles';
 import type { InquiryRecord } from '../types';
 import { InquiryRow } from './InquiryRow';
-
-const headerRowClass =
-  'border-b border-gray-200/80 bg-gradient-to-b from-gray-50 to-gray-100/80 ' +
-  'shadow-[inset_0_-1px_0_rgba(15,23,42,0.04)] dark:border-gray-700/80 ' +
-  'dark:from-gray-900/90 dark:to-gray-800/80';
-
-const headerCellClass =
-  'border-r border-gray-200/70 px-2 py-2.5 text-left align-middle text-[11px] ' +
-  'font-semibold text-gray-600 last:border-r-0 dark:border-gray-700/70 dark:text-gray-300 md:px-3';
-
-const headerCellCenterClass =
-  'border-r border-gray-200/70 px-2 py-2.5 text-center align-middle last:border-r-0 dark:border-gray-700/70';
-
-const headerCellRightClass =
-  'border-r border-gray-200/70 px-1 py-2.5 text-right align-middle text-[11px] ' +
-  'font-semibold text-gray-600 last:border-r-0 dark:border-gray-700/70 dark:text-gray-300 md:px-3';
 
 function useBreakpoint() {
   const [bp, setBp] = useState<'sm' | 'md' | 'lg'>('lg');
@@ -131,9 +121,9 @@ export function InquiryTable({
                 >
                   <span className="truncate">询价编号</span>
                   {sortDir === 'desc' ? (
-                    <ArrowDown className="h-3 w-3 shrink-0" />
+                    <ChevronDown className="h-3 w-3 shrink-0" />
                   ) : (
-                    <ArrowUp className="h-3 w-3 shrink-0" />
+                    <ChevronUp className="h-3 w-3 shrink-0" />
                   )}
                 </button>
               </th>

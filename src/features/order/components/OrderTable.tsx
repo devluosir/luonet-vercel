@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
+import {
+  headerCellOverflowClass,
+  headerCellOverflowRightClass,
+  headerRowClass,
+} from '@/components/table/tableHeaderStyles';
 import type { InquiryRecord } from '@/features/inquiry/types';
 import {
   type OrderTableBreakpoint,
@@ -16,18 +21,8 @@ export type SortField = 'orderNo' | 'deliveryDate';
 
 export type { OrderTableBreakpoint };
 
-const headerRowClass =
-  'border-b border-gray-200/80 bg-gradient-to-b from-gray-50 to-gray-100/80 ' +
-  'shadow-[inset_0_-1px_0_rgba(15,23,42,0.04)] dark:border-gray-700/80 ' +
-  'dark:from-gray-900/90 dark:to-gray-800/80';
-
-const headerCellClass =
-  'overflow-hidden border-r border-gray-200/70 px-2 py-2.5 text-left align-middle text-[11px] ' +
-  'font-semibold text-gray-600 last:border-r-0 dark:border-gray-700/70 dark:text-gray-300';
-
-const headerCellRightClass =
-  'overflow-hidden border-r border-gray-200/70 px-2 py-2.5 text-right align-middle text-[11px] ' +
-  'font-semibold text-gray-600 last:border-r-0 dark:border-gray-700/70 dark:text-gray-300';
+const headerCellClass = headerCellOverflowClass;
+const headerCellRightClass = headerCellOverflowRightClass;
 
 function useBreakpoint(): OrderTableBreakpoint {
   const [bp, setBp] = useState<OrderTableBreakpoint>('lg');
@@ -97,9 +92,9 @@ export function OrderTable({
 
   if (records.length === 0) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm dark:border-gray-800 dark:bg-[#2C2C2E]">
-        <p className="text-sm text-gray-400 dark:text-gray-500">暂无订单记录</p>
-        <p className="mt-1 text-xs text-gray-300 dark:text-gray-600">
+      <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-gray-700 dark:bg-[#2C2C2E]">
+        <h2 className="text-base font-semibold text-gray-900 dark:text-white">暂无订单记录</h2>
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           在询报价登记中填写订单编号后，记录会自动显示在这里
         </p>
       </div>
