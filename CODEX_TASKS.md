@@ -13876,3 +13876,210 @@ npm run build
 - `OrderPage.tsx` 权限校验期间不再白屏。
 - 现有筛选/排序/权限逻辑行为不变，只改表现层，不改数据流转、不改 D1/Worker 相关代码。
 - `MonthRangeNav` / `FilterChip` / `PermissionDenied` / `FullScreenSpinner` 后续如果第三个页面需要类似 UI，可直接复用，不再新增第三份重复实现。
+
+---
+
+## TASK-95：询报价/订单状态表轮询改为"变更感知"，降低 Vercel Fluid Active CPU 占用
+
+### 背景
+
+Roger 反馈 Vercel 用量面板上 **Fluid Active CPU 已用 3h41m / 4h（92%）**，Function Invocations 384K / 1M（38%）。两个指标不对称（CPU 快顶格、调用量还有余量）说明问题不是"调用次数太多"，而是**单次调用做的事太重，且这个重量会随数据量持续变大**。
+
+排查到的具体根因（`src/features/inquiry/app/InquiryPage.tsx` 第 192-228 行、`src/features/order/app/OrderPage.tsx` 第 150-184 行）：
+
+1. 两个页面各自起了一份**几乎逐字重复**的 30 秒轮询 `useEffect`（`syncFromD1`），只要标签页可见就每 30 秒完整跑一遍：`inquiryService.pullFromD1()`（分页拉全表，当前 700+ 条记录且持续增长）→ `pushLocalToD1()`（把全部本地记录和这一整份远端快照逐条比对，找出"本地有远端没有"的记录重新 POST）→ `mergeFromD1()`（逐条比对写回 localStorage）。
+2. `src/worker.ts` 的 `handleInquiryRequest`（第 1498-1536 行）目前**不支持增量查询**，`GET /api/inquiry` 永远是 `SELECT * FROM Document WHERE type='inquiry' AND (status='active' OR updated_at >= 30天内) ORDER BY doc_no DESC LIMIT ? OFFSET ?`，最多一次吐 2000 行，且每行都要在 Worker 和 Next.js 代理层（`src/app/api/inquiry/[[...path]]/route.ts`）各做一次逐条 `.map()` 重建/过滤。这份"全量 reshape"的 CPU 成本随记录数线性增长，是当前逼近额度、且会继续恶化的直接原因。
+3. Next.js 代理层每次请求都要 `getServerSession(authOptions)` 做一次 JWT 解密校验（真实 CPU 开销，不是 I/O 等待），30 秒一次乘以所有开着标签页的人，进一步放大。
+
+### 优化方案：加一层"元信息"轻量探测，只有真的有变化才做重活
+
+核心思路：**不改变现有 `mergeFromD1` / `pushLocalToD1` 的全量比对语义（它们目前的正确性依赖"传入的是完整远端快照"这个假设，贸然改成只传增量列表会导致 `pushLocalToD1` 误判、把本来已存在于 D1 的记录当成"本地独有"重新 POST，产生脏写），而是在"要不要触发这次全量比对"之前，先做一次几乎零成本的探测**：
+
+- Worker 新增 `GET /api/inquiry/meta`，只查 `COUNT(*)` 和 `MAX(updated_at)`，SQL 极轻，返回体几十字节。
+- 客户端每 30 秒先打这个 `meta` 接口；只有当 `maxUpdatedAt`（或 `count`）和上次记住的值不同，才触发一次完整的 `pullFromD1 → pushLocalToD1 → mergeFromD1`。没变化时这一轮轮询几乎不消耗 CPU。
+- 为防止"没人碰这份共享数据、meta 永远不变，导致某条本地创建但推送失败的记录永远等不到重试"这种边界情况，保留一个较长周期（5 分钟）的强制全量兜底，不完全依赖 meta 变化。
+- 顺带把两个页面里逐字重复的轮询 `useEffect` 抽成一个共享 hook，避免以后只改一处。
+
+---
+
+### 改动 1：`src/worker.ts` —— 新增轻量 `meta` 端点
+
+在 `handleInquiryRequest` 函数内，`GET /api/inquiry`（第 1498-1536 行）分支**之后、`POST /api/inquiry`（第 1538 行）分支**之前插入：
+
+```ts
+if (request.method === 'GET' && path === '/api/inquiry/meta') {
+  const metaRow = await env.USERS_DB.prepare(`
+    SELECT COUNT(*) as cnt, MAX(updated_at) as maxUpdatedAt FROM Document
+    WHERE type = 'inquiry'
+      AND (status = 'active' OR updated_at >= datetime('now', '-30 days'))
+  `).bind().first<{ cnt: number; maxUpdatedAt: string | null }>();
+
+  return jsonResponse({
+    count: metaRow?.cnt ?? 0,
+    maxUpdatedAt: metaRow?.maxUpdatedAt ?? null,
+  });
+}
+```
+
+注意必须放在 `path.match(/^\/api\/inquiry\/([^/]+)$/)`（第 1567 行 `itemMatch`）之前的位置生效即可——`meta` 会被 `itemMatch` 正则匹配上，但 `itemMatch` 只在 `request.method === 'PUT'` 或 `'DELETE'` 时才处理，GET 请求不会进入那两个分支，所以顺序上只要保证这段新代码在函数体内、且在 `return jsonResponse({ error: 'Not Found' }, 404)` 之前即可，不会和现有 PUT/DELETE-by-id 逻辑冲突。
+
+`Next.js` 侧的代理路由 `src/app/api/inquiry/[[...path]]/route.ts` 不需要改动——它是 `[[...path]]` 通配路由，`/api/inquiry/meta` 会被现有 `proxyInquiryRequest` 自动转发到 Worker 的同名路径，响应体里没有 `records` 数组，现有的财务字段过滤逻辑（判断 `Array.isArray(data?.records)`）会自然跳过，不用额外处理。
+
+---
+
+### 改动 2：`src/features/inquiry/services/inquiry.service.ts` —— 新增 `getMeta()`
+
+```ts
+async getMeta(): Promise<{ count: number; maxUpdatedAt: string | null }> {
+  try {
+    const res = await fetch(`${API_BASE}/meta`, { cache: 'no-store' });
+    if (!res.ok) return { count: -1, maxUpdatedAt: null };
+    return await res.json() as { count: number; maxUpdatedAt: string | null };
+  } catch {
+    return { count: -1, maxUpdatedAt: null };
+  }
+},
+```
+
+（`count: -1` 作为"探测失败"的哨兵值，永远不等于上次记住的值，效果等同于"探测失败时保守地当作有变化处理"，触发一次全量同步兜底，不会因为网络抖动导致数据永远不刷新。）
+
+---
+
+### 改动 3：新增共享 hook `src/features/inquiry/hooks/useInquirySync.ts`
+
+把 `InquiryPage.tsx` 和 `OrderPage.tsx` 里几乎相同的轮询 `useEffect` 合并成一份：
+
+```ts
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { inquiryService } from '../services/inquiry.service';
+import { useInquiryStore } from '../state/inquiry.store';
+
+const POLL_INTERVAL_MS = 30_000;
+const FORCE_FULL_SYNC_EVERY_MS = 5 * 60_000; // 兜底：即使 meta 没变化，5 分钟至少全量核对一次
+
+interface UseInquirySyncOptions {
+  /** 有权限且已登录、且权限校验已完成时传 true，否则不启动轮询 */
+  enabled: boolean;
+  /** 弹窗打开等场景需要暂停同步时传 true，避免用户编辑中途被远端数据覆盖 */
+  suspended?: boolean;
+}
+
+export function useInquirySync({ enabled, suspended = false }: UseInquirySyncOptions) {
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const suspendedRef = useRef(suspended);
+  const lastMetaRef = useRef<string | null>(null);
+  const lastFullSyncAtRef = useRef(0);
+
+  useEffect(() => { suspendedRef.current = suspended; }, [suspended]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+
+    async function fullSync() {
+      const d1Records = await inquiryService.pullFromD1();
+      if (cancelled || suspendedRef.current) return;
+      inquiryService.pushLocalToD1(d1Records);
+      const merged = inquiryService.mergeFromD1(d1Records);
+      useInquiryStore.setState({ records: merged });
+      lastFullSyncAtRef.current = Date.now();
+      setLastSyncedAt(new Date());
+    }
+
+    async function checkAndMaybeSync() {
+      if (suspendedRef.current) return;
+      const meta = await inquiryService.getMeta();
+      const metaKey = `${meta.count}:${meta.maxUpdatedAt ?? ''}`;
+      const forceFullSync = Date.now() - lastFullSyncAtRef.current > FORCE_FULL_SYNC_EVERY_MS;
+
+      if (metaKey !== lastMetaRef.current || forceFullSync) {
+        lastMetaRef.current = metaKey;
+        await fullSync();
+      } else {
+        setLastSyncedAt(new Date()); // 探测到"确认无变化"也算一次成功同步，刷新时间戳
+      }
+    }
+
+    void fullSync(); // 首次挂载：全量拉取，同时做一次 pushLocalToD1 兜底补偿
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') void checkAndMaybeSync();
+    }, POLL_INTERVAL_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void checkAndMaybeSync();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [enabled]);
+
+  return { lastSyncedAt };
+}
+```
+
+---
+
+### 改动 4：`InquiryPage.tsx` / `OrderPage.tsx` 改用共享 hook
+
+`InquiryPage.tsx` 删除第 192-228 行整个 `useEffect`（含内部 `POLL_INTERVAL_MS`、`syncFromD1`、`visibilitychange` 监听），以及第 123 行 `const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);`，改为：
+
+```ts
+const { lastSyncedAt } = useInquirySync({
+  enabled: permissionChecked && hasInquiryAccess,
+  suspended: isModalOpen,
+});
+```
+
+放在原来 `isModalOpenRef` 附近即可，`isModalOpenRef` 这个 ref 和相关同步 effect（第 188-190 行）如果不再被其他地方使用可以一并删除。
+
+`OrderPage.tsx` 同理删除第 150-184 行的 `useEffect` 和第 122 行 `lastSyncedAt` 状态，改为：
+
+```ts
+const { lastSyncedAt } = useInquirySync({ enabled: status === 'authenticated' && hasOrderAccess });
+```
+
+两个页面顶部都加上 `import { useInquirySync } from '@/features/inquiry/hooks/useInquirySync';`，其余读取 `lastSyncedAt` 渲染"同步 HH:mm:ss"的代码不用改。
+
+---
+
+### 涉及文件
+
+| 文件 | 操作 |
+|------|------|
+| `src/worker.ts` | 新增 `GET /api/inquiry/meta` 分支 |
+| `src/features/inquiry/services/inquiry.service.ts` | 新增 `getMeta()` |
+| `src/features/inquiry/hooks/useInquirySync.ts`（新增） | 合并后的轮询 hook |
+| `src/features/inquiry/app/InquiryPage.tsx` | 删除本地轮询 `useEffect`，改用 `useInquirySync` |
+| `src/features/order/app/OrderPage.tsx` | 删除本地轮询 `useEffect`，改用 `useInquirySync` |
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npx eslint src/worker.ts src/features/inquiry src/features/order
+npm run build
+npx wrangler deploy   # worker.ts 改动需要单独部署才生效
+```
+
+### 手工验证
+
+1. 打开 `/inquiry`，Network 面板确认每 30 秒只打一次很小的 `meta` 请求（响应体几十字节），没有别人改动数据时**不会**再看到大的 `pullFromD1`/`records` 请求。
+2. 另开一个账号/标签页新增或编辑一条询价记录，确认原标签页在下一次 30 秒轮询内能感知到变化并刷新（`meta` 变化触发了一次全量同步）。
+3. 断网重连场景：新增一条记录时故意断网导致 `syncToD1` 失败，恢复网络后确认最多 5 分钟内（`FORCE_FULL_SYNC_EVERY_MS` 兜底）这条记录被 `pushLocalToD1` 重新推送成功，不会永久丢失同步。
+4. 弹窗编辑期间（`isModalOpen=true`）确认不会被中途同步覆盖正在编辑的内容（`suspended` 生效）。
+5. 部署后观察 Vercel 用量面板 1-2 天，确认 Fluid Active CPU 增长速率明显放缓（不要求立刻看到总量下降，而是"斜率变缓"）。
+
+### 验收标准
+
+- 正常无变化时，30 秒轮询只产生一次极轻量的 `meta` 请求，不再每次都全量拉取 700+ 条记录并逐条 reshape/比对。
+- 数据真的发生变化时，仍然能在下一轮轮询内感知并同步，行为和现在一致，用户感知不到延迟变化。
+- `pushLocalToD1` 的"本地创建但未同步成功"兜底重试能力保留（不因为改成 meta 触发就丢失离线创建记录的补偿写入）。
+- `InquiryPage.tsx`/`OrderPage.tsx` 不再有两份几乎相同的轮询代码。
+- 不改变现有筛选、排序、权限、批量编辑等业务逻辑。

@@ -1535,6 +1535,19 @@ async function handleInquiryRequest(
       return jsonResponse({ records, total: totalCount });
     }
 
+    if (request.method === 'GET' && path === '/api/inquiry/meta') {
+      const metaRow = await env.USERS_DB.prepare(`
+        SELECT COUNT(*) as cnt, MAX(updated_at) as maxUpdatedAt FROM Document
+        WHERE type = 'inquiry'
+          AND (status = 'active' OR updated_at >= datetime('now', '-30 days'))
+      `).bind().first<{ cnt: number; maxUpdatedAt: string | null }>();
+
+      return jsonResponse({
+        count: metaRow?.cnt ?? 0,
+        maxUpdatedAt: metaRow?.maxUpdatedAt ?? null,
+      });
+    }
+
     if (request.method === 'POST' && path === '/api/inquiry') {
       const body = await request.json() as InquiryRecordPayload;
       const now = new Date().toISOString();

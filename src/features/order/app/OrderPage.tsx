@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout';
@@ -11,8 +11,8 @@ import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { useAppUser } from '@/hooks/useAppUser';
 import { usePermissionStore } from '@/lib/permissions';
 import { getCustomersForDropdown } from '@/features/customer/services/customerService';
+import { useInquirySync } from '@/features/inquiry/hooks/useInquirySync';
 import { useInquiryStore } from '@/features/inquiry/state/inquiry.store';
-import { inquiryService } from '@/features/inquiry/services/inquiry.service';
 import type { InquiryRecord, OrderSubStatus } from '@/features/inquiry/types';
 import { OrderTable, type SortField } from '../components/OrderTable';
 
@@ -88,7 +88,6 @@ export function OrderPage() {
   const records = useInquiryStore((s) => s.records);
   const updateRecord = useInquiryStore((s) => s.updateRecord);
 
-  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('3months');
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>('all');
   const [keyword, setKeyword] = useState('');
@@ -97,8 +96,9 @@ export function OrderPage() {
   // 默认按交货日期降序排列
   const [sortField, setSortField] = useState<SortField>('deliveryDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-
-  const isModalOpenRef = useRef(false);
+  const { lastSyncedAt } = useInquirySync({
+    enabled: status === 'authenticated' && hasOrderAccess,
+  });
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -148,40 +148,6 @@ export function OrderPage() {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (status !== 'authenticated' || !hasOrderAccess) return;
-
-    const POLL_INTERVAL_MS = 30_000;
-    let cancelled = false;
-
-    async function syncFromD1() {
-      if (isModalOpenRef.current) return;
-      const d1Records = await inquiryService.pullFromD1();
-      if (cancelled) return;
-      inquiryService.pushLocalToD1(d1Records);
-      const merged = inquiryService.mergeFromD1(d1Records);
-      useInquiryStore.setState({ records: merged });
-      setLastSyncedAt(new Date());
-    }
-
-    void syncFromD1();
-
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') void syncFromD1();
-    }, POLL_INTERVAL_MS);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') void syncFromD1();
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [status, hasOrderAccess]);
 
   const now = useMemo(() => new Date(), []);
 

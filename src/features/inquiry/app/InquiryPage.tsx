@@ -16,6 +16,7 @@ import { usePermissionStore } from '@/lib/permissions';
 import type { CustomerQuoteStatus, InquiryBasicInput, InquiryRecord, SupplierQuoteStatus } from '../types';
 import { useInquiryActions } from '../hooks/useInquiryActions';
 import { useInquiryFilter } from '../hooks/useInquiryFilter';
+import { useInquirySync } from '../hooks/useInquirySync';
 import { useInquiryStore } from '../state/inquiry.store';
 import { inquiryService } from '../services/inquiry.service';
 import { InquiryFilterBar } from '../components/InquiryFilterBar';
@@ -122,13 +123,11 @@ export function InquiryPage() {
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
-  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const [isBatchLinkOpen, setIsBatchLinkOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const isModalOpenRef = useRef(false);
   const appliedAssociationFilterRef = useRef('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasBatchEditPermission = usePermissionStore((state) => state.hasPermission('inquiry.batchEdit'));
@@ -138,6 +137,10 @@ export function InquiryPage() {
     const permission = (session.user.permissions ?? []).find((item) => item.moduleId === 'inquiry');
     return permission?.canAccess ?? session.user.isAdmin;
   }, [session]);
+  const { lastSyncedAt } = useInquirySync({
+    enabled: permissionChecked && hasInquiryAccess,
+    suspended: isModalOpen,
+  });
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -186,48 +189,6 @@ export function InquiryPage() {
       linkStatus: 'all',
     });
   }, [associationFilterKey, filter, setFilter]);
-
-  useEffect(() => {
-    isModalOpenRef.current = isModalOpen;
-  }, [isModalOpen]);
-
-  useEffect(() => {
-    if (!permissionChecked || !hasInquiryAccess || isModalOpen) return;
-
-    const POLL_INTERVAL_MS = 30_000;
-    let cancelled = false;
-
-    async function syncFromD1() {
-      if (isModalOpenRef.current) return;
-      const d1Records = await inquiryService.pullFromD1();
-      if (cancelled || isModalOpenRef.current) return;
-      inquiryService.pushLocalToD1(d1Records);
-      const merged = inquiryService.mergeFromD1(d1Records);
-      useInquiryStore.setState({ records: merged });
-      setLastSyncedAt(new Date());
-    }
-
-    void syncFromD1();
-
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        void syncFromD1();
-      }
-    }, POLL_INTERVAL_MS);
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        void syncFromD1();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [hasInquiryAccess, isModalOpen, permissionChecked]);
 
   const openCreateModal = () => {
     setEditingRecord(null);

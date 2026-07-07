@@ -80,6 +80,16 @@ export const inquiryService = {
     return all;
   },
 
+  async getMeta(): Promise<{ count: number; maxUpdatedAt: string | null }> {
+    try {
+      const res = await fetch(`${API_BASE}/meta`, { cache: 'no-store' });
+      if (!res.ok) return { count: -1, maxUpdatedAt: null };
+      return await res.json() as { count: number; maxUpdatedAt: string | null };
+    } catch {
+      return { count: -1, maxUpdatedAt: null };
+    }
+  },
+
   syncToD1(record: InquiryRecord): void {
     void (async () => {
       try {
