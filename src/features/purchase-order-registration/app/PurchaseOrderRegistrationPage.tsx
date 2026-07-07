@@ -83,7 +83,7 @@ export function PurchaseOrderRegistrationPage() {
   const canViewFinancials = usePermissionStore((s) => s.hasPermission('order.financials'));
   const records = useInquiryStore((s) => s.records);
   const patchRecordForView = useInquiryStore((s) => s.patchRecordForView);
-  const { lastSyncedAt } = useInquirySync({
+  const { lastSyncedAt, syncStatus } = useInquirySync({
     enabled: status === 'authenticated' && hasAccess,
     pushLocal: false,
     mergeLocal: false,
@@ -191,7 +191,14 @@ export function PurchaseOrderRegistrationPage() {
     return <PermissionDenied message="您没有采购订单表的访问权限" />;
   }
 
-  const topBarSlot = lastSyncedAt ? (
+  const topBarSlot = syncStatus.pendingCount > 0 ? (
+    <span
+      className="text-amber-600 dark:text-amber-400"
+      title={syncStatus.lastError ? `最近同步失败：${syncStatus.lastError}` : undefined}
+    >
+      待同步 {syncStatus.pendingCount} 条
+    </span>
+  ) : lastSyncedAt ? (
     <span>
       同步{' '}
       {lastSyncedAt.toLocaleTimeString('zh-CN', {

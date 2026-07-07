@@ -137,7 +137,7 @@ export function InquiryPage() {
     const permission = (session.user.permissions ?? []).find((item) => item.moduleId === 'inquiry');
     return permission?.canAccess ?? session.user.isAdmin;
   }, [session]);
-  const { lastSyncedAt } = useInquirySync({
+  const { lastSyncedAt, syncStatus } = useInquirySync({
     enabled: permissionChecked && hasInquiryAccess,
     suspended: isModalOpen,
   });
@@ -438,11 +438,20 @@ export function InquiryPage() {
       user={user}
       onLogout={handleLogout}
       bottomActions={bottomActions}
-      topBarSlot={lastSyncedAt ? (
-        <span>
-          同步 {lastSyncedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-        </span>
-      ) : undefined}
+      topBarSlot={
+        syncStatus.pendingCount > 0 ? (
+          <span
+            className="text-amber-600 dark:text-amber-400"
+            title={syncStatus.lastError ? `最近同步失败：${syncStatus.lastError}` : undefined}
+          >
+            待同步 {syncStatus.pendingCount} 条
+          </span>
+        ) : lastSyncedAt ? (
+          <span>
+            同步 {lastSyncedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </span>
+        ) : undefined
+      }
     >
       {/* 隐藏的文件选择框（批量编辑权限导入用） */}
       {hasBatchEditPermission && (

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { inquiryService } from '../services/inquiry.service';
 import { useInquiryStore } from '../state/inquiry.store';
+import type { InquirySyncStatus } from '../services/inquiry.service';
 
 const POLL_INTERVAL_MS = 30_000;
 const FORCE_FULL_SYNC_EVERY_MS = 5 * 60_000;
@@ -25,6 +26,9 @@ export function useInquirySync({
   mergeLocal = true,
 }: UseInquirySyncOptions) {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [syncStatus, setSyncStatus] = useState<InquirySyncStatus>(() =>
+    inquiryService.getSyncStatus()
+  );
   const suspendedRef = useRef(suspended);
   const lastMetaRef = useRef<string | null>(null);
   const lastFullSyncAtRef = useRef(0);
@@ -33,6 +37,12 @@ export function useInquirySync({
   useEffect(() => {
     suspendedRef.current = suspended;
   }, [suspended]);
+
+  useEffect(() => {
+    const refresh = () => setSyncStatus(inquiryService.getSyncStatus());
+    refresh();
+    return inquiryService.subscribeSyncStatus(refresh);
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
@@ -48,6 +58,8 @@ export function useInquirySync({
       syncingRef.current = true;
 
       try {
+        await inquiryService.flushPendingSyncs();
+        if (cancelled || suspendedRef.current) return;
         const d1Records = await inquiryService.pullFromD1();
         if (cancelled || suspendedRef.current) return;
         if (pushLocal) inquiryService.pushLocalToD1(d1Records);
@@ -60,6 +72,7 @@ export function useInquirySync({
         useInquiryStore.setState({ records: nextRecords });
         lastFullSyncAtRef.current = Date.now();
         setLastSyncedAt(new Date());
+        setSyncStatus(inquiryService.getSyncStatus());
         await refreshMetaMemory();
       } finally {
         syncingRef.current = false;
@@ -81,6 +94,7 @@ export function useInquirySync({
         await fullSync();
       } else {
         setLastSyncedAt(new Date());
+        setSyncStatus(inquiryService.getSyncStatus());
       }
     }
 
@@ -102,5 +116,5 @@ export function useInquirySync({
     };
   }, [enabled, mergeLocal, pushLocal]);
 
-  return { lastSyncedAt };
+  return { lastSyncedAt, syncStatus };
 }

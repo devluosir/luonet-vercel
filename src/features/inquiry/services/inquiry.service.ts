@@ -3,14 +3,182 @@ import type { InquiryRecord } from '../types';
 
 const STORAGE_KEY = 'inquiry_records';
 const DELETED_KEY = 'inquiry_deleted_ids';  // id → deletedAt ISO string
+const PENDING_SYNC_KEY = 'inquiry_pending_syncs';
+const SYNC_STATUS_EVENT = 'inquiry-sync-status-change';
 const API_BASE = '/api/inquiry';
 
 type DeletedMap = Record<string, string>;
+type SyncAction = 'create' | 'update' | 'patch' | 'delete';
+
+interface PendingSyncOp {
+  opId: string;
+  action: SyncAction;
+  recordId: string;
+  payload?: Partial<InquiryRecord>;
+  createdAt: string;
+  attempts: number;
+  lastTriedAt?: string;
+  lastError?: string;
+}
+
+export interface InquirySyncStatus {
+  pendingCount: number;
+  lastError: string | null;
+  lastFailedAt: string | null;
+}
 
 function isRemoteNewer(remote: InquiryRecord, local: InquiryRecord): boolean {
   const remoteTime = new Date(remote.updatedAt).getTime();
   const localTime = new Date(local.updatedAt).getTime();
   return Number.isFinite(remoteTime) && (!Number.isFinite(localTime) || remoteTime > localTime);
+}
+
+function loadPendingQueue(): PendingSyncOp[] {
+  return getLocalStorageJSON<PendingSyncOp[]>(PENDING_SYNC_KEY, []);
+}
+
+function notifySyncStatusChange(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(SYNC_STATUS_EVENT));
+}
+
+function savePendingQueue(queue: PendingSyncOp[]): void {
+  setLocalStorage(PENDING_SYNC_KEY, queue);
+  notifySyncStatusChange();
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : '未知错误';
+}
+
+function getLatestFullLocalRecord(recordId: string): InquiryRecord | null {
+  return getLocalStorageJSON<InquiryRecord[]>(STORAGE_KEY, [])
+    .find((record) => record.id === recordId) ?? null;
+}
+
+function buildPendingOp(
+  action: SyncAction,
+  recordId: string,
+  payload?: Partial<InquiryRecord>
+): PendingSyncOp {
+  return {
+    opId: `${recordId}-${action}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    action,
+    recordId,
+    payload,
+    createdAt: new Date().toISOString(),
+    attempts: 0,
+  };
+}
+
+function compactWithNewOp(queue: PendingSyncOp[], op: PendingSyncOp): PendingSyncOp[] {
+  const sameRecord = queue.filter((item) => item.recordId === op.recordId);
+  const otherRecords = queue.filter((item) => item.recordId !== op.recordId);
+
+  if (op.action === 'delete') {
+    return [...otherRecords, op];
+  }
+
+  const deletePending = sameRecord.find((item) => item.action === 'delete');
+  if (deletePending) {
+    // 本机已排队删除的记录，不允许后续旧编辑把它重新推回 D1。
+    return [...otherRecords, deletePending];
+  }
+
+  const fullPending = sameRecord.find(
+    (item) => item.action === 'create' || item.action === 'update'
+  );
+  if (fullPending && op.action === 'patch') {
+    return [
+      ...otherRecords,
+      {
+        ...fullPending,
+        payload: { ...fullPending.payload, ...op.payload },
+      },
+    ];
+  }
+
+  if (op.action === 'patch') {
+    const patchPending = sameRecord.find((item) => item.action === 'patch');
+    if (patchPending) {
+      return [
+        ...otherRecords,
+        {
+          ...patchPending,
+          payload: { ...patchPending.payload, ...op.payload },
+        },
+      ];
+    }
+  }
+
+  return [...otherRecords, op];
+}
+
+function enqueueSync(op: PendingSyncOp): PendingSyncOp {
+  const queue = compactWithNewOp(loadPendingQueue(), op);
+  const queuedOp = queue.find((item) => item.recordId === op.recordId) ?? op;
+  savePendingQueue(queue);
+  return queuedOp;
+}
+
+function removePendingOp(opId: string): void {
+  savePendingQueue(loadPendingQueue().filter((item) => item.opId !== opId));
+}
+
+function updatePendingOp(opId: string, patch: Partial<PendingSyncOp>): void {
+  savePendingQueue(
+    loadPendingQueue().map((item) =>
+      item.opId === opId ? { ...item, ...patch } : item
+    )
+  );
+}
+
+async function executeSyncOp(op: PendingSyncOp): Promise<void> {
+  let res: Response;
+
+  if (op.action === 'delete') {
+    res = await fetch(`${API_BASE}/${encodeURIComponent(op.recordId)}`, { method: 'DELETE' });
+  } else if (op.action === 'create') {
+    res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(op.payload ?? {}),
+    });
+  } else {
+    res = await fetch(`${API_BASE}/${encodeURIComponent(op.recordId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(op.payload ?? {}),
+    });
+  }
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`HTTP ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`);
+  }
+}
+
+async function trySyncOp(op: PendingSyncOp): Promise<boolean> {
+  try {
+    await executeSyncOp(op);
+    removePendingOp(op.opId);
+    return true;
+  } catch (error) {
+    const now = new Date().toISOString();
+    const message = getErrorMessage(error);
+    console.warn(`[inquirySync] ${op.action} ${op.recordId} failed: ${message}`);
+    updatePendingOp(op.opId, {
+      attempts: op.attempts + 1,
+      lastTriedAt: now,
+      lastError: message,
+    });
+    return false;
+  }
+}
+
+function enqueueAndTry(action: SyncAction, recordId: string, payload?: Partial<InquiryRecord>): void {
+  const op = enqueueSync(buildPendingOp(action, recordId, payload));
+  void trySyncOp(op);
 }
 
 export const inquiryService = {
@@ -90,56 +258,53 @@ export const inquiryService = {
     }
   },
 
+  getSyncStatus(): InquirySyncStatus {
+    const queue = loadPendingQueue();
+    const lastFailed = [...queue].reverse().find((op) => op.lastError);
+    return {
+      pendingCount: queue.length,
+      lastError: lastFailed?.lastError ?? null,
+      lastFailedAt: lastFailed?.lastTriedAt ?? null,
+    };
+  },
+
+  subscribeSyncStatus(callback: () => void): () => void {
+    if (typeof window === 'undefined') return () => {};
+    window.addEventListener(SYNC_STATUS_EVENT, callback);
+    return () => window.removeEventListener(SYNC_STATUS_EVENT, callback);
+  },
+
+  getPendingSyncIds(): Set<string> {
+    return new Set(loadPendingQueue().map((op) => op.recordId));
+  },
+
+  async flushPendingSyncs(): Promise<void> {
+    const queue = loadPendingQueue();
+    if (queue.length === 0) return;
+
+    for (const op of queue) {
+      const latest = loadPendingQueue().find((item) => item.opId === op.opId);
+      if (!latest) continue;
+      await trySyncOp(latest);
+    }
+  },
+
   syncToD1(record: InquiryRecord): void {
-    void (async () => {
-      try {
-        await fetch(API_BASE, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(record),
-        });
-      } catch {
-        // D1 同步失败不阻塞本地业务操作。
-      }
-    })();
+    enqueueAndTry('create', record.id, record);
   },
 
   updateInD1(record: InquiryRecord): void {
-    void (async () => {
-      try {
-        await fetch(`${API_BASE}/${encodeURIComponent(record.id)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(record),
-        });
-      } catch {
-        // D1 同步失败不阻塞本地业务操作。
-      }
-    })();
+    enqueueAndTry('update', record.id, record);
   },
 
   patchInD1(id: string, patch: Partial<InquiryRecord>): void {
-    void (async () => {
-      try {
-        await fetch(`${API_BASE}/${encodeURIComponent(id)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(patch),
-        });
-      } catch {
-        // D1 同步失败不阻塞本地业务操作。
-      }
-    })();
+    const pendingIds = this.getPendingSyncIds();
+    const fullRecord = pendingIds.has(id) ? getLatestFullLocalRecord(id) : null;
+    enqueueAndTry(fullRecord ? 'update' : 'patch', id, fullRecord ?? patch);
   },
 
   deleteFromD1(id: string): void {
-    void (async () => {
-      try {
-        await fetch(`${API_BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      } catch {
-        // D1 同步失败不阻塞本地业务操作。
-      }
-    })();
+    enqueueAndTry('delete', id);
   },
 
   mergeFromD1(d1Records: InquiryRecord[]): InquiryRecord[] {
@@ -153,8 +318,10 @@ export const inquiryService = {
 
     const local = this.getAll();
     const localMap = new Map(local.map((record) => [record.id, record]));
+    const pendingIds = this.getPendingSyncIds();
 
     for (const d1Record of d1Records) {
+      if (pendingIds.has(d1Record.id)) continue;
       // D1 软删除标记 → 从本地移除，并写入 deletedIds 防止被重新拉回
       if (d1Record.status === 'deleted') {
         localMap.delete(d1Record.id);

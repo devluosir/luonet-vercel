@@ -96,7 +96,7 @@ export function OrderPage() {
   // 默认按交货日期降序排列
   const [sortField, setSortField] = useState<SortField>('deliveryDate');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const { lastSyncedAt } = useInquirySync({
+  const { lastSyncedAt, syncStatus } = useInquirySync({
     enabled: status === 'authenticated' && hasOrderAccess,
   });
 
@@ -247,7 +247,14 @@ export function OrderPage() {
     return <PermissionDenied message="您没有订单状态表的访问权限" />;
   }
 
-  const topBarSlot = lastSyncedAt ? (
+  const topBarSlot = syncStatus.pendingCount > 0 ? (
+    <span
+      className="text-amber-600 dark:text-amber-400"
+      title={syncStatus.lastError ? `最近同步失败：${syncStatus.lastError}` : undefined}
+    >
+      待同步 {syncStatus.pendingCount} 条
+    </span>
+  ) : lastSyncedAt ? (
     <span>
       同步{' '}
       {lastSyncedAt.toLocaleTimeString('zh-CN', {
