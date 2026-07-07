@@ -26,7 +26,7 @@ interface PDFPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   item: PreviewHistoryItem | null;
-  itemType: 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'purchase' | 'packing';
+  itemType: 'quotation' | 'confirmation' | 'domestic' | 'domestic-contract' | 'invoice' | 'purchase' | 'packing';
 }
 
 interface DeviceInfo {
@@ -131,7 +131,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         pdfUrl = URL.createObjectURL(item.pdfBlob);
       } else {
         // 最后才根据记录类型生成对应的PDF
-        if (itemType === 'quotation' || itemType === 'confirmation' || itemType === 'domestic') {
+        if (itemType === 'quotation' || itemType === 'confirmation' || itemType === 'domestic' || itemType === 'domestic-contract') {
           // 使用新的generatePdf服务来处理报价单和订单确认
           const { generatePdf } = await import('@/features/quotation/services/generate.service');
 
@@ -142,9 +142,12 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
           // 🆕 从历史记录数据中提取保存时的列显示设置
           const savedVisibleCols = quotationData.savedVisibleCols || undefined;
 
+          // 内销报价/内销合同底层都是同一个 'domestic' 单据类型，子类型由 data.domesticDocType 决定
+          const pdfTab = itemType === 'domestic-contract' ? 'domestic' : itemType;
+
           // 使用新的生成服务，传入notesConfig和保存时的列显示设置
           const pdfBlob = await generatePdf(
-            itemType,
+            pdfTab,
             quotationData,
             notesConfig,
             (progress) => {
@@ -205,7 +208,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         pdfBlob = item.pdfBlob;
       } else {
         // 根据记录类型生成对应的PDF
-        if (itemType === 'quotation' || itemType === 'confirmation' || itemType === 'domestic') {
+        if (itemType === 'quotation' || itemType === 'confirmation' || itemType === 'domestic' || itemType === 'domestic-contract') {
           // 使用新的generatePdf服务来处理报价单和订单确认
           const { generatePdf } = await import('@/features/quotation/services/generate.service');
 
@@ -216,9 +219,12 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
           // 🆕 从历史记录数据中提取保存时的列显示设置
           const savedVisibleCols = quotationData.savedVisibleCols || undefined;
 
+          // 内销报价/内销合同底层都是同一个 'domestic' 单据类型，子类型由 data.domesticDocType 决定
+          const pdfTab = itemType === 'domestic-contract' ? 'domestic' : itemType;
+
           // 使用新的生成服务，传入notesConfig和保存时的列显示设置
           pdfBlob = await generatePdf(
-            itemType,
+            pdfTab,
             quotationData,
             notesConfig,
             (progress) => {
@@ -258,6 +264,8 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         fileName = `SC_${item.quotationNo || 'export'}.pdf`;
       } else if (itemType === 'domestic') {
         fileName = `NSQ_${item.quotationNo || 'export'}.pdf`;
+      } else if (itemType === 'domestic-contract') {
+        fileName = `NSC_${item.quotationNo || 'export'}.pdf`;
       } else if (itemType === 'invoice') {
         fileName = `INV_${item.invoiceNo || 'export'}.pdf`;
       } else if (itemType === 'purchase') {
@@ -294,7 +302,9 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
       case 'confirmation':
         return '订单确认预览';
       case 'domestic':
-        return '内销报价单预览';
+        return '内销报价预览';
+      case 'domestic-contract':
+        return '内销合同预览';
       case 'invoice':
         return '发票预览';
       case 'purchase':

@@ -28,6 +28,8 @@ export function HistoryTabs({ onTabChange }: HistoryTabsProps) {
         return 'bg-gradient-to-br from-green-50 via-emerald-75 to-emerald-100 dark:from-green-900/30 dark:via-emerald-900/20 dark:to-emerald-900/10 text-green-700 dark:text-green-300 shadow-lg shadow-green-200/50 dark:shadow-green-900/30';
       case 'domestic':
         return 'bg-gradient-to-br from-sky-50 via-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:via-cyan-900/20 dark:to-cyan-900/10 text-cyan-700 dark:text-cyan-300 shadow-lg shadow-cyan-200/50 dark:shadow-cyan-900/30';
+      case 'domestic-contract':
+        return 'bg-gradient-to-br from-emerald-50 via-emerald-75 to-emerald-100 dark:from-emerald-900/30 dark:via-emerald-900/20 dark:to-emerald-900/10 text-emerald-700 dark:text-emerald-300 shadow-lg shadow-emerald-200/50 dark:shadow-emerald-900/30';
       case 'packing':
         return 'bg-gradient-to-br from-teal-50 via-cyan-75 to-cyan-100 dark:from-teal-900/30 dark:via-cyan-900/20 dark:to-cyan-900/10 text-teal-700 dark:text-teal-300 shadow-lg shadow-teal-200/50 dark:shadow-teal-900/30';
       case 'invoice':
@@ -48,6 +50,8 @@ export function HistoryTabs({ onTabChange }: HistoryTabsProps) {
         return 'bg-gradient-to-br from-gray-50 via-gray-75 to-gray-100 dark:from-gray-700 dark:via-gray-750 dark:to-gray-800 text-gray-600 dark:text-gray-400 hover:from-green-50 hover:via-emerald-75 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:via-emerald-900/20 dark:hover:to-emerald-900/10 hover:text-green-700 dark:hover:text-green-300 shadow-md shadow-gray-200/30 dark:shadow-gray-900/20 hover:shadow-lg hover:shadow-green-200/40 dark:hover:shadow-green-900/25';
       case 'domestic':
         return 'bg-gradient-to-br from-gray-50 via-gray-75 to-gray-100 dark:from-gray-700 dark:via-gray-750 dark:to-gray-800 text-gray-600 dark:text-gray-400 hover:from-sky-50 hover:via-cyan-50 hover:to-cyan-100 dark:hover:from-cyan-900/30 dark:hover:via-cyan-900/20 dark:hover:to-cyan-900/10 hover:text-cyan-700 dark:hover:text-cyan-300 shadow-md shadow-gray-200/30 dark:shadow-gray-900/20 hover:shadow-lg hover:shadow-cyan-200/40 dark:hover:shadow-cyan-900/25';
+      case 'domestic-contract':
+        return 'bg-gradient-to-br from-gray-50 via-gray-75 to-gray-100 dark:from-gray-700 dark:via-gray-750 dark:to-gray-800 text-gray-600 dark:text-gray-400 hover:from-emerald-50 hover:via-emerald-75 hover:to-emerald-100 dark:hover:from-emerald-900/30 dark:hover:via-emerald-900/20 dark:hover:to-emerald-900/10 hover:text-emerald-700 dark:hover:text-emerald-300 shadow-md shadow-gray-200/30 dark:shadow-gray-900/20 hover:shadow-lg hover:shadow-emerald-200/40 dark:hover:shadow-emerald-900/25';
       case 'packing':
         return 'bg-gradient-to-br from-gray-50 via-gray-75 to-gray-100 dark:from-gray-700 dark:via-gray-750 dark:to-gray-800 text-gray-600 dark:text-gray-400 hover:from-teal-50 hover:via-cyan-75 hover:to-cyan-100 dark:hover:from-teal-900/30 dark:hover:via-cyan-900/20 dark:hover:to-cyan-900/10 hover:text-teal-700 dark:hover:text-teal-300 shadow-md shadow-gray-200/30 dark:shadow-gray-900/20 hover:shadow-lg hover:shadow-teal-200/40 dark:hover:shadow-teal-900/25';
       case 'invoice':
@@ -74,6 +78,8 @@ export function HistoryTabs({ onTabChange }: HistoryTabsProps) {
         return 'text-green-700 bg-green-50 dark:text-green-300 dark:bg-green-900/50';
       case 'domestic':
         return 'text-cyan-700 bg-cyan-50 dark:text-cyan-300 dark:bg-cyan-900/50';
+      case 'domestic-contract':
+        return 'text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-900/50';
       case 'packing':
         return 'text-teal-700 bg-teal-50 dark:text-teal-300 dark:bg-teal-900/50';
       case 'invoice':
@@ -95,6 +101,8 @@ export function HistoryTabs({ onTabChange }: HistoryTabsProps) {
           return 'text-green-600 dark:text-green-400';
         case 'domestic':
           return 'text-cyan-600 dark:text-cyan-400';
+        case 'domestic-contract':
+          return 'text-emerald-600 dark:text-emerald-400';
         case 'packing':
           return 'text-teal-600 dark:text-teal-400';
         case 'invoice':
@@ -112,6 +120,8 @@ export function HistoryTabs({ onTabChange }: HistoryTabsProps) {
           return 'text-gray-500 dark:text-gray-400 group-hover:text-green-600 dark:group-hover:text-green-400';
         case 'domestic':
           return 'text-gray-500 dark:text-gray-400 group-hover:text-cyan-600 dark:group-hover:text-cyan-400';
+        case 'domestic-contract':
+          return 'text-gray-500 dark:text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400';
         case 'packing':
           return 'text-gray-500 dark:text-gray-400 group-hover:text-teal-600 dark:group-hover:text-teal-400';
         case 'invoice':

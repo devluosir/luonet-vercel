@@ -15,8 +15,9 @@ import {
   getPackingHistory,
   importPackingHistory
 } from './packingHistory';
+import { getDomesticDocSubtype } from './dashboardUtils';
 
-export type HistoryType = 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'purchase' | 'packing';
+export type HistoryType = 'quotation' | 'confirmation' | 'domestic' | 'domestic-contract' | 'invoice' | 'purchase' | 'packing';
 
 export interface HistoryItem {
   id: string;
@@ -635,8 +636,16 @@ export const smartExport = (activeTab: HistoryType, selectedIds?: string[]): Exp
         exportStats = `订单确认: ${allData.length} 条`;
         break;
       case 'domestic':
-        allData = getQuotationHistory().filter(item => item.type === 'domestic') as HistoryItem[];
-        exportStats = `内销报价单: ${allData.length} 条`;
+        allData = getQuotationHistory().filter(item =>
+          item.type === 'domestic' && getDomesticDocSubtype(item) === 'quotation'
+        ) as HistoryItem[];
+        exportStats = `内销报价: ${allData.length} 条`;
+        break;
+      case 'domestic-contract':
+        allData = getQuotationHistory().filter(item =>
+          item.type === 'domestic' && getDomesticDocSubtype(item) === 'contract'
+        ) as HistoryItem[];
+        exportStats = `内销合同: ${allData.length} 条`;
         break;
       case 'purchase':
         allData = getPurchaseHistory() as HistoryItem[];

@@ -52,7 +52,9 @@ export interface PackingHistory {
 }
 
 // 通用类型
-export type HistoryType = 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'purchase' | 'packing';
+// 注：'domestic' 对应内销报价单子类型，'domestic-contract' 对应内销合同子类型；
+// 两者在底层存储中都是 quotation_history 里 type==='domestic' 的记录，按 data.domesticDocType 拆分展示
+export type HistoryType = 'quotation' | 'confirmation' | 'domestic' | 'domestic-contract' | 'invoice' | 'purchase' | 'packing';
 export type HistoryItem = QuotationHistory | PurchaseHistory | InvoiceHistory | PackingHistory;
 
 // 排序配置

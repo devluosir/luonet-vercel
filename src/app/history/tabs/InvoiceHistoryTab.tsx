@@ -31,7 +31,7 @@ interface SortConfig {
 
 interface Filters {
   search: string;
-  type: 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'purchase' | 'packing' | 'all';
+  type: 'quotation' | 'confirmation' | 'domestic' | 'domestic-contract' | 'invoice' | 'purchase' | 'packing' | 'all';
   dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
 }
 

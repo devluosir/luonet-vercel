@@ -38,6 +38,7 @@ export function useHistoryActions() {
         path = `/quotation/edit/${id}?tab=confirmation`;
         break;
       case 'domestic':
+      case 'domestic-contract':
         path = `/quotation/edit/${id}?tab=domestic`;
         break;
       case 'invoice':
@@ -69,6 +70,7 @@ export function useHistoryActions() {
         path = `/quotation/copy/${id}?tab=confirmation`;
         break;
       case 'domestic':
+      case 'domestic-contract':
         path = `/quotation/copy/${id}?tab=domestic`;
         break;
       case 'invoice':

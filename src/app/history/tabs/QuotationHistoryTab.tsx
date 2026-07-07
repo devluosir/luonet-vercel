@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getQuotationHistory } from '@/utils/quotationHistory';
+import { getDomesticDocSubtype } from '@/utils/dashboardUtils';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import type { QuotationData } from '@/types/quotation';
@@ -32,7 +33,7 @@ interface SortConfig {
 
 interface Filters {
   search: string;
-  type: 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'purchase' | 'packing' | 'all';
+  type: 'quotation' | 'confirmation' | 'domestic' | 'domestic-contract' | 'invoice' | 'purchase' | 'packing' | 'all';
   dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
 }
 
@@ -49,7 +50,7 @@ interface Props {
   onSelectAll: (selected: boolean) => void;
   mainColor?: string;
   refreshKey?: number;
-  historyType?: 'quotation' | 'domestic';
+  historyType?: 'quotation' | 'domestic' | 'domestic-contract';
   emptyText?: string;
   numberLabel?: string;
 }
@@ -78,7 +79,16 @@ export default function QuotationHistoryTab({
   const loadHistory = useCallback(() => {
     setLoading(true);
     try {
-      let results = getQuotationHistory().filter(item => item.type === historyType);
+      // 'domestic'（内销报价）/'domestic-contract'（内销合同）底层都存成 type==='domestic'，
+      // 按 data.domesticDocType 子类型二次拆分（未填写时按历史默认值归为"合同"）
+      let results = getQuotationHistory().filter(item => {
+        if (historyType === 'domestic' || historyType === 'domestic-contract') {
+          if (item.type !== 'domestic') return false;
+          const wantedSubtype = historyType === 'domestic' ? 'quotation' : 'contract';
+          return getDomesticDocSubtype(item) === wantedSubtype;
+        }
+        return item.type === historyType;
+      });
       // 搜索过滤
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();

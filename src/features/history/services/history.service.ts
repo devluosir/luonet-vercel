@@ -15,7 +15,7 @@ import {
   getPackingHistory,
   deletePackingHistory
 } from '@/utils/packingHistory';
-import { isQuotationUpgraded } from '@/utils/dashboardUtils';
+import { isQuotationUpgraded, getDomesticDocSubtype } from '@/utils/dashboardUtils';
 
 const getStringField = (item: HistoryItem, key: string): string => {
   const value = (item as unknown as Record<string, unknown>)[key];
@@ -51,7 +51,15 @@ export class HistoryService {
       case 'confirmation':
         return getQuotationHistory().filter(item => item.type === 'confirmation');
       case 'domestic':
-        return getQuotationHistory().filter(item => item.type === 'domestic');
+        // 内销报价：type==='domestic' 且 domesticDocType==='quotation'
+        return getQuotationHistory().filter(item =>
+          item.type === 'domestic' && getDomesticDocSubtype(item) === 'quotation'
+        );
+      case 'domestic-contract':
+        // 内销合同：type==='domestic' 且 domesticDocType 非 'quotation'（未填写按历史默认值归为"合同"）
+        return getQuotationHistory().filter(item =>
+          item.type === 'domestic' && getDomesticDocSubtype(item) === 'contract'
+        );
       case 'invoice':
         return getInvoiceHistory();
       case 'purchase':
@@ -71,6 +79,7 @@ export class HistoryService {
       case 'quotation':
       case 'confirmation':
       case 'domestic':
+      case 'domestic-contract':
         deleteQuotationHistory(id);
         break;
       case 'invoice':
@@ -100,6 +109,7 @@ export class HistoryService {
       quotation: this.getHistory('quotation'),
       confirmation: this.getHistory('confirmation'),
       domestic: this.getHistory('domestic'),
+      'domestic-contract': this.getHistory('domestic-contract'),
       invoice: this.getHistory('invoice'),
       purchase: this.getHistory('purchase'),
       packing: this.getHistory('packing'),

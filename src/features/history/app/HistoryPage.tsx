@@ -36,7 +36,12 @@ const ConfirmationHistoryTab = dynamic(() => import('@/app/history/tabs/Confirma
 });
 
 const DomesticQuotationHistoryTab = dynamic(() => import('@/app/history/tabs/QuotationHistoryTab'), {
-  loading: () => <div className="py-8 text-center text-gray-400">正在加载内销报价单历史...</div>,
+  loading: () => <div className="py-8 text-center text-gray-400">正在加载内销报价历史...</div>,
+  ssr: false
+});
+
+const DomesticContractHistoryTab = dynamic(() => import('@/app/history/tabs/QuotationHistoryTab'), {
+  loading: () => <div className="py-8 text-center text-gray-400">正在加载内销合同历史...</div>,
   ssr: false
 });
 
@@ -118,7 +123,8 @@ export function HistoryPage() {
   const tabColorMap = {
     quotation: 'blue',      // 报价单 - 蓝色
     confirmation: 'green',   // 合同确认 - 绿色
-    domestic: 'cyan',        // 内销报价单 - 青色
+    domestic: 'cyan',        // 内销报价 - 青色
+    'domestic-contract': 'green', // 内销合同 - 绿色
     packing: 'teal',        // 装箱单 - 青色
     invoice: 'purple',      // 发票 - 紫色
     purchase: 'orange'      // 采购单 - 橙色
@@ -129,7 +135,7 @@ export function HistoryPage() {
   useEffect(() => {
       if (mounted && searchParams) {
       const tabParam = searchParams.get('tab');
-      if (tabParam && ['quotation', 'confirmation', 'domestic', 'invoice', 'purchase', 'packing'].includes(tabParam)) {
+      if (tabParam && ['quotation', 'confirmation', 'domestic', 'domestic-contract', 'invoice', 'purchase', 'packing'].includes(tabParam)) {
         setActiveTab(tabParam as HistoryType);
       }
     }
@@ -255,8 +261,18 @@ export function HistoryPage() {
             {...commonProps}
             mainColor={activeColor}
             historyType="domestic"
-            emptyText="暂无内销报价单历史记录"
+            emptyText="暂无内销报价历史记录"
             numberLabel="报价单编号"
+          />
+        );
+      case 'domestic-contract':
+        return (
+          <DomesticContractHistoryTab
+            {...commonProps}
+            mainColor={activeColor}
+            historyType="domestic-contract"
+            emptyText="暂无内销合同历史记录"
+            numberLabel="合同编号"
           />
         );
       case 'packing':

@@ -30,9 +30,14 @@ interface QuotationUpgradeRecord {
   data?: unknown;
 }
 
-const isDomesticQuotationRecord = (doc: DocumentWithType): boolean => {
+interface DomesticLikeRecord {
+  type?: string;
+  data?: unknown;
+}
+
+const isDomesticQuotationRecord = (doc: DomesticLikeRecord): boolean => {
   const data = doc.data;
-  const rawType = (doc as { type?: string }).type;
+  const rawType = doc.type;
   return rawType === 'domestic' || (
     typeof data === 'object' &&
     data !== null &&
@@ -43,7 +48,8 @@ const isDomesticQuotationRecord = (doc: DocumentWithType): boolean => {
 
 // 内销单据的子类型（报价单 / 合同），未填写时按历史默认值归为"合同"
 // （与 quotationInitialData.ts / QuotationPage.tsx 里 `data.domesticDocType ?? 'contract'` 的兼容口径保持一致）
-const getDomesticDocSubtype = (doc: DocumentWithType): 'quotation' | 'contract' | undefined => {
+// 使用宽松的结构类型而非 DocumentWithType，方便 history.service.ts / QuotationHistoryTab.tsx 等其他模块直接复用
+export const getDomesticDocSubtype = (doc: DomesticLikeRecord): 'quotation' | 'contract' | undefined => {
   if (!isDomesticQuotationRecord(doc)) return undefined;
   const data = doc.data;
   const docType = typeof data === 'object' && data !== null && !Array.isArray(data)
