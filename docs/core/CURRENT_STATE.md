@@ -121,6 +121,8 @@ rmb
 
 - `007_grant_default_impa_permission.sql` 已在远程 D1 执行。
 - 执行后复查：`impa_permissions = 8`，`enabled_permissions = 8`。
+- `008_add_domestic_document_type.sql` 已在远程 D1 执行（2026-07-08 复查确认）。
+- 复查结果：`Document` 表 `type` CHECK 约束已包含 `'domestic'`；当前分组计数为 `confirmation=60`、`inquiry=967`、`invoice=9`、`packing=11`、`purchase=50`、`quotation=265`。
 
 ### localStorage
 
