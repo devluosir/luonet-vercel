@@ -774,6 +774,14 @@ html.dark, html.dark body {
   transform: scale(1.1) !important;
 }
 
+/* 移动端浏览器地址栏会动态显示/隐藏，100vh 按“最大高度”计算，
+   会导致 fixed 定位元素（如侧边栏）底部被地址栏遮住，看起来像“沉底”。
+   用 100dvh（动态视口高度）覆盖，不支持的浏览器自动回退到 100vh。 */
+.app-h-dvh {
+  height: 100vh;
+  height: 100dvh;
+}
+
 /* ── 侧边栏布局（CSS 变量 + 首屏 data 属性，避免收缩态闪烁） ── */
 @media (min-width: 1024px) {
   .app-sidebar {

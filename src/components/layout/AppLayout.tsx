@@ -32,7 +32,7 @@ export function AppLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-app-dark-base">
+    <div className="app-h-dvh flex overflow-hidden bg-gray-50 dark:bg-app-dark-base">
       {/* 移动端 overlay 侧边栏（桌面端由 DesktopSidebarHost 全局渲染） */}
       {sidebarOpen && (
         <>
