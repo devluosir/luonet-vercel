@@ -28,6 +28,7 @@ import { usePdfWarmup } from '@/hooks/usePdfWarmup';
 import { PageCard } from '@/components/ui/PageCard';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { convertToRmbCapital } from '@/utils/rmbCapitalAmount';
+import { DOMESTIC_DEFAULT_UNITS } from '@/utils/unitUtils';
 
 // 货币名称辅助函数
 const getCurrencyName = (currency: 'USD' | 'CNY' | 'EUR') => {
@@ -887,7 +888,7 @@ export default function QuotationPage() {
                           partName: '',
                           description: '',
                           quantity: 0,
-                          unit: 'pc',
+                          unit: isDomesticQuotation ? DOMESTIC_DEFAULT_UNITS[0] : 'pc',
                           unitPrice: 0,
                           amount: 0,
                           remarks: ''

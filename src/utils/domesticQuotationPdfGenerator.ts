@@ -197,18 +197,21 @@ function drawClauses(
     .sort((a, b) => a.order - b.order);
 
   doc.setFontSize(9);
+  const lineHeight = 5.5; // 单条条款内换行的行距，比之前(5)更舒展
+  const clauseGap = 2.5; // 条款与条款之间的额外间距，避免挤在一起
   clauses.forEach((note, index) => {
     const number = isContract ? getDomesticClauseNumber(index) : String(index + 1);
     const { title, body } = splitClause(note.content ?? '');
     const text = `${number}.${title}${body}`;
     const lines = doc.splitTextToSize(text, contentWidth);
-    y = checkPage(doc, y, lines.length * 5 + 2, margin, pageHeight);
+    y = checkPage(doc, y, lines.length * lineHeight + clauseGap + 2, margin, pageHeight);
 
     lines.forEach((line: string, lineIndex: number) => {
       setCnFont(doc, lineIndex === 0 ? 'bold' : 'normal');
       doc.text(line, margin, y);
-      y += 5;
+      y += lineHeight;
     });
+    y += clauseGap;
   });
 
   return y + 3;

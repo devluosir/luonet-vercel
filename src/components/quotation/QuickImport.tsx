@@ -1,16 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { quickSmartParse, type ParseResult, type ParsedRow } from '@/features/quotation/utils/quickSmartParse';
+import { quickSmartParse, type ParseResult, type ParsedRow, type UnitParseOptions } from '@/features/quotation/utils/quickSmartParse';
 
 export function QuickImport({
   onInsert,
   presetRaw,
   presetParsed,
   onClosePreset,
+  unitOptions,
 }: {
   onInsert: (items: ParsedRow[], replaceMode?: boolean) => void;
   presetRaw?: string;
   presetParsed?: ParseResult;
   onClosePreset?: () => void;
+  // 内销单据的中文单位（只/套/节）不应被智能解析翻译成英文缩写(pc/set)
+  unitOptions?: UnitParseOptions;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -50,7 +53,7 @@ export function QuickImport({
       const text = e.clipboardData?.getData('text') || '';
       if (text.trim()) {
         // 自动处理粘贴的数据
-        const smartResult = quickSmartParse(text);
+        const smartResult = quickSmartParse(text, unitOptions);
         if (smartResult.rows.length > 0) {
           onInsert(smartResult.rows, true); // 替换模式
           closeAll();
@@ -63,7 +66,7 @@ export function QuickImport({
       // 尝试从剪贴板读取数据
       navigator.clipboard.readText().then(text => {
         if (text.trim()) {
-          const smartResult = quickSmartParse(text);
+          const smartResult = quickSmartParse(text, unitOptions);
           if (smartResult.rows.length > 0) {
             onInsert(smartResult.rows, true); // 替换模式
             closeAll();
@@ -82,7 +85,7 @@ export function QuickImport({
       document.removeEventListener('paste', handlePaste);
       document.removeEventListener('contextmenu', handleContextMenu);
     };
-  }, [open, onInsert, closeAll]);
+  }, [open, onInsert, closeAll, unitOptions]);
 
   // 处理预设数据（从全局粘贴回退而来）
   useEffect(() => {

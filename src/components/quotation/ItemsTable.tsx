@@ -706,7 +706,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
         partName: r.partName || '',
         description: r.description || '',
         quantity,
-        unit: r.unit || 'pc',
+        unit: r.unit || (isDomestic ? DOMESTIC_DEFAULT_UNITS[0] : 'pc'),
         unitPrice,
         amount: quantity * unitPrice,
         remarks: r.remarks || '',
@@ -721,6 +721,10 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
     maxDirectInsert: 80,
     minConfidence: 0.7,
     onFallbackPreview: (raw, parsed) => setImportPreset({ raw, parsed }),
+    // 内销单据的中文单位（只/套/节）不应被智能解析翻译成英文缩写(pc/set)
+    unitOptions: isDomestic
+      ? { preserveUnitText: true, defaultUnit: DOMESTIC_DEFAULT_UNITS[0] }
+      : undefined,
   });
 
   // context menu state
@@ -925,6 +929,9 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
             presetRaw={importPreset?.raw}
             presetParsed={importPreset?.parsed}
             onClosePreset={() => setImportPreset(null)}
+            unitOptions={isDomestic
+              ? { preserveUnitText: true, defaultUnit: DOMESTIC_DEFAULT_UNITS[0] }
+              : undefined}
           />
         </div>
       </div>

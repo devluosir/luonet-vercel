@@ -1,5 +1,10 @@
 import { validateRow, sampleBasedColumnDetection, batchProjectByMapping } from './enhancedColumnDetection';
+import type { UnitParseOptions } from './enhancedColumnDetection';
 import { parseMetrics, getFeatureFlags } from './parseMetrics';
+
+// 解析选项：内销单据（中文单位：只/套/节等）不应被翻译成英文缩写(pc/set等)，
+// 由调用方（页面层知道当前是否为内销模式）传入 preserveUnitText/defaultUnit
+export type { UnitParseOptions };
 
 const SEP = /[\t,;]|\s{2,}/; // tab, comma, semicolon, 或 2+ spaces
 const HEADER_HINTS = /line\s*no|item|part\s*no|description|qty|quantity|unit|price|amount|u\/price|单价|数量|名称|单位|序号|编号|no\.|num|index|#|line|part|desc/i;
@@ -213,9 +218,11 @@ function findDataStartRow(allRowCells: string[][], headerRowIndex: number): numb
   return startRow;
 }
 
-function normUnit(u?: string) {
-  if (!u) return 'pc';
+function normUnit(u?: string, opts?: UnitParseOptions) {
+  const fallback = opts?.defaultUnit ?? 'pc';
+  if (!u) return fallback;
   const cleaned = cleanTextContent(u);
+  if (opts?.preserveUnitText) return cleaned || fallback;
   const k = cleaned.toLowerCase();
   return UNIT_MAP[k] || (k.endsWith('s') && UNIT_MAP[k.slice(0, -1)] ? UNIT_MAP[k.slice(0, -1)] : cleaned);
 }
@@ -361,7 +368,7 @@ function parseRowCells(line: string): string[] {
   return cells; // 保留所有单元格，包括空单元格
 }
 
-export function quickSmartParse(text: string): ParseResult {
+export function quickSmartParse(text: string, opts?: UnitParseOptions): ParseResult {
   // 获取特性开关配置
   const featureFlags = getFeatureFlags();
 
@@ -735,7 +742,7 @@ export function quickSmartParse(text: string): ParseResult {
       const newItem = {
         partName: name,
         quantity: qty1,
-        unit: normUnit(c2),
+        unit: normUnit(c2, opts),
         unitPrice: price3 || 0,
         description: cleanTextContent(c4)
       };
@@ -759,7 +766,7 @@ export function quickSmartParse(text: string): ParseResult {
             partName: name,
             description: cleanTextContent(c1),
             quantity: qty2,
-            unit: normUnit(c3),
+            unit: normUnit(c3, opts),
             unitPrice: price4 || 0
           };
           rows.push(newItem);
@@ -780,7 +787,7 @@ export function quickSmartParse(text: string): ParseResult {
             partName: name,
             description: cleanTextContent(c1),
             quantity: qty2,
-            unit: 'pc',
+            unit: opts?.defaultUnit ?? 'pc',
             unitPrice: price3 || 0
           });
           if (!detectedFormat) detectedFormat = 'name-desc-qty-price';
@@ -799,7 +806,7 @@ export function quickSmartParse(text: string): ParseResult {
         rows.push({
           partName: name,
           quantity: qty1,
-          unit: 'pc',
+          unit: opts?.defaultUnit ?? 'pc',
           unitPrice: price2 || 0
         });
         if (!detectedFormat) detectedFormat = 'name-qty-price';
@@ -815,7 +822,7 @@ export function quickSmartParse(text: string): ParseResult {
       rows.push({
         partName: name,
         quantity: qty1,
-        unit: 'pc',
+        unit: opts?.defaultUnit ?? 'pc',
         unitPrice: 0
       });
       if (!detectedFormat) detectedFormat = 'name-qty';
@@ -879,7 +886,7 @@ export function quickSmartParse(text: string): ParseResult {
               partName: name,
               description: '', // 修复：不重复设置描述，只保留在partName中
               quantity: qty,
-              unit: normUnit(unit),
+              unit: normUnit(unit, opts),
               unitPrice: price,
               remarks: remarks
             };
@@ -897,7 +904,7 @@ export function quickSmartParse(text: string): ParseResult {
               console.log(`[QuickSmartParse] 第${i}行完整数据:`, {
                 partName: name,
                 quantity: qty,
-                unit: normUnit(unit),
+                unit: normUnit(unit, opts),
                 unitPrice: price,
                 remarks: remarks
               });
@@ -958,7 +965,7 @@ export function quickSmartParse(text: string): ParseResult {
     // 高置信度：使用新的投影方式
     // 如果有表头，需要跳过表头行进行投影
     const rowsToProject = maybeHeader ? dataRowCells : dataRowCells;
-    const projectedRows = batchProjectByMapping(rowsToProject, inference.mapping);
+    const projectedRows = batchProjectByMapping(rowsToProject, inference.mapping, opts);
 
     if (process.env.NODE_ENV === 'development') {
       console.log('[QuickSmartParse] 增强解析结果:', {
@@ -982,7 +989,7 @@ export function quickSmartParse(text: string): ParseResult {
           partName: projected.partName,
           description: projected.description || '',
           quantity,
-          unit: projected.unit || 'pc',
+          unit: projected.unit || (opts?.defaultUnit ?? 'pc'),
           unitPrice,
         };
 

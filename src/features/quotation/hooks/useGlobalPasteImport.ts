@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { quickSmartParse, type ParseResult } from '../utils/quickSmartParse';
+import { quickSmartParse, type ParseResult, type UnitParseOptions } from '../utils/quickSmartParse';
 import { useQuotationStore } from '@/features/quotation/state/useQuotationStore';
 import { useToast } from '@/components/ui/Toast';
 
@@ -9,6 +9,8 @@ type Opts = {
   maxDirectInsert?: number; // 直接插入阈值（行数）
   minConfidence?: number; // 最小置信度阈值
   onFallbackPreview?: (raw: string, parsed: ParseResult) => void;
+  // 内销单据的中文单位（只/套/节）不应被智能解析翻译成英文缩写(pc/set)
+  unitOptions?: UnitParseOptions;
 };
 
 export function useGlobalPasteImport(opts: Opts = {}) {
@@ -16,7 +18,8 @@ export function useGlobalPasteImport(opts: Opts = {}) {
     enabled = true,
     maxDirectInsert = 80,
     minConfidence = 0.7,
-    onFallbackPreview
+    onFallbackPreview,
+    unitOptions
   } = opts;
 
   const updateItems = useQuotationStore(s => s.updateItems);
@@ -49,7 +52,7 @@ export function useGlobalPasteImport(opts: Opts = {}) {
       if (lines.length < 1) return;
 
       // 2) 解析
-      const parsed = quickSmartParse(text);
+      const parsed = quickSmartParse(text, unitOptions);
       if (parsed.rows.length === 0) return;
 
       // 3) 默认替换模式（避免空行干扰合并检测）
@@ -71,7 +74,7 @@ export function useGlobalPasteImport(opts: Opts = {}) {
             partName: r.partName || '',
             description: r.description || '',
             quantity: q,
-            unit: r.unit || 'pc',
+            unit: r.unit || (unitOptions?.defaultUnit ?? 'pc'),
             unitPrice: p,
             amount: q * p,
             remarks: r.remarks || '',
@@ -133,5 +136,5 @@ export function useGlobalPasteImport(opts: Opts = {}) {
 
     document.addEventListener('paste', handler);
     return () => document.removeEventListener('paste', handler);
-  }, [enabled, maxDirectInsert, minConfidence, onFallbackPreview, items, updateItems, updateFromParse, showToast]);
+  }, [enabled, maxDirectInsert, minConfidence, onFallbackPreview, items, updateItems, updateFromParse, showToast, unitOptions]);
 }

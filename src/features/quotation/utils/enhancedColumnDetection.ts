@@ -46,9 +46,18 @@ const UNIT_DICT = new Set([
 const CURRENCY_SYMBOLS = /[$€¥£₹₩¢₨₽₡₪₦₨]/;
 const CURRENCY_CODES = /\b(USD|EUR|CNY|JPY|GBP|CAD|AUD|CHF|HKD|SGD|RMB)\b/i;
 
-function normUnit(u?: string) {
-  if (!u) return 'pc';
+// 单位解析选项：内销单据（中文单位：只/套/节等）不应被翻译成英文缩写，
+// 与 quickSmartParse.ts 中的同名选项含义一致，两处解析入口需要保持口径统一
+export interface UnitParseOptions {
+  preserveUnitText?: boolean;
+  defaultUnit?: string;
+}
+
+function normUnit(u?: string, opts?: UnitParseOptions) {
+  const fallback = opts?.defaultUnit ?? 'pc';
+  if (!u) return fallback;
   const cleaned = u.trim().replace(/^["']|["']$/g, '');
+  if (opts?.preserveUnitText) return cleaned || fallback;
   const k = cleaned.toLowerCase();
   return UNIT_MAP[k] || (k.endsWith('s') && UNIT_MAP[k.slice(0, -1)] ? UNIT_MAP[k.slice(0, -1)] : cleaned);
 }
@@ -682,7 +691,7 @@ export function validateRow(row: ParsedRow): ValidationWarning[] {
 /**
  * 投影器：将原始行数据按列映射转换为标准字段对象
  */
-export function projectByMapping(row: string[], mapping: ColumnField[]): Partial<ParsedRow> {
+export function projectByMapping(row: string[], mapping: ColumnField[], opts?: UnitParseOptions): Partial<ParsedRow> {
   const result: Partial<ParsedRow> = {};
 
   for (let i = 0; i < Math.min(row.length, mapping.length); i++) {
@@ -711,7 +720,7 @@ export function projectByMapping(row: string[], mapping: ColumnField[]): Partial
         result.quantity = parseQuantity(value);
         break;
       case 'unit':
-        result.unit = normUnit(value);
+        result.unit = normUnit(value, opts);
         break;
       case 'price':
         result.unitPrice = parsePrice(value);
@@ -768,11 +777,11 @@ export function sampleBasedColumnDetection(rows: string[][], maxSampleSize = 50)
 /**
  * 批量投影：优化版本，适用于大数据集
  */
-export function batchProjectByMapping(rows: string[][], mapping: ColumnField[]): ParsedRow[] {
+export function batchProjectByMapping(rows: string[][], mapping: ColumnField[], opts?: UnitParseOptions): ParsedRow[] {
   const results: ParsedRow[] = [];
 
   for (const row of rows) {
-    const projected = projectByMapping(row, mapping);
+    const projected = projectByMapping(row, mapping, opts);
 
     // 只有当有有效数据时才添加
     if (projected.partName || projected.quantity || projected.unitPrice) {
@@ -780,7 +789,7 @@ export function batchProjectByMapping(rows: string[][], mapping: ColumnField[]):
         partName: projected.partName || '',
         description: projected.description || '',
         quantity: projected.quantity || 0,
-        unit: projected.unit || 'pc',
+        unit: projected.unit || (opts?.defaultUnit ?? 'pc'),
         unitPrice: projected.unitPrice || 0,
         remarks: projected.remarks || ''
       });
