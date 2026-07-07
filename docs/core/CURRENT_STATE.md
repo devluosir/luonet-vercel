@@ -36,8 +36,8 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 | 路由 | 模块 | 当前状态 |
 |------|------|----------|
 | `/dashboard` | 首页 | 快速创建、最近文档、权限过滤入口 |
-| `/quotation` | 外贸报价 / 销售确认 | 本地历史为主，支持 PDF/Excel、复制、编辑 |
-| `/quotation?tab=domestic` | 内销报价单 | 复用报价单页面与 `quotation_history` 存储 key，默认 CNY，中文录入表单和中文合同式 PDF，历史记录使用独立 `type='domestic'`，避免混入外贸报价单 |
+| `/quotation` | 外贸报价合同（报价单 / 销售确认） | 已合并为同一入口，页面顶部不再有 tab 按钮，改在设置面板内用 "Type: Quotation / Sales Confirmation" 切换；本地历史为主，支持 PDF/Excel、复制、编辑 |
+| `/quotation?tab=domestic` | 内销报价合同 | 独立侧边栏入口，复用报价单页面与 `quotation_history` 存储 key，默认 CNY，中文录入表单和中文合同式 PDF，历史记录使用独立 `type='domestic'`，避免混入外贸报价单 |
 | `/inquiry` | 询报价登记 | 已接入 D1 `Document`，支持客户/联络人关联、批量关联、筛选 |
 | `/order` | 订单状态表 | 复用询报价记录，支持订单状态、金额权限和进行中筛选 |
 | `/purchase-registration` | 采购部登记 | 复用询报价 D1 JSON 记录，只开放采购部描述、采购询报价状态和执行情况字段 |

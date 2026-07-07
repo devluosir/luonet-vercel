@@ -86,7 +86,7 @@ utils/      模块内部工具
 |------|------|-----------------|
 | `/` | 登录页（NextAuth Credentials） | `userCache`、`userInfo` |
 | `/dashboard` | 首页，快捷创建单据，最近文档 | 各历史 key |
-| `/quotation` | 报价单 / 销售确认（Tab 切换） | `quotation_history`、`draftQuotation`、`qt.visibleCols` |
+| `/quotation` | 外贸报价合同（含报价单/销售确认，设置面板内切换 Type；内销报价合同经 `?tab=domestic` 独立入口） | `quotation_history`、`draftQuotation`、`draftDomesticQuotation`、`qt.visibleCols` |
 | `/packing` | 装箱单，可从销售确认导入 | `packing_history`、`pk.visibleCols` |
 | `/invoice` | 财务发票 | `invoice_history` |
 | `/purchase` | 采购订单，支持自动保存草稿 | `purchase_history`、`draftPurchase`、`purchase-autosave` |

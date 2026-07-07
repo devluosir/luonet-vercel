@@ -18,7 +18,7 @@ export interface PermissionModuleDef {
 
 /** 权限模块唯一注册表：新增或下线模块只改这一处 */
 export const PERMISSION_MODULES: PermissionModuleDef[] = [
-  { moduleId: 'quotation', label: '外贸报价单 / 销售确认', icon: '📋', category: 'document' },
+  { moduleId: 'quotation', label: '外贸报价合同', icon: '📋', category: 'document' },
   { moduleId: 'packing', label: '箱单发票', icon: '📦', category: 'document' },
   { moduleId: 'invoice', label: '财务发票', icon: '🧾', category: 'document' },
   { moduleId: 'purchase', label: '采购订单', icon: '🛒', category: 'document' },

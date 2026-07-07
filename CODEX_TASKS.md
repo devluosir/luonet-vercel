@@ -8,6 +8,89 @@
 
 ---
 
+## TASK-99：合并报价单/销售确认为同一入口，改用设置面板内 Type 切换
+
+**状态**：已完成（由 Claude 直接实施，2026-07-07）
+**日期**：2026-07-07
+
+### 实施结果
+
+按下方方案 1-5 全部执行：`AppSidebar.tsx`（label 改名、删除 confirmation 条目、`isItemActive` 收窄为按 `tab !== 'domestic'` 判断、清理未用的 `FileCheck` import 和 `canCreateConfirmation` 映射）、`MobileBottomTab.tsx`（同步 label 和 `isTabActive`）、`QuotationPage.tsx`（删除顶部三 tab 整块 + 未用的 `TabButton` import，`SettingsPanel` 新增 `onTabChange={handleTabChange}`）、`SettingsPanel.tsx`（新增 `onTabChange` prop 和最前面的 "Type: Quotation / Sales Confirmation" 切换分组，选中态样式与其余分组一致）、`permissionModules.ts`（quotation label 顺手改为"外贸报价合同"）。`useQuotationStore`/`quotation.service.ts`/PDF生成器/D1同步/历史导入导出/Dashboard 快速创建区均未改动，符合原方案的排除范围。
+
+验证：`npx tsc --noEmit` 通过（无输出）；`npx eslint` 对 5 个改动文件跑通过（无输出）；`npm run build` 在本次审核环境单命令 45 秒时限内两次都未能跑完整（卡在 Next.js 编译阶段，是环境限制不是代码报错，与 TASK-66/71 等历史记录一致），前面的 diff 走查 + tsc + eslint 已足够确认改动正确。`git diff --stat` 确认改动范围精确匹配方案（6 个文件，无意外改动）。
+
+### 背景
+
+Roger 反馈：`/quotation` 页面顶部三个 tab 按钮（Export Quotation / Domestic Quotation / Order Confirmation）体验冗余。要求把"报价单"和"销售确认"合并为同一入口，改成在设置面板里用 `Type: Quotation / Sales Confirmation` 切换；内销报价单保持独立入口不受影响。侧边栏"新单据"分组对应只保留两条：外贸报价合同、内销报价合同，去掉"外贸报价单""内销报价单""销售确认"这几个旧名字/旧入口。
+
+**关键约束（务必遵守，不要顺带重构）**：`useQuotationStore` 的 `QuotationTab` 类型（`'quotation' | 'confirmation' | 'domestic'`）、`setTab()` 内部切换快照逻辑、`quotation.service.ts`（`getHistoryTypeFromTab`/`saveOrUpdate`）、PDF 生成器分流、D1 同步/拉取、`historyImportExport.ts`、Excel 导出全部保持不变——这些都是按 `tab` 值工作的业务逻辑，本任务只改**入口 UI**（顶部 tab 按钮 → 设置面板内切换），不改数据结构、历史类型、PDF 输出。
+
+### 改动方案
+
+1. **`src/components/layout/AppSidebar.tsx`**
+   - `NAV_ITEMS`：`quotation` 的 `label` 改为 `外贸报价合同`；`quotation-domestic` 的 `label` 改为 `内销报价合同`；删除 `confirmation` 这一整条。
+   - `NAV_GROUPS` 里 `documents` 分组的 `navGroupItems([...])` 去掉 `'confirmation'`。
+   - `isItemActive()`：删除 `item.id === 'confirmation'` 分支；`quotation` 分支条件从 `tab !== 'confirmation' && tab !== 'domestic'` 改为 `tab !== 'domestic'`（现在 confirmation 归入同一个"外贸报价合同"入口，应保持高亮）。
+   - `PERMISSION_MODULE_MAP` 里 `canCreateConfirmation` 这一行可以顺手删除（`canCreateQuotation`/`canCreateConfirmation` 本来就映射同一个 moduleId `'quotation'`，删掉不影响权限行为，只是清理不再被引用的 key）。
+
+2. **`src/components/layout/MobileBottomTab.tsx`**
+   - `MOBILE_TABS` 里 `quotation` 的 `label` 改为 `外贸报价合同`。
+   - `isTabActive()`：`quotation` 分支条件从 `tab !== 'confirmation' && tab !== 'domestic'` 改为 `tab !== 'domestic'`（同上，confirmation 现在算同一入口）。
+
+3. **`src/features/quotation/app/QuotationPage.tsx`**
+   - 删除顶部三个 `TabButton`（Export Quotation / Domestic Quotation / Order Confirmation）整块 `<div className="flex justify-center ...">`。因此 `import { TabButton } from '@/components/quotation/TabButton'` 这行也要删除（避免 unused import 报错），`TabButton.tsx` 文件本身不用删。
+   - `handleTabChange` 函数保留，只是触发点从顶部按钮改为设置面板内的 Type 切换（见第4点）。
+   - 非 domestic 分支渲染 `<SettingsPanel ... />` 时，多传一个 `onTabChange={handleTabChange}` prop。
+   - `documentLabel`/`breadcrumbs`（`isDomesticQuotation ? '内销报价单' : activeTab === 'confirmation' ? '销售确认' : '外贸报价单'`）保持不变——这是当前正在编辑的具体单据类型展示，不等同于侧边栏入口名字，不用跟着改。
+
+4. **`src/components/quotation/SettingsPanel.tsx`**
+   - 新增 prop：`onTabChange: (tab: 'quotation' | 'confirmation') => void`。
+   - 在现有 "From:" 分组**之前**新增一组 "Type:" 切换按钮，两个选项 `Quotation` / `Sales Confirmation`，点击分别调用 `onTabChange('quotation')` / `onTabChange('confirmation')`；选中态样式复用现有分组按钮的视觉风格（`bg-[#007AFF] text-white shadow-sm` vs 描边样式），布局风格与 `From/Currency/Header` 那几组一致（含分隔线）。
+   - `activeTab === 'confirmation'` 时才显示的 Deposit / Stamp 分组逻辑不变。
+
+5. **`src/constants/permissionModules.ts`**（可选，非必须）
+   - `quotation` 模块的 `label` 目前是 `外贸报价单 / 销售确认`，可以顺手改成 `外贸报价合同`，与侧边栏新文案保持一致。这是纯文案，不影响权限逻辑，Codex 可自行判断是否顺带做。
+
+### 明确不改的范围（防止过度重构）
+
+- `useQuotationStore.ts`：`QuotationTab` 类型、`setTab()`、`preDomesticSnapshot` 逻辑不动。
+- `quotation.service.ts`、`generate.service.ts`、`excel.service.ts`、D1 同步/拉取、`historyImportExport.ts`：都按 `tab` 值工作，本任务不涉及。
+- `src/features/history/**`、`src/app/history/**`：历史记录列表三种 type 筛选/编辑/预览不变。
+- `src/constants/dashboardModules.ts` 的 `QUICK_CREATE_MODULES`（Dashboard 快速创建区当前仍是三个独立入口：新外贸报价单/新内销报价单/销售确认）：本次不改，因为 Roger 这次反馈范围明确是"左侧新单据"和"页面顶部 tab"，没提 Dashboard 快速创建区。如果实现时发现三个快速创建按钮和新架构明显不协调，可以在完成说明里提出来，但不要自作主张改掉。
+- `DOCUMENT_TYPES`（`dashboardModules.ts`）：quotation/confirmation 两个类型标识必须保留，历史记录和 Dashboard 统计仍要分别识别，不能合并。
+
+### 涉及文件
+
+| 文件 | 说明 |
+|---|---|
+| `src/components/layout/AppSidebar.tsx` | 新单据分组两条目、label、isItemActive、权限映射清理 |
+| `src/components/layout/MobileBottomTab.tsx` | label、isTabActive |
+| `src/features/quotation/app/QuotationPage.tsx` | 删除顶部三tab，SettingsPanel 新增 onTabChange |
+| `src/components/quotation/SettingsPanel.tsx` | 新增 Type 切换分组和 onTabChange prop |
+| `src/constants/permissionModules.ts` | quotation label 文案（可选） |
+| `AGENTS.md` | 路由表 `/quotation` 一行描述更新为"外贸报价合同（含报价单/销售确认，设置面板内切换类型）"（实现完成后更新） |
+| `docs/core/CURRENT_STATE.md` | 如有对应"顶部三tab"描述需同步更新（实现完成后更新） |
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npx eslint src/components/layout/AppSidebar.tsx src/components/layout/MobileBottomTab.tsx src/features/quotation/app/QuotationPage.tsx src/components/quotation/SettingsPanel.tsx
+npm run build
+```
+
+### 验收标准
+
+- 左侧"新单据"分组只剩两条："外贸报价合同"（原 quotation）、"内销报价合同"（原 quotation-domestic），"销售确认"作为独立导航条目消失。
+- 进入 `/quotation`，页面顶部不再有 Export Quotation / Domestic Quotation / Order Confirmation 三个 tab 按钮。
+- 打开设置面板（点击右上角 Settings 图标）能看到 "Type: Quotation / Sales Confirmation" 切换按钮；点击 Sales Confirmation 后行为与原来点击 "Order Confirmation" tab 完全一致：`mode='export'`、`showStamp` 自动置 true、notes 默认值随 tab 切换、保存/生成 PDF 走 confirmation 分支（合同号自动补全等）不变。
+- 进入 `/quotation?tab=domestic`（内销报价合同）页面不显示任何顶部 tab 按钮，原有"单据类型：报价单/产品购销合同"切换、供方需方表单、PDF 生成不受影响。
+- 直接通过 URL 访问 `/quotation?tab=confirmation`（例如 Dashboard 快速创建区"销售确认"按钮）依然能正确落在销售确认状态，且此时侧边栏"外贸报价合同"和移动端底部"外贸报价合同"图标应显示为高亮/激活态（此前 confirmation 状态下是不激活的，这是本次预期的行为变化）。
+- `/history` 页面三种历史类型（quotation/confirmation/domestic）筛选、编辑、复制、PDF 预览均正常，不受影响。
+- `npx tsc --noEmit`、指定文件 `eslint`、`npm run build` 全部通过。
+
+---
+
 ## TASK-98：修复内销报价单污染外贸历史和 tab 状态回归
 
 **状态**：已完成  

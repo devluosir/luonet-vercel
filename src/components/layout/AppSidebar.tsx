@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Clock,
   ClipboardCheck,
-  FileCheck,
   FileText,
   LayoutDashboard,
   Mail,
@@ -66,9 +65,8 @@ interface AppSidebarProps {
 /** 全量平铺列表（供外部引用） */
 export const NAV_ITEMS: SidebarItem[] = [
   { id: 'dashboard',    label: '首页',      path: '/dashboard',               icon: LayoutDashboard },
-  { id: 'quotation',    label: '外贸报价单', path: '/quotation',              icon: FileText,  permissionKey: 'canCreateQuotation' },
-  { id: 'quotation-domestic', label: '内销报价单', path: '/quotation?tab=domestic', icon: FileText, permissionKey: 'canCreateQuotation' },
-  { id: 'confirmation', label: '销售确认',  path: '/quotation?tab=confirmation', icon: FileCheck, permissionKey: 'canCreateConfirmation' },
+  { id: 'quotation',    label: '外贸报价合同', path: '/quotation',              icon: FileText,  permissionKey: 'canCreateQuotation' },
+  { id: 'quotation-domestic', label: '内销报价合同', path: '/quotation?tab=domestic', icon: FileText, permissionKey: 'canCreateQuotation' },
   { id: 'packing',      label: '箱单发票',  path: '/packing',                 icon: Package,   permissionKey: 'canCreatePacking' },
   { id: 'invoice',      label: '财务发票',  path: '/invoice',                 icon: Receipt,   permissionKey: 'canCreateInvoice' },
   { id: 'purchase',     label: '采购订单',  path: '/purchase',                icon: ShoppingCart, permissionKey: 'canCreatePurchase' },
@@ -104,7 +102,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: 'documents',
     label: '新单据',
-    items: navGroupItems(['quotation', 'quotation-domestic', 'confirmation', 'packing', 'invoice', 'purchase']),
+    items: navGroupItems(['quotation', 'quotation-domestic', 'packing', 'invoice', 'purchase']),
   },
   {
     id: 'registration',
@@ -126,7 +124,6 @@ const NAV_GROUPS: NavGroup[] = [
 /** 权限 key → 模块 ID 映射 */
 const PERMISSION_MODULE_MAP: Record<string, string> = {
   canCreateQuotation:   'quotation',
-  canCreateConfirmation:'quotation',
   canCreatePacking:     'packing',
   canCreateInvoice:     'invoice',
   canCreatePurchase:    'purchase',
@@ -145,9 +142,8 @@ const PERMISSION_MODULE_MAP: Record<string, string> = {
 // ── 辅助函数 ──────────────────────────────────────────────────────────────────
 
 function isItemActive(item: SidebarItem, pathname: string, tab: string | null) {
-  if (item.id === 'confirmation') return pathname.startsWith('/quotation') && tab === 'confirmation';
   if (item.id === 'quotation-domestic') return pathname.startsWith('/quotation') && tab === 'domestic';
-  if (item.id === 'quotation')    return pathname.startsWith('/quotation') && tab !== 'confirmation' && tab !== 'domestic';
+  if (item.id === 'quotation')    return pathname.startsWith('/quotation') && tab !== 'domestic';
   const itemPath = item.path.split('?')[0];
   return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
 }

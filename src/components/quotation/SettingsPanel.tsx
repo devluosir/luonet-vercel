@@ -7,9 +7,10 @@ interface SettingsPanelProps {
   data: QuotationData;
   onChange: (data: QuotationData) => void;
   activeTab: 'quotation' | 'confirmation';
+  onTabChange: (tab: 'quotation' | 'confirmation') => void;
 }
 
-export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps) {
+export function SettingsPanel({ data, onChange, activeTab, onTabChange }: SettingsPanelProps) {
   const [customUnit, setCustomUnit] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [fromOptions, setFromOptions] = useState<string[]>(['Roger', 'Sharon', 'Emily', 'Summer', 'Nina']);
@@ -108,7 +109,34 @@ export function SettingsPanel({ data, onChange, activeTab }: SettingsPanelProps)
       
       {/* 响应式布局容器 */}
       <div className="flex flex-wrap items-center gap-3 text-xs">
-        
+
+        {/* 第零组：单据类型（合并原顶部 Export Quotation / Order Confirmation 两个tab） */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">Type:</span>
+          <div className="flex gap-1">
+            {[
+              { value: 'quotation', label: 'Quotation' },
+              { value: 'confirmation', label: 'Sales Confirmation' },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onTabChange(option.value as 'quotation' | 'confirmation')}
+                className={`px-2 py-1 rounded text-[11px] font-medium transition-all ${
+                  activeTab === option.value
+                    ? 'bg-[#007AFF] text-white shadow-sm'
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-[#007AFF]/40'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 分隔线 */}
+        <div className="hidden md:block h-4 w-px bg-blue-300 dark:bg-blue-700"></div>
+
         {/* 第一组：来源 */}
         <div className="flex items-center gap-1.5">
           <span className="text-blue-700 dark:text-blue-300 font-medium whitespace-nowrap">From:</span>

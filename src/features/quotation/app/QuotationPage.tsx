@@ -57,7 +57,6 @@ const DynamicPaymentTermsSection = dynamic(() => import('@/components/quotation/
 });
 
 // 导入现有组件
-import { TabButton } from '@/components/quotation/TabButton';
 import { CustomerInfoCompact } from '@/components/quotation/CustomerInfoCompact';
 import { DomesticCustomerInfo } from '@/components/quotation/DomesticCustomerInfo';
 import { ItemsTable } from '@/components/quotation/ItemsTable';
@@ -608,28 +607,6 @@ export default function QuotationPage() {
       bottomActions={bottomActions}
     >
       <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-3 sm:py-6">
-          {/* 标签切换 */}
-          <div className="flex justify-center gap-1.5 sm:gap-3 mt-3 sm:mt-4 mb-4 sm:mb-6">
-            <TabButton
-              active={activeTab === 'quotation'}
-              onClick={() => handleTabChange('quotation')}
-            >
-              Export Quotation
-            </TabButton>
-            <TabButton
-              active={activeTab === 'domestic'}
-              onClick={() => handleTabChange('domestic')}
-            >
-              Domestic Quotation
-            </TabButton>
-            <TabButton
-              active={activeTab === 'confirmation'}
-              onClick={() => handleTabChange('confirmation')}
-            >
-              Order Confirmation
-            </TabButton>
-          </div>
-
           {/* 主卡片容器 */}
           <PageCard>
             <form onSubmit={handleSubmit}>
@@ -771,6 +748,7 @@ export default function QuotationPage() {
                     data={data}
                     onChange={handleSettingsChange}
                     activeTab={exportTab}
+                    onTabChange={handleTabChange}
                   />
                 )}
               </CollapsibleSection>
