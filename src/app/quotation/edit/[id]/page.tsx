@@ -22,7 +22,7 @@ export default function QuotationEditPage({ params }: { params: { id: string } }
 
       // 检查URL中的tab参数
       const urlParams = new URLSearchParams(window.location.search);
-      const tabFromUrl = urlParams.get('tab') as 'quotation' | 'confirmation' | null;
+      const tabFromUrl = urlParams.get('tab') as 'quotation' | 'confirmation' | 'domestic' | null;
       
       // 🆕 恢复保存时的列显示设置
       if (quotation.data.savedVisibleCols && typeof window !== 'undefined') {

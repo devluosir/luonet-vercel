@@ -2,7 +2,7 @@ import type { QuotationData } from '@/types/quotation';
 
 // 构建预览数据
 export function buildPreviewPayload(
-  tab: 'quotation' | 'confirmation', 
+  tab: 'quotation' | 'confirmation' | 'domestic',
   data: QuotationData, 
   editId?: string, 
   totalAmount?: number
@@ -12,8 +12,8 @@ export function buildPreviewPayload(
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     customerName: data.to || 'Unknown',
-    quotationNo: tab === 'confirmation' 
-      ? (data.contractNo || data.quotationNo || 'N/A') 
+    quotationNo: tab === 'confirmation'
+      ? (data.contractNo || data.quotationNo || 'N/A')
       : (data.quotationNo || 'N/A'),
     totalAmount: totalAmount ?? 0,
     currency: data.currency,

@@ -50,6 +50,8 @@ export class HistoryService {
         });
       case 'confirmation':
         return getQuotationHistory().filter(item => item.type === 'confirmation');
+      case 'domestic':
+        return getQuotationHistory().filter(item => item.type === 'domestic');
       case 'invoice':
         return getInvoiceHistory();
       case 'purchase':
@@ -68,6 +70,7 @@ export class HistoryService {
     switch (type) {
       case 'quotation':
       case 'confirmation':
+      case 'domestic':
         deleteQuotationHistory(id);
         break;
       case 'invoice':
@@ -96,6 +99,7 @@ export class HistoryService {
     return {
       quotation: this.getHistory('quotation'),
       confirmation: this.getHistory('confirmation'),
+      domestic: this.getHistory('domestic'),
       invoice: this.getHistory('invoice'),
       purchase: this.getHistory('purchase'),
       packing: this.getHistory('packing'),

@@ -26,7 +26,7 @@ interface PDFPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   item: PreviewHistoryItem | null;
-  itemType: 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
+  itemType: 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'purchase' | 'packing';
 }
 
 interface DeviceInfo {
@@ -131,7 +131,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         pdfUrl = URL.createObjectURL(item.pdfBlob);
       } else {
         // 最后才根据记录类型生成对应的PDF
-        if (itemType === 'quotation' || itemType === 'confirmation') {
+        if (itemType === 'quotation' || itemType === 'confirmation' || itemType === 'domestic') {
           // 使用新的generatePdf服务来处理报价单和订单确认
           const { generatePdf } = await import('@/features/quotation/services/generate.service');
 
@@ -205,7 +205,7 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         pdfBlob = item.pdfBlob;
       } else {
         // 根据记录类型生成对应的PDF
-        if (itemType === 'quotation' || itemType === 'confirmation') {
+        if (itemType === 'quotation' || itemType === 'confirmation' || itemType === 'domestic') {
           // 使用新的generatePdf服务来处理报价单和订单确认
           const { generatePdf } = await import('@/features/quotation/services/generate.service');
 
@@ -256,6 +256,8 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         fileName = `QTN_${item.quotationNo || 'export'}.pdf`;
       } else if (itemType === 'confirmation') {
         fileName = `SC_${item.quotationNo || 'export'}.pdf`;
+      } else if (itemType === 'domestic') {
+        fileName = `NSQ_${item.quotationNo || 'export'}.pdf`;
       } else if (itemType === 'invoice') {
         fileName = `INV_${item.invoiceNo || 'export'}.pdf`;
       } else if (itemType === 'purchase') {
@@ -291,6 +293,8 @@ export default function PDFPreviewModal({ isOpen, onClose, item, itemType }: PDF
         return '报价单预览';
       case 'confirmation':
         return '订单确认预览';
+      case 'domestic':
+        return '内销报价单预览';
       case 'invoice':
         return '发票预览';
       case 'purchase':

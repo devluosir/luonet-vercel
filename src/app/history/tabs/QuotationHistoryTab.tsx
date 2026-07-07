@@ -17,7 +17,7 @@ interface QuotationHistory {
   id: string;
   createdAt: string;
   updatedAt: string;
-  type: 'quotation' | 'confirmation';
+  type: 'quotation' | 'confirmation' | 'domestic';
   customerName: string;
   quotationNo: string;
   totalAmount: number;
@@ -32,7 +32,7 @@ interface SortConfig {
 
 interface Filters {
   search: string;
-  type: 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing' | 'all';
+  type: 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'purchase' | 'packing' | 'all';
   dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
 }
 
@@ -49,6 +49,9 @@ interface Props {
   onSelectAll: (selected: boolean) => void;
   mainColor?: string;
   refreshKey?: number;
+  historyType?: 'quotation' | 'domestic';
+  emptyText?: string;
+  numberLabel?: string;
 }
 
 export default function QuotationHistoryTab({ 
@@ -63,7 +66,10 @@ export default function QuotationHistoryTab({
   onSelect,
   onSelectAll,
   mainColor,
-  refreshKey
+  refreshKey,
+  historyType = 'quotation',
+  emptyText = '暂无报价单历史记录',
+  numberLabel = '询价号',
 }: Props) {
   const [history, setHistory] = useState<QuotationHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +78,7 @@ export default function QuotationHistoryTab({
   const loadHistory = useCallback(() => {
     setLoading(true);
     try {
-      let results = getQuotationHistory().filter(item => item.type === 'quotation');
+      let results = getQuotationHistory().filter(item => item.type === historyType);
       // 搜索过滤
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
@@ -119,7 +125,7 @@ export default function QuotationHistoryTab({
     } finally {
       setLoading(false);
     }
-  }, [filters, sortConfig]);
+  }, [filters, sortConfig, historyType]);
 
   useEffect(() => {
     loadHistory();
@@ -139,7 +145,7 @@ export default function QuotationHistoryTab({
   }
 
   if (history.length === 0) {
-    return <div className="py-8 text-center text-gray-400">暂无报价单历史记录</div>;
+    return <div className="py-8 text-center text-gray-400">{emptyText}</div>;
   }
 
   return (
@@ -177,7 +183,7 @@ export default function QuotationHistoryTab({
             onClick={() => onSort('quotationNo')}
             className="w-24 sm:w-40 flex-shrink-0 font-semibold pl-2 text-left hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center group whitespace-nowrap text-gray-900 dark:text-white"
           >
-            询价号
+            {numberLabel}
             <span className="ml-1 flex items-center">{renderSortIcon('quotationNo')}</span>
           </button>
           <button

@@ -7,7 +7,7 @@
 
 ## 概述
 
-内销报价单是报价模块下的 `domestic` Tab，用于生成中文“产品购销合同式”报价文件。它复用 `/quotation` 页面、`quotation_history` 本地历史和 `quotation` 权限，不新增独立路由模块或 Document 类型。
+内销报价单是报价模块下的 `domestic` Tab，用于生成中文“产品购销合同式”报价文件。它复用 `/quotation` 页面、`quotation_history` 本地历史 key 和 `quotation` 权限，但历史记录与 D1 同步都使用独立 `type='domestic'`，避免混入外贸报价单。
 
 ---
 
@@ -94,7 +94,8 @@ PDF 结构：
 
 - 权限：复用 `quotation` 模块权限。
 - 路由：`/quotation?tab=domestic`。
-- 历史：仍写入 `quotation_history`，类型保持 `quotation`，通过 `data.mode='domestic'` 区分。
+- 历史：仍写入 `quotation_history`，但类型为 `domestic`；外贸报价单继续使用 `quotation`，销售确认继续使用 `confirmation`。
+- D1 同步：使用 `Document.type='domestic'`，需要执行 `migrations/008_add_domestic_document_type.sql` 后远端 CHECK 约束才会接受该类型。
 - 编号：当前沿用报价单编号逻辑，未新增独立内销编号规则。
 
 ---

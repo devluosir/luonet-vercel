@@ -10,7 +10,7 @@
  * 业务单据仍以 localStorage 为主存储，D1 是云端权威副本。
  */
 
-export type D1DocType = 'quotation' | 'confirmation' | 'invoice' | 'packing' | 'purchase';
+export type D1DocType = 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'packing' | 'purchase';
 
 export interface D1DocumentPayload {
   id: string;

@@ -12,22 +12,22 @@ const formatNumber = (value: number): string => {
 /**
  * 格式化Excel文件名
  */
-const formatExcelFileName = (documentNo: string, type: 'quotation' | 'confirmation'): string => {
-  const prefix = type === 'confirmation' ? 'SC' : 'QTN';
+const formatExcelFileName = (documentNo: string, type: 'quotation' | 'confirmation' | 'domestic'): string => {
+  const prefix = type === 'confirmation' ? 'SC' : type === 'domestic' ? 'NSQ' : 'QTN';
   return `${prefix}_${documentNo}.csv`;
 };
 
 /**
  * 导出报价单为Excel
  */
-export const exportQuotationToExcel = (data: QuotationData, type: 'quotation' | 'confirmation'): void => {
+export const exportQuotationToExcel = (data: QuotationData, type: 'quotation' | 'confirmation' | 'domestic'): void => {
   try {
     // 准备Excel数据
     const excelData = [];
 
     // 添加文档基本信息
     const documentNo = type === 'confirmation' ? (data.contractNo || data.quotationNo) : data.quotationNo;
-    const documentType = type === 'confirmation' ? 'SALES CONFIRMATION' : 'QUOTATION';
+    const documentType = type === 'confirmation' ? 'SALES CONFIRMATION' : type === 'domestic' ? '内销报价单' : 'QUOTATION';
 
     // 添加标题 - 与PDF保持一致，居中显示
     excelData.push(['', '', '', documentType, '', '', '', '']);

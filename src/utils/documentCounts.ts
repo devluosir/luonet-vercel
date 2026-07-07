@@ -6,6 +6,9 @@ type DocumentRecord = {
   id?: string;
   createdAt?: string;
   quotationNo?: string;
+  data?: {
+    mode?: string;
+  };
   [key: string]: unknown;
 };
 
@@ -15,6 +18,10 @@ const isDocumentRecord = (value: unknown): value is DocumentRecord => (
 
 const getHistoryRecords = (key: string): DocumentRecord[] => (
   getLocalStorageJSON<unknown[]>(key, []).filter(isDocumentRecord)
+);
+
+const isDomesticQuotationRecord = (item: DocumentRecord): boolean => (
+  item.type === 'domestic' || item.data?.mode === 'domestic'
 );
 
 // 统一的文档计数工具函数
@@ -50,6 +57,7 @@ export const getQuotationCount = (): number => {
     return quotationHistory.filter((item) => {
       // 只保留type为'quotation'的记录
       if (!('type' in item) || item.type !== 'quotation') return false;
+      if (isDomesticQuotationRecord(item)) return false;
 
       // 检查这个报价单是否已经升级为confirmation
       const isUpgraded = isQuotationUpgraded(item, confirmationRecords);

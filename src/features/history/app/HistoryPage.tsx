@@ -35,6 +35,11 @@ const ConfirmationHistoryTab = dynamic(() => import('@/app/history/tabs/Confirma
   ssr: false
 });
 
+const DomesticQuotationHistoryTab = dynamic(() => import('@/app/history/tabs/QuotationHistoryTab'), {
+  loading: () => <div className="py-8 text-center text-gray-400">正在加载内销报价单历史...</div>,
+  ssr: false
+});
+
 const InvoiceHistoryTab = dynamic(() => import('@/app/history/tabs/InvoiceHistoryTab'), {
   loading: () => <div className="py-8 text-center text-gray-400">正在加载发票历史...</div>,
   ssr: false
@@ -113,6 +118,7 @@ export function HistoryPage() {
   const tabColorMap = {
     quotation: 'blue',      // 报价单 - 蓝色
     confirmation: 'green',   // 合同确认 - 绿色
+    domestic: 'cyan',        // 内销报价单 - 青色
     packing: 'teal',        // 装箱单 - 青色
     invoice: 'purple',      // 发票 - 紫色
     purchase: 'orange'      // 采购单 - 橙色
@@ -123,7 +129,7 @@ export function HistoryPage() {
   useEffect(() => {
       if (mounted && searchParams) {
       const tabParam = searchParams.get('tab');
-      if (tabParam && ['quotation', 'confirmation', 'invoice', 'purchase', 'packing'].includes(tabParam)) {
+      if (tabParam && ['quotation', 'confirmation', 'domestic', 'invoice', 'purchase', 'packing'].includes(tabParam)) {
         setActiveTab(tabParam as HistoryType);
       }
     }
@@ -241,6 +247,16 @@ export function HistoryPage() {
             {...commonProps}
             mainColor={activeColor}
             onConvert={handleConvert}
+          />
+        );
+      case 'domestic':
+        return (
+          <DomesticQuotationHistoryTab
+            {...commonProps}
+            mainColor={activeColor}
+            historyType="domestic"
+            emptyText="暂无内销报价单历史记录"
+            numberLabel="报价单编号"
           />
         );
       case 'packing':

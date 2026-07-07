@@ -37,6 +37,9 @@ export function useHistoryActions() {
       case 'confirmation':
         path = `/quotation/edit/${id}?tab=confirmation`;
         break;
+      case 'domestic':
+        path = `/quotation/edit/${id}?tab=domestic`;
+        break;
       case 'invoice':
         path = `/invoice/edit/${id}`;
         break;
@@ -64,6 +67,9 @@ export function useHistoryActions() {
         break;
       case 'confirmation':
         path = `/quotation/copy/${id}?tab=confirmation`;
+        break;
+      case 'domestic':
+        path = `/quotation/copy/${id}?tab=domestic`;
         break;
       case 'invoice':
         path = `/invoice/copy/${id}`;

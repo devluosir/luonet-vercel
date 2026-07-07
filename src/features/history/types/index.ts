@@ -8,7 +8,7 @@ export interface QuotationHistory {
   id: string;
   createdAt: string;
   updatedAt: string;
-  type: 'quotation' | 'confirmation';
+  type: 'quotation' | 'confirmation' | 'domestic';
   customerName: string;
   quotationNo: string;
   totalAmount: number;
@@ -52,7 +52,7 @@ export interface PackingHistory {
 }
 
 // 通用类型
-export type HistoryType = 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
+export type HistoryType = 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'purchase' | 'packing';
 export type HistoryItem = QuotationHistory | PurchaseHistory | InvoiceHistory | PackingHistory;
 
 // 排序配置

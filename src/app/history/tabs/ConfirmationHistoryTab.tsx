@@ -18,7 +18,7 @@ interface ConfirmationHistory {
   id: string;
   createdAt: string;
   updatedAt: string;
-  type: 'quotation' | 'confirmation';
+  type: 'quotation' | 'confirmation' | 'domestic';
   customerName: string;
   quotationNo: string;
   totalAmount: number;
@@ -33,7 +33,7 @@ interface SortConfig {
 
 interface Filters {
   search: string;
-  type: 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing' | 'all';
+  type: 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'purchase' | 'packing' | 'all';
   dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
 }
 

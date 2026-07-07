@@ -4,7 +4,7 @@ export interface QuotationHistory {
   id: string;
   createdAt: string;
   updatedAt: string;
-  type: 'quotation' | 'confirmation';
+  type: 'quotation' | 'confirmation' | 'domestic';
   customerName: string;
   quotationNo: string;
   totalAmount: number;
@@ -18,5 +18,5 @@ export interface QuotationHistoryFilters {
     start: string;
     end: string;
   };
-  type?: 'quotation' | 'confirmation' | 'all';
+  type?: 'quotation' | 'confirmation' | 'domestic' | 'all';
 } 

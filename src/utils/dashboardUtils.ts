@@ -23,6 +23,17 @@ interface QuotationUpgradeRecord {
   data?: unknown;
 }
 
+const isDomesticQuotationRecord = (doc: DocumentWithType): boolean => {
+  const data = doc.data;
+  const rawType = (doc as { type?: string }).type;
+  return rawType === 'domestic' || (
+    typeof data === 'object' &&
+    data !== null &&
+    !Array.isArray(data) &&
+    (data as { mode?: unknown }).mode === 'domestic'
+  );
+};
+
 // 权限事件工具函数
 export const emitPermissionChanged = (message = '权限已更新') => {
   if (typeof window !== 'undefined') {
@@ -60,6 +71,7 @@ export const getDocumentsByType = (type: DocumentType): DocumentWithType[] => {
       .filter((doc) => {
         // 只保留type为'quotation'的记录
         if (doc.type !== 'quotation') return false;
+        if (isDomesticQuotationRecord(doc)) return false;
 
         // 检查这个报价单是否已经升级为confirmation
         const isUpgraded = isQuotationUpgraded(doc, confirmationRecords);

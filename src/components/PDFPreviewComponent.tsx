@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react';
 import { X, FileText, Download, ExternalLink } from 'lucide-react';
 import { getDeviceInfo, openPDFInNewTab, handlePDFPreview } from '@/utils/pdfHelpers';
 import { generateQuotationPDF } from '@/utils/quotationPdfGenerator';
+import { generateDomesticQuotationPDF } from '@/utils/domesticQuotationPdfGenerator';
 import { generateOrderConfirmationPDF } from '@/utils/orderConfirmationPdfGenerator';
 import { generateInvoicePDF } from '@/utils/invoicePdfGenerator';
 import { generatePurchaseOrderPDF } from '@/utils/purchasePdfGenerator';
 import { generatePackingListPDF } from '@/utils/packingPdfGenerator';
 import type { QuotationData } from '@/types/quotation';
+import type { NoteConfig } from '@/features/quotation/types/notes';
 import type { PDFGeneratorData } from '@/types/pdf';
 import type { PurchaseOrderData } from '@/types/purchase';
 import type { PackingData } from '@/features/packing/types';
@@ -19,7 +21,7 @@ interface PDFPreviewComponentProps {
   onClose: () => void;
   title?: string;
   data?: unknown;
-  itemType?: 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
+  itemType?: 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'purchase' | 'packing';
   showDownloadButton?: boolean;
   showOpenInNewTab?: boolean;
 }
@@ -103,6 +105,17 @@ export default function PDFPreviewComponent({
         const link = document.createElement('a');
         link.href = url;
         link.download = `SC_${getStringField(data, 'quotationNo') || 'export'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else if (itemType === 'domestic') {
+        const quotationData = data as QuotationData & { notesConfig?: NoteConfig[] };
+        const pdfBlob = await generateDomesticQuotationPDF(quotationData, quotationData.notesConfig || [], false);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `NSQ_${getStringField(data, 'quotationNo') || 'export'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

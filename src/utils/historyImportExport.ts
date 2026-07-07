@@ -16,7 +16,7 @@ import {
   importPackingHistory
 } from './packingHistory';
 
-export type HistoryType = 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
+export type HistoryType = 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'purchase' | 'packing';
 
 export interface HistoryItem {
   id: string;
@@ -234,7 +234,7 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
         console.log(`✅ 添加documentType: ${item.documentType}`);
       } else if (item.type) {
         // 历史数据使用 type 字段
-        if (item.type === 'quotation' || item.type === 'confirmation') {
+        if (item.type === 'quotation' || item.type === 'confirmation' || item.type === 'domestic') {
           dataTypes.add(item.type);
           console.log(`✅ 添加type: ${item.type}`);
         } else if (item.type === 'purchase') {
@@ -263,7 +263,7 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
           // 有发票号但没有报价单号或订单号，可能是发票
           dataTypes.add('invoice');
           console.log(`🔍 通过invoiceNo智能识别为发票`);
-        } else if (item.id && ['quotation', 'confirmation', 'purchase', 'invoice', 'packing'].includes(item.id)) {
+        } else if (item.id && ['quotation', 'confirmation', 'domestic', 'purchase', 'invoice', 'packing'].includes(item.id)) {
           // 通过ID字段识别数据类型（兼容旧版导出格式）
           dataTypes.add(item.id);
           console.log(`🔍 通过ID字段智能识别为${item.id}`);
@@ -394,6 +394,44 @@ export const smartImport = (content: string, activeTab: HistoryType): ImportResu
 
         if (activeTab !== 'confirmation') {
           otherTabs.push('confirmation');
+        }
+      }
+    }
+
+    // 内销报价单导入
+    if (dataTypes.has('domestic')) {
+      const domesticItem = importData.find((item: ImportRecord) => item.id === 'domestic');
+      let domesticData: ImportRecord[] = [];
+
+      if (domesticItem) {
+        if (Array.isArray(domesticItem.data)) {
+          domesticData = domesticItem.data;
+        } else if (Array.isArray(domesticItem.items)) {
+          domesticData = domesticItem.items;
+        } else if (Array.isArray(domesticItem.records)) {
+          domesticData = domesticItem.records;
+        } else {
+          const numericKeys = Object.keys(domesticItem).filter(key =>
+            key !== 'id' && !isNaN(Number(key))
+          );
+          domesticData = numericKeys.length > 0
+            ? recordsFromNumericKeys(domesticItem, numericKeys)
+            : [domesticItem];
+        }
+      } else {
+        domesticData = importData.filter((item: ImportRecord) =>
+          item.documentType === 'domestic' || item.type === 'domestic'
+        );
+      }
+
+      if (domesticData.length > 0) {
+        const { processedData } = processDocumentData(domesticData, 'domestic');
+        importQuotationHistory(JSON.stringify(processedData));
+        totalImported += processedData.length;
+        details.push(`内销报价单: ${processedData.length} 条`);
+
+        if (activeTab !== 'domestic') {
+          otherTabs.push('domestic');
         }
       }
     }
@@ -589,12 +627,16 @@ export const smartExport = (activeTab: HistoryType, selectedIds?: string[]): Exp
     // 根据当前标签获取数据
     switch (activeTab) {
       case 'quotation':
-        allData = getQuotationHistory() as HistoryItem[];
+        allData = getQuotationHistory().filter(item => item.type === 'quotation') as HistoryItem[];
         exportStats = `报价单: ${allData.length} 条`;
         break;
       case 'confirmation':
         allData = getQuotationHistory().filter(item => item.type === 'confirmation') as HistoryItem[];
         exportStats = `订单确认: ${allData.length} 条`;
+        break;
+      case 'domestic':
+        allData = getQuotationHistory().filter(item => item.type === 'domestic') as HistoryItem[];
+        exportStats = `内销报价单: ${allData.length} 条`;
         break;
       case 'purchase':
         allData = getPurchaseHistory() as HistoryItem[];
@@ -651,6 +693,7 @@ export const fullExport = (): ExportResult => {
     const quotationHistory = getQuotationHistory();
     const quotationData = quotationHistory.filter(item => item.type === 'quotation');
     const confirmationData = quotationHistory.filter(item => item.type === 'confirmation');
+    const domesticData = quotationHistory.filter(item => item.type === 'domestic');
     const purchaseData = getPurchaseHistory() as HistoryItem[];
     const invoiceData = getInvoiceHistory() as HistoryItem[];
     const packingData = getPackingHistory() as HistoryItem[];
@@ -658,6 +701,7 @@ export const fullExport = (): ExportResult => {
     console.log(`📊 全量导出数据统计:`);
     console.log(`  - 报价单: ${quotationData.length} 条`);
     console.log(`  - 订单确认: ${confirmationData.length} 条`);
+    console.log(`  - 内销报价单: ${domesticData.length} 条`);
     console.log(`  - 采购单: ${purchaseData.length} 条`);
     console.log(`  - 发票: ${invoiceData.length} 条`);
     console.log(`  - 装箱单: ${packingData.length} 条`);
@@ -683,6 +727,7 @@ export const fullExport = (): ExportResult => {
     const allData: HistoryItem[] = [
       ...quotationData,
       ...confirmationData,
+      ...domesticData,
       ...purchaseDataWithType,
       ...invoiceDataWithType,
       ...packingDataWithType
@@ -690,11 +735,12 @@ export const fullExport = (): ExportResult => {
 
     const quotationCount = quotationData.length;
     const confirmationCount = confirmationData.length;
+    const domesticCount = domesticData.length;
     const purchaseCount = purchaseData.length;
     const invoiceCount = invoiceData.length;
     const packingCount = packingData.length;
 
-    const exportStats = `全量导出: 报价单 ${quotationCount} 条, 订单确认 ${confirmationCount} 条, 采购单 ${purchaseCount} 条, 发票 ${invoiceCount} 条, 装箱单 ${packingCount} 条, 总计 ${allData.length} 条`;
+    const exportStats = `全量导出: 报价单 ${quotationCount} 条, 订单确认 ${confirmationCount} 条, 内销报价单 ${domesticCount} 条, 采购单 ${purchaseCount} 条, 发票 ${invoiceCount} 条, 装箱单 ${packingCount} 条, 总计 ${allData.length} 条`;
 
     if (allData.length === 0) {
       throw new Error('没有数据可导出');

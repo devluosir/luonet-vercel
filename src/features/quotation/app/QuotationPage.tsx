@@ -100,6 +100,7 @@ export default function QuotationPage() {
   const currency = useQuotationStore(sel.currency);
   const historyType = getHistoryTypeFromTab(activeTab);
   const isDomesticQuotation = activeTab === 'domestic';
+  const exportTab: 'quotation' | 'confirmation' = activeTab === 'confirmation' ? 'confirmation' : 'quotation';
 
   // Action selectors（actions是稳定引用）
   const setTab = useQuotationStore(sel.setTab);
@@ -747,7 +748,7 @@ export default function QuotationPage() {
                   <SettingsPanel
                     data={data}
                     onChange={handleSettingsChange}
-                    activeTab={historyType}
+                    activeTab={exportTab}
                   />
                 )}
               </CollapsibleSection>
@@ -762,7 +763,7 @@ export default function QuotationPage() {
                   <CustomerInfoCompact
                     data={data}
                     onChange={updateData}
-                    type={historyType}
+                    type={exportTab}
                   />
                 )}
               </div>

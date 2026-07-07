@@ -11,7 +11,8 @@ import {
   FileText,
   Receipt,
   ShoppingCart,
-  Package
+  Package,
+  FileSignature,
 } from 'lucide-react';
 
 // 状态接口
@@ -176,6 +177,7 @@ export const getAvailableTabs = (): TabConfig[] => {
   return [
     { id: 'quotation', name: '报价单', shortName: '报价', icon: FileText },
     { id: 'confirmation', name: '合同确认', shortName: '合同', icon: FileText },
+    { id: 'domestic', name: '内销报价单', shortName: '内销', icon: FileSignature },
     { id: 'packing', name: '装箱单', shortName: '装箱', icon: Package },
     { id: 'invoice', name: '发票', shortName: '发票', icon: Receipt },
     { id: 'purchase', name: '采购单', shortName: '采购', icon: ShoppingCart },

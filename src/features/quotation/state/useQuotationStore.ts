@@ -93,8 +93,12 @@ export interface QuotationState {
     quotationNo: string;
     totalAmount: number;
     currency: string;
-    type: 'quotation' | 'confirmation';
+    type: 'quotation' | 'confirmation' | 'domestic';
     data: QuotationData;
+  } | null;
+  preDomesticSnapshot: {
+    currency: QuotationData['currency'];
+    notesConfig: NoteConfig[];
   } | null;
 
   // Actions
@@ -160,17 +164,35 @@ export const useQuotationStore = create<QuotationState>((set, _get) => ({
   compactMode: false, // 新增：默认非紧凑模式
   uiFlags: { selectingCustomer: false }, // 🔥 新增：UI标记初始化
   previewItem: null,
+  preDomesticSnapshot: null,
 
   // Actions
   setTab: (tab) => set((state) => {
+    if (tab === state.tab) return {};
+
+    const isLeavingDomestic = state.tab === 'domestic' && tab !== 'domestic';
+    const restoredData = isLeavingDomestic && state.preDomesticSnapshot
+      ? {
+          ...state.data,
+          mode: 'export' as const,
+          currency: state.preDomesticSnapshot.currency,
+        }
+      : state.data;
+    const restoredNotesConfig = isLeavingDomestic && state.preDomesticSnapshot
+      ? state.preDomesticSnapshot.notesConfig
+      : state.notesConfig;
+
     // 当切换到销售确认tab时，自动设置showStamp为true
-    if (tab === 'confirmation' && !state.data.showStamp) {
+    if (tab === 'confirmation') {
       return {
         tab,
-        data: { ...state.data, mode: 'export', showStamp: true }
+        data: { ...restoredData, mode: 'export', showStamp: true },
+        notesConfig: restoredNotesConfig,
+        preDomesticSnapshot: isLeavingDomestic ? null : state.preDomesticSnapshot,
       };
     }
     if (tab === 'domestic') {
+      const shouldCaptureSnapshot = state.tab !== 'domestic';
       return {
         tab,
         data: {
@@ -184,12 +206,20 @@ export const useQuotationStore = create<QuotationState>((set, _get) => ({
         notesConfig: state.notesConfig.some((note) => note.id.startsWith('domestic_clause_'))
           ? state.notesConfig
           : DOMESTIC_NOTES_CONFIG,
+        preDomesticSnapshot: shouldCaptureSnapshot
+          ? {
+              currency: state.data.currency,
+              notesConfig: state.notesConfig,
+            }
+          : state.preDomesticSnapshot,
       };
     }
-    if (state.data.mode === 'domestic') {
+    if (isLeavingDomestic) {
       return {
         tab,
-        data: { ...state.data, mode: 'export' }
+        data: restoredData,
+        notesConfig: restoredNotesConfig,
+        preDomesticSnapshot: null,
       };
     }
     return { tab };

@@ -1,7 +1,7 @@
 // 客户信息使用跟踪工具
 
 interface UsageRecord {
-  documentType: 'invoice' | 'packing' | 'quotation' | 'confirmation';
+  documentType: 'invoice' | 'packing' | 'quotation' | 'confirmation' | 'domestic';
   documentNo: string;
   usedAt: string;
 }
@@ -77,7 +77,7 @@ function findBestCustomerMatch(customerName: string, records: CustomerRecord[]):
  * @param documentType 文档类型
  * @param documentNo 文档编号
  */
-export function recordCustomerUsage(customerName: string, documentType: 'invoice' | 'packing' | 'quotation' | 'confirmation', documentNo: string) {
+export function recordCustomerUsage(customerName: string, documentType: 'invoice' | 'packing' | 'quotation' | 'confirmation' | 'domestic', documentNo: string) {
   try {
     const customerRecords = localStorage.getItem('customerRecords');
     if (!customerRecords) return;

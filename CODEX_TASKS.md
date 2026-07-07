@@ -8,6 +8,59 @@
 
 ---
 
+## TASK-98：修复内销报价单污染外贸历史和 tab 状态回归
+
+**状态**：已完成  
+**日期**：2026-07-07
+
+### 背景
+
+TASK-97 实现内销报价单后留下两个回归：
+
+- `getHistoryTypeFromTab('domestic')` 被塌缩为 `quotation`，导致内销报价单保存为外贸报价单历史，污染外贸历史列表、Dashboard 计数和导出筛选。
+- `/quotation` 页面三个 tab 共用同一个 Zustand store，从内销切回外贸 / 销售确认时，`currency='CNY'` 和中文合同条款会残留。
+
+### 修复方式
+
+- 将 `QuotationHistory.type`、`saveQuotationHistory()`、D1 同步和 D1 拉取类型扩展为 `quotation | confirmation | domestic`。
+- `getHistoryTypeFromTab()` 改为直接返回 tab，内销报价单保存为 `type='domestic'`。
+- `/history` 新增「内销报价单」tab，支持独立查看、编辑、复制、删除、预览和导出。
+- Dashboard 外贸计数仍只统计 `type='quotation'`，内销记录不会进入外贸报价单数量和列表。
+- `useQuotationStore.setTab()` 进入 domestic 前保存 `currency` 和 `notesConfig` 快照，离开 domestic 时恢复快照；销售确认分支保留原有 `showStamp=true` 行为。
+- 新增 D1 migration `008_add_domestic_document_type.sql`，将 `Document.type` CHECK 约束扩展为包含 `domestic`。
+
+### 涉及文件
+
+| 文件/目录 | 说明 |
+|---|---|
+| `src/features/quotation/services/quotation.service.ts` | domestic 历史类型不再塌缩 |
+| `src/utils/quotationHistory.ts`、`src/types/quotation-history.ts` | 本地历史支持 `type='domestic'` |
+| `src/features/quotation/state/useQuotationStore.ts` | domestic tab 切换快照保存 / 恢复 |
+| `src/features/history/**`、`src/app/history/**` | 新增内销报价单历史 tab 和操作路径 |
+| `src/components/history/PDFPreviewModal.tsx`、`src/components/PDFPreviewComponent.tsx` | domestic PDF 预览 / 下载 |
+| `src/utils/d1Sync.ts`、`src/utils/d1Pull.ts` | D1 同步和拉取支持 domestic |
+| `src/utils/historyImportExport.ts` | domestic 导入导出；外贸导出只取 `type='quotation'` |
+| `migrations/008_add_domestic_document_type.sql` | D1 CHECK 约束迁移 |
+| `docs/core/CURRENT_STATE.md`、`docs/features/quotation-domestic/` | 更新当前事实 |
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npx eslint <本任务改动文件>
+npm run build
+```
+
+### 验收标准
+
+- 新建内销报价单保存后，`quotation_history` 中记录的 `type` 为 `domestic`。
+- 外贸报价单历史列表和 Dashboard 外贸报价单计数不包含内销报价单。
+- `/history?tab=domestic` 可以独立查看内销报价单，并能编辑、复制、删除、预览 PDF。
+- 同页面会话中外贸报价单选择 EUR → 切到内销 → 切回外贸后，币种和 Notes 条款恢复为切换前状态。
+- 外贸报价单和销售确认的 PDF、历史列表、Dashboard 计数保持原逻辑。
+
+---
+
 ## TASK-97：内销报价单中文录入表单与合同式 PDF
 
 **状态**：已完成  

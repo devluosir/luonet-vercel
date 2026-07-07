@@ -5,6 +5,7 @@ import { getDefaultNotes } from '@/utils/getDefaultNotes';
 import { d1SyncDocument } from './d1Sync';
 
 const STORAGE_KEY = 'quotation_history';
+type QuotationHistoryType = QuotationHistory['type'];
 
 const isQuotaExceededError = (error: unknown): boolean => (
   error instanceof DOMException &&
@@ -16,8 +17,17 @@ const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2);
 };
 
+const normalizeDomesticHistoryTypes = (history: QuotationHistory[]): QuotationHistory[] => (
+  history.map((item) => {
+    if (item.type === 'quotation' && item.data?.mode === 'domestic') {
+      return { ...item, type: 'domestic' as const };
+    }
+    return item;
+  })
+);
+
 // 保存报价历史
-export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: QuotationData, existingId?: string) => {
+export const saveQuotationHistory = (type: QuotationHistoryType, data: QuotationData, existingId?: string) => {
   try {
     const history = getQuotationHistory();
     const totalAmount = (data.items || []).reduce((sum, item) => sum + (item.amount || 0), 0) +
@@ -199,7 +209,7 @@ export const saveQuotationHistory = (type: 'quotation' | 'confirmation', data: Q
 // 获取所有历史记录
 export const getQuotationHistory = (filters?: QuotationHistoryFilters): QuotationHistory[] => {
   try {
-    let history = getLocalStorageJSON(STORAGE_KEY, []);
+    let history = normalizeDomesticHistoryTypes(getLocalStorageJSON<QuotationHistory[]>(STORAGE_KEY, []));
 
     if (filters) {
       // 搜索
@@ -238,9 +248,10 @@ export const getQuotationHistoryById = (id: string): QuotationHistory | null => 
 export const deleteQuotationHistory = (id: string): boolean => {
   try {
     const history = getQuotationHistory();
+    const item = history.find(record => record.id === id);
     const filtered = history.filter(item => item.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-    d1SyncDocument('delete', { id, type: 'quotation', doc_no: '', data: null });
+    d1SyncDocument('delete', { id, type: item?.type ?? 'quotation', doc_no: '', data: null });
     return true;
   } catch (error) {
     return false;

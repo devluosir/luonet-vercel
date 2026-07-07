@@ -13,10 +13,10 @@ interface CustomWindow extends Window {
 }
 
 export type QuotationTab = 'quotation' | 'confirmation' | 'domestic';
-export type QuotationHistoryType = 'quotation' | 'confirmation';
+export type QuotationHistoryType = QuotationTab;
 
 export function getHistoryTypeFromTab(tab: QuotationTab): QuotationHistoryType {
-  return tab === 'confirmation' ? 'confirmation' : 'quotation';
+  return tab;
 }
 
 // 保存或更新报价数据

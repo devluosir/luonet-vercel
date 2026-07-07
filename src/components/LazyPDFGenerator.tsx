@@ -22,7 +22,7 @@ interface LazyPDFGeneratorProps {
   onClose: () => void;
   title?: string;
   data?: Record<string, unknown>;
-  itemType?: 'quotation' | 'confirmation' | 'invoice' | 'purchase' | 'packing';
+  itemType?: 'quotation' | 'confirmation' | 'domestic' | 'invoice' | 'purchase' | 'packing';
   showDownloadButton?: boolean;
   showOpenInNewTab?: boolean;
   className?: string;

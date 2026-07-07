@@ -84,6 +84,18 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function getQuotationLocalType(item: Record<string, unknown>): D1DocType {
+  const data = asRecord(item.data);
+  if (data.mode === 'domestic') return 'domestic';
+
+  const type = getString(item.type);
+  if (type === 'quotation' || type === 'confirmation' || type === 'domestic') {
+    return type;
+  }
+
+  return 'quotation';
+}
+
 function normalizeTimestamp(value: unknown): string | undefined {
   if (typeof value !== 'string' || !value.trim()) return undefined;
 
@@ -120,15 +132,16 @@ async function pushLocalDocsToD1(deletedIds: Set<string>): Promise<void> {
   const packLocal = readLocalArray('packing_history');
   const purchLocal = readLocalArray('purchase_history');
 
-  const [qRes, cRes, iRes, pkRes, puRes] = await Promise.all([
+  const [qRes, cRes, dRes, iRes, pkRes, puRes] = await Promise.all([
     fetchAll<{ id: string }>('/api/documents?type=quotation&status=all', 'documents'),
     fetchAll<{ id: string }>('/api/documents?type=confirmation&status=all', 'documents'),
+    fetchAll<{ id: string }>('/api/documents?type=domestic&status=all', 'documents'),
     fetchAll<{ id: string }>('/api/documents?type=invoice&status=all', 'documents'),
     fetchAll<{ id: string }>('/api/documents?type=packing&status=all', 'documents'),
     fetchAll<{ id: string }>('/api/documents?type=purchase&status=all', 'documents'),
   ]);
 
-  const quotD1Ids = new Set([...qRes.data, ...cRes.data].map((doc) => doc.id));
+  const quotD1Ids = new Set([...qRes.data, ...cRes.data, ...dRes.data].map((doc) => doc.id));
   const invD1Ids = new Set(iRes.data.map((doc) => doc.id));
   const packD1Ids = new Set(pkRes.data.map((doc) => doc.id));
   const purchD1Ids = new Set(puRes.data.map((doc) => doc.id));
@@ -139,15 +152,15 @@ async function pushLocalDocsToD1(deletedIds: Set<string>): Promise<void> {
   console.log(
     `[d1Push] 本地记录: quotation+conf=${quotLocal.length} invoice=${invLocal.length}` +
     ` packing=${packLocal.length} purchase=${purchLocal.length}` +
-    ` | D1已有: quot+conf=${quotD1Ids.size} invoice=${invD1Ids.size}` +
+    ` | D1已有: quot+conf+domestic=${quotD1Ids.size} invoice=${invD1Ids.size}` +
     ` packing=${packD1Ids.size} purchase=${purchD1Ids.size}`,
   );
 
   for (const item of quotLocal) {
     const id = getString(item.id);
-    if (!shouldPush(id, quotD1Ids, qRes.ok && cRes.ok)) continue;
+    if (!shouldPush(id, quotD1Ids, qRes.ok && cRes.ok && dRes.ok)) continue;
 
-    const type = (getString(item.type) || 'quotation') as D1DocType;
+    const type = getQuotationLocalType(item);
     d1SyncDocument('create', {
       id,
       type,
@@ -274,7 +287,7 @@ function mergeIntoStorage<T extends LocalStorageItem>(
 function docToQuotationHistory(doc: D1Doc) {
   return {
     id: doc.id,
-    type: doc.type as 'quotation' | 'confirmation',
+    type: doc.type as 'quotation' | 'confirmation' | 'domestic',
     quotationNo: doc.doc_no || '',
     customerName: doc.customer_name || '',
     totalAmount: doc.total_amount || 0,
@@ -354,9 +367,10 @@ export async function pullAllFromD1(): Promise<void> {
     await flushPendingQueue();
     pendingIds = getPendingIds();
 
-    const [quotRes, confRes, invRes, packRes, purchRes] = await Promise.all([
+    const [quotRes, confRes, domesticRes, invRes, packRes, purchRes] = await Promise.all([
       fetchAll<D1Doc>('/api/documents?type=quotation&status=all', 'documents'),
       fetchAll<D1Doc>('/api/documents?type=confirmation&status=all', 'documents'),
+      fetchAll<D1Doc>('/api/documents?type=domestic&status=all', 'documents'),
       fetchAll<D1Doc>('/api/documents?type=invoice&status=all', 'documents'),
       fetchAll<D1Doc>('/api/documents?type=packing&status=all', 'documents'),
       fetchAll<D1Doc>('/api/documents?type=purchase&status=all', 'documents'),
@@ -366,6 +380,7 @@ export async function pullAllFromD1(): Promise<void> {
       [
         ...quotRes.data,
         ...confRes.data,
+        ...domesticRes.data,
         ...invRes.data,
         ...packRes.data,
         ...purchRes.data,
@@ -381,14 +396,14 @@ export async function pullAllFromD1(): Promise<void> {
 
     console.log(
       `[d1Pull] D1数据: quotation=${quotRes.data.length} confirmation=${confRes.data.length}` +
-      ` invoice=${invRes.data.length} packing=${packRes.data.length} purchase=${purchRes.data.length}` +
+      ` domestic=${domesticRes.data.length} invoice=${invRes.data.length} packing=${packRes.data.length} purchase=${purchRes.data.length}` +
       ` (ok=${quotRes.ok})`,
     );
 
     mergeIntoStorage(
       'quotation_history',
-      [...quotRes.data, ...confRes.data].map(docToQuotationHistory),
-      quotRes.ok && confRes.ok,
+      [...quotRes.data, ...confRes.data, ...domesticRes.data].map(docToQuotationHistory),
+      quotRes.ok && confRes.ok && domesticRes.ok,
       pendingIds,
       effectiveDeletedIds,
     );
