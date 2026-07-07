@@ -895,8 +895,16 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
       <div className="flex items-center justify-between mb-6 px-2">
         <div className="flex items-center gap-4">
           <ImportDataButton onImport={handleImport} />
-          <div className="hidden md:block text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg">
-            <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg">
+            {isDomestic && (
+              <>
+                <span className="whitespace-nowrap font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  一、产品名称、规格型号、数量、金额
+                </span>
+                <span className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
+              </>
+            )}
+            <div className="flex items-center gap-2 whitespace-nowrap">
               <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>

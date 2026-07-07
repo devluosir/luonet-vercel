@@ -135,7 +135,7 @@ export default function QuotationPage() {
       // 支付条款字段
       'additionalPaymentTerms', 'domesticTotalRemark',
       // 显示控制字段
-      'showBank', 'showStamp', 'domesticDocType'
+      'showBank', 'showStamp', 'domesticDocType', 'showDomesticRemark'
     ]);
 
     // 合并 SETTINGS_ALLOWED_KEYS
@@ -710,6 +710,17 @@ export default function QuotationPage() {
                           {option.label}
                         </button>
                       ))}
+                      <button
+                        type="button"
+                        onClick={() => updateData({ showDomesticRemark: !(data.showDomesticRemark ?? true) })}
+                        className={`rounded px-2 py-1 text-[11px] font-medium transition-all ${
+                          (data.showDomesticRemark ?? true)
+                            ? 'bg-[#007AFF] text-white shadow-sm'
+                            : 'border border-gray-200 bg-white text-gray-600 hover:border-[#007AFF]/40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        税运备注
+                      </button>
                       {(data.domesticDocType ?? 'contract') === 'contract' && (
                         <>
                           <span className="text-blue-300 dark:text-blue-700">|</span>
@@ -895,18 +906,24 @@ export default function QuotationPage() {
                   </div>
                 </div>
 
-                {/* 金额大写：按钮行下方单独一行，备注放在大写金额后的括号里 */}
+                {/* 金额大写：按钮行下方单独一行，税运备注开关打开时放在大写金额后的括号里 */}
                 {isDomesticQuotation && (
                   <div className="mt-2 flex flex-wrap items-baseline justify-end gap-1 text-right text-xs text-gray-500 dark:text-gray-400">
-                    <span>金额大写：{totalAmountInWords || '人民币零元整'}（</span>
-                    <input
-                      type="text"
-                      value={data.domesticTotalRemark ?? ''}
-                      onChange={(e) => updateData({ domesticTotalRemark: e.target.value })}
-                      placeholder="价格含13个点专票及运费"
-                      className="h-5 min-w-[120px] max-w-[220px] rounded border border-transparent bg-transparent px-1 text-right text-xs text-gray-700 outline-none hover:border-gray-200 focus:border-blue-400 focus:bg-white focus:ring-1 focus:ring-blue-200 dark:text-gray-200 dark:hover:border-gray-700 dark:focus:bg-gray-900"
-                    />
-                    <span>）</span>
+                    {(data.showDomesticRemark ?? true) ? (
+                      <>
+                        <span>金额大写：{totalAmountInWords || '人民币零元整'}（</span>
+                        <input
+                          type="text"
+                          value={data.domesticTotalRemark ?? ''}
+                          onChange={(e) => updateData({ domesticTotalRemark: e.target.value })}
+                          placeholder="价格含13个点专票及运费"
+                          className="h-5 min-w-[120px] max-w-[220px] rounded border border-transparent bg-transparent px-1 text-right text-xs text-gray-700 outline-none hover:border-gray-200 focus:border-blue-400 focus:bg-white focus:ring-1 focus:ring-blue-200 dark:text-gray-200 dark:hover:border-gray-700 dark:focus:bg-gray-900"
+                        />
+                        <span>）</span>
+                      </>
+                    ) : (
+                      <span>金额大写：{totalAmountInWords || '人民币零元整'}</span>
+                    )}
                   </div>
                 )}
                 </div>

@@ -341,13 +341,16 @@ export async function generateDomesticQuotationPDF(
   const capital = convertToRmbCapital(total);
 
   const remark = data.domesticTotalRemark || '价格含13个点专票及运费';
+  const showRemark = data.showDomesticRemark ?? true;
 
   y = checkPage(doc, y, 18, margin, pageHeight);
   doc.setFontSize(9);
   setCnFont(doc, 'bold');
 
   doc.text(`合计：¥${formatAmount(total)}`, pageWidth - margin, y, { align: 'right' });
-  const combined = `合计（大写）：${capital}（${remark}）`;
+  const combined = showRemark
+    ? `合计（大写）：${capital}（${remark}）`
+    : `合计（大写）：${capital}`;
   const amountLines = doc.splitTextToSize(combined, contentWidth - 45);
   amountLines.forEach((line: string, index: number) => {
     if (index > 0) y += 5;

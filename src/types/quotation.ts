@@ -74,6 +74,8 @@ export interface QuotationData {
   showInvoiceReminder?: boolean;
   additionalPaymentTerms?: string;
   domesticTotalRemark?: string;
+  /** 税运备注开关：控制"（价格含13个点专票及运费）"是否显示在大写金额后面，默认 true */
+  showDomesticRemark?: boolean;
   /** 内销单据类型：报价单（简版）或产品购销合同（含供需方详情表+印章），默认 contract */
   domesticDocType?: 'quotation' | 'contract';
   paymentMethod?: 'T/T' | 'L/C' | 'D/P' | 'D/A' | 'Open Account';
