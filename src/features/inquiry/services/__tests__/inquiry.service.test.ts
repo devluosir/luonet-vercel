@@ -112,4 +112,34 @@ describe('inquiryService D1 sync queue', () => {
       orderNo: 'ORD-001',
     });
   });
+
+  test('does not auto-upload legacy local-only records that were never queued', async () => {
+    global.fetch = jest.fn().mockResolvedValue(okResponse()) as jest.Mock;
+    const localOnly = mockRecord({ id: 'legacy-local-only', inquiryNo: 'C260708G' });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([localOnly]));
+
+    inquiryService.pushLocalToD1([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(pendingQueue()).toHaveLength(0);
+  });
+
+  test('continues retrying local-only records that are already in the pending queue', async () => {
+    global.fetch = jest.fn().mockResolvedValue(failedResponse()) as jest.Mock;
+    const queuedLocal = mockRecord({ id: 'queued-local-only', inquiryNo: 'C260708H' });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([queuedLocal]));
+
+    inquiryService.syncToD1(queuedLocal);
+    await waitFor(() => pendingQueue().length === 1);
+
+    (global.fetch as jest.Mock).mockClear();
+    inquiryService.pushLocalToD1([]);
+    await waitFor(() => (global.fetch as jest.Mock).mock.calls.length > 0);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/inquiry',
+      expect.objectContaining({ method: 'POST' })
+    );
+  });
 });

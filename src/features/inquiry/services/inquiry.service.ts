@@ -346,12 +346,19 @@ export const inquiryService = {
 
   pushLocalToD1(d1Records: InquiryRecord[]): void {
     const d1Map = new Map(d1Records.map((record) => [record.id, record]));
+    const pendingIds = this.getPendingSyncIds();
     const local = this.getAll();
 
     for (const localRecord of local) {
       const d1Record = d1Map.get(localRecord.id);
       if (!d1Record) {
-        this.syncToD1(localRecord);
+        if (pendingIds.has(localRecord.id)) {
+          this.syncToD1(localRecord);
+        } else {
+          console.warn(
+            `[inquirySync] 跳过未入队的本地独有记录 ${localRecord.id} (${localRecord.inquiryNo})，避免把历史幽灵记录推到 D1`
+          );
+        }
       } else if (d1Record.status !== 'deleted' && isRemoteNewer(localRecord, d1Record)) {
         // D1 已软删除的记录不允许本地旧版本覆盖回来
         this.updateInD1(localRecord);
