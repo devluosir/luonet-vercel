@@ -183,9 +183,11 @@ export function AppUserMenu({
   // 弹出层定位
   const dropdownPos = isBottomLeft ? 'bottom-full left-0 mb-2' : 'right-0 top-full mt-2';
   // 子菜单定位（profile 面板）
+  // 移动端侧边栏固定宽 220px，屏幕较窄时若仍向右展开会超出可视区域，
+  // 因此小屏（<640px）改为在按钮下方原地展开（智能收窄），sm 及以上保持原有向右弹出。
   const submenuPos = isBottomLeft
-    ? 'left-full top-0 ml-1'                                          // 向右展开
-    : 'right-0 top-full mt-1 sm:right-full sm:top-0 sm:mt-0 sm:-translate-x-[2px]'; // 原行为
+    ? 'static mt-2 sm:absolute sm:mt-0 sm:left-full sm:top-0 sm:ml-1'
+    : 'absolute right-0 top-full mt-1 sm:right-full sm:top-0 sm:mt-0 sm:-translate-x-[2px]'; // 原行为
 
   const ChevronIcon = isBottomLeft ? ChevronUp : ChevronDown;
 
@@ -245,7 +247,7 @@ export function AppUserMenu({
               <div
                 onMouseEnter={openProfileSubmenu}
                 onMouseLeave={scheduleCloseProfileSubmenu}
-                className={`absolute w-auto min-w-[14rem] rounded-xl bg-white p-3 shadow-xl ring-1 ring-black/5 dark:bg-app-dark-surface dark:ring-white/10 ${submenuPos}`}
+                className={`w-full sm:w-auto sm:min-w-[14rem] rounded-xl bg-white p-3 shadow-xl ring-1 ring-black/5 dark:bg-app-dark-surface dark:ring-white/10 ${submenuPos}`}
               >
                 <div className="space-y-2.5">
                   <div>
@@ -347,52 +349,52 @@ export function AppUserMenu({
               </div>
             )}
 
-            {/* 预加载资源 */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={handlePreload}
-                disabled={isPreloading}
-                className={`relative flex w-full items-center overflow-hidden px-4 py-2 text-sm transition-colors duration-200 ${
-                  isPreloading
-                    ? 'cursor-not-allowed text-gray-400 dark:text-gray-500'
-                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50'
-                }`}
-              >
-                {isPreloading && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 transition-all duration-300 ease-out dark:from-blue-900/10 dark:to-blue-800/20" />
-                )}
-                {isPreloading && (
-                  <div
-                    className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-300 transition-all duration-300 ease-out dark:from-blue-700/40 dark:to-blue-600/50"
-                    style={{ width: `${Math.max(0, Math.min(100, preloadProgress))}%` }}
-                  />
-                )}
-                {isPreloading && (
-                  <div
-                    className="absolute inset-0 border-r-2 border-blue-400 transition-all duration-300 ease-out dark:border-blue-300"
-                    style={{ width: `${Math.max(0, Math.min(100, preloadProgress))}%` }}
-                  />
-                )}
-                <div className="relative z-10 flex w-full items-center">
-                  <Download className={`mr-2 h-4 w-4 ${isPreloading ? 'animate-pulse' : ''}`} />
-                  <span className="flex-1 text-left">
-                    {isPreloading ? (
-                      <span className="flex flex-col">
-                        <span className="text-sm font-medium">预加载中 {preloadProgress}%</span>
-                        {preloadStage && (
-                          <span className="truncate text-xs text-gray-500 dark:text-gray-400">{preloadStage}</span>
-                        )}
-                      </span>
-                    ) : isPreloaded ? (
-                      '资源已预加载 (100%)'
-                    ) : (
-                      '预加载资源'
-                    )}
-                  </span>
-                </div>
-              </button>
-            </div>
+            {/* 预加载资源：完成后不再需要手动操作，直接隐藏该行，不再展示"资源已预加载"提示 */}
+            {!isPreloaded && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={handlePreload}
+                  disabled={isPreloading}
+                  className={`relative flex w-full items-center overflow-hidden px-4 py-2 text-sm transition-colors duration-200 ${
+                    isPreloading
+                      ? 'cursor-not-allowed text-gray-400 dark:text-gray-500'
+                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800/50'
+                  }`}
+                >
+                  {isPreloading && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-blue-100 transition-all duration-300 ease-out dark:from-blue-900/10 dark:to-blue-800/20" />
+                  )}
+                  {isPreloading && (
+                    <div
+                      className="absolute inset-0 bg-gradient-to-r from-blue-200 to-blue-300 transition-all duration-300 ease-out dark:from-blue-700/40 dark:to-blue-600/50"
+                      style={{ width: `${Math.max(0, Math.min(100, preloadProgress))}%` }}
+                    />
+                  )}
+                  {isPreloading && (
+                    <div
+                      className="absolute inset-0 border-r-2 border-blue-400 transition-all duration-300 ease-out dark:border-blue-300"
+                      style={{ width: `${Math.max(0, Math.min(100, preloadProgress))}%` }}
+                    />
+                  )}
+                  <div className="relative z-10 flex w-full items-center">
+                    <Download className={`mr-2 h-4 w-4 ${isPreloading ? 'animate-pulse' : ''}`} />
+                    <span className="flex-1 text-left">
+                      {isPreloading ? (
+                        <span className="flex flex-col">
+                          <span className="text-sm font-medium">预加载中 {preloadProgress}%</span>
+                          {preloadStage && (
+                            <span className="truncate text-xs text-gray-500 dark:text-gray-400">{preloadStage}</span>
+                          )}
+                        </span>
+                      ) : (
+                        '预加载资源'
+                      )}
+                    </span>
+                  </div>
+                </button>
+              </div>
+            )}
 
             {user.isAdmin && (
               <button
