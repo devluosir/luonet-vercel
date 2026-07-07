@@ -8,6 +8,663 @@
 
 ---
 
+## TASK-100：采购部登记表 —— 内容描述改为共享 description，询报价状态改为点击整行弹窗编辑
+
+**状态**：已完成（由 Claude 直接实施，非 Codex；Roger 明确说"请开始实施"）
+**日期**：2026-07-07
+
+### 实施结果
+
+按下方方案全部执行：`src/features/inquiry/types/index.ts`（删除 `PurchaseInquiryStatus`/`purchaseContentDesc`/`purchaseInquiryStatus`，新增 `purchaseSupplierStatuses`/`purchaseQuotedStatuses`）、`src/app/api/inquiry/[[...path]]/route.ts`（`PURCHASE_REGISTRATION_WRITE_FIELDS` 和 `sanitizePurchaseRegistrationRecord` 换成新字段，去掉 `orderDeliveryStatus`/`orderDeliveryConsignee`）、新建 `src/features/purchase-registration/components/PurchaseInquiryEditModal.tsx`（复用 `InquiryQuoteStatus` + 影子记录）、`PurchaseRegistrationRow.tsx`（整行改为可点击触发 `onEditRecord`，内容描述改绑 `description`，删除"备货/交货/发票"列和 `DeliveryStatusCell`）、`PurchaseRegistrationTable.tsx`（新增 `onEditRecord` 透传，表格 5 列改 4 列）、`PurchaseRegistrationPage.tsx`（`matchesKeyword` 改用 `description`，新增 `editingRecord` state 并渲染弹窗）、`PurchaseRegistrationFilterBar.tsx`（占位符去掉"执行情况"）、`docs/features/purchase-registration/PURCHASE_REGISTRATION_MODULE.md` 和 `docs/core/CURRENT_STATE.md` 两处文档同步更新。
+
+验证：`npx tsc --noEmit` 通过（无输出）；`npx eslint`（7 个改动/新建文件）无输出（通过）；`grep -rn "purchaseContentDesc\|purchaseInquiryStatus" src/` 无匹配；`grep -rn "orderDeliveryStatus\|orderDeliveryConsignee" src/features/purchase-registration/` 无匹配；`npm run build` 在本次审核环境单命令 45 秒时限内卡在 Next.js 编译阶段没跑完整（环境限制，与 TASK-66/71/99 一致），前面 tsc+eslint+grep+`git diff --stat` 逐文件核对（9 个改动文件+1 个新文件，704 行新增/81 行删除，与方案精确匹配，无意外改动）已足够确认正确性。工作区未提交。
+
+### 背景
+
+Roger 反馈现有采购部登记表（`/purchase-registration`）有三处要改：
+
+1. **询价编号、内容描述都应来自"询报价登记"表**。当前"内容描述"列绑定的是采购部专用的独立字段 `purchaseContentDesc`，和询报价登记的 `description` 是两份数据、互不同步。要求改成：采购部登记表编辑"内容描述"时，直接读写 `InquiryRecord.description`（询报价登记同一份数据），编辑后双方都能看到。
+2. **备货 / 交货 / 发票不应该出现在采购部登记表里**。这个状态只应该显示在"采购订单表"（`/purchase-order-table`，`PurchaseOrderRow.tsx` 读写的是 `PurchaseOrderRecord.orderDeliveryStatus`/`orderDeliveryConsignee`，独立数据结构，本任务不用动，已经是对的）。采购部登记表当前这一列展示/编辑的是 `InquiryRecord.orderDeliveryStatus`/`orderDeliveryConsignee`——这两个字段本来是给"订单状态表"（`/order`，`OrderPage.tsx`/`OrderRow.tsx`）用的，采购部登记表里再显示一遍是重复且不该出现在这个视图里。本任务要把"备货 / 交货 / 发票"这一列从采购部登记表整个删掉，表格从 5 列变成 4 列：询价编号 / 内容描述 / 询报价状态 / 成单状态。`InquiryRecord.orderDeliveryStatus`/`orderDeliveryConsignee` 字段本身不删（`/order` 订单状态表还要用），只是采购部登记表的 UI 和权限代理不再读写它们。
+3. **"询报价状态"列要像询报价登记表一样，点击记录（点击整行）就弹出编辑窗口**。当前是一个只有"内部供应商 / 已报至销售部"两个选项的下拉框，信息量太少。要求换成一个新的"编辑询价"弹窗，弹窗内是采购部专属的供应商标签 + 已报价列表编辑器（界面和交互与询报价登记的"编辑询价"弹窗一致），但数据要**单独存储**（新增 `purchaseSupplierStatuses` / `purchaseQuotedStatuses` 两个字段），不能读写销售视图用的 `supplierStatuses` / `quotedStatuses`，也不能互相覆盖。
+
+**关键约束**：询报价登记表（`/inquiry`）本身的组件、类型、API 行为一律不改；只新增/调整采购部登记专属的字段和组件。`InquiryQuoteStatus`（供应商标签 + 已报价列表编辑器）和 `InquiryQuoteStatusDisplay`（只读预览）这两个共享组件已经是"纯函数式"地读写 `record.supplierStatuses` / `record.quotedStatuses`，与 `record` 其余字段无关（详见 `src/features/inquiry/utils/inquiryUtils.ts` 里 `getRecordColorState` / `getSupplierStatusClass` 只依赖这两个数组）——因此可以直接复用，不用改这两个组件一行代码，只需要在采购部登记这一侧构造一个"影子记录"（把 `purchaseSupplierStatuses`/`purchaseQuotedStatuses` 接到 `supplierStatuses`/`quotedStatuses` 这两个字段名上）传进去。
+
+### 涉及文件
+
+| 文件 | 改动 |
+|---|---|
+| `src/features/inquiry/types/index.ts` | 删除 `PurchaseInquiryStatus` 类型、`purchaseContentDesc`、`purchaseInquiryStatus` 三处；新增 `purchaseSupplierStatuses?: SupplierQuoteStatus[]`、`purchaseQuotedStatuses?: CustomerQuoteStatus[]` |
+| `src/app/api/inquiry/[[...path]]/route.ts` | `PURCHASE_REGISTRATION_WRITE_FIELDS` 和 `sanitizePurchaseRegistrationRecord` 换成新字段，去掉 `orderDeliveryStatus`/`orderDeliveryConsignee` |
+| `src/features/purchase-registration/app/PurchaseRegistrationPage.tsx` | `matchesKeyword` 改用 `description`，去掉 `orderDeliveryStatus`/`orderDeliveryConsignee`；新增编辑弹窗的打开/关闭状态，传给 Table |
+| `src/features/purchase-registration/components/PurchaseRegistrationTable.tsx` | 新增 `onEditRecord` 透传给每一行；删除"备货 / 交货 / 发票"表头列，colgroup 从 5 列改 4 列 |
+| `src/features/purchase-registration/components/PurchaseRegistrationRow.tsx` | 整行可点击（触发 `onEditRecord`）；内容描述改绑 `description`；询报价状态列改为只读预览（复用 `InquiryQuoteStatusDisplay`）；删除"备货 / 交货 / 发票"列和 `DeliveryStatusCell` |
+| `src/features/purchase-registration/components/PurchaseInquiryEditModal.tsx`（新建） | "编辑询价"弹窗，复用 `InquiryQuoteStatus`，保存到 `purchaseSupplierStatuses`/`purchaseQuotedStatuses` |
+| `src/features/purchase-registration/components/PurchaseRegistrationFilterBar.tsx` | 搜索框 placeholder 顺手去掉"执行情况"字样 |
+| `docs/features/purchase-registration/PURCHASE_REGISTRATION_MODULE.md` | 更新数据模型说明 |
+| `docs/core/CURRENT_STATE.md` | 第 43、182 行两处描述同步更新 |
+
+### 改动 1：`src/features/inquiry/types/index.ts`
+
+找到：
+
+```ts
+/** 订单附加标记：辙销C / 悬挂P / 善后S */
+export type OrderSubStatus = 'cancelled' | 'suspended' | 'followup';
+export type PurchaseInquiryStatus = 'internal_supplier' | 'reported_to_sales';
+```
+
+替换为：
+
+```ts
+/** 订单附加标记：辙销C / 悬挂P / 善后S */
+export type OrderSubStatus = 'cancelled' | 'suspended' | 'followup';
+```
+
+找到：
+
+```ts
+  description: string;
+  /** 采购部登记专用内容描述；独立于询报价登记的 description 字段 */
+  purchaseContentDesc?: string;
+  /** 采购部登记专用询报价状态；不影响 supplierStatuses / quotedStatuses */
+  purchaseInquiryStatus?: PurchaseInquiryStatus;
+  orderNo?: string;
+```
+
+替换为：
+
+```ts
+  description: string;
+  orderNo?: string;
+```
+
+找到：
+
+```ts
+  supplierStatuses: SupplierQuoteStatus[];
+  quotedStatuses: CustomerQuoteStatus[];
+  createdAt: string;
+```
+
+替换为：
+
+```ts
+  supplierStatuses: SupplierQuoteStatus[];
+  quotedStatuses: CustomerQuoteStatus[];
+  /** 采购部登记专属供应商报价状态；结构与 supplierStatuses 相同，但数据独立存储，不影响询报价登记的销售视图 */
+  purchaseSupplierStatuses?: SupplierQuoteStatus[];
+  /** 采购部登记专属已报价状态；结构与 quotedStatuses 相同，数据独立存储 */
+  purchaseQuotedStatuses?: CustomerQuoteStatus[];
+  createdAt: string;
+```
+
+（旧数据里残留的 `purchaseContentDesc` / `purchaseInquiryStatus` 键值不会报错，只是不再被读取——JSON blob 字段，无需 D1 迁移。）
+
+### 改动 2：`src/app/api/inquiry/[[...path]]/route.ts`
+
+找到：
+
+```ts
+const PURCHASE_REGISTRATION_WRITE_FIELDS = [
+  'purchaseContentDesc',
+  'purchaseInquiryStatus',
+  'orderDeliveryStatus',
+  'orderDeliveryConsignee',
+] as const;
+```
+
+替换为：
+
+```ts
+const PURCHASE_REGISTRATION_WRITE_FIELDS = [
+  'description',
+  'purchaseSupplierStatuses',
+  'purchaseQuotedStatuses',
+] as const;
+```
+
+（`orderDeliveryStatus`/`orderDeliveryConsignee` 不再放进采购部登记的可写字段——这两个字段是"订单状态表"`/order` 专用的，采购部登记不应该改它们，见下方"备货/交货/发票列删除"说明。）
+
+找到：
+
+```ts
+function sanitizePurchaseRegistrationRecord(record: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: record.id,
+    inquiryDate: record.inquiryDate,
+    inquiryNo: record.inquiryNo,
+    purchaseContentDesc: record.purchaseContentDesc,
+    purchaseInquiryStatus: record.purchaseInquiryStatus,
+    orderNo: record.orderNo,
+    orderDeliveryStatus: record.orderDeliveryStatus,
+    orderDeliveryConsignee: record.orderDeliveryConsignee,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    status: record.status,
+  };
+}
+```
+
+替换为：
+
+```ts
+function sanitizePurchaseRegistrationRecord(record: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: record.id,
+    inquiryDate: record.inquiryDate,
+    inquiryNo: record.inquiryNo,
+    description: record.description,
+    purchaseSupplierStatuses: record.purchaseSupplierStatuses,
+    purchaseQuotedStatuses: record.purchaseQuotedStatuses,
+    orderNo: record.orderNo,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    status: record.status,
+  };
+}
+```
+
+`orderNo` 保留，只是用来算"成单状态"徽章（有没有订单号），不是用来显示交货状态。
+
+注意：这一改动让"只有 `purchaseRegistration` 权限、没有 `inquiry` 权限"的用户从只能改 `purchaseContentDesc`（隔离字段）变成可以直接改 `description`（询报价登记共享字段）。这是 Roger 明确要的行为（"编辑后也同步保存"），不是遗漏。
+
+### 改动 3：新建 `src/features/purchase-registration/components/PurchaseInquiryEditModal.tsx`
+
+```tsx
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { X } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { InquiryQuoteStatus } from '@/features/inquiry/components/InquiryQuoteStatus';
+import type { CustomerQuoteStatus, InquiryRecord, SupplierQuoteStatus } from '@/features/inquiry/types';
+
+interface PurchaseInquiryEditModalProps {
+  record: InquiryRecord | null;
+  onClose: () => void;
+  onSave: (id: string, patch: Partial<InquiryRecord>) => void;
+}
+
+export function PurchaseInquiryEditModal({ record, onClose, onSave }: PurchaseInquiryEditModalProps) {
+  const [localSuppliers, setLocalSuppliers] = useState<SupplierQuoteStatus[]>([]);
+  const [localQuoted, setLocalQuoted] = useState<CustomerQuoteStatus[]>([]);
+
+  useEffect(() => {
+    if (!record) return;
+    setLocalSuppliers(record.purchaseSupplierStatuses ?? []);
+    setLocalQuoted(record.purchaseQuotedStatuses ?? []);
+  }, [record]);
+
+  // 借用询报价登记的供应商/已报价编辑器：该组件只读写 record.supplierStatuses / record.quotedStatuses，
+  // 与 record 其余字段无关，因此用「影子记录」把采购部专属数组接到这两个字段名上即可复用，
+  // 编辑内容互不影响询报价登记原本的 supplierStatuses / quotedStatuses。
+  const shimRecord = useMemo<InquiryRecord | null>(() => {
+    if (!record) return null;
+    return { ...record, supplierStatuses: localSuppliers, quotedStatuses: localQuoted };
+  }, [record, localSuppliers, localQuoted]);
+
+  if (!record || !shimRecord) return null;
+
+  const handleSave = () => {
+    onSave(record.id, {
+      purchaseSupplierStatuses: localSuppliers,
+      purchaseQuotedStatuses: localQuoted,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8">
+      <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl dark:bg-[#2C2C2E]">
+        <div className="flex items-center justify-between px-6 pb-4 pt-5">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">编辑询价</h2>
+            <p className="mt-0.5 font-mono text-xs text-gray-400 dark:text-gray-500">{record.inquiryNo}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="-mr-1 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700"
+            aria-label="关闭弹窗"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="h-px bg-gray-100 dark:bg-gray-700" />
+
+        <div className="px-6 py-5">
+          {record.description && (
+            <p className="mb-4 truncate text-sm text-gray-500 dark:text-gray-400" title={record.description}>
+              {record.description}
+            </p>
+          )}
+
+          <div className="mb-4 rounded-xl bg-gray-50 p-4 ring-1 ring-gray-100 dark:bg-gray-800/50 dark:ring-gray-700">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+              询报价状态（采购部专属，不影响询报价登记）
+            </p>
+            <InquiryQuoteStatus
+              record={shimRecord}
+              onSuppliersChange={setLocalSuppliers}
+              onQuotedChange={setLocalQuoted}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              取消
+            </button>
+            <Button type="button" onClick={handleSave} className="px-5">
+              保存修改
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### 改动 4：`src/features/purchase-registration/components/PurchaseRegistrationRow.tsx`
+
+整个文件替换为（这一版把"备货 / 交货 / 发票"整列删掉了——那是订单状态表 `/order` 专用的字段，不该出现在采购部登记表里）：
+
+```tsx
+'use client';
+
+import { useState } from 'react';
+import { InquiryQuoteStatusDisplay } from '@/features/inquiry/components/InquiryQuoteStatusDisplay';
+import type { InquiryRecord } from '@/features/inquiry/types';
+
+type EditField = 'content' | null;
+
+interface EditableTextProps {
+  editing: boolean;
+  value: string | undefined;
+  placeholder: string;
+  onActivate: () => void;
+  onSave: (value: string | undefined) => void;
+  onCancel: () => void;
+}
+
+function EditableText({ editing, value, placeholder, onActivate, onSave, onCancel }: EditableTextProps) {
+  const display = value?.trim() || '';
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        type="text"
+        defaultValue={display}
+        placeholder={placeholder}
+        onBlur={(e) => onSave(e.target.value.trim() || undefined)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur();
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
+        className="w-full rounded border border-blue-300 bg-white px-1.5 py-0.5 text-xs outline-none focus:ring-1 focus:ring-blue-200 dark:border-blue-600 dark:bg-gray-900 dark:text-gray-100"
+      />
+    );
+  }
+
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      onClick={onActivate}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') onActivate();
+      }}
+      title={display || undefined}
+      className={`block min-h-[1.25rem] min-w-0 truncate cursor-text rounded px-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/5 ${
+        display ? 'text-gray-800 dark:text-gray-100' : 'text-gray-300 dark:text-gray-700'
+      }`}
+    >
+      {display || placeholder}
+    </span>
+  );
+}
+
+interface PurchaseRegistrationRowProps {
+  record: InquiryRecord;
+  onUpdate: (patch: Partial<InquiryRecord>) => void;
+  onEditRecord: (record: InquiryRecord) => void;
+}
+
+export function PurchaseRegistrationRow({ record, onUpdate, onEditRecord }: PurchaseRegistrationRowProps) {
+  const [activeField, setActiveField] = useState<EditField>(null);
+  const hasOrder = Boolean(record.orderNo?.trim());
+
+  // 供只读预览用的影子记录：把采购部专属供应商/报价状态接到 InquiryQuoteStatusDisplay 期望的字段名上
+  const previewRecord: InquiryRecord = {
+    ...record,
+    supplierStatuses: record.purchaseSupplierStatuses ?? [],
+    quotedStatuses: record.purchaseQuotedStatuses ?? [],
+  };
+
+  return (
+    <tr
+      className="group cursor-pointer border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/30"
+      onClick={() => onEditRecord(record)}
+    >
+      <td className="max-w-0 overflow-hidden px-3 py-2">
+        <span className="block truncate font-mono text-[11px] font-bold text-gray-800 dark:text-gray-100">
+          {record.inquiryNo}
+        </span>
+      </td>
+      <td className="max-w-0 overflow-hidden px-2 py-2" onClick={(e) => e.stopPropagation()}>
+        <EditableText
+          editing={activeField === 'content'}
+          value={record.description}
+          placeholder="内容描述"
+          onActivate={() => setActiveField('content')}
+          onSave={(value) => {
+            setActiveField(null);
+            onUpdate({ description: value ?? '' });
+          }}
+          onCancel={() => setActiveField(null)}
+        />
+      </td>
+      <td className="max-w-0 overflow-hidden px-2 py-2">
+        <InquiryQuoteStatusDisplay record={previewRecord} />
+      </td>
+      <td className="max-w-0 overflow-hidden px-2 py-2">
+        <span
+          className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+            hasOrder
+              ? 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300'
+              : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+          }`}
+        >
+          {hasOrder ? '已成单' : '未成单'}
+        </span>
+      </td>
+    </tr>
+  );
+}
+```
+
+说明：内容描述这一列的单元格加了 `onClick={(e) => e.stopPropagation()}`，因为它本身有点击即进入行内编辑的交互，如果不拦截，点击这一列会同时触发"打开编辑询价弹窗"和"进入行内编辑"，体验冲突。询价编号、询报价状态预览、成单状态这三列没有自己的点击交互，点击会正常冒泡到 `<tr>` 打开弹窗。"备货 / 交货 / 发票"列已整个删除（不再是采购部登记表的内容，改由"采购订单表" `/purchase-order-table` 独立展示，那边的 `PurchaseOrderRow.tsx` 已经有一份，不用动）。
+
+### 改动 5：`src/features/purchase-registration/components/PurchaseRegistrationTable.tsx`
+
+找到：
+
+```tsx
+interface PurchaseRegistrationTableProps {
+  records: InquiryRecord[];
+  onUpdate: (id: string, patch: Partial<InquiryRecord>) => void;
+}
+
+export function PurchaseRegistrationTable({ records, onUpdate }: PurchaseRegistrationTableProps) {
+```
+
+替换为：
+
+```tsx
+interface PurchaseRegistrationTableProps {
+  records: InquiryRecord[];
+  onUpdate: (id: string, patch: Partial<InquiryRecord>) => void;
+  onEditRecord: (record: InquiryRecord) => void;
+}
+
+export function PurchaseRegistrationTable({ records, onUpdate, onEditRecord }: PurchaseRegistrationTableProps) {
+```
+
+找到（表格从 5 列变成 4 列，删掉"备货 / 交货 / 发票"）：
+
+```tsx
+        <colgroup>
+          <col className="w-[18%]" />
+          <col className="w-[34%]" />
+          <col className="w-[18%]" />
+          <col className="w-[12%]" />
+          <col className="w-[18%]" />
+        </colgroup>
+        <thead>
+          <tr className={headerRowClass}>
+            <th className={headerCellOverflowClass}>询价编号</th>
+            <th className={headerCellOverflowClass}>内容描述</th>
+            <th className={headerCellOverflowClass}>询报价状态</th>
+            <th className={headerCellOverflowClass}>成单状态</th>
+            <th className={headerCellOverflowClass}>备货 / 交货 / 发票</th>
+          </tr>
+        </thead>
+```
+
+替换为：
+
+```tsx
+        <colgroup>
+          <col className="w-[18%]" />
+          <col className="w-[42%]" />
+          <col className="w-[26%]" />
+          <col className="w-[14%]" />
+        </colgroup>
+        <thead>
+          <tr className={headerRowClass}>
+            <th className={headerCellOverflowClass}>询价编号</th>
+            <th className={headerCellOverflowClass}>内容描述</th>
+            <th className={headerCellOverflowClass}>询报价状态</th>
+            <th className={headerCellOverflowClass}>成单状态</th>
+          </tr>
+        </thead>
+```
+
+找到：
+
+```tsx
+          {records.map((record) => (
+            <PurchaseRegistrationRow
+              key={record.id}
+              record={record}
+              onUpdate={(patch) => onUpdate(record.id, patch)}
+            />
+          ))}
+```
+
+替换为：
+
+```tsx
+          {records.map((record) => (
+            <PurchaseRegistrationRow
+              key={record.id}
+              record={record}
+              onUpdate={(patch) => onUpdate(record.id, patch)}
+              onEditRecord={onEditRecord}
+            />
+          ))}
+```
+
+### 改动 6：`src/features/purchase-registration/app/PurchaseRegistrationPage.tsx`
+
+找到：
+
+```tsx
+function matchesKeyword(record: InquiryRecord, keyword: string): boolean {
+  const q = keyword.trim().toLowerCase();
+  if (!q) return true;
+  return [
+    record.inquiryNo,
+    record.purchaseContentDesc,
+    record.purchaseInquiryStatus,
+    record.orderNo,
+    record.orderDeliveryStatus,
+    record.orderDeliveryConsignee,
+  ].some((value) => String(value ?? '').toLowerCase().includes(q));
+}
+```
+
+替换为（去掉 `orderDeliveryStatus`/`orderDeliveryConsignee`——采购部登记表不再展示这两个字段）：
+
+```tsx
+function matchesKeyword(record: InquiryRecord, keyword: string): boolean {
+  const q = keyword.trim().toLowerCase();
+  if (!q) return true;
+  return [
+    record.inquiryNo,
+    record.description,
+    record.orderNo,
+  ].some((value) => String(value ?? '').toLowerCase().includes(q));
+}
+```
+
+找到 import 区域：
+
+```tsx
+import {
+  PurchaseRegistrationFilterBar,
+  type OrderStateFilter,
+} from '../components/PurchaseRegistrationFilterBar';
+import { PurchaseRegistrationTable } from '../components/PurchaseRegistrationTable';
+```
+
+替换为：
+
+```tsx
+import {
+  PurchaseRegistrationFilterBar,
+  type OrderStateFilter,
+} from '../components/PurchaseRegistrationFilterBar';
+import { PurchaseRegistrationTable } from '../components/PurchaseRegistrationTable';
+import { PurchaseInquiryEditModal } from '../components/PurchaseInquiryEditModal';
+```
+
+在 `const [keyword, setKeyword] = useState('');` 之后（`const [orderState, ...]` 那一行附近）新增一个 state：
+
+```tsx
+  const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
+```
+
+找到组件内 `<PurchaseRegistrationTable ... />` 部分：
+
+```tsx
+        <PurchaseRegistrationTable
+          records={filteredRecords}
+          onUpdate={(id, patch) => patchRecordForView(id, patch)}
+        />
+      </div>
+    </AppLayout>
+  );
+}
+```
+
+替换为：
+
+```tsx
+        <PurchaseRegistrationTable
+          records={filteredRecords}
+          onUpdate={(id, patch) => patchRecordForView(id, patch)}
+          onEditRecord={setEditingRecord}
+        />
+      </div>
+
+      <PurchaseInquiryEditModal
+        record={editingRecord}
+        onClose={() => setEditingRecord(null)}
+        onSave={(id, patch) => patchRecordForView(id, patch)}
+      />
+    </AppLayout>
+  );
+}
+```
+
+### 改动 7：`src/features/purchase-registration/components/PurchaseRegistrationFilterBar.tsx`
+
+找到：
+
+```tsx
+            placeholder="搜索编号/内容/执行情况..."
+```
+
+替换为：
+
+```tsx
+            placeholder="搜索编号/内容..."
+```
+
+### 改动 8：文档同步
+
+**`docs/features/purchase-registration/PURCHASE_REGISTRATION_MODULE.md`** —— 把「数据模型」一节：
+
+```
+purchaseContentDesc?: string;
+purchaseInquiryStatus?: 'internal_supplier' | 'reported_to_sales';
+```
+
+```
+这两个字段独立于 `description`、`supplierStatuses`、`quotedStatuses`，只服务采购部登记。
+```
+
+改为：
+
+```
+purchaseSupplierStatuses?: SupplierQuoteStatus[];
+purchaseQuotedStatuses?: CustomerQuoteStatus[];
+```
+
+```
+内容描述直接读写 `description`，与询报价登记共享同一份数据；`purchaseSupplierStatuses` / `purchaseQuotedStatuses` 结构与询报价登记的 `supplierStatuses` / `quotedStatuses` 相同，但数据独立存储，互不影响，通过"编辑询价"弹窗（点击整行触发）编辑。表格不再展示"备货 / 交货 / 发票"，该状态只在"采购订单表"（`/purchase-order-table`）里维护，采购部登记不读写 `orderDeliveryStatus` / `orderDeliveryConsignee`。
+```
+
+**`docs/core/CURRENT_STATE.md`**：
+
+第 43 行找到：
+
+```
+| `/purchase-registration` | 采购部登记 | 复用询报价 D1 JSON 记录，只开放采购部描述、采购询报价状态和执行情况字段 |
+```
+
+替换为：
+
+```
+| `/purchase-registration` | 采购部登记 | 复用询报价 D1 JSON 记录，只开放内容描述（与询报价登记共享 description）和采购部专属供应商/报价状态字段；不含备货/交货/发票（该状态在采购订单表维护） |
+```
+
+第 182 行找到：
+
+```
+- 采购部登记复用 `InquiryRecord`，新增 `purchaseContentDesc` 与 `purchaseInquiryStatus` 两个采购部专用字段，不复用询报价登记的 `description`、`supplierStatuses` 或 `quotedStatuses` 状态。
+```
+
+替换为：
+
+```
+- 采购部登记复用 `InquiryRecord` 的 `description` 字段读写内容描述（与询报价登记共享同一份数据）；新增 `purchaseSupplierStatuses` 与 `purchaseQuotedStatuses` 两个采购部专用字段，结构与询报价登记的 `supplierStatuses` / `quotedStatuses` 相同，但数据独立存储，通过点击整行弹出的"编辑询价"弹窗编辑；不展示/不读写 `orderDeliveryStatus` / `orderDeliveryConsignee`（那是订单状态表 `/order` 和采购订单表 `/purchase-order-table` 各自维护的字段）。
+```
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npx eslint src/features/inquiry/types/index.ts src/app/api/inquiry/[[...path]]/route.ts src/features/purchase-registration/app/PurchaseRegistrationPage.tsx src/features/purchase-registration/components/PurchaseRegistrationTable.tsx src/features/purchase-registration/components/PurchaseRegistrationRow.tsx src/features/purchase-registration/components/PurchaseInquiryEditModal.tsx src/features/purchase-registration/components/PurchaseRegistrationFilterBar.tsx
+npm run build
+grep -rn "purchaseContentDesc\|purchaseInquiryStatus" src/
+# 预期：无匹配（全部改为 description / purchaseSupplierStatuses / purchaseQuotedStatuses）
+grep -rn "orderDeliveryStatus\|orderDeliveryConsignee" src/features/purchase-registration/
+# 预期：无匹配（采购部登记表不再读写这两个字段）
+```
+
+### 验收标准
+
+- 采购部登记表"内容描述"列点击可编辑，保存后 `/inquiry`（询报价登记）里同一条记录的"内容简述"同步显示新值，反之亦然。
+- "询报价状态"列不再是下拉框，改为只读的供应商标签 + 已报价预览（复用询报价登记同款展示样式）。
+- 采购部登记表**不再显示"备货 / 交货 / 发票"列**（表格只剩询价编号/内容描述/询报价状态/成单状态 4 列）；这个状态继续只在"采购订单表"（`/purchase-order-table`）里维护和展示，不受影响。
+- 点击采购部登记表任意一行（内容描述列的行内编辑除外）弹出"编辑询价"弹窗，弹窗内可新增/编辑/删除供应商标签和已报价记录，交互与询报价登记的"编辑询价"弹窗一致。
+- 保存后数据写入 `purchaseSupplierStatuses` / `purchaseQuotedStatuses`，不影响同一条记录在 `/inquiry` 里显示的 `supplierStatuses` / `quotedStatuses`（两边互相独立）。
+- 只有 `purchaseRegistration` 权限（无 `inquiry` 权限）的用户仍无法新增/删除询报价记录，但可以编辑 `description`、`purchaseSupplierStatuses`、`purchaseQuotedStatuses`；不再能通过这个代理改 `orderDeliveryStatus`/`orderDeliveryConsignee`（这两个字段不属于采购部登记的写入范围）。
+- 全仓库搜索确认 `purchaseContentDesc` / `purchaseInquiryStatus` 无业务代码残留（`CODEX_TASKS.md` 里 TASK-96/99 的历史记录原文不用改）。
+
+---
+
 ## TASK-99：合并报价单/销售确认为同一入口，改用设置面板内 Type 切换
 
 **状态**：已完成（由 Claude 直接实施，2026-07-07）

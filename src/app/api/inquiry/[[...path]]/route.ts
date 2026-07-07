@@ -5,10 +5,9 @@ import { authOptions } from '@/lib/auth';
 const WORKER_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://udb.luocompany.net';
 const FINANCIAL_FIELDS = ['orderAmount', 'orderPaymentDate', 'orderReceivedAmount'] as const;
 const PURCHASE_REGISTRATION_WRITE_FIELDS = [
-  'purchaseContentDesc',
-  'purchaseInquiryStatus',
-  'orderDeliveryStatus',
-  'orderDeliveryConsignee',
+  'description',
+  'purchaseSupplierStatuses',
+  'purchaseQuotedStatuses',
 ] as const;
 
 function getWorkerHeaders(): HeadersInit {
@@ -25,11 +24,10 @@ function sanitizePurchaseRegistrationRecord(record: Record<string, unknown>): Re
     id: record.id,
     inquiryDate: record.inquiryDate,
     inquiryNo: record.inquiryNo,
-    purchaseContentDesc: record.purchaseContentDesc,
-    purchaseInquiryStatus: record.purchaseInquiryStatus,
+    description: record.description,
+    purchaseSupplierStatuses: record.purchaseSupplierStatuses,
+    purchaseQuotedStatuses: record.purchaseQuotedStatuses,
     orderNo: record.orderNo,
-    orderDeliveryStatus: record.orderDeliveryStatus,
-    orderDeliveryConsignee: record.orderDeliveryConsignee,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     status: record.status,

@@ -24,17 +24,17 @@ src/features/purchase-registration/
 新增字段位于 `src/features/inquiry/types/index.ts`：
 
 ```ts
-purchaseContentDesc?: string;
-purchaseInquiryStatus?: 'internal_supplier' | 'reported_to_sales';
+purchaseSupplierStatuses?: SupplierQuoteStatus[];
+purchaseQuotedStatuses?: CustomerQuoteStatus[];
 ```
 
-这两个字段独立于 `description`、`supplierStatuses`、`quotedStatuses`，只服务采购部登记。
+内容描述直接读写 `description`，与询报价登记共享同一份数据；`purchaseSupplierStatuses` / `purchaseQuotedStatuses` 结构与询报价登记的 `supplierStatuses` / `quotedStatuses` 相同，但数据独立存储，互不影响，通过"编辑询价"弹窗（点击整行触发）编辑。表格不再展示"备货 / 交货 / 发票"，该状态只在"采购订单表"（`/purchase-order-table`）里维护，采购部登记不读写 `orderDeliveryStatus` / `orderDeliveryConsignee`。
 
 ## 权限
 
 - moduleId：`purchaseRegistration`
 - 分类：`registration`
-- API：复用 `/api/inquiry` 代理，但当用户只有 `purchaseRegistration`、没有 `inquiry` 权限时，只返回采购部登记需要的字段，并且只允许更新采购部描述、采购询报价状态和执行情况。
+- API：复用 `/api/inquiry` 代理，但当用户只有 `purchaseRegistration`、没有 `inquiry` 权限时，只返回采购部登记需要的字段，并且只允许更新 `description`、`purchaseSupplierStatuses`、`purchaseQuotedStatuses`。
 
 ## 同步
 

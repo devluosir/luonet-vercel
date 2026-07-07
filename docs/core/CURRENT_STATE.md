@@ -40,7 +40,7 @@ LC App / MLUONET 是 Luo & Company 内部业务管理系统，不是展示站。
 | `/quotation?tab=domestic` | 内销报价合同 | 独立侧边栏入口，复用报价单页面与 `quotation_history` 存储 key，默认 CNY，中文录入表单和中文合同式 PDF，历史记录使用独立 `type='domestic'`，避免混入外贸报价单 |
 | `/inquiry` | 询报价登记 | 已接入 D1 `Document`，支持客户/联络人关联、批量关联、筛选 |
 | `/order` | 订单状态表 | 复用询报价记录，支持订单状态、金额权限和进行中筛选 |
-| `/purchase-registration` | 采购部登记 | 复用询报价 D1 JSON 记录，只开放采购部描述、采购询报价状态和执行情况字段 |
+| `/purchase-registration` | 采购部登记 | 复用询报价 D1 JSON 记录，只开放内容描述（与询报价登记共享 description）和采购部专属供应商/报价状态字段；不含备货/交货/发票（该状态在采购订单表维护） |
 | `/purchase-order-table` | 采购订单表 | 独立 D1 登记表，使用 `Document.type='purchase'` + `_shared_purchase_` 共享记录，不自动导入旧 `purchase_history` |
 | `/packing` | 箱单发票 | 支持从销售确认导入，已切断装箱单 Consignee 反向污染客户库的保存动作 |
 | `/invoice` | 财务发票 | 本地历史为主，支持导入、PDF/Excel、复制、编辑 |
@@ -179,7 +179,7 @@ theme-config
 ## 询报价与订单状态现状
 
 - 询报价记录已支持 `customerId`、`contactId` 结构化关联。
-- 采购部登记复用 `InquiryRecord`，新增 `purchaseContentDesc` 与 `purchaseInquiryStatus` 两个采购部专用字段，不复用询报价登记的 `description`、`supplierStatuses` 或 `quotedStatuses` 状态。
+- 采购部登记复用 `InquiryRecord` 的 `description` 字段读写内容描述（与询报价登记共享同一份数据）；新增 `purchaseSupplierStatuses` 与 `purchaseQuotedStatuses` 两个采购部专用字段，结构与询报价登记的 `supplierStatuses` / `quotedStatuses` 相同，但数据独立存储，通过点击整行弹出的"编辑询价"弹窗编辑；不展示/不读写 `orderDeliveryStatus` / `orderDeliveryConsignee`（那是订单状态表 `/order` 和采购订单表 `/purchase-order-table` 各自维护的字段）。
 - 询价成单后支持 `orderSubStatus` 标记：`cancelled`（辙销C）、`suspended`（悬挂P）、`followup`（善后S）。
 - 编辑询价时选择 C/P/S 标记会出现单行「情况备注」，保存到 `orderSubStatusRemark`；取消标记或清空订单编号会清空该备注。
 - 询价 Excel 导入导出包含 `订单标记`、`订单备注` 两列；D1 仍通过 `Document.data` JSON 透传，无需 schema 迁移。

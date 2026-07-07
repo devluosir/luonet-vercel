@@ -1,15 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { DeliveryStatusCell } from '@/features/order/components/DeliveryStatusCell';
-import type { InquiryRecord, PurchaseInquiryStatus } from '@/features/inquiry/types';
+import { InquiryQuoteStatusDisplay } from '@/features/inquiry/components/InquiryQuoteStatusDisplay';
+import type { InquiryRecord } from '@/features/inquiry/types';
 
-type EditField = 'content' | 'deliveryStatus' | null;
-
-const STATUS_LABELS: Record<PurchaseInquiryStatus, string> = {
-  internal_supplier: '内部供应商',
-  reported_to_sales: '已报至销售部',
-};
+type EditField = 'content' | null;
 
 interface EditableTextProps {
   editing: boolean;
@@ -64,54 +59,45 @@ function EditableText({ editing, value, placeholder, onActivate, onSave, onCance
 interface PurchaseRegistrationRowProps {
   record: InquiryRecord;
   onUpdate: (patch: Partial<InquiryRecord>) => void;
+  onEditRecord: (record: InquiryRecord) => void;
 }
 
-export function PurchaseRegistrationRow({ record, onUpdate }: PurchaseRegistrationRowProps) {
+export function PurchaseRegistrationRow({ record, onUpdate, onEditRecord }: PurchaseRegistrationRowProps) {
   const [activeField, setActiveField] = useState<EditField>(null);
   const hasOrder = Boolean(record.orderNo?.trim());
-  const rowTextClass = record.orderDeliveryStatus?.trim().startsWith('发票')
-    ? 'text-gray-900 dark:text-gray-100'
-    : record.orderDeliveryStatus?.trim().startsWith('交货')
-      ? 'text-blue-600 dark:text-blue-400'
-      : 'text-pink-500 dark:text-pink-400';
+
+  // 供只读预览用的影子记录：把采购部专属供应商/报价状态接到 InquiryQuoteStatusDisplay 期望的字段名上
+  const previewRecord: InquiryRecord = {
+    ...record,
+    supplierStatuses: record.purchaseSupplierStatuses ?? [],
+    quotedStatuses: record.purchaseQuotedStatuses ?? [],
+  };
 
   return (
-    <tr className="border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/30">
+    <tr
+      className="group cursor-pointer border-b border-gray-100 align-middle last:border-b-0 hover:bg-gray-50/70 dark:border-gray-800 dark:hover:bg-gray-800/30"
+      onClick={() => onEditRecord(record)}
+    >
       <td className="max-w-0 overflow-hidden px-3 py-2">
         <span className="block truncate font-mono text-[11px] font-bold text-gray-800 dark:text-gray-100">
           {record.inquiryNo}
         </span>
       </td>
-      <td className="max-w-0 overflow-hidden px-2 py-2">
+      <td className="max-w-0 overflow-hidden px-2 py-2" onClick={(e) => e.stopPropagation()}>
         <EditableText
           editing={activeField === 'content'}
-          value={record.purchaseContentDesc}
+          value={record.description}
           placeholder="内容描述"
           onActivate={() => setActiveField('content')}
           onSave={(value) => {
             setActiveField(null);
-            onUpdate({ purchaseContentDesc: value ?? '' });
+            onUpdate({ description: value ?? '' });
           }}
           onCancel={() => setActiveField(null)}
         />
       </td>
       <td className="max-w-0 overflow-hidden px-2 py-2">
-        <select
-          value={record.purchaseInquiryStatus ?? ''}
-          onChange={(e) =>
-            onUpdate({
-              purchaseInquiryStatus: (e.target.value || undefined) as PurchaseInquiryStatus | undefined,
-            })
-          }
-          className="h-7 w-full rounded-lg border border-gray-200 bg-white px-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-        >
-          <option value="">未设置</option>
-          {Object.entries(STATUS_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <InquiryQuoteStatusDisplay record={previewRecord} />
       </td>
       <td className="max-w-0 overflow-hidden px-2 py-2">
         <span
@@ -123,23 +109,6 @@ export function PurchaseRegistrationRow({ record, onUpdate }: PurchaseRegistrati
         >
           {hasOrder ? '已成单' : '未成单'}
         </span>
-      </td>
-      <td className="max-w-0 overflow-hidden px-2 py-2">
-        <DeliveryStatusCell
-          editing={activeField === 'deliveryStatus'}
-          value={record.orderDeliveryStatus}
-          consigneeValue={record.orderDeliveryConsignee}
-          textClassName={rowTextClass}
-          onActivate={() => setActiveField('deliveryStatus')}
-          onSave={(status, consignee) => {
-            setActiveField(null);
-            onUpdate({
-              orderDeliveryStatus: status ?? '',
-              orderDeliveryConsignee: consignee ?? '',
-            });
-          }}
-          onCancel={() => setActiveField(null)}
-        />
       </td>
     </tr>
   );

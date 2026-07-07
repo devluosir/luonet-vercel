@@ -10,9 +10,10 @@ import { PurchaseRegistrationRow } from './PurchaseRegistrationRow';
 interface PurchaseRegistrationTableProps {
   records: InquiryRecord[];
   onUpdate: (id: string, patch: Partial<InquiryRecord>) => void;
+  onEditRecord: (record: InquiryRecord) => void;
 }
 
-export function PurchaseRegistrationTable({ records, onUpdate }: PurchaseRegistrationTableProps) {
+export function PurchaseRegistrationTable({ records, onUpdate, onEditRecord }: PurchaseRegistrationTableProps) {
   if (records.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-gray-700 dark:bg-[#2C2C2E]">
@@ -29,10 +30,9 @@ export function PurchaseRegistrationTable({ records, onUpdate }: PurchaseRegistr
       <table className="w-full table-fixed">
         <colgroup>
           <col className="w-[18%]" />
-          <col className="w-[34%]" />
-          <col className="w-[18%]" />
-          <col className="w-[12%]" />
-          <col className="w-[18%]" />
+          <col className="w-[42%]" />
+          <col className="w-[26%]" />
+          <col className="w-[14%]" />
         </colgroup>
         <thead>
           <tr className={headerRowClass}>
@@ -40,7 +40,6 @@ export function PurchaseRegistrationTable({ records, onUpdate }: PurchaseRegistr
             <th className={headerCellOverflowClass}>内容描述</th>
             <th className={headerCellOverflowClass}>询报价状态</th>
             <th className={headerCellOverflowClass}>成单状态</th>
-            <th className={headerCellOverflowClass}>备货 / 交货 / 发票</th>
           </tr>
         </thead>
         <tbody>
@@ -49,6 +48,7 @@ export function PurchaseRegistrationTable({ records, onUpdate }: PurchaseRegistr
               key={record.id}
               record={record}
               onUpdate={(patch) => onUpdate(record.id, patch)}
+              onEditRecord={onEditRecord}
             />
           ))}
         </tbody>

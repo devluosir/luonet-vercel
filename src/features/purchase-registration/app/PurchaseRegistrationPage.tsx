@@ -16,6 +16,7 @@ import {
   type OrderStateFilter,
 } from '../components/PurchaseRegistrationFilterBar';
 import { PurchaseRegistrationTable } from '../components/PurchaseRegistrationTable';
+import { PurchaseInquiryEditModal } from '../components/PurchaseInquiryEditModal';
 
 function hasOrder(record: InquiryRecord): boolean {
   return Boolean(record.orderNo?.trim());
@@ -26,11 +27,8 @@ function matchesKeyword(record: InquiryRecord, keyword: string): boolean {
   if (!q) return true;
   return [
     record.inquiryNo,
-    record.purchaseContentDesc,
-    record.purchaseInquiryStatus,
+    record.description,
     record.orderNo,
-    record.orderDeliveryStatus,
-    record.orderDeliveryConsignee,
   ].some((value) => String(value ?? '').toLowerCase().includes(q));
 }
 
@@ -56,6 +54,7 @@ export function PurchaseRegistrationPage() {
 
   const [keyword, setKeyword] = useState('');
   const [orderState, setOrderState] = useState<OrderStateFilter>('all');
+  const [editingRecord, setEditingRecord] = useState<InquiryRecord | null>(null);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -137,8 +136,15 @@ export function PurchaseRegistrationPage() {
         <PurchaseRegistrationTable
           records={filteredRecords}
           onUpdate={(id, patch) => patchRecordForView(id, patch)}
+          onEditRecord={setEditingRecord}
         />
       </div>
+
+      <PurchaseInquiryEditModal
+        record={editingRecord}
+        onClose={() => setEditingRecord(null)}
+        onSave={(id, patch) => patchRecordForView(id, patch)}
+      />
     </AppLayout>
   );
 }

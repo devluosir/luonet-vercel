@@ -55,7 +55,7 @@ export function PurchaseRegistrationFilterBar({
             type="search"
             value={keyword}
             onChange={(e) => onKeywordChange(e.target.value)}
-            placeholder="搜索编号/内容/执行情况..."
+            placeholder="搜索编号/内容..."
             className="h-7 min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2 text-xs text-gray-700 outline-none placeholder:text-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-500 dark:focus:border-blue-500 sm:w-64 sm:flex-none"
           />
           {activeCount > 0 && (
