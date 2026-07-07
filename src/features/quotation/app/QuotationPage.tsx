@@ -701,6 +701,34 @@ export default function QuotationPage() {
                       >
                         税运备注
                       </button>
+                      <span className="text-blue-300 dark:text-blue-700">|</span>
+                      <span className="font-medium text-blue-700 dark:text-blue-300">Header：</span>
+                      {[
+                        { value: 'none', label: '无' },
+                        { value: 'bilingual', label: '中英文' },
+                        { value: 'english', label: '英文' },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() =>
+                            updateData({
+                              templateConfig: {
+                                stampType: data.templateConfig?.stampType ?? 'none',
+                                ...data.templateConfig,
+                                headerType: option.value as 'none' | 'bilingual' | 'english',
+                              },
+                            })
+                          }
+                          className={`rounded px-2 py-1 text-[11px] font-medium transition-all ${
+                            (data.templateConfig?.headerType ?? 'bilingual') === option.value
+                              ? 'bg-[#007AFF] text-white shadow-sm'
+                              : 'border border-gray-200 bg-white text-gray-600 hover:border-[#007AFF]/40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
                       {(data.domesticDocType ?? 'contract') === 'contract' && (
                         <>
                           <span className="text-blue-300 dark:text-blue-700">|</span>

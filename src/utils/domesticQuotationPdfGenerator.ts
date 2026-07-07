@@ -1,4 +1,4 @@
-import jsPDF, { GState } from 'jspdf';
+import jsPDF, { GState, ImageProperties } from 'jspdf';
 import 'jspdf-autotable';
 import type { UserOptions } from 'jspdf-autotable';
 import type { NoteConfig } from '@/features/quotation/types/notes';
@@ -7,6 +7,7 @@ import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { safeSetCnFont } from './pdf/ensureFont';
 import { convertToRmbCapital } from './rmbCapitalAmount';
 import { getDomesticClauseNumber } from './domesticClauseNumber';
+import { getHeaderImage, getHeaderImageFormat } from './imageLoader';
 
 interface ExtendedJsPDF extends jsPDF {
   autoTable: (options: UserOptions) => void;
@@ -15,6 +16,7 @@ interface ExtendedJsPDF extends jsPDF {
   saveGraphicsState: () => jsPDF;
   restoreGraphicsState: () => jsPDF;
   setGState: (gState: GState) => jsPDF;
+  getImageProperties: (image: string) => ImageProperties;
 }
 
 function setCnFont(doc: jsPDF, style: 'normal' | 'bold' = 'normal') {
@@ -70,6 +72,44 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
     doc.setFontSize(8);
     setCnFont(doc, 'normal');
     doc.text(`Page ${page} of ${total}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+  }
+}
+
+// 顶部Header图片（公司抬头）：None / 中英文 / 英文，与外贸报价单口径一致，默认双语
+async function drawHeaderImage(
+  doc: ExtendedJsPDF,
+  data: QuotationData,
+  margin: number,
+  pageWidth: number,
+  y: number
+): Promise<number> {
+  const headerType = data.templateConfig?.headerType || 'bilingual';
+  if (headerType === 'none') return y;
+
+  try {
+    const normalizedHeaderType = headerType as 'bilingual' | 'english';
+    const headerImage = await getHeaderImage(normalizedHeaderType);
+    const headerFormat = getHeaderImageFormat(normalizedHeaderType);
+    const contentWidth = pageWidth - margin * 2;
+
+    const imgProperties = doc.getImageProperties(headerImage);
+    const aspectRatio = imgProperties.width / imgProperties.height;
+    const maxWidth = contentWidth;
+    const maxHeight = 32;
+    let imgWidth = maxWidth;
+    let imgHeight = imgWidth / aspectRatio;
+
+    if (imgHeight > maxHeight) {
+      imgHeight = maxHeight;
+      imgWidth = imgHeight * aspectRatio;
+    }
+
+    const xPosition = margin + (contentWidth - imgWidth) / 2;
+    doc.addImage(headerImage, headerFormat, xPosition, y, imgWidth, imgHeight);
+    return y + imgHeight + 6;
+  } catch (error) {
+    console.error('[DomesticQuotationPDF] 头部图片加载失败，跳过:', error);
+    return y;
   }
 }
 
@@ -278,6 +318,7 @@ export async function generateDomesticQuotationPDF(
   const isContract = (data.domesticDocType ?? 'contract') === 'contract';
   let y = 18;
 
+  y = await drawHeaderImage(doc, data, margin, pageWidth, y);
   y = drawHeader(doc, data, margin, pageWidth, y, isContract);
 
   doc.setFontSize(10);
@@ -309,13 +350,13 @@ export async function generateDomesticQuotationPDF(
     },
     columnStyles: {
       0: { halign: 'center', cellWidth: 12 },
-      1: { cellWidth: 24 },
-      2: { cellWidth: 42 },
+      1: { halign: 'center', cellWidth: 24 },
+      2: { halign: 'center', cellWidth: 42 },
       3: { halign: 'center', cellWidth: 12 },
-      4: { halign: 'right', cellWidth: 14 },
-      5: { halign: 'right', cellWidth: 24 },
-      6: { halign: 'right', cellWidth: 26 },
-      7: { cellWidth: 24 },
+      4: { halign: 'center', cellWidth: 14 },
+      5: { halign: 'center', cellWidth: 24 },
+      6: { halign: 'center', cellWidth: 26 },
+      7: { halign: 'center', cellWidth: 24 },
     },
     didParseCell: (hookData) => {
       hookData.cell.styles.font = 'NotoSansSC';
