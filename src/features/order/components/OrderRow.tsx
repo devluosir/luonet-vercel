@@ -393,9 +393,15 @@ interface OrderRowProps {
   canViewFinancials: boolean;
   consigneeOptions: string[];
   onUpdate: (patch: Partial<InquiryRecord>) => void;
+  canBatchEdit?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function OrderRow({ record, bp, canViewFinancials, consigneeOptions, onUpdate }: OrderRowProps) {
+export function OrderRow({
+  record, bp, canViewFinancials, consigneeOptions, onUpdate,
+  canBatchEdit = false, selected = false, onToggleSelect,
+}: OrderRowProps) {
   const customerCol = showCustomerCol(bp);
   const lgCols = showLgCols(bp);
   const adminCols = showAdminCols(bp, canViewFinancials);
@@ -421,6 +427,19 @@ export function OrderRow({ record, bp, canViewFinancials, consigneeOptions, onUp
 
   return (
     <tr className={`group border-b border-gray-100 align-middle last:border-b-0 dark:border-gray-800 ${getRowBgClass(record)}`}>
+
+      {/* 批量选择 checkbox */}
+      {canBatchEdit && (
+        <td className="w-8 px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect?.(record.id)}
+            className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 accent-blue-600 dark:border-gray-600"
+            aria-label={`选择 ${record.orderNo ?? record.inquiryNo}`}
+          />
+        </td>
+      )}
 
       {/* 订单编号 + 询价编号 */}
       <td className="max-w-0 overflow-hidden px-2 py-2 sm:px-3">

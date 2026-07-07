@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import {
+  headerCellCenterClass,
   headerCellOverflowClass,
   headerCellOverflowRightClass,
   headerRowClass,
@@ -48,6 +49,10 @@ interface OrderTableProps {
   consigneeOptions: string[];
   onSortToggle: (field: SortField) => void;
   onUpdate: (id: string, patch: Partial<InquiryRecord>) => void;
+  canBatchEdit?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onToggleSelectAll?: (allIds: string[]) => void;
 }
 
 function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: SortField; sortDir: 'asc' | 'desc' }) {
@@ -65,12 +70,19 @@ export function OrderTable({
   consigneeOptions,
   onSortToggle,
   onUpdate,
+  canBatchEdit = false,
+  selectedIds = new Set(),
+  onToggleSelect,
+  onToggleSelectAll,
 }: OrderTableProps) {
   const bp = useBreakpoint();
-  const colWidths = getVisibleColWidths(bp, canViewFinancials);
+  const colWidths = getVisibleColWidths(bp, canViewFinancials, canBatchEdit);
   const customerCol = showCustomerCol(bp);
   const lgCols = showLgCols(bp);
   const adminCols = showAdminCols(bp, canViewFinancials);
+  const allIds = records.map((r) => r.id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+  const someSelected = allIds.some((id) => selectedIds.has(id)) && !allSelected;
 
   const thSort = (field: SortField, label: string, shortLabel?: string) => {
     const active = field === sortField;
@@ -111,6 +123,19 @@ export function OrderTable({
         </colgroup>
         <thead>
           <tr className={headerRowClass}>
+            {canBatchEdit && (
+              <th className={headerCellCenterClass}>
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => { if (el) el.indeterminate = someSelected; }}
+                  onChange={() => onToggleSelectAll?.(allIds)}
+                  className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 accent-blue-600 dark:border-gray-600"
+                  aria-label="全选"
+                  title={allSelected ? '取消全选' : '全选当前页'}
+                />
+              </th>
+            )}
             <th className={`${headerCellClass} sm:px-3`}>
               {thSort('orderNo', '订单编号', '编号')}
             </th>
@@ -164,6 +189,9 @@ export function OrderTable({
               canViewFinancials={canViewFinancials}
               consigneeOptions={consigneeOptions}
               onUpdate={(patch) => onUpdate(record.id, patch)}
+              canBatchEdit={canBatchEdit}
+              selected={selectedIds.has(record.id)}
+              onToggleSelect={onToggleSelect}
             />
           ))}
         </tbody>

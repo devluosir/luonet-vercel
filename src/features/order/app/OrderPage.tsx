@@ -1,14 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pencil, Trash2, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { AppLayout } from '@/components/layout';
+import { AppLayout, type ActionButton } from '@/components/layout';
 import { FilterChip } from '@/components/FilterChip';
 import { MonthRangeNav, type MonthTimeRange } from '@/components/MonthRangeNav';
 import { PermissionDenied } from '@/components/PermissionDenied';
 import { FullScreenSpinner } from '@/components/layout/FullScreenSpinner';
 import { useAppUser } from '@/hooks/useAppUser';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { usePermissionStore } from '@/lib/permissions';
 import { getCustomersForDropdown } from '@/features/customer/services/customerService';
 import { useInquirySync } from '@/features/inquiry/hooks/useInquirySync';
@@ -87,6 +89,13 @@ export function OrderPage() {
 
   const records = useInquiryStore((s) => s.records);
   const updateRecord = useInquiryStore((s) => s.updateRecord);
+  const removeRecord = useInquiryStore((s) => s.removeRecord);
+  const confirm = useConfirm();
+  const hasBatchEditPermission = usePermissionStore((s) => s.hasPermission('inquiry.batchEdit'));
+
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [timeRange, setTimeRange] = useState<TimeRange>('3months');
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>('all');
@@ -207,6 +216,60 @@ export function OrderPage() {
     setCustomerFilter('');
   };
 
+  // 筛选条件变化时清空选中
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [timeRange, orderStatusFilter, keyword, customerFilter]);
+
+  const handleToggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleToggleSelectAll = useCallback((allIds: string[]) => {
+    setSelectedIds((prev) => {
+      const allSelected = allIds.every((id) => prev.has(id));
+      return allSelected ? new Set() : new Set(allIds);
+    });
+  }, []);
+
+  const handleBatchDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    const confirmed = await confirm({
+      title: '删除订单记录',
+      description: `确定删除选中的 ${selectedIds.size} 条记录吗？此操作不可撤销，且会同时从询报价登记表中删除这条记录。`,
+      confirmLabel: '删除',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    Array.from(selectedIds).forEach((id) => removeRecord(id));
+    setSelectedIds(new Set());
+  }, [selectedIds, removeRecord, confirm]);
+
+  const toggleEditMode = useCallback(() => {
+    setIsEditMode((prev) => {
+      if (prev) setSelectedIds(new Set());
+      return !prev;
+    });
+  }, []);
+
+  const bottomActions = useMemo<ActionButton[]>(() => {
+    if (!hasBatchEditPermission) return [];
+    return [
+      {
+        key: 'admin-menu',
+        label: '批量编辑',
+        onClick: () => setIsAdminMenuOpen((prev) => !prev),
+        variant: isAdminMenuOpen || isEditMode ? 'primary' : 'secondary',
+        icon: Pencil,
+      },
+    ];
+  }, [hasBatchEditPermission, isAdminMenuOpen, isEditMode]);
+
   /** "m.D" 或 "[m.D]" → 数字排序键，无值返回 0（排末尾） */
   const parseDeliveryDate = (s: string | undefined): number => {
     if (!s) return 0;
@@ -271,6 +334,7 @@ export function OrderPage() {
       user={user}
       onLogout={handleLogout}
       topBarSlot={topBarSlot}
+      bottomActions={bottomActions}
     >
       <div className="w-full px-3 py-3 sm:px-5 lg:px-6">
         {/* 筛选面板 */}
@@ -406,8 +470,64 @@ export function OrderPage() {
             }
           }}
           onUpdate={(id, patch) => updateRecord(id, patch)}
+          canBatchEdit={hasBatchEditPermission && isEditMode}
+          selectedIds={selectedIds}
+          onToggleSelect={handleToggleSelect}
+          onToggleSelectAll={handleToggleSelectAll}
         />
       </div>
+
+      {/* ── 批量编辑菜单 ── */}
+      {hasBatchEditPermission && isAdminMenuOpen && (
+        <>
+          {/* 点击遮罩关闭 */}
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setIsAdminMenuOpen(false)}
+          />
+          {/* 菜单面板，悬浮在底部 bar 上方 */}
+          <div className="fixed bottom-20 right-4 z-50 min-w-[10rem] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-[#2C2C2E]">
+
+            {/* 批量选择 开关 */}
+            <button
+              type="button"
+              onClick={toggleEditMode}
+              className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                isEditMode
+                  ? 'font-medium text-blue-600 dark:text-blue-400'
+                  : 'text-gray-700 dark:text-gray-200'
+              }`}
+            >
+              <Pencil className="h-4 w-4 shrink-0 text-gray-400" />
+              {isEditMode ? '退出批量选择' : '批量选择'}
+            </button>
+
+            {/* 删除选中（有选中时才显示） */}
+            {isEditMode && selectedIds.size > 0 && (
+              <button
+                type="button"
+                onClick={() => { handleBatchDelete(); setIsAdminMenuOpen(false); }}
+                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+              >
+                <Trash2 className="h-4 w-4 shrink-0" />
+                删除选中（{selectedIds.size}）
+              </button>
+            )}
+
+            {/* 取消选择（编辑模式且有选中时显示） */}
+            {isEditMode && selectedIds.size > 0 && (
+              <button
+                type="button"
+                onClick={() => { setSelectedIds(new Set()); setIsAdminMenuOpen(false); }}
+                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-700/50"
+              >
+                <X className="h-4 w-4 shrink-0 text-gray-400" />
+                取消选择
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </AppLayout>
   );
 }

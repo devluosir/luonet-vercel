@@ -15209,3 +15209,354 @@ npx wrangler deploy   # worker.ts 改动需要单独部署才生效
 - `pushLocalToD1` 的"本地创建但未同步成功"兜底重试能力保留（不因为改成 meta 触发就丢失离线创建记录的补偿写入）。
 - `InquiryPage.tsx`/`OrderPage.tsx` 不再有两份几乎相同的轮询代码。
 - 不改变现有筛选、排序、权限、批量编辑等业务逻辑。
+
+---
+
+## TASK-103：订单状态表新增"批量编辑"（批量选择 + 批量删除，用于清理重复订单数据）
+
+### 背景
+
+Roger 反馈订单状态表（`/order`，`OrderPage.tsx`）目前没有任何批量操作入口，而他需要手动清理一批重复/错误的订单数据，只有在订单状态表里才能清晰识别出这些重复记录。询报价登记表（`/inquiry`）已经有一套"批量编辑"模式（底部悬浮按钮 → 弹出菜单 → 开启"批量选择" → 表格出现 checkbox 列 → 选中后可批量操作），这次要在订单状态表复用同一套 UI 模式，但菜单内容按订单表场景裁剪。
+
+**已与 Roger 确认的两个关键点**：
+
+1. 订单状态表和询报价登记表本质是同一份底层记录（`InquiryRecord`，订单表只是筛选出 `orderNo` 有值的那些），因此订单表没有"手动新增"概念，询报价表批量菜单里的"关联客户"在订单场景下也不适用——**这次订单表的批量菜单只做"批量选择 + 批量删除"，不加导入/导出/关联客户**。
+2. 批量删除的语义是**彻底删除记录**（调用和询报价表完全一样的 `removeRecord`），删除后询报价登记表里对应那条记录也会一并消失——这是 Roger 明确要的行为（不是"只清空订单编号、保留询价历史"），因为他要清理的就是重复录入的整条记录。
+
+复用现有的 `inquiry.batchEdit` 权限位（`permissionModules.ts` 里标注为"批量编辑 / 导入导出"，本身就是通用位，不是询报价专属），有这个权限的用户在订单表也能看到"批量编辑"按钮，不需要新增权限模块。
+
+### 改动 1：`src/features/order/utils/orderTableLayout.ts` —— `getVisibleColWidths` 支持 checkbox 列
+
+```ts
+export function getVisibleColWidths(
+  bp: OrderTableBreakpoint,
+  canViewFinancials: boolean,
+  canBatchEdit = false
+): string[] {
+  const base = (() => {
+    if (bp === 'sm') {
+      return ['26%', '12%', '36%', '26%'];
+    }
+    if (bp === 'md') {
+      return ['14%', '7%', '12%', '28%', '29%'];
+    }
+    if (bp === 'lg' || (bp === 'xl' && !canViewFinancials)) {
+      return ['10%', '5%', '9%', '24%', '5%', '24%', '20%'];
+    }
+    return ['10%', '4%', '8%', '16%', '4%', '18%', '12%', '10%', '5%', '11%'];
+  })();
+
+  if (!canBatchEdit) return base;
+
+  // checkbox 列从第一列（订单编号）借宽度，其余列不变
+  const CHECK_WIDTH = 4;
+  const widths = base.map((w) => parseFloat(w));
+  const [first, ...rest] = widths;
+  const adjustedFirst = Math.max(first - CHECK_WIDTH, 4);
+  return [`${CHECK_WIDTH}%`, `${adjustedFirst}%`, ...rest.map((w) => `${w}%`)];
+}
+```
+
+（原函数体原样保留，只是包了一层 `base` 计算 + 在 `canBatchEdit` 时前面插入一列。`showCustomerCol`/`showLgCols`/`showAdminCols` 三个函数不用改。）
+
+### 改动 2：`src/features/order/components/OrderTable.tsx`
+
+顶部 import 增加 `headerCellCenterClass`：
+
+```ts
+import {
+  headerCellCenterClass,
+  headerCellOverflowClass,
+  headerCellOverflowRightClass,
+  headerRowClass,
+} from '@/components/table/tableHeaderStyles';
+```
+
+`OrderTableProps` 增加：
+
+```ts
+interface OrderTableProps {
+  records: InquiryRecord[];
+  canViewFinancials: boolean;
+  sortField: SortField;
+  sortDir: 'asc' | 'desc';
+  consigneeOptions: string[];
+  onSortToggle: (field: SortField) => void;
+  onUpdate: (id: string, patch: Partial<InquiryRecord>) => void;
+  canBatchEdit?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onToggleSelectAll?: (allIds: string[]) => void;
+}
+```
+
+函数体解构增加对应参数（默认值 `canBatchEdit = false`、`selectedIds = new Set()`），并且：
+
+```ts
+const colWidths = getVisibleColWidths(bp, canViewFinancials, canBatchEdit);
+const allIds = records.map((r) => r.id);
+const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+const someSelected = allIds.some((id) => selectedIds.has(id)) && !allSelected;
+```
+
+表头 `<tr className={headerRowClass}>` 内、`订单编号` 那个 `<th>` **之前**插入：
+
+```tsx
+{canBatchEdit && (
+  <th className={headerCellCenterClass}>
+    <input
+      type="checkbox"
+      checked={allSelected}
+      ref={(el) => { if (el) el.indeterminate = someSelected; }}
+      onChange={() => onToggleSelectAll?.(allIds)}
+      className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 accent-blue-600 dark:border-gray-600"
+      aria-label="全选"
+      title={allSelected ? '取消全选' : '全选当前页'}
+    />
+  </th>
+)}
+```
+
+`<OrderRow>` 调用处传入新 props：
+
+```tsx
+<OrderRow
+  key={record.id}
+  record={record}
+  bp={bp}
+  canViewFinancials={canViewFinancials}
+  consigneeOptions={consigneeOptions}
+  onUpdate={(patch) => onUpdate(record.id, patch)}
+  canBatchEdit={canBatchEdit}
+  selected={selectedIds.has(record.id)}
+  onToggleSelect={onToggleSelect}
+/>
+```
+
+### 改动 3：`src/features/order/components/OrderRow.tsx`
+
+`OrderRowProps` 增加：
+
+```ts
+interface OrderRowProps {
+  record: InquiryRecord;
+  bp: OrderTableBreakpoint;
+  canViewFinancials: boolean;
+  consigneeOptions: string[];
+  onUpdate: (patch: Partial<InquiryRecord>) => void;
+  canBatchEdit?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
+}
+
+export function OrderRow({
+  record, bp, canViewFinancials, consigneeOptions, onUpdate,
+  canBatchEdit = false, selected = false, onToggleSelect,
+}: OrderRowProps) {
+```
+
+`<tr>` 内、"订单编号 + 询价编号"那个 `<td>` **之前**插入：
+
+```tsx
+{canBatchEdit && (
+  <td className="w-8 px-2 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+    <input
+      type="checkbox"
+      checked={selected}
+      onChange={() => onToggleSelect?.(record.id)}
+      className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 accent-blue-600 dark:border-gray-600"
+      aria-label={`选择 ${record.orderNo ?? record.inquiryNo}`}
+    />
+  </td>
+)}
+```
+
+（`OrderRow` 的 `<tr>` 本身没有整行 `onClick` 跳转，`stopPropagation` 是保险写法，和询报价表 `InquiryRow.tsx` 保持一致的写法风格，不是必须但统一。）
+
+### 改动 4：`src/features/order/app/OrderPage.tsx`
+
+顶部 import 调整：
+
+```ts
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pencil, Trash2, X } from 'lucide-react';
+import { AppLayout, type ActionButton } from '@/components/layout';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+```
+
+（`AppLayout` 原来的 import 行改成上面这样带 `type ActionButton`；`useCallback` 加进已有的 `react` import 里；新增 `Pencil, Trash2, X` 和 `useConfirm`。）
+
+`OrderPage` 函数体内，`updateRecord` 那行下面增加：
+
+```ts
+const removeRecord = useInquiryStore((s) => s.removeRecord);
+const confirm = useConfirm();
+const hasBatchEditPermission = usePermissionStore((s) => s.hasPermission('inquiry.batchEdit'));
+
+const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+const [isEditMode, setIsEditMode] = useState(false);
+const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+```
+
+筛选条件变化时清空选中（放在其他 `useEffect` 附近）：
+
+```ts
+useEffect(() => {
+  setSelectedIds(new Set());
+}, [timeRange, orderStatusFilter, keyword, customerFilter]);
+```
+
+批量操作回调（放在 `resetFilters` 附近）：
+
+```ts
+const handleToggleSelect = useCallback((id: string) => {
+  setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
+}, []);
+
+const handleToggleSelectAll = useCallback((allIds: string[]) => {
+  setSelectedIds((prev) => {
+    const allSelected = allIds.every((id) => prev.has(id));
+    return allSelected ? new Set() : new Set(allIds);
+  });
+}, []);
+
+const handleBatchDelete = useCallback(async () => {
+  if (selectedIds.size === 0) return;
+  const confirmed = await confirm({
+    title: '删除订单记录',
+    description: `确定删除选中的 ${selectedIds.size} 条记录吗？此操作不可撤销，且会同时从询报价登记表中删除这条记录。`,
+    confirmLabel: '删除',
+    variant: 'danger',
+  });
+  if (!confirmed) return;
+  Array.from(selectedIds).forEach((id) => removeRecord(id));
+  setSelectedIds(new Set());
+}, [selectedIds, removeRecord, confirm]);
+
+const toggleEditMode = useCallback(() => {
+  setIsEditMode((prev) => {
+    if (prev) setSelectedIds(new Set());
+    return !prev;
+  });
+}, []);
+
+const bottomActions = useMemo<ActionButton[]>(() => {
+  if (!hasBatchEditPermission) return [];
+  return [
+    {
+      key: 'admin-menu',
+      label: '批量编辑',
+      onClick: () => setIsAdminMenuOpen((prev) => !prev),
+      variant: isAdminMenuOpen || isEditMode ? 'primary' : 'secondary',
+      icon: Pencil,
+    },
+  ];
+}, [hasBatchEditPermission, isAdminMenuOpen, isEditMode]);
+```
+
+`<AppLayout>` 标签增加 `bottomActions={bottomActions}` prop（放在现有 `topBarSlot={topBarSlot}` 旁边）。
+
+`<OrderTable>` 调用处增加：
+
+```tsx
+<OrderTable
+  records={filteredRecords}
+  canViewFinancials={hasFinancialsPermission}
+  sortField={sortField}
+  sortDir={sortDir}
+  consigneeOptions={consigneeOptions}
+  onSortToggle={(field) => { /* 原逻辑不变 */ }}
+  onUpdate={(id, patch) => updateRecord(id, patch)}
+  canBatchEdit={hasBatchEditPermission && isEditMode}
+  selectedIds={selectedIds}
+  onToggleSelect={handleToggleSelect}
+  onToggleSelectAll={handleToggleSelectAll}
+/>
+```
+
+在 `</AppLayout>` 闭合标签**之前**（`<div className="w-full px-3...">` 这个最外层 div 结束之后）插入悬浮菜单，直接照抄询报价表的结构但去掉导入/导出/关联客户，只留批量选择开关 + 删除选中 + 取消选择：
+
+```tsx
+{hasBatchEditPermission && isAdminMenuOpen && (
+  <>
+    <div className="fixed inset-0 z-40" onClick={() => setIsAdminMenuOpen(false)} />
+    <div className="fixed bottom-20 right-4 z-50 min-w-[10rem] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-[#2C2C2E]">
+      <button
+        type="button"
+        onClick={toggleEditMode}
+        className={`flex w-full items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+          isEditMode ? 'font-medium text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'
+        }`}
+      >
+        <Pencil className="h-4 w-4 shrink-0 text-gray-400" />
+        {isEditMode ? '退出批量选择' : '批量选择'}
+      </button>
+
+      {isEditMode && selectedIds.size > 0 && (
+        <button
+          type="button"
+          onClick={() => { handleBatchDelete(); setIsAdminMenuOpen(false); }}
+          className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+        >
+          <Trash2 className="h-4 w-4 shrink-0" />
+          删除选中（{selectedIds.size}）
+        </button>
+      )}
+
+      {isEditMode && selectedIds.size > 0 && (
+        <button
+          type="button"
+          onClick={() => { setSelectedIds(new Set()); setIsAdminMenuOpen(false); }}
+          className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-700/50"
+        >
+          <X className="h-4 w-4 shrink-0 text-gray-400" />
+          取消选择
+        </button>
+      )}
+    </div>
+  </>
+)}
+```
+
+（这段菜单和 `<InquiryFormModal>`/`<BatchLinkCustomerModal>` 在 `InquiryPage.tsx` 里的位置一样，是 `AppLayout` 的子元素、`return (` 顶层 fragment 的一部分，不是嵌在 `<div className="w-full px-3...">` 里面。）
+
+### 涉及文件
+
+| 文件 | 操作 |
+|------|------|
+| `src/features/order/utils/orderTableLayout.ts` | `getVisibleColWidths` 加 `canBatchEdit` 参数，支持 checkbox 列宽 |
+| `src/features/order/components/OrderTable.tsx` | 加 checkbox 表头列 + 传参给 `OrderRow` |
+| `src/features/order/components/OrderRow.tsx` | 加 checkbox 单元格 |
+| `src/features/order/app/OrderPage.tsx` | 批量选择状态、批量删除逻辑、底部"批量编辑"按钮 + 悬浮菜单 |
+
+### 验证命令
+
+```bash
+npx tsc --noEmit
+npx eslint src/features/order
+npm run build
+```
+
+### 手工验证
+
+1. 有 `inquiry.batchEdit` 权限的账号打开 `/order`，底部应出现"批量编辑"按钮（和 `/inquiry` 一致的位置/样式）。
+2. 点击后弹出悬浮菜单，只有"批量选择"一项（不应出现导入/导出/关联客户，那些是询报价表专属）。
+3. 点"批量选择"后表格最左侧出现 checkbox 列，表头有全选/半选（indeterminate）状态。
+4. 勾选几条后菜单里出现"删除选中（N）”和"取消选择”。
+5. 点"删除选中"弹出确认对话框，确认后这些记录从订单表消失，**同时**去 `/inquiry` 确认对应的询价记录也一并消失了（验证是彻底删除，不是只清空订单编号）。
+6. 切换筛选条件（时间范围/订单状态/关键词/客户）后，之前的选中状态应被清空（不应该出现"筛选后选中的还是原来那批不相关记录"的情况）。
+7. 没有 `inquiry.batchEdit` 权限的账号打开 `/order`，不应看到"批量编辑"按钮，其余排序/筛选/行内编辑功能不受影响。
+8. `canViewFinancials` 为 true/false 两种情况下，各个断点（sm/md/lg/xl）checkbox 列宽度借用是否导致其他列挤压到明显变形（尤其 sm 断点列本来就窄）。
+
+### 验收标准
+
+- 订单状态表的"批量编辑"入口、悬浮菜单视觉风格与询报价登记表一致（同一个按钮位置、同一套悬浮面板样式）。
+- 批量删除 = 彻底删除 `InquiryRecord`（询报价登记表同步消失），不是"只清空订单编号"。
+- 不新增权限模块，复用 `inquiry.batchEdit`。
+- 不改变订单表现有的排序、筛选、行内编辑（交货日期/执行情况/金额等）逻辑。
+- 没有批量编辑权限的用户看不到任何新增 UI，行为和改动前完全一致。
