@@ -23,6 +23,7 @@ import { EyeOff, GripVertical, Plus, MoreHorizontal, Truck, Ship, Globe } from '
 import { useQuotationStore } from '../state/useQuotationStore';
 import { NOTES_TEMPLATES_BILINGUAL, PAYMENT_TERMS_OPTIONS, DELIVERY_TERMS_OPTIONS, DEFAULT_NOTES_CONFIG, extractEnglishContent } from '../types/notes';
 import type { NoteConfig } from '../types/notes';
+import { getDomesticClauseNumber } from '@/utils/domesticClauseNumber';
 
 interface NotesSectionProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -243,8 +244,6 @@ interface SortableNoteProps {
   onRemove: (noteId: string) => void;
 }
 
-const DOMESTIC_NUMERALS = ['二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四'];
-
 const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, onUpdateContent, onRemove: _onRemove }) => {
   const {
     attributes,
@@ -287,7 +286,7 @@ const SortableNote: React.FC<SortableNoteProps> = ({ note, onVisibilityToggle, o
     .filter(n => n.visible)
     .sort((a, b) => a.order - b.order);
   const noteIndex = visibleNotes.findIndex(n => n.id === note.id) + 1;
-  const displayIndex = isDomestic ? (DOMESTIC_NUMERALS[noteIndex - 1] ?? String(noteIndex + 1)) : String(noteIndex);
+  const displayIndex = isDomestic ? getDomesticClauseNumber(noteIndex - 1) : String(noteIndex);
 
   // 编辑相关函数
   const handleStartEdit = () => {

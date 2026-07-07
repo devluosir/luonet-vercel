@@ -6,6 +6,7 @@ import type { DomesticPartyDetails, QuotationData } from '@/types/quotation';
 import { ensurePdfFont } from '@/utils/pdfFontRegistry';
 import { safeSetCnFont } from './pdf/ensureFont';
 import { convertToRmbCapital } from './rmbCapitalAmount';
+import { getDomesticClauseNumber } from './domesticClauseNumber';
 
 interface ExtendedJsPDF extends jsPDF {
   autoTable: (options: UserOptions) => void;
@@ -14,20 +15,6 @@ interface ExtendedJsPDF extends jsPDF {
   saveGraphicsState: () => jsPDF;
   restoreGraphicsState: () => jsPDF;
   setGState: (gState: GState) => jsPDF;
-}
-
-const CN_ORDINAL_DIGITS = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
-
-// 条款序号从"二"开始（"一"是产品明细表标题），支持超过十四条时继续生成 十五/十六/二十一...
-function getClauseNumber(index: number): string {
-  const n = index + 2;
-  if (n < 10) return CN_ORDINAL_DIGITS[n];
-  if (n === 10) return '十';
-  if (n < 20) return `十${CN_ORDINAL_DIGITS[n - 10]}`;
-  const tens = Math.floor(n / 10);
-  const ones = n % 10;
-  const tensPart = tens === 1 ? '十' : `${CN_ORDINAL_DIGITS[tens]}十`;
-  return `${tensPart}${ones ? CN_ORDINAL_DIGITS[ones] : ''}`;
 }
 
 function setCnFont(doc: jsPDF, style: 'normal' | 'bold' = 'normal') {
@@ -165,7 +152,7 @@ function drawClauses(
 
   doc.setFontSize(9);
   clauses.forEach((note, index) => {
-    const number = getClauseNumber(index);
+    const number = getDomesticClauseNumber(index);
     const { title, body } = splitClause(note.content ?? '');
     const text = `${number}.${title}${body}`;
     const lines = doc.splitTextToSize(text, contentWidth);
