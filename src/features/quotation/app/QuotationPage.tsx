@@ -692,9 +692,9 @@ export default function QuotationPage() {
                       ))}
                       <button
                         type="button"
-                        onClick={() => updateData({ showDomesticRemark: !(data.showDomesticRemark ?? true) })}
+                        onClick={() => updateData({ showDomesticRemark: !(data.showDomesticRemark ?? false) })}
                         className={`rounded px-2 py-1 text-[11px] font-medium transition-all ${
-                          (data.showDomesticRemark ?? true)
+                          (data.showDomesticRemark ?? false)
                             ? 'bg-[#007AFF] text-white shadow-sm'
                             : 'border border-gray-200 bg-white text-gray-600 hover:border-[#007AFF]/40 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300'
                         }`}
@@ -975,7 +975,7 @@ export default function QuotationPage() {
                 {/* 金额大写：按钮行下方单独一行，税运备注开关打开时放在大写金额后的括号里 */}
                 {isDomesticQuotation && (
                   <div className="mt-2 flex flex-wrap items-baseline justify-end gap-1 text-right text-xs text-gray-500 dark:text-gray-400">
-                    {(data.showDomesticRemark ?? true) ? (
+                    {(data.showDomesticRemark ?? false) ? (
                       <>
                         <span>金额大写：{totalAmountInWords || '人民币零元整'}（</span>
                         <input

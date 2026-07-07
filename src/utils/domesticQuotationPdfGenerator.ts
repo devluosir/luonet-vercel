@@ -370,7 +370,7 @@ export async function generateDomesticQuotationPDF(
   const capital = convertToRmbCapital(total);
 
   const remark = data.domesticTotalRemark || '价格含13个点专票及运费';
-  const showRemark = data.showDomesticRemark ?? true;
+  const showRemark = data.showDomesticRemark ?? false;
 
   y = checkPage(doc, y, 18, margin, pageHeight);
   doc.setFontSize(9);

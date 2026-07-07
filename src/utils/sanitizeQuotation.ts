@@ -62,7 +62,7 @@ export function sanitizeQuotation(raw: any): QuotationData {
     showInvoiceReminder: raw.showInvoiceReminder ?? false,
     additionalPaymentTerms: raw.additionalPaymentTerms ?? '',
     domesticTotalRemark: raw.domesticTotalRemark ?? '',
-    showDomesticRemark: raw.showDomesticRemark ?? true,
+    showDomesticRemark: raw.showDomesticRemark ?? false,
     domesticDocType: raw.domesticDocType,
     paymentMethod: raw.paymentMethod ?? 'T/T',
     templateConfig: raw.templateConfig ?? {
