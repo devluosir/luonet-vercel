@@ -111,7 +111,7 @@ export default function PDFPreviewComponent({
         URL.revokeObjectURL(url);
       } else if (itemType === 'domestic') {
         const quotationData = data as QuotationData & { notesConfig?: NoteConfig[] };
-        const pdfBlob = await generateDomesticQuotationPDF(quotationData, quotationData.notesConfig || [], false);
+        const pdfBlob = await generateDomesticQuotationPDF(quotationData, quotationData.notesConfig || [], false, quotationData.savedVisibleCols);
         const url = URL.createObjectURL(pdfBlob);
         const link = document.createElement('a');
         link.href = url;

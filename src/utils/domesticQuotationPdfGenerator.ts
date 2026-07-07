@@ -8,6 +8,7 @@ import { safeSetCnFont } from './pdf/ensureFont';
 import { convertToRmbCapital } from './rmbCapitalAmount';
 import { getDomesticClauseNumber } from './domesticClauseNumber';
 import { getHeaderImage, getHeaderImageFormat } from './imageLoader';
+import { getLocalStorageJSON } from '@/utils/safeLocalStorage';
 
 interface ExtendedJsPDF extends jsPDF {
   autoTable: (options: UserOptions) => void;
@@ -135,7 +136,7 @@ function drawHeader(
 
   doc.setFontSize(10);
   setCnFont(doc, 'normal');
-  const rightX = margin + contentWidth * 0.66;
+  const rightX = margin + contentWidth * 0.72;
   const lineGap = 6;
   doc.text(`供方：${sellerName}`, margin, y);
   doc.text(`${noLabel}：${data.quotationNo || ''}`, rightX, y);
@@ -149,20 +150,23 @@ function drawHeader(
   return y;
 }
 
-function buildProductRows(data: QuotationData) {
-  const rows = (data.items ?? []).map((item, index) => [
-    String(index + 1),
-    item.partName || '',
-    item.description || '',
-    item.unit || '',
-    String(item.quantity || ''),
-    formatAmount(item.unitPrice || 0),
-    formatAmount(item.amount || 0),
-    item.remarks || '',
-  ]);
+function buildProductRows(data: QuotationData, showRemarksCol: boolean) {
+  const rows = (data.items ?? []).map((item, index) => {
+    const row = [
+      String(index + 1),
+      item.partName || '',
+      item.description || '',
+      item.unit || '',
+      String(item.quantity || ''),
+      formatAmount(item.unitPrice || 0),
+      formatAmount(item.amount || 0),
+    ];
+    if (showRemarksCol) row.push(item.remarks || '');
+    return row;
+  });
 
   (data.otherFees ?? []).forEach((fee, index) => {
-    rows.push([
+    const row = [
       String((data.items?.length ?? 0) + index + 1),
       fee.description || '其他费用',
       '',
@@ -170,8 +174,9 @@ function buildProductRows(data: QuotationData) {
       '',
       '',
       formatAmount(fee.amount || 0),
-      fee.remarks || '',
-    ]);
+    ];
+    if (showRemarksCol) row.push(fee.remarks || '');
+    rows.push(row);
   });
 
   return rows;
@@ -303,7 +308,8 @@ async function drawPartyTable(
 export async function generateDomesticQuotationPDF(
   data: QuotationData,
   notesConfig: NoteConfig[],
-  preview = false
+  preview = false,
+  savedVisibleCols?: string[] | null
 ): Promise<Blob> {
   if (typeof window === 'undefined') {
     throw new Error('PDF generation is only available in client-side environment');
@@ -319,6 +325,11 @@ export async function generateDomesticQuotationPDF(
   const isContract = (data.domesticDocType ?? 'contract') === 'contract';
   let y = 18;
 
+  // 读取"备注"列显示偏好：优先使用保存时的设置，否则读取页面当前的本地设置，
+  // 与导出报价单（quotationPdfGenerator.ts）口径一致，确保页面上的列开关与PDF联动
+  const visibleCols = savedVisibleCols ?? getLocalStorageJSON<string[]>('qt.visibleCols', []);
+  const showRemarksCol = visibleCols ? visibleCols.includes('remarks') : true;
+
   y = await drawHeaderImage(doc, data, margin, pageWidth, y);
   y = drawHeader(doc, data, margin, pageWidth, y, isContract);
 
@@ -327,10 +338,24 @@ export async function generateDomesticQuotationPDF(
   doc.text(isContract ? '一、产品名称、规格型号、数量、金额' : '感谢您的询价，现报价如下：', margin, y);
   y += 5;
 
+  const head = ['序号', '产品名称', '规格型号', '单位', '数量', '单价(含税)', '金额(含税)'];
+  if (showRemarksCol) head.push('备注');
+
+  const columnStyles: Record<number, { halign: 'center'; cellWidth: number }> = {
+    0: { halign: 'center', cellWidth: 12 },
+    1: { halign: 'center', cellWidth: 24 },
+    2: { halign: 'center', cellWidth: showRemarksCol ? 42 : 66 }, // 隐藏备注列时，把空出来的宽度补给规格型号列
+    3: { halign: 'center', cellWidth: 12 },
+    4: { halign: 'center', cellWidth: 14 },
+    5: { halign: 'center', cellWidth: 24 },
+    6: { halign: 'center', cellWidth: 26 },
+  };
+  if (showRemarksCol) columnStyles[7] = { halign: 'center', cellWidth: 24 };
+
   doc.autoTable({
     startY: y,
-    head: [['序号', '产品名称', '规格型号', '单位', '数量', '单价(含税)', '金额(含税)', '备注']],
-    body: buildProductRows(data),
+    head: [head],
+    body: buildProductRows(data, showRemarksCol),
     theme: 'grid',
     margin: { left: margin, right: margin },
     styles: {
@@ -349,16 +374,7 @@ export async function generateDomesticQuotationPDF(
       fillColor: [245, 245, 245],
       textColor: [20, 20, 20],
     },
-    columnStyles: {
-      0: { halign: 'center', cellWidth: 12 },
-      1: { halign: 'center', cellWidth: 24 },
-      2: { halign: 'center', cellWidth: 42 },
-      3: { halign: 'center', cellWidth: 12 },
-      4: { halign: 'center', cellWidth: 14 },
-      5: { halign: 'center', cellWidth: 24 },
-      6: { halign: 'center', cellWidth: 26 },
-      7: { halign: 'center', cellWidth: 24 },
-    },
+    columnStyles,
     didParseCell: (hookData) => {
       hookData.cell.styles.font = 'NotoSansSC';
     },

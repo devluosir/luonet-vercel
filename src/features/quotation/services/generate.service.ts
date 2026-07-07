@@ -49,7 +49,8 @@ export const generatePdf = async (
             currency: 'CNY',
           },
           notesConfig,
-          opts?.mode === 'preview'
+          opts?.mode === 'preview',
+          opts?.savedVisibleCols
         );
       }, { mode: opts?.mode === 'preview' ? 'preview' : 'export', operation: tab });
 
