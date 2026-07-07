@@ -25,7 +25,7 @@ export const DEFAULT_NOTES_CONFIG: NoteConfig[] = [
 export const DOMESTIC_NOTES_CONFIG: NoteConfig[] = [
   { id: 'domestic_clause_2', visible: true, order: 0, content: '质量要求技术标准：按国家标准、行业标准及双方确认的技术资料执行。' },
   { id: 'domestic_clause_3', visible: true, order: 1, content: '交货时间：以双方确认的交货计划为准。' },
-  { id: 'domestic_clause_4', visible: true, order: 2, content: '备货时间：收到需方确认后安排备货。' },
+  { id: 'domestic_clause_4', visible: true, order: 2, content: '备货时间：收到需方确认后安排备货，备货时间30天。' },
   { id: 'domestic_clause_5', visible: true, order: 3, content: '交货地点、运输方式及费用：按双方确认地点交货，运输方式及费用按报价约定执行。' },
   { id: 'domestic_clause_6', visible: true, order: 4, content: '合理损耗及计算方法：按实际交付数量结算，合理损耗按双方确认标准执行。' },
   { id: 'domestic_clause_7', visible: true, order: 5, content: '包装标准：按供方常规包装或双方确认的包装要求执行。' },
