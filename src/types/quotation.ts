@@ -74,6 +74,8 @@ export interface QuotationData {
   showInvoiceReminder?: boolean;
   additionalPaymentTerms?: string;
   domesticTotalRemark?: string;
+  /** 内销单据类型：报价单（简版）或产品购销合同（含供需方详情表+印章），默认 contract */
+  domesticDocType?: 'quotation' | 'contract';
   paymentMethod?: 'T/T' | 'L/C' | 'D/P' | 'D/A' | 'Open Account';
   templateConfig?: {
     headerType: 'none' | 'bilingual' | 'english';

@@ -62,6 +62,7 @@ export function sanitizeQuotation(raw: any): QuotationData {
     showInvoiceReminder: raw.showInvoiceReminder ?? false,
     additionalPaymentTerms: raw.additionalPaymentTerms ?? '',
     domesticTotalRemark: raw.domesticTotalRemark ?? '',
+    domesticDocType: raw.domesticDocType,
     paymentMethod: raw.paymentMethod ?? 'T/T',
     templateConfig: raw.templateConfig ?? {
       headerType: 'bilingual',
@@ -115,6 +116,7 @@ export function pickDraft(full: any) {
     showInvoiceReminder: full.showInvoiceReminder,
     additionalPaymentTerms: full.additionalPaymentTerms,
     domesticTotalRemark: full.domesticTotalRemark,
+    domesticDocType: full.domesticDocType,
     paymentMethod: full.paymentMethod,
     templateConfig: full.templateConfig,
     notesConfig: full.notesConfig,

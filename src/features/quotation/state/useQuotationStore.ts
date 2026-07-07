@@ -15,7 +15,7 @@ const KNOWN_KEYS = new Set<keyof QuotationData>([
   'paymentDate', 'items', 'amountInWords', 'showDescription', 'showRemarks', 'showBank',
   'showStamp', 'otherFees', 'customUnits', 'showMainPaymentTerm', 'showInvoiceReminder',
   'additionalPaymentTerms', 'templateConfig', 'depositPercentage', 'depositAmount',
-  'domesticTotalRemark', 'showBalance', 'balanceAmount', 'updatedAt'
+  'domesticTotalRemark', 'domesticDocType', 'showBalance', 'balanceAmount', 'updatedAt'
 ]);
 
 // 浅比较工具函数

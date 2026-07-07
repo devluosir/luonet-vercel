@@ -74,33 +74,50 @@ function addPageNumbers(doc: ExtendedJsPDF, pageWidth: number, pageHeight: numbe
   }
 }
 
-function drawHeader(doc: jsPDF, data: QuotationData, margin: number, pageWidth: number, y: number): number {
+function drawHeader(
+  doc: jsPDF,
+  data: QuotationData,
+  margin: number,
+  pageWidth: number,
+  y: number,
+  isContract: boolean
+): number {
   const contentWidth = pageWidth - margin * 2;
   const sellerName = getPartyName(data.domesticSeller, data.from);
   const buyerName = getPartyName(data.domesticBuyer, data.to);
+  const title = isContract ? '产 品 购 销 合 同' : '报 价 单';
+  const noLabel = isContract ? '合同编号' : '报价单编号';
+  const dateLabel = isContract ? '签订时间' : '报价日期';
 
   doc.setFontSize(18);
   setCnFont(doc, 'bold');
-  doc.text('内 销 报 价 单', pageWidth / 2, y, { align: 'center' });
+  doc.text(title, pageWidth / 2, y, { align: 'center' });
   y += 12;
 
-  doc.setDrawColor(80);
-  doc.setLineWidth(0.2);
-  doc.line(margin, y - 3, pageWidth - margin, y - 3);
+  if (isContract) {
+    doc.setDrawColor(80);
+    doc.setLineWidth(0.2);
+    doc.line(margin, y - 3, pageWidth - margin, y - 3);
+  }
 
   doc.setFontSize(10);
   setCnFont(doc, 'normal');
   const rightX = margin + contentWidth * 0.66;
   const lineGap = 6;
   doc.text(`供方：${sellerName}`, margin, y);
-  doc.text(`报价单编号：${data.quotationNo || ''}`, rightX, y);
+  doc.text(`${noLabel}：${data.quotationNo || ''}`, rightX, y);
   y += lineGap;
   doc.text(`需方：${buyerName}`, margin, y);
-  doc.text(`报价日期：${data.date || ''}`, rightX, y);
+  doc.text(`${dateLabel}：${data.date || ''}`, rightX, y);
   y += lineGap;
   doc.text(`询价编号：${data.inquiryNo || ''}`, rightX, y);
   y += 8;
-  doc.line(margin, y - 3, pageWidth - margin, y - 3);
+
+  if (isContract) {
+    doc.line(margin, y - 3, pageWidth - margin, y - 3);
+  } else {
+    y -= 4;
+  }
 
   return y;
 }
@@ -271,9 +288,11 @@ export async function generateDomesticQuotationPDF(
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 16;
+  const contentWidth = pageWidth - margin * 2;
+  const isContract = (data.domesticDocType ?? 'contract') === 'contract';
   let y = 18;
 
-  y = drawHeader(doc, data, margin, pageWidth, y);
+  y = drawHeader(doc, data, margin, pageWidth, y, isContract);
 
   doc.setFontSize(10);
   setCnFont(doc, 'bold');
@@ -303,13 +322,13 @@ export async function generateDomesticQuotationPDF(
       textColor: [20, 20, 20],
     },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 10 },
-      1: { cellWidth: 33 },
-      2: { cellWidth: 34 },
-      3: { halign: 'center', cellWidth: 13 },
-      4: { halign: 'right', cellWidth: 15 },
+      0: { halign: 'center', cellWidth: 8 },
+      1: { cellWidth: 24 },
+      2: { cellWidth: 46 },
+      3: { halign: 'center', cellWidth: 12 },
+      4: { halign: 'right', cellWidth: 14 },
       5: { halign: 'right', cellWidth: 24 },
-      6: { halign: 'right', cellWidth: 25 },
+      6: { halign: 'right', cellWidth: 26 },
       7: { cellWidth: 24 },
     },
     didParseCell: (hookData) => {
@@ -322,19 +341,35 @@ export async function generateDomesticQuotationPDF(
     + (data.otherFees ?? []).reduce((sum, fee) => sum + (fee.amount || 0), 0);
   const capital = convertToRmbCapital(total);
 
+  const remark = data.domesticTotalRemark || '价格含13个点专票及运费';
+
   y = checkPage(doc, y, 18, margin, pageHeight);
   doc.setFontSize(9);
   setCnFont(doc, 'bold');
-  doc.text(`合计（大写）：${capital}`, margin, y);
-  setCnFont(doc, 'bold');
-  doc.text(`合计：¥${formatAmount(total)}`, pageWidth - margin, y, { align: 'right' });
-  y += 6;
-  setCnFont(doc, 'normal');
-  doc.text(data.domesticTotalRemark || '价格含13个点专票及运费', margin, y);
-  y += 7;
+
+  if (isContract) {
+    doc.text(`合计（大写）：${capital}`, margin, y);
+    doc.text(`合计：¥${formatAmount(total)}`, pageWidth - margin, y, { align: 'right' });
+    y += 6;
+    setCnFont(doc, 'normal');
+    doc.text(remark, margin, y);
+    y += 7;
+  } else {
+    doc.text(`合计：¥${formatAmount(total)}`, pageWidth - margin, y, { align: 'right' });
+    const combined = `合计（大写）：${capital}（${remark}）`;
+    const lines = doc.splitTextToSize(combined, contentWidth - 45);
+    lines.forEach((line: string, index: number) => {
+      if (index > 0) y += 5;
+      doc.text(line, margin, y);
+    });
+    y += 7;
+  }
 
   y = drawClauses(doc, notesConfig, margin, pageWidth, pageHeight, y);
-  y = await drawPartyTable(doc, data, margin, pageWidth, pageHeight, y);
+
+  if (isContract) {
+    y = await drawPartyTable(doc, data, margin, pageWidth, pageHeight, y);
+  }
 
   addPageNumbers(doc, pageWidth, pageHeight, margin);
 

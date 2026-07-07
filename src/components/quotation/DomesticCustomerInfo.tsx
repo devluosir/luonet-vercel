@@ -61,6 +61,7 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
 }: DomesticCustomerInfoProps) {
   const seller = useMemo(() => data.domesticSeller ?? {}, [data.domesticSeller]);
   const buyer = useMemo(() => data.domesticBuyer ?? {}, [data.domesticBuyer]);
+  const isContract = (data.domesticDocType ?? 'contract') === 'contract';
 
   const [customerOptions, setCustomerOptions] = useState<Customer[]>([]);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -155,12 +156,12 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 rounded-xl border border-[#E5E5EA] bg-white/70 p-3 dark:border-[#3A3A3C] dark:bg-[#1C1C1E]/60 md:grid-cols-3">
         <FieldInput
-          label="报价单编号"
+          label={isContract ? '合同编号' : '报价单编号'}
           value={data.quotationNo || ''}
           onChange={(value) => onChange({ quotationNo: value })}
         />
         <FieldInput
-          label="报价日期"
+          label={isContract ? '签订时间' : '报价日期'}
           value={data.date || ''}
           onChange={(value) => onChange({ date: value })}
         />
@@ -190,7 +191,7 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
               <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {title}
               </h3>
-              {party === 'domesticBuyer' && (
+              {isContract && party === 'domesticBuyer' && (
                 <button
                   type="button"
                   onClick={handleSaveBuyerToCustomer}
@@ -202,7 +203,9 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
               )}
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {partyFields.map((field) => (
+              {/* 报价单模式下 PDF 只显示单位名称，法定代表人/税号/开户行等详情表仅产品购销合同模式才输出，
+                  这里也只保留"单位名称"字段，避免用户填了却用不上 */}
+              {(isContract ? partyFields : partyFields.filter((field) => field.key === 'name')).map((field) => (
                 <FieldInput
                   key={field.key}
                   label={field.label}
@@ -213,12 +216,17 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
                 />
               ))}
             </div>
-            {party === 'domesticBuyer' && saveMessage && (
+            {!isContract && (
+              <p className="mt-2 text-[11px] text-[#86868B] dark:text-[#98989D]">
+                提示：切换到「产品购销合同」可填写地址/法定代表人/税号/开户行等详情并加盖印章。
+              </p>
+            )}
+            {isContract && party === 'domesticBuyer' && saveMessage && (
               <p className={`mt-2 text-xs ${saveState === 'error' ? 'text-red-500' : 'text-[#34C759] dark:text-[#30D158]'}`}>
                 {saveMessage}
               </p>
             )}
-            {party === 'domesticBuyer' && (
+            {isContract && party === 'domesticBuyer' && (
               <p className="mt-2 text-[11px] text-[#86868B] dark:text-[#98989D]">
                 提示：单位名称与已保存客户资料完全一致时，失焦后会自动调用其地址/税号/开户行等信息。
               </p>

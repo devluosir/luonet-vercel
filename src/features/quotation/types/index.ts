@@ -7,6 +7,7 @@ export interface QuotationData extends BaseDocument {
   domesticSeller?: DomesticPartyDetails;
   domesticBuyer?: DomesticPartyDetails;
   domesticTotalRemark?: string;
+  domesticDocType?: 'quotation' | 'contract';
   // 基础信息
   inquiryNo: string;
   quotationNo: string;

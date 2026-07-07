@@ -68,6 +68,7 @@ export function getInitialQuotationData(pageType: 'quotation' | 'confirmation' |
     showInvoiceReminder: false,
     additionalPaymentTerms: '',
     domesticTotalRemark: isDomestic ? '价格含13个点专票及运费' : undefined,
+    domesticDocType: isDomestic ? 'contract' : undefined,
     paymentMethod: 'T/T',
     templateConfig: { 
       headerType: 'bilingual', 
