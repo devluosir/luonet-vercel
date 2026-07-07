@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DomesticPartyDetails, QuotationData } from '@/types/quotation';
 import type { Customer } from '@/features/customer/types';
 import { findCustomerByName, getAllCustomers, getCachedCustomers, upsertDomesticCustomerInfo } from '@/features/customer/services/customerService';
@@ -21,6 +21,16 @@ const partyFields: Array<{ key: PartyField; label: string }> = [
   { key: 'taxNo', label: '纳税人识别号' },
   { key: 'bankName', label: '开户行' },
   { key: 'bankAccount', label: '帐号' },
+];
+
+const fieldLabel = (key: PartyField): string => partyFields.find((f) => f.key === key)?.label ?? key;
+
+// 单位名称/地址/税号内容通常较长（长地址、18位统一社会信用代码），单独占一行；
+// 其余字段内容较短，两两配对显示，避免奇数个字段导致最后一行落单
+const PAIRED_FIELD_GROUPS: Array<[PartyField, PartyField]> = [
+  ['legalRepresentative', 'agent'],
+  ['phone', 'fax'],
+  ['bankName', 'bankAccount'],
 ];
 
 const BUYER_CUSTOMER_LIST_ID = 'domestic-buyer-customer-options';
@@ -50,6 +60,47 @@ function FieldInput({
         onBlur={onBlur}
         list={listId}
         className="h-8 w-full rounded-lg border border-[#E5E5EA] bg-white px-2 text-sm text-[#1D1D1F] outline-none transition-colors focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF]/25 dark:border-[#3A3A3C] dark:bg-[#1C1C1E] dark:text-[#F5F5F7]"
+      />
+    </label>
+  );
+}
+
+// 单位地址内容通常较长（自贸区/门牌号等），用可自动增高的多行文本框展示，
+// 避免像单行 input 那样把后半段内容裁掉看不见
+function FieldTextarea({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+
+  const adjust = useCallback((el: HTMLTextAreaElement) => {
+    el.style.height = '32px';
+    el.style.height = `${Math.max(32, Math.min(el.scrollHeight, 120))}px`;
+  }, []);
+
+  useEffect(() => {
+    if (ref.current) adjust(ref.current);
+  }, [value, adjust]);
+
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-medium text-[#86868B] dark:text-[#98989D]">
+        {label}
+      </span>
+      <textarea
+        ref={ref}
+        value={value}
+        rows={1}
+        onChange={(e) => {
+          onChange(e.target.value);
+          adjust(e.target);
+        }}
+        className="w-full resize-none overflow-hidden rounded-lg border border-[#E5E5EA] bg-white px-2 py-1.5 text-sm leading-5 text-[#1D1D1F] outline-none transition-colors focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF]/25 dark:border-[#3A3A3C] dark:bg-[#1C1C1E] dark:text-[#F5F5F7]"
       />
     </label>
   );
@@ -202,20 +253,53 @@ export const DomesticCustomerInfo = React.memo(function DomesticCustomerInfo({
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {/* 报价单模式下 PDF 只显示单位名称，法定代表人/税号/开户行等详情表仅产品购销合同模式才输出，
-                  这里也只保留"单位名称"字段，避免用户填了却用不上 */}
-              {(isContract ? partyFields : partyFields.filter((field) => field.key === 'name')).map((field) => (
+            {/* 报价单模式下 PDF 只显示单位名称，法定代表人/税号/开户行等详情表仅产品购销合同模式才输出，
+                这里也只保留"单位名称"字段，避免用户填了却用不上 */}
+            {!isContract ? (
+              <FieldInput
+                label={fieldLabel('name')}
+                value={String(details.name ?? '')}
+                onChange={(value) => updateParty(party, 'name', value)}
+                onBlur={party === 'domesticBuyer' ? handleBuyerNameBlur : undefined}
+                listId={party === 'domesticBuyer' ? BUYER_CUSTOMER_LIST_ID : undefined}
+              />
+            ) : (
+              <div className="space-y-3">
+                {/* 长字段各占一行：名称、地址（多行文本框）、税号，避免单行输入框把后半段内容裁掉 */}
                 <FieldInput
-                  key={field.key}
-                  label={field.label}
-                  value={String(details[field.key] ?? '')}
-                  onChange={(value) => updateParty(party, field.key, value)}
-                  onBlur={party === 'domesticBuyer' && field.key === 'name' ? handleBuyerNameBlur : undefined}
-                  listId={party === 'domesticBuyer' && field.key === 'name' ? BUYER_CUSTOMER_LIST_ID : undefined}
+                  label={fieldLabel('name')}
+                  value={String(details.name ?? '')}
+                  onChange={(value) => updateParty(party, 'name', value)}
+                  onBlur={party === 'domesticBuyer' ? handleBuyerNameBlur : undefined}
+                  listId={party === 'domesticBuyer' ? BUYER_CUSTOMER_LIST_ID : undefined}
                 />
-              ))}
-            </div>
+                <FieldTextarea
+                  label={fieldLabel('address')}
+                  value={String(details.address ?? '')}
+                  onChange={(value) => updateParty(party, 'address', value)}
+                />
+                <FieldInput
+                  label={fieldLabel('taxNo')}
+                  value={String(details.taxNo ?? '')}
+                  onChange={(value) => updateParty(party, 'taxNo', value)}
+                />
+                {/* 短字段两两配对，避免奇数个字段导致最后一行落单 */}
+                {PAIRED_FIELD_GROUPS.map(([keyA, keyB]) => (
+                  <div key={`${keyA}-${keyB}`} className="grid grid-cols-2 gap-3">
+                    <FieldInput
+                      label={fieldLabel(keyA)}
+                      value={String(details[keyA] ?? '')}
+                      onChange={(value) => updateParty(party, keyA, value)}
+                    />
+                    <FieldInput
+                      label={fieldLabel(keyB)}
+                      value={String(details[keyB] ?? '')}
+                      onChange={(value) => updateParty(party, keyB, value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
             {!isContract && (
               <p className="mt-2 text-[11px] text-[#86868B] dark:text-[#98989D]">
                 提示：切换到「产品购销合同」可填写地址/法定代表人/税号/开户行等详情并加盖印章。

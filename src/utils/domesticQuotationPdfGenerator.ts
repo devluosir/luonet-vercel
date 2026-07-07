@@ -16,7 +16,19 @@ interface ExtendedJsPDF extends jsPDF {
   setGState: (gState: GState) => jsPDF;
 }
 
-const clauseNumbers = ['二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四'];
+const CN_ORDINAL_DIGITS = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+
+// 条款序号从"二"开始（"一"是产品明细表标题），支持超过十四条时继续生成 十五/十六/二十一...
+function getClauseNumber(index: number): string {
+  const n = index + 2;
+  if (n < 10) return CN_ORDINAL_DIGITS[n];
+  if (n === 10) return '十';
+  if (n < 20) return `十${CN_ORDINAL_DIGITS[n - 10]}`;
+  const tens = Math.floor(n / 10);
+  const ones = n % 10;
+  const tensPart = tens === 1 ? '十' : `${CN_ORDINAL_DIGITS[tens]}十`;
+  return `${tensPart}${ones ? CN_ORDINAL_DIGITS[ones] : ''}`;
+}
 
 function setCnFont(doc: jsPDF, style: 'normal' | 'bold' = 'normal') {
   safeSetCnFont(doc, style, 'export');
@@ -94,12 +106,6 @@ function drawHeader(
   doc.text(title, pageWidth / 2, y, { align: 'center' });
   y += 12;
 
-  if (isContract) {
-    doc.setDrawColor(80);
-    doc.setLineWidth(0.2);
-    doc.line(margin, y - 3, pageWidth - margin, y - 3);
-  }
-
   doc.setFontSize(10);
   setCnFont(doc, 'normal');
   const rightX = margin + contentWidth * 0.66;
@@ -111,13 +117,7 @@ function drawHeader(
   doc.text(`${dateLabel}：${data.date || ''}`, rightX, y);
   y += lineGap;
   doc.text(`询价编号：${data.inquiryNo || ''}`, rightX, y);
-  y += 8;
-
-  if (isContract) {
-    doc.line(margin, y - 3, pageWidth - margin, y - 3);
-  } else {
-    y -= 4;
-  }
+  y += 4;
 
   return y;
 }
@@ -161,12 +161,11 @@ function drawClauses(
   const contentWidth = pageWidth - margin * 2;
   const clauses = notesConfig
     .filter((note) => note.visible && note.content?.trim())
-    .sort((a, b) => a.order - b.order)
-    .slice(0, 13);
+    .sort((a, b) => a.order - b.order);
 
   doc.setFontSize(9);
   clauses.forEach((note, index) => {
-    const number = clauseNumbers[index] ?? String(index + 2);
+    const number = getClauseNumber(index);
     const { title, body } = splitClause(note.content ?? '');
     const text = `${number}.${title}${body}`;
     const lines = doc.splitTextToSize(text, contentWidth);
@@ -322,9 +321,9 @@ export async function generateDomesticQuotationPDF(
       textColor: [20, 20, 20],
     },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 8 },
+      0: { halign: 'center', cellWidth: 12 },
       1: { cellWidth: 24 },
-      2: { cellWidth: 46 },
+      2: { cellWidth: 42 },
       3: { halign: 'center', cellWidth: 12 },
       4: { halign: 'right', cellWidth: 14 },
       5: { halign: 'right', cellWidth: 24 },
@@ -347,23 +346,14 @@ export async function generateDomesticQuotationPDF(
   doc.setFontSize(9);
   setCnFont(doc, 'bold');
 
-  if (isContract) {
-    doc.text(`合计（大写）：${capital}`, margin, y);
-    doc.text(`合计：¥${formatAmount(total)}`, pageWidth - margin, y, { align: 'right' });
-    y += 6;
-    setCnFont(doc, 'normal');
-    doc.text(remark, margin, y);
-    y += 7;
-  } else {
-    doc.text(`合计：¥${formatAmount(total)}`, pageWidth - margin, y, { align: 'right' });
-    const combined = `合计（大写）：${capital}（${remark}）`;
-    const lines = doc.splitTextToSize(combined, contentWidth - 45);
-    lines.forEach((line: string, index: number) => {
-      if (index > 0) y += 5;
-      doc.text(line, margin, y);
-    });
-    y += 7;
-  }
+  doc.text(`合计：¥${formatAmount(total)}`, pageWidth - margin, y, { align: 'right' });
+  const combined = `合计（大写）：${capital}（${remark}）`;
+  const amountLines = doc.splitTextToSize(combined, contentWidth - 45);
+  amountLines.forEach((line: string, index: number) => {
+    if (index > 0) y += 5;
+    doc.text(line, margin, y);
+  });
+  y += 7;
 
   y = drawClauses(doc, notesConfig, margin, pageWidth, pageHeight, y);
 
