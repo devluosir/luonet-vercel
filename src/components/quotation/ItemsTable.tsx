@@ -899,7 +899,7 @@ export const ItemsTable: React.FC<ItemsTableProps> = ({
         <div className="flex items-center gap-4">
           <ImportDataButton onImport={handleImport} />
           <div className="hidden md:flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-3 py-2 rounded-lg">
-            {isDomestic && (
+            {isDomestic && (data.domesticDocType ?? 'contract') === 'contract' && (
               <>
                 <span className="whitespace-nowrap font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
                   一、产品名称、规格型号、数量、金额
